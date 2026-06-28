@@ -1,19 +1,3 @@
-import type { Metadata } from "next";
-import "./globals.css";
-
-export const metadata: Metadata = {
-  title: "BuiltIQ Fitness",
-  description: "Workout, nutrition, and progress tracking platform"
-};
-
-export default function RootLayout({
-  children
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    <html lang="en">
-      <body>{children}</body>
-    </html>
-  );
-}
+import './globals.css';
+export const metadata = { title: 'BuiltIQ', description: 'AI fitness, nutrition, mobility, and progress', appleWebApp: { capable: true, title: 'BuiltIQ', statusBarStyle: 'black-translucent' }, themeColor: '#080b12' };
+export default function RootLayout({ children }: { children: React.ReactNode }) { return <html lang="en"><body>{children}</body></html>; }
