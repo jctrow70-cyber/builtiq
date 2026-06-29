@@ -1,207 +1,42 @@
-
 create extension if not exists "uuid-ossp";
 
-create table if not exists households (
-  id uuid primary key default uuid_generate_v4(),
-  name text not null,
-  invite_code text unique not null,
-  created_at timestamptz default now()
-);
+create table if not exists households (id uuid primary key default uuid_generate_v4(), name text not null, invite_code text unique not null, created_at timestamptz default now());
+create table if not exists household_members (id uuid primary key default uuid_generate_v4(), household_id uuid references households(id) on delete cascade, user_id uuid references auth.users(id) on delete cascade, display_name text, created_at timestamptz default now(), unique(household_id,user_id));
+create table if not exists programs (id uuid primary key default uuid_generate_v4(), household_id uuid references households(id) on delete cascade, name text not null, weeks int default 6, goal text default 'Build Muscle', priorities jsonb default '{}'::jsonb, created_at timestamptz default now());
+create table if not exists workouts (id uuid primary key default uuid_generate_v4(), program_id uuid references programs(id) on delete cascade, week int not null, day_label text not null, day_order int default 0, workout_type text not null, created_at timestamptz default now());
+create table if not exists exercises (id uuid primary key default uuid_generate_v4(), workout_id uuid references workouts(id) on delete cascade, sort_order int default 0, name text not null, primary_muscle text, secondary_muscles text[] default '{}', target_sets text, target_reps text, video_url text, instructions text[] default '{}', tips text[] default '{}', created_at timestamptz default now());
+create table if not exists mobility_exercises (id uuid primary key default uuid_generate_v4(), workout_id uuid references workouts(id) on delete cascade, sort_order int default 0, name text not null, focus_area text, duration text, video_url text, notes text, created_at timestamptz default now());
+create table if not exists exercise_logs (id uuid primary key default uuid_generate_v4(), exercise_id uuid references exercises(id) on delete cascade, user_id uuid references auth.users(id) on delete cascade, actual_sets text, actual_reps text, weight text, rpe text, notes text, completed boolean default false, updated_at timestamptz default now(), unique(exercise_id,user_id));
+create table if not exists mobility_logs (id uuid primary key default uuid_generate_v4(), mobility_exercise_id uuid references mobility_exercises(id) on delete cascade, user_id uuid references auth.users(id) on delete cascade, completed boolean default false, notes text, updated_at timestamptz default now(), unique(mobility_exercise_id,user_id));
+create table if not exists nutrition_logs (id uuid primary key default uuid_generate_v4(), household_id uuid references households(id) on delete cascade, user_id uuid references auth.users(id) on delete cascade, log_date date not null default current_date, food_name text not null, calories numeric default 0, protein numeric default 0, carbs numeric default 0, fat numeric default 0, source text default 'manual', created_at timestamptz default now());
+create table if not exists body_metrics (id uuid primary key default uuid_generate_v4(), household_id uuid references households(id) on delete cascade, user_id uuid references auth.users(id) on delete cascade, metric_date date not null default current_date, body_weight numeric, waist numeric, notes text, created_at timestamptz default now());
 
-create table if not exists household_members (
-  id uuid primary key default uuid_generate_v4(),
-  household_id uuid references households(id) on delete cascade,
-  user_id uuid references auth.users(id) on delete cascade,
-  display_name text,
-  created_at timestamptz default now(),
-  unique(household_id, user_id)
-);
+alter table households enable row level security; alter table household_members enable row level security; alter table programs enable row level security; alter table workouts enable row level security; alter table exercises enable row level security; alter table mobility_exercises enable row level security; alter table exercise_logs enable row level security; alter table mobility_logs enable row level security; alter table nutrition_logs enable row level security; alter table body_metrics enable row level security;
 
-create table if not exists programs (
-  id uuid primary key default uuid_generate_v4(),
-  household_id uuid references households(id) on delete cascade,
-  name text not null,
-  weeks int default 6,
-  goal text default 'Build Muscle',
-  priorities jsonb default '{}'::jsonb,
-  created_at timestamptz default now()
-);
+do $$ declare r record; begin for r in select schemaname, tablename, policyname from pg_policies where schemaname='public' and tablename in ('households','household_members','programs','workouts','exercises','mobility_exercises','exercise_logs','mobility_logs','nutrition_logs','body_metrics') loop execute format('drop policy if exists %I on %I.%I', r.policyname, r.schemaname, r.tablename); end loop; end $$;
 
-create table if not exists workouts (
-  id uuid primary key default uuid_generate_v4(),
-  program_id uuid references programs(id) on delete cascade,
-  week int not null,
-  day_label text not null,
-  day_order int default 0,
-  workout_type text not null,
-  created_at timestamptz default now()
-);
+create policy households_insert on households for insert with check (auth.uid() is not null);
+create policy households_select on households for select using (auth.uid() is not null);
+create policy household_members_select_own on household_members for select using (user_id = auth.uid());
+create policy household_members_insert_own on household_members for insert with check (user_id = auth.uid());
 
-create table if not exists exercises (
-  id uuid primary key default uuid_generate_v4(),
-  workout_id uuid references workouts(id) on delete cascade,
-  sort_order int default 0,
-  name text not null,
-  primary_muscle text,
-  secondary_muscles text[] default '{}',
-  target_sets text,
-  target_reps text,
-  video_url text,
-  instructions text[] default '{}',
-  tips text[] default '{}',
-  created_at timestamptz default now()
-);
+create policy programs_select on programs for select using (exists (select 1 from household_members hm where hm.household_id = programs.household_id and hm.user_id = auth.uid()));
+create policy programs_insert on programs for insert with check (exists (select 1 from household_members hm where hm.household_id = programs.household_id and hm.user_id = auth.uid()));
 
-create table if not exists mobility_exercises (
-  id uuid primary key default uuid_generate_v4(),
-  workout_id uuid references workouts(id) on delete cascade,
-  sort_order int default 0,
-  name text not null,
-  focus_area text,
-  duration text,
-  video_url text,
-  notes text,
-  created_at timestamptz default now()
-);
+create policy workouts_select on workouts for select using (exists (select 1 from programs p join household_members hm on hm.household_id=p.household_id where p.id=workouts.program_id and hm.user_id=auth.uid()));
+create policy workouts_insert on workouts for insert with check (exists (select 1 from programs p join household_members hm on hm.household_id=p.household_id where p.id=workouts.program_id and hm.user_id=auth.uid()));
+create policy workouts_update on workouts for update using (exists (select 1 from programs p join household_members hm on hm.household_id=p.household_id where p.id=workouts.program_id and hm.user_id=auth.uid()));
+create policy workouts_delete on workouts for delete using (exists (select 1 from programs p join household_members hm on hm.household_id=p.household_id where p.id=workouts.program_id and hm.user_id=auth.uid()));
 
-create table if not exists exercise_logs (
-  id uuid primary key default uuid_generate_v4(),
-  exercise_id uuid references exercises(id) on delete cascade,
-  user_id uuid references auth.users(id) on delete cascade,
-  actual_sets text,
-  actual_reps text,
-  weight text,
-  rpe text,
-  notes text,
-  completed boolean default false,
-  updated_at timestamptz default now(),
-  unique(exercise_id, user_id)
-);
+create policy exercises_select on exercises for select using (exists (select 1 from workouts w join programs p on p.id=w.program_id join household_members hm on hm.household_id=p.household_id where w.id=exercises.workout_id and hm.user_id=auth.uid()));
+create policy exercises_insert on exercises for insert with check (exists (select 1 from workouts w join programs p on p.id=w.program_id join household_members hm on hm.household_id=p.household_id where w.id=exercises.workout_id and hm.user_id=auth.uid()));
+create policy exercises_update on exercises for update using (exists (select 1 from workouts w join programs p on p.id=w.program_id join household_members hm on hm.household_id=p.household_id where w.id=exercises.workout_id and hm.user_id=auth.uid()));
+create policy exercises_delete on exercises for delete using (exists (select 1 from workouts w join programs p on p.id=w.program_id join household_members hm on hm.household_id=p.household_id where w.id=exercises.workout_id and hm.user_id=auth.uid()));
 
-create table if not exists mobility_logs (
-  id uuid primary key default uuid_generate_v4(),
-  mobility_exercise_id uuid references mobility_exercises(id) on delete cascade,
-  user_id uuid references auth.users(id) on delete cascade,
-  completed boolean default false,
-  notes text,
-  updated_at timestamptz default now(),
-  unique(mobility_exercise_id, user_id)
-);
+create policy mobility_exercises_select on mobility_exercises for select using (exists (select 1 from workouts w join programs p on p.id=w.program_id join household_members hm on hm.household_id=p.household_id where w.id=mobility_exercises.workout_id and hm.user_id=auth.uid()));
+create policy mobility_exercises_insert on mobility_exercises for insert with check (exists (select 1 from workouts w join programs p on p.id=w.program_id join household_members hm on hm.household_id=p.household_id where w.id=mobility_exercises.workout_id and hm.user_id=auth.uid()));
 
-create table if not exists nutrition_logs (
-  id uuid primary key default uuid_generate_v4(),
-  household_id uuid references households(id) on delete cascade,
-  user_id uuid references auth.users(id) on delete cascade,
-  log_date date not null default current_date,
-  meal_name text,
-  food_name text not null,
-  calories numeric default 0,
-  protein numeric default 0,
-  carbs numeric default 0,
-  fat numeric default 0,
-  source text default 'manual',
-  created_at timestamptz default now()
-);
-
-create table if not exists body_metrics (
-  id uuid primary key default uuid_generate_v4(),
-  household_id uuid references households(id) on delete cascade,
-  user_id uuid references auth.users(id) on delete cascade,
-  metric_date date not null default current_date,
-  body_weight numeric,
-  waist numeric,
-  notes text,
-  created_at timestamptz default now()
-);
-
-alter table households enable row level security;
-alter table household_members enable row level security;
-alter table programs enable row level security;
-alter table workouts enable row level security;
-alter table exercises enable row level security;
-alter table mobility_exercises enable row level security;
-alter table exercise_logs enable row level security;
-alter table mobility_logs enable row level security;
-alter table nutrition_logs enable row level security;
-alter table body_metrics enable row level security;
-
-drop policy if exists "households_insert" on households;
-create policy "households_insert" on households for insert with check (auth.uid() is not null);
-drop policy if exists "households_select" on households;
-create policy "households_select" on households for select using (auth.uid() is not null);
-
-drop policy if exists "members_select" on household_members;
-create policy "members_select" on household_members for select using (
-  user_id = auth.uid()
-  or exists (select 1 from household_members hm where hm.household_id = household_members.household_id and hm.user_id = auth.uid())
-);
-drop policy if exists "members_insert" on household_members;
-create policy "members_insert" on household_members for insert with check (user_id = auth.uid());
-
-drop policy if exists "programs_select" on programs;
-create policy "programs_select" on programs for select using (
-  exists (select 1 from household_members hm where hm.household_id = programs.household_id and hm.user_id = auth.uid())
-);
-drop policy if exists "programs_insert" on programs;
-create policy "programs_insert" on programs for insert with check (
-  exists (select 1 from household_members hm where hm.household_id = programs.household_id and hm.user_id = auth.uid())
-);
-
-drop policy if exists "workouts_select" on workouts;
-create policy "workouts_select" on workouts for select using (
-  exists (select 1 from programs p join household_members hm on hm.household_id = p.household_id where p.id = workouts.program_id and hm.user_id = auth.uid())
-);
-drop policy if exists "workouts_insert" on workouts;
-create policy "workouts_insert" on workouts for insert with check (
-  exists (select 1 from programs p join household_members hm on hm.household_id = p.household_id where p.id = workouts.program_id and hm.user_id = auth.uid())
-);
-
-drop policy if exists "exercises_select" on exercises;
-create policy "exercises_select" on exercises for select using (
-  exists (select 1 from workouts w join programs p on p.id = w.program_id join household_members hm on hm.household_id = p.household_id where w.id = exercises.workout_id and hm.user_id = auth.uid())
-);
-drop policy if exists "exercises_insert" on exercises;
-create policy "exercises_insert" on exercises for insert with check (
-  exists (select 1 from workouts w join programs p on p.id = w.program_id join household_members hm on hm.household_id = p.household_id where w.id = exercises.workout_id and hm.user_id = auth.uid())
-);
-drop policy if exists "exercises_update" on exercises;
-create policy "exercises_update" on exercises for update using (
-  exists (select 1 from workouts w join programs p on p.id = w.program_id join household_members hm on hm.household_id = p.household_id where w.id = exercises.workout_id and hm.user_id = auth.uid())
-);
-drop policy if exists "exercises_delete" on exercises;
-create policy "exercises_delete" on exercises for delete using (
-  exists (select 1 from workouts w join programs p on p.id = w.program_id join household_members hm on hm.household_id = p.household_id where w.id = exercises.workout_id and hm.user_id = auth.uid())
-);
-
-drop policy if exists "mobility_exercises_select" on mobility_exercises;
-create policy "mobility_exercises_select" on mobility_exercises for select using (
-  exists (select 1 from workouts w join programs p on p.id = w.program_id join household_members hm on hm.household_id = p.household_id where w.id = mobility_exercises.workout_id and hm.user_id = auth.uid())
-);
-drop policy if exists "mobility_exercises_insert" on mobility_exercises;
-create policy "mobility_exercises_insert" on mobility_exercises for insert with check (
-  exists (select 1 from workouts w join programs p on p.id = w.program_id join household_members hm on hm.household_id = p.household_id where w.id = mobility_exercises.workout_id and hm.user_id = auth.uid())
-);
-
-drop policy if exists "own_exercise_logs_select" on exercise_logs;
-create policy "own_exercise_logs_select" on exercise_logs for select using (user_id = auth.uid());
-drop policy if exists "own_exercise_logs_insert" on exercise_logs;
-create policy "own_exercise_logs_insert" on exercise_logs for insert with check (user_id = auth.uid());
-drop policy if exists "own_exercise_logs_update" on exercise_logs;
-create policy "own_exercise_logs_update" on exercise_logs for update using (user_id = auth.uid());
-
-drop policy if exists "own_mobility_logs_select" on mobility_logs;
-create policy "own_mobility_logs_select" on mobility_logs for select using (user_id = auth.uid());
-drop policy if exists "own_mobility_logs_insert" on mobility_logs;
-create policy "own_mobility_logs_insert" on mobility_logs for insert with check (user_id = auth.uid());
-drop policy if exists "own_mobility_logs_update" on mobility_logs;
-create policy "own_mobility_logs_update" on mobility_logs for update using (user_id = auth.uid());
-
-drop policy if exists "nutrition_own_select" on nutrition_logs;
-create policy "nutrition_own_select" on nutrition_logs for select using (user_id = auth.uid());
-drop policy if exists "nutrition_own_insert" on nutrition_logs;
-create policy "nutrition_own_insert" on nutrition_logs for insert with check (user_id = auth.uid());
-
-drop policy if exists "metrics_own_select" on body_metrics;
-create policy "metrics_own_select" on body_metrics for select using (user_id = auth.uid());
-drop policy if exists "metrics_own_insert" on body_metrics;
-create policy "metrics_own_insert" on body_metrics for insert with check (user_id = auth.uid());
+create policy exercise_logs_select on exercise_logs for select using (user_id=auth.uid()); create policy exercise_logs_insert on exercise_logs for insert with check (user_id=auth.uid()); create policy exercise_logs_update on exercise_logs for update using (user_id=auth.uid());
+create policy mobility_logs_select on mobility_logs for select using (user_id=auth.uid()); create policy mobility_logs_insert on mobility_logs for insert with check (user_id=auth.uid()); create policy mobility_logs_update on mobility_logs for update using (user_id=auth.uid());
+create policy nutrition_select on nutrition_logs for select using (user_id=auth.uid()); create policy nutrition_insert on nutrition_logs for insert with check (user_id=auth.uid());
+create policy metrics_select on body_metrics for select using (user_id=auth.uid()); create policy metrics_insert on body_metrics for insert with check (user_id=auth.uid());

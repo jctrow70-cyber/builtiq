@@ -1,24 +1,16 @@
-# BuiltIQ Password Login Version
+# BuiltIQ Production V1
 
-This version uses email + password login instead of Supabase magic links.
-
-## Supabase settings
-
-In Supabase:
-
-Authentication > Sign In / Providers > Email
-
-- Email: Enabled
-- Confirm email: OFF for testing
+This version fixes the generator so it creates real exercises and mobility items, not just day tiles.
 
 ## Update steps
-
 1. Unzip this folder.
-2. Replace the files in your GitHub repo with these files.
-3. Commit and push.
-4. Vercel will redeploy.
-5. Open the site.
-6. Click Create Account.
-7. Then click Sign In.
+2. Replace all files in your GitHub repo root with these files.
+3. Commit and push to GitHub.
+4. In Supabase SQL Editor, run `supabase-schema.sql`.
+5. In Vercel, redeploy.
+6. Hard refresh the site.
+7. Sign in.
+8. Generate a new program.
+9. Go to Train — you should see real exercises under each day.
 
-No magic link needed.
+If an older generated program shows only tiles, generate a new program after this update.
