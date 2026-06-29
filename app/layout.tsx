@@ -1,8 +1,8 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'BuiltIQ V2',
-  description: 'Household and personal workout planning'
+  title: 'BuiltIQ V3',
+  description: 'Dashboard, training, nutrition, body composition, and settings'
 };
 
 export const viewport = { themeColor: '#080b12' };
