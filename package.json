@@ -1,6 +1,6 @@
 {
-  "name": "builtiq-v3-dashboard-training",
-  "version": "3.0.0",
+  "name": "builtiq-v4-platform",
+  "version": "4.0.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
