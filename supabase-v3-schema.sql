@@ -59,6 +59,24 @@ create table if not exists workouts (
 alter table workouts add column if not exists readiness jsonb default '{}'::jsonb;
 alter table workouts add column if not exists cardio jsonb default '{}'::jsonb;
 
+create table if not exists workout_blocks (
+  id uuid primary key default uuid_generate_v4(),
+  workout_id uuid references workouts(id) on delete cascade,
+  block_type text not null default 'strength',
+  sort_order int default 0,
+  name text not null,
+  focus_area text,
+  target_sets int default 1,
+  target_reps text,
+  target_duration text,
+  notes text,
+  video_url text,
+  created_at timestamptz default now()
+);
+
+alter table workout_blocks enable row level security;
+
+
 create table if not exists exercises (
   id uuid primary key default uuid_generate_v4(),
   workout_id uuid references workouts(id) on delete cascade,
@@ -210,7 +228,7 @@ begin
     select schemaname, tablename, policyname
     from pg_policies
     where schemaname='public'
-    and tablename in ('households','household_members','user_profiles','programs','workouts','exercises','mobility_exercises','exercise_set_logs','exercise_logs','mobility_logs','nutrition_logs','body_metrics')
+    and tablename in ('households','household_members','user_profiles','programs','workouts','exercises','mobility_exercises','workout_blocks','exercise_set_logs','exercise_logs','mobility_logs','nutrition_logs','body_metrics')
   ) loop
     execute format('drop policy if exists %I on %I.%I', r.policyname, r.schemaname, r.tablename);
   end loop;
@@ -296,6 +314,33 @@ create policy "mobility_exercises_select" on mobility_exercises for select using
 );
 create policy "mobility_exercises_insert" on mobility_exercises for insert with check (
   exists (select 1 from workouts w join programs p on p.id=w.program_id where w.id=mobility_exercises.workout_id and (
+    (p.visibility = 'personal' and p.owner_user_id = auth.uid())
+    or (p.visibility = 'household' and exists (select 1 from household_members hm where hm.household_id = p.household_id and hm.user_id = auth.uid()))
+  ))
+);
+
+
+
+create policy "workout_blocks_select" on workout_blocks for select using (
+  exists (select 1 from workouts w join programs p on p.id=w.program_id where w.id=workout_blocks.workout_id and (
+    (p.visibility = 'personal' and p.owner_user_id = auth.uid())
+    or (p.visibility = 'household' and exists (select 1 from household_members hm where hm.household_id = p.household_id and hm.user_id = auth.uid()))
+  ))
+);
+create policy "workout_blocks_insert" on workout_blocks for insert with check (
+  exists (select 1 from workouts w join programs p on p.id=w.program_id where w.id=workout_blocks.workout_id and (
+    (p.visibility = 'personal' and p.owner_user_id = auth.uid())
+    or (p.visibility = 'household' and exists (select 1 from household_members hm where hm.household_id = p.household_id and hm.user_id = auth.uid()))
+  ))
+);
+create policy "workout_blocks_update" on workout_blocks for update using (
+  exists (select 1 from workouts w join programs p on p.id=w.program_id where w.id=workout_blocks.workout_id and (
+    (p.visibility = 'personal' and p.owner_user_id = auth.uid())
+    or (p.visibility = 'household' and exists (select 1 from household_members hm where hm.household_id = p.household_id and hm.user_id = auth.uid()))
+  ))
+);
+create policy "workout_blocks_delete" on workout_blocks for delete using (
+  exists (select 1 from workouts w join programs p on p.id=w.program_id where w.id=workout_blocks.workout_id and (
     (p.visibility = 'personal' and p.owner_user_id = auth.uid())
     or (p.visibility = 'household' and exists (select 1 from household_members hm where hm.household_id = p.household_id and hm.user_id = auth.uid()))
   ))

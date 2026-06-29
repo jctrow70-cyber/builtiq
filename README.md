@@ -17,3 +17,16 @@ Built around your V2 notes.
 5. Redeploy Vercel.
 6. Hard refresh.
 7. Generate a Household or Personal program.
+
+
+## V3.1 additions
+- Remove generated strength exercises
+- Add/edit/remove strength exercises
+- Mobility Warm-Up section
+- Plyometric Warm-Up section
+- Cardio Finisher section
+- Ab Finisher section
+- Add/edit/remove any generated item
+- New `workout_blocks` table in `supabase-v3-schema.sql`
+
+Run `supabase-v3-schema.sql` again after deploying this version.
