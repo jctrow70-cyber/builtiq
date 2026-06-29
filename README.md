@@ -1,45 +1,23 @@
-# BuiltIQ V4 Platform
+# BuiltIQ V4 Clean Rebuild
 
-This rebuild changes the app foundation.
+Uses brand-new `biq_*` tables so old prototype data, policies, and foreign keys do not interfere.
 
-## Major changes
+## Install
+1. Replace your GitHub repo files with this package.
+2. Commit and push.
+3. In Supabase SQL Editor, run `supabase-v4-clean-schema.sql`.
+4. Redeploy Vercel.
+5. Hard refresh the site.
+6. Sign in and click Start Personal.
 
-- No forced household/team creation
-- New user flow:
-  - Start Personal
-  - Join Exercise Team
-  - Create Exercise Team
-- Household renamed to Exercise Team
-- Personal plans and Team plans are separate
-- Team plans are visible to team members
-- Each person logs their own sets/progress
-- Team page with invite code and member list
-- Training supports:
-  - mobility warm-up
-  - plyometric warm-up
-  - strength
-  - supersets through group labels
-  - editable/removable exercises
-  - editable/removable set rows
-  - set type dropdown
-  - cardio finisher
-  - ab finisher
-- Dashboard, Nutrition, Body Comp, Exercise Team, Settings
-
-## Update steps
-
-1. Unzip this package.
-2. Replace the files in your GitHub repo root.
-3. Commit and push.
-4. In Supabase SQL Editor, run `supabase-v4-schema.sql`.
-5. Redeploy in Vercel.
-6. Hard refresh the app.
-7. Existing users may need to go through the new Welcome screen once.
-
-## Important
-
-This version uses new tables:
-- exercise_teams
-- exercise_team_members
-
-It no longer depends on households/household_members.
+## Features
+- Personal-first onboarding
+- Optional Exercise Teams
+- Team invite code
+- Separate Personal and Team plans
+- Mobility, plyometric, strength, cardio, abs sections
+- Add/edit/remove exercises
+- Add/remove set rows
+- Set type dropdown
+- Superset labels through exercise edit
+- Nutrition, Body Comp, Settings
