@@ -97,16 +97,12 @@ do $$ declare r record; begin
 end $$;
 
 create policy "profiles_all" on st_profiles for all using (user_id=auth.uid()) with check (user_id=auth.uid());
-
 create policy "teams_read" on st_teams for select using (auth.uid() is not null);
 create policy "teams_insert" on st_teams for insert with check (owner_user_id=auth.uid());
 create policy "teams_update_owner" on st_teams for update using (owner_user_id=auth.uid());
-
 create policy "team_members_read" on st_team_members for select using (auth.uid() is not null);
 create policy "team_members_insert_self" on st_team_members for insert with check (user_id=auth.uid());
-create policy "team_members_update_owner" on st_team_members for update using (
- exists(select 1 from st_teams t where t.id=st_team_members.team_id and t.owner_user_id=auth.uid())
-);
+create policy "team_members_update_owner" on st_team_members for update using (exists(select 1 from st_teams t where t.id=st_team_members.team_id and t.owner_user_id=auth.uid()));
 
 create policy "programs_read" on st_programs for select using (
  (visibility='personal' and owner_user_id=auth.uid())
@@ -120,13 +116,10 @@ create policy "programs_update_editor" on st_programs for update using (
  owner_user_id=auth.uid()
  or exists(select 1 from st_team_members m where m.team_id=st_programs.team_id and m.user_id=auth.uid() and m.role in ('owner','editor') and m.status='active')
 );
-
 create policy "workouts_read" on st_workouts for select using (exists(select 1 from st_programs p where p.id=st_workouts.program_id));
 create policy "workouts_insert" on st_workouts for insert with check (auth.uid() is not null);
 create policy "workouts_update" on st_workouts for update using (auth.uid() is not null);
 create policy "workouts_delete" on st_workouts for delete using (auth.uid() is not null);
-
 create policy "exercises_all" on st_exercises for all using (auth.uid() is not null) with check (auth.uid() is not null);
 create policy "planned_sets_all" on st_planned_sets for all using (auth.uid() is not null) with check (auth.uid() is not null);
-
 create policy "set_logs_all" on st_set_logs for all using (user_id=auth.uid()) with check (user_id=auth.uid());
