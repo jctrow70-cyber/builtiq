@@ -1,25 +1,16 @@
-# BuiltIQ App Shell + Functional Strength
+# BuiltIQ v0.5.1 — Future Week Workout Updates
 
-This version creates the real BuiltIQ shell while keeping Strength/Training fully functional.
+This build fixes the key training issue: workout-structure edits can apply to:
 
-## Active
-- Dashboard shell
-- Training fully functional
-- Nutrition shell
-- Progress shell
-- Teams shell
-- Settings shell
-- Personal/team programs
-- Team roles: owner, editor, member
-- Owner can grant editor privileges
-- Team program edits push to all members
-- Members log only
-- Exercise reorder
-- Compact layout
-- Cloud-saved planned sets and logs
+- This week and all future weeks
+- This workout only
 
-## Install
-1. Replace repo files with this package.
+Default is future weeks.
+
+Applies to add/edit/remove/reorder exercises and add/edit/remove sets.
+
+Install:
+1. Replace repo files.
 2. Commit/push.
 3. Run `supabase-strength-team-schema.sql`.
 4. Redeploy Vercel.

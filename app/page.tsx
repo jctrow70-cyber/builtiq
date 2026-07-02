@@ -18,7 +18,7 @@ export default function Page(){
  const [teams,setTeams]=useState<any[]>([]),[team,setTeam]=useState<any>(null),[members,setMembers]=useState<any[]>([]),[mode,setMode]=useState<'personal'|'team'>('personal');
  const [programs,setPrograms]=useState<any[]>([]),[program,setProgram]=useState<any>(null),[programName,setProgramName]=useState('Strength Program'),[weeks,setWeeks]=useState(6);
  const [week,setWeek]=useState(1),[days,setDays]=useState(['Mon','Tue','Fri']),[dayTypes,setDayTypes]=useState<any>({Mon:'Lower Body',Tue:'Upper Body',Fri:'Full Body'}),[activeWorkout,setActiveWorkout]=useState('');
- const [logDate,setLogDate]=useState(today()),[logs,setLogs]=useState<any>({});
+ const [logDate,setLogDate]=useState(today()),[logs,setLogs]=useState<any>({}),[applyScope,setApplyScope]=useState<'current'|'future'>('future');
  const refs=useRef<any[]>([]);
 
  useEffect(()=>{supabase.auth.getSession().then(({data})=>setSession(data.session));const{data}=supabase.auth.onAuthStateChange((_e,s)=>setSession(s));return()=>data.subscription.unsubscribe()},[]);
@@ -45,17 +45,112 @@ export default function Page(){
  }
  async function loadLogs(p:any){const ids:any[]=[];(p.st_workouts||[]).forEach((w:any)=>(w.st_exercises||[]).forEach((e:any)=>(e.st_planned_sets||[]).forEach((s:any)=>ids.push(s.id)))); if(!ids.length){setLogs({});return} const{data}=await supabase.from('st_set_logs').select('*').in('planned_set_id',ids).eq('user_id',session.user.id).eq('log_date',logDate); const by:any={};(data||[]).forEach((l:any)=>by[l.planned_set_id]=l);setLogs(by);}
  async function generate(){if(mode==='team'&&!team)return alert('Create or join a team first.'); if(mode==='team'&&!canEdit())return alert('Only owner/editors can create team programs.'); const{data:p,error}=await supabase.from('st_programs').insert({owner_user_id:session.user.id,team_id:mode==='team'?team.id:null,visibility:mode,name:programName,weeks}).select().single(); if(error)return alert(error.message); const wr:any=[]; for(let w=1;w<=weeks;w++)days.forEach(d=>wr.push({program_id:p.id,week:w,day_order:DAYS.indexOf(d),day_label:d,workout_type:dayTypes[d]||'Full Body'})); const{data:ws,error:we}=await supabase.from('st_workouts').insert(wr).select(); if(we)return alert(we.message); for(const w of ws||[]){const list=DEFAULT[w.workout_type]||DEFAULT['Full Body']; const{data:exs,error:ee}=await supabase.from('st_exercises').insert(list.map((x:any,i:number)=>({workout_id:w.id,sort_order:i,name:x[0],muscle_group:x[1]}))).select(); if(ee)return alert(ee.message); for(const e of exs||[]){const t=list.find((x:any)=>x[0]===e.name)||list[0],sets=Number(t[2]),wt=Number(t[5]||0); const rows:any[]=[{sort_order:0,set_number:1,set_type:'warmup',target_weight:wt?String(Math.round(wt*.5/5)*5):'',target_reps:'8',target_rpe:'5'},{sort_order:1,set_number:2,set_type:'warmup',target_weight:wt?String(Math.round(wt*.7/5)*5):'',target_reps:'5',target_rpe:'6'}]; for(let i=0;i<sets;i++)rows.push({sort_order:i+10,set_number:i+1,set_type:'working',target_weight:String(t[5]||''),target_reps:t[3],target_rpe:t[4]}); await supabase.from('st_planned_sets').insert(rows.map(r=>({...r,exercise_id:e.id})));}} await loadPrograms();setAppNav('Training');}
- async function addExercise(wid:string){if(!canEdit())return alert('Only owner/editors can change the shared team program.'); const name=prompt('Exercise name'); if(!name)return; const muscle=prompt('Muscle group','')||''; const{data:e,error}=await supabase.from('st_exercises').insert({workout_id:wid,sort_order:99,name,muscle_group:muscle}).select().single(); if(error)return alert(error.message); await supabase.from('st_planned_sets').insert([{exercise_id:e.id,sort_order:10,set_number:1,set_type:'working',target_reps:'8-12',target_rpe:'8'},{exercise_id:e.id,sort_order:11,set_number:2,set_type:'working',target_reps:'8-12',target_rpe:'8'},{exercise_id:e.id,sort_order:12,set_number:3,set_type:'working',target_reps:'8-12',target_rpe:'8'}]); await loadPrograms();}
- async function editExercise(e:any){if(!canEdit())return alert('Only owner/editors can edit exercises.'); const name=prompt('Exercise',e.name); if(!name)return; const muscle=prompt('Muscle',e.muscle_group||'')||''; await supabase.from('st_exercises').update({name,muscle_group:muscle}).eq('id',e.id); await loadPrograms();}
- async function removeExercise(e:any){if(!canEdit())return alert('Only owner/editors can remove exercises.'); if(confirm('Remove exercise?')){await supabase.from('st_exercises').delete().eq('id',e.id); await loadPrograms();}}
- async function moveExercise(e:any,dir:number){if(!canEdit())return alert('Only owner/editors can reorder.'); await supabase.from('st_exercises').update({sort_order:(e.sort_order||0)+dir}).eq('id',e.id); await loadPrograms();}
- async function addSet(e:any){if(!canEdit())return alert('Only owner/editors can change planned sets.'); const type=prompt('Set type','working')||'working'; const n=Number(prompt('Set #','1')||1); await supabase.from('st_planned_sets').insert({exercise_id:e.id,sort_order:99,set_number:n,set_type:type,target_reps:'8-12',target_rpe:'8'}); await loadPrograms();}
- async function editSet(s:any,field:string,value:any){if(!canEdit())return alert('Only owner/editors can change planned sets.'); await supabase.from('st_planned_sets').update({[field]:value}).eq('id',s.id); await loadPrograms();}
- async function removeSet(s:any){if(!canEdit())return alert('Only owner/editors can remove planned sets.'); if(confirm('Remove planned set for everyone?')){await supabase.from('st_planned_sets').update({is_deleted:true}).eq('id',s.id); await loadPrograms();}}
+ async function addExercise(wid:string){
+ if(!canEdit())return alert('Only owner/editors can change the shared team program.');
+ const name=prompt('Exercise name'); if(!name)return;
+ const muscle=prompt('Muscle group','')||'';
+ const current=workout; if(!current)return;
+ const maxSort=Math.max(-1,...(current.st_exercises||[]).map((e:any)=>e.sort_order||0))+1;
+ for(const tw of targetWorkoutsFrom(current)){
+  const{data:e,error}=await supabase.from('st_exercises').insert({workout_id:tw.id,sort_order:maxSort,name,muscle_group:muscle}).select().single();
+  if(error)return alert(error.message);
+  await supabase.from('st_planned_sets').insert([
+   {exercise_id:e.id,sort_order:10,set_number:1,set_type:'working',target_reps:'8-12',target_rpe:'8'},
+   {exercise_id:e.id,sort_order:11,set_number:2,set_type:'working',target_reps:'8-12',target_rpe:'8'},
+   {exercise_id:e.id,sort_order:12,set_number:3,set_type:'working',target_reps:'8-12',target_rpe:'8'}
+  ]);
+ }
+ await reloadKeepDay();
+}
+ async function editExercise(e:any){
+ if(!canEdit())return alert('Only owner/editors can edit exercises.');
+ const name=prompt('Exercise',e.name); if(!name)return;
+ const muscle=prompt('Muscle',e.muscle_group||'')||'';
+ for(const tw of targetWorkoutsFrom(workout)){
+  const match=matchingExercise(tw,e);
+  if(match) await supabase.from('st_exercises').update({name,muscle_group:muscle}).eq('id',match.id);
+ }
+ await reloadKeepDay();
+}
+ async function removeExercise(e:any){
+ if(!canEdit())return alert('Only owner/editors can remove exercises.');
+ const msg=applyScope==='future'?'Remove this exercise from this week and all future weeks?':'Remove this exercise from this workout only?';
+ if(confirm(msg)){
+  for(const tw of targetWorkoutsFrom(workout)){
+   const match=matchingExercise(tw,e);
+   if(match) await supabase.from('st_exercises').delete().eq('id',match.id);
+  }
+  await reloadKeepDay();
+ }
+}
+ async function moveExercise(e:any,dir:number){
+ if(!canEdit())return alert('Only owner/editors can reorder.');
+ const newSort=(e.sort_order||0)+dir;
+ for(const tw of targetWorkoutsFrom(workout)){
+  const match=matchingExercise(tw,e);
+  if(match) await supabase.from('st_exercises').update({sort_order:newSort}).eq('id',match.id);
+ }
+ await reloadKeepDay();
+}
+ async function addSet(e:any){
+ if(!canEdit())return alert('Only owner/editors can change planned sets.');
+ const type=prompt('Set type','working')||'working';
+ const n=Number(prompt('Set #','1')||1);
+ const sort_order=Math.max(0,...(e.st_planned_sets||[]).map((s:any)=>s.sort_order||0))+1;
+ for(const tw of targetWorkoutsFrom(workout)){
+  const targetEx=matchingExercise(tw,e);
+  if(targetEx) await supabase.from('st_planned_sets').insert({exercise_id:targetEx.id,sort_order,set_number:n,set_type:type,target_reps:'8-12',target_rpe:'8'});
+ }
+ await reloadKeepDay();
+}
+ async function editSet(s:any,field:string,value:any){
+ if(!canEdit())return alert('Only owner/editors can change planned sets.');
+ const ex=(workout?.st_exercises||[]).find((e:any)=>(e.st_planned_sets||[]).some((ps:any)=>ps.id===s.id));
+ if(!ex)return;
+ for(const tw of targetWorkoutsFrom(workout)){
+  const targetEx=matchingExercise(tw,ex);
+  const targetSet=targetEx?matchingSet(targetEx,s):null;
+  if(targetSet) await supabase.from('st_planned_sets').update({[field]:value}).eq('id',targetSet.id);
+ }
+ await reloadKeepDay();
+}
+ async function removeSet(s:any){
+ if(!canEdit())return alert('Only owner/editors can remove planned sets.');
+ const ex=(workout?.st_exercises||[]).find((e:any)=>(e.st_planned_sets||[]).some((ps:any)=>ps.id===s.id));
+ if(!ex)return;
+ for(const tw of targetWorkoutsFrom(workout)){
+  const targetEx=matchingExercise(tw,ex);
+  const targetSet=targetEx?matchingSet(targetEx,s):null;
+  if(targetSet) await supabase.from('st_planned_sets').update({is_deleted:true}).eq('id',targetSet.id);
+ }
+ await reloadKeepDay();
+}
  async function saveLog(sid:string,field:string,value:any){const old=logs[sid]||{}; const payload={planned_set_id:sid,user_id:session.user.id,log_date:logDate,actual_weight:field==='actual_weight'?value:old.actual_weight||'',actual_reps:field==='actual_reps'?value:old.actual_reps||'',actual_rpe:field==='actual_rpe'?value:old.actual_rpe||'',completed:true}; const{data,error}=await supabase.from('st_set_logs').upsert(payload,{onConflict:'planned_set_id,user_id,log_date'}).select().single(); if(error)return alert(error.message); setLogs({...logs,[sid]:data});}
  async function setRole(member:any,role:string){if(!isOwner())return alert('Only owner can change roles.'); await supabase.from('st_team_members').update({role}).eq('id',member.id); await loadMembers(); await loadTeams();}
  function next(e:any){if(e.key==='Enter'||e.key==='ArrowRight'){e.preventDefault(); const i=refs.current.indexOf(e.currentTarget); if(refs.current[i+1])refs.current[i+1].focus();}}
- const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sort((a:any,b:any)=>a.day_order-b.day_order);
+ async function reloadKeepDay(){
+  const keep = activeWorkout;
+  await loadPrograms();
+  if(keep) setActiveWorkout(keep);
+}
+
+function targetWorkoutsFrom(current:any){
+  if(!current) return [];
+  const all=(program?.st_workouts||[]).filter((w:any)=>w.day_order===current.day_order);
+  return applyScope==='future'
+    ? all.filter((w:any)=>w.week>=current.week).sort((a:any,b:any)=>a.week-b.week)
+    : [current];
+}
+function matchingExercise(targetWorkout:any, sourceExercise:any){
+  return (targetWorkout.st_exercises||[]).find((e:any)=>e.sort_order===sourceExercise.sort_order)
+    || (targetWorkout.st_exercises||[]).find((e:any)=>e.name===sourceExercise.name);
+}
+function matchingSet(targetExercise:any, sourceSet:any){
+  return (targetExercise.st_planned_sets||[]).find((s:any)=>s.sort_order===sourceSet.sort_order)
+    || (targetExercise.st_planned_sets||[]).find((s:any)=>s.set_type===sourceSet.set_type && s.set_number===sourceSet.set_number);
+}
+
+const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sort((a:any,b:any)=>a.day_order-b.day_order);
  const workout=weekWorkouts.find((w:any)=>w.id===activeWorkout)||weekWorkouts[0];
  const planned=(workout?.st_exercises||[]).reduce((n:number,e:any)=>n+(e.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).length,0);
  const logged=Object.values(logs).filter((x:any)=>x.completed).length;
@@ -81,6 +176,7 @@ export default function Page(){
   {appNav==='Settings'&&<section><div className="card"><h2>Settings</h2><label>Name</label><input value={displayName} onChange={e=>setDisplayName(e.target.value)}/><p className="muted">More settings coming later.</p></div></section>}
   {appNav==='Teams'&&<section><div className="card"><h2>BuiltIQ Teams</h2><p className="muted">Owner/editor can edit shared plans. Members log only.</p><div className="actions"><button className="btn secondary" onClick={createTeam}>Create Team</button><button className="btn secondary" onClick={joinTeam}>Join Team</button><button className="btn secondary" onClick={loadMembers}>Refresh Members</button></div>{team&&<p className="muted" style={{marginTop:8}}>Active: <b>{team.name}</b> · Invite: <b>{team.invite_code}</b> · Role: <b>{team.my_role}</b></p>}</div>{members.length>0&&<div className="card"><h2>Members</h2>{members.map((m:any)=><div key={m.id} className="topline" style={{justifyContent:'space-between',marginTop:6}}><span>{m.display_name||m.user_id.slice(0,6)}</span><select disabled={!isOwner()||m.user_id===session.user.id} value={m.role} onChange={e=>setRole(m,e.target.value)} style={{maxWidth:115}}><option>owner</option><option>editor</option><option>member</option></select></div>)}</div>}</section>}
   {appNav==='Training'&&<section>
+    <div className="applybox"><label>When changing workout structure, apply edits to:</label><select value={applyScope} onChange={e=>setApplyScope(e.target.value as any)}><option value="future">This week and all future weeks</option><option value="current">This workout only</option></select><p className="muted">Default is future weeks, so changes carry forward in the plan.</p></div>
     <div className="stats"><div className="stat"><span className="muted">Mode</span><b>{mode==='team'?'Team':'Personal'}</b></div><div className="stat"><span className="muted">Week</span><b>{week}</b></div><div className="stat"><span className="muted">Sets</span><b>{planned}</b></div><div className="stat"><span className="muted">Logged</span><b>{logged}</b></div></div>
     <div className="row"><div><label>Date</label><input type="date" value={logDate} onChange={e=>setLogDate(e.target.value)}/></div><div><label>Week</label><select value={week} onChange={e=>setWeek(Number(e.target.value))}>{Array.from({length:program?.weeks||weeks},(_,i)=><option key={i+1} value={i+1}>Week {i+1}</option>)}</select></div></div>
     <div className="tabs">{(program?.st_workouts||[]).filter((w:any)=>w.week===week).sort((a:any,b:any)=>a.day_order-b.day_order).map((w:any)=><button key={w.id} className={workout?.id===w.id?'active':''} onClick={()=>setActiveWorkout(w.id)}>{w.day_label} · {w.workout_type}</button>)}</div>
