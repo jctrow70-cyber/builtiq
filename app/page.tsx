@@ -18,13 +18,14 @@ export default function Page(){
  const [teams,setTeams]=useState<any[]>([]),[team,setTeam]=useState<any>(null),[members,setMembers]=useState<any[]>([]),[mode,setMode]=useState<'personal'|'team'>('personal');
  const [programs,setPrograms]=useState<any[]>([]),[program,setProgram]=useState<any>(null),[programName,setProgramName]=useState('Strength Program'),[weeks,setWeeks]=useState(6);
  const [week,setWeek]=useState(1),[days,setDays]=useState(['Mon','Tue','Fri']),[dayTypes,setDayTypes]=useState<any>({Mon:'Lower Body',Tue:'Upper Body',Fri:'Full Body'}),[activeWorkout,setActiveWorkout]=useState('');
- const [logDate,setLogDate]=useState(today()),[logs,setLogs]=useState<any>({}),[applyScope,setApplyScope]=useState<'current'|'future'>('future');
+ const [logDate,setLogDate]=useState(today()),[logs,setLogs]=useState<any>({}),[history,setHistory]=useState<any>({}),[applyScope,setApplyScope]=useState<'current'|'future'>('future');
  const refs=useRef<any[]>([]);
 
  useEffect(()=>{supabase.auth.getSession().then(({data})=>setSession(data.session));const{data}=supabase.auth.onAuthStateChange((_e,s)=>setSession(s));return()=>data.subscription.unsubscribe()},[]);
  useEffect(()=>{if(session?.user) boot()},[session]);
  useEffect(()=>{if(profile) loadPrograms()},[mode,team,profile]);
  useEffect(()=>{if(program) loadLogs(program)},[program,logDate]);
+ useEffect(()=>{if(program) loadLiftHistory()},[program,logDate,session]);
 
  async function boot(){await loadProfile(); await loadTeams();}
  async function signIn(){const{error}=await supabase.auth.signInWithPassword({email,password}); if(error)alert(error.message)}
@@ -44,6 +45,58 @@ export default function Page(){
   const first=(data||[])[0]?.st_workouts?.sort((a:any,b:any)=>a.week-b.week||a.day_order-b.day_order)?.[0]; if(first)setActiveWorkout(first.id);
  }
  async function loadLogs(p:any){const ids:any[]=[];(p.st_workouts||[]).forEach((w:any)=>(w.st_exercises||[]).forEach((e:any)=>(e.st_planned_sets||[]).forEach((s:any)=>ids.push(s.id)))); if(!ids.length){setLogs({});return} const{data}=await supabase.from('st_set_logs').select('*').in('planned_set_id',ids).eq('user_id',session.user.id).eq('log_date',logDate); const by:any={};(data||[]).forEach((l:any)=>by[l.planned_set_id]=l);setLogs(by);}
+
+ async function loadLiftHistory(){
+  if(!session?.user) return;
+
+  const { data, error } = await supabase
+    .from('st_set_logs')
+    .select('*, st_planned_sets(set_type,set_number,st_exercises(name,muscle_group))')
+    .eq('user_id', session.user.id)
+    .lt('log_date', logDate)
+    .eq('completed', true)
+    .order('log_date', { ascending:false })
+    .order('updated_at', { ascending:false })
+    .limit(500);
+
+  if(error){
+    console.warn(error.message);
+    return;
+  }
+
+  const by:any = {};
+  (data || []).forEach((row:any)=>{
+    const ex = row.st_planned_sets?.st_exercises;
+    const ps = row.st_planned_sets;
+    if(!ex || !ps) return;
+
+    const exerciseKey = String(ex.name || '').toLowerCase().trim();
+    const setKey = `${exerciseKey}|${ps.set_type}|${ps.set_number}`;
+
+    if(!by[exerciseKey]) by[exerciseKey] = [];
+    by[exerciseKey].push(row);
+
+    if(!by[setKey]) by[setKey] = row;
+  });
+
+  setHistory(by);
+ }
+
+ function previousFor(ex:any, set:any){
+  const exerciseKey = String(ex.name || '').toLowerCase().trim();
+  const setKey = `${exerciseKey}|${set.set_type}|${set.set_number}`;
+  return history[setKey] || null;
+ }
+
+ function exerciseLastSummary(ex:any){
+  const exerciseKey = String(ex.name || '').toLowerCase().trim();
+  const rows = history[exerciseKey] || [];
+  if(!rows.length) return '';
+  const latestDate = rows[0].log_date;
+  const sameDay = rows.filter((r:any)=>r.log_date === latestDate).slice(0,4);
+  return sameDay.map((r:any)=>`${r.actual_weight || '-'} x ${r.actual_reps || '-'}`).join(' · ');
+ }
+
  async function generate(){if(mode==='team'&&!team)return alert('Create or join a team first.'); if(mode==='team'&&!canEdit())return alert('Only owner/editors can create team programs.'); const{data:p,error}=await supabase.from('st_programs').insert({owner_user_id:session.user.id,team_id:mode==='team'?team.id:null,visibility:mode,name:programName,weeks}).select().single(); if(error)return alert(error.message); const wr:any=[]; for(let w=1;w<=weeks;w++)days.forEach(d=>wr.push({program_id:p.id,week:w,day_order:DAYS.indexOf(d),day_label:d,workout_type:dayTypes[d]||'Full Body'})); const{data:ws,error:we}=await supabase.from('st_workouts').insert(wr).select(); if(we)return alert(we.message); for(const w of ws||[]){const list=DEFAULT[w.workout_type]||DEFAULT['Full Body']; const{data:exs,error:ee}=await supabase.from('st_exercises').insert(list.map((x:any,i:number)=>({workout_id:w.id,sort_order:i,name:x[0],muscle_group:x[1]}))).select(); if(ee)return alert(ee.message); for(const e of exs||[]){const t=list.find((x:any)=>x[0]===e.name)||list[0],sets=Number(t[2]),wt=Number(t[5]||0); const rows:any[]=[{sort_order:0,set_number:1,set_type:'warmup',target_weight:wt?String(Math.round(wt*.5/5)*5):'',target_reps:'8',target_rpe:'5'},{sort_order:1,set_number:2,set_type:'warmup',target_weight:wt?String(Math.round(wt*.7/5)*5):'',target_reps:'5',target_rpe:'6'}]; for(let i=0;i<sets;i++)rows.push({sort_order:i+10,set_number:i+1,set_type:'working',target_weight:String(t[5]||''),target_reps:t[3],target_rpe:t[4]}); await supabase.from('st_planned_sets').insert(rows.map(r=>({...r,exercise_id:e.id})));}} await loadPrograms();setAppNav('Training');}
  async function addExercise(wid:string){
  if(!canEdit())return alert('Only owner/editors can change the shared team program.');
@@ -182,7 +235,7 @@ const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sor
     <div className="tabs">{(program?.st_workouts||[]).filter((w:any)=>w.week===week).sort((a:any,b:any)=>a.day_order-b.day_order).map((w:any)=><button key={w.id} className={workout?.id===w.id?'active':''} onClick={()=>setActiveWorkout(w.id)}>{w.day_label} · {w.workout_type}</button>)}</div>
     {!program&&<div className="card"><h2>No program yet</h2><p className="muted">Generate a program from the left panel.</p></div>}
     {workout&&<div className="card"><div className="topline" style={{justifyContent:'space-between'}}><h2>{workout.day_label} · {workout.workout_type}</h2>{canEdit()&&<button className="btn small secondary" onClick={()=>addExercise(workout.id)}>Add Exercise</button>}</div></div>}
-    {(workout?.st_exercises||[]).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0)).map((ex:any)=><div className="card" key={ex.id}><div className="exercise-head"><div><h3>{ex.name}</h3><span className="badge">{ex.muscle_group||'Muscle'}</span></div>{canEdit()&&<div className="actions"><button className="btn small secondary" onClick={()=>moveExercise(ex,-1)}>↑</button><button className="btn small secondary" onClick={()=>moveExercise(ex,1)}>↓</button><button className="btn small secondary" onClick={()=>editExercise(ex)}>Edit</button><button className="btn small red" onClick={()=>removeExercise(ex)}>X</button></div>}</div>{canEdit()&&<button className="btn small secondary" onClick={()=>addSet(ex)}>Add Set</button>}<div className="setgrid muted"><b>Type</b><b>#</b><b>Wt</b><b>Reps</b><b>RPE</b><b>Plan</b></div>{(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0)).map((s:any)=>{const l=logs[s.id]||{};return <div className="setgrid" key={s.id}><select disabled={!canEdit()} value={s.set_type} onChange={e=>editSet(s,'set_type',e.target.value)}><option>warmup</option><option>working</option><option>backoff</option><option>dropset</option><option>amrap</option></select><input disabled={!canEdit()} value={s.set_number} onChange={e=>editSet(s,'set_number',Number(e.target.value))}/><input ref={el=>{if(el&&!refs.current.includes(el))refs.current.push(el)}} onKeyDown={next} placeholder={s.target_weight||'lb'} defaultValue={l.actual_weight||''} onBlur={e=>saveLog(s.id,'actual_weight',e.target.value)}/><input ref={el=>{if(el&&!refs.current.includes(el))refs.current.push(el)}} onKeyDown={next} placeholder={s.target_reps||'reps'} defaultValue={l.actual_reps||''} onBlur={e=>saveLog(s.id,'actual_reps',e.target.value)}/><input ref={el=>{if(el&&!refs.current.includes(el))refs.current.push(el)}} onKeyDown={next} placeholder={s.target_rpe||'rpe'} defaultValue={l.actual_rpe||''} onBlur={e=>saveLog(s.id,'actual_rpe',e.target.value)}/>{canEdit()?<button className="btn small red" onClick={()=>removeSet(s)}>X</button>:<span className="muted">log</span>}</div>})}</div>)}
+    {(workout?.st_exercises||[]).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0)).map((ex:any)=><div className="card" key={ex.id}><div className="exercise-head"><div><h3>{ex.name}</h3><span className="badge">{ex.muscle_group||'Muscle'}</span>{exerciseLastSummary(ex)&&<div className="prevline">Last time: {exerciseLastSummary(ex)}</div>}</div>{canEdit()&&<div className="actions"><button className="btn small secondary" onClick={()=>moveExercise(ex,-1)}>↑</button><button className="btn small secondary" onClick={()=>moveExercise(ex,1)}>↓</button><button className="btn small secondary" onClick={()=>editExercise(ex)}>Edit</button><button className="btn small red" onClick={()=>removeExercise(ex)}>X</button></div>}</div>{canEdit()&&<button className="btn small secondary" onClick={()=>addSet(ex)}>Add Set</button>}<div className="setgrid muted"><b>Type</b><b>#</b><b>Wt</b><b>Reps</b><b>RPE</b><b>Plan</b></div>{(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0)).map((s:any)=>{const l=logs[s.id]||{};const prev=previousFor(ex,s);return <div className="setgrid" key={s.id}><select disabled={!canEdit()} value={s.set_type} onChange={e=>editSet(s,'set_type',e.target.value)}><option>warmup</option><option>working</option><option>backoff</option><option>dropset</option><option>amrap</option></select><input disabled={!canEdit()} value={s.set_number} onChange={e=>editSet(s,'set_number',Number(e.target.value))}/><input ref={el=>{if(el&&!refs.current.includes(el))refs.current.push(el)}} onKeyDown={next} placeholder={prev?.actual_weight?`last ${prev.actual_weight}`:(s.target_weight||'lb')} defaultValue={l.actual_weight||''} onBlur={e=>saveLog(s.id,'actual_weight',e.target.value)}/><input ref={el=>{if(el&&!refs.current.includes(el))refs.current.push(el)}} onKeyDown={next} placeholder={prev?.actual_reps?`last ${prev.actual_reps}`:(s.target_reps||'reps')} defaultValue={l.actual_reps||''} onBlur={e=>saveLog(s.id,'actual_reps',e.target.value)}/><input ref={el=>{if(el&&!refs.current.includes(el))refs.current.push(el)}} onKeyDown={next} placeholder={prev?.actual_rpe?`last ${prev.actual_rpe}`:(s.target_rpe||'rpe')} defaultValue={l.actual_rpe||''} onBlur={e=>saveLog(s.id,'actual_rpe',e.target.value)}/>{canEdit()?<button className="btn small red" onClick={()=>removeSet(s)}>X</button>:<span className="muted">log</span>}</div>})}</div>)}
   </section>}
  </main></div></>
 }

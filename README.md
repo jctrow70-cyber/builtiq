@@ -1,17 +1,25 @@
-# BuiltIQ v0.5.1 — Future Week Workout Updates
+# BuiltIQ v0.5.2 — Individual Lift History
 
-This build fixes the key training issue: workout-structure edits can apply to:
+This update fixes week-to-week strength tracking for team members.
 
-- This week and all future weeks
-- This workout only
+## What changed
+- Each user/team member sees their own previous logged weights and reps.
+- Workout rows show previous values as placeholders:
+  - `last 185`
+  - `last 8`
+- Each exercise shows a "Last time" summary.
+- Progress tab displays individual lift history for the signed-in user.
+- Team plan structure remains shared.
+- Actual logs remain individual by user.
 
-Default is future weeks.
+## Important
+This does not overwrite anyone else's numbers. Jesse, wife, and son each log and view their own history.
 
-Applies to add/edit/remove/reorder exercises and add/edit/remove sets.
+## Database
+No schema change from v0.5.1.
 
-Install:
+## Install
 1. Replace repo files.
 2. Commit/push.
-3. Run `supabase-strength-team-schema.sql`.
-4. Redeploy Vercel.
-5. Hard refresh.
+3. Redeploy Vercel.
+4. Hard refresh.
