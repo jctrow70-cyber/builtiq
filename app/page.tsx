@@ -528,11 +528,15 @@ const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sor
  const trainingModeStat=<div className="stat"><span className="muted">Plan</span><b>{mode==='team'?(activeTeam?.training_source==='personal'?'Personal':'Team'):'Personal'}</b></div>;
  const renderExerciseCard=(ex:any,inSuperset=false)=><div className={`card exercise-card${inSuperset?' in-superset':''}`} key={ex.id}>
         <div className="exercise-head"><div className="exercise-meta">{canEdit()?<>
-          <input className="exercise-name" defaultValue={ex.name} onBlur={e=>{if(e.target.value.trim()&&e.target.value!==ex.name)updateExerciseField(ex,'name',e.target.value.trim());}}/>
-          <input className="exercise-muscle" placeholder="Muscle group" defaultValue={ex.muscle_group||''} onBlur={e=>{if((e.target.value||'')!==(ex.muscle_group||''))updateExerciseField(ex,'muscle_group',e.target.value);}}/>
+          <div className="exercise-title-row">
+            <input className="exercise-name" defaultValue={ex.name} onBlur={e=>{if(e.target.value.trim()&&e.target.value!==ex.name)updateExerciseField(ex,'name',e.target.value.trim());}}/>
+            <input className="exercise-muscle" placeholder="Muscle" defaultValue={ex.muscle_group||''} onBlur={e=>{if((e.target.value||'')!==(ex.muscle_group||''))updateExerciseField(ex,'muscle_group',e.target.value);}}/>
+          </div>
         </>:<>
-          <h3>{ex.name}</h3>
-          <span className="badge">{ex.muscle_group||'Muscle'}</span>
+          <div className="exercise-title-row">
+            <h3 className="exercise-name-text">{ex.name}</h3>
+            <span className="badge exercise-muscle-badge">{ex.muscle_group||'Muscle'}</span>
+          </div>
         </>}{exerciseLastSummary(ex)&&<div className="prevline">Last time: {exerciseLastSummary(ex)}</div>}</div>
         {canEdit()&&<div className="actions"><button className="btn small secondary" title="Move up" onClick={()=>moveExercise(ex,-1)}>↑</button><button className="btn small secondary" title="Move down" onClick={()=>moveExercise(ex,1)}>↓</button><button className="btn small secondary" onClick={()=>addSet(ex)}>+ Set</button><button className="btn small red" onClick={()=>removeExercise(ex)}>Remove</button></div>}
         </div>

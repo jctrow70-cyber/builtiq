@@ -20,10 +20,13 @@
 .section-head h2{margin:0;font-size:15px;color:#e5e7eb}
 .section-empty{padding:8px 4px 12px}
 .exercise-card{margin-bottom:10px}
-.exercise-meta{display:grid;gap:6px}
-.exercise-name,.exercise-muscle{font-weight:800}
-.exercise-name{font-size:16px}
-.exercise-muscle{font-size:12px;color:#cbd5e1}
+.exercise-meta{display:flex;flex-direction:column;gap:4px;min-width:0}
+.exercise-title-row{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}
+.exercise-name-text{margin:0;font-size:15px;font-weight:800;flex:1;min-width:0;line-height:1.2}
+.exercise-muscle-badge{flex-shrink:0;margin:0}
+.exercise-name,.exercise-muscle{width:auto;font-weight:800;padding:6px 8px}
+.exercise-name{flex:1 1 auto;min-width:0;font-size:15px}
+.exercise-muscle{flex:0 1 120px;min-width:84px;font-size:12px;color:#cbd5e1}
 .add-exercise-row{display:grid;grid-template-columns:1.4fr 1fr auto;gap:6px;margin:8px 0 4px}
 .catalog-picker{margin:8px 0 12px;padding:10px;border:1px solid var(--line);border-radius:14px;background:#101827}
 .catalog-results{display:grid;gap:6px;margin-top:8px;max-height:220px;overflow:auto}
