@@ -202,3 +202,29 @@ Logs were tied to live template rows. Deleting or renaming exercises could destr
 ### Impact
 
 Progress and Training history read snapshot fields first. Template edits no longer delete completed logs. New logs must include `snapshot_exercise_name` on insert (enforced by RLS).
+
+---
+
+## Decision 008 - Exercise Catalog (System + User)
+
+Date: 2026-07-07  
+Status: Accepted  
+Category: Workout Data Model
+
+### Decision
+
+Introduce `st_exercise_catalog` as the canonical exercise library. BuiltIQ seeds **system exercises** (`is_system = true`, `user_id = null`) available to all users. Users may create **custom exercises** (`is_system = false`, `user_id = auth.uid()`) visible only to themselves. Workout template rows (`st_exercises`) link via `catalog_exercise_id`. Set logs store both `snapshot_catalog_exercise_id` and `snapshot_exercise_name` at save time.
+
+### Reason
+
+Progress accuracy requires a stable exercise identity across programs, renames, and template edits. Name-only matching splits history and blocks reliable PR tracking. Snapshots preserve what the user saw when logging; catalog IDs enable aggregation.
+
+### Alternatives Considered
+
+- Name-only snapshots without catalog (insufficient for cross-program progress)
+- Per-program exercise libraries (duplicated data, no reuse)
+- Shared user-created exercises across teams (privacy/complexity; deferred)
+
+### Impact
+
+Training search reads system + own custom exercises. Settings manages custom exercise lifecycle (edit, archive). History keys prefer catalog ID with legacy name fallback. System exercises are read-only for normal users. Future PR charts and muscle-group analytics can use catalog metadata (`muscle_group`, `equipment`, `movement_pattern`).
