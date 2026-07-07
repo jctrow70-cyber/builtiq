@@ -190,17 +190,18 @@ Goal: Prepare BuiltIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
-Phase 2 security hardening (BIQ-0002) and initial workout section work (BIQ-0004) are complete on `develop`.
+Phase 2 security hardening (BIQ-0002), workout sections (BIQ-0004), and workout history snapshots (BIQ-0003) are complete on `develop`.
 
 Next priorities:
 
-1. **BIQ-0003** — Workout history stability (completed workout snapshots)
-2. Progress tab — surface lift history already loaded in Training
-3. Settings — persist display name to Supabase
-4. Plyometrics / Power workout section (after warmup/strength is stable)
+1. Settings — persist display name to Supabase
+2. Plyometrics / Power workout section
+3. PR detection and strength trends on Progress tab
+4. Split `page.tsx` into focused components
 
 Run pending Supabase migrations on each environment before testing:
 
 - `20250707_001_tighten_strength_team_rls.sql`
 - `20250707_002_fix_team_join_rls.sql`
 - `20250707_003_exercise_sections.sql`
+- `20250707_004_set_log_snapshots.sql`

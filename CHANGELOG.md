@@ -131,47 +131,64 @@ BIQ-0002 Harden strength/team RLS and secure team join flow
 
 ## BIQ-0003 - Workout History Stability
 
-Date: TBD  
+Date: 2026-07-07  
 Branch: develop  
-Status: Planned
+Status: Completed
 
 ### Summary
 
-Improve workout history so completed workouts remain accurate even when templates or exercises change later.
+Completed workout logs now store snapshot metadata at save time and survive template edits or exercise removal. Progress tab shows saved lift history from snapshots.
 
 ### Purpose
 
-Workout history must be reliable. A completed workout should represent exactly what the user did at that time.
+Workout history must be reliable. A completed workout should represent exactly what the user did at that time, even when program templates change later.
 
 ### Changes
 
-TBD.
+- Added snapshot columns to `st_set_logs` (exercise name, muscle, section, set info, targets, workout day/type)
+- Backfill snapshots for existing logs where template data still exists
+- Changed `planned_set_id` foreign key to `ON DELETE SET NULL` so logs are not deleted when templates change
+- Updated set log RLS to allow reading snapshot-only rows after template removal
+- `saveLog()` writes snapshot fields on every upsert
+- Lift history (`Last time`, placeholders) prefers snapshot fields with legacy join fallback
+- Progress tab lists completed sets grouped by date and exercise using snapshots
 
 ### Files Changed
 
-TBD.
+- `app/page.tsx`
+- `app/globals.css`
+- `supabase/migrations/20250707_004_set_log_snapshots.sql`
+- `CHANGELOG.md`
+- `DECISIONS.md`
 
 ### Database Changes
 
-TBD.
+Run in Supabase SQL Editor:
+
+- `supabase/migrations/20250707_004_set_log_snapshots.sql`
+
+Adds snapshot columns, backfills existing logs, changes FK to `SET NULL`, updates set log RLS policies.
 
 ### Testing Steps
 
-- Create workout template
-- Complete workout from template
-- Save completed workout
-- Edit original template
-- Confirm saved workout history does not change
-- Confirm old workout still displays correctly
+- Run migration `20250707_004_set_log_snapshots.sql`
+- Log sets for an exercise in Training
+- Open Progress — confirm date, exercise, and logged weight/reps appear
+- As owner/editor, rename or remove that exercise from the template
+- Refresh Progress — logged history still shows original exercise name and numbers
+- Training placeholders (`last 185`, etc.) still work for remaining template exercises
+- Sign out/in — history persists for the same user only
 
 ### Known Issues
 
-TBD.
+- Logs saved before migration rely on backfill; orphaned logs without snapshots may not appear in history
+- Editing a log after its planned set was removed is not supported (read-only orphaned rows)
+- PR charts and trends still planned for a later phase
 
 ### Recommended Commit Message
 
 ```text
-BIQ-0003 Stabilize workout history behavior
+BIQ-0003 Stabilize workout history with set log snapshots
 ```
 
 ---
@@ -228,7 +245,6 @@ Adds `st_exercises.section` (default `strength`) and index on `(workout_id, sect
 
 - Programs created before this change do not automatically get warmup section exercises
 - Plyometrics / Power section not added yet (future change)
-- Completed workout snapshots (BIQ-0003) not implemented — template edits can still affect historical context via `planned_set_id`
 
 ### Recommended Commit Message
 

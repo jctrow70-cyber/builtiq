@@ -25,6 +25,11 @@ const exerciseSection=(ex:any)=>ex?.section||'strength';
 const sectionExercises=(workout:any,section:string)=>(workout?.st_exercises||[]).filter((e:any)=>exerciseSection(e)===section).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));
 const nextSortOrder=(workout:any,section:string)=>{const list=sectionExercises(workout,section);const base=SECTION_SORT_BASE[section]??100;return list.length?Math.max(...list.map((e:any)=>e.sort_order||0))+1:base;};
 const buildPlannedSetRows=(item:any[],section:string)=>{const sets=Number(item[2]||1),reps=item[3]||'',rpe=item[4]||'',wt=item[5]||'';const rows:any[]=[];for(let i=0;i<sets;i++)rows.push({sort_order:i,set_number:i+1,set_type:'working',target_weight:section==='strength'?String(wt||''):'',target_reps:reps,target_rpe:section==='strength'?rpe:'5'});return rows;};
+const logExerciseName=(row:any,joinEx?:any)=>String(row.snapshot_exercise_name||joinEx?.name||'').trim();
+const logSetType=(row:any,joinPs?:any)=>row.snapshot_set_type||joinPs?.set_type||'working';
+const logSetNumber=(row:any,joinPs?:any)=>row.snapshot_set_number??joinPs?.set_number??1;
+const logHistoryKeys=(row:any)=>{const joinEx=row.st_planned_sets?.st_exercises;const joinPs=row.st_planned_sets;const exerciseKey=logExerciseName(row,joinEx).toLowerCase();const setKey=`${exerciseKey}|${logSetType(row,joinPs)}|${logSetNumber(row,joinPs)}`;return {exerciseKey,setKey};};
+const snapshotForLog=(ex:any,set:any,workoutRef:any)=>({snapshot_exercise_name:ex?.name||'',snapshot_muscle_group:ex?.muscle_group||'',snapshot_section:exerciseSection(ex),snapshot_set_type:set?.set_type||'working',snapshot_set_number:set?.set_number||1,snapshot_target_weight:set?.target_weight||'',snapshot_target_reps:set?.target_reps||'',snapshot_target_rpe:set?.target_rpe||'',snapshot_day_label:workoutRef?.day_label||'',snapshot_workout_type:workoutRef?.workout_type||''});
 const today=()=>new Date().toISOString().slice(0,10);
 const makeInviteCode=()=>(typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID().replace(/-/g,'').slice(0,8):Math.random().toString(36).slice(2,10)).toUpperCase();
 
@@ -36,6 +41,7 @@ export default function Page(){
  const [week,setWeek]=useState(1),[days,setDays]=useState(['Mon','Tue','Fri']),[dayTypes,setDayTypes]=useState<any>({Mon:'Lower Body',Tue:'Upper Body',Fri:'Full Body'}),[activeWorkout,setActiveWorkout]=useState('');
  const [logDate,setLogDate]=useState(today()),[logs,setLogs]=useState<any>({}),[history,setHistory]=useState<any>({}),[applyScope,setApplyScope]=useState<'current'|'future'>('future');
  const [exDraft,setExDraft]=useState<any>({warmup:{name:'',muscle:''},strength:{name:'',muscle:''}});
+ const [progressLogs,setProgressLogs]=useState<any[]>([]);
  const refs=useRef<any[]>([]);
 
  useEffect(()=>{supabase.auth.getSession().then(({data})=>setSession(data.session));const{data}=supabase.auth.onAuthStateChange((_e,s)=>setSession(s));return()=>data.subscription.unsubscribe()},[]);
@@ -78,7 +84,7 @@ export default function Page(){
 
   const { data, error } = await supabase
     .from('st_set_logs')
-    .select('*, st_planned_sets(set_type,set_number,st_exercises(name,muscle_group))')
+    .select('*, st_planned_sets(set_type,set_number,st_exercises(name,muscle_group,section))')
     .eq('user_id', session.user.id)
     .lt('log_date', logDate)
     .eq('completed', true)
@@ -93,12 +99,8 @@ export default function Page(){
 
   const by:any = {};
   (data || []).forEach((row:any)=>{
-    const ex = row.st_planned_sets?.st_exercises;
-    const ps = row.st_planned_sets;
-    if(!ex || !ps) return;
-
-    const exerciseKey = String(ex.name || '').toLowerCase().trim();
-    const setKey = `${exerciseKey}|${ps.set_type}|${ps.set_number}`;
+    const { exerciseKey, setKey } = logHistoryKeys(row);
+    if(!exerciseKey) return;
 
     if(!by[exerciseKey]) by[exerciseKey] = [];
     by[exerciseKey].push(row);
@@ -107,6 +109,20 @@ export default function Page(){
   });
 
   setHistory(by);
+ }
+
+ async function loadProgressLogs(){
+  if(!session?.user) return;
+  const { data, error } = await supabase
+    .from('st_set_logs')
+    .select('*')
+    .eq('user_id', session.user.id)
+    .eq('completed', true)
+    .order('log_date', { ascending:false })
+    .order('updated_at', { ascending:false })
+    .limit(300);
+  if(error) return console.warn(error.message);
+  setProgressLogs(data||[]);
  }
 
  function previousFor(ex:any, set:any){
@@ -211,7 +227,28 @@ export default function Page(){
  }
  await reloadKeepDay();
 }
- async function saveLog(sid:string,field:string,value:any){const old=logs[sid]||{}; const payload={planned_set_id:sid,user_id:session.user.id,log_date:logDate,actual_weight:field==='actual_weight'?value:old.actual_weight||'',actual_reps:field==='actual_reps'?value:old.actual_reps||'',actual_rpe:field==='actual_rpe'?value:old.actual_rpe||'',completed:true}; const{data,error}=await supabase.from('st_set_logs').upsert(payload,{onConflict:'planned_set_id,user_id,log_date'}).select().single(); if(error)return alert(error.message); setLogs({...logs,[sid]:data});}
+ async function saveLog(sid:string,field:string,value:any){
+  const old=logs[sid]||{};
+  let ex:any=null, ps:any=null;
+  for(const e of workout?.st_exercises||[]){
+    const found=(e.st_planned_sets||[]).find((s:any)=>s.id===sid);
+    if(found){ex=e; ps=found; break;}
+  }
+  if(!ex||!ps) return alert('Could not save log for this set.');
+  const payload={
+    planned_set_id:sid,
+    user_id:session.user.id,
+    log_date:logDate,
+    actual_weight:field==='actual_weight'?value:old.actual_weight||'',
+    actual_reps:field==='actual_reps'?value:old.actual_reps||'',
+    actual_rpe:field==='actual_rpe'?value:old.actual_rpe||'',
+    completed:true,
+    ...snapshotForLog(ex,ps,workout)
+  };
+  const{data,error}=await supabase.from('st_set_logs').upsert(payload,{onConflict:'planned_set_id,user_id,log_date'}).select().single();
+  if(error)return alert(error.message);
+  setLogs({...logs,[sid]:data});
+ }
  async function setRole(member:any,role:string){if(!isOwner())return alert('Only owner can change roles.'); await supabase.from('st_team_members').update({role}).eq('id',member.id); await loadMembers(); await loadTeams();}
  function next(e:any){if(e.key==='Enter'||e.key==='ArrowRight'){e.preventDefault(); const i=refs.current.indexOf(e.currentTarget); if(refs.current[i+1])refs.current[i+1].focus();}}
  async function reloadKeepDay(){
@@ -241,13 +278,20 @@ const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sor
  const workout=weekWorkouts.find((w:any)=>w.id===activeWorkout)||weekWorkouts[0];
  const planned=(workout?.st_exercises||[]).reduce((n:number,e:any)=>n+(e.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).length,0);
  const logged=Object.values(logs).filter((x:any)=>x.completed).length;
+ const progressByDate=progressLogs.reduce((acc:any,row:any)=>{
+  const key=row.log_date;
+  if(!acc[key]) acc[key]={date:key,label:row.snapshot_day_label||'',type:row.snapshot_workout_type||'',rows:[]};
+  acc[key].rows.push(row);
+  return acc;
+ },{});
+ const progressDays=Object.values(progressByDate).sort((a:any,b:any)=>String(b.date).localeCompare(String(a.date)));
 
  if(!session)return <><header className="header"><div><div className="brand">Built<span>IQ</span></div><div className="muted">Training functional · modules ready</div></div></header><div className="login"><div className="panel"><h2>Sign in</h2><label>Email</label><input value={email} onKeyDown={e=>{if(e.key==='Enter')signIn()}} onChange={e=>setEmail(e.target.value)}/><label>Password</label><input type="password" value={password} onKeyDown={e=>{if(e.key==='Enter')signIn()}} onChange={e=>setPassword(e.target.value)}/><button className="btn full" style={{marginTop:10}} onClick={signIn}>Sign In</button><button className="btn secondary full" style={{marginTop:8}} onClick={signUp}>Create Account</button></div></div></>;
  if(!profile)return <><header className="header"><div className="brand">Built<span>IQ</span></div><button className="btn secondary" onClick={signOut}>Sign Out</button></header><div className="login"><div className="panel"><h2>Set up profile</h2><label>Name</label><input value={displayName} onChange={e=>setDisplayName(e.target.value)}/><button className="btn green full" style={{marginTop:10}} onClick={createProfile}>Start</button></div></div></>;
 
  return <><header className="header"><div><div className="brand">Built<span>IQ</span></div><div className="muted">{session.user.email} · {displayName} · {mode==='team'?(activeTeam?.name||'Team'):'Personal'} · {canEdit()?'can edit plan':'log only'}</div></div><button className="btn secondary" onClick={signOut}>Sign Out</button></header>
  <div className="shell" key={session.user.id}><aside className="panel">
-  <div className="appnav">{NAV.map(n=><button key={n} className={appNav===n?'active':''} onClick={()=>{setAppNav(n); if(n==='Teams')loadMembers();}}>{n}</button>)}</div>
+  <div className="appnav">{NAV.map(n=><button key={n} className={appNav===n?'active':''} onClick={()=>{setAppNav(n); if(n==='Teams')loadMembers(); if(n==='Progress')loadProgressLogs();}}>{n}</button>)}</div>
   <div className="tabs"><button className={mode==='personal'?'active':''} onClick={()=>setMode('personal')}>Personal</button><button className={mode==='team'?'active':''} onClick={()=>setMode('team')}>Team</button></div>
   {mode==='team'&&<div className="card"><label>Team</label><select value={activeTeam?.id||''} onChange={e=>setSelectedTeamId(e.target.value||null)}><option value="">Select</option>{teams.map((t:any)=><option key={t.id} value={t.id}>{t.name} · {t.my_role}</option>)}</select><div className="actions" style={{marginTop:8}}><button className="btn small secondary" onClick={createTeam}>Create</button><button className="btn small secondary" onClick={joinTeam}>Join</button></div>{activeTeam?<p className="muted">Invite: <b>{activeTeam.invite_code}</b> · Your role: {activeTeam.my_role}</p>:teams.length===0?<p className="muted">No teams yet. Create one or join with an invite code.</p>:<p className="muted">Select a team above.</p>}</div>}
   <label>Program</label><select value={program?.id||''} onChange={e=>setProgram(programs.find((p:any)=>p.id===e.target.value))}>{programs.length===0&&<option>No programs</option>}{programs.map((p:any)=><option key={p.id} value={p.id}>{p.name}</option>)}</select>
@@ -259,7 +303,7 @@ const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sor
  <main className="main">
   {appNav==='Dashboard'&&<section><div className="stats"><div className="stat"><span className="muted">Today</span><b>{workout?.day_label||'-'}</b></div><div className="stat"><span className="muted">Week</span><b>{week}</b></div><div className="stat"><span className="muted">Sets</span><b>{planned}</b></div><div className="stat"><span className="muted">Logged</span><b>{logged}</b></div></div><div className="module-grid"><div className="module-card"><h2>Training</h2><p className="muted">Fully functional now.</p><button className="btn green" onClick={()=>setAppNav('Training')}>Open Training</button></div><div className="module-card"><h2>Nutrition</h2><p className="muted">Coming after strength testing.</p></div><div className="module-card"><h2>Progress</h2><p className="muted">PRs, graphs, and body comp will connect here.</p></div><div className="module-card"><h2>Teams</h2><p className="muted">Team roles and shared programs are active.</p><button className="btn secondary" onClick={()=>setAppNav('Teams')}>Manage Team</button></div></div></section>}
   {appNav==='Nutrition'&&<section><div className="card"><h2>Nutrition</h2><p className="muted">Coming next. This will bring macro tracking into the same BuiltIQ account.</p></div></section>}
-  {appNav==='Progress'&&<section><div className="card"><h2>Progress</h2><p className="muted">Coming next. This will show strength history, PRs, trends, and body composition.</p></div></section>}
+  {appNav==='Progress'&&<section><div className="card"><div className="topline" style={{justifyContent:'space-between'}}><h2>Progress</h2><button className="btn small secondary" onClick={loadProgressLogs}>Refresh</button></div><p className="muted">Saved lift history uses snapshots, so past workouts stay accurate even if the program template changes later.</p></div>{progressDays.length===0&&<div className="card"><p className="muted">No completed sets yet. Log a workout in Training to build history.</p></div>}{progressDays.map((day:any)=><div className="card" key={day.date}><h3>{day.date}{day.label?` · ${day.label}`:''}{day.type?` · ${day.type}`:''}</h3>{Object.values(day.rows.reduce((acc:any,row:any)=>{const name=logExerciseName(row);if(!acc[name]) acc[name]=[]; acc[name].push(row);return acc;},{})).map((rows:any)=>{const label=logExerciseName(rows[0]);return <div key={label} className="history-row"><b>{label}</b><span className="muted">{rows.sort((a:any,b:any)=>(logSetNumber(a)-logSetNumber(b))).map((r:any)=>`${r.actual_weight||'-'} x ${r.actual_reps||'-'}${r.actual_rpe?` @ ${r.actual_rpe}`:''}`).join(' · ')}</span></div>})}</div>)}</section>}
   {appNav==='Settings'&&<section><div className="card"><h2>Settings</h2><label>Name</label><input value={displayName} onChange={e=>setDisplayName(e.target.value)}/><p className="muted">More settings coming later.</p></div></section>}
   {appNav==='Teams'&&<section><div className="card"><h2>BuiltIQ Teams</h2><p className="muted">Signed in as <b>{session.user.email}</b>. Owner/editor can edit shared plans. Members log only.</p><div className="actions"><button className="btn secondary" onClick={createTeam}>Create Team</button><button className="btn secondary" onClick={joinTeam}>Join Team</button><button className="btn secondary" onClick={loadMembers}>Refresh Members</button></div>{activeTeam&&<p className="muted" style={{marginTop:8}}>Active: <b>{activeTeam.name}</b> · Invite: <b>{activeTeam.invite_code}</b> · Role: <b>{activeTeam.my_role}</b></p>}{teams.length===0&&<p className="muted" style={{marginTop:8}}>You are not on any team yet.</p>}</div>{members.length>0&&<div className="card"><h2>Members</h2>{members.map((m:any)=><div key={m.id} className="topline" style={{justifyContent:'space-between',marginTop:6}}><span>{m.display_name||m.user_id.slice(0,6)}</span><select disabled={!isOwner()||m.user_id===session.user.id} value={m.role} onChange={e=>setRole(m,e.target.value)} style={{maxWidth:115}}><option>owner</option><option>editor</option><option>member</option></select></div>)}</div>}</section>}
   {appNav==='Training'&&<section>

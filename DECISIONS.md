@@ -177,3 +177,28 @@ Keeps the existing workout → exercise → planned set hierarchy intact while s
 ### Impact
 
 Program generation and Training UI group by section. Future sections (e.g. plyometrics) can add new `section` values. Cross-week edit matching uses `section` + `sort_order` or `section` + `name`.
+
+---
+
+## Decision 007 - Set Log Snapshots on Save
+
+Date: 2026-07-07  
+Status: Accepted  
+Category: Workout History
+
+### Decision
+
+When a user logs a set, store snapshot fields on `st_set_logs` (exercise name, muscle, section, set details, workout day/type). Change `planned_set_id` to `ON DELETE SET NULL` instead of cascade delete.
+
+### Reason
+
+Logs were tied to live template rows. Deleting or renaming exercises could destroy or distort history. Snapshot-on-write preserves what the user actually did while still linking to the template when it exists.
+
+### Alternatives Considered
+
+- Separate immutable `st_completed_workouts` table (more complete, more scope)
+- Keep cascade delete and forbid template deletes (too restrictive)
+
+### Impact
+
+Progress and Training history read snapshot fields first. Template edits no longer delete completed logs. New logs must include `snapshot_exercise_name` on insert (enforced by RLS).
