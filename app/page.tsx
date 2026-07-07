@@ -10,11 +10,11 @@ const SECTION_SORT_BASE:any={warmup:0,strength:100};
 const WORKOUT_TEMPLATES:any={
  'Lower Body':{
   warmup:[['Assault Bike or Walk','Cardio',1,'3 min','',''],['World\'s Greatest Stretch','Full Body',1,'5 each','',''],['Glute Bridge','Glutes',2,'12','5','']],
-  strength:[['Romanian Deadlift','Hamstrings',4,'6-10','7-8','185'],['Back Squat','Quads',4,'5-8','7-8','185'],['Seated Leg Curl','Hamstrings',3,'10-15','8','90'],['Hip Thrust','Glutes',3,'8-12','8','185']]
+  strength:[['Romanian Deadlift','Hamstrings',4,'6-10','7-8','185'],['Back Squat','Quads',4,'5-8','7-8','185'],{superset:[['Seated Leg Curl','Hamstrings',3,'10-15','8','90'],['Leg Extension','Quads',3,'10-15','8','80']]},{superset:[['Hip Thrust','Glutes',3,'8-12','8','185'],['Walking Lunge','Quads',3,'10-12','8','60']]}}
  },
  'Upper Body':{
   warmup:[['Assault Bike or Walk','Cardio',1,'3 min','',''],['Band Pull-Aparts','Upper Back',2,'15','5',''],['Scap Push-ups','Chest',1,'10','5','']],
-  strength:[['Bench Press','Chest',4,'6-10','7-8','155'],['Lat Pulldown','Lats',3,'8-12','8','120'],['Incline DB Press','Upper Chest',3,'8-12','8','55'],['Cable Row','Mid Back',3,'8-12','8','120']]
+  strength:[['Bench Press','Chest',4,'6-10','7-8','155'],{superset:[['Lat Pulldown','Lats',3,'8-12','8','120'],['Face Pull','Rear Delts',3,'12-15','7','30']]},{superset:[['Incline DB Press','Upper Chest',3,'8-12','8','55'],['Cable Row','Mid Back',3,'8-12','8','120']]}]
  },
  'Full Body':{
   warmup:[['Assault Bike or Walk','Cardio',1,'3 min','',''],['Bodyweight Squat','Quads',2,'10','5',''],['Inchworm','Full Body',1,'5','','']],
@@ -25,13 +25,18 @@ const exerciseSection=(ex:any)=>ex?.section||'strength';
 const sectionExercises=(workout:any,section:string)=>(workout?.st_exercises||[]).filter((e:any)=>exerciseSection(e)===section).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));
 const nextSortOrder=(workout:any,section:string)=>{const list=sectionExercises(workout,section);const base=SECTION_SORT_BASE[section]??100;return list.length?Math.max(...list.map((e:any)=>e.sort_order||0))+1:base;};
 const buildPlannedSetRows=(item:any[],section:string)=>{const sets=Number(item[2]||1),reps=item[3]||'',rpe=item[4]||'',wt=item[5]||'';const rows:any[]=[];for(let i=0;i<sets;i++)rows.push({sort_order:i,set_number:i+1,set_type:'working',target_weight:section==='strength'?String(wt||''):'',target_reps:reps,target_rpe:section==='strength'?rpe:'5'});return rows;};
+const isSupersetTemplate=(item:any)=>item&&typeof item==='object'&&!Array.isArray(item)&&Array.isArray(item.superset);
+const isExerciseTemplate=(item:any)=>Array.isArray(item);
+const makeSupersetGroupId=()=>(typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():`ss-${Date.now()}-${Math.random().toString(36).slice(2,8)}`);
+const groupSectionBlocks=(exercises:any[])=>{const blocks:any[]=[];(exercises||[]).forEach((ex:any)=>{const gid=ex.superset_group_id;const last=blocks[blocks.length-1];if(gid&&last?.type==='superset'&&last.groupId===gid)last.exercises.push(ex);else if(gid)blocks.push({type:'superset',groupId:gid,exercises:[ex]});else blocks.push({type:'single',exercises:[ex]});});return blocks;};
+async function insertTemplateSectionItems(sb:any,workoutId:string,section:string,list:any[],startSort:number,catMap:any){let sort=startSort;for(const item of list){if(isSupersetTemplate(item)){if(item.superset.length<2||item.superset.length>3)continue;const groupId=makeSupersetGroupId();for(const exItem of item.superset){const hit=catMap[String(exItem[0]).toLowerCase()];const{data:e,error}=await sb.from('st_exercises').insert({workout_id:workoutId,section,sort_order:sort,name:exItem[0],muscle_group:hit?.muscle_group||exItem[1],catalog_exercise_id:hit?.id||null,superset_group_id:groupId}).select().single();if(error)return{error};const rows=buildPlannedSetRows(exItem,section);if(rows.length)await sb.from('st_planned_sets').insert(rows.map(r=>({...r,exercise_id:e.id})));sort++;}}else if(isExerciseTemplate(item)){const hit=catMap[String(item[0]).toLowerCase()];const{data:e,error}=await sb.from('st_exercises').insert({workout_id:workoutId,section,sort_order:sort,name:item[0],muscle_group:hit?.muscle_group||item[1],catalog_exercise_id:hit?.id||null,superset_group_id:null}).select().single();if(error)return{error};const rows=buildPlannedSetRows(item,section);if(rows.length)await sb.from('st_planned_sets').insert(rows.map(r=>({...r,exercise_id:e.id})));sort++;}}return{error:null};}
 const logExerciseName=(row:any,joinEx?:any)=>String(row.snapshot_exercise_name||joinEx?.name||'').trim();
 const logCatalogId=(row:any,joinEx?:any)=>row.snapshot_catalog_exercise_id||joinEx?.catalog_exercise_id||'';
 const logSetType=(row:any,joinPs?:any)=>row.snapshot_set_type||joinPs?.set_type||'working';
 const logSetNumber=(row:any,joinPs?:any)=>row.snapshot_set_number??joinPs?.set_number??1;
 const exerciseHistoryKey=(catalogId:string,name:string)=>catalogId||String(name||'').toLowerCase().trim();
 const logHistoryKeys=(row:any)=>{const joinEx=row.st_planned_sets?.st_exercises;const joinPs=row.st_planned_sets;const catalogId=logCatalogId(row,joinEx);const exerciseKey=exerciseHistoryKey(catalogId,logExerciseName(row,joinEx));const setKey=`${exerciseKey}|${logSetType(row,joinPs)}|${logSetNumber(row,joinPs)}`;return {exerciseKey,setKey,catalogId};};
-const snapshotForLog=(ex:any,set:any,workoutRef:any)=>({snapshot_exercise_name:ex?.name||'',snapshot_catalog_exercise_id:ex?.catalog_exercise_id||null,snapshot_muscle_group:ex?.muscle_group||'',snapshot_section:exerciseSection(ex),snapshot_set_type:set?.set_type||'working',snapshot_set_number:set?.set_number||1,snapshot_target_weight:set?.target_weight||'',snapshot_target_reps:set?.target_reps||'',snapshot_target_rpe:set?.target_rpe||'',snapshot_day_label:workoutRef?.day_label||'',snapshot_workout_type:workoutRef?.workout_type||''});
+const snapshotForLog=(ex:any,set:any,workoutRef:any)=>({snapshot_exercise_name:ex?.name||'',snapshot_catalog_exercise_id:ex?.catalog_exercise_id||null,snapshot_superset_group_id:ex?.superset_group_id||null,snapshot_muscle_group:ex?.muscle_group||'',snapshot_section:exerciseSection(ex),snapshot_set_type:set?.set_type||'working',snapshot_set_number:set?.set_number||1,snapshot_target_weight:set?.target_weight||'',snapshot_target_reps:set?.target_reps||'',snapshot_target_rpe:set?.target_rpe||'',snapshot_day_label:workoutRef?.day_label||'',snapshot_workout_type:workoutRef?.workout_type||''});
 const catalogByName=(items:any[])=>{const map:any={};(items||[]).filter((c:any)=>!c.is_archived).forEach((c:any)=>{map[String(c.name||'').toLowerCase()]=c;});return map;};
 const filterCatalog=(items:any[],query:string,limit=12)=>(items||[]).filter((c:any)=>{if(c.is_archived)return false;const q=query.trim().toLowerCase();if(!q)return true;return String(c.name||'').toLowerCase().includes(q)||String(c.muscle_group||'').toLowerCase().includes(q)||String(c.category||'').toLowerCase().includes(q);}).slice(0,limit);
 const today=()=>new Date().toISOString().slice(0,10);
@@ -59,6 +64,8 @@ export default function Page(){
  const [catalogEditDraft,setCatalogEditDraft]=useState<any>({name:'',category:'',muscle_group:'',equipment:'',movement_pattern:''});
  const [progressLogs,setProgressLogs]=useState<any[]>([]);
  const [showProgramSetup,setShowProgramSetup]=useState(false);
+ const [supersetDraft,setSupersetDraft]=useState<any>({warmup:{picks:[]},strength:{picks:[]}});
+ const [supersetQuery,setSupersetQuery]=useState<any>({warmup:'',strength:''});
  const refs=useRef<any[]>([]);
 
  useEffect(()=>{
@@ -215,7 +222,7 @@ export default function Page(){
   return sameDay.map((r:any)=>`${r.actual_weight || '-'} x ${r.actual_reps || '-'}`).join(' · ');
  }
 
- async function generate(){if(mode==='team'&&!activeTeam)return alert('Create or join a team first.'); if(mode==='team'&&!canEdit())return alert('Only owner/editors can create team programs.'); const catMap=catalogByName(catalog); const{data:p,error}=await supabase.from('st_programs').insert({owner_user_id:session.user.id,team_id:mode==='team'?activeTeam.id:null,visibility:mode,name:programName,weeks}).select().single(); if(error)return alert(error.message); const wr:any=[]; for(let w=1;w<=weeks;w++)days.forEach(d=>wr.push({program_id:p.id,week:w,day_order:DAYS.indexOf(d),day_label:d,workout_type:dayTypes[d]||'Full Body'})); const{data:ws,error:we}=await supabase.from('st_workouts').insert(wr).select(); if(we)return alert(we.message); for(const w of ws||[]){const tpl=WORKOUT_TEMPLATES[w.workout_type]||WORKOUT_TEMPLATES['Full Body']; for(const sec of SECTIONS){const list=tpl[sec.id]||[]; if(!list.length)continue; const{data:exs,error:ee}=await supabase.from('st_exercises').insert(list.map((x:any,i:number)=>{const hit=catMap[String(x[0]).toLowerCase()]; return {workout_id:w.id,section:sec.id,sort_order:(SECTION_SORT_BASE[sec.id]??0)+i,name:x[0],muscle_group:hit?.muscle_group||x[1],catalog_exercise_id:hit?.id||null};})).select(); if(ee)return alert(ee.message); for(let i=0;i<(exs||[]).length;i++){const e=exs![i],item=list[i],rows=buildPlannedSetRows(item,sec.id); if(rows.length)await supabase.from('st_planned_sets').insert(rows.map(r=>({...r,exercise_id:e.id})));}}} await loadPrograms();setAppNav('Training');}
+ async function generate(){if(mode==='team'&&!activeTeam)return alert('Create or join a team first.'); if(mode==='team'&&!canEdit())return alert('Only owner/editors can create team programs.'); const catMap=catalogByName(catalog); const{data:p,error}=await supabase.from('st_programs').insert({owner_user_id:session.user.id,team_id:mode==='team'?activeTeam.id:null,visibility:mode,name:programName,weeks}).select().single(); if(error)return alert(error.message); const wr:any=[]; for(let w=1;w<=weeks;w++)days.forEach(d=>wr.push({program_id:p.id,week:w,day_order:DAYS.indexOf(d),day_label:d,workout_type:dayTypes[d]||'Full Body'})); const{data:ws,error:we}=await supabase.from('st_workouts').insert(wr).select(); if(we)return alert(we.message); for(const w of ws||[]){const tpl=WORKOUT_TEMPLATES[w.workout_type]||WORKOUT_TEMPLATES['Full Body']; for(const sec of SECTIONS){const list=tpl[sec.id]||[]; if(!list.length)continue; const startSort=SECTION_SORT_BASE[sec.id]??0; const{error:ie}=await insertTemplateSectionItems(supabase,w.id,sec.id,list,startSort,catMap); if(ie)return alert(ie.message);}} await loadPrograms();setAppNav('Training');}
  async function addExerciseFromCatalog(cat:any,section:string){
  if(!canEdit())return alert('Only owner/editors can change the shared team program.');
  if(!cat?.id)return alert('Select an exercise from the catalog.');
@@ -232,6 +239,50 @@ export default function Page(){
  setCatalogQuery({...catalogQuery,[section]:''});
  await reloadKeepDay();
 }
+ function toggleSupersetPick(section:string,cat:any){
+  const picks=[...(supersetDraft[section]?.picks||[])];
+  const idx=picks.findIndex((p:any)=>p.id===cat.id);
+  if(idx>=0) picks.splice(idx,1);
+  else if(picks.length>=3) return alert('A superset can have 2 or 3 exercises.');
+  else picks.push(cat);
+  setSupersetDraft({...supersetDraft,[section]:{picks}});
+ }
+ async function addSupersetFromCatalog(section:string){
+  if(!canEdit())return alert('Only owner/editors can change the shared team program.');
+  const picks=supersetDraft[section]?.picks||[];
+  if(picks.length<2||picks.length>3)return alert('Pick 2 or 3 exercises for a superset.');
+  const current=workout; if(!current)return;
+  const groupId=makeSupersetGroupId();
+  let sortOrder=nextSortOrder(current,section);
+  for(const cat of picks){
+   for(const tw of targetWorkoutsFrom(current)){
+    const{data:e,error}=await supabase.from('st_exercises').insert({workout_id:tw.id,section,sort_order:sortOrder,name:cat.name,muscle_group:cat.muscle_group||'',catalog_exercise_id:cat.id,superset_group_id:groupId}).select().single();
+    if(error)return alert(error.message);
+    const defaultSets=section==='warmup'?1:3;
+    const rows:any[]=[];
+    for(let i=0;i<defaultSets;i++)rows.push({exercise_id:e.id,sort_order:i,set_number:i+1,set_type:'working',target_reps:section==='warmup'?'10':'8-12',target_rpe:section==='warmup'?'5':'8'});
+    await supabase.from('st_planned_sets').insert(rows);
+   }
+   sortOrder++;
+  }
+  setSupersetDraft({...supersetDraft,[section]:{picks:[]}});
+  setSupersetQuery({...supersetQuery,[section]:''});
+  await reloadKeepDay();
+ }
+ async function breakSuperset(ex:any){
+  if(!canEdit()||!ex.superset_group_id)return;
+  for(const tw of targetWorkoutsFrom(workout)){
+   const targets=(tw.st_exercises||[]).filter((e:any)=>e.superset_group_id===ex.superset_group_id&&exerciseSection(e)===exerciseSection(ex));
+   for(const t of targets) await supabase.from('st_exercises').update({superset_group_id:null}).eq('id',t.id);
+  }
+  await reloadKeepDay();
+ }
+ async function cleanupSupersetOrphans(section:string,groupId:string){
+  for(const tw of targetWorkoutsFrom(workout)){
+   const remaining=(tw.st_exercises||[]).filter((e:any)=>e.superset_group_id===groupId&&exerciseSection(e)===section);
+   if(remaining.length===1) await supabase.from('st_exercises').update({superset_group_id:null}).eq('id',remaining[0].id);
+  }
+ }
  async function createCustomExercise(section:string, addToWorkout=true){
  if(!session?.user)return alert('Sign in to create exercises.');
  const draft=customDraft;
@@ -276,10 +327,12 @@ export default function Page(){
  if(!canEdit())return alert('Only owner/editors can remove exercises.');
  const msg=applyScope==='future'?'Remove this exercise from this week and all future weeks?':'Remove this exercise from this workout only?';
  if(confirm(msg)){
+  const groupId=e.superset_group_id, section=exerciseSection(e);
   for(const tw of targetWorkoutsFrom(workout)){
    const match=matchingExercise(tw,e);
    if(match) await supabase.from('st_exercises').delete().eq('id',match.id);
   }
+  if(groupId) await cleanupSupersetOrphans(section,groupId);
   await reloadKeepDay();
  }
 }
@@ -378,6 +431,7 @@ function targetWorkoutsFrom(current:any){
 function matchingExercise(targetWorkout:any, sourceExercise:any){
   const section=exerciseSection(sourceExercise);
   return (targetWorkout.st_exercises||[]).find((e:any)=>exerciseSection(e)===section&&e.sort_order===sourceExercise.sort_order)
+    || (sourceExercise.superset_group_id&&(targetWorkout.st_exercises||[]).find((e:any)=>exerciseSection(e)===section&&e.superset_group_id===sourceExercise.superset_group_id&&sourceExercise.catalog_exercise_id&&e.catalog_exercise_id===sourceExercise.catalog_exercise_id))
     || (targetWorkout.st_exercises||[]).find((e:any)=>exerciseSection(e)===section&&sourceExercise.catalog_exercise_id&&e.catalog_exercise_id===sourceExercise.catalog_exercise_id)
     || (targetWorkout.st_exercises||[]).find((e:any)=>exerciseSection(e)===section&&e.name===sourceExercise.name);
 }
@@ -411,7 +465,28 @@ const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sor
  const weeklySetCount=weeklyLogs.length;
  const weeklyWorkoutDays=new Set(weeklyLogs.map((r:any)=>r.log_date)).size;
  const todaySetCount=progressLogs.filter((r:any)=>String(r.log_date)===today()).length;
- const programSetupPanel=<div className="card program-setup"><div className="topline" style={{justifyContent:'space-between'}}><h2>Program setup</h2><button className="btn small secondary" onClick={()=>setShowProgramSetup(v=>!v)}>{showProgramSetup?'Hide':'Show'}</button></div>{showProgramSetup&&<><div className="tabs" style={{marginTop:8}}><button className={mode==='personal'?'active':''} onClick={()=>setMode('personal')}>Personal</button><button className={mode==='team'?'active':''} onClick={()=>setMode('team')}>Team</button></div>{mode==='team'&&<div className="card" style={{marginTop:8}}><label>Team</label><select value={activeTeam?.id||''} onChange={e=>setSelectedTeamId(e.target.value||null)}><option value="">Select</option>{teams.map((t:any)=><option key={t.id} value={t.id}>{t.name} · {t.my_role}</option>)}</select><div className="actions" style={{marginTop:8}}><button className="btn small secondary" onClick={createTeam}>Create</button><button className="btn small secondary" onClick={joinTeam}>Join</button></div>{activeTeam?<p className="muted">Invite: <b>{activeTeam.invite_code}</b> · Role: {activeTeam.my_role}</p>:teams.length===0?<p className="muted">No teams yet.</p>:<p className="muted">Select a team above.</p>}</div>}<label>Program</label><select value={program?.id||''} onChange={e=>setProgram(programs.find((p:any)=>p.id===e.target.value))}>{programs.length===0&&<option>No programs</option>}{programs.map((p:any)=><option key={p.id} value={p.id}>{p.name}</option>)}</select><label>New program name</label><input value={programName} onChange={e=>setProgramName(e.target.value)}/><label>Weeks</label><input type="number" value={weeks} onChange={e=>setWeeks(Number(e.target.value))}/><label>Workout days</label><div className="tabs">{DAYS.map(d=><button key={d} type="button" className={days.includes(d)?'active':''} onClick={()=>setDays(days.includes(d)?days.filter(x=>x!==d):[...days,d].sort((a,b)=>DAYS.indexOf(a)-DAYS.indexOf(b)))}>{d}</button>)}</div>{days.map(d=><div key={d}><label>{d} type</label><select value={dayTypes[d]||'Full Body'} onChange={e=>setDayTypes({...dayTypes,[d]:e.target.value})}><option>Lower Body</option><option>Upper Body</option><option>Full Body</option></select></div>)}<button className="btn green full" style={{marginTop:10}} onClick={generate}>Generate {mode==='team'?'Team':'Personal'} Program</button></>}{!showProgramSetup&&program&&<p className="muted">Active program: <b>{program.name}</b></p>}{!showProgramSetup&&!program&&<p className="muted">No program yet. Open setup to generate one.</p>}</div>;
+ const renderExerciseCard=(ex:any,inSuperset=false)=><div className={`card exercise-card${inSuperset?' in-superset':''}`} key={ex.id}>
+        <div className="exercise-head"><div className="exercise-meta">{canEdit()?<>
+          <input className="exercise-name" defaultValue={ex.name} onBlur={e=>{if(e.target.value.trim()&&e.target.value!==ex.name)updateExerciseField(ex,'name',e.target.value.trim());}}/>
+          <input className="exercise-muscle" placeholder="Muscle group" defaultValue={ex.muscle_group||''} onBlur={e=>{if((e.target.value||'')!==(ex.muscle_group||''))updateExerciseField(ex,'muscle_group',e.target.value);}}/>
+        </>:<>
+          <h3>{ex.name}</h3>
+          <span className="badge">{ex.muscle_group||'Muscle'}</span>
+        </>}{exerciseLastSummary(ex)&&<div className="prevline">Last time: {exerciseLastSummary(ex)}</div>}</div>
+        {canEdit()&&<div className="actions"><button className="btn small secondary" title="Move up" onClick={()=>moveExercise(ex,-1)}>↑</button><button className="btn small secondary" title="Move down" onClick={()=>moveExercise(ex,1)}>↓</button><button className="btn small secondary" onClick={()=>addSet(ex)}>+ Set</button><button className="btn small red" onClick={()=>removeExercise(ex)}>Remove</button></div>}
+        </div>
+        <div className={`setgrid ${canEdit()?'setgrid-edit':''} muted`}><b>Type</b><b>#</b>{canEdit()&&<><b>T Wt</b><b>T Reps</b><b>T RPE</b></>}<b>{canEdit()?'Log Wt':'Wt'}</b><b>{canEdit()?'Log Reps':'Reps'}</b><b>{canEdit()?'Log RPE':'RPE'}</b>{canEdit()&&<b></b>}</div>
+        {(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0)).map((s:any)=>{const l=logs[s.id]||{};const prev=previousFor(ex,s);return <div className={`setgrid ${canEdit()?'setgrid-edit':''}`} key={s.id}>
+          <select disabled={!canEdit()} value={s.set_type} onChange={e=>editSet(s,'set_type',e.target.value)}><option>warmup</option><option>working</option><option>backoff</option><option>dropset</option><option>amrap</option></select>
+          <input disabled={!canEdit()} value={s.set_number} onChange={e=>editSet(s,'set_number',Number(e.target.value))}/>
+          {canEdit()&&<><input defaultValue={s.target_weight||''} placeholder="target" onBlur={e=>editSet(s,'target_weight',e.target.value)}/><input defaultValue={s.target_reps||''} placeholder="target" onBlur={e=>editSet(s,'target_reps',e.target.value)}/><input defaultValue={s.target_rpe||''} placeholder="target" onBlur={e=>editSet(s,'target_rpe',e.target.value)}/></>}
+          <input ref={el=>{if(el&&!refs.current.includes(el))refs.current.push(el)}} onKeyDown={next} placeholder={prev?.actual_weight?`last ${prev.actual_weight}`:(s.target_weight||'lb')} defaultValue={l.actual_weight||''} onBlur={e=>saveLog(s.id,'actual_weight',e.target.value)}/>
+          <input ref={el=>{if(el&&!refs.current.includes(el))refs.current.push(el)}} onKeyDown={next} placeholder={prev?.actual_reps?`last ${prev.actual_reps}`:(s.target_reps||'reps')} defaultValue={l.actual_reps||''} onBlur={e=>saveLog(s.id,'actual_reps',e.target.value)}/>
+          <input ref={el=>{if(el&&!refs.current.includes(el))refs.current.push(el)}} onKeyDown={next} placeholder={prev?.actual_rpe?`last ${prev.actual_rpe}`:(s.target_rpe||'rpe')} defaultValue={l.actual_rpe||''} onBlur={e=>saveLog(s.id,'actual_rpe',e.target.value)}/>
+          {canEdit()?<button className="btn small red" onClick={()=>removeSet(s)}>X</button>:<span className="muted">log</span>}
+        </div>})}
+      </div>;
+ const programSetupPanel=<div className="card program-setup"><div className="topline" style={{justifyContent:'space-between'}}><h2>Program setup</h2><button className="btn small secondary" onClick={()=>setShowProgramSetup(v=>!v)}>{showProgramSetup?'Hide':'Show'}</button></div>{showProgramSetup&&<><div className="tabs" style={{marginTop:8}}><button className={mode==='personal'?'active':''} onClick={()=>setMode('personal')}>Personal</button><button className={mode==='team'?'active':''} onClick={()=>setMode('team')}>Team</button></div>{mode==='team'&&<div className="card" style={{marginTop:8}}><label>Team</label><select value={activeTeam?.id||''} onChange={e=>setSelectedTeamId(e.target.value||null)}><option value="">Select</option>{teams.map((t:any)=><option key={t.id} value={t.id}>{t.name} · {t.my_role}</option>)}</select><div className="actions" style={{marginTop:8}}><button className="btn small secondary" onClick={createTeam}>Create</button><button className="btn small secondary" onClick={joinTeam}>Join</button></div>{activeTeam?<p className="muted">Invite: <b>{activeTeam.invite_code}</b> · Role: {activeTeam.my_role}</p>:teams.length===0?<p className="muted">No teams yet.</p>:<p className="muted">Select a team above.</p>}</div>}<label>Program</label><select value={program?.id||''} onChange={e=>setProgram(programs.find((p:any)=>p.id===e.target.value))}>{programs.length===0&&<option>No programs</option>}{programs.map((p:any)=><option key={p.id} value={p.id}>{p.name}</option>)}</select><label>New program name</label><input value={programName} onChange={e=>setProgramName(e.target.value)}/><label>Weeks</label><input type="number" value={weeks} onChange={e=>setWeeks(Number(e.target.value))}/><label>Workout days</label><div className="tabs">{DAYS.map(d=><button key={d} type="button" className={days.includes(d)?'active':''} onClick={()=>setDays(days.includes(d)?days.filter(x=>x!==d):[...days,d].sort((a,b)=>DAYS.indexOf(a)-DAYS.indexOf(b)))}>{d}</button>)}</div>{days.map(d=><div key={d}><label>{d} type</label><select value={dayTypes[d]||'Full Body'} onChange={e=>setDayTypes({...dayTypes,[d]:e.target.value})}><option>Lower Body</option><option>Upper Body</option><option>Full Body</option></select></div>)}<button className="btn green full" style={{marginTop:10}} onClick={generate}>Generate {mode==='team'?'Team':'Personal'} Program</button><p className="muted" style={{marginTop:8}}>Built-in templates include supersets — 2–3 exercises grouped back-to-back with minimal rest.</p></>}{!showProgramSetup&&program&&<p className="muted">Active program: <b>{program.name}</b></p>}{!showProgramSetup&&!program&&<p className="muted">No program yet. Open setup to generate one.</p>}</div>;
 
  const profileFields=(compact=false)=><>
   <label>Display name</label>
@@ -453,33 +528,19 @@ const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sor
     {workout&&<div className="card"><div className="topline" style={{justifyContent:'space-between'}}><h2>{workout.day_label} · {workout.workout_type}</h2><span className="muted">{sectionExercises(workout,'warmup').length + sectionExercises(workout,'strength').length} exercises</span></div></div>}
     {workout&&SECTIONS.map((sec:any)=>{
       const exercises=sectionExercises(workout,sec.id);
+      const blocks=groupSectionBlocks(exercises);
       const query=catalogQuery[sec.id]||'';
       const results=filterCatalog(catalog,query);
+      const ssQuery=supersetQuery[sec.id]||'';
+      const ssResults=filterCatalog(catalog,ssQuery);
+      const ssPicks=supersetDraft[sec.id]?.picks||[];
       const customOpen=!!showCustomForm[sec.id];
       const customSectionDraft={...customDraft,category:customDraft.category||sec.id};
       return <div className="section-block" key={sec.id}><div className="section-head"><h2>{sec.label}</h2><span className="badge">{exercises.length}</span></div>
-      {exercises.map((ex:any)=><div className="card exercise-card" key={ex.id}>
-        <div className="exercise-head"><div className="exercise-meta">{canEdit()?<>
-          <input className="exercise-name" defaultValue={ex.name} onBlur={e=>{if(e.target.value.trim()&&e.target.value!==ex.name)updateExerciseField(ex,'name',e.target.value.trim());}}/>
-          <input className="exercise-muscle" placeholder="Muscle group" defaultValue={ex.muscle_group||''} onBlur={e=>{if((e.target.value||'')!==(ex.muscle_group||''))updateExerciseField(ex,'muscle_group',e.target.value);}}/>
-        </>:<>
-          <h3>{ex.name}</h3>
-          <span className="badge">{ex.muscle_group||'Muscle'}</span>
-        </>}{exerciseLastSummary(ex)&&<div className="prevline">Last time: {exerciseLastSummary(ex)}</div>}</div>
-        {canEdit()&&<div className="actions"><button className="btn small secondary" title="Move up" onClick={()=>moveExercise(ex,-1)}>↑</button><button className="btn small secondary" title="Move down" onClick={()=>moveExercise(ex,1)}>↓</button><button className="btn small secondary" onClick={()=>addSet(ex)}>+ Set</button><button className="btn small red" onClick={()=>removeExercise(ex)}>Remove</button></div>}
-        </div>
-        <div className={`setgrid ${canEdit()?'setgrid-edit':''} muted`}><b>Type</b><b>#</b>{canEdit()&&<><b>T Wt</b><b>T Reps</b><b>T RPE</b></>}<b>{canEdit()?'Log Wt':'Wt'}</b><b>{canEdit()?'Log Reps':'Reps'}</b><b>{canEdit()?'Log RPE':'RPE'}</b>{canEdit()&&<b></b>}</div>
-        {(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0)).map((s:any)=>{const l=logs[s.id]||{};const prev=previousFor(ex,s);return <div className={`setgrid ${canEdit()?'setgrid-edit':''}`} key={s.id}>
-          <select disabled={!canEdit()} value={s.set_type} onChange={e=>editSet(s,'set_type',e.target.value)}><option>warmup</option><option>working</option><option>backoff</option><option>dropset</option><option>amrap</option></select>
-          <input disabled={!canEdit()} value={s.set_number} onChange={e=>editSet(s,'set_number',Number(e.target.value))}/>
-          {canEdit()&&<><input defaultValue={s.target_weight||''} placeholder="target" onBlur={e=>editSet(s,'target_weight',e.target.value)}/><input defaultValue={s.target_reps||''} placeholder="target" onBlur={e=>editSet(s,'target_reps',e.target.value)}/><input defaultValue={s.target_rpe||''} placeholder="target" onBlur={e=>editSet(s,'target_rpe',e.target.value)}/></>}
-          <input ref={el=>{if(el&&!refs.current.includes(el))refs.current.push(el)}} onKeyDown={next} placeholder={prev?.actual_weight?`last ${prev.actual_weight}`:(s.target_weight||'lb')} defaultValue={l.actual_weight||''} onBlur={e=>saveLog(s.id,'actual_weight',e.target.value)}/>
-          <input ref={el=>{if(el&&!refs.current.includes(el))refs.current.push(el)}} onKeyDown={next} placeholder={prev?.actual_reps?`last ${prev.actual_reps}`:(s.target_reps||'reps')} defaultValue={l.actual_reps||''} onBlur={e=>saveLog(s.id,'actual_reps',e.target.value)}/>
-          <input ref={el=>{if(el&&!refs.current.includes(el))refs.current.push(el)}} onKeyDown={next} placeholder={prev?.actual_rpe?`last ${prev.actual_rpe}`:(s.target_rpe||'rpe')} defaultValue={l.actual_rpe||''} onBlur={e=>saveLog(s.id,'actual_rpe',e.target.value)}/>
-          {canEdit()?<button className="btn small red" onClick={()=>removeSet(s)}>X</button>:<span className="muted">log</span>}
-        </div>})}
-      </div>)}
-      {canEdit()&&<div className="catalog-picker"><label>Search exercise catalog</label>{catalogError&&<p className="muted" style={{color:'#f87171'}}>Catalog unavailable: {catalogError}. Run migration 20250707_005_exercise_catalog.sql in Supabase.</p>}<input placeholder="Search BuiltIQ + your exercises" value={query} onChange={e=>setCatalogQuery({...catalogQuery,[sec.id]:e.target.value})}/>{results.length>0&&<div className="catalog-results">{results.map((item:any)=><button type="button" key={item.id} className="catalog-result" onClick={()=>addExerciseFromCatalog(item,sec.id)}><span><b>{item.name}</b><span className="muted">{item.muscle_group||'Muscle'}{item.equipment?` · ${item.equipment}`:''}</span></span><span className={`badge ${item.is_system?'':'custom-badge'}`}>{item.is_system?'BuiltIQ':'Mine'}</span></button>)}</div>}{query.trim()&&results.length===0&&<p className="muted">No matches. Create a custom exercise below.</p>}<div className="actions" style={{marginTop:8}}><button className="btn small secondary" onClick={()=>{setShowCustomForm({...showCustomForm,[sec.id]:!customOpen}); setCustomDraft({...customDraft,category:sec.id});}}>{customOpen?'Cancel custom exercise':'Create custom exercise'}</button></div>{customOpen&&<div className="catalog-edit-grid" style={{marginTop:8}}><input value={customSectionDraft.name} onChange={e=>setCustomDraft({...customSectionDraft,name:e.target.value})} placeholder="Exercise name"/><select value={customSectionDraft.category} onChange={e=>setCustomDraft({...customSectionDraft,category:e.target.value})}><option value="warmup">Warmup</option><option value="strength">Strength</option><option value="mobility">Mobility</option><option value="plyometric">Plyometric</option><option value="other">Other</option></select><input value={customSectionDraft.muscle_group} onChange={e=>setCustomDraft({...customSectionDraft,muscle_group:e.target.value})} placeholder="Muscle group"/><input value={customSectionDraft.equipment} onChange={e=>setCustomDraft({...customSectionDraft,equipment:e.target.value})} placeholder="Equipment"/><input value={customSectionDraft.movement_pattern} onChange={e=>setCustomDraft({...customSectionDraft,movement_pattern:e.target.value})} placeholder="Movement pattern"/><button className="btn small green" onClick={()=>createCustomExercise(sec.id)}>Save and add to workout</button></div>}</div>}
+      {blocks.map((block:any)=>block.type==='superset'
+        ?<div className="superset-block" key={block.groupId}><div className="superset-head"><span className="badge superset-badge">Superset · {block.exercises.length} exercises</span>{canEdit()&&<button className="btn small secondary" onClick={()=>breakSuperset(block.exercises[0])}>Break superset</button>}</div>{block.exercises.map((ex:any)=>renderExerciseCard(ex,true))}</div>
+        :renderExerciseCard(block.exercises[0]))}
+      {canEdit()&&<div className="catalog-picker"><label>Search exercise catalog</label>{catalogError&&<p className="muted" style={{color:'#f87171'}}>Catalog unavailable: {catalogError}. Run migration 20250707_005_exercise_catalog.sql in Supabase.</p>}<input placeholder="Search BuiltIQ + your exercises" value={query} onChange={e=>setCatalogQuery({...catalogQuery,[sec.id]:e.target.value})}/>{results.length>0&&<div className="catalog-results">{results.map((item:any)=><button type="button" key={item.id} className="catalog-result" onClick={()=>addExerciseFromCatalog(item,sec.id)}><span><b>{item.name}</b><span className="muted">{item.muscle_group||'Muscle'}{item.equipment?` · ${item.equipment}`:''}</span></span><span className={`badge ${item.is_system?'':'custom-badge'}`}>{item.is_system?'BuiltIQ':'Mine'}</span></button>)}</div>}{query.trim()&&results.length===0&&<p className="muted">No matches. Create a custom exercise below.</p>}<div className="superset-builder"><label>Add superset (pick 2–3 exercises)</label><input placeholder="Search exercises for superset" value={ssQuery} onChange={e=>setSupersetQuery({...supersetQuery,[sec.id]:e.target.value})}/>{ssResults.length>0&&<div className="catalog-results">{ssResults.map((item:any)=>{const picked=ssPicks.some((p:any)=>p.id===item.id);return <button type="button" key={`ss-${item.id}`} className={`catalog-result${picked?' picked':''}`} onClick={()=>toggleSupersetPick(sec.id,item)}><span><b>{item.name}</b><span className="muted">{item.muscle_group||'Muscle'}{item.equipment?` · ${item.equipment}`:''}</span></span><span className={`badge ${picked?'superset-badge':item.is_system?'':'custom-badge'}`}>{picked?'Selected':item.is_system?'BuiltIQ':'Mine'}</span></button>})}</div>}{ssPicks.length>0&&<div className="superset-picks">{ssPicks.map((p:any)=><span key={p.id} className="badge superset-badge">{p.name}</span>)}</div>}<div className="actions" style={{marginTop:8}}><button className="btn small green" disabled={ssPicks.length<2} onClick={()=>addSupersetFromCatalog(sec.id)}>Add superset ({ssPicks.length}/3)</button>{ssPicks.length>0&&<button className="btn small secondary" onClick={()=>{setSupersetDraft({...supersetDraft,[sec.id]:{picks:[]}});setSupersetQuery({...supersetQuery,[sec.id]:''});}}>Clear picks</button>}</div></div><div className="actions" style={{marginTop:8}}><button className="btn small secondary" onClick={()=>{setShowCustomForm({...showCustomForm,[sec.id]:!customOpen}); setCustomDraft({...customDraft,category:sec.id});}}>{customOpen?'Cancel custom exercise':'Create custom exercise'}</button></div>{customOpen&&<div className="catalog-edit-grid" style={{marginTop:8}}><input value={customSectionDraft.name} onChange={e=>setCustomDraft({...customSectionDraft,name:e.target.value})} placeholder="Exercise name"/><select value={customSectionDraft.category} onChange={e=>setCustomDraft({...customSectionDraft,category:e.target.value})}><option value="warmup">Warmup</option><option value="strength">Strength</option><option value="mobility">Mobility</option><option value="plyometric">Plyometric</option><option value="other">Other</option></select><input value={customSectionDraft.muscle_group} onChange={e=>setCustomDraft({...customSectionDraft,muscle_group:e.target.value})} placeholder="Muscle group"/><input value={customSectionDraft.equipment} onChange={e=>setCustomDraft({...customSectionDraft,equipment:e.target.value})} placeholder="Equipment"/><input value={customSectionDraft.movement_pattern} onChange={e=>setCustomDraft({...customSectionDraft,movement_pattern:e.target.value})} placeholder="Movement pattern"/><button className="btn small green" onClick={()=>createCustomExercise(sec.id)}>Save and add to workout</button></div>}</div>}
       {!exercises.length&&!canEdit()&&<p className="muted section-empty">No {sec.label.toLowerCase()} exercises.</p>}
       </div>;
     })}
