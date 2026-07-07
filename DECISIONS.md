@@ -205,6 +205,32 @@ Progress and Training history read snapshot fields first. Template edits no long
 
 ---
 
+## Decision 009 - Auth Loading State and Expanded Profiles
+
+Date: 2026-07-07  
+Status: Accepted  
+Category: Authentication / User Profile
+
+### Decision
+
+Separate auth boot from profile onboarding. Show a loading state while session + profile fetch complete instead of rendering the setup screen when `profile` is temporarily null. Expand `st_profiles` with height, weight, birth year, sex, experience level, primary goal, units preference, and `profile_completed`. New accounts collect profile data during signup; returning users skip onboarding when `profile_completed = true`.
+
+### Reason
+
+The previous `if (!profile)` check ran before `loadProfile()` finished, causing a setup-screen flash on every login. Remembered email and browser password autofill improve daily sign-in. Richer profiles support future program generation and progress features aligned with BuiltIQ_Context.md.
+
+### Alternatives Considered
+
+- Auto-create minimal profile on first login (skips intentional onboarding)
+- Store profile only in localStorage (not durable or secure)
+- Store passwords in localStorage (unsafe; rejected)
+
+### Impact
+
+Sign-in uses standard form autofill attributes. Email remembered in localStorage only. Settings saves full profile to Supabase. Existing users with display names are backfilled as onboarded.
+
+---
+
 ## Decision 008 - Exercise Catalog (System + User)
 
 Date: 2026-07-07  

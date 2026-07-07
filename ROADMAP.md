@@ -194,10 +194,10 @@ Phase 2 security hardening (BIQ-0002), workout sections (BIQ-0004), workout hist
 
 Next priorities:
 
-1. Settings — persist display name to Supabase
-2. Plyometrics / Power workout section
-3. PR detection and strength trends on Progress tab (catalog IDs now available)
-4. Split `page.tsx` into focused components
+1. Plyometrics / Power workout section
+2. PR detection and strength trends on Progress tab (catalog IDs now available)
+3. Split `page.tsx` into focused components
+4. Metric unit input conversion for profile height/weight
 
 Run pending Supabase migrations on each environment before testing:
 
@@ -206,3 +206,4 @@ Run pending Supabase migrations on each environment before testing:
 - `20250707_003_exercise_sections.sql`
 - `20250707_004_set_log_snapshots.sql`
 - `20250707_005_exercise_catalog.sql`
+- `20250707_006_expand_user_profiles.sql`
