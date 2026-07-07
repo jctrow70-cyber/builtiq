@@ -251,3 +251,72 @@ Adds `st_exercises.section` (default `strength`) and index on `(workout_id, sect
 ```text
 BIQ-0004 Add workout sections and improve exercise/set organization
 ```
+
+---
+
+## BIQ-0005 - Exercise Catalog (System + User Exercises)
+
+Date: 2026-07-07  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Added a shared exercise catalog with BuiltIQ system exercises and per-user custom exercises. Workout templates and logging now link to catalog entries so progress history aggregates by exercise identity, not free-text names alone.
+
+### Purpose
+
+Progress, PR tracking, and “last time” placeholders need a stable exercise identity. Free-text names split history when spelling differs or a user renames an exercise. A catalog gives canonical IDs while snapshots preserve the name shown at log time.
+
+### Changes
+
+- Added `st_exercise_catalog` with system and user-owned exercises
+- Seeded BuiltIQ system exercises (template lifts + common starter library)
+- Added `catalog_exercise_id` on `st_exercises`
+- Added `snapshot_catalog_exercise_id` on `st_set_logs` (with existing name snapshots)
+- RLS: all users read system exercises; users read/write only their own custom exercises
+- Training: search system + personal catalog when adding exercises; create custom exercises inline
+- Settings: manage custom exercises (edit, archive, restore)
+- Program generation links template exercises to catalog entries by name
+- Lift history keys prefer catalog ID, with name fallback for legacy logs
+
+### Files Changed
+
+- `supabase/migrations/20250707_005_exercise_catalog.sql`
+- `app/page.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+
+### Database Changes
+
+- `supabase/migrations/20250707_005_exercise_catalog.sql`
+
+Creates `st_exercise_catalog`, seeds system exercises, adds FK columns, backfills existing workout exercises and log snapshots where names match.
+
+### Testing Steps
+
+1. Run migration `20250707_005_exercise_catalog.sql` in Supabase
+2. **System catalog** — open Training, search “Bench Press”, add from results; confirm BuiltIQ badge and muscle/equipment metadata
+3. **Create custom exercise** — use “Create custom exercise” in Training or Settings; save and add to workout
+4. **Search** — confirm custom exercise appears in your search results but not for another user account
+5. **Edit custom exercise** — Settings → My Exercise Catalog → Edit name/metadata; confirm changes save
+6. **Archive / restore** — archive a custom exercise; confirm it disappears from Training search; restore from Settings
+7. **System protection** — confirm system exercises cannot be edited or archived in Settings
+8. **Logging snapshots** — log sets for a catalog-linked exercise; rename the workout exercise display name; refresh Progress — history still shows logged name and numbers
+9. **Cross-program history** — log the same catalog exercise in two programs; confirm “Last time” in Training uses shared history when catalog IDs match
+10. **Generate program** — create a new program; confirm template exercises receive `catalog_exercise_id` links
+11. **Mobile** — catalog search, result list, and custom form remain usable on narrow screens
+
+### Known Issues
+
+- Legacy logs without catalog links still fall back to name-based matching
+- Workout inline name edits change display name only; catalog link drives progress aggregation
+- No duplicate-name prevention for user custom exercises yet
+- System catalog is seed data only; admin tooling for BuiltIQ-managed exercises not built yet
+
+### Recommended Commit Message
+
+```text
+BIQ-0005 Add exercise catalog with system and user exercises
+```
