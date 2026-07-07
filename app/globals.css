@@ -33,6 +33,13 @@
 .catalog-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
 .catalog-row.archived{opacity:.75}
 .catalog-edit-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:8px}
+.superset-block{border:1px solid #4c3f78;border-radius:16px;padding:8px;margin-bottom:10px;background:linear-gradient(180deg,#141827,#101520)}
+.superset-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;padding:0 2px}
+.superset-badge{background:#312654;color:#ddd6fe}
+.superset-builder{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+.superset-picks{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.exercise-card.in-superset{margin-bottom:8px;border-color:#3b335f;background:linear-gradient(180deg,#151a28,#111827)}
+.catalog-result.picked{border-color:var(--purple);background:#171628}
 .setgrid-edit{grid-template-columns:72px 45px 0.8fr 0.8fr 0.7fr 0.9fr 0.9fr 0.8fr 42px}
 .history-row{display:grid;grid-template-columns:1fr;gap:4px;padding:8px 0;border-top:1px solid var(--line)}
 .history-row b{display:block}
