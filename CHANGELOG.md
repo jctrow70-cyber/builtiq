@@ -443,3 +443,62 @@ None.
 ```text
 BIQ-0007 Redesign dashboard UX with top navigation
 ```
+
+---
+
+## BIQ-0008 - Exercise Supersets
+
+Date: 2026-07-07  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Added superset support so 2–3 exercises can be grouped back-to-back in workouts. Supersets can be created when adding exercises in Training or generated automatically from built-in program templates.
+
+### Purpose
+
+Athletes and coaches commonly program antagonist or complementary pairs (e.g. leg curl + leg extension). BuiltIQ needed a first-class way to represent, display, and log supersets without breaking future-week edit sync or set-log snapshots.
+
+### Changes
+
+- Added `superset_group_id` on `st_exercises` and `snapshot_superset_group_id` on `st_set_logs`
+- Program generation reads `{ superset: [...] }` blocks in `WORKOUT_TEMPLATES` (Lower/Upper Body templates updated)
+- Training UI: grouped superset blocks with visual styling, break-superset action, and catalog picker to pick 2–3 exercises
+- Set log snapshots preserve superset group at save time
+- Removing an exercise from a superset auto-ungroups if only one remains
+
+### Files Changed
+
+- `supabase/migrations/20250707_007_exercise_supersets.sql`
+- `app/page.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+Run in Supabase SQL editor (after prior migrations):
+
+- `20250707_007_exercise_supersets.sql`
+
+### Testing Steps
+
+1. Run migration `20250707_007_exercise_supersets.sql` in Supabase
+2. Generate a new Lower Body or Upper Body program — confirm supersets appear grouped in Strength
+3. In Training, use **Add superset** to pick 2–3 catalog exercises and add them as a group
+4. Log sets within a superset — confirm logs save normally
+5. Use **Break superset** — exercises become standalone again
+6. Remove one exercise from a 2-exercise superset — remaining exercise is ungrouped
+
+### Known Issues
+
+- Reorder (↑↓) moves individual exercises, not whole superset blocks
+- Existing programs created before this migration have no supersets until edited or regenerated
+
+### Recommended Commit Message
+
+```text
+BIQ-0008 Add exercise supersets for training and program templates
+```

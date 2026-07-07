@@ -279,3 +279,29 @@ BuiltIQ should present as a premium wellness product, not a builder tool. Most d
 ### Impact
 
 No database changes. All BIQ-0005 catalog and training flows preserved. AI Coach and Nutrition remain placeholders until future BIQ work.
+
+---
+
+## Decision 011 - Exercise Supersets via Group ID
+
+Date: 2026-07-07  
+Status: Accepted  
+Category: Workout Data Model
+
+### Decision
+
+Group supersets using a shared nullable `superset_group_id` (UUID) on adjacent `st_exercises` rows within the same workout section. Each superset contains 2–3 exercises. Program templates express supersets as `{ superset: [ exerciseTuple, ... ] }` alongside single-exercise tuples. Set logs snapshot `snapshot_superset_group_id` at save time.
+
+### Reason
+
+Supersets are a presentation and programming grouping, not a separate entity type. A shared group ID keeps sort order intact, works with existing future-week sync via `sort_order` + catalog matching, and avoids a new join table for MVP.
+
+### Alternatives Considered
+
+- Dedicated `st_supersets` table with ordered child rows (more normalized; heavier MVP scope)
+- JSON array on a single exercise row (breaks per-exercise set logging model)
+- Name-prefix convention like "SS: A / B" (fragile, no structured UI)
+
+### Impact
+
+Training renders contiguous same-group exercises as a visual superset block. Users can break groups or build new ones from catalog search. Lower/Upper Body templates ship with example supersets. Full-body template remains all singles for now.
