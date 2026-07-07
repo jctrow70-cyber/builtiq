@@ -468,6 +468,8 @@ export default function Page(){
   setAppNav(n);
   if(n==='Progress'||n==='Dashboard')loadProgressLogs();
   if(n==='Settings'){loadCatalog(); if(activeTeam)loadMembers();}
+  if(n==='Team'){if(teams.length)setMode('team'); loadMembers(); loadMemberStats();}
+  if(n==='Dashboard'&&teams.length){loadMembers(); loadMemberStats();}
   if(n==='Training'&&!program)setShowProgramSetup(true);
  }
 
