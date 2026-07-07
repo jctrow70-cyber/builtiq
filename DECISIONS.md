@@ -127,3 +127,53 @@ Change numbers make it easier to track what Cursor changed, what was tested, and
 ### Impact
 
 Every meaningful change should update CHANGELOG.md and use a clear commit message.
+
+---
+
+## Decision 005 - Migration-Based RLS Hardening
+
+Date: 2026-07-07  
+Status: Accepted  
+Category: Database Security
+
+### Decision
+
+Apply RLS policy changes through numbered SQL migration files in `supabase/migrations/` rather than editing `supabase-strength-team-schema.sql` in place.
+
+### Reason
+
+Production and develop databases already exist with user data. Incremental migrations preserve data, provide a clear run order, and document what must be executed in Supabase.
+
+### Alternatives Considered
+
+- Re-run the full base schema script (drops/recreates policies; risky on live data)
+- App-only permission checks without RLS (insufficient security)
+
+### Impact
+
+All future database permission changes should add a new migration file. The base schema file remains the reference for fresh installs.
+
+---
+
+## Decision 006 - Exercise Section Column
+
+Date: 2026-07-07  
+Status: Accepted  
+Category: Workout Data Model
+
+### Decision
+
+Add `st_exercises.section` with values `warmup` and `strength` instead of separate workout tables per section.
+
+### Reason
+
+Keeps the existing workout → exercise → planned set hierarchy intact while supporting grouped UI and section-scoped reorder. Minimal schema change; existing exercises default to `strength`.
+
+### Alternatives Considered
+
+- Separate tables per section (more joins, more complexity)
+- Warmup sets only as set types on strength exercises (confusing UX; does not match product structure)
+
+### Impact
+
+Program generation and Training UI group by section. Future sections (e.g. plyometrics) can add new `section` values. Cross-week edit matching uses `section` + `sort_order` or `section` + `name`.

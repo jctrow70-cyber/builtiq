@@ -67,10 +67,11 @@ Example:
 
 ```text
 BIQ-0001 Initial documentation foundation
-BIQ-0002 Authentication security updates
-BIQ-0003 Workout history redesign
-BIQ-0004 Nutrition tracker foundation
-BIQ-0005 AI Coach planning
+BIQ-0002 Strength/team RLS security hardening
+BIQ-0003 Workout history stability
+BIQ-0004 Workout plan sections and exercise organization
+BIQ-0005 Nutrition tracker foundation
+BIQ-0006 AI Coach planning
 ```
 
 Each change should update `CHANGELOG.md` and include testing steps.

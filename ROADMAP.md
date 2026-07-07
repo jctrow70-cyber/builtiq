@@ -190,4 +190,17 @@ Goal: Prepare BuiltIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
-Start with Phase 1 and Phase 2 before adding the AI Wellness Coach. The app needs a secure and stable foundation first.
+Phase 2 security hardening (BIQ-0002) and initial workout section work (BIQ-0004) are complete on `develop`.
+
+Next priorities:
+
+1. **BIQ-0003** — Workout history stability (completed workout snapshots)
+2. Progress tab — surface lift history already loaded in Training
+3. Settings — persist display name to Supabase
+4. Plyometrics / Power workout section (after warmup/strength is stable)
+
+Run pending Supabase migrations on each environment before testing:
+
+- `20250707_001_tighten_strength_team_rls.sql`
+- `20250707_002_fix_team_join_rls.sql`
+- `20250707_003_exercise_sections.sql`
