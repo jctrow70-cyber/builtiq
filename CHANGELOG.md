@@ -320,3 +320,126 @@ Creates `st_exercise_catalog`, seeds system exercises, adds FK columns, backfill
 ```text
 BIQ-0005 Add exercise catalog with system and user exercises
 ```
+
+---
+
+## BIQ-0006 - Streamline Auth and Expand User Profiles
+
+Date: 2026-07-07  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Fixed the login profile-screen flash for returning users, added remembered email and browser-friendly sign-in forms, and expanded account onboarding with height, weight, and profile metrics.
+
+### Purpose
+
+Returning users should land in the app immediately after sign-in. New users need a clearer onboarding path with profile data that supports future personalization and progress tracking.
+
+### Changes
+
+- Added loading state while session and profile load (eliminates setup-screen flash)
+- Sign In / Create Account tabs with `autocomplete` attributes for browser password managers
+- Remember email via localStorage (password saved by browser, not app code)
+- Expanded profile fields: name, height, weight, birth year, sex, experience, goal, units
+- Settings profile section saves all fields to Supabase
+- `profile_completed` flag controls whether onboarding is shown
+
+### Files Changed
+
+- `supabase/migrations/20250707_006_expand_user_profiles.sql`
+- `app/page.tsx`
+- `app/globals.css`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+- `supabase/migrations/20250707_006_expand_user_profiles.sql`
+
+Adds profile metric columns and `profile_completed` to `st_profiles`. Backfills `profile_completed = true` for existing users with a display name.
+
+### Testing Steps
+
+1. Run migration `20250707_006_expand_user_profiles.sql` in Supabase
+2. Returning user sign-in shows loading spinner only, then app opens (no setup flash)
+3. Remember email checkbox prefills email after sign out
+4. Browser offers to save password on sign-in
+5. Create Account tab collects email, password, confirm, and profile fields
+6. Settings saves and persists profile fields
+7. Mobile auth layout remains usable
+
+### Known Issues
+
+- Height/weight stored in inches and pounds; full metric input conversion is future work
+- Email confirmation flow depends on Supabase auth settings
+
+### Recommended Commit Message
+
+```text
+BIQ-0006 Streamline auth flow and expand user profiles
+```
+
+---
+
+## BIQ-0007 - Dashboard UX Redesign
+
+Date: 2026-07-07  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Redesigned BuiltIQ from a configuration sidebar layout into a premium wellness dashboard with top navigation, personalized home cards, and program setup moved into Training.
+
+### Purpose
+
+BuiltIQ should feel like a wellness product on login — not a builder tool. Users land on a dashboard with today's workout and progress snapshot, while program setup lives in Training.
+
+### Changes
+
+- Removed left sidebar layout
+- Added top navigation: Dashboard, Training, Nutrition, Progress, AI Coach, Settings
+- Dashboard: personalized greeting, today's workout, weekly progress, nutrition placeholder, AI Coach insight placeholder
+- Moved program creation, team mode, and program selection into Training → Program setup
+- Moved Teams management into Settings (functionality preserved)
+- Mobile-first responsive dashboard grid and scrollable top nav
+- Preserved BIQ-0005 exercise catalog search, custom exercises, and logging
+
+### Files Changed
+
+- `app/page.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Sign in and confirm top navigation appears (no left sidebar)
+2. Dashboard shows greeting with your display name
+3. Today's Workout card shows scheduled workout or rest-day message
+4. Weekly Progress shows 7-day set count and workout days after logging
+5. Nutrition and AI Coach cards show placeholders
+6. Training → Program setup creates/selects programs
+7. Exercise catalog search, custom exercises, and set logging still work
+8. Settings → Profile, Exercise Catalog, and Teams still work
+9. AI Coach nav opens placeholder page
+10. Mobile: top nav scrolls horizontally; dashboard cards stack in one column
+
+### Known Issues
+
+- Today's workout uses program week/day mapping, not calendar auto-advance
+- AI Coach and Nutrition are placeholders only
+- Dashboard weekly stats depend on completed set logs
+
+### Recommended Commit Message
+
+```text
+BIQ-0007 Redesign dashboard UX with top navigation
+```
