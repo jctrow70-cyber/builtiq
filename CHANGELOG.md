@@ -564,3 +564,39 @@ Run in Supabase SQL editor (after prior migrations):
 ```text
 BIQ-0009 Add team progress tracking and member workout plans
 ```
+
+---
+
+## BIQ-0010 - Team Tab, Compliance Summary, and Training UX Cleanup
+
+Date: 2026-07-07  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Added a dedicated Team tab with compliance metrics and member roster. Simplified Training logging to weight and reps only, compact typeahead exercise search with inline superset checkbox, and dashboard team compliance widget.
+
+### Changes
+
+- New **Team** nav tab: plan toggle, compliance summary, member list with coach view
+- Dashboard **Team Compliance** card (7-day active members, total sets)
+- Removed target weight/reps/RPE columns from Training UI; removed RPE from logging
+- Compact typeahead exercise search (name or muscle group)
+- Superset via **SS** checkbox when adding exercises (replaces separate superset builder)
+
+### Files Changed
+
+- `app/page.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Recommended Commit Message
+
+```text
+BIQ-0010 Add Team tab, compliance summary, and streamlined Training UX
+```
