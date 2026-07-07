@@ -74,6 +74,14 @@ Goal: Complete the core workout logging experience.
 - Workout summary cards
 - Testing checklist
 
+### BIQ-0011 additions (planned)
+
+- Confirm-before-add exercise panel with superset configuration
+- Personal / Team sub-navigation within Training
+- Coach member training dashboard
+- Rule-based progression hints on future workouts (`lib/training/progression.ts`)
+- Muscle focus program generation with weekly volume targets
+
 ## Phase 4 — Progress and Analytics
 
 Goal: Help users see improvement over time.
@@ -190,14 +198,18 @@ Goal: Prepare BuiltIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
-Phase 2 security hardening (BIQ-0002), workout sections (BIQ-0004), workout history snapshots (BIQ-0003), exercise catalog (BIQ-0005), auth/profile onboarding (BIQ-0006), dashboard UX (BIQ-0007), exercise supersets (BIQ-0008), and team progress/member plans (BIQ-0009) are complete on `develop`.
+Completed through **BIQ-0010** on `main`: security (BIQ-0002), sections (BIQ-0004), history snapshots (BIQ-0003), exercise catalog (BIQ-0005), auth/profile (BIQ-0006), dashboard UX (BIQ-0007), supersets (BIQ-0008), team progress/member plans (BIQ-0009), Team tab + Training UX cleanup (BIQ-0010).
 
-Next priorities:
+### Active change request
+
+**BIQ-0011 — Training UX, Team Training Dashboard, Workout Progression, Muscle Focus Programs** (Completed)
+
+### Next priorities (after BIQ-0011)
 
 1. Plyometrics / Power workout section
 2. PR detection and strength trends on Progress tab
 3. Nutrition MVP placeholder → functional tracking
-4. AI Coach insight cards with real data
+4. AI Coach progression hook-up (uses BIQ-0011 progression module)
 5. Split `page.tsx` into focused components
 
 Run pending Supabase migrations on each environment before testing:
@@ -208,3 +220,6 @@ Run pending Supabase migrations on each environment before testing:
 - `20250707_004_set_log_snapshots.sql`
 - `20250707_005_exercise_catalog.sql`
 - `20250707_006_expand_user_profiles.sql`
+- `20250707_007_exercise_supersets.sql`
+- `20250707_008_team_progress_and_plans.sql`
+- `20250707_009_training_progression_and_focus.sql` (planned with BIQ-0011)

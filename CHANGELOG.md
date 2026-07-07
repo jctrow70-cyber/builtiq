@@ -600,3 +600,281 @@ None.
 ```text
 BIQ-0010 Add Team tab, compliance summary, and streamlined Training UX
 ```
+
+---
+
+## BIQ-0011 - Training UX, Team Training Dashboard, Workout Progression, and Muscle Focus Programs
+
+Date: 2026-07-07  
+Branch: develop  
+Status: **Completed**
+
+> **Note:** Requestor referenced “BIQ-0007” for this scope; BIQ-0007 is already assigned to Dashboard UX Redesign. This change request is numbered **BIQ-0011** as the next available BIQ.
+
+### Summary
+
+Improve the core training experience before adding more surface area: confirm-before-add exercise flow, Personal/Team sub-navigation inside Training, coach member dashboard, rule-based workout progression from logged history, and muscle-focus program generation using hypertrophy volume principles.
+
+### Purpose
+
+The current training flow is functional but confusing. Exercises feel auto-added before setup is finalized, team training requires leaving Training to use the Team tab, future weeks do not show last performance or next targets, and program generation does not support user-selected muscle emphasis. This BIQ consolidates UX polish and progression foundations into one coherent training upgrade.
+
+### Scope
+
+#### Part 1 — Improve Add Exercise UX
+
+**Problem:** User must choose set/superset options before the exercise is clearly finalized; selecting from catalog feels like immediate add.
+
+**Desired flow:**
+
+1. User clicks **Add Exercise**
+2. Modal or slide-over panel opens
+3. User searches catalog or creates custom exercise
+4. After selection, user configures:
+   - Normal exercise **or** superset membership
+   - If superset: join existing group or create new group
+   - Starting sets / reps / weight / rest (where applicable)
+5. User clicks **Add Exercise** to confirm
+6. Exercise is written to workout **only** on confirm
+
+**Requirements:**
+
+- No auto-add on catalog pick alone
+- Custom exercise creation preserved (BIQ-0005 catalog)
+- Intentional, simple flow; mobile-friendly panel
+- Preserve snapshot-based history integrity (BIQ-0003)
+- Superset grouping continues via `superset_group_id` (BIQ-0008)
+
+**Proposed UI:**
+
+- Replace inline typeahead + SS checkbox with **Add Exercise** button per section
+- Panel states: `search` → `configure` → confirm
+- Show summary line before confirm: e.g. “Bench Press · 3 sets · Superset with Face Pull”
+
+---
+
+#### Part 2 — Personal vs Team Training Inside Training
+
+**Problem:** Team workflow requires Team tab → select team → return to Training.
+
+**Desired structure:**
+
+Training is the root training area with sub-navigation:
+
+| Sub-tab | Content |
+|---------|---------|
+| **Personal Training** | User’s plan, today’s workout, week view, exercise history |
+| **Team Training** | Team list/selector, roster, today’s team overview — without leaving Training |
+
+**Requirements:**
+
+- Team selector and mode live under Training sub-nav (Team tab may remain for compliance/roster admin or link into Team Training)
+- Preserve `training_source`, `default_program_id`, coach read-only member view (BIQ-0009)
+- No regression to personal logging or team program editing permissions
+
+---
+
+#### Part 3 — Team Member Training Dashboard
+
+**Problem:** Clicking a member today opens read-only Training; coaches need at-a-glance compliance.
+
+**Desired dashboard (coach view on member select):**
+
+| Section | Data |
+|---------|------|
+| Header | Member name, plan type (team/personal), role |
+| Today | Assigned workout (day label, type), status: Not started / In progress / Completed |
+| Exercises | Today’s exercises with planned sets |
+| Logging | Per-set weight, reps, completion status for selected log date |
+| History | Last completed workout summary |
+| Notes | Recent performance notes (placeholder field OK for v1) |
+| Progress | Simple indicators when data exists (sets/week, streak) |
+
+**Requirements:**
+
+- Coach-only for other members; member can view own dashboard
+- Read-only for coach on member logs; no impersonation
+- Uses existing `st_set_logs` + snapshots; optional `coach_notes` table deferred to sub-task if needed
+
+---
+
+#### Part 4 — Workout History and Next-Week Progression Logic
+
+**Problem:** Logging today does not inform week 3+ views; no “last time” or “next target” on future workouts.
+
+**Data to leverage (existing + extensions):**
+
+| Field | Source |
+|-------|--------|
+| exercise_id / catalog id | `st_exercises`, snapshots |
+| exercise_name_snapshot | `snapshot_exercise_name` on log |
+| date, week, day | `log_date`, program week, workout `day_order` |
+| sets/reps/weight | `actual_*` on `st_set_logs` |
+| RPE / difficulty | Optional; re-introduce as optional field if stored |
+| completion | `completed` flag |
+
+**Future workout display:**
+
+```
+Last time: Bench Press — 3×8 @ 135 lb
+Next target: Bench Press — 3×8 @ 140 lb
+Progression note: All reps completed — increase weight 5 lb
+```
+
+**Rule-based progression v1:**
+
+| Condition | Action |
+|-----------|--------|
+| All prescribed reps completed, manageable difficulty | Increase weight slightly (e.g. +5 lb upper / +10 lb lower default) |
+| Weight cannot increase | Increase reps within target range |
+| Reps missed | Repeat same target |
+| Multiple missed sets | Reduce load slightly |
+
+**Architecture placeholder for AI progression:**
+
+- Add `lib/progression/` (or `lib/training/progression.ts`) with:
+  - `getLastPerformance(exerciseKey, beforeDate)`
+  - `recommendNextTarget(lastPerformance, plannedTemplate)`
+  - `ProgressionResult { lastSummary, nextTarget, note, ruleApplied }`
+- UI reads from this module only — swap rules for AI later without UI rewrite
+
+**Requirements:**
+
+- Do not mutate historical logs when templates change
+- Recommendations are **display hints** on future weeks; user still logs actuals
+- Works for personal and coach member view
+
+---
+
+#### Part 5 — Muscle Focus Program Generation
+
+**Problem:** Generated programs ignore user emphasis preferences.
+
+**Desired behavior:**
+
+At program generation, user selects focus muscle groups, e.g.:
+
+Chest · Hamstrings · Quads · Lats · Traps · Shoulders · Glutes · Arms · Core
+
+**Rule-based hypertrophy guidance (v1):**
+
+- Target ~**10–15 quality working sets per week** per focus muscle (starting point)
+- Spread volume across 2–3 sessions when possible
+- Balance agonist/antagonist (e.g. chest + back; hamstrings + quads/glutes)
+- Avoid stacking same joint pattern on consecutive days
+- Include mobility/prehab in warmup sections
+
+**Examples:**
+
+- **Chest focus:** Extra pressing + fly work across 2–3 days; maintain back volume
+- **Hamstrings focus:** Hip hinge + knee flexion; balance quads/glutes; avoid back-to-back posterior-chain overload
+
+**Requirements:**
+
+- Store `focus_muscles text[]` (or JSON) on `st_programs`
+- Template engine adjusts exercise selection and set counts from focus list
+- Show user-visible summary: “This program emphasizes: Chest, Hamstrings (~12 sets/week each)”
+- No AI generation in v1; deterministic rules only
+- Extensible for AI Coach (Phase 6)
+
+---
+
+### Proposed Database Changes
+
+| Change | Purpose |
+|--------|---------|
+| `st_programs.focus_muscles text[]` | Persist muscle focus selections |
+| Optional `st_programs.progression_profile jsonb` | Future AI/rule profile metadata |
+| Optional `st_coach_notes` | Member notes on dashboard (Part 3); defer if placeholder UI suffices |
+| Optional `snapshot_week`, `snapshot_day_order` on logs | Faster progression queries (or derive from workout join) |
+| Re-optional `actual_rpe` or `difficulty` on logs | Part 4 if user wants difficulty signal again |
+
+Migration file (planned): `20250707_009_training_progression_and_focus.sql`
+
+### Proposed Files to Change
+
+| File | Changes |
+|------|---------|
+| `app/page.tsx` | Split or refactor: add-exercise panel, Training sub-nav, member dashboard, progression display |
+| `app/globals.css` | Panel/modal, sub-nav, member dashboard, progression cards |
+| `lib/training/progression.ts` | **New** — rule engine + types |
+| `lib/training/programGenerator.ts` | **New** — muscle focus volume logic |
+| `lib/training/focusMuscles.ts` | **New** — focus muscle constants + mappings |
+| `supabase/migrations/20250707_009_*.sql` | Schema for focus muscles + optional fields |
+| `CHANGELOG.md`, `DECISIONS.md`, `ROADMAP.md` | This request + implementation notes |
+
+### Dependencies
+
+- BIQ-0003 set log snapshots (required)
+- BIQ-0005 exercise catalog (required)
+- BIQ-0008 supersets (required)
+- BIQ-0009 team plans + coach visibility (required for Part 3)
+- BIQ-0010 current Training UI (baseline to refactor, not duplicate Team tab work)
+
+### Out of Scope (this BIQ)
+
+- Full AI Coach progression
+- Nutrition integration
+- Plyometrics/Power section (separate BIQ)
+- Splitting entire `page.tsx` into components (recommended parallel refactor, not blocker)
+
+### Testing Steps
+
+1. **Add normal exercise** — open panel, search, configure sets, confirm; exercise appears only after confirm
+2. **Add custom exercise** — create in panel, configure, confirm; appears in catalog and workout
+3. **Add to superset** — select existing group or new group in panel; 2–3 exercises grouped correctly
+4. **Personal vs Team sub-nav** — switch inside Training without visiting Team tab; correct program loads
+5. **Member dashboard** — coach clicks member; sees today’s workout, status, logged sets/reps/weight
+6. **Log sets/reps/weight** — personal workout; logs persist with snapshots
+7. **Future week progression** — view week N+1; see last performance + next target + note per exercise
+8. **Muscle focus generation** — select Chest + Hamstrings; program generates with visible emphasis summary
+9. **Weekly volume** — confirm focus muscles receive ~10–15 working sets/week in generated plan
+
+### Mobile / UX Acceptance
+
+- Add-exercise panel usable on 375px width
+- Sub-nav tabs scroll horizontally if needed
+- Member dashboard readable without horizontal scroll for core metrics
+- Progression text concise (two lines max per exercise in list view)
+
+### Known Issues / Risks
+
+- Large `page.tsx` refactor may conflict with in-flight UI changes — implement in feature branch
+- Progression rules are simplified; edge cases (deload weeks, injuries) need future BIQ
+- Re-adding optional RPE must not clutter BIQ-0010 simplified grid unless user opts in
+- Team tab vs Training sub-nav overlap must be designed to avoid duplicate controls
+
+### Files Changed
+
+- `app/page.tsx`
+- `app/globals.css`
+- `lib/training/focusMuscles.ts` (new)
+- `lib/training/progression.ts` (new)
+- `lib/training/programGenerator.ts` (new)
+- `supabase/migrations/20250707_009_training_progression_and_focus.sql` (new)
+- `CHANGELOG.md`, `DECISIONS.md`, `ROADMAP.md`
+
+### Database Changes
+
+Run migration `20250707_009_training_progression_and_focus.sql`:
+- `st_programs.focus_muscles text[]`
+- `st_programs.progression_profile jsonb`
+- `st_set_logs.snapshot_week`, `snapshot_day_order`
+
+### Testing Steps
+
+1. Add normal exercise via panel → search → configure → **Add Exercise**
+2. Add custom exercise from panel custom step → configure → confirm
+3. Add to superset (new or existing group) via configure step
+4. Switch **Personal Training** / **Team Training** sub-tabs inside Training
+5. Team Training → click member → dashboard with status and today’s sets
+6. Log sets/reps/weight on personal workout
+7. View week 2+ → see Last / Next progression hints on exercises
+8. Generate program with Chest + Hamstrings focus → see focus summary
+9. Confirm generated plan includes extra focus-muscle volume
+
+### Recommended Commit Message
+
+```text
+BIQ-0011 Add training UX panel, team dashboard, progression hints, and muscle focus programs
+```

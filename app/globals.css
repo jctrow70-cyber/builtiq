@@ -67,7 +67,28 @@
 .typeahead-empty{padding:10px}
 .superset-check{display:flex!important;align-items:center;gap:4px;font-size:11px;color:#cbd5e1;font-weight:800;white-space:nowrap;margin:0!important}
 .superset-check input{width:auto;margin:0}
-.team-compliance-card .dash-metrics{grid-template-columns:repeat(4,1fr)}
+ .team-compliance-card .dash-metrics{grid-template-columns:repeat(4,1fr)}
+ .training-subnav{margin-bottom:10px}
+ .team-training-bar{margin-bottom:10px}
+ .team-roster-compact{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+ .team-member-chip{border:1px solid var(--line);background:#0b1119;color:#e5e7eb;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800}
+ .team-member-chip.active{border-color:var(--purple);background:#1b1634}
+ .section-add-row{margin:8px 0 4px}
+ .panel-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;display:flex;align-items:flex-end;justify-content:center;padding:12px}
+ .add-exercise-panel{width:100%;max-width:520px;max-height:85vh;overflow:auto;margin:0}
+ .panel-results{position:static;max-height:200px;margin-top:8px;box-shadow:none}
+ .panel-picked{padding:10px;border:1px solid var(--line);border-radius:12px;margin:8px 0;background:#0b1119}
+ .panel-picked b{display:block}
+ .focus-muscle-grid{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}
+ .focus-chip{border:1px solid var(--line);background:#0b1119;color:#cbd5e1;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800}
+ .focus-chip.active{border-color:var(--purple);background:#1b1634;color:#fff}
+ .progression-hints{margin-top:4px;padding:6px 8px;border-radius:10px;background:#0f1422;border:1px solid var(--line)}
+ .progression-next{font-size:12px;font-weight:800;color:#c4b5fd;margin-top:2px}
+ .progression-note{font-size:10px;margin-top:2px}
+ .member-dashboard{border-color:#4c3f78}
+ .member-dash-metrics{margin-top:10px}
+ .member-exercise-row{padding:8px 0;border-top:1px solid var(--line)}
+ .member-exercise-row b{display:block;font-size:14px}
 .history-row{display:grid;grid-template-columns:1fr;gap:4px;padding:8px 0;border-top:1px solid var(--line)}
 .history-row b{display:block}
-@media(max-width:900px){.add-exercise-row{grid-template-columns:1fr 1fr}.catalog-edit-grid{grid-template-columns:1fr}.setgrid,.setgrid-edit{grid-template-columns:1fr 1fr 1fr}.exercise-add-row{grid-template-columns:1fr auto auto}.team-compliance-card .dash-metrics{grid-template-columns:1fr 1fr}}
+ @media(max-width:900px){.add-exercise-row{grid-template-columns:1fr auto auto}.catalog-edit-grid{grid-template-columns:1fr}.setgrid,.setgrid-edit{grid-template-columns:1fr 1fr 1fr}.exercise-add-row{grid-template-columns:1fr auto auto}.team-compliance-card .dash-metrics{grid-template-columns:1fr 1fr}.panel-overlay{align-items:flex-end;padding:0}.add-exercise-panel{border-radius:18px 18px 0 0;max-height:90vh}}

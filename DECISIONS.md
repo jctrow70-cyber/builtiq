@@ -331,3 +331,107 @@ Coaches need visibility into compliance and performance without sharing login cr
 ### Impact
 
 Training shows team roster with 7-day set counts. Clicking a member opens read-only plan + logs for owners/editors. Members toggle team vs personal plan without leaving team mode.
+
+---
+
+## Decision 013 - Confirm-Before-Add Exercise Flow
+
+Date: 2026-07-07  
+Status: Accepted  
+Category: Training UX
+
+### Decision
+
+Replace immediate catalog-to-workout insertion with a two-step **Add Exercise** panel: (1) search or create exercise, (2) configure type (normal/superset), superset group, and starting set prescription, then confirm. No database write until the user clicks **Add Exercise**.
+
+### Reason
+
+Current typeahead + SS checkbox feels like exercises are added before setup is complete. A confirm step makes intent clear, reduces mistaken adds, and gives room for sets/reps/weight defaults before the exercise appears in the workout.
+
+### Alternatives Considered
+
+- Keep inline typeahead with delayed save (still feels auto-added)
+- Separate superset builder screen (BIQ-0008 legacy; rejected as too much space)
+- Modal vs slide-over panel (implementation choice; panel preferred for mobile)
+
+### Impact
+
+Preserves BIQ-0005 catalog search and BIQ-0008 superset group IDs. Slightly more taps per add, but clearer flow. Custom exercises still created from the same panel.
+
+---
+
+## Decision 014 - Training Root with Personal/Team Sub-Navigation
+
+Date: 2026-07-07  
+Status: Accepted  
+Category: Information Architecture
+
+### Decision
+
+Make **Training** the primary training hub with sub-tabs **Personal Training** and **Team Training**. Team selection, roster, and member context live under Team Training without forcing navigation to a separate top-level Team tab for daily workout use.
+
+### Reason
+
+Users currently bounce Team tab → Training, which feels disconnected. Sub-navigation keeps workout logging in one mental “place” while still supporting team programs (BIQ-0009).
+
+### Alternatives Considered
+
+- Remove Team top-level nav entirely (compliance summary still useful on Dashboard / Team admin view)
+- Global Personal/Team toggle only in header (insufficient for roster + member dashboard)
+- Separate coach app (out of MVP scope)
+
+### Impact
+
+Team top-level tab may remain for compliance and settings-style team admin, but day-to-day team workouts start from Training → Team Training. `training_source` and coach permissions unchanged.
+
+---
+
+## Decision 015 - Rule-Based Progression Engine (v1)
+
+Date: 2026-07-07  
+Status: Accepted  
+Category: Workout Intelligence
+
+### Decision
+
+Introduce a dedicated progression module that reads completed set logs (with snapshots) and returns **last performance**, **next target**, and a **plain-language note** using transparent rules: increase weight when reps hit, increase reps when weight stalls, repeat on miss, reduce load on multiple misses. Future workouts display recommendations; logs remain user-entered actuals.
+
+### Reason
+
+Users expect week-ahead workouts to reflect what they did last time. Centralizing logic in `lib/training/progression.ts` allows rule-based MVP now and AI replacement later without rewriting Training UI.
+
+### Alternatives Considered
+
+- Store next targets on `st_planned_sets` automatically (mutates templates; conflicts with BIQ-0003 history integrity)
+- AI-only progression (too heavy for current phase)
+- Progress tab only, no in-workout hints (does not solve future-week confusion)
+
+### Impact
+
+Requires querying historical logs by exercise key (catalog id + name fallback). Optional difficulty/RPE field may return as optional input to improve rules. Display-only recommendations on future weeks.
+
+---
+
+## Decision 016 - Muscle Focus Program Generation
+
+Date: 2026-07-07  
+Status: Accepted  
+Category: Program Design
+
+### Decision
+
+Extend program generation with multi-select **focus muscles**, persisted on `st_programs.focus_muscles`. A rule-based generator allocates ~10–15 weekly working sets per focus muscle, spreads volume across days, and balances opposing groups using catalog muscle_group mappings and template expansion—not LLM generation in v1.
+
+### Reason
+
+Users want programs that reflect priorities (e.g. chest + hamstrings) without manual template editing. Hypertrophy volume landmarks provide a defensible, explainable starting point before AI Coach (Phase 6).
+
+### Alternatives Considered
+
+- Manual template only (no personalization)
+- Full AI program writer (Phase 6; premature)
+- Per-exercise sliders for volume (too complex for MVP)
+
+### Impact
+
+Generate screen shows focus picker + weekly volume summary. WORKOUT_TEMPLATES and catalog drive exercise selection adjustments. Documented in BIQ-0011 testing checklist.
