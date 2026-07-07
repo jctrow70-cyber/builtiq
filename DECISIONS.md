@@ -254,3 +254,28 @@ Progress accuracy requires a stable exercise identity across programs, renames, 
 ### Impact
 
 Training search reads system + own custom exercises. Settings manages custom exercise lifecycle (edit, archive). History keys prefer catalog ID with legacy name fallback. System exercises are read-only for normal users. Future PR charts and muscle-group analytics can use catalog metadata (`muscle_group`, `equipment`, `movement_pattern`).
+
+---
+
+## Decision 010 - Dashboard-First UX Layout
+
+Date: 2026-07-07  
+Status: Accepted  
+Category: Product UX
+
+### Decision
+
+Replace the sidebar configuration layout with a top-nav, dashboard-first experience. Dashboard becomes the default landing view with wellness summary cards. Program generation and team/program controls move into Training. Teams management moves into Settings. Top navigation items: Dashboard, Training, Nutrition, Progress, AI Coach, Settings.
+
+### Reason
+
+BuiltIQ should present as a premium wellness product, not a builder tool. Most daily use is logging workouts and reviewing progress — not editing program structure. Separating configuration into Training reduces noise while preserving all existing functionality.
+
+### Alternatives Considered
+
+- Keep sidebar for power users (adds permanent clutter on mobile)
+- Remove Teams entirely from nav (would drop existing team MVP features)
+
+### Impact
+
+No database changes. All BIQ-0005 catalog and training flows preserved. AI Coach and Nutrition remain placeholders until future BIQ work.

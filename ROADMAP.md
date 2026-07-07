@@ -190,14 +190,15 @@ Goal: Prepare BuiltIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
-Phase 2 security hardening (BIQ-0002), workout sections (BIQ-0004), workout history snapshots (BIQ-0003), and exercise catalog (BIQ-0005) are complete on `develop`.
+Phase 2 security hardening (BIQ-0002), workout sections (BIQ-0004), workout history snapshots (BIQ-0003), exercise catalog (BIQ-0005), auth/profile onboarding (BIQ-0006), and dashboard UX (BIQ-0007) are complete on `develop`.
 
 Next priorities:
 
 1. Plyometrics / Power workout section
-2. PR detection and strength trends on Progress tab (catalog IDs now available)
-3. Split `page.tsx` into focused components
-4. Metric unit input conversion for profile height/weight
+2. PR detection and strength trends on Progress tab
+3. Nutrition MVP placeholder → functional tracking
+4. AI Coach insight cards with real data
+5. Split `page.tsx` into focused components
 
 Run pending Supabase migrations on each environment before testing:
 
