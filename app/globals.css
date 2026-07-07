@@ -40,6 +40,17 @@
 .superset-picks{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .exercise-card.in-superset{margin-bottom:8px;border-color:#3b335f;background:linear-gradient(180deg,#151a28,#111827)}
 .catalog-result.picked{border-color:var(--purple);background:#171628}
+.team-plan-card,.team-roster-card{margin-bottom:10px}
+.team-member-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.team-member-row.active{background:#121827;border-radius:12px;padding:10px;margin:0 -4px}
+.team-member-main{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:transparent;color:inherit;padding:0}
+.team-member-main b{display:block;font-size:14px}
+.team-member-main .muted{display:block;font-size:11px;margin-top:2px}
+.team-member-stats{text-align:right;min-width:72px}
+.team-member-stats b{display:block;font-size:18px}
+.team-member-stats .muted{display:block;font-size:10px}
+.team-member-plan{max-width:120px;padding:6px 8px;font-size:11px}
+.viewing-banner{border-color:#4c3f78;background:linear-gradient(180deg,#171628,#121827);margin-bottom:10px}
 .setgrid-edit{grid-template-columns:72px 45px 0.8fr 0.8fr 0.7fr 0.9fr 0.9fr 0.8fr 42px}
 .history-row{display:grid;grid-template-columns:1fr;gap:4px;padding:8px 0;border-top:1px solid var(--line)}
 .history-row b{display:block}

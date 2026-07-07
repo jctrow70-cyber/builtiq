@@ -305,3 +305,29 @@ Supersets are a presentation and programming grouping, not a separate entity typ
 ### Impact
 
 Training renders contiguous same-group exercises as a visual superset block. Users can break groups or build new ones from catalog search. Lower/Upper Body templates ship with example supersets. Full-body template remains all singles for now.
+
+---
+
+## Decision 012 - Team Progress and Per-Member Training Plans
+
+Date: 2026-07-07  
+Status: Accepted  
+Category: Team Training Model
+
+### Decision
+
+Each team membership stores `training_source` (`team` | `personal`). Team default program is `st_teams.default_program_id`. Set logs store optional `team_id` when logging against a team program. Owners/editors may read (not write) teammate programs and set logs via expanded RLS; members choose their own training source via RPC.
+
+### Reason
+
+Coaches need visibility into compliance and performance without sharing login credentials. Some athletes follow the team block; others keep individualized work while remaining on the roster. Snapshots + per-user log rows preserve history integrity.
+
+### Alternatives Considered
+
+- Separate coach dashboard service (heavier MVP)
+- Copy team program per member (duplicated templates, harder sync)
+- Global Personal/Team toggle only (no per-member plan assignment)
+
+### Impact
+
+Training shows team roster with 7-day set counts. Clicking a member opens read-only plan + logs for owners/editors. Members toggle team vs personal plan without leaving team mode.

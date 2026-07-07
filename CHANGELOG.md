@@ -502,3 +502,65 @@ Run in Supabase SQL editor (after prior migrations):
 ```text
 BIQ-0008 Add exercise supersets for training and program templates
 ```
+
+---
+
+## BIQ-0009 - Team Progress and Member Workout Plans
+
+Date: 2026-07-07  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Team mode now supports tracking teammate progress, choosing team vs personal training plans, and coach read-only views of member workouts and logged sets.
+
+### Purpose
+
+Teams need more than a shared program template — coaches must see who is logging, which plan each member follows, and what they actually lifted. Members should follow the team workout or keep a personal plan without leaving the team.
+
+### Changes
+
+- Added `training_source` on `st_team_members` (`team` | `personal`)
+- Added `default_program_id` on `st_teams` for the active team program
+- Added `team_id` on `st_set_logs` for team-scoped progress queries
+- RLS: owners/editors can read teammate personal programs and set logs (view-only)
+- RPCs: `st_set_my_training_source`, `st_set_member_training_source`
+- Training UI: My training plan toggle, team roster with 7-day stats, click member to view plan/logs
+- Owners/editors can assign team vs personal plan per member
+
+### Files Changed
+
+- `supabase/migrations/20250707_008_team_progress_and_plans.sql`
+- `app/page.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+Run in Supabase SQL editor (after prior migrations):
+
+- `20250707_008_team_progress_and_plans.sql`
+
+### Testing Steps
+
+1. Run migration `20250707_008_team_progress_and_plans.sql`
+2. Switch to Team mode — confirm **My training plan** toggle (Team workout / Personal plan)
+3. As owner/editor, set **Team active program** in Program setup
+4. Log sets on team program — confirm they appear in roster 7-day stats
+5. Click a teammate — view their program template and logged sets (read-only)
+6. Assign a member to Personal plan — confirm their personal program loads when viewed
+7. Confirm members cannot edit another user’s logs
+
+### Known Issues
+
+- Team dashboard aggregates are Training-only (no separate team analytics page yet)
+- Personal-plan logs are not tagged with `team_id` (coach access uses membership-based RLS)
+
+### Recommended Commit Message
+
+```text
+BIQ-0009 Add team progress tracking and member workout plans
+```

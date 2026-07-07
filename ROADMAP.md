@@ -190,7 +190,7 @@ Goal: Prepare BuiltIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
-Phase 2 security hardening (BIQ-0002), workout sections (BIQ-0004), workout history snapshots (BIQ-0003), exercise catalog (BIQ-0005), auth/profile onboarding (BIQ-0006), dashboard UX (BIQ-0007), and exercise supersets (BIQ-0008) are complete on `develop`.
+Phase 2 security hardening (BIQ-0002), workout sections (BIQ-0004), workout history snapshots (BIQ-0003), exercise catalog (BIQ-0005), auth/profile onboarding (BIQ-0006), dashboard UX (BIQ-0007), exercise supersets (BIQ-0008), and team progress/member plans (BIQ-0009) are complete on `develop`.
 
 Next priorities:
 

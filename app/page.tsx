@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabaseClient';
 
-const NAV=['Dashboard','Training','Nutrition','Progress','AI Coach','Settings'];
+const NAV=['Dashboard','Training','Team','Nutrition','Progress','AI Coach','Settings'];
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const SECTIONS=[{id:'warmup',label:'Warm Up / Prep'},{id:'strength',label:'Strength'}];
 const SECTION_SORT_BASE:any={warmup:0,strength:100};
@@ -24,7 +24,7 @@ const WORKOUT_TEMPLATES:any={
 const exerciseSection=(ex:any)=>ex?.section||'strength';
 const sectionExercises=(workout:any,section:string)=>(workout?.st_exercises||[]).filter((e:any)=>exerciseSection(e)===section).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));
 const nextSortOrder=(workout:any,section:string)=>{const list=sectionExercises(workout,section);const base=SECTION_SORT_BASE[section]??100;return list.length?Math.max(...list.map((e:any)=>e.sort_order||0))+1:base;};
-const buildPlannedSetRows=(item:any[],section:string)=>{const sets=Number(item[2]||1),reps=item[3]||'',rpe=item[4]||'',wt=item[5]||'';const rows:any[]=[];for(let i=0;i<sets;i++)rows.push({sort_order:i,set_number:i+1,set_type:'working',target_weight:section==='strength'?String(wt||''):'',target_reps:reps,target_rpe:section==='strength'?rpe:'5'});return rows;};
+const buildPlannedSetRows=(item:any[],section:string)=>{const sets=Number(item[2]||1);const rows:any[]=[];for(let i=0;i<sets;i++)rows.push({sort_order:i,set_number:i+1,set_type:'working',target_weight:'',target_reps:'',target_rpe:''});return rows;};
 const isSupersetTemplate=(item:any)=>item&&typeof item==='object'&&!Array.isArray(item)&&Array.isArray(item.superset);
 const isExerciseTemplate=(item:any)=>Array.isArray(item);
 const makeSupersetGroupId=()=>(typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():`ss-${Date.now()}-${Math.random().toString(36).slice(2,8)}`);
@@ -36,9 +36,8 @@ const logSetType=(row:any,joinPs?:any)=>row.snapshot_set_type||joinPs?.set_type|
 const logSetNumber=(row:any,joinPs?:any)=>row.snapshot_set_number??joinPs?.set_number??1;
 const exerciseHistoryKey=(catalogId:string,name:string)=>catalogId||String(name||'').toLowerCase().trim();
 const logHistoryKeys=(row:any)=>{const joinEx=row.st_planned_sets?.st_exercises;const joinPs=row.st_planned_sets;const catalogId=logCatalogId(row,joinEx);const exerciseKey=exerciseHistoryKey(catalogId,logExerciseName(row,joinEx));const setKey=`${exerciseKey}|${logSetType(row,joinPs)}|${logSetNumber(row,joinPs)}`;return {exerciseKey,setKey,catalogId};};
-const snapshotForLog=(ex:any,set:any,workoutRef:any)=>({snapshot_exercise_name:ex?.name||'',snapshot_catalog_exercise_id:ex?.catalog_exercise_id||null,snapshot_superset_group_id:ex?.superset_group_id||null,snapshot_muscle_group:ex?.muscle_group||'',snapshot_section:exerciseSection(ex),snapshot_set_type:set?.set_type||'working',snapshot_set_number:set?.set_number||1,snapshot_target_weight:set?.target_weight||'',snapshot_target_reps:set?.target_reps||'',snapshot_target_rpe:set?.target_rpe||'',snapshot_day_label:workoutRef?.day_label||'',snapshot_workout_type:workoutRef?.workout_type||''});
-const catalogByName=(items:any[])=>{const map:any={};(items||[]).filter((c:any)=>!c.is_archived).forEach((c:any)=>{map[String(c.name||'').toLowerCase()]=c;});return map;};
-const filterCatalog=(items:any[],query:string,limit=12)=>(items||[]).filter((c:any)=>{if(c.is_archived)return false;const q=query.trim().toLowerCase();if(!q)return true;return String(c.name||'').toLowerCase().includes(q)||String(c.muscle_group||'').toLowerCase().includes(q)||String(c.category||'').toLowerCase().includes(q);}).slice(0,limit);
+const snapshotForLog=(ex:any,set:any,workoutRef:any)=>({snapshot_exercise_name:ex?.name||'',snapshot_catalog_exercise_id:ex?.catalog_exercise_id||null,snapshot_superset_group_id:ex?.superset_group_id||null,snapshot_muscle_group:ex?.muscle_group||'',snapshot_section:exerciseSection(ex),snapshot_set_type:set?.set_type||'working',snapshot_set_number:set?.set_number||1,snapshot_target_weight:'',snapshot_target_reps:'',snapshot_target_rpe:'',snapshot_day_label:workoutRef?.day_label||'',snapshot_workout_type:workoutRef?.workout_type||''});
+const filterCatalog=(items:any[],query:string,limit=8)=>{const q=query.trim().toLowerCase();if(!q)return[];return(items||[]).filter((c:any)=>{if(c.is_archived)return false;return String(c.name||'').toLowerCase().includes(q)||String(c.muscle_group||'').toLowerCase().includes(q)||String(c.category||'').toLowerCase().includes(q)||String(c.equipment||'').toLowerCase().includes(q);}).slice(0,limit);};const catalogByName=(items:any[])=>{const map:any={};(items||[]).filter((c:any)=>!c.is_archived).forEach((c:any)=>{map[String(c.name||'').toLowerCase()]=c;});return map;};
 const today=()=>new Date().toISOString().slice(0,10);
 const makeInviteCode=()=>(typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID().replace(/-/g,'').slice(0,8):Math.random().toString(36).slice(2,10)).toUpperCase();
 const REMEMBER_EMAIL_KEY='builtiq_remembered_email';
@@ -64,8 +63,11 @@ export default function Page(){
  const [catalogEditDraft,setCatalogEditDraft]=useState<any>({name:'',category:'',muscle_group:'',equipment:'',movement_pattern:''});
  const [progressLogs,setProgressLogs]=useState<any[]>([]);
  const [showProgramSetup,setShowProgramSetup]=useState(false);
- const [supersetDraft,setSupersetDraft]=useState<any>({warmup:{picks:[]},strength:{picks:[]}});
- const [supersetQuery,setSupersetQuery]=useState<any>({warmup:'',strength:''});
+ const [supersetAdd,setSupersetAdd]=useState<any>({warmup:false,strength:false});
+ const [supersetBatch,setSupersetBatch]=useState<any>({warmup:null,strength:null});
+ const [typeaheadOpen,setTypeaheadOpen]=useState<any>({warmup:false,strength:false});
+ const [viewingMember,setViewingMember]=useState<any>(null);
+ const [memberStats,setMemberStats]=useState<any>({});
  const refs=useRef<any[]>([]);
 
  useEffect(()=>{
@@ -87,11 +89,14 @@ export default function Page(){
   setSelectedTeamId(null);setTeams([]);setMembers([]);setMode('personal');
   boot().finally(()=>setProfileLoading(false));
  },[session?.user?.id]);
- useEffect(()=>{if(profile) loadPrograms()},[mode,selectedTeamId,teams,profile]);
- useEffect(()=>{if(program) loadLogs(program)},[program,logDate]);
+ useEffect(()=>{if(profile) loadPrograms()},[mode,selectedTeamId,teams,profile,viewingMember?.user_id]);
+ useEffect(()=>{if(program) loadLogs(program,viewingMember?.user_id||session?.user?.id)},[program,logDate,viewingMember?.user_id,session?.user?.id]);
  useEffect(()=>{if(program) loadLiftHistory()},[program,logDate,session]);
  useEffect(()=>{if(profile&&appNav==='Dashboard')loadProgressLogs();},[profile,appNav]);
  useEffect(()=>{if(appNav==='Training'&&!program)setShowProgramSetup(true);},[appNav,program]);
+ useEffect(()=>{setViewingMember(null);},[mode,selectedTeamId]);
+ useEffect(()=>{if(mode==='team'&&selectedTeamId)loadMembers();},[mode,selectedTeamId]);
+ useEffect(()=>{if(mode==='team'&&members.length)loadMemberStats();},[mode,members,selectedTeamId]);
 
  const activeTeam=teams.find((t:any)=>t.id===selectedTeamId)||teams[0]||null;
 
@@ -147,19 +152,79 @@ export default function Page(){
  }
  async function createProfile(){await saveProfile(true);}
  async function signOut(){await supabase.auth.signOut();}
- async function loadTeams(){const{data}=await supabase.from('st_team_members').select('*, st_teams(*)').eq('user_id',session.user.id).eq('status','active'); const ts=(data||[]).map((m:any)=>m.st_teams?{...m.st_teams,my_role:m.role}:null).filter(Boolean); setTeams(ts); setSelectedTeamId((prev)=>prev&&ts.some((t:any)=>t.id===prev)?prev:ts[0]?.id||null);}
+ async function loadTeams(){const{data}=await supabase.from('st_team_members').select('*, st_teams(*)').eq('user_id',session.user.id).eq('status','active'); const ts=(data||[]).map((m:any)=>m.st_teams?{...m.st_teams,my_role:m.role,training_source:m.training_source||'team',membership_id:m.id}:null).filter(Boolean); setTeams(ts); setSelectedTeamId((prev)=>prev&&ts.some((t:any)=>t.id===prev)?prev:ts[0]?.id||null);}
  async function createTeam(){const name=prompt('Team name','Trowbridge Team'); if(!name)return; const code=makeInviteCode(); const{data:t,error}=await supabase.from('st_teams').insert({name,invite_code:code,owner_user_id:session.user.id}).select().single(); if(error)return alert(error.message); const{error:me}=await supabase.from('st_team_members').insert({team_id:t.id,user_id:session.user.id,display_name:displayName,role:'owner'}); if(me)return alert(me.message); await loadTeams(); setMode('team'); setSelectedTeamId(t.id);}
  async function joinTeam(){const code=prompt('Invite code'); if(!code)return; const{data:t,error}=await supabase.rpc('st_join_team_by_invite',{p_invite_code:code,p_display_name:displayName}); if(error||!t)return alert(error?.message||'Team not found'); await loadTeams(); setMode('team'); setSelectedTeamId(t.id);}
- async function loadMembers(){if(!activeTeam)return; const{data}=await supabase.from('st_team_members').select('*').eq('team_id',activeTeam.id).order('created_at'); setMembers(data||[])}
- function canEdit(){return mode==='personal'||activeTeam?.my_role==='owner'||activeTeam?.my_role==='editor'}
- function isOwner(){return mode==='team'&&activeTeam?.my_role==='owner'}
- async function loadPrograms(){
-  let q=supabase.from('st_programs').select('*, st_workouts(*, st_exercises(*, st_planned_sets(*)))').order('created_at',{ascending:false});
-  q=mode==='personal'?q.eq('visibility','personal').eq('owner_user_id',session.user.id):q.eq('visibility','team').eq('team_id',activeTeam?.id||'00000000-0000-0000-0000-000000000000');
-  const{data,error}=await q; if(error)return alert(error.message); setPrograms(data||[]); setProgram((data||[])[0]||null);
-  const first=(data||[])[0]?.st_workouts?.sort((a:any,b:any)=>a.week-b.week||a.day_order-b.day_order)?.[0]; if(first)setActiveWorkout(first.id);
+ async function loadMembers(){if(!activeTeam)return; const{data}=await supabase.from('st_team_members').select('*').eq('team_id',activeTeam.id).eq('status','active').order('created_at'); setMembers(data||[])}
+ async function loadMemberStats(){
+  if(!activeTeam||!members.length){setMemberStats({});return;}
+  const weekStart=new Date(); weekStart.setDate(weekStart.getDate()-6);
+  const weekStartStr=weekStart.toISOString().slice(0,10);
+  const ids=members.map((m:any)=>m.user_id);
+  const{data}=await supabase.from('st_set_logs').select('user_id,log_date').in('user_id',ids).eq('completed',true).gte('log_date',weekStartStr);
+  const stats:any={};
+  (data||[]).forEach((r:any)=>{if(!stats[r.user_id])stats[r.user_id]={sets:0,days:new Set()}; stats[r.user_id].sets++; stats[r.user_id].days.add(r.log_date);});
+  setMemberStats(Object.fromEntries(Object.entries(stats).map(([k,v]:any)=>[k,{sets:v.sets,days:v.days.size}])));
  }
- async function loadLogs(p:any){const ids:any[]=[];(p.st_workouts||[]).forEach((w:any)=>(w.st_exercises||[]).forEach((e:any)=>(e.st_planned_sets||[]).forEach((s:any)=>ids.push(s.id)))); if(!ids.length){setLogs({});return} const{data}=await supabase.from('st_set_logs').select('*').in('planned_set_id',ids).eq('user_id',session.user.id).eq('log_date',logDate); const by:any={};(data||[]).forEach((l:any)=>by[l.planned_set_id]=l);setLogs(by);}
+ function canCoachView(){return mode==='team'&&(activeTeam?.my_role==='owner'||activeTeam?.my_role==='editor');}
+ function canLog(){return !viewingMember||viewingMember.user_id===session.user.id;}
+ function canEdit(){if(viewingMember&&viewingMember.user_id!==session.user.id)return false; return mode==='personal'||activeTeam?.my_role==='owner'||activeTeam?.my_role==='editor';}
+ function isOwner(){return mode==='team'&&activeTeam?.my_role==='owner'}
+ function pickProgram(list:any[],defaultId?:string|null){if(!list.length)return null; if(defaultId)return list.find((p:any)=>p.id===defaultId)||list[0]; return list[0];}
+ async function loadPrograms(){
+  if(viewingMember&&viewingMember.user_id!==session.user.id)return;
+  let q=supabase.from('st_programs').select('*, st_workouts(*, st_exercises(*, st_planned_sets(*)))').order('created_at',{ascending:false});
+  const usePersonal=mode==='personal'||(mode==='team'&&activeTeam?.training_source==='personal');
+  q=usePersonal?q.eq('visibility','personal').eq('owner_user_id',session.user.id):q.eq('visibility','team').eq('team_id',activeTeam?.id||'00000000-0000-0000-0000-000000000000');
+  const{data,error}=await q; if(error)return alert(error.message);
+  const list=data||[];
+  setPrograms(list);
+  const picked=pickProgram(list,!usePersonal?activeTeam?.default_program_id:null);
+  setProgram(picked);
+  const first=picked?.st_workouts?.sort((a:any,b:any)=>a.week-b.week||a.day_order-b.day_order)?.[0];
+  if(first)setActiveWorkout(first.id);
+ }
+ async function openMemberView(member:any){
+  if(!member)return;
+  if(member.user_id===session.user.id){await closeMemberView();setAppNav('Training');return;}
+  if(!canCoachView())return alert('Only owners and editors can view member workouts.');
+  setViewingMember(member);
+  const usePersonal=(member.training_source||'team')==='personal';
+  let q=supabase.from('st_programs').select('*, st_workouts(*, st_exercises(*, st_planned_sets(*)))').order('created_at',{ascending:false});
+  q=usePersonal?q.eq('visibility','personal').eq('owner_user_id',member.user_id):q.eq('visibility','team').eq('team_id',activeTeam.id);
+  const{data,error}=await q; if(error)return alert(error.message);
+  const list=data||[];
+  const picked=pickProgram(list,!usePersonal?activeTeam?.default_program_id:null);
+  setPrograms(list);
+  setProgram(picked);
+  const first=picked?.st_workouts?.sort((a:any,b:any)=>a.week-b.week||a.day_order-b.day_order)?.[0];
+  if(first)setActiveWorkout(first.id);
+  setAppNav('Training');
+ }
+ async function closeMemberView(){setViewingMember(null); await loadPrograms();}
+ async function setMyTrainingSource(source:'team'|'personal'){
+  if(!activeTeam)return;
+  const{error}=await supabase.rpc('st_set_my_training_source',{p_team_id:activeTeam.id,p_training_source:source});
+  if(error)return alert(error.message);
+  await loadTeams();
+  setViewingMember(null);
+ }
+ async function setMemberTrainingSource(member:any,source:string){
+  if(!activeTeam||!canCoachView())return;
+  const{error}=await supabase.rpc('st_set_member_training_source',{p_team_id:activeTeam.id,p_member_user_id:member.user_id,p_training_source:source});
+  if(error)return alert(error.message);
+  await loadMembers();
+  await loadMemberStats();
+  if(viewingMember?.user_id===member.user_id)setViewingMember({...member,training_source:source});
+ }
+ async function setTeamDefaultProgram(programId:string){
+  if(!activeTeam||!canEdit())return;
+  const{error}=await supabase.from('st_teams').update({default_program_id:programId||null}).eq('id',activeTeam.id);
+  if(error)return alert(error.message);
+  await loadTeams();
+  await loadPrograms();
+ }
+ async function loadLogs(p:any,userId?:string){const uid=userId||session.user.id; const ids:any[]=[];(p.st_workouts||[]).forEach((w:any)=>(w.st_exercises||[]).forEach((e:any)=>(e.st_planned_sets||[]).forEach((s:any)=>ids.push(s.id)))); if(!ids.length){setLogs({});return} const{data}=await supabase.from('st_set_logs').select('*').in('planned_set_id',ids).eq('user_id',uid).eq('log_date',logDate); const by:any={};(data||[]).forEach((l:any)=>by[l.planned_set_id]=l);setLogs(by);}
 
  async function loadLiftHistory(){
   if(!session?.user) return;
@@ -227,48 +292,31 @@ export default function Page(){
  if(!canEdit())return alert('Only owner/editors can change the shared team program.');
  if(!cat?.id)return alert('Select an exercise from the catalog.');
  const current=workout; if(!current)return;
+ const asSuperset=!!supersetAdd[section];
+ let groupId:string|null=null;
+ let batch=supersetBatch[section];
+ if(asSuperset){
+  if(batch&&batch.count>0&&batch.count<3)groupId=batch.groupId;
+  else{groupId=makeSupersetGroupId();batch={groupId,count:0};}
+ }
  const sortOrder=nextSortOrder(current,section);
  for(const tw of targetWorkoutsFrom(current)){
-  const{data:e,error}=await supabase.from('st_exercises').insert({workout_id:tw.id,section,sort_order:sortOrder,name:cat.name,muscle_group:cat.muscle_group||'',catalog_exercise_id:cat.id}).select().single();
+  const{data:e,error}=await supabase.from('st_exercises').insert({workout_id:tw.id,section,sort_order:sortOrder,name:cat.name,muscle_group:cat.muscle_group||'',catalog_exercise_id:cat.id,superset_group_id:groupId}).select().single();
   if(error)return alert(error.message);
   const defaultSets=section==='warmup'?1:3;
   const rows:any[]=[];
-  for(let i=0;i<defaultSets;i++)rows.push({exercise_id:e.id,sort_order:i,set_number:i+1,set_type:'working',target_reps:section==='warmup'?'10':'8-12',target_rpe:section==='warmup'?'5':'8'});
+  for(let i=0;i<defaultSets;i++)rows.push({exercise_id:e.id,sort_order:i,set_number:i+1,set_type:'working'});
   await supabase.from('st_planned_sets').insert(rows);
  }
+ if(asSuperset&&groupId){
+  const newCount=(batch?.count||0)+1;
+  if(newCount>=3){setSupersetBatch({...supersetBatch,[section]:null});setSupersetAdd({...supersetAdd,[section]:false});}
+  else setSupersetBatch({...supersetBatch,[section]:{groupId,count:newCount}});
+ } else setSupersetBatch({...supersetBatch,[section]:null});
  setCatalogQuery({...catalogQuery,[section]:''});
+ setTypeaheadOpen({...typeaheadOpen,[section]:false});
  await reloadKeepDay();
 }
- function toggleSupersetPick(section:string,cat:any){
-  const picks=[...(supersetDraft[section]?.picks||[])];
-  const idx=picks.findIndex((p:any)=>p.id===cat.id);
-  if(idx>=0) picks.splice(idx,1);
-  else if(picks.length>=3) return alert('A superset can have 2 or 3 exercises.');
-  else picks.push(cat);
-  setSupersetDraft({...supersetDraft,[section]:{picks}});
- }
- async function addSupersetFromCatalog(section:string){
-  if(!canEdit())return alert('Only owner/editors can change the shared team program.');
-  const picks=supersetDraft[section]?.picks||[];
-  if(picks.length<2||picks.length>3)return alert('Pick 2 or 3 exercises for a superset.');
-  const current=workout; if(!current)return;
-  const groupId=makeSupersetGroupId();
-  let sortOrder=nextSortOrder(current,section);
-  for(const cat of picks){
-   for(const tw of targetWorkoutsFrom(current)){
-    const{data:e,error}=await supabase.from('st_exercises').insert({workout_id:tw.id,section,sort_order:sortOrder,name:cat.name,muscle_group:cat.muscle_group||'',catalog_exercise_id:cat.id,superset_group_id:groupId}).select().single();
-    if(error)return alert(error.message);
-    const defaultSets=section==='warmup'?1:3;
-    const rows:any[]=[];
-    for(let i=0;i<defaultSets;i++)rows.push({exercise_id:e.id,sort_order:i,set_number:i+1,set_type:'working',target_reps:section==='warmup'?'10':'8-12',target_rpe:section==='warmup'?'5':'8'});
-    await supabase.from('st_planned_sets').insert(rows);
-   }
-   sortOrder++;
-  }
-  setSupersetDraft({...supersetDraft,[section]:{picks:[]}});
-  setSupersetQuery({...supersetQuery,[section]:''});
-  await reloadKeepDay();
- }
  async function breakSuperset(ex:any){
   if(!canEdit()||!ex.superset_group_id)return;
   for(const tw of targetWorkoutsFrom(workout)){
@@ -359,7 +407,7 @@ export default function Page(){
  const sort_order=active.length?Math.max(...active.map((s:any)=>s.sort_order||0))+1:0;
  for(const tw of targetWorkoutsFrom(workout)){
   const targetEx=matchingExercise(tw,e);
-  if(targetEx) await supabase.from('st_planned_sets').insert({exercise_id:targetEx.id,sort_order,set_number:n,set_type:'working',target_reps:exerciseSection(e)==='warmup'?'10':'8-12',target_rpe:exerciseSection(e)==='warmup'?'5':'8'});
+  if(targetEx) await supabase.from('st_planned_sets').insert({exercise_id:targetEx.id,sort_order,set_number:n,set_type:'working'});
  }
  await reloadKeepDay();
 }
@@ -386,6 +434,7 @@ export default function Page(){
  await reloadKeepDay();
 }
  async function saveLog(sid:string,field:string,value:any){
+  if(!canLog())return;
   const old=logs[sid]||{};
   let ex:any=null, ps:any=null;
   for(const e of workout?.st_exercises||[]){
@@ -393,13 +442,14 @@ export default function Page(){
     if(found){ex=e; ps=found; break;}
   }
   if(!ex||!ps) return alert('Could not save log for this set.');
+  const logTeamId=mode==='team'&&activeTeam&&activeTeam.training_source!=='personal'?activeTeam.id:null;
   const payload={
     planned_set_id:sid,
     user_id:session.user.id,
+    team_id:logTeamId,
     log_date:logDate,
     actual_weight:field==='actual_weight'?value:old.actual_weight||'',
     actual_reps:field==='actual_reps'?value:old.actual_reps||'',
-    actual_rpe:field==='actual_rpe'?value:old.actual_rpe||'',
     completed:true,
     ...snapshotForLog(ex,ps,workout)
   };
@@ -480,14 +530,14 @@ const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sor
           <select disabled={!canEdit()} value={s.set_type} onChange={e=>editSet(s,'set_type',e.target.value)}><option>warmup</option><option>working</option><option>backoff</option><option>dropset</option><option>amrap</option></select>
           <input disabled={!canEdit()} value={s.set_number} onChange={e=>editSet(s,'set_number',Number(e.target.value))}/>
           {canEdit()&&<><input defaultValue={s.target_weight||''} placeholder="target" onBlur={e=>editSet(s,'target_weight',e.target.value)}/><input defaultValue={s.target_reps||''} placeholder="target" onBlur={e=>editSet(s,'target_reps',e.target.value)}/><input defaultValue={s.target_rpe||''} placeholder="target" onBlur={e=>editSet(s,'target_rpe',e.target.value)}/></>}
-          <input ref={el=>{if(el&&!refs.current.includes(el))refs.current.push(el)}} onKeyDown={next} placeholder={prev?.actual_weight?`last ${prev.actual_weight}`:(s.target_weight||'lb')} defaultValue={l.actual_weight||''} onBlur={e=>saveLog(s.id,'actual_weight',e.target.value)}/>
-          <input ref={el=>{if(el&&!refs.current.includes(el))refs.current.push(el)}} onKeyDown={next} placeholder={prev?.actual_reps?`last ${prev.actual_reps}`:(s.target_reps||'reps')} defaultValue={l.actual_reps||''} onBlur={e=>saveLog(s.id,'actual_reps',e.target.value)}/>
-          <input ref={el=>{if(el&&!refs.current.includes(el))refs.current.push(el)}} onKeyDown={next} placeholder={prev?.actual_rpe?`last ${prev.actual_rpe}`:(s.target_rpe||'rpe')} defaultValue={l.actual_rpe||''} onBlur={e=>saveLog(s.id,'actual_rpe',e.target.value)}/>
+          <input ref={el=>{if(el&&!refs.current.includes(el))refs.current.push(el)}} onKeyDown={next} disabled={!canLog()} placeholder={prev?.actual_weight?`last ${prev.actual_weight}`:(s.target_weight||'lb')} defaultValue={l.actual_weight||''} onBlur={e=>saveLog(s.id,'actual_weight',e.target.value)}/>
+          <input ref={el=>{if(el&&!refs.current.includes(el))refs.current.push(el)}} onKeyDown={next} disabled={!canLog()} placeholder={prev?.actual_reps?`last ${prev.actual_reps}`:(s.target_reps||'reps')} defaultValue={l.actual_reps||''} onBlur={e=>saveLog(s.id,'actual_reps',e.target.value)}/>
+          <input ref={el=>{if(el&&!refs.current.includes(el))refs.current.push(el)}} onKeyDown={next} disabled={!canLog()} placeholder={prev?.actual_rpe?`last ${prev.actual_rpe}`:(s.target_rpe||'rpe')} defaultValue={l.actual_rpe||''} onBlur={e=>saveLog(s.id,'actual_rpe',e.target.value)}/>
           {canEdit()?<button className="btn small red" onClick={()=>removeSet(s)}>X</button>:<span className="muted">log</span>}
         </div>})}
       </div>;
  const trainingModeControl=<div className="stat stat-mode"><span className="muted">Mode</span><div className="mode-toggle tabs"><button type="button" className={mode==='personal'?'active':''} onClick={()=>setMode('personal')}>Personal</button><button type="button" className={mode==='team'?'active':''} onClick={()=>setMode('team')}>Team</button></div>{mode==='team'&&<select className="mode-team-select" value={activeTeam?.id||''} onChange={e=>setSelectedTeamId(e.target.value||null)} aria-label="Select team"><option value="">{teams.length?'Select team':'No teams yet'}</option>{teams.map((t:any)=><option key={t.id} value={t.id}>{t.name}</option>)}</select>}{mode==='team'&&activeTeam&&<span className="muted mode-team-meta">{activeTeam.my_role}{canEdit()?' · can edit':' · log only'}</span>}{mode==='team'&&!teams.length&&<span className="muted mode-team-meta">Create or join in Settings → Teams</span>}</div>;
- const programSetupPanel=<div className="card program-setup"><div className="topline" style={{justifyContent:'space-between'}}><h2>Program setup</h2><button className="btn small secondary" onClick={()=>setShowProgramSetup(v=>!v)}>{showProgramSetup?'Hide':'Show'}</button></div>{showProgramSetup&&<>{mode==='team'&&<div className="card" style={{marginTop:8}}><label>Team</label><select value={activeTeam?.id||''} onChange={e=>setSelectedTeamId(e.target.value||null)}><option value="">Select</option>{teams.map((t:any)=><option key={t.id} value={t.id}>{t.name} · {t.my_role}</option>)}</select><div className="actions" style={{marginTop:8}}><button className="btn small secondary" onClick={createTeam}>Create</button><button className="btn small secondary" onClick={joinTeam}>Join</button></div>{activeTeam?<p className="muted">Invite: <b>{activeTeam.invite_code}</b> · Role: {activeTeam.my_role}</p>:teams.length===0?<p className="muted">No teams yet.</p>:<p className="muted">Select a team above.</p>}</div>}<label>Program</label><select value={program?.id||''} onChange={e=>setProgram(programs.find((p:any)=>p.id===e.target.value))}>{programs.length===0&&<option>No programs</option>}{programs.map((p:any)=><option key={p.id} value={p.id}>{p.name}</option>)}</select><label>New program name</label><input value={programName} onChange={e=>setProgramName(e.target.value)}/><label>Weeks</label><input type="number" value={weeks} onChange={e=>setWeeks(Number(e.target.value))}/><label>Workout days</label><div className="tabs">{DAYS.map(d=><button key={d} type="button" className={days.includes(d)?'active':''} onClick={()=>setDays(days.includes(d)?days.filter(x=>x!==d):[...days,d].sort((a,b)=>DAYS.indexOf(a)-DAYS.indexOf(b)))}>{d}</button>)}</div>{days.map(d=><div key={d}><label>{d} type</label><select value={dayTypes[d]||'Full Body'} onChange={e=>setDayTypes({...dayTypes,[d]:e.target.value})}><option>Lower Body</option><option>Upper Body</option><option>Full Body</option></select></div>)}<button className="btn green full" style={{marginTop:10}} onClick={generate}>Generate {mode==='team'?'Team':'Personal'} Program</button><p className="muted" style={{marginTop:8}}>Built-in templates include supersets — 2–3 exercises grouped back-to-back with minimal rest.</p></>}{!showProgramSetup&&program&&<p className="muted">Active program: <b>{program.name}</b></p>}{!showProgramSetup&&!program&&<p className="muted">No program yet. Open setup to generate one.</p>}</div>;
+ const programSetupPanel=<div className="card program-setup"><div className="topline" style={{justifyContent:'space-between'}}><h2>Program setup</h2><button className="btn small secondary" onClick={()=>setShowProgramSetup(v=>!v)}>{showProgramSetup?'Hide':'Show'}</button></div>{showProgramSetup&&<>{mode==='team'&&<div className="card" style={{marginTop:8}}><label>Team</label><select value={activeTeam?.id||''} onChange={e=>setSelectedTeamId(e.target.value||null)}><option value="">Select</option>{teams.map((t:any)=><option key={t.id} value={t.id}>{t.name} · {t.my_role}</option>)}</select><div className="actions" style={{marginTop:8}}><button className="btn small secondary" onClick={createTeam}>Create</button><button className="btn small secondary" onClick={joinTeam}>Join</button></div>{activeTeam?<p className="muted">Invite: <b>{activeTeam.invite_code}</b> · Role: {activeTeam.my_role}</p>:teams.length===0?<p className="muted">No teams yet.</p>:<p className="muted">Select a team above.</p>}</div>}<label>Program</label><select value={program?.id||''} onChange={e=>setProgram(programs.find((p:any)=>p.id===e.target.value))}>{programs.length===0&&<option>No programs</option>}{programs.map((p:any)=><option key={p.id} value={p.id}>{p.name}</option>)}</select>{mode==='team'&&canEdit()&&programs.length>0&&<><label>Team active program</label><select value={activeTeam?.default_program_id||program?.id||''} onChange={e=>setTeamDefaultProgram(e.target.value)}>{programs.map((p:any)=><option key={p.id} value={p.id}>{p.name}</option>)}</select><p className="muted">Members following the team plan use this program.</p></>}<label>New program name</label><input value={programName} onChange={e=>setProgramName(e.target.value)}/><label>Weeks</label><input type="number" value={weeks} onChange={e=>setWeeks(Number(e.target.value))}/><label>Workout days</label><div className="tabs">{DAYS.map(d=><button key={d} type="button" className={days.includes(d)?'active':''} onClick={()=>setDays(days.includes(d)?days.filter(x=>x!==d):[...days,d].sort((a,b)=>DAYS.indexOf(a)-DAYS.indexOf(b)))}>{d}</button>)}</div>{days.map(d=><div key={d}><label>{d} type</label><select value={dayTypes[d]||'Full Body'} onChange={e=>setDayTypes({...dayTypes,[d]:e.target.value})}><option>Lower Body</option><option>Upper Body</option><option>Full Body</option></select></div>)}<button className="btn green full" style={{marginTop:10}} onClick={generate}>Generate {mode==='team'?'Team':'Personal'} Program</button><p className="muted" style={{marginTop:8}}>Built-in templates include supersets — 2–3 exercises grouped back-to-back with minimal rest.</p></>}{!showProgramSetup&&program&&<p className="muted">Active program: <b>{program.name}</b></p>}{!showProgramSetup&&!program&&<p className="muted">No program yet. Open setup to generate one.</p>}</div>;
 
  const profileFields=(compact=false)=><>
   <label>Display name</label>
@@ -521,7 +571,10 @@ const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sor
   {appNav==='Settings'&&<section><div className="card"><div className="topline" style={{justifyContent:'space-between'}}><h2>Profile</h2><button className="btn small green" onClick={()=>saveProfile(true)} disabled={profileSaving}>{profileSaving?'Saving...':'Save Profile'}</button></div><p className="muted">Update your account details used across BuiltIQ.</p>{profileFields(true)}</div><div className="card"><div className="topline" style={{justifyContent:'space-between'}}><h2>My Exercise Catalog</h2><button className="btn small secondary" onClick={loadCatalog}>Refresh</button></div><p className="muted">Custom exercises are private to your account. Search them alongside BuiltIQ system exercises when building workouts.</p>{activeUserCatalog.length===0&&archivedUserCatalog.length===0&&<p className="muted">No custom exercises yet. Create one from Training or below.</p>}{activeUserCatalog.map((item:any)=><div key={item.id} className="catalog-row">{catalogEditId===item.id?<div className="catalog-edit-grid"><input value={catalogEditDraft.name} onChange={e=>setCatalogEditDraft({...catalogEditDraft,name:e.target.value})} placeholder="Name"/><select value={catalogEditDraft.category} onChange={e=>setCatalogEditDraft({...catalogEditDraft,category:e.target.value})}><option value="warmup">Warmup</option><option value="strength">Strength</option><option value="mobility">Mobility</option><option value="plyometric">Plyometric</option><option value="other">Other</option></select><input value={catalogEditDraft.muscle_group} onChange={e=>setCatalogEditDraft({...catalogEditDraft,muscle_group:e.target.value})} placeholder="Muscle group"/><input value={catalogEditDraft.equipment} onChange={e=>setCatalogEditDraft({...catalogEditDraft,equipment:e.target.value})} placeholder="Equipment"/><input value={catalogEditDraft.movement_pattern} onChange={e=>setCatalogEditDraft({...catalogEditDraft,movement_pattern:e.target.value})} placeholder="Movement pattern"/><div className="actions"><button className="btn small green" onClick={saveCustomExerciseEdit}>Save</button><button className="btn small secondary" onClick={()=>setCatalogEditId(null)}>Cancel</button></div></div>:<><div><b>{item.name}</b><div className="muted">{item.muscle_group||'Muscle'}{item.equipment?` · ${item.equipment}`:''}{item.movement_pattern?` · ${item.movement_pattern}`:''}</div></div><div className="actions"><button className="btn small secondary" onClick={()=>{setCatalogEditId(item.id); setCatalogEditDraft({name:item.name,category:item.category||'strength',muscle_group:item.muscle_group||'',equipment:item.equipment||'',movement_pattern:item.movement_pattern||''});}}>Edit</button><button className="btn small red" onClick={()=>archiveCustomExercise(item,true)}>Archive</button></div></>}</div>)}{archivedUserCatalog.length>0&&<><h3 style={{marginTop:12}}>Archived</h3>{archivedUserCatalog.map((item:any)=><div key={item.id} className="catalog-row archived"><div><b>{item.name}</b><div className="muted">Archived · not shown in workout search</div></div><button className="btn small secondary" onClick={()=>archiveCustomExercise(item,false)}>Restore</button></div>)}</>}</div><div className="card"><h2>Create Custom Exercise</h2><div className="catalog-edit-grid"><input value={customDraft.name} onChange={e=>setCustomDraft({...customDraft,name:e.target.value})} placeholder="Exercise name"/><select value={customDraft.category} onChange={e=>setCustomDraft({...customDraft,category:e.target.value})}><option value="warmup">Warmup</option><option value="strength">Strength</option><option value="mobility">Mobility</option><option value="plyometric">Plyometric</option><option value="other">Other</option></select><input value={customDraft.muscle_group} onChange={e=>setCustomDraft({...customDraft,muscle_group:e.target.value})} placeholder="Muscle group"/><input value={customDraft.equipment} onChange={e=>setCustomDraft({...customDraft,equipment:e.target.value})} placeholder="Equipment"/><input value={customDraft.movement_pattern} onChange={e=>setCustomDraft({...customDraft,movement_pattern:e.target.value})} placeholder="Movement pattern"/></div><button className="btn green" style={{marginTop:8}} onClick={()=>createCustomExercise(customDraft.category||'strength', false)}>Save to My Catalog</button></div><div className="card"><h2>Teams</h2><p className="muted">Shared programs and team roles. Owner/editor can edit plans; members log only.</p><div className="actions"><button className="btn secondary" onClick={createTeam}>Create Team</button><button className="btn secondary" onClick={joinTeam}>Join Team</button><button className="btn secondary" onClick={loadMembers}>Refresh Members</button></div>{activeTeam&&<p className="muted" style={{marginTop:8}}>Active: <b>{activeTeam.name}</b> · Invite: <b>{activeTeam.invite_code}</b> · Role: <b>{activeTeam.my_role}</b></p>}{teams.length===0&&<p className="muted" style={{marginTop:8}}>You are not on any team yet.</p>}{members.length>0&&<><h3 style={{marginTop:12}}>Members</h3>{members.map((m:any)=><div key={m.id} className="topline" style={{justifyContent:'space-between',marginTop:6}}><span>{m.display_name||m.user_id.slice(0,6)}</span><select disabled={!isOwner()||m.user_id===session.user.id} value={m.role} onChange={e=>setRole(m,e.target.value)} style={{maxWidth:115}}><option>owner</option><option>editor</option><option>member</option></select></div>)}</>}</div></section>}
   {appNav==='Training'&&<section>
     {programSetupPanel}
-    <div className="applybox"><label>When changing workout structure, apply edits to:</label><select value={applyScope} onChange={e=>setApplyScope(e.target.value as any)}><option value="future">This week and all future weeks</option><option value="current">This workout only</option></select><p className="muted">Default is future weeks, so changes carry forward in the plan.</p></div>
+    {mode==='team'&&activeTeam&&!viewingMember&&<div className="card team-plan-card"><div className="topline" style={{justifyContent:'space-between'}}><h2>My training plan</h2><span className="badge">{(activeTeam.training_source||'team')==='team'?'Team program':'Personal program'}</span></div><p className="muted">Choose whether to follow the shared team workout or your own personal plan while staying on this team.</p><div className="tabs"><button type="button" className={(activeTeam.training_source||'team')!=='personal'?'active':''} onClick={()=>setMyTrainingSource('team')}>Team workout</button><button type="button" className={activeTeam.training_source==='personal'?'active':''} onClick={()=>setMyTrainingSource('personal')}>Personal plan</button></div></div>}
+    {mode==='team'&&activeTeam&&<div className="card team-roster-card"><div className="topline" style={{justifyContent:'space-between'}}><h2>Team progress</h2><button className="btn small secondary" onClick={()=>{loadMembers();loadMemberStats();}}>Refresh</button></div><p className="muted">{canCoachView()?'Click a member to view their plan and logged sets. Owners/editors can assign team vs personal plan.':'Tap your name to train. Owners and editors can view teammate workouts.'}</p>{members.length===0&&<p className="muted">No members loaded yet.</p>}{members.map((m:any)=>{const stats=memberStats[m.user_id]||{sets:0,days:0}; const isSelf=m.user_id===session.user.id; const isViewing=viewingMember?.user_id===m.user_id; return <div key={m.id} className={`team-member-row${isViewing?' active':''}`}><button type="button" className="team-member-main" onClick={()=>openMemberView(m)}><div><b>{m.display_name||'Member'}{isSelf?' (you)':''}</b><span className="muted">{m.role} · {(m.training_source||'team')==='team'?'Team plan':'Personal plan'}</span></div><div className="team-member-stats"><b>{stats.sets}</b><span className="muted">sets (7d)</span><span className="muted">{stats.days} days</span></div></button>{canCoachView()&&!isSelf&&<select className="team-member-plan" value={m.training_source||'team'} onChange={e=>setMemberTrainingSource(m,e.target.value)} aria-label={`Plan for ${m.display_name||'member'}`}><option value="team">Team plan</option><option value="personal">Personal plan</option></select>}</div>})}</div>}
+    {viewingMember&&viewingMember.user_id!==session.user.id&&<div className="card viewing-banner"><div className="topline" style={{justifyContent:'space-between'}}><div><h2>{viewingMember.display_name||'Member'}&apos;s workout</h2><p className="muted">{(viewingMember.training_source||'team')==='team'?'Following team program':'Personal program'} · {program?.name||'No program'} · read-only</p></div><button className="btn small secondary" onClick={closeMemberView}>Back to my training</button></div></div>}
+    {!viewingMember&&<div className="applybox"><label>When changing workout structure, apply edits to:</label><select value={applyScope} onChange={e=>setApplyScope(e.target.value as any)}><option value="future">This week and all future weeks</option><option value="current">This workout only</option></select><p className="muted">Default is future weeks, so changes carry forward in the plan.</p></div>}
     <div className="stats">{trainingModeControl}<div className="stat"><span className="muted">Week</span><b>{week}</b></div><div className="stat"><span className="muted">Sets</span><b>{planned}</b></div><div className="stat"><span className="muted">Logged</span><b>{logged}</b></div></div>
     <div className="row"><div><label>Date</label><input type="date" value={logDate} onChange={e=>setLogDate(e.target.value)}/></div><div><label>Week</label><select value={week} onChange={e=>setWeek(Number(e.target.value))}>{Array.from({length:program?.weeks||weeks},(_,i)=><option key={i+1} value={i+1}>Week {i+1}</option>)}</select></div></div>
     <div className="tabs">{(program?.st_workouts||[]).filter((w:any)=>w.week===week).sort((a:any,b:any)=>a.day_order-b.day_order).map((w:any)=><button key={w.id} className={workout?.id===w.id?'active':''} onClick={()=>setActiveWorkout(w.id)}>{w.day_label} · {w.workout_type}</button>)}</div>
