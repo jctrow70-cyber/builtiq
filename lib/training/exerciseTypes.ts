@@ -44,7 +44,7 @@ function exerciseSection(ex: any) {
   return ex?.section || 'strength';
 }
 
-export function supersetSlotLabel(order: number, index: number) {
-  const letter = String.fromCharCode(65 + Math.max(0, (order || 1) - 1));
-  return `${order || 1}${String.fromCharCode(64 + index)}`;
+export function supersetSlotLabel(groupIndex: number, slotOrder: number) {
+  const letter = String.fromCharCode(64 + Math.max(1, slotOrder || 1));
+  return `${groupIndex || 1}${letter}`;
 }

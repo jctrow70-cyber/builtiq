@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabaseClient';
 import { FOCUS_MUSCLES, focusVolumeSummary } from '../lib/training/focusMuscles';
 import { applyFocusToWorkoutTemplate, estimateWeeklyFocusSets } from '../lib/training/programGenerator';
 import { recommendNextTarget, buildLastPerformance } from '../lib/training/progression';
-import { EXERCISE_TYPES, exerciseTypeOf, inferExerciseType, assignmentTypeLabel, supersetSlotLabel, isCardioType, isStrengthLike } from '../lib/training/exerciseTypes';
+import { EXERCISE_TYPES, exerciseTypeOf, inferExerciseType, assignmentTypeLabel, isCardioType, isStrengthLike } from '../lib/training/exerciseTypes';
 import { logFieldsForType, formatLogSummary } from '../lib/training/logFields';
 
 const NAV=['Dashboard','Training','Team','Nutrition','Progress','AI Coach','Settings'];
@@ -27,16 +27,15 @@ const WORKOUT_TEMPLATES:any={
  }
 };
 const exerciseSection=(ex:any)=>ex?.section||'strength';
-const sectionExercises=(workout:any,section:string)=>(workout?.st_exercises||[]).filter((e:any)=>exerciseSection(e)===section).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));
+const sectionExercises=(workout:any,section:string)=>(workout?.st_exercises||[]).filter((e:any)=>exerciseSection(e)===section).sort((a:any,b:any)=>{const d=(a.sort_order||0)-(b.sort_order||0);if(d)return d;return (a.superset_order||0)-(b.superset_order||0);});
 const nextSortOrder=(workout:any,section:string)=>{const list=sectionExercises(workout,section);const base=SECTION_SORT_BASE[section]??100;return list.length?Math.max(...list.map((e:any)=>e.sort_order||0))+1:base;};
 const buildPlannedSetRows=(item:any[],section:string)=>{const sets=Number(item[2]||1);const rows:any[]=[];for(let i=0;i<sets;i++)rows.push({sort_order:i,set_number:i+1,set_type:'working',target_weight:'',target_reps:'',target_rpe:''});return rows;};
 const isSupersetTemplate=(item:any)=>item&&typeof item==='object'&&!Array.isArray(item)&&Array.isArray(item.superset);
 const isExerciseTemplate=(item:any)=>Array.isArray(item);
 const makeSupersetGroupId=()=>(typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():`ss-${Date.now()}-${Math.random().toString(36).slice(2,8)}`);
 const nextSupersetLabel=(w:any,section:string)=>{const exs=sectionExercises(w,section).filter((e:any)=>e.superset_group_id);const nums=exs.map((e:any)=>{const m=String(e.superset_label||'').match(/Superset\s+([A-Z])/i);return m?m[1].charCodeAt(0)-64:0;});const n=nums.length?Math.max(...nums)+1:1;return `Superset ${String.fromCharCode(64+n)}`;};
-const supersetGroupIndex=(w:any,section:string,gid:string)=>{const groups=getSupersetGroupsForSection(w,section);const i=groups.findIndex((g:any)=>g.id===gid);return i>=0?i+1:1;};
-const groupSectionBlocks=(exercises:any[])=>{const blocks:any[]=[];(exercises||[]).forEach((ex:any)=>{const gid=ex.superset_group_id;const last=blocks[blocks.length-1];if(gid&&last?.type==='superset'&&last.groupId===gid)last.exercises.push(ex);else if(gid)blocks.push({type:'superset',groupId:gid,label:ex.superset_label||'Superset',exercises:[ex]});else blocks.push({type:'single',exercises:[ex]});});blocks.forEach((b:any)=>{if(b.type==='superset')b.exercises.sort((a:any,c:any)=>(a.superset_order||0)-(c.superset_order||0));});return blocks;};
-async function insertTemplateSectionItems(sb:any,workoutId:string,section:string,list:any[],startSort:number,catMap:any){let sort=startSort;let groupNum=0;for(const item of list){if(isSupersetTemplate(item)){if(item.superset.length<2||item.superset.length>3)continue;groupNum++;const groupId=makeSupersetGroupId();const label=`Superset ${String.fromCharCode(64+groupNum)}`;let slot=0;for(const exItem of item.superset){slot++;const hit=catMap[String(exItem[0]).toLowerCase()];const exType=inferExerciseType(exItem[0],hit?.muscle_group||exItem[1],section,hit?.exercise_type);const{data:e,error}=await sb.from('st_exercises').insert({workout_id:workoutId,section,sort_order:sort,name:exItem[0],muscle_group:hit?.muscle_group||exItem[1],catalog_exercise_id:hit?.id||null,exercise_type:exType,superset_group_id:groupId,superset_label:label,superset_order:slot}).select().single();if(error)return{error};const rows=buildPlannedSetRows(exItem,section);if(rows.length)await sb.from('st_planned_sets').insert(rows.map(r=>({...r,exercise_id:e.id})));sort++;}}else if(isExerciseTemplate(item)){const hit=catMap[String(item[0]).toLowerCase()];const exType=inferExerciseType(item[0],hit?.muscle_group||item[1],section,hit?.exercise_type);const{data:e,error}=await sb.from('st_exercises').insert({workout_id:workoutId,section,sort_order:sort,name:item[0],muscle_group:hit?.muscle_group||item[1],catalog_exercise_id:hit?.id||null,exercise_type:exType,superset_group_id:null}).select().single();if(error)return{error};const rows=buildPlannedSetRows(item,section);if(rows.length)await sb.from('st_planned_sets').insert(rows.map(r=>({...r,exercise_id:e.id})));sort++;}}return{error:null};}
+const groupSectionBlocks=(exercises:any[])=>{const blocks:any[]=[];const groups=new Map<string,any>();(exercises||[]).forEach((ex:any)=>{const gid=ex.superset_group_id;if(!gid){blocks.push({type:'single',exercises:[ex],anchor:ex.sort_order||0});return;}if(!groups.has(gid))groups.set(gid,{type:'superset',groupId:gid,label:ex.superset_label||'Superset',exercises:[],anchor:ex.sort_order||0});const g=groups.get(gid);g.exercises.push(ex);g.anchor=Math.min(g.anchor,ex.sort_order||0);if(ex.superset_label)g.label=ex.superset_label;});groups.forEach((g)=>{g.exercises.sort((a:any,c:any)=>(a.superset_order||0)-(c.superset_order||0));blocks.push(g);});blocks.sort((a:any,b:any)=>(a.anchor||0)-(b.anchor||0));return blocks;};
+async function insertTemplateSectionItems(sb:any,workoutId:string,section:string,list:any[],startSort:number,catMap:any){let sort=startSort;let groupNum=0;for(const item of list){if(isSupersetTemplate(item)){if(item.superset.length<2||item.superset.length>3)continue;groupNum++;const groupId=makeSupersetGroupId();const label=`Superset ${String.fromCharCode(64+groupNum)}`;let slot=0;for(const exItem of item.superset){slot++;const hit=catMap[String(exItem[0]).toLowerCase()];const exType=inferExerciseType(exItem[0],hit?.muscle_group||exItem[1],section,hit?.exercise_type);const{data:e,error}=await sb.from('st_exercises').insert({workout_id:workoutId,section,sort_order:sort,name:exItem[0],muscle_group:hit?.muscle_group||exItem[1],catalog_exercise_id:hit?.id||null,exercise_type:exType,superset_group_id:groupId,superset_label:label,superset_order:slot}).select().single();if(error)return{error};const rows=buildPlannedSetRows(exItem,section);if(rows.length)await sb.from('st_planned_sets').insert(rows.map(r=>({...r,exercise_id:e.id})));}sort++;}else if(isExerciseTemplate(item)){const hit=catMap[String(item[0]).toLowerCase()];const exType=inferExerciseType(item[0],hit?.muscle_group||item[1],section,hit?.exercise_type);const{data:e,error}=await sb.from('st_exercises').insert({workout_id:workoutId,section,sort_order:sort,name:item[0],muscle_group:hit?.muscle_group||item[1],catalog_exercise_id:hit?.id||null,exercise_type:exType,superset_group_id:null}).select().single();if(error)return{error};const rows=buildPlannedSetRows(item,section);if(rows.length)await sb.from('st_planned_sets').insert(rows.map(r=>({...r,exercise_id:e.id})));sort++;}}return{error:null};}
 const logExerciseName=(row:any,joinEx?:any)=>String(row.snapshot_exercise_name||joinEx?.name||'').trim();
 const logCatalogId=(row:any,joinEx?:any)=>row.snapshot_catalog_exercise_id||joinEx?.catalog_exercise_id||'';
 const logSetType=(row:any,joinPs?:any)=>row.snapshot_set_type||joinPs?.set_type||'working';
@@ -52,7 +51,7 @@ const emptyProfileDraft=(source?:any)=>({display_name:source?.display_name||'',h
 const profileNeedsSetup=(p:any)=>{if(!p)return true; if(p.profile_completed===true)return false; if(p.profile_completed===false)return true; return !String(p.display_name||'').trim();};
 const emptyAddPanelConfig=()=>({mode:'normal' as 'normal'|'superset',supersetGroupId:null as string|null,setCount:3,targetReps:'8-12',targetWeight:''});
 const emptyAddPanelCustom=()=>({name:'',category:'strength',muscle_group:'',equipment:'',movement_pattern:''});
-const getSupersetGroupsForSection=(w:any,section:string)=>{const exs=sectionExercises(w,section);const groups:any[]=[];const seen=new Set();exs.forEach((ex:any)=>{if(!ex.superset_group_id||seen.has(ex.superset_group_id))return;seen.add(ex.superset_group_id);const members=exs.filter((e:any)=>e.superset_group_id===ex.superset_group_id).sort((a:any,b:any)=>(a.superset_order||0)-(b.superset_order||0));if(members.length>=1&&members.length<3)groups.push({id:ex.superset_group_id,label:ex.superset_label||members.map((e:any)=>e.name).join(' + '),count:members.length,sortOrder:members[0]?.sort_order||0});});return groups.sort((a:any,b:any)=>(a.sortOrder||0)-(b.sortOrder||0));};
+const getSupersetGroupsForSection=(w:any,section:string)=>{const exs=sectionExercises(w,section);const groups:any[]=[];const seen=new Set();exs.forEach((ex:any)=>{if(!ex.superset_group_id||seen.has(ex.superset_group_id))return;seen.add(ex.superset_group_id);const members=exs.filter((e:any)=>e.superset_group_id===ex.superset_group_id).sort((a:any,b:any)=>(a.superset_order||0)-(b.superset_order||0));if(members.length>=1)groups.push({id:ex.superset_group_id,label:ex.superset_label||members.map((e:any)=>e.name).join(' + '),count:members.length,sortOrder:Math.min(...members.map((m:any)=>m.sort_order||0))});});return groups.sort((a:any,b:any)=>(a.sortOrder||0)-(b.sortOrder||0));};
 const workoutStatusFor=(workoutRef:any,logMap:any)=>{if(!workoutRef)return 'none';let planned=0,done=0;(workoutRef.st_exercises||[]).forEach((e:any)=>(e.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).forEach((s:any)=>{planned++;if(logMap[s.id]?.completed)done++;}));if(!planned)return 'none';if(done===0)return 'not_started';if(done<planned)return 'in_progress';return 'completed';};
 const statusLabel=(s:string)=>s==='completed'?'Completed':s==='in_progress'?'In progress':s==='not_started'?'Not started':'No workout';
 
@@ -367,10 +366,10 @@ export default function Page(){
  }
 
  async function generate(){if(mode==='team'&&!activeTeam)return alert('Create or join a team first.'); if(mode==='team'&&!canEdit())return alert('Only owner/editors can create team programs.'); const catMap=catalogByName(catalog); const payload:any={owner_user_id:session.user.id,team_id:mode==='team'?activeTeam.id:null,visibility:mode,name:programName,weeks}; if(focusMuscles.length)payload.focus_muscles=focusMuscles; const{data:p,error}=await supabase.from('st_programs').insert(payload).select().single(); if(error)return alert(error.message); const wr:any=[]; for(let w=1;w<=weeks;w++)days.forEach(d=>wr.push({program_id:p.id,week:w,day_order:DAYS.indexOf(d),day_label:d,workout_type:dayTypes[d]||'Full Body'})); const{data:ws,error:we}=await supabase.from('st_workouts').insert(wr).select(); if(we)return alert(we.message); for(const w of ws||[]){const baseTpl=WORKOUT_TEMPLATES[w.workout_type]||WORKOUT_TEMPLATES['Full Body']; const tpl=applyFocusToWorkoutTemplate(baseTpl,focusMuscles,catalog); for(const sec of SECTIONS){const list=tpl[sec.id]||[]; if(!list.length)continue; const startSort=SECTION_SORT_BASE[sec.id]??0; const{error:ie}=await insertTemplateSectionItems(supabase,w.id,sec.id,list,startSort,catMap); if(ie)return alert(ie.message);}} await loadPrograms();setTrainingSubNav(mode);setAppNav('Training');}
- function openAddExercisePanel(section:string){if(!canEdit())return; const pending=pendingSupersetGroup[section]; const config=pending?{...emptyAddPanelConfig(),mode:'superset' as const,supersetGroupId:pending}:emptyAddPanelConfig(); setAddExercisePanel({section,step:'search',query:'',picked:null,config,custom:emptyAddPanelCustom()});}
+ function openAddExercisePanel(section:string,supersetGroupId?:string|null){if(!canEdit())return; const pending=supersetGroupId||pendingSupersetGroup[section]; const config=pending?{...emptyAddPanelConfig(),mode:'superset' as const,supersetGroupId:pending}:emptyAddPanelConfig(); if(supersetGroupId)setPendingSupersetGroup({...pendingSupersetGroup,[section]:supersetGroupId}); setAddExercisePanel({section,step:'search',query:'',picked:null,config,custom:emptyAddPanelCustom()});}
  function pickExerciseForPanel(item:any){if(!addExercisePanel)return; const defaultSets=addExercisePanel.section==='warmup'?1:3; setAddExercisePanel({...addExercisePanel,step:'configure',picked:item,config:{...addExercisePanel.config,setCount:defaultSets}});}
  async function createCustomInPanel(){if(!addExercisePanel||!session?.user)return; const d=addExercisePanel.custom; const name=d.name.trim(); if(!name)return alert('Enter exercise name.'); const{data,error}=await supabase.from('st_exercise_catalog').insert({user_id:session.user.id,name,category:d.category||addExercisePanel.section,muscle_group:d.muscle_group.trim(),equipment:d.equipment.trim(),movement_pattern:d.movement_pattern.trim(),is_system:false,is_archived:false}).select().single(); if(error)return alert(error.message); await loadCatalog(); setAddExercisePanel({...addExercisePanel,step:'configure',picked:data,config:{...addExercisePanel.config,setCount:addExercisePanel.section==='warmup'?1:3}});}
- async function confirmAddExercise(){if(!addExercisePanel?.picked||!canEdit()||!workout)return; const{section,picked,config}=addExercisePanel; const exType=exerciseTypeOf(picked,picked); let groupId:string|null=null; let supersetLabel:string|null=null; let slotOrder:number|null=null; if(config.mode==='superset'){if(!config.supersetGroupId||config.supersetGroupId==='__new__')groupId=makeSupersetGroupId(); else groupId=config.supersetGroupId; if(groupId){const existing=sectionExercises(workout,section).filter((e:any)=>e.superset_group_id===groupId); if(existing.length>=3)return alert('That superset already has 3 exercises.'); if(!existing.length){supersetLabel=nextSupersetLabel(workout,section); slotOrder=1;} else {supersetLabel=existing[0].superset_label; slotOrder=existing.length+1;}}} const sortOrder=nextSortOrder(workout,section); const setCount=Math.max(1,Number(config.setCount)|| (section==='warmup'?1:3)); const existingInGroup=groupId?sectionExercises(workout,section).filter((e:any)=>e.superset_group_id===groupId).length:0; for(const tw of targetWorkoutsFrom(workout)){const{data:e,error}=await supabase.from('st_exercises').insert({workout_id:tw.id,section,sort_order:sortOrder,name:picked.name,muscle_group:picked.muscle_group||'',catalog_exercise_id:picked.id,exercise_type:exType,superset_group_id:groupId,superset_label:supersetLabel,superset_order:slotOrder}).select().single(); if(error)return alert(error.message); const rows:any[]=[]; for(let i=0;i<setCount;i++)rows.push({exercise_id:e.id,sort_order:i,set_number:i+1,set_type:'working',target_weight:config.targetWeight||'',target_reps:config.targetReps||''}); if(rows.length)await supabase.from('st_planned_sets').insert(rows);} await reloadKeepDay(); const newGroupCount=existingInGroup+1; if(config.mode==='superset'&&groupId&&newGroupCount<3){setPendingSupersetGroup({...pendingSupersetGroup,[section]:groupId}); setAddExercisePanel({section,step:'search',query:'',picked:null,config:{...emptyAddPanelConfig(),mode:'superset',supersetGroupId:groupId,setCount:section==='warmup'?1:3,targetReps:'8-12',targetWeight:''},custom:emptyAddPanelCustom()}); return;} setPendingSupersetGroup({...pendingSupersetGroup,[section]:null}); setAddExercisePanel(null);}
+ async function confirmAddExercise(){if(!addExercisePanel?.picked||!canEdit()||!workout)return; const{section,picked,config}=addExercisePanel; const exType=exerciseTypeOf(picked,picked); let groupId:string|null=null; let supersetLabel:string|null=null; let slotOrder:number|null=null; let existing:any[]=[]; if(config.mode==='superset'){if(!config.supersetGroupId||config.supersetGroupId==='__new__')groupId=makeSupersetGroupId(); else groupId=config.supersetGroupId; if(groupId){existing=sectionExercises(workout,section).filter((e:any)=>e.superset_group_id===groupId); if(existing.length>=3)return alert('That superset already has 3 exercises.'); if(!existing.length){supersetLabel=nextSupersetLabel(workout,section); slotOrder=1;} else {supersetLabel=existing[0].superset_label; slotOrder=existing.length+1;}}} let sortOrder=nextSortOrder(workout,section); if(groupId&&existing.length)sortOrder=Math.max(...existing.map((e:any)=>e.sort_order||0))+1; const setCount=Math.max(1,Number(config.setCount)|| (section==='warmup'?1:3)); const existingInGroup=groupId?sectionExercises(workout,section).filter((e:any)=>e.superset_group_id===groupId).length:0; for(const tw of targetWorkoutsFrom(workout)){const{data:e,error}=await supabase.from('st_exercises').insert({workout_id:tw.id,section,sort_order:sortOrder,name:picked.name,muscle_group:picked.muscle_group||'',catalog_exercise_id:picked.id,exercise_type:exType,superset_group_id:groupId,superset_label:supersetLabel,superset_order:slotOrder}).select().single(); if(error)return alert(error.message); const rows:any[]=[]; for(let i=0;i<setCount;i++)rows.push({exercise_id:e.id,sort_order:i,set_number:i+1,set_type:'working',target_weight:config.targetWeight||'',target_reps:config.targetReps||''}); if(rows.length)await supabase.from('st_planned_sets').insert(rows);} await reloadKeepDay(); const newGroupCount=existingInGroup+1; if(config.mode==='superset'&&groupId&&newGroupCount<3){setPendingSupersetGroup({...pendingSupersetGroup,[section]:groupId}); setAddExercisePanel({section,step:'search',query:'',picked:null,config:{...emptyAddPanelConfig(),mode:'superset',supersetGroupId:groupId,setCount:section==='warmup'?1:3,targetReps:'8-12',targetWeight:''},custom:emptyAddPanelCustom()}); return;} setPendingSupersetGroup({...pendingSupersetGroup,[section]:null}); setAddExercisePanel(null);}
  async function renameSuperset(ex:any,newLabel:string){
   if(!canEdit()||!ex.superset_group_id||!newLabel.trim())return;
   for(const tw of targetWorkoutsFrom(workout)){
@@ -390,6 +389,29 @@ export default function Page(){
   }
   await reloadKeepDay();
   if(ex.superset_group_id)setPendingSupersetGroup((prev:any)=>{const next={...prev};Object.keys(next).forEach((k)=>{if(next[k]===ex.superset_group_id)next[k]=null;});return next;});
+ }
+ async function renumberSupersetGroup(section:string,groupId:string){
+  const ordered=sectionExercises(workout,section).filter((e:any)=>e.superset_group_id===groupId).sort((a:any,b:any)=>(a.superset_order||0)-(b.superset_order||0));
+  for(let i=0;i<ordered.length;i++){
+   const order=i+1;
+   if((ordered[i].superset_order||0)===order)continue;
+   for(const tw of targetWorkoutsFrom(workout)){
+    const match=resolveExerciseTarget(tw,ordered[i],workout);
+    if(match) await supabase.from('st_exercises').update({superset_order:order}).eq('id',match.id);
+   }
+  }
+ }
+ async function removeFromSuperset(ex:any){
+  if(!canEdit()||!ex.superset_group_id)return;
+  const section=exerciseSection(ex);
+  const gid=ex.superset_group_id;
+  for(const tw of targetWorkoutsFrom(workout)){
+   const match=resolveExerciseTarget(tw,ex,workout);
+   if(match) await supabase.from('st_exercises').update({superset_group_id:null,superset_label:null,superset_order:null}).eq('id',match.id);
+  }
+  await renumberSupersetGroup(section,gid);
+  await cleanupSupersetOrphans(section,gid);
+  await reloadKeepDay();
  }
  async function cleanupSupersetOrphans(section:string,groupId:string){
   for(const tw of targetWorkoutsFrom(workout)){
@@ -458,16 +480,43 @@ export default function Page(){
 }
  async function moveExercise(e:any,dir:number){
  if(!canEdit())return alert('Only owner/editors can reorder.');
- const list=sectionExercises(workout,exerciseSection(e));
- const idx=list.findIndex((x:any)=>x.id===e.id);
- const swap=list[idx+dir];
- if(!swap)return;
+ const section=exerciseSection(e);
+ const gid=e.superset_group_id;
+ if(gid){
+  const groupMembers=sectionExercises(workout,section).filter((x:any)=>x.superset_group_id===gid).sort((a:any,b:any)=>(a.superset_order||0)-(b.superset_order||0));
+  const idx=groupMembers.findIndex((x:any)=>x.id===e.id);
+  const innerSwap=idx+dir;
+  if(innerSwap>=0&&innerSwap<groupMembers.length){
+   const other=groupMembers[innerSwap];
+   const myOrder=e.superset_order||idx+1;
+   const otherOrder=other.superset_order||innerSwap+1;
+   for(const tw of targetWorkoutsFrom(workout)){
+    const match=resolveExerciseTarget(tw,e,workout);
+    const otherMatch=resolveExerciseTarget(tw,other,workout);
+    if(match&&otherMatch){
+     await supabase.from('st_exercises').update({superset_order:otherOrder}).eq('id',match.id);
+     await supabase.from('st_exercises').update({superset_order:myOrder}).eq('id',otherMatch.id);
+    }
+   }
+   await reloadKeepDay();
+   return;
+  }
+ }
+ const exercises=sectionExercises(workout,section);
+ const blocks=groupSectionBlocks(exercises);
+ const blockIdx=blocks.findIndex((b:any)=>b.type==='superset'?b.exercises.some((x:any)=>x.id===e.id):b.exercises[0]?.id===e.id);
+ const swapIdx=blockIdx+dir;
+ if(blockIdx<0||swapIdx<0||swapIdx>=blocks.length)return;
+ const reordered=[...blocks];
+ const tmp=reordered[blockIdx];reordered[blockIdx]=reordered[swapIdx];reordered[swapIdx]=tmp;
+ const base=SECTION_SORT_BASE[section]??100;
+ let sort=base;
+ const plan:any[]=[];
+ reordered.forEach((b:any)=>{b.exercises.forEach((ex:any)=>{plan.push({source:ex,sort_order:sort});sort++;});});
  for(const tw of targetWorkoutsFrom(workout)){
-  const match=resolveExerciseTarget(tw,e,workout);
-  const swapMatch=resolveExerciseTarget(tw,swap,workout);
-  if(match&&swapMatch){
-   await supabase.from('st_exercises').update({sort_order:swap.sort_order}).eq('id',match.id);
-   await supabase.from('st_exercises').update({sort_order:e.sort_order}).eq('id',swapMatch.id);
+  for(const row of plan){
+   const match=resolveExerciseTarget(tw,row.source,workout);
+   if(match) await supabase.from('st_exercises').update({sort_order:row.sort_order}).eq('id',match.id);
   }
  }
  await reloadKeepDay();
@@ -628,13 +677,13 @@ const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sor
  const memberWorkoutStatus=workoutStatusFor(memberTodayWorkout,memberDashLogs);
  const focusVolumeEst=focusMuscles.length?estimateWeeklyFocusSets(focusMuscles,dayTypes,days):{};
  const panelResults=addExercisePanel?filterCatalog(catalog,addExercisePanel.query||'',12):[];
- const panelSupersetGroups=addExercisePanel&&workout?getSupersetGroupsForSection(workout,addExercisePanel.section):[];
+ const panelSupersetGroups=addExercisePanel&&workout?getSupersetGroupsForSection(workout,addExercisePanel.section).filter((g:any)=>g.count<3):[];
  const pendingGroupId=addExercisePanel?pendingSupersetGroup[addExercisePanel.section]:null;
  const pendingGroupInfo=pendingGroupId?panelSupersetGroups.find((g:any)=>g.id===pendingGroupId):null;
  const trainingModeStat=<div className="stat"><span className="muted">Plan</span><b>{mode==='team'?(activeTeam?.training_source==='personal'?'Personal':'Team'):'Personal'}</b></div>;
  const memberAssignment=memberDashboard?memberAssignments[memberDashboard.user_id]:null;
- const renderExerciseCard=(ex:any,inSuperset=false,slotLabel?:string)=>{const catItem=catalog.find((c:any)=>c.id===ex.catalog_exercise_id);const exType=exerciseTypeOf(ex,catItem);const logFields=logFieldsForType(exType);const gridStyle={gridTemplateColumns:`72px 45px ${logFields.map(()=>'1fr').join(' ')}${canEdit()?' 42px':''}`};const exerciseKey=exerciseHistoryKey(ex.catalog_exercise_id||'',ex.name||'');const histRows=history[exerciseKey]||[];const lastPerf=buildLastPerformance(histRows);const plannedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).length;const progression=recommendNextTarget(lastPerf,plannedSets,ex.name,ex.muscle_group||'');return <div className={`card exercise-card${inSuperset?' in-superset':''}`} key={ex.id}>
-        <div className="exercise-head"><div className="exercise-meta">{inSuperset&&slotLabel&&<span className="badge superset-slot">{slotLabel}</span>}{canEdit()?<>
+ const renderExerciseCard=(ex:any,inSuperset=false)=>{const catItem=catalog.find((c:any)=>c.id===ex.catalog_exercise_id);const exType=exerciseTypeOf(ex,catItem);const logFields=logFieldsForType(exType);const gridStyle={gridTemplateColumns:`72px 45px ${logFields.map(()=>'1fr').join(' ')}${canEdit()?' 42px':''}`};const exerciseKey=exerciseHistoryKey(ex.catalog_exercise_id||'',ex.name||'');const histRows=history[exerciseKey]||[];const lastPerf=buildLastPerformance(histRows);const plannedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).length;const progression=recommendNextTarget(lastPerf,plannedSets,ex.name,ex.muscle_group||'');return <div className={`card exercise-card${inSuperset?' in-superset':''}`} key={ex.id}>
+        <div className="exercise-head"><div className="exercise-meta">{canEdit()?<>
           <div className="exercise-title-row">
             <input className="exercise-name" defaultValue={ex.name} onBlur={e=>{if(e.target.value.trim()&&e.target.value!==ex.name)updateExerciseField(ex,'name',e.target.value.trim());}}/>
             <input className="exercise-muscle" placeholder="Muscle" defaultValue={ex.muscle_group||''} onBlur={e=>{if((e.target.value||'')!==(ex.muscle_group||''))updateExerciseField(ex,'muscle_group',e.target.value);}}/>
@@ -647,7 +696,7 @@ const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sor
             <span className="badge exercise-type-badge">{exType}</span>
           </div>
         </>}{(week>1||lastPerf)&&<div className="progression-hints"><div className="prevline">Last: {progression.lastSummary}</div><div className="progression-next">Next: {progression.nextTarget}</div><div className="muted progression-note">{progression.note}</div></div>}{exerciseLastSummary(ex)&&<div className="prevline">Logged: {exerciseLastSummary(ex)}</div>}</div>
-        {canEdit()&&<div className="actions"><button className="btn small secondary" title="Move up" onClick={()=>moveExercise(ex,-1)}>↑</button><button className="btn small secondary" title="Move down" onClick={()=>moveExercise(ex,1)}>↓</button><button className="btn small secondary" onClick={()=>addSet(ex)}>+ Set</button><button className="btn small red" onClick={()=>removeExercise(ex)}>Remove</button></div>}
+        {canEdit()&&<div className="actions">{inSuperset&&<><button className="btn small secondary" title="Move up in superset" onClick={()=>moveExercise(ex,-1)}>↑</button><button className="btn small secondary" title="Move down in superset" onClick={()=>moveExercise(ex,1)}>↓</button><button className="btn small secondary" title="Remove from superset" onClick={()=>removeFromSuperset(ex)}>Out</button></>}{!inSuperset&&<><button className="btn small secondary" title="Move up" onClick={()=>moveExercise(ex,-1)}>↑</button><button className="btn small secondary" title="Move down" onClick={()=>moveExercise(ex,1)}>↓</button></>}<button className="btn small secondary" onClick={()=>addSet(ex)}>+ Set</button><button className="btn small red" onClick={()=>removeExercise(ex)}>Remove</button></div>}
         </div>
         <div className={`setgrid setgrid-adaptive ${canEdit()?'setgrid-edit':''} muted`} style={gridStyle}><b>Type</b><b>#</b>{logFields.map((f:any)=><b key={f.key}>{f.label}</b>)}{canEdit()&&<b></b>}</div>
         {(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0)).map((s:any)=>{const l=logs[s.id]||{};const prev=previousFor(ex,s);return <div className={`setgrid setgrid-adaptive ${canEdit()?'setgrid-edit':''}`} style={gridStyle} key={s.id}>
@@ -708,8 +757,8 @@ const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sor
       const exercises=sectionExercises(workout,sec.id);
       const blocks=groupSectionBlocks(exercises);
       return <div className="section-block" key={sec.id}><div className="section-head"><h2>{sec.label}</h2><span className="badge">{exercises.length}</span></div>
-      {blocks.map((block:any)=>{const gIdx=block.type==='superset'?supersetGroupIndex(workout,sec.id,block.groupId):0;return block.type==='superset'
-        ?<div className="superset-block" key={block.groupId}><div className="superset-head">{canEdit()?<input className="superset-label-input" defaultValue={block.label||'Superset'} onBlur={e=>{if(e.target.value.trim()&&e.target.value!==block.label)renameSuperset(block.exercises[0],e.target.value);}}/>:<span className="badge superset-badge">{block.label||'Superset'}</span>}<span className="muted">{block.exercises.length} exercises</span>{canEdit()&&<button className="btn small secondary" onClick={()=>breakSuperset(block.exercises[0])}>Break</button>}</div>{block.exercises.map((ex:any)=>renderExerciseCard(ex,true,supersetSlotLabel(gIdx,ex.superset_order||1)))}</div>
+      {blocks.map((block:any)=>block.type==='superset'
+        ?<div className="superset-block" key={block.groupId}><div className="superset-head"><div className="superset-head-left"><span className="superset-tag">Superset</span>{canEdit()?<input className="superset-label-input" defaultValue={block.label||'Superset'} onBlur={e=>{if(e.target.value.trim()&&e.target.value!==block.label)renameSuperset(block.exercises[0],e.target.value);}}/>:<span className="badge superset-badge">{block.label||'Superset'}</span>}</div><div className="superset-head-actions"><span className="muted">{block.exercises.length} exercises</span>{canEdit()&&block.exercises.length<3&&<button className="btn small secondary" onClick={()=>openAddExercisePanel(sec.id,block.groupId)}>+ Add</button>}{canEdit()&&<button className="btn small secondary" onClick={()=>breakSuperset(block.exercises[0])}>Break</button>}</div></div><div className="superset-exercises">{block.exercises.map((ex:any)=>renderExerciseCard(ex,true))}</div></div>
         :renderExerciseCard(block.exercises[0]);})}
       {canEdit()&&<div className="section-add-row"><button type="button" className="btn secondary" onClick={()=>openAddExercisePanel(sec.id)}>+ Add Exercise</button></div>}
       {!exercises.length&&!canEdit()&&<p className="muted section-empty">No {sec.label.toLowerCase()} exercises.</p>}
