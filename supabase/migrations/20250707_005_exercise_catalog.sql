@@ -162,3 +162,4 @@ join public.st_exercises e on e.id = ps.exercise_id
 where sl.planned_set_id = ps.id
   and sl.snapshot_catalog_exercise_id is null
   and e.catalog_exercise_id is not null;
+
