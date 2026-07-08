@@ -82,6 +82,14 @@ Goal: Complete the core workout logging experience.
 - Rule-based progression hints on future workouts (`lib/training/progression.ts`)
 - Muscle focus program generation with weekly volume targets
 
+### BIQ-0012 additions (completed)
+
+- `exercise_type` with strength vs cardio adaptive logging UI
+- Labeled supersets (Superset A / 1A / 1B) with rename and reorder
+- Training tabs: Personal Training · Team Training · Program Setup
+- `st_program_assignments` with four assignment modes
+- Enhanced member dashboard + coach co-logging permissions
+
 ## Phase 4 — Progress and Analytics
 
 Goal: Help users see improvement over time.
@@ -198,13 +206,23 @@ Goal: Prepare BuiltIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
-Completed through **BIQ-0010** on `main`: security (BIQ-0002), sections (BIQ-0004), history snapshots (BIQ-0003), exercise catalog (BIQ-0005), auth/profile (BIQ-0006), dashboard UX (BIQ-0007), supersets (BIQ-0008), team progress/member plans (BIQ-0009), Team tab + Training UX cleanup (BIQ-0010).
+Completed through **BIQ-0011** on `main`: security (BIQ-0002) through training UX phase 1 (BIQ-0011).
 
 ### Active change request
 
-**BIQ-0011 — Training UX, Team Training Dashboard, Workout Progression, Muscle Focus Programs** (Completed)
+**BIQ-0012 — Cardio Logging, Superset UX v2, Training Navigation, Team Program Assignment** (Completed)
 
-### Next priorities (after BIQ-0011)
+| Part | Deliverable |
+|------|-------------|
+| 1 | `exercise_type` + adaptive strength/cardio logging |
+| 2 | Labeled supersets with rename/reorder |
+| 3 | Personal / Team / Program Setup tabs |
+| 4 | Program assignments (team, personal, individual, manual) |
+| 5 | Enhanced member dashboard |
+| 6 | Coach + member logging permissions |
+| 7 | `st_program_assignments` migration |
+
+### Next priorities (after BIQ-0012)
 
 1. Plyometrics / Power workout section
 2. PR detection and strength trends on Progress tab
@@ -214,12 +232,5 @@ Completed through **BIQ-0010** on `main`: security (BIQ-0002), sections (BIQ-000
 
 Run pending Supabase migrations on each environment before testing:
 
-- `20250707_001_tighten_strength_team_rls.sql`
-- `20250707_002_fix_team_join_rls.sql`
-- `20250707_003_exercise_sections.sql`
-- `20250707_004_set_log_snapshots.sql`
-- `20250707_005_exercise_catalog.sql`
-- `20250707_006_expand_user_profiles.sql`
-- `20250707_007_exercise_supersets.sql`
-- `20250707_008_team_progress_and_plans.sql`
-- `20250707_009_training_progression_and_focus.sql` (planned with BIQ-0011)
+- `20250707_001` through `20250707_009` (see prior list)
+- `20250708_010_exercise_types_and_program_assignments.sql` (BIQ-0012)

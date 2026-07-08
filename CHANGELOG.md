@@ -878,3 +878,271 @@ Run migration `20250707_009_training_progression_and_focus.sql`:
 ```text
 BIQ-0011 Add training UX panel, team dashboard, progression hints, and muscle focus programs
 ```
+
+### Follow-on
+
+Phase 2 training platform requirements captured in **BIQ-0012** (cardio logging, superset UX v2, three-tab Training nav, program assignments, coach logging).
+
+---
+
+## BIQ-0012 - Cardio Logging, Superset UX v2, Training Navigation, and Team Program Assignment
+
+Date: 2026-07-08  
+Branch: develop  
+Status: **Completed**
+
+> **Note:** Requestor asked to add these to **BIQ-0007**. Official **BIQ-0007** is Dashboard UX Redesign. The Training UX epic started as **BIQ-0011** (phase 1, completed). This document is **BIQ-0012** (phase 2).
+
+### Summary
+
+Extend BuiltIQ training with multi-type exercise logging (strength + cardio), faster labeled superset UX, three-tab Training navigation (Personal / Team / Program Setup), flexible team program assignment, enhanced member dashboards, and coach-or-member logging with clear permission rules.
+
+### Purpose
+
+BIQ-0011 improved the training shell but still treats all exercises as strength-style sets. Team assignment is limited to team vs personal toggle. Coaches need richer assignment flows, cardio support, and clearer superset management before scaling team features.
+
+---
+
+### Part 1 — Cardio Exercise Support
+
+**Problem:** All exercises log sets/reps/weight only. Cardio (walk, run, bike, row, elliptical, swim) needs different fields.
+
+**Add `exercise_type` enum:**
+
+| Type | Examples |
+|------|----------|
+| `strength` | Bench, squat, curls |
+| `cardio` | Walk, run, bike, row, elliptical, swim |
+| `mobility` | Stretch, foam roll |
+| `bodyweight` | Push-ups, pull-ups |
+| `timed` | Plank, carries |
+| `custom` | User-defined |
+
+**Strength logging fields:** sets, reps, weight, RPE (optional), rest
+
+**Cardio logging fields:** duration, distance, pace/speed, heart rate (optional), calories (optional), notes
+
+**Requirements:**
+
+- Do not require weight for cardio exercises
+- Catalog entries and custom exercises carry `exercise_type`
+- Workout log UI adapts fields by `exercise_type`
+- Snapshots on save preserve type-specific values for history integrity (BIQ-0003)
+- Preserve BIQ-0005 catalog search; filter/tag by type
+
+**Proposed schema additions:**
+
+- `st_exercise_catalog.exercise_type text`
+- `st_exercises.exercise_type text` (copied from catalog on add)
+- `st_set_logs`: optional columns or JSONB `log_payload` for cardio metrics + snapshots
+
+---
+
+### Part 2 — Better Superset UX
+
+**Problem:** Superset creation works but lacks labels, in-group management, and visual clarity.
+
+**Desired add flow:**
+
+1. Add Exercise → select exercise
+2. Choose **Normal Exercise** or **Superset**
+3. If Superset: **Create New Superset** or **Add to Existing Superset**
+4. Continue adding exercises to same group until 2–3 (BIQ-0008 limit)
+
+**Desired display:**
+
+```text
+Superset A
+  1A Dumbbell Bench Press
+  1B Chest-Supported Row
+
+Superset B
+  2A Walking Lunge
+  2B Plank
+```
+
+**User actions:**
+
+- Add another exercise to superset
+- Remove exercise from superset (without deleting from workout optional)
+- **Rename superset** (display label; keep `superset_group_id` as key)
+- Reorder exercises inside superset
+
+**Proposed additions:**
+
+- `st_exercises.superset_label text` (e.g. "Superset A") shared by group id
+- `st_exercises.superset_order smallint` (1A, 1B ordering within group)
+- UI: grouped block with label, drag/reorder, rename inline
+
+---
+
+### Part 3 — Training Navigation Update
+
+**Problem:** Program setup is mixed into Personal/Team views. Team tab duplicates some controls.
+
+**Three Training sub-sections:**
+
+| Tab | Content |
+|-----|---------|
+| **Personal Training** | Own plan, today's workout, history, progression recommendations |
+| **Team Training** | Team list, roster, member dashboards, team workout assignments |
+| **Program Setup** | Create/edit program, goals, days/week, muscle focus, generate, assign to personal or team |
+
+**Requirements:**
+
+- Move program generation UI from collapsible panel into **Program Setup** tab
+- Personal and Team tabs focus on execution/logging, not template editing
+- Team top-level nav may remain for compliance/admin; daily work lives under Training → Team
+
+---
+
+### Part 4 — Team Member Program Assignment
+
+**Problem:** Members only choose team vs personal (`training_source`). Coaches need richer assignment.
+
+**Assignment options:**
+
+| Option | Description |
+|--------|-------------|
+| **A. Follow Team Plan** | Member uses team shared program (`default_program_id`) |
+| **B. Use Existing Personal Plan** | Pull member's personal program into team view |
+| **C. Generate Individual Team Plan** | Coach generates program scoped to member |
+| **D. Manual Assignment** | Coach builds/ad-hoc workouts, exercises, sets, cardio, notes |
+
+**Logging:**
+
+- Coach/admin **or** member can log results (see Part 6 permissions)
+- Assignment visible on member dashboard
+
+**Extends BIQ-0009** `training_source` with full `program_assignments` model (Part 7).
+
+---
+
+### Part 5 — Team Member Dashboard Enhancements
+
+**When clicking a team member, show:**
+
+| Section | Data |
+|---------|------|
+| Plan | Current assigned plan name |
+| Assignment type | Team Plan · Personal Plan · Individual Team Plan · Manual |
+| Today | Workout, completion status |
+| Logging | Sets/reps/weight (strength); duration/distance (cardio) |
+| History | Last workout, missed workouts |
+| Forward | Next recommended workout, progression suggestions |
+| Coach | Coach notes (editable by coach) |
+
+---
+
+### Part 6 — Permission Rules
+
+| Role | Can |
+|------|-----|
+| **Coach/admin** | Assign programs, generate member programs, log/edit workouts for members, view dashboards |
+| **Team member** | View assigned workouts, log own results, view own progress |
+| **Member (default)** | Cannot edit master team program |
+
+**Implementation:**
+
+- Extend RLS: coaches write member logs when `assignment` active and role is owner/editor
+- Members write only own `user_id` logs
+- Program template edits require `st_user_can_edit_program` on team program
+
+---
+
+### Part 7 — Database / Architecture
+
+**New table: `st_program_assignments`**
+
+| Column | Purpose |
+|--------|---------|
+| `id` | PK |
+| `user_id` | Assignee |
+| `team_id` | Nullable; set for team-scoped assignments |
+| `assigned_by` | Coach user id |
+| `assignment_type` | `personal` \| `team` \| `individual_team` \| `manual` |
+| `program_id` | FK to `st_programs` |
+| `start_date` | When assignment begins |
+| `is_active` | Current assignment flag |
+| `notes` | Coach assignment notes |
+
+**Optional:**
+
+- `st_coach_notes` (member_id, team_id, note, created_by, date)
+- `st_superset_metadata` (group_id, label, workout_id) if not on `st_exercises`
+
+**Keep existing:**
+
+- `st_programs`, `st_workouts`, `st_exercises`, `st_planned_sets`, `st_set_logs` (with snapshots)
+- `st_team_members` — may add `assignment_id` FK or derive from `st_program_assignments`
+
+**Migration (planned):** `20250708_010_exercise_types_and_program_assignments.sql`
+
+---
+
+### Proposed Files to Change
+
+| Area | Files |
+|------|-------|
+| Schema | `supabase/migrations/20250708_010_*.sql` |
+| Types/logging | `lib/training/logFields.ts`, extend `progression.ts` |
+| Superset UI | `app/page.tsx` or split components |
+| Training nav | `app/page.tsx`, `app/globals.css` |
+| Assignments | RPCs for assign/generate individual plan |
+| Docs | `CHANGELOG.md`, `DECISIONS.md`, `ROADMAP.md` |
+
+### Dependencies
+
+- BIQ-0003 snapshots, BIQ-0005 catalog, BIQ-0008 supersets, BIQ-0009 team plans, BIQ-0011 training shell
+
+### Out of Scope (this BIQ)
+
+- Full AI program generation
+- Nutrition integration
+- Native mobile app
+
+### Testing Steps
+
+1. Log strength exercise with weight, reps, optional RPE
+2. Log cardio (e.g. run) with duration/distance — no weight required
+3. Create superset with label "Superset A"
+4. Add second exercise to existing superset
+5. Rename superset and reorder exercises within group
+6. Navigate Personal / Team / Program Setup tabs
+7. Assign team plan to member (option A)
+8. Pull member personal plan into team view (option B)
+9. Generate individual team plan for member (option C)
+10. Coach logs workout results for a member
+11. Member logs own workout from their login
+12. Verify member cannot edit master team program
+
+### Recommended Commit Message
+
+```text
+BIQ-0012 Add cardio logging, superset UX v2, program assignments, and Training nav
+```
+
+### Files Changed
+
+- `app/page.tsx` — three-tab Training nav, adaptive log fields, superset labels, coach logging, program assignments UI
+- `app/globals.css` — superset slot/label styles, adaptive set grid, member assignment panel
+- `lib/training/exerciseTypes.ts` (new)
+- `lib/training/logFields.ts` (new)
+- `supabase/migrations/20250708_010_exercise_types_and_program_assignments.sql` (new)
+- `CHANGELOG.md`, `ROADMAP.md`
+
+### Database Changes
+
+Run migration `20250708_010_exercise_types_and_program_assignments.sql` in Supabase:
+
+- `st_exercise_catalog.exercise_type`, `st_exercises.exercise_type`, `st_exercises.superset_label`, `st_exercises.superset_order`
+- `st_set_logs` cardio/RPE fields, `logged_by_user_id`, `snapshot_exercise_type`
+- `st_program_assignments` table + RLS
+- `st_assign_member_program` RPC
+- Coach insert/update policies on `st_set_logs`
+
+### Known Issues
+
+- Individual team plan generation (option C) uses existing program picker; full per-member generator deferred
+- Reorder within superset uses existing move up/down on exercise cards
+- Migration must be applied before cardio fields and assignments work in production

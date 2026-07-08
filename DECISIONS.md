@@ -435,3 +435,131 @@ Users want programs that reflect priorities (e.g. chest + hamstrings) without ma
 ### Impact
 
 Generate screen shows focus picker + weekly volume summary. WORKOUT_TEMPLATES and catalog drive exercise selection adjustments. Documented in BIQ-0011 testing checklist.
+
+---
+
+## Decision 017 - Exercise Type and Adaptive Logging Fields
+
+Date: 2026-07-08  
+Status: Proposed  
+Category: Workout Data Model
+
+### Decision
+
+Add `exercise_type` (`strength` | `cardio` | `mobility` | `bodyweight` | `timed` | `custom`) on catalog and workout exercises. Logging UI and saved snapshots adapt by type: strength uses sets/reps/weight/RPE/rest; cardio uses duration/distance/pace/HR/calories/notes without requiring weight.
+
+### Reason
+
+Single grid for all exercises blocks cardio use cases and forces fake weight entries. Type-driven fields keep history accurate and UI simple.
+
+### Alternatives Considered
+
+- Separate cardio app section (fragments Training UX)
+- One JSON blob only, no typed columns (harder to query progress)
+- Always optional weight column (confusing for runners)
+
+### Impact
+
+Requires migration, catalog seed updates for cardio examples, snapshot extensions. Progression module applies primarily to `strength` in v1; cardio shows last session metrics.
+
+---
+
+## Decision 018 - Program Assignments Table
+
+Date: 2026-07-08  
+Status: Proposed  
+Category: Team Training Model
+
+### Decision
+
+Introduce `st_program_assignments` linking `user_id`, optional `team_id`, `program_id`, `assignment_type` (`personal` | `team` | `individual_team` | `manual`), `assigned_by`, `start_date`, and `is_active`. Replaces binary `training_source` alone for coach workflows while remaining compatible with BIQ-0009.
+
+### Reason
+
+Coaches need four assignment modes: shared team plan, member personal plan, generated individual plan, and manual build. A dedicated assignment row supports history, start dates, and multiple inactive assignments.
+
+### Alternatives Considered
+
+- Only `st_team_members.training_source` enum extension (insufficient for individual_team + manual)
+- Copy program per member always (sync nightmare)
+- External coach spreadsheet (out of product)
+
+### Impact
+
+Member dashboard reads active assignment. RPCs for assign/generate. RLS scoped by team membership and role.
+
+---
+
+## Decision 019 - Labeled Superset Groups
+
+Date: 2026-07-08  
+Status: Proposed  
+Category: Training UX
+
+### Decision
+
+Superset blocks display user-visible labels (e.g. "Superset A") with sub-labels (1A, 1B). Store `superset_label` and `superset_order` on exercises sharing `superset_group_id`. Support rename, reorder within group, add/remove from group in UI.
+
+### Reason
+
+BIQ-0011/0008 group by UUID only; coaches and athletes need readable labels matching gym notation. Extends existing group id model without new entity table for MVP.
+
+### Alternatives Considered
+
+- Separate `st_supersets` table (heavier; defer if labels on exercises suffice)
+- Letter-only sort order without label field (no rename)
+
+### Impact
+
+Template generator assigns default labels. Break/remove flows update orphan groups. Mobile-friendly grouped cards.
+
+---
+
+## Decision 020 - Three-Tab Training Navigation
+
+Date: 2026-07-08  
+Status: Proposed  
+Category: Information Architecture
+
+### Decision
+
+Training sub-nav becomes **Personal Training**, **Team Training**, and **Program Setup** (three tabs). Program creation, muscle focus, and assignment live under Program Setup; execution and logging under Personal/Team.
+
+### Reason
+
+BIQ-0011 added two tabs but left program setup embedded in Personal/Team flow. Separating setup reduces confusion and matches user mental model.
+
+### Alternatives Considered
+
+- Program Setup only in Settings (too far from Training)
+- Keep collapsible setup panel (clutter)
+
+### Impact
+
+Refactor `app/page.tsx` nav state. Team top-level tab optional for compliance-only views.
+
+---
+
+## Decision 021 - Coach and Member Co-Logging
+
+Date: 2026-07-08  
+Status: Proposed  
+Category: Permissions
+
+### Decision
+
+Owners/editors may create and update `st_set_logs` for team members on assigned programs. Members always log their own `user_id`. Members cannot edit team master program templates unless promoted to editor/owner.
+
+### Reason
+
+Sideline coaching and remote teams require coach-entered results. Members still need self-logging from their account.
+
+### Alternatives Considered
+
+- Coach-only logging (blocks athlete self-service)
+- Shared login (security anti-pattern)
+- Impersonation sessions (overkill for MVP)
+
+### Impact
+
+RLS policies on `st_set_logs` INSERT/UPDATE for coach+member pairs. UI indicates who logged each set.

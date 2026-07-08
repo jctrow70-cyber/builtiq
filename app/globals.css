@@ -89,6 +89,13 @@
  .member-dash-metrics{margin-top:10px}
  .member-exercise-row{padding:8px 0;border-top:1px solid var(--line)}
  .member-exercise-row b{display:block;font-size:14px}
+.superset-slot{background:#1f2937;color:#86efac;margin-bottom:4px}
+.superset-label-input{flex:1;min-width:120px;font-weight:800;padding:6px 10px;font-size:13px;background:#0b1119;border:1px solid var(--line);border-radius:10px;color:var(--text)}
+.exercise-type-badge{background:#1f2937;color:#93c5fd;font-size:10px}
+.setgrid-adaptive input,.setgrid-adaptive select{text-align:center;padding:7px}
+.member-assignment-panel{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+.setup-mode-tabs{margin-bottom:10px}
+.training-subnav button{flex:1 1 auto;min-width:0;text-align:center;font-size:11px;padding:7px 8px}
 .history-row{display:grid;grid-template-columns:1fr;gap:4px;padding:8px 0;border-top:1px solid var(--line)}
 .history-row b{display:block}
  @media(max-width:900px){.add-exercise-row{grid-template-columns:1fr auto auto}.catalog-edit-grid{grid-template-columns:1fr}.setgrid,.setgrid-edit{grid-template-columns:1fr 1fr 1fr}.exercise-add-row{grid-template-columns:1fr auto auto}.team-compliance-card .dash-metrics{grid-template-columns:1fr 1fr}.panel-overlay{align-items:flex-end;padding:0}.add-exercise-panel{border-radius:18px 18px 0 0;max-height:90vh}}
