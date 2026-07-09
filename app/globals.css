@@ -27,6 +27,7 @@
 .exercise-name,.exercise-muscle{width:auto;font-weight:800;padding:6px 8px}
 .exercise-name{flex:1 1 auto;min-width:0;font-size:15px}
 .exercise-muscle{flex:0 1 120px;min-width:84px;font-size:12px;color:#cbd5e1}
+.exercise-link-hint{font-size:10px;margin:2px 0 0;line-height:1.3}
 .add-exercise-row{display:grid;grid-template-columns:1.4fr 1fr auto;gap:6px;margin:8px 0 4px}
 .catalog-picker{margin:8px 0 12px;padding:10px;border:1px solid var(--line);border-radius:14px;background:#101827}
 .catalog-results{display:grid;gap:6px;margin-top:8px;max-height:220px;overflow:auto}
