@@ -210,6 +210,16 @@ Completed through **BIQ-0011** on `main`: security (BIQ-0002) through training U
 
 ### Active change request
 
+**BIQ-0013 — Exercise Intelligence Database** (Planned)
+
+| Part | Deliverable |
+|------|-------------|
+| 1 | Import-ready fields (`external_source`, `external_id`, `media_url`, instructions) |
+| 2 | BuiltIQ intelligence columns (movement, goal, progression, volume %) |
+| 3 | `st_exercise_alternatives` substitution graph |
+| 4 | `coaching_metadata` JSONB for AI programming |
+| 5 | Bulk import pipeline (CLI, dry-run, upsert) — **scaffolded** |
+
 **BIQ-0012 — Cardio Logging, Superset UX v2, Training Navigation, Team Program Assignment** (Completed)
 
 | Part | Deliverable |
@@ -222,15 +232,17 @@ Completed through **BIQ-0011** on `main`: security (BIQ-0002) through training U
 | 6 | Coach + member logging permissions |
 | 7 | `st_program_assignments` migration |
 
-### Next priorities (after BIQ-0012)
+### Next priorities (after BIQ-0013 import verified)
 
-1. Plyometrics / Power workout section
-2. PR detection and strength trends on Progress tab
-3. Nutrition MVP placeholder → functional tracking
-4. AI Coach progression hook-up (uses BIQ-0011 progression module)
-5. Split `page.tsx` into focused components
+1. **Production dataset import** — license-compatible 1000+ exercise JSON
+2. Plyometrics / Power workout section
+3. PR detection and strength trends on Progress tab
+4. Nutrition MVP placeholder → functional tracking
+5. AI Coach hook-up (consumes `coaching_metadata` + alternatives)
+6. Split `page.tsx` into focused components
 
 Run pending Supabase migrations on each environment before testing:
 
 - `20250707_001` through `20250707_009` (see prior list)
 - `20250708_010_exercise_types_and_program_assignments.sql` (BIQ-0012)
+- `20250708_011_exercise_intelligence_database.sql` (BIQ-0013)

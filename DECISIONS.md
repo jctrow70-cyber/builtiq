@@ -563,3 +563,29 @@ Sideline coaching and remote teams require coach-entered results. Members still 
 ### Impact
 
 RLS policies on `st_set_logs` INSERT/UPDATE for coach+member pairs. UI indicates who logged each set.
+
+---
+
+## Decision 022 - Exercise Intelligence Database (Not Manual Catalog Growth)
+
+Date: 2026-07-08  
+Status: Accepted  
+Category: Workout Data Model
+
+### Decision
+
+Do **not** expand BuiltIQ by manually curating a small system exercise list. Evolve `st_exercise_catalog` into an **Exercise Intelligence Database** prepared for importing 1000+ exercises from external datasets. Store `external_source`, `external_id`, and `media_url` for idempotent imports. Add BuiltIQ intelligence columns (`movement_pattern`, `training_goal`, `progression_type`, muscle volume percentages, `coaching_metadata` JSONB) and a substitution graph via `st_exercise_alternatives`.
+
+### Reason
+
+BuiltIQ differentiation is smarter programming — movement classification, volume attribution, progression type, substitutions, and AI-ready metadata — not owning another exercise name list. External libraries already provide names, media, and instructions at scale.
+
+### Alternatives Considered
+
+- Continue hand-seeding SQL `INSERT` rows (does not scale; rejected)
+- Replace catalog with runtime API calls to third parties (no offline intelligence layer; rejected)
+- Flat JSON file in repo (no RLS, no user custom exercises; rejected)
+
+### Impact
+
+Migration `20250708_011` extends catalog schema without removing BIQ-0005 seeds. Import pipeline and UI browsing are follow-on work. `lib/training/exerciseIntelligence.ts` defines enums and normalization helpers. AI Coach and program generator will consume `coaching_metadata` and alternatives in future BIQs.

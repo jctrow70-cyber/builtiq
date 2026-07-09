@@ -314,6 +314,7 @@ Creates `st_exercise_catalog`, seeds system exercises, adds FK columns, backfill
 - Workout inline name edits change display name only; catalog link drives progress aggregation
 - No duplicate-name prevention for user custom exercises yet
 - System catalog is seed data only; admin tooling for BuiltIQ-managed exercises not built yet
+- **Superseded by BIQ-0013:** manual catalog growth → bulk import + intelligence fields
 
 ### Recommended Commit Message
 
@@ -1146,3 +1147,171 @@ Run migration `20250708_010_exercise_types_and_program_assignments.sql` in Supab
 - Individual team plan generation (option C) uses existing program picker; full per-member generator deferred
 - Reorder within superset uses existing move up/down on exercise cards
 - Migration must be applied before cardio fields and assignments work in production
+
+---
+
+## BIQ-0013 - Exercise Intelligence Database
+
+Date: 2026-07-08  
+Branch: main  
+Status: **In Progress** (schema + import pipeline scaffolded; production dataset import not run)
+
+> **Note:** Requestor referenced BIQ-0008 for import; official **BIQ-0008** is supersets (unchanged). Catalog intelligence is **BIQ-0013**.
+
+### Summary
+
+Evolve `st_exercise_catalog` into a scalable **Exercise Intelligence Database** prepared for importing 1000+ exercises from external datasets, enriched with BuiltIQ programming fields, substitution links, and AI coaching metadata. BuiltIQ value is not the raw exercise list — it is how exercises are classified, substituted, and used to build smarter plans.
+
+### Purpose
+
+The BIQ-0005 seed (~40 exercises) was sufficient for MVP templates but does not scale. Manually curating a small catalog is the wrong long-term strategy. BuiltIQ needs import-ready storage, intelligence columns, and alternative exercise graphs so future AI Coach and program generation can reason about movement patterns, volume, progression type, and substitutions (e.g. Bench Press → Dumbbell Press when no barbell).
+
+### Strategy Shift
+
+| Old (BIQ-0005 follow-on) | New (BIQ-0013) |
+|--------------------------|----------------|
+| Hand-add system exercises in SQL seeds | Bulk import from external dataset |
+| Name + muscle + equipment only | Full media, instructions, intelligence fields |
+| No substitution model | `st_exercise_alternatives` graph |
+| Catalog as list | Catalog as programming knowledge base |
+
+### Part 1 — Import-Ready External References
+
+Support large third-party exercise libraries:
+
+| Field | Purpose |
+|-------|---------|
+| `external_source` | Origin key (`wger`, `exercisedb`, `builtiq_curated`, etc.) |
+| `external_id` | Stable id for idempotent re-import |
+| `media_url` | Primary media asset |
+| `image_url` | Still image |
+| `video_url` | Video demo |
+| `gif_url` | Animated demo |
+| `instructions` | Execution steps |
+
+Unique index on `(external_source, external_id)` prevents duplicate imports.
+
+### Part 2 — BuiltIQ Intelligence Fields
+
+| Field | Values / purpose |
+|-------|------------------|
+| `movement_pattern` | `squat`, `hinge`, `push_horizontal`, `push_vertical`, `pull_horizontal`, `pull_vertical`, `carry`, `rotation`, `isolation`, `cardio` |
+| `training_goal` | `strength`, `hypertrophy`, `endurance`, `power`, `mobility` |
+| `progression_type` | `weight`, `reps`, `duration`, `distance`, `intensity` |
+| `primary_muscle_percentage` | Volume attribution (0–100) |
+| `secondary_muscle_percentage` | Volume attribution (0–100) |
+| `muscle_targets` | JSONB fine-grained `[{muscle, percentage, role}]` |
+| `coaching_metadata` | JSONB AI hints (fatigue, skill, cues, pairing, triggers) |
+
+### Part 3 — Exercise Alternatives
+
+Table `st_exercise_alternatives`:
+
+| Column | Purpose |
+|--------|---------|
+| `exercise_id` | Primary catalog exercise |
+| `alternative_id` | Substitute exercise |
+| `reason` | `equipment_unavailable`, `injury`, `skill_level`, `preference`, `similar_stimulus` |
+| `priority` | Ranked recommendation order |
+| `notes` | Coach-facing explanation |
+
+Example: **Bench Press** → **Dumbbell Bench Press** when `reason = equipment_unavailable`.
+
+### Part 4 — AI Coaching Metadata (`coaching_metadata` JSONB)
+
+Structured hints for future AI programming (not user-facing prose):
+
+```json
+{
+  "programming_role": "primary_compound",
+  "fatigue_cost": "high",
+  "skill_demand": "moderate",
+  "equipment_constraints": ["barbell", "rack"],
+  "substitution_triggers": ["shoulder_pain", "no_barbell"],
+  "rep_range_hints": { "strength": "3-6", "hypertrophy": "8-12" },
+  "superset_pairing_hints": ["antagonist_pull_horizontal"],
+  "coaching_cues": ["brace core", "controlled eccentric"],
+  "contraindications": ["acute_shoulder_injury"]
+}
+```
+
+### Part 5 — Import Pipeline (scaffolded)
+
+CLI script imports JSON/JSONL datasets into `st_exercise_catalog`:
+
+| Feature | Behavior |
+|---------|----------|
+| Upsert key | `(external_source, external_id)` |
+| Dry run | `--dry-run` validates + reports without writes |
+| Safety | Only `is_system = true`, `user_id = null`; never touches user custom exercises |
+| Legacy seeds | Skips when name matches BIQ-0005 system row without `external_source` |
+| Logging | Total found, imported, skipped, duplicates in file, errors + skip reasons |
+
+```bash
+npm run import:exercises:dry -- --file scripts/import-exercises/sample-dataset.json
+npm run import:exercises -- --file path/to/dataset.json
+```
+
+Requires `SUPABASE_SERVICE_ROLE_KEY` in `.env.local` for live import.
+
+### Files Changed (this phase)
+
+| Area | Files |
+|------|-------|
+| Schema | `supabase/migrations/20250708_011_exercise_intelligence_database.sql`, `20250708_012_fix_movement_pattern_constraint.sql` |
+| Types | `lib/training/exerciseIntelligence.ts` |
+| Import | `scripts/import-exercises/importExercises.ts`, `mapImportRecord.ts`, `types.ts`, `sample-dataset.json`, `README.md` |
+| Config | `package.json` (`import:exercises`, `import:exercises:dry`), `.env.example` |
+| Docs | `CHANGELOG.md`, `DECISIONS.md`, `ROADMAP.md` |
+
+### Out of Scope (this phase)
+
+- Training search UI for 1000+ exercises / media browsing
+- AI program generator consuming metadata (future BIQ)
+- Removing BIQ-0005 seed rows (kept for backward compatibility)
+- Auto-generating `st_exercise_alternatives` at import time
+
+### Testing Steps
+
+**Schema**
+
+1. Run migration `20250708_011_exercise_intelligence_database.sql`
+2. If movement_pattern CHECK fails, run `20250708_012_fix_movement_pattern_constraint.sql`
+3. Confirm new columns on `st_exercise_catalog` and `st_exercise_alternatives` table exists
+
+**Import pipeline (dry run)**
+
+4. `npm install` (adds `tsx` dev dependency)
+5. Add `SUPABASE_SERVICE_ROLE_KEY` to `.env.local` (not required for dry run)
+6. Run `npm run import:exercises:dry -- --file scripts/import-exercises/sample-dataset.json`
+7. Confirm report shows: 4 total, 3 would import, 1 duplicate in file skipped, 0 errors
+
+**Import pipeline (live)**
+
+8. Run same command without `--dry-run` via `npm run import:exercises -- --file scripts/import-exercises/sample-dataset.json`
+9. Re-run live import — confirm 0 inserted, 3 updated (idempotent upsert)
+10. Confirm BIQ-0005 seed exercises (e.g. Bench Press) unchanged — sample uses different names
+11. Create a custom user exercise in Settings — re-run import — confirm user row untouched
+12. Query: `select external_source, external_id, name, image_url from st_exercise_catalog where external_source = 'builtiq_sample'`
+
+**Regression**
+
+13. Training search still works with existing + imported exercises (no UI changes expected)
+14. Custom exercises still private to owner account
+
+### Recommended Commit Message
+
+```text
+BIQ-0013 Add exercise intelligence database schema for scalable imports
+```
+
+### Dependencies
+
+- BIQ-0005 `st_exercise_catalog` (foundation)
+- BIQ-0012 `exercise_type` on catalog (complementary)
+
+### Known Issues
+
+- Legacy `movement_pattern` values (`push`, `pull`, etc.) allowed until import normalizes rows
+- Full-text search index requires PostgreSQL `english` config
+- System alternative rows require service-role or migration for bulk curation

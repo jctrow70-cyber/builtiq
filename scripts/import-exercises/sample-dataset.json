@@ -1,0 +1,45 @@
+[
+  {
+    "external_source": "builtiq_sample",
+    "external_id": "bench-press-001",
+    "name": "Barbell Bench Press (Import Sample)",
+    "exercise_type": "strength",
+    "primary_muscle": "Chest",
+    "secondary_muscles": ["Triceps", "Front Delts"],
+    "equipment": "barbell",
+    "movement_pattern": "push_horizontal",
+    "instructions": "Lie on bench, grip slightly wider than shoulders, lower to mid-chest, press up.",
+    "media_url": "https://example.com/media/bench-press.mp4",
+    "thumbnail_url": "https://example.com/images/bench-press.jpg"
+  },
+  {
+    "external_source": "builtiq_sample",
+    "external_id": "db-bench-001",
+    "name": "Dumbbell Bench Press (Import Sample)",
+    "exercise_type": "strength",
+    "primary_muscle": "Chest",
+    "secondary_muscles": "Triceps, Front Delts",
+    "equipment": "dumbbell",
+    "movement_pattern": "push_horizontal",
+    "instructions": "Press dumbbells from chest level with controlled tempo.",
+    "thumbnail_url": "https://example.com/images/db-bench.jpg"
+  },
+  {
+    "external_source": "builtiq_sample",
+    "external_id": "treadmill-run-001",
+    "name": "Treadmill Run (Import Sample)",
+    "exercise_type": "cardio",
+    "primary_muscle": "Cardio",
+    "equipment": "treadmill",
+    "movement_pattern": "cardio",
+    "instructions": "Maintain steady pace; use incline as programmed.",
+    "media_url": "https://example.com/media/treadmill-run.gif"
+  },
+  {
+    "external_source": "builtiq_sample",
+    "external_id": "bench-press-001",
+    "name": "Duplicate In File — should skip",
+    "exercise_type": "strength",
+    "primary_muscle": "Chest"
+  }
+]
