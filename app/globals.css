@@ -22,11 +22,14 @@
 .exercise-card{margin-bottom:10px}
 .exercise-meta{display:flex;flex-direction:column;gap:4px;min-width:0}
 .exercise-title-row{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}
-.exercise-name-text{margin:0;font-size:15px;font-weight:800;flex:1;min-width:0;line-height:1.2}
+.exercise-name-text{margin:0;font-size:15px;font-weight:800;flex:1;min-width:0;line-height:1.35;word-break:break-word;white-space:pre-wrap}
 .exercise-muscle-badge{flex-shrink:0;margin:0}
 .exercise-name,.exercise-muscle{width:auto;font-weight:800;padding:6px 8px}
-.exercise-name{flex:1 1 auto;min-width:0;font-size:15px}
-.exercise-muscle{flex:0 1 120px;min-width:84px;font-size:12px;color:#cbd5e1}
+.exercise-name-wrap{flex:1 1 100%;min-width:0;align-self:stretch}
+.exercise-name{flex:1 1 auto;min-width:0;width:100%;font-size:15px;resize:none;overflow:hidden;line-height:1.35;white-space:pre-wrap;word-break:break-word;field-sizing:content;min-height:2.4em;background:#121a2a;border-color:#3b4a63}
+.exercise-muscle{flex:0 1 120px;min-width:84px;font-size:12px;color:#cbd5e1;background:#121a2a;border-color:#3b4a63}
+.exercise-name-menu{z-index:40;max-height:240px}
+.exercise-title-row{align-items:flex-start}
 .exercise-link-hint{font-size:10px;margin:2px 0 0;line-height:1.3}
 .add-exercise-row{display:grid;grid-template-columns:1.4fr 1fr auto;gap:6px;margin:8px 0 4px}
 .catalog-picker{margin:8px 0 12px;padding:10px;border:1px solid var(--line);border-radius:14px;background:#101827}
@@ -122,6 +125,10 @@
 .superset-label-input{flex:1;min-width:120px;font-weight:800;padding:6px 10px;font-size:13px;background:#0b1119;border:1px solid var(--line);border-radius:10px;color:var(--text)}
 .exercise-type-badge{background:#1f2937;color:#93c5fd;font-size:10px}
 .setgrid-adaptive input,.setgrid-adaptive select{text-align:center;padding:7px}
+.log-field-input,.setgrid-adaptive .log-field-input{background:#0a1018;border:1px solid #334155;border-radius:10px;box-shadow:inset 0 1px 2px rgba(0,0,0,.35);color:#f8fafc;font-weight:700}
+.log-field-input:focus,.setgrid-adaptive .log-field-input:focus{border-color:#64748b;outline:none;background:#0d1420}
+.log-field-input::placeholder{color:#64748b;font-weight:500}
+.setgrid-adaptive select.log-field-input{font-weight:800}
 .member-assignment-panel{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
 .setup-mode-tabs{margin-bottom:10px}
 .setup-wizard-steps{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:12px 0 14px;padding:10px 12px;border-radius:12px;background:#0f1422;border:1px solid var(--line);font-size:12px;font-weight:800;color:#64748b}
