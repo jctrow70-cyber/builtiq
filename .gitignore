@@ -32,3 +32,6 @@ next-env.d.ts
 # Optional tooling
 .turbo
 coverage/
+
+# Downloaded exercise datasets (large; regenerate via convert script)
+scripts/import-exercises/data/

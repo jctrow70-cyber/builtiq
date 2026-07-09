@@ -32,7 +32,44 @@ JSON **array** or **JSONL** (one object per line).
 | `media_url` | no | `media_url` |
 | `thumbnail_url` | no | `image_url` |
 
-## Commands
+## Production dataset: Free Exercise DB (873 exercises)
+
+**Source:** [yuhonas/free-exercise-db](https://github.com/yuhonas/free-exercise-db) — **The Unlicense** (public domain).
+
+### 1. Download (PowerShell)
+
+```powershell
+New-Item -ItemType Directory -Force -Path "scripts/import-exercises/data/free-exercise-db"
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json" -OutFile "scripts/import-exercises/data/free-exercise-db/exercises.json"
+```
+
+### 2. Convert to BuiltIQ format
+
+```powershell
+npm.cmd run import:convert:free-exercise-db
+```
+
+Output: `scripts/import-exercises/data/free-exercise-db/builtiq-import.json`
+
+### 3. Dry-run, then live import
+
+```powershell
+npm.cmd run import:exercises:dry -- --file scripts/import-exercises/data/free-exercise-db/builtiq-import.json
+npm.cmd run import:exercises -- --file scripts/import-exercises/data/free-exercise-db/builtiq-import.json
+```
+
+### 4. Verify in Supabase
+
+```sql
+select count(*) from st_exercise_catalog where external_source = 'free_exercise_db';
+-- expect ~873 (minus any skipped legacy name collisions)
+```
+
+Imported rows include `thumbnail_url` (GitHub-hosted images) and `instructions`. Re-running import **updates** existing rows by `(external_source, external_id)`.
+
+---
+
+## Commands (sample dataset)
 
 Dry run (no database writes):
 

@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "import:exercises": "tsx scripts/import-exercises/importExercises.ts",
-    "import:exercises:dry": "tsx scripts/import-exercises/importExercises.ts --dry-run"
+    "import:exercises:dry": "tsx scripts/import-exercises/importExercises.ts --dry-run",
+    "import:convert:free-exercise-db": "tsx scripts/import-exercises/convertFreeExerciseDb.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
