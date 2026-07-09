@@ -94,7 +94,8 @@ export function convertFreeExerciseDbRow(row: FreeExerciseDbRow): ExternalExerci
   const primary = row.primaryMuscles?.[0] ? titleMuscle(row.primaryMuscles[0]) : '';
   const secondaries = (row.secondaryMuscles || []).map(titleMuscle);
   const movement = inferFreeExerciseDbMovementPattern(row);
-  const thumbnail = row.images?.[0] ? FREE_EXERCISE_DB_IMAGE_BASE + row.images[0] : undefined;
+    const thumbnail = row.images?.[0] ? FREE_EXERCISE_DB_IMAGE_BASE + row.images[0] : undefined;
+  const media = row.images?.[1] ? FREE_EXERCISE_DB_IMAGE_BASE + row.images[1] : undefined;
 
   return {
     external_source: FREE_EXERCISE_DB_SOURCE,
@@ -108,6 +109,7 @@ export function convertFreeExerciseDbRow(row: FreeExerciseDbRow): ExternalExerci
     ...(movement ? { movement_pattern: movement } : {}),
     instructions: (row.instructions || []).join('\n\n'),
     thumbnail_url: thumbnail,
+    media_url: media,
     coaching_metadata: {
       source_dataset: 'yuhonas/free-exercise-db',
       license: 'Unlicense',
