@@ -1744,3 +1744,55 @@ BIQ-0016 Add mobility warmup rules, cooldown section, and mobility day type
 - Schedule wizard: mobility day preference chips (Yes/No/Let AI decide), Mobility in day-type dropdown, review-step cooldown toggle.
 - Validation: strength-day warmup ≥3 with ≥2 mobility items; cooldown ≥2 when `includeCooldown` true; Mobility day ≥6 mobility-classified exercises.
 - No database migration — `st_exercises.section` accepts `cooldown` as text.
+
+---
+
+## BIQ-0017 - Available Equipment Filter and Exercise Replace UX
+
+Date: 2026-07-09  
+Branch: develop  
+Status: **Completed**
+
+### Summary
+
+Users can specify available gym equipment on their profile and in Program Setup. Catalog search (Add/Change exercise) and AI program generation filter exercises to match. Replacing an exercise from the catalog now refreshes name, muscle, thumbnail, and form guide in the UI.
+
+### Purpose
+
+Home-gym and limited-equipment users were shown barbell/cable exercises they cannot perform. Exercise "Change" updated the database but uncontrolled `defaultValue` inputs did not remount, so the card looked unchanged.
+
+### Files changed
+
+- `lib/training/equipmentFilter.ts` — equipment options, matching, filter helpers
+- `lib/training/catalogSearch.ts` — `availableEquipment` filter in search
+- `lib/training/aiProgramPlan.ts` — equipment-aware catalog slice + AI prompt rule
+- `lib/training/scheduleSuggestion.ts` — equipment in schedule context
+- `app/api/programs/generate/route.ts` — `availableEquipment` body param
+- `app/api/programs/suggest-schedule/route.ts` — `availableEquipment` body param
+- `app/page.tsx` — equipment chips (Settings + Program Setup Goals), `cardKey` remount on replace, catalog panel filter hint, `persistEquipmentPreference`
+- `supabase/migrations/20250709_014_profile_available_equipment.sql` — `st_profiles.available_equipment text[]`
+
+### Database changes
+
+- `st_profiles.available_equipment` — text array, default `{}`; empty or `full_gym` = no filter
+
+### Testing steps
+
+1. Run migration `20250709_014_profile_available_equipment.sql` on Supabase
+2. Settings → select Dumbbell + Bench → Save Profile
+3. Training → Change exercise → catalog search excludes barbell-only exercises; active filter message shown
+4. Pick replacement → name, muscle badge, thumbnail, Form guide update without page refresh
+5. Program Setup Goals → equipment chips visible; selections persist when advancing wizard
+6. Generate with AI respects equipment in program exercises
+7. `npm run build` passes
+
+### Known issues
+
+- Equipment matching is heuristic (string contains); unusual catalog equipment labels may need tuning
+- Users must run migration before profile equipment saves
+
+### Recommended commit message
+
+```text
+BIQ-0017 Add available equipment filter and fix exercise replace UI refresh
+```

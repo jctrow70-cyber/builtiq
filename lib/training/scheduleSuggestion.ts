@@ -49,7 +49,8 @@ export function buildScheduleSuggestionPrompt(
   goals: string,
   profile: any,
   includeCardio: boolean | null = null,
-  includeMobility: boolean | null = null
+  includeMobility: boolean | null = null,
+  availableEquipment: string[] = []
 ): { system: string; user: string } {
   const cardioPref =
     includeCardio === true
@@ -105,6 +106,7 @@ JSON schema:
       goals: goals.trim(),
       cardio_preference: cardioPref,
       mobility_preference: mobilityPref,
+      available_equipment: availableEquipment.length ? availableEquipment : null,
       athlete_profile: {
         experience_level: profile?.experience_level || 'beginner',
         primary_goal: profile?.primary_goal || 'general_health',

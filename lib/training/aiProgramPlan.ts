@@ -2,6 +2,7 @@
 
 import { inferExerciseType } from './exerciseTypes';
 import { hasExerciseGuide } from './exerciseMedia';
+import { filterCatalogByEquipment, hasEquipmentFilter, normalizeEquipmentList } from './equipmentFilter';
 
 export type AiExercise = {
   name: string;
@@ -40,6 +41,7 @@ export type GenerationConfig = {
   mode: 'personal' | 'team';
   teamId?: string | null;
   includeCooldown?: boolean;
+  availableEquipment?: string[];
 };
 
 const DAY_ORDER = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -87,11 +89,15 @@ function scoreCatalogItemForAi(item: any, tokens: string[]): number {
 export function selectCatalogForAi(
   catalog: any[],
   userPrompt: string,
-  limit = 500
+  limit = 500,
+  availableEquipment?: string[] | null
 ): { name: string; muscle_group: string; movement_pattern: string; equipment: string; has_form_guide: boolean }[] {
   const tokens = promptTokens(userPrompt);
-  return (catalog || [])
-    .filter((c) => !isUserCustomExercise(c))
+  let pool = (catalog || []).filter((c) => !isUserCustomExercise(c));
+  if (hasEquipmentFilter(availableEquipment)) {
+    pool = filterCatalogByEquipment(pool, availableEquipment);
+  }
+  return pool
     .map((c) => ({ item: c, score: scoreCatalogItemForAi(c, tokens) }))
     .sort((a, b) => b.score - a.score || String(a.item.name || '').localeCompare(String(b.item.name || '')))
     .slice(0, limit)
@@ -131,11 +137,15 @@ function scoreMobilityCatalogItem(item: any, tokens: string[]): number {
 export function selectMobilityCatalogForAi(
   catalog: any[],
   userPrompt: string,
-  limit = 100
+  limit = 100,
+  availableEquipment?: string[] | null
 ): { name: string; muscle_group: string; exercise_type: string; has_form_guide: boolean }[] {
   const tokens = promptTokens(userPrompt);
-  return (catalog || [])
-    .filter((c) => !isUserCustomExercise(c))
+  let pool = (catalog || []).filter((c) => !isUserCustomExercise(c));
+  if (hasEquipmentFilter(availableEquipment)) {
+    pool = filterCatalogByEquipment(pool, availableEquipment);
+  }
+  return pool
     .map((c) => ({ item: c, score: scoreMobilityCatalogItem(c, tokens) }))
     .sort((a, b) => b.score - a.score || String(a.item.name || '').localeCompare(String(b.item.name || '')))
     .slice(0, limit)
@@ -153,8 +163,14 @@ export function buildProgramGenerationPrompt(
   catalog: any[],
   config: GenerationConfig
 ): { system: string; user: string } {
-  const catalogRef = selectCatalogForAi(catalog, userPrompt);
-  const mobilityCatalog = selectMobilityCatalogForAi(catalog, userPrompt, 100);
+  const equipment = normalizeEquipmentList(
+    config.availableEquipment?.length ? config.availableEquipment : profile?.available_equipment
+  );
+  const catalogRef = selectCatalogForAi(catalog, userPrompt, 500, equipment);
+  const mobilityCatalog = selectMobilityCatalogForAi(catalog, userPrompt, 100, equipment);
+  const equipmentNote = hasEquipmentFilter(equipment)
+    ? `15. EQUIPMENT: User only has access to: ${equipment.join(', ')}. Use ONLY exercises from exercise_catalog/mobility_catalog that match this equipment (bodyweight/mobility stretches are always OK). Do not prescribe barbell/dumbbell/cable exercises requiring unavailable equipment.`
+    : '';
   const daySchedule = config.days
     .map((d) => `${d}: ${config.dayTypes[d] || 'Full Body'}`)
     .join(', ');
@@ -217,7 +233,7 @@ Rules:
 7. Strongly prefer exercises from the catalog that have form guides (has_form_guide: true — image, video, or instructions).
 8. Frame guidance as general fitness/wellness — not medical advice.
 9. Output ONLY valid JSON matching the schema below.
-10. Match each workout's workout_type to the scheduled day_type for that day_label (${daySchedule}).${cardioRules}${mobilityDayRules}${cooldownRules}${warmupMobilityRules}
+10. Match each workout's workout_type to the scheduled day_type for that day_label (${daySchedule}).${equipmentNote}${cardioRules}${mobilityDayRules}${cooldownRules}${warmupMobilityRules}
 ${sportPresets}
 
 JSON schema:
@@ -257,6 +273,7 @@ Generate exactly one workout entry per (week × training day) for all ${config.w
         focus_muscles: config.focusMuscles || [],
         visibility: config.mode,
         include_cooldown: includeCooldown,
+        available_equipment: equipment.length ? equipment : null,
       },
       exercise_catalog: catalogRef,
       mobility_catalog: mobilityCatalog,

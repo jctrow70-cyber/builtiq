@@ -9,6 +9,7 @@ import {
   type GenerationConfig,
 } from '../../../../lib/training/aiProgramPlan';
 import { builtinCatalogItems } from '../../../../lib/training/catalogSearch';
+import { normalizeEquipmentList } from '../../../../lib/training/equipmentFilter';
 
 export const runtime = 'nodejs';
 
@@ -91,6 +92,9 @@ export async function POST(request: Request) {
     mode,
     teamId,
     includeCooldown,
+    availableEquipment: Array.isArray(body?.availableEquipment)
+      ? body.availableEquipment.map(String)
+      : normalizeEquipmentList(profile?.available_equipment),
   };
 
   const { system, user: userContent } = buildProgramGenerationPrompt(prompt, profile, catalog || [], config);

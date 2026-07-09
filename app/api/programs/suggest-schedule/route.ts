@@ -5,6 +5,7 @@ import {
   buildScheduleSuggestionPrompt,
   parseScheduleSuggestion,
 } from '../../../../lib/training/scheduleSuggestion';
+import { normalizeEquipmentList } from '../../../../lib/training/equipmentFilter';
 
 export const runtime = 'nodejs';
 
@@ -49,7 +50,17 @@ export async function POST(request: Request) {
     .eq('user_id', user.id)
     .maybeSingle();
 
-  const { system, user: userContent } = buildScheduleSuggestionPrompt(goalsPrompt, profile, includeCardio, includeMobility);
+  const availableEquipment = Array.isArray(body?.availableEquipment)
+    ? body.availableEquipment.map(String)
+    : normalizeEquipmentList(profile?.available_equipment);
+
+  const { system, user: userContent } = buildScheduleSuggestionPrompt(
+    goalsPrompt,
+    profile,
+    includeCardio,
+    includeMobility,
+    availableEquipment
+  );
   const openai = new OpenAI({ apiKey });
 
   let rawContent = '';

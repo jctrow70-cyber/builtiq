@@ -1,4 +1,4 @@
-/** BIQ-0013: Client-side exercise catalog search for large imports */
+import { exerciseMatchesEquipment, hasEquipmentFilter } from './equipmentFilter';
 
 /** System/imported exercises only — excludes user custom rows (no form guides). */
 export function builtinCatalogItems(items: any[]) {
@@ -15,6 +15,8 @@ export type CatalogSearchFilters = {
   muscle?: string;
   equipment?: string;
   exerciseType?: string;
+  /** When set (and not full_gym), limit to exercises matching user equipment */
+  availableEquipment?: string[];
 };
 
 export type CatalogSearchOptions = {
@@ -64,6 +66,9 @@ function applyFilters(pool: any[], filters?: CatalogSearchFilters) {
   if (muscle) out = out.filter((c) => String(c.muscle_group || '') === muscle);
   if (equipment) out = out.filter((c) => String(c.equipment || '') === equipment);
   if (exerciseType) out = out.filter((c) => String(c.exercise_type || '') === exerciseType);
+  if (hasEquipmentFilter(filters?.availableEquipment)) {
+    out = out.filter((c) => exerciseMatchesEquipment(c, filters!.availableEquipment!));
+  }
   return out;
 }
 
@@ -74,7 +79,12 @@ function tokenize(query: string) {
 export function searchCatalog(items: any[], opts: CatalogSearchOptions = {}) {
   const limit = opts.limit ?? 50;
   const tokens = tokenize(opts.query || '');
-  const hasFilters = !!(opts.filters?.muscle || opts.filters?.equipment || opts.filters?.exerciseType);
+  const hasFilters = !!(
+    opts.filters?.muscle ||
+    opts.filters?.equipment ||
+    opts.filters?.exerciseType ||
+    hasEquipmentFilter(opts.filters?.availableEquipment)
+  );
 
   let pool = applyFilters(activeItems(items), opts.filters);
 
@@ -96,7 +106,12 @@ export function searchCatalog(items: any[], opts: CatalogSearchOptions = {}) {
 
 export function countCatalogMatches(items: any[], opts: CatalogSearchOptions = {}) {
   const tokens = tokenize(opts.query || '');
-  const hasFilters = !!(opts.filters?.muscle || opts.filters?.equipment || opts.filters?.exerciseType);
+  const hasFilters = !!(
+    opts.filters?.muscle ||
+    opts.filters?.equipment ||
+    opts.filters?.exerciseType ||
+    hasEquipmentFilter(opts.filters?.availableEquipment)
+  );
   if (!tokens.length && !hasFilters) return 0;
 
   let pool = applyFilters(activeItems(items), opts.filters);
@@ -123,5 +138,9 @@ export function catalogResultMeta(item: any): string {
 }
 
 export function hasCatalogSearchInput(query = '', filters?: CatalogSearchFilters) {
-  return !!query.trim() || !!(filters?.muscle || filters?.equipment || filters?.exerciseType);
+  return (
+    !!query.trim() ||
+    !!(filters?.muscle || filters?.equipment || filters?.exerciseType) ||
+    hasEquipmentFilter(filters?.availableEquipment)
+  );
 }
