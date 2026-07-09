@@ -80,7 +80,17 @@
  .section-add-row{margin:8px 0 4px}
  .panel-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;display:flex;align-items:flex-end;justify-content:center;padding:12px}
  .add-exercise-panel{width:100%;max-width:520px;max-height:85vh;overflow:auto;margin:0}
- .panel-results{position:static;max-height:200px;margin-top:8px;box-shadow:none}
+ .panel-results{position:static;max-height:min(50vh,360px);margin-top:8px;box-shadow:none}
+ .catalog-search-input{width:100%}
+ .catalog-search-filters{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0}
+ .catalog-search-filters select{width:100%;font-size:12px;padding:6px 8px}
+ .catalog-search-meta{margin:2px 0 6px;font-size:12px}
+ .catalog-search-results{max-height:min(50vh,360px)}
+ .typeahead-item.catalog-search-item{display:flex;align-items:center;gap:10px;text-align:left}
+ .catalog-search-thumb{width:44px;height:44px;border-radius:8px;object-fit:cover;flex-shrink:0;background:#101827;border:1px solid var(--line)}
+ .catalog-search-body{min-width:0;flex:1}
+ .panel-picked-img{display:block;width:100%;max-height:140px;object-fit:cover;border-radius:12px;margin-top:8px;border:1px solid var(--line)}
+ .panel-instructions{font-size:13px;line-height:1.45;max-height:140px;overflow:auto;margin-top:8px;padding:8px 10px;background:#0b1119;border-radius:10px;border:1px solid var(--line);white-space:pre-wrap}
  .panel-picked{padding:10px;border:1px solid var(--line);border-radius:12px;margin:8px 0;background:#0b1119}
  .panel-picked b{display:block}
  .focus-muscle-grid{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}
@@ -102,4 +112,4 @@
 .training-subnav button{flex:1 1 auto;min-width:0;text-align:center;font-size:11px;padding:7px 8px}
 .history-row{display:grid;grid-template-columns:1fr;gap:4px;padding:8px 0;border-top:1px solid var(--line)}
 .history-row b{display:block}
- @media(max-width:900px){.add-exercise-row{grid-template-columns:1fr auto auto}.catalog-edit-grid{grid-template-columns:1fr}.setgrid,.setgrid-edit{grid-template-columns:1fr 1fr 1fr}.exercise-add-row{grid-template-columns:1fr auto auto}.team-compliance-card .dash-metrics{grid-template-columns:1fr 1fr}.panel-overlay{align-items:flex-end;padding:0}.add-exercise-panel{border-radius:18px 18px 0 0;max-height:90vh}}
+ @media(max-width:900px){.add-exercise-row{grid-template-columns:1fr auto auto}.catalog-edit-grid{grid-template-columns:1fr}.catalog-search-filters{grid-template-columns:1fr}.setgrid,.setgrid-edit{grid-template-columns:1fr 1fr 1fr}.exercise-add-row{grid-template-columns:1fr auto auto}.team-compliance-card .dash-metrics{grid-template-columns:1fr 1fr}.panel-overlay{align-items:flex-end;padding:0}.add-exercise-panel{border-radius:18px 18px 0 0;max-height:90vh}}
