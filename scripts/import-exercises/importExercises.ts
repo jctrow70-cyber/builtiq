@@ -121,8 +121,8 @@ async function fetchExistingForRecords(
     bySourceIds.get(source)!.add(id);
   });
 
-  for (const [source, idSet] of bySourceIds) {
-    const ids = [...idSet];
+  for (const [source, idSet] of Array.from(bySourceIds.entries())) {
+    const ids = Array.from(idSet);
     for (let i = 0; i < ids.length; i += BATCH_SIZE) {
       const chunk = ids.slice(i, i + BATCH_SIZE);
       const { data, error } = await supabase
@@ -305,7 +305,7 @@ async function main() {
     records.map((r) => String(r.external_source || '').trim().toLowerCase()).filter(Boolean)
   );
   if (sourceSet.size > 1) {
-    console.warn(`Warning: multiple external_source values in file: ${[...sourceSet].join(', ')}`);
+    console.warn(`Warning: multiple external_source values in file: ${Array.from(sourceSet).join(', ')}`);
   }
 
   const supabase =
