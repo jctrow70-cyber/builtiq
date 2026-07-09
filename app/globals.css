@@ -123,6 +123,27 @@
 .setgrid-adaptive input,.setgrid-adaptive select{text-align:center;padding:7px}
 .member-assignment-panel{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
 .setup-mode-tabs{margin-bottom:10px}
+.setup-wizard-steps{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:12px 0 14px;padding:10px 12px;border-radius:12px;background:#0f1422;border:1px solid var(--line);font-size:12px;font-weight:800;color:#64748b}
+.setup-wizard-steps span.active{color:#c4b5fd}
+.setup-wizard-dot{color:#334155;font-weight:400}
+.schedule-coach-msg{padding:10px 12px;border-radius:12px;background:#121827;border:1px solid #3b335f;margin:8px 0 12px;line-height:1.45}
+.section-block.section-cooldown .section-head{border-bottom-color:#14b8a6}
+.section-block.section-cooldown .section-head h2{color:#5eead4}
+.cardio-pref-chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 12px}
+.cardio-pref-chips.mobility-pref-chips{margin-top:4px}
+.cardio-pref-chips button{border:1px solid var(--line);background:#0b1119;color:#cbd5e1;border-radius:999px;padding:7px 12px;font-size:11px;font-weight:800}
+.cardio-pref-chips button.active{border-color:var(--purple);background:#1b1634;color:#fff}
+.schedule-options{display:grid;gap:8px;margin:8px 0 12px}
+.schedule-option-card{display:block;width:100%;text-align:left;padding:12px;border-radius:14px;border:1px solid var(--line);background:#0b1119;color:var(--text);cursor:pointer}
+.schedule-option-card.selected{border-color:var(--purple);background:#141028;box-shadow:0 0 0 1px #4c3f78}
+.schedule-option-card.recommended:not(.selected){border-color:#3b335f}
+.schedule-option-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}
+.schedule-option-head b{font-size:14px}
+.schedule-day-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.schedule-day-chip{font-size:10px;font-weight:800;padding:5px 8px;border-radius:999px;background:#1f2937;color:#e2e8f0;border:1px solid #334155}
+.schedule-review-summary{padding:10px 12px;border-radius:12px;background:#0f1422;border:1px solid var(--line);margin:8px 0 12px}
+.wizard-nav{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.wizard-nav .btn{flex:1 1 auto;min-width:120px}
 .training-subnav button{flex:1 1 auto;min-width:0;text-align:center;font-size:11px;padding:7px 8px}
 .history-row{display:grid;grid-template-columns:1fr;gap:4px;padding:8px 0;border-top:1px solid var(--line)}
 .history-row b{display:block}

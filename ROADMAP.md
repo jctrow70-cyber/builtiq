@@ -206,7 +206,22 @@ Goal: Prepare BuiltIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
-Completed through **BIQ-0014** on `develop`: AI-driven program generation is the primary Program Setup path.
+Completed through **BIQ-0016** on `develop`: mobility warmup rules, cooldown / stretch section, Mobility day type in schedule wizard, and AI catalog bias for stretches.
+
+### Recently completed
+
+**BIQ-0016 — Mobility, Stretching, and Cooldown** (Completed)
+
+| Part | Deliverable |
+|------|-------------|
+| 1 | **Cooldown / Stretch** section (third workout block after strength) |
+| 2 | AI rules: mandatory mobility in warmup on every strength day |
+| 3 | AI rules: default cooldown stretches (2–4) with user toggle |
+| 4 | **Mobility** day type in schedule wizard + AI generation |
+| 5 | Mobility catalog bias helper for stretch exercise selection |
+| 6 | Sport-aware mobility presets in AI prompt (baseball throw/hit, etc.) |
+
+See `CHANGELOG.md` BIQ-0016 for full scope, testing, and file list.
 
 ### Active change request
 
@@ -230,6 +245,16 @@ Completed through **BIQ-0014** on `develop`: AI-driven program generation is the
 | 4 | `st_programs` generation metadata migration |
 | 5 | Template fallback (`generation_method: template`) |
 
+**BIQ-0015 — AI-Guided Program Setup Wizard** (Completed)
+
+| Part | Deliverable |
+|------|-------------|
+| 1 | `POST /api/programs/suggest-schedule` — AI split recommendations |
+| 2 | `lib/training/scheduleSuggestion.ts` — prompt + validation |
+| 3 | 3-step wizard UI (Goals · Schedule · Generate) |
+| 4 | Cardio day types in schedule + AI generation |
+| 5 | Schedule option cards + manual day override |
+
 **BIQ-0012 — Cardio Logging, Superset UX v2, Training Navigation, Team Program Assignment** (Completed)
 
 | Part | Deliverable |
@@ -242,14 +267,13 @@ Completed through **BIQ-0014** on `develop`: AI-driven program generation is the
 | 6 | Coach + member logging permissions |
 | 7 | `st_program_assignments` migration |
 
-### Next priorities (after BIQ-0013 import verified)
+### Next priorities
 
-1. **Production dataset import** — license-compatible 1000+ exercise JSON
-2. AI program regeneration / edit-from-prompt for existing programs
-3. PR detection and strength trends on Progress tab
-4. Nutrition MVP placeholder → functional tracking
-5. AI Coach hook-up (consumes `coaching_metadata` + program context)
-6. Split `page.tsx` into focused components
+1. AI program regeneration / edit-from-prompt for existing programs
+2. PR detection and strength trends on Progress tab
+3. Nutrition MVP placeholder → functional tracking
+4. AI Coach hook-up (consumes `coaching_metadata` + program context)
+5. Split `page.tsx` into focused components
 
 Run pending Supabase migrations on each environment before testing:
 

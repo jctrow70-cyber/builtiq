@@ -1,7 +1,7 @@
 import { catalogMatchesFocus, FOCUS_WEEKLY_SETS, pickCatalogForFocus } from './focusMuscles';
 
 type ExerciseTuple = [string, string, number, string, string, string];
-type TemplateSection = { warmup: any[]; strength: any[] };
+type TemplateSection = { warmup: any[]; strength: any[]; cooldown?: any[] };
 
 function exerciseTupleFromCatalog(item: any, sets = 3): ExerciseTuple {
   return [item.name, item.muscle_group || 'Muscle', sets, '8-12', '7-8', ''];
@@ -11,6 +11,7 @@ function cloneTemplate(tpl: TemplateSection): TemplateSection {
   return {
     warmup: [...(tpl.warmup || [])],
     strength: [...(tpl.strength || [])],
+    cooldown: [...(tpl.cooldown || [])],
   };
 }
 

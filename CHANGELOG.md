@@ -1438,3 +1438,309 @@ BIQ-0014 Add AI-driven program generation with natural-language prompts
 - BIQ-0011 Program Setup tab and muscle focus
 - BIQ-0013 catalog intelligence fields (optional enrichment in prompts)
 - Decision 023 — AI-driven program generation
+
+---
+
+## BIQ-0015 - AI-Guided Program Setup Wizard
+
+Date: 2026-07-09  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Replaced the single-screen Program Setup flow with a **3-step AI-guided wizard**: Goals → Schedule → Generate. AI recommends 2–4 weekly splits tailored to the user's goals, with optional cardio days. Users pick a schedule (or customize days/types), then confirm weeks/name and generate the full program.
+
+### Purpose
+
+Users need AI to drive split recommendations (training days, upper/lower/full/cardio) instead of manually toggling days before writing a prompt. Separating goals from schedule improves clarity and lets the coach message guide schedule selection.
+
+### Scope
+
+- **API** `POST /api/programs/suggest-schedule` — goals + optional cardio preference → schedule options JSON
+- **`lib/training/scheduleSuggestion.ts`** — prompt builder, validation, types
+- **`lib/training/aiProgramPlan.ts`** — `Cardio` workout type; cardio-focused session rules in generation prompt; relaxed min exercise count for cardio days
+- **Program Setup UI** — stepped wizard with schedule option cards, cardio preference chips, manual day override, review step
+- **CSS** — wizard progress, schedule cards, day chips
+
+### Files Changed
+
+- `app/api/programs/suggest-schedule/route.ts` (new)
+- `lib/training/scheduleSuggestion.ts` (new)
+- `lib/training/aiProgramPlan.ts` — Cardio day support
+- `app/page.tsx` — wizard state, `fetchScheduleSuggestions()`, stepped UI
+- `app/globals.css` — wizard and schedule card styles
+- `CHANGELOG.md`, `ROADMAP.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+**Prerequisites**
+
+1. `OPENAI_API_KEY` set in `.env.local`
+2. `npm run build` — must pass
+
+**Wizard flow**
+
+3. Sign in → Training → Program Setup
+4. Step 1: enter goals (e.g. baseball throw/hit power) → **Next: Plan my schedule**
+5. Step 2: confirm coach message; try cardio chips (Yes / No / Let AI decide) — options refresh
+6. Select a schedule card (recommended badge visible); optionally **Customize days** and add Cardio type
+7. **Next: Review & generate** — summary shows goals + weekly chips
+8. Set weeks/name → **Generate with AI** — program loads in Training with correct days/types
+
+**Cardio**
+
+9. Pick or customize a schedule with Cardio days → generated workouts use conditioning exercises on those days
+
+**Error states**
+
+10. Remove `OPENAI_API_KEY` — schedule step returns 503 with clear message
+11. Short goals text — client validation alert
+12. Invalid AI JSON — API returns 422
+
+**Regression**
+
+13. **Quick template program** still works from review step
+14. Team program mode + AI generate unchanged
+15. Mobile: wizard steps, option cards, and chips usable on narrow viewport
+
+### Known Issues
+
+- Changing cardio preference re-fetches all schedule options (extra OpenAI call)
+- Manual day override does not sync back to `selectedScheduleId` label (days/types still apply correctly to generation)
+- Cardio template fallback is basic compared to AI cardio sessions
+
+### Recommended Commit Message
+
+```text
+BIQ-0015 Add AI-guided program setup wizard for schedule and cardio
+```
+
+### Dependencies
+
+- BIQ-0014 AI program generator
+- BIQ-0012 cardio exercise logging types
+
+
+### Follow-up (2026-07-09)
+
+- **Stronger AI volume** — system prompt now requires 6–10 strength exercises per session with compound lifts + accessories; validates minimum 6 per workout with one automatic retry
+- **Smarter catalog slice** — `selectCatalogForAi()` scores exercises by form guides, prompt keywords, and import source instead of alphabetical slice; sends `has_form_guide` to OpenAI
+- **Custom exercise exclusion** — user-built exercises excluded from AI generation and Add Exercise search; `builtinCatalogItems()` helper; Settings **Remove all custom exercises** bulk archive button
+- **Fuzzy match tie-break** — catalog matching prefers exercises with form guides when scores tie
+
+---
+
+## BIQ-0016 - Mobility, Stretching, and Cooldown in Program Design
+
+Date: 2026-07-09  
+Branch: develop  
+Status: **Completed**
+
+### Summary
+
+Make mobility and stretching a first-class part of every program: mandatory dynamic warmup stretches, an optional **Cooldown / Stretch** section after strength work, and a **Mobility** day type in the schedule wizard — all driven by AI rules and catalog-aware exercise selection.
+
+### Purpose
+
+Warmup today is labeled “prep” but stretches are inconsistent. AI favors strength exercises with form guides; stretching entries in the catalog (`exercise_type: mobility`, imported `stretching` category) are underused. Athletes (e.g. baseball) need reliable hip, shoulder, and thoracic mobility without typing it into every prompt. A dedicated cooldown section supports recovery and flexibility goals without cramming stretches into the strength block.
+
+### Scope
+
+#### Part 1 — Cooldown / Stretch workout section
+
+**Problem:** Only `warmup` and `strength` sections exist. No post-workout stretch block.
+
+**Desired behavior:**
+
+| Section | Label | Sort order base | Typical content |
+|---------|-------|-----------------|-----------------|
+| `warmup` | Warm Up / Prep | 0 | Dynamic mobility, activation, light cardio |
+| `strength` | Strength | 100 | Lifts, accessories, supersets |
+| `cooldown` | Cooldown / Stretch | 200 | Static/dynamic stretches, foam roll, breathing |
+
+**Requirements:**
+
+- Extend `SECTIONS` and `SECTION_SORT_BASE` in `app/page.tsx`
+- Render cooldown block in Training workout view (same card/grid patterns as warmup; mobility logging fields via `logFieldsForType`)
+- Add Exercise panel supports `cooldown` section
+- Cross-week edit matching uses `section` + `sort_order` (existing pattern)
+- Snapshot fields: `snapshot_section` already supports any section string — no migration required for logs
+- `st_exercises.section` is unconstrained text — **no DB migration** unless we add a check constraint documenting allowed values
+
+**Template fallback (`WORKOUT_TEMPLATES`):**
+
+- Add `cooldown` arrays to Lower / Upper / Full Body / Cardio templates (2–3 stretches each)
+- Example: World's Greatest Stretch, pigeon pose, band shoulder distraction — names matched to catalog where possible
+
+---
+
+#### Part 2 — AI warmup mobility rules (every strength day)
+
+**Problem:** AI prompt says “2–4 prep items” without requiring stretches or sport-specific mobility.
+
+**Desired AI rules (add to `buildProgramGenerationPrompt` in `aiProgramPlan.ts`):**
+
+1. **Every strength day warmup must include:**
+   - 1 light cardio/activation item (bike, walk, jump rope — optional on mobility-only days)
+   - **2–3 mobility/stretch items** from catalog (`exercise_type: mobility` or stretching names)
+   - At least one item targeting **hips**, **thoracic spine/rotation**, or **shoulders** when goals mention throwing, hitting, or rotational sport
+
+2. **Catalog bias for warmup/cooldown picks:**
+   - New helper `selectMobilityCatalogForAi(catalog, userPrompt, limit)` — boost `category: warmup`, `exercise_type: mobility`, `training_goal: mobility`, name contains stretch/mobility
+   - Pass separate `mobility_catalog_sample` (top 80–120) in generation user JSON alongside main strength catalog
+
+3. **Rep prescription for mobility:** duration-based (`30 sec`, `45 sec each side`, `10 reps`) not heavy sets
+
+4. **Validation:** each strength-day workout must have `warmup.length >= 3` with at least **2** items classified as mobility when parsed (match catalog `exercise_type` or keyword list)
+
+---
+
+#### Part 3 — AI cooldown block (optional but default-on)
+
+**Problem:** No post-workout stretching in generated plans.
+
+**Desired behavior:**
+
+- AI JSON schema adds `cooldown` array (same shape as warmup items)
+- **Default:** include `cooldown` on all strength days — **2–4 stretches** targeting muscles worked that session (e.g. lower day → hip flexor, hamstring, glute stretches)
+- **Cardio days:** optional shorter cooldown (1–2 items) or omit
+- **Mobility days:** cooldown may merge into main work (see Part 4)
+
+**User toggle (Program Setup review step):**
+
+- Checkbox: **Include cooldown stretches** (default: on)
+- Passed to `/api/programs/generate` as `includeCooldown: boolean`
+- When off, AI omits cooldown array; UI hides empty cooldown section
+
+**Validation:** when `includeCooldown` true, strength days need `cooldown.length >= 2`
+
+---
+
+#### Part 4 — Mobility day type in schedule wizard
+
+**Problem:** Schedule options only offer Lower / Upper / Full Body / Cardio. No dedicated recovery/mobility session.
+
+**Desired behavior:**
+
+**Schedule suggestion (`scheduleSuggestion.ts` + `/api/programs/suggest-schedule`):**
+
+- Add `Mobility` to valid `day_types`
+- AI offers schedules that may include 1 mobility day per week when goals imply high training load, rotational sport, or user selects **Include mobility day** chip (alongside cardio chips)
+- Example option: `Mon Upper · Wed Lower · Fri Full · Sun Mobility`
+
+**Program generation (`aiProgramPlan.ts`):**
+
+- `VALID_WORKOUT_TYPES` includes `Mobility`
+- Mobility day rules:
+  - `workout_type: "Mobility"`
+  - Warmup: 1–2 light items
+  - Strength section: **6–10 mobility/stretch exercises** (treated as main work, not lifts)
+  - Cooldown: optional 1–2 breathing/relaxation items
+  - No barbell compound lifts on mobility days
+  - Min exercise validation: 6 mobility items (relaxed set counts; duration/reps)
+
+**Wizard UI (`app/page.tsx` step 2):**
+
+- Chip group: **Include a mobility day?** — Yes / No / Let AI decide (mirrors cardio pattern)
+- Day type dropdown includes **Mobility**
+- Schedule option cards show mobility day chips (e.g. `Sun Mobility`)
+
+---
+
+#### Part 5 — Sport-aware mobility presets (prompt context, not hardcoded plans)
+
+Embed in AI system prompt as **reference patterns** (AI adapts, does not copy blindly):
+
+| Sport / goal | Warmup emphasis | Cooldown emphasis |
+|--------------|-----------------|-------------------|
+| Baseball throw | Shoulder IR/ER, scap activation, thoracic rotation, hip hinge prep | Pec/lat, shoulder capsule, forearm |
+| Baseball hit | Hip mobility, anti-rotation prep, thoracic rotation | Hip flexors, glutes, T-spine |
+| General strength | Hip opener, T-spine, shoulder CARs | Muscles trained that day |
+| Fat loss / conditioning | Dynamic full-body | Lower intensity static stretch |
+
+User goals prompt still primary; presets inform AI when keywords match.
+
+---
+
+#### Part 6 — UI polish
+
+- Section headers: icon or color distinction for Cooldown (e.g. green/teal vs purple strength)
+- Mobility exercises show **duration** field prominently in log grid (existing `mobility` / `timed` log fields)
+- Form guide button on mobility items when catalog has `image_url` / instructions (many stretches have images from Free Exercise DB)
+- Dashboard “Today’s Workout” exercise count includes cooldown items
+
+---
+
+### Proposed Files to Change
+
+| File | Changes |
+|------|---------|
+| `lib/training/aiProgramPlan.ts` | Cooldown schema, mobility catalog helper, warmup/cooldown/mobility-day rules, validation |
+| `lib/training/scheduleSuggestion.ts` | `Mobility` day type, mobility-day schedule options |
+| `app/api/programs/generate/route.ts` | Accept `includeCooldown`, `includeMobilityDay` |
+| `app/api/programs/suggest-schedule/route.ts` | Mobility preference in request body |
+| `app/page.tsx` | `cooldown` section UI, wizard chips, review toggle, template cooldown arrays |
+| `app/globals.css` | Cooldown section styling |
+| `lib/training/logFields.ts` | Confirm mobility/cooldown logging UX (extend only if gaps) |
+| `CHANGELOG.md`, `DECISIONS.md`, `ROADMAP.md` | This BIQ + Decision 024 |
+
+### Database Changes
+
+**None required** — `st_exercises.section` already accepts new section values; snapshots store `snapshot_section` as text.
+
+Optional future: `st_programs.include_cooldown boolean` to persist preference on program row.
+
+### Dependencies
+
+- BIQ-0014 AI program generator
+- BIQ-0015 schedule wizard + Cardio day type
+- BIQ-0013 exercise catalog (stretching/mobility entries from import)
+- BIQ-0012 adaptive logging by `exercise_type`
+
+### Out of Scope (this BIQ)
+
+- Dedicated foam-rolling video library
+- PNF / partner stretching flows
+- Separate mobile “stretch timer” UX
+- AI Coach readiness-based stretch adjustments (Phase 6)
+- Plyometrics section (separate BIQ)
+
+### Testing Steps
+
+1. **Wizard** — goals for baseball → schedule step → enable mobility day → option includes `Mobility` day
+2. **AI generate** — strength day has warmup with ≥2 mobility items + cooldown with ≥2 stretches
+3. **Mobility day** — Sunday (or chosen) is all mobility exercises; no heavy squats/bench
+4. **Cooldown toggle** — uncheck on review → generated plan has no cooldown section
+5. **Training UI** — cooldown section renders; log duration/reps on mobility exercises
+6. **Form guides** — stretch with catalog image shows thumbnail + Form guide
+7. **Template fallback** — quick template includes cooldown arrays
+8. **History** — completed cooldown logs retain snapshots if template later edited
+9. **Mobile** — three sections scroll cleanly on 375px width
+10. `npm run build` passes
+
+### Known Issues / Risks
+
+- More exercises per session increases AI token usage and generation time
+- Stretch names in catalog vary; fuzzy match may miss — mobility catalog helper mitigates
+- Existing programs lack cooldown until regenerated or manually edited
+- Validation stricter → more 422 retries; keep one retry path
+
+### Recommended Commit Message
+
+```text
+BIQ-0016 Add mobility warmup rules, cooldown section, and mobility day type
+```
+
+### Implementation notes (2026-07-09)
+
+- Added `cooldown` as third workout section in UI (`SECTIONS`, templates, training view, dashboard counts).
+- `selectMobilityCatalogForAi()` biases stretch/mobility catalog picks for AI generation.
+- AI prompt: mandatory warmup mobility on strength days, optional default-on cooldown (2–4 stretches), Mobility day type (6–10 mobility exercises).
+- Schedule wizard: mobility day preference chips (Yes/No/Let AI decide), Mobility in day-type dropdown, review-step cooldown toggle.
+- Validation: strength-day warmup ≥3 with ≥2 mobility items; cooldown ≥2 when `includeCooldown` true; Mobility day ≥6 mobility-classified exercises.
+- No database migration — `st_exercises.section` accepts `cooldown` as text.

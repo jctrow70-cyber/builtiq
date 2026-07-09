@@ -3,10 +3,12 @@ import OpenAI from 'openai';
 import { createSupabaseFromRequest, requireAuthUser } from '../../../../lib/supabaseServer';
 import {
   buildProgramGenerationPrompt,
+  isRetryablePlanError,
   parseAndValidateAiPlan,
   persistAiProgramPlan,
   type GenerationConfig,
 } from '../../../../lib/training/aiProgramPlan';
+import { builtinCatalogItems } from '../../../../lib/training/catalogSearch';
 
 export const runtime = 'nodejs';
 
@@ -54,6 +56,7 @@ export async function POST(request: Request) {
   const teamId = body?.teamId ? String(body.teamId) : null;
   const focusMuscles = Array.isArray(body?.focusMuscles) ? body.focusMuscles.map(String) : [];
   const programName = body?.programName ? String(body.programName) : 'AI Strength Program';
+  const includeCooldown = body?.includeCooldown !== false;
 
   if (mode === 'team') {
     if (!teamId) return NextResponse.json({ error: 'teamId required for team programs' }, { status: 400 });
@@ -87,24 +90,32 @@ export async function POST(request: Request) {
     programName,
     mode,
     teamId,
+    includeCooldown,
   };
 
   const { system, user: userContent } = buildProgramGenerationPrompt(prompt, profile, catalog || [], config);
+  const builtinCatalog = builtinCatalogItems(catalog || []);
 
   const openai = new OpenAI({ apiKey });
   let rawContent = '';
 
-  try {
+  const callAi = async (extraSystem?: string) => {
+    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
+      { role: 'system', content: system },
+      { role: 'user', content: userContent },
+    ];
+    if (extraSystem) messages.push({ role: 'system', content: extraSystem });
     const completion = await openai.chat.completions.create({
       model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
       temperature: 0.5,
       response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: userContent },
-      ],
+      messages,
     });
-    rawContent = completion.choices[0]?.message?.content || '';
+    return completion.choices[0]?.message?.content || '';
+  };
+
+  try {
+    rawContent = await callAi();
   } catch (err: any) {
     const msg = err?.message || 'OpenAI request failed';
     return NextResponse.json({ error: msg }, { status: 502 });
@@ -114,12 +125,33 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Empty response from AI' }, { status: 502 });
   }
 
-  const { plan, error: validateError } = parseAndValidateAiPlan(rawContent, config);
+  let { plan, error: validateError } = parseAndValidateAiPlan(rawContent, config, catalog || []);
+
+  if ((validateError || !plan) && isRetryablePlanError(validateError)) {
+    try {
+      const retryContent = await callAi(
+        'Previous plan failed validation. Ensure strength days have warmup with at least 3 items including 2 mobility stretches, cooldown with at least 2 stretches when enabled, at least 6-8 strength exercises per session, and Mobility days have 6+ mobility exercises in strength section.'
+      );
+      if (retryContent) {
+        rawContent = retryContent;
+        const retryResult = parseAndValidateAiPlan(rawContent, config, catalog || []);
+        if (retryResult.plan) {
+          plan = retryResult.plan;
+          validateError = null;
+        } else {
+          validateError = retryResult.error;
+        }
+      }
+    } catch {
+      /* keep original validation error */
+    }
+  }
+
   if (validateError || !plan) {
     return NextResponse.json({ error: validateError || 'Invalid AI plan' }, { status: 422 });
   }
 
-  const { programId, error: persistError } = await persistAiProgramPlan(supabase, user.id, plan, config, catalog || []);
+  const { programId, error: persistError } = await persistAiProgramPlan(supabase, user.id, plan, config, builtinCatalog);
   if (persistError || !programId) {
     return NextResponse.json({ error: persistError || 'Failed to save program' }, { status: 500 });
   }

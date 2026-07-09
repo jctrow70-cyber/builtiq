@@ -1,5 +1,16 @@
 /** BIQ-0013: Client-side exercise catalog search for large imports */
 
+/** System/imported exercises only — excludes user custom rows (no form guides). */
+export function builtinCatalogItems(items: any[]) {
+  return (items || []).filter((c) => {
+    if (c?.is_archived) return false;
+    if (c?.user_id) return false;
+    if (c?.is_system === true) return true;
+    if (c?.external_source) return true;
+    return false;
+  });
+}
+
 export type CatalogSearchFilters = {
   muscle?: string;
   equipment?: string;

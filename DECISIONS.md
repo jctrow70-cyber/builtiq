@@ -618,3 +618,32 @@ Sport-specific goals are too varied for hardcoded profiles alone. Natural-langua
 - `st_programs.generation_prompt`, `generation_method`, `program_summary`, `program_style`
 - Program Setup UI: prompt textarea + **Generate with AI**
 - Requires `OPENAI_API_KEY` in server environment (documented in `.env.example`)
+
+---
+
+## Decision 024 - Mobility, Cooldown Section, and Mobility Day Type
+
+Date: 2026-07-09  
+Status: Accepted  
+Category: Workout Structure
+
+### Decision
+
+Extend workout structure with a third section **`cooldown`** (Cooldown / Stretch). Require AI-generated strength days to include **mobility/stretch items in warmup** and **static stretches in cooldown** by default. Add **`Mobility`** as a schedule day type (alongside Lower, Upper, Full Body, Cardio) for dedicated recovery/mobility sessions. Users can toggle cooldown inclusion at program review; mobility day inclusion follows the same Yes / No / Let AI decide pattern as cardio.
+
+### Reason
+
+Stretching is currently incidental. Athletes need predictable hip, shoulder, and rotational prep without repeating prompts. Separating cooldown from strength keeps logging clear and matches how coaches program (prep → work → restore). A mobility day supports high-frequency training without extra lifting volume.
+
+### Alternatives Considered
+
+- Prompt-only (“add stretches in your goals text”) — rejected; inconsistent
+- Stretches only in warmup, no cooldown — rejected; post-workout flexibility is a distinct coaching need
+- Mobility as exercise type only, no day type — rejected; does not support dedicated sessions
+
+### Impact
+
+- `SECTIONS` gains `cooldown`; AI JSON schema gains `cooldown` array
+- Schedule wizard and `scheduleSuggestion.ts` gain Mobility day type
+- `selectMobilityCatalogForAi()` biases stretch picks from imported catalog
+- Documented in BIQ-0016

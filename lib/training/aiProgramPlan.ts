@@ -1,6 +1,7 @@
 /** BIQ-0014: AI-driven program generation — prompt, validation, catalog matching */
 
 import { inferExerciseType } from './exerciseTypes';
+import { hasExerciseGuide } from './exerciseMedia';
 
 export type AiExercise = {
   name: string;
@@ -19,6 +20,7 @@ export type AiWorkout = {
   workout_type: string;
   warmup?: AiWorkoutItem[];
   strength?: AiWorkoutItem[];
+  cooldown?: AiWorkoutItem[];
 };
 
 export type AiProgramPlan = {
@@ -37,21 +39,111 @@ export type GenerationConfig = {
   programName?: string;
   mode: 'personal' | 'team';
   teamId?: string | null;
+  includeCooldown?: boolean;
 };
 
 const DAY_ORDER = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const VALID_WORKOUT_TYPES = ['Lower Body', 'Upper Body', 'Full Body'];
-const SECTION_SORT_BASE: Record<string, number> = { warmup: 0, strength: 100 };
+const VALID_WORKOUT_TYPES = ['Lower Body', 'Upper Body', 'Full Body', 'Cardio', 'Mobility'];
+const SECTION_SORT_BASE: Record<string, number> = { warmup: 0, strength: 100, cooldown: 200 };
 
-function compactCatalog(catalog: any[], limit = 500): { name: string; muscle_group: string; movement_pattern: string; equipment: string }[] {
+const MOBILITY_NAME_PATTERN = /stretch|mobility|foam|pigeon|inchworm|cat\s*cow|world'?s?\s*greatest|rotation|dislocation|breathing/i;
+
+function isUserCustomExercise(item: any): boolean {
+  if (!item || item.is_archived) return true;
+  if (item.user_id) return true;
+  if (item.is_system === false && !item.external_source) return true;
+  return false;
+}
+
+function promptTokens(prompt: string): string[] {
+  return prompt
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((t) => t.length >= 3);
+}
+
+function scoreCatalogItemForAi(item: any, tokens: string[]): number {
+  let score = 0;
+  if (hasExerciseGuide(item)) score += 40;
+  if (item.external_source) score += 15;
+  if (item.is_system === true) score += 5;
+
+  const fields = [
+    String(item.name || '').toLowerCase(),
+    String(item.muscle_group || '').toLowerCase(),
+    String(item.movement_pattern || '').toLowerCase(),
+    String(item.training_goal || '').toLowerCase(),
+  ];
+  const hay = fields.join(' ');
+  tokens.forEach((t, i) => {
+    if (fields[0].includes(t)) score += 30 - i * 2;
+    else if (hay.includes(t)) score += 12 - i;
+  });
+
+  return score;
+}
+
+export function selectCatalogForAi(
+  catalog: any[],
+  userPrompt: string,
+  limit = 500
+): { name: string; muscle_group: string; movement_pattern: string; equipment: string; has_form_guide: boolean }[] {
+  const tokens = promptTokens(userPrompt);
   return (catalog || [])
-    .filter((c) => !c?.is_archived)
+    .filter((c) => !isUserCustomExercise(c))
+    .map((c) => ({ item: c, score: scoreCatalogItemForAi(c, tokens) }))
+    .sort((a, b) => b.score - a.score || String(a.item.name || '').localeCompare(String(b.item.name || '')))
     .slice(0, limit)
-    .map((c) => ({
-      name: String(c.name || ''),
-      muscle_group: String(c.muscle_group || ''),
-      movement_pattern: String(c.movement_pattern || ''),
-      equipment: String(c.equipment || ''),
+    .map(({ item }) => ({
+      name: String(item.name || ''),
+      muscle_group: String(item.muscle_group || ''),
+      movement_pattern: String(item.movement_pattern || ''),
+      equipment: String(item.equipment || ''),
+      has_form_guide: hasExerciseGuide(item),
+    }));
+}
+
+function scoreMobilityCatalogItem(item: any, tokens: string[]): number {
+  let score = 0;
+  const et = String(item.exercise_type || '').toLowerCase();
+  const cat = String(item.category || '').toLowerCase();
+  const goal = String(item.training_goal || '').toLowerCase();
+  const name = String(item.name || '').toLowerCase();
+
+  if (et === 'mobility') score += 50;
+  if (cat === 'warmup' || cat === 'stretching') score += 40;
+  if (goal === 'mobility' || goal.includes('mobility')) score += 35;
+  if (MOBILITY_NAME_PATTERN.test(name)) score += 30;
+  if (hasExerciseGuide(item)) score += 20;
+  if (item.is_system === true) score += 5;
+
+  const fields = [name, String(item.muscle_group || '').toLowerCase(), goal];
+  const hay = fields.join(' ');
+  tokens.forEach((t, i) => {
+    if (fields[0].includes(t)) score += 25 - i * 2;
+    else if (hay.includes(t)) score += 10 - i;
+  });
+
+  return score;
+}
+
+export function selectMobilityCatalogForAi(
+  catalog: any[],
+  userPrompt: string,
+  limit = 100
+): { name: string; muscle_group: string; exercise_type: string; has_form_guide: boolean }[] {
+  const tokens = promptTokens(userPrompt);
+  return (catalog || [])
+    .filter((c) => !isUserCustomExercise(c))
+    .map((c) => ({ item: c, score: scoreMobilityCatalogItem(c, tokens) }))
+    .sort((a, b) => b.score - a.score || String(a.item.name || '').localeCompare(String(b.item.name || '')))
+    .slice(0, limit)
+    .map(({ item }) => ({
+      name: String(item.name || ''),
+      muscle_group: String(item.muscle_group || ''),
+      exercise_type: String(item.exercise_type || 'mobility'),
+      has_form_guide: hasExerciseGuide(item),
     }));
 }
 
@@ -61,22 +153,72 @@ export function buildProgramGenerationPrompt(
   catalog: any[],
   config: GenerationConfig
 ): { system: string; user: string } {
-  const catalogRef = compactCatalog(catalog);
+  const catalogRef = selectCatalogForAi(catalog, userPrompt);
+  const mobilityCatalog = selectMobilityCatalogForAi(catalog, userPrompt, 100);
   const daySchedule = config.days
     .map((d) => `${d}: ${config.dayTypes[d] || 'Full Body'}`)
     .join(', ');
+  const hasCardioDays = config.days.some((d) => config.dayTypes[d] === 'Cardio');
+  const hasMobilityDays = config.days.some((d) => config.dayTypes[d] === 'Mobility');
+  const includeCooldown = config.includeCooldown !== false;
+
+  const cardioRules = hasCardioDays
+    ? `
+11. CARDIO DAYS: When day_types includes "Cardio", design cardio-focused conditioning sessions for those days.
+    - workout_type must be "Cardio" on those days.
+    - Use catalog exercises with muscle_group Cardio or conditioning equipment (assault bike, rower, ski erg, treadmill, bike).
+    - Structure: 1–2 light warmup prep items, then 4–6 conditioning blocks in strength array (intervals, steady-state, or mixed).
+    - Reps field can hold duration ("10 min", "30 sec", "500m") or distance; RPE 6–9 for intervals.
+    - Vary cardio modality and intensity week to week (e.g. week 1 steady, week 2 intervals, week 3 tempo).
+    - No heavy barbell lifts on Cardio days.${includeCooldown ? ' Optional cooldown: 1–2 light stretches or omit.' : ''}`
+    : '';
+
+  const mobilityDayRules = hasMobilityDays
+    ? `
+12. MOBILITY DAYS: When day_types includes "Mobility", design dedicated recovery/mobility sessions.
+    - workout_type must be "Mobility" on those days.
+    - Warmup: 1–2 light activation items (walk, bike, breathing).
+    - Strength section: 6–10 mobility/stretch exercises from mobility_catalog (main work — NOT barbell compounds).
+    - Use duration-based reps ("30 sec", "45 sec each side", "10 reps").
+    - No heavy squats, deadlifts, bench press, or barbell compounds on Mobility days.
+    - Cooldown: optional 1–2 breathing/relaxation items or merge into strength section.`
+    : '';
+
+  const cooldownRules = includeCooldown
+    ? `
+13. COOLDOWN (default ON): On strength days (Lower, Upper, Full Body), include a "cooldown" array with 2–4 static/dynamic stretches targeting muscles worked that session (e.g. lower day → hip flexor, hamstring, glute stretches). Pick from mobility_catalog. Use duration reps ("30 sec", "60 sec each side"). Cardio days: optional 1–2 cooldown stretches or omit.`
+    : `
+13. COOLDOWN: User disabled cooldown — omit the cooldown array entirely on all days.`;
+
+  const warmupMobilityRules = `
+14. WARMUP MOBILITY (strength days): Every Lower/Upper/Full Body day warmup must include:
+    - 1 light cardio/activation item (bike, walk, jump rope).
+    - 2–3 mobility/stretch items from mobility_catalog (exercise_type mobility or stretching names).
+    - At least one item targeting hips, thoracic spine/rotation, or shoulders when goals mention throwing, hitting, baseball, or rotational sport.
+    - Mobility reps are duration-based ("30 sec", "45 sec each side") — not heavy working sets.`;
+
+  const sportPresets = `
+Sport-aware mobility reference patterns (adapt to user goals — do not copy blindly):
+| Sport / goal | Warmup emphasis | Cooldown emphasis |
+| Baseball throw | Shoulder IR/ER, scap activation, thoracic rotation, hip hinge prep | Pec/lat, shoulder capsule, forearm |
+| Baseball hit | Hip mobility, anti-rotation prep, thoracic rotation | Hip flexors, glutes, T-spine |
+| General strength | Hip opener, T-spine, shoulder CARs | Muscles trained that day |
+| Fat loss / conditioning | Dynamic full-body | Lower intensity static stretch |`;
 
   const system = `You are BuiltIQ Health's strength & conditioning program designer. You create science-based, periodized training plans as strict JSON only — no markdown, no prose outside JSON.
 
 Rules:
 1. Interpret the user's natural-language goal (sport, position, throw/hit power, hypertrophy, etc.) and design accordingly.
 2. Each week must differ: vary exercises, rep schemes, and/or intensity across weeks (accumulation → intensification → deload/peak). Never photocopy identical workouts every week.
-3. Prefer exercise names EXACTLY from the provided catalog when possible. If no match, use a clear standard gym name.
-4. Balance push/pull; avoid stacking the same movement pattern on consecutive training days.
+3. Prefer exercise names EXACTLY from the provided catalog when possible. For warmup/cooldown/mobility picks, strongly prefer mobility_catalog names.
+4. Balance push/pull on strength days; avoid stacking the same movement pattern on consecutive training days.
 5. Use realistic set/rep/RPE targets for the user's experience level.
-6. Warmup: 2–4 prep items per session. Strength: 4–8 exercises per session; optional supersets (2 exercises max per superset).
-7. Frame guidance as general fitness/wellness — not medical advice.
-8. Output ONLY valid JSON matching the schema below.
+6. Strength days: warmup 3–4 prep items (see rule 14); strength section 6–10 exercises; prefer compound lifts plus accessories; 3–4 working sets on main lifts. Optional supersets (2 exercises max per superset).
+7. Strongly prefer exercises from the catalog that have form guides (has_form_guide: true — image, video, or instructions).
+8. Frame guidance as general fitness/wellness — not medical advice.
+9. Output ONLY valid JSON matching the schema below.
+10. Match each workout's workout_type to the scheduled day_type for that day_label (${daySchedule}).${cardioRules}${mobilityDayRules}${cooldownRules}${warmupMobilityRules}
+${sportPresets}
 
 JSON schema:
 {
@@ -87,12 +229,12 @@ JSON schema:
     {
       "week": 1,
       "day_label": "Mon",
-      "workout_type": "Lower Body|Upper Body|Full Body",
-      "warmup": [{ "name": "...", "muscle_group": "...", "sets": 1, "reps": "..." }],
+      "workout_type": "Lower Body|Upper Body|Full Body|Cardio|Mobility",
+      "warmup": [{ "name": "...", "muscle_group": "...", "sets": 1, "reps": "30 sec" }],
       "strength": [
         { "name": "...", "muscle_group": "...", "sets": 3, "reps": "8-12", "rpe": "7-8" },
         { "superset": [{ "name": "...", "sets": 3, "reps": "10-12" }, { "name": "...", "sets": 3, "reps": "10-12" }] }
-      ]
+      ]${includeCooldown ? ',\n      "cooldown": [{ "name": "...", "muscle_group": "...", "sets": 1, "reps": "45 sec each side" }]' : ''}
     }
   ]
 }
@@ -114,8 +256,10 @@ Generate exactly one workout entry per (week × training day) for all ${config.w
         training_days: daySchedule,
         focus_muscles: config.focusMuscles || [],
         visibility: config.mode,
+        include_cooldown: includeCooldown,
       },
       exercise_catalog: catalogRef,
+      mobility_catalog: mobilityCatalog,
     },
     null,
     0
@@ -151,6 +295,55 @@ function normalizeExercise(ex: AiExercise): AiExercise {
   };
 }
 
+function countWorkoutItems(items: AiWorkoutItem[]): number {
+  let count = 0;
+  for (const item of items) {
+    if (isSupersetItem(item)) count += item.superset.length;
+    else if (isExerciseItem(item)) count += 1;
+  }
+  return count;
+}
+
+function countStrengthExercises(strength: AiWorkoutItem[]): number {
+  return countWorkoutItems(strength);
+}
+
+function isMobilityClassified(name: string, catalog: any[], catMap: Record<string, any>): boolean {
+  const hit = matchExerciseToCatalog(name, catalog, catMap);
+  if (String(hit?.exercise_type || '').toLowerCase() === 'mobility') return true;
+  const cat = String(hit?.category || '').toLowerCase();
+  if (cat === 'warmup' || cat === 'stretching' || cat === 'mobility') return true;
+  return MOBILITY_NAME_PATTERN.test(name);
+}
+
+function countMobilityInItems(items: AiWorkoutItem[], catalog: any[], catMap: Record<string, any>): number {
+  let count = 0;
+  for (const item of items) {
+    if (isSupersetItem(item)) {
+      for (const ex of item.superset) {
+        if (ex?.name && isMobilityClassified(ex.name, catalog, catMap)) count++;
+      }
+    } else if (isExerciseItem(item) && item.name && isMobilityClassified(item.name, catalog, catMap)) {
+      count++;
+    }
+  }
+  return count;
+}
+
+const MIN_STRENGTH_EXERCISES = 6;
+const MIN_CARDIO_EXERCISES = 4;
+const MIN_MOBILITY_EXERCISES = 6;
+
+export function isRetryablePlanError(error: string | null): boolean {
+  if (!error) return false;
+  return (
+    /too few (strength|conditioning|mobility) exercises/i.test(error) ||
+    /warmup mobility/i.test(error) ||
+    /cooldown/i.test(error) ||
+    /incomplete/i.test(error)
+  );
+}
+
 function normalizeWorkoutItem(item: any): AiWorkoutItem | null {
   if (isSupersetItem(item)) {
     const superset = item.superset
@@ -164,7 +357,11 @@ function normalizeWorkoutItem(item: any): AiWorkoutItem | null {
   return null;
 }
 
-export function parseAndValidateAiPlan(raw: string, config: GenerationConfig): { plan: AiProgramPlan | null; error: string | null } {
+export function parseAndValidateAiPlan(
+  raw: string,
+  config: GenerationConfig,
+  catalog: any[] = []
+): { plan: AiProgramPlan | null; error: string | null } {
   let parsed: any;
   try {
     parsed = JSON.parse(stripJsonFences(raw));
@@ -189,6 +386,8 @@ export function parseAndValidateAiPlan(raw: string, config: GenerationConfig): {
 
   const workouts: AiWorkout[] = [];
   const seen = new Set<string>();
+  const catMap = catalogByName(catalog);
+  const includeCooldown = config.includeCooldown !== false;
 
   for (const row of workoutsIn) {
     const week = Number(row?.week);
@@ -207,10 +406,62 @@ export function parseAndValidateAiPlan(raw: string, config: GenerationConfig): {
     const strength = (Array.isArray(row?.strength) ? row.strength : [])
       .map(normalizeWorkoutItem)
       .filter(Boolean) as AiWorkoutItem[];
+    const cooldown = (Array.isArray(row?.cooldown) ? row.cooldown : [])
+      .map(normalizeWorkoutItem)
+      .filter(Boolean) as AiWorkoutItem[];
 
     if (!strength.length) continue;
 
-    workouts.push({ week, day_label: dayLabel, workout_type: workoutType, warmup, strength });
+    const strengthCount = countStrengthExercises(strength);
+    const isCardioSession = workoutType === 'Cardio' || config.dayTypes[dayLabel] === 'Cardio';
+    const isMobilitySession = workoutType === 'Mobility' || config.dayTypes[dayLabel] === 'Mobility';
+    const isStrengthSession = !isCardioSession && !isMobilitySession;
+
+    if (isMobilitySession) {
+      const mobilityCount = countMobilityInItems(strength, catalog, catMap);
+      if (strengthCount < MIN_MOBILITY_EXERCISES) {
+        return {
+          plan: null,
+          error: `Too few mobility exercises in week ${week} ${dayLabel} (${strengthCount}; minimum ${MIN_MOBILITY_EXERCISES})`,
+        };
+      }
+      if (mobilityCount < MIN_MOBILITY_EXERCISES) {
+        return {
+          plan: null,
+          error: `Too few mobility-classified exercises in week ${week} ${dayLabel} Mobility day (${mobilityCount}; minimum ${MIN_MOBILITY_EXERCISES})`,
+        };
+      }
+    } else {
+      const minExercises = isCardioSession ? MIN_CARDIO_EXERCISES : MIN_STRENGTH_EXERCISES;
+      if (strengthCount < minExercises) {
+        const label = isCardioSession ? 'conditioning' : 'strength';
+        return {
+          plan: null,
+          error: `Too few ${label} exercises in week ${week} ${dayLabel} (${strengthCount}; minimum ${minExercises})`,
+        };
+      }
+    }
+
+    if (isStrengthSession) {
+      const warmupCount = countWorkoutItems(warmup);
+      const mobilityInWarmup = countMobilityInItems(warmup, catalog, catMap);
+      if (warmupCount < 3 || mobilityInWarmup < 2) {
+        return {
+          plan: null,
+          error: `Warmup mobility insufficient in week ${week} ${dayLabel} (warmup ${warmupCount}, mobility items ${mobilityInWarmup}; need warmup >= 3 with >= 2 mobility)`,
+        };
+      }
+      if (includeCooldown && cooldown.length < 2) {
+        return {
+          plan: null,
+          error: `Cooldown too short in week ${week} ${dayLabel} (${cooldown.length}; minimum 2 on strength days)`,
+        };
+      }
+    }
+
+    const workout: AiWorkout = { week, day_label: dayLabel, workout_type: workoutType, warmup, strength };
+    if (includeCooldown && cooldown.length) workout.cooldown = cooldown;
+    workouts.push(workout);
   }
 
   if (!workouts.length) return { plan: null, error: 'No valid workouts after validation' };
@@ -233,7 +484,7 @@ export function parseAndValidateAiPlan(raw: string, config: GenerationConfig): {
 export function catalogByName(items: any[]): Record<string, any> {
   const map: Record<string, any> = {};
   (items || [])
-    .filter((c) => !c?.is_archived)
+    .filter((c) => !c?.is_archived && !isUserCustomExercise(c))
     .forEach((c) => {
       map[String(c.name || '').toLowerCase()] = c;
     });
@@ -254,11 +505,12 @@ export function matchExerciseToCatalog(name: string, catalog: any[], catMap: Rec
   let bestScore = 0;
 
   for (const item of catalog || []) {
-    if (item?.is_archived) continue;
+    if (item?.is_archived || isUserCustomExercise(item)) continue;
     const iname = String(item.name || '').toLowerCase();
     if (iname.includes(lower) || lower.includes(iname)) {
       const score = 80 + iname.length;
-      if (score > bestScore) {
+      const guideBoost = hasExerciseGuide(item) ? 1 : 0;
+      if (score > bestScore || (score === bestScore && guideBoost && !hasExerciseGuide(best))) {
         bestScore = score;
         best = item;
       }
@@ -266,9 +518,13 @@ export function matchExerciseToCatalog(name: string, catalog: any[], catMap: Rec
     }
     const itokens = tokenize(iname);
     const overlap = tokens.filter((t) => itokens.some((it) => it.includes(t) || t.includes(it))).length;
-    if (overlap >= 2 && overlap > bestScore) {
-      bestScore = overlap;
-      best = item;
+    if (overlap >= 2) {
+      const score = overlap;
+      const guideBoost = hasExerciseGuide(item) ? 1 : 0;
+      if (score > bestScore || (score === bestScore && guideBoost && !hasExerciseGuide(best))) {
+        bestScore = score;
+        best = item;
+      }
     }
   }
 
@@ -431,7 +687,7 @@ export async function persistAiProgramPlan(
     const tpl = planByKey.get(`${w.week}|${w.day_label}`);
     if (!tpl) continue;
 
-    for (const sec of ['warmup', 'strength'] as const) {
+    for (const sec of ['warmup', 'strength', 'cooldown'] as const) {
       const list = tpl[sec] || [];
       if (!list.length) continue;
       const startSort = SECTION_SORT_BASE[sec] ?? 0;
