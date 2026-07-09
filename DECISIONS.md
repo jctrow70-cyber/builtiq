@@ -589,3 +589,32 @@ BuiltIQ differentiation is smarter programming — movement classification, volu
 ### Impact
 
 Migration `20250708_011` extends catalog schema without removing BIQ-0005 seeds. Import pipeline and UI browsing are follow-on work. `lib/training/exerciseIntelligence.ts` defines enums and normalization helpers. AI Coach and program generator will consume `coaching_metadata` and alternatives in future BIQs.
+
+---
+
+## Decision 023 - AI-Driven Program Generation
+
+Date: 2026-07-09  
+Status: Accepted  
+Category: Program Design
+
+### Decision
+
+Program generation uses **OpenAI on the server** as the primary path. Users describe goals in natural language (e.g. baseball throw/hit power); the API loads profile + exercise catalog, returns validated JSON, and persists a periodized multi-week plan. Rule-based templates remain a secondary fallback (`generation_method: template`).
+
+### Reason
+
+Sport-specific goals are too varied for hardcoded profiles alone. Natural-language prompts let athletes and coaches express intent once; AI can vary exercises and rep schemes week to week while grounding picks in the BuiltIQ catalog.
+
+### Alternatives Considered
+
+- Rule-based sport profiles only (rejected — too rigid, poor coverage)
+- Client-side OpenAI calls (rejected — exposes API key)
+- LLM without catalog grounding (rejected — invented exercise names, poor history matching)
+
+### Impact
+
+- `POST /api/programs/generate` with Supabase session auth
+- `st_programs.generation_prompt`, `generation_method`, `program_summary`, `program_style`
+- Program Setup UI: prompt textarea + **Generate with AI**
+- Requires `OPENAI_API_KEY` in server environment (documented in `.env.example`)

@@ -108,6 +108,8 @@
  .focus-muscle-grid{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 10px}
  .focus-chip{border:1px solid var(--line);background:#0b1119;color:#cbd5e1;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800}
  .focus-chip.active{border-color:var(--purple);background:#1b1634;color:#fff}
+ .ai-prompt-input{width:100%;margin:6px 0 10px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:#0b1119;color:var(--text);font:inherit;line-height:1.4;resize:vertical;min-height:88px}
+ .program-ai-summary{padding:8px 10px;border-radius:10px;background:#0f1422;border:1px solid var(--line)}
  .progression-hints{margin-top:4px;padding:6px 8px;border-radius:10px;background:#0f1422;border:1px solid var(--line)}
  .progression-next{font-size:12px;font-weight:800;color:#c4b5fd;margin-top:2px}
  .progression-note{font-size:10px;margin-top:2px}

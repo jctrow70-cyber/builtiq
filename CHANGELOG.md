@@ -1315,3 +1315,126 @@ BIQ-0013 Add exercise intelligence database schema for scalable imports
 - Legacy `movement_pattern` values (`push`, `pull`, etc.) allowed until import normalizes rows
 - Full-text search index requires PostgreSQL `english` config
 - System alternative rows require service-role or migration for bulk curation
+
+---
+
+## BIQ-0014 - AI Program Generator
+
+Date: 2026-07-09  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Replaced static template photocopying as the primary program path with **AI-driven generation**. Users describe goals in natural language (e.g. baseball throw/hit power); a server-side OpenAI call builds a periodized multi-week plan grounded in the exercise catalog, validates JSON, and inserts programs/workouts/exercises. Template generation remains as a secondary fallback.
+
+### Purpose
+
+Users need sport- and goal-specific programming without hand-picking every exercise. Rule-based sport profiles alone cannot cover the variety of athlete prompts. AI interprets intent, varies workouts week to week, and maps exercises to the BuiltIQ catalog for logging and history integrity.
+
+### Scope
+
+- **API** `POST /api/programs/generate` — Supabase session auth, profile + catalog load, OpenAI JSON plan, validation, persistence
+- **`lib/training/aiProgramPlan.ts`** — prompt builder, schema validation, fuzzy catalog matching, DB insert
+- **`lib/supabaseServer.ts`** — server auth helper from Bearer token
+- **Program Setup UI** — prompt textarea, **Generate with AI** (primary), quick template fallback
+- **Migration** — `generation_prompt`, `generation_method`, `program_summary`, `program_style` on `st_programs`
+- **Env** — `OPENAI_API_KEY` (server only); optional `OPENAI_MODEL` (default `gpt-4o-mini`)
+
+### Files Changed
+
+- `app/api/programs/generate/route.ts` (new)
+- `lib/training/aiProgramPlan.ts` (new)
+- `lib/supabaseServer.ts` (new)
+- `app/page.tsx` — AI prompt UI, `generateWithAi()`, template `generation_method`
+- `app/globals.css` — AI prompt textarea styles
+- `.env.example` — `OPENAI_API_KEY` documentation
+- `package.json` — `openai` dependency
+- `supabase/migrations/20250709_013_program_generator_v2.sql` (new)
+- `CHANGELOG.md`, `DECISIONS.md`, `ROADMAP.md`
+
+### Database Changes
+
+Run in Supabase SQL Editor:
+
+`supabase/migrations/20250709_013_program_generator_v2.sql`
+
+Adds to `st_programs`:
+
+- `generation_prompt text`
+- `generation_method text` (`ai` | `template` | `manual`)
+- `program_summary text`
+- `program_style text` (`general` | `hypertrophy` | `strength` | `athletic_performance`)
+
+Existing programs without these fields continue to load normally (columns nullable).
+
+### Environment Setup
+
+Add to `.env.local` (never commit):
+
+```text
+OPENAI_API_KEY=sk-...
+```
+
+Optional: `OPENAI_MODEL=gpt-4o-mini`
+
+Restart `npm run dev` after adding the key.
+
+### Testing Steps
+
+**Prerequisites**
+
+1. Run migration `20250709_013_program_generator_v2.sql`
+2. Set `OPENAI_API_KEY` in `.env.local`
+3. `npm install` then `npm run build` — must pass
+
+**AI personal program**
+
+4. Sign in, open Training → Program Setup
+5. Enter prompt: `I'm a baseball player trying to throw harder and hit harder`
+6. Set weeks (e.g. 6) and days (Mon/Tue/Fri)
+7. Click **Generate with AI** — wait for completion
+8. Confirm program loads in Training with exercises on Week 1 vs Week 2 **not identical**
+9. Confirm summary text appears after generation
+10. Log sets on a workout — history snapshots still work
+
+**AI team program**
+
+11. As team owner/editor, switch to Team program mode
+12. Generate with AI — confirm program attaches to team
+13. Member can view/log; member cannot edit templates
+
+**Error states**
+
+14. Remove `OPENAI_API_KEY` — API returns 503 with clear message
+15. Empty/short prompt — client validation alert
+16. Sign out — cannot call generate API
+
+**Template fallback**
+
+17. Click **Quick template program** — `generation_method` is `template`; same static template behavior as before
+
+**Mobile**
+
+18. Program Setup prompt textarea and buttons usable on narrow viewport
+
+### Known Issues
+
+- Large catalogs send up to 500 exercise names to OpenAI (token/cost tradeoff); full 859+ list not sent in one prompt
+- AI may occasionally omit a day — validation rejects severely incomplete plans but may accept minor gaps
+- Incomplete AI JSON returns 422; user must retry
+- `OPENAI_API_KEY` must be server-side only — not prefixed with `NEXT_PUBLIC_`
+- Team AI generation requires owner/editor role (enforced server-side)
+
+### Recommended Commit Message
+
+```text
+BIQ-0014 Add AI-driven program generation with natural-language prompts
+```
+
+### Dependencies
+
+- BIQ-0005 exercise catalog
+- BIQ-0011 Program Setup tab and muscle focus
+- BIQ-0013 catalog intelligence fields (optional enrichment in prompts)
+- Decision 023 — AI-driven program generation

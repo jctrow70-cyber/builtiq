@@ -206,11 +206,11 @@ Goal: Prepare BuiltIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
-Completed through **BIQ-0011** on `main`: security (BIQ-0002) through training UX phase 1 (BIQ-0011).
+Completed through **BIQ-0014** on `develop`: AI-driven program generation is the primary Program Setup path.
 
 ### Active change request
 
-**BIQ-0013 — Exercise Intelligence Database** (Planned)
+**BIQ-0013 — Exercise Intelligence Database** (In Progress — import pipeline scaffolded)
 
 | Part | Deliverable |
 |------|-------------|
@@ -219,6 +219,16 @@ Completed through **BIQ-0011** on `main`: security (BIQ-0002) through training U
 | 3 | `st_exercise_alternatives` substitution graph |
 | 4 | `coaching_metadata` JSONB for AI programming |
 | 5 | Bulk import pipeline (CLI, dry-run, upsert) — **scaffolded** |
+
+**BIQ-0014 — AI Program Generator** (Completed)
+
+| Part | Deliverable |
+|------|-------------|
+| 1 | `POST /api/programs/generate` — server OpenAI + Supabase auth |
+| 2 | `lib/training/aiProgramPlan.ts` — prompt, JSON validation, catalog matching |
+| 3 | Program Setup prompt UI + **Generate with AI** |
+| 4 | `st_programs` generation metadata migration |
+| 5 | Template fallback (`generation_method: template`) |
 
 **BIQ-0012 — Cardio Logging, Superset UX v2, Training Navigation, Team Program Assignment** (Completed)
 
@@ -235,10 +245,10 @@ Completed through **BIQ-0011** on `main`: security (BIQ-0002) through training U
 ### Next priorities (after BIQ-0013 import verified)
 
 1. **Production dataset import** — license-compatible 1000+ exercise JSON
-2. Plyometrics / Power workout section
+2. AI program regeneration / edit-from-prompt for existing programs
 3. PR detection and strength trends on Progress tab
 4. Nutrition MVP placeholder → functional tracking
-5. AI Coach hook-up (consumes `coaching_metadata` + alternatives)
+5. AI Coach hook-up (consumes `coaching_metadata` + program context)
 6. Split `page.tsx` into focused components
 
 Run pending Supabase migrations on each environment before testing:
@@ -246,3 +256,4 @@ Run pending Supabase migrations on each environment before testing:
 - `20250707_001` through `20250707_009` (see prior list)
 - `20250708_010_exercise_types_and_program_assignments.sql` (BIQ-0012)
 - `20250708_011_exercise_intelligence_database.sql` (BIQ-0013)
+- `20250709_013_program_generator_v2.sql` (BIQ-0014)
