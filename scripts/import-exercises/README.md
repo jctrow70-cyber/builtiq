@@ -69,6 +69,49 @@ Imported rows include `thumbnail_url` (GitHub-hosted images) and `instructions`.
 
 ---
 
+## Spreadsheet import (Excel → CSV)
+
+Use `scripts/import-exercises/exercise-import-template.csv` as your starting point in Excel.
+
+### Columns
+
+| Column | Required | Example | Notes |
+|--------|----------|---------|-------|
+| `name` | **yes** | Kettlebell Swing | Display name in BuiltIQ |
+| `external_id` | no | kb-swing-2arm | Unique per source; auto-slug from name if blank |
+| `external_source` | no | spreadsheet_import | Dataset tag; default `spreadsheet_import` |
+| `exercise_type` | no | strength | strength, cardio, mobility, bodyweight, timed, custom |
+| `primary_muscle` | no | Hamstrings | Main muscle group |
+| `secondary_muscles` | no | Glutes, Core | Comma-separated in one cell |
+| `equipment` | no | kettlebell | Used for equipment filter in app |
+| `movement_pattern` | no | hinge | squat, hinge, push_horizontal, push_vertical, pull_horizontal, pull_vertical, carry, rotation, isolation, cardio |
+| `category` | no | strength | warmup, strength, mobility |
+| `instructions` | no | Hinge at hips… | Form guide text |
+| `thumbnail_url` | no | https://…/kb-swing.jpg | Public image URL (form guide thumbnail) |
+| `media_url` | no | https://…/video.mp4 | Optional video URL |
+
+**Thumbnails:** use a public HTTPS URL (Supabase Storage, your CDN, or any hosted image). Excel cannot embed images in CSV — paste the URL in `thumbnail_url`.
+
+### Workflow
+
+1. Copy or open `exercise-import-template.csv` in Excel, add your rows, save as **CSV UTF-8**.
+2. Convert to import JSON:
+
+```powershell
+npm.cmd run import:convert:spreadsheet -- --file scripts/import-exercises/my-exercises.csv --source jesse_import
+```
+
+3. Dry-run, then import:
+
+```powershell
+npm.cmd run import:exercises:dry -- --file scripts/import-exercises/my-exercises-builtiq.json
+npm.cmd run import:exercises -- --file scripts/import-exercises/my-exercises-builtiq.json
+```
+
+Re-importing the same `external_source` + `external_id` **updates** the exercise (name, muscles, thumbnail, etc.).
+
+---
+
 ## Commands (sample dataset)
 
 Dry run (no database writes):
