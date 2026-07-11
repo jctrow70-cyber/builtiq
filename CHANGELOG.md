@@ -1887,3 +1887,49 @@ Practical workflow:
 Automated browser E2E (Playwright) can be added later; for now bug reports + manual steps are the lightest reliable loop.
 
 ---
+
+## BIQ-0019 - Fix Sign Out Client Crash
+
+Date: 2026-07-11  
+Branch: cursor/fix-signout-crash-bf79  
+Status: **Completed**
+
+### Summary
+
+Fixed a client-side crash when tapping **Sign Out** (`Application error: a client-side exception has occurred`). Sign-out cleared the session while render/effects still touched `session.user`.
+
+### Purpose
+
+Users on the Vercel deploy (`builtiq-duf7.vercel.app`) hit a white error screen after Sign Out instead of returning to the login screen.
+
+### Changes
+
+- Guard roster `isSelf` checks with `session?.user`
+- Clear local app state before calling Supabase `signOut`
+- Prevent `loadLogs` / `loadLiftHistory` / `loadPrograms` / `loadTeams` / `loadProfile` from running without a session
+- Harden `canLog` / `canEdit` and set-log save against null session
+
+### Files changed
+
+- `app/page.tsx`
+- `CHANGELOG.md`
+
+### Database changes
+
+None.
+
+### Testing steps
+
+1. Sign in on the deployed app
+2. Tap **Sign Out**
+3. Confirm login screen appears (no Application error)
+4. Sign in again successfully
+5. Mobile Safari and Chrome
+
+### Recommended commit message
+
+```text
+BIQ-0019 Fix sign-out client crash from null session access
+```
+
+---
