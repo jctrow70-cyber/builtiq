@@ -1796,3 +1796,94 @@ Home-gym and limited-equipment users were shown barbell/cable exercises they can
 ```text
 BIQ-0017 Add available equipment filter and fix exercise replace UI refresh
 ```
+
+---
+
+## BIQ-0018 - Plan Generation Reliability, Richer AI Text, and In-App Bug Reports
+
+Date: 2026-07-11  
+Branch: cursor/plan-gen-bug-report-bf79  
+Status: **Completed**
+
+### Summary
+
+Hardened AI program generation so incomplete warmup/cooldown/mobility plans are auto-repaired instead of hard-failing; asked the model for longer `program_summary` + `coaching_notes` and showed them in larger text boxes; added an in-app **Bug** reporter so signed-in users can file issues with page context for Cursor/agent follow-up.
+
+### Purpose
+
+Plan generation under a real login was erroring when OpenAI returned plans that failed strict mobility/cooldown validation. Users also wanted more AI-written coaching text in the UI, plus a way to report bugs from the app so frontend issues can be captured and fixed in later agent runs.
+
+### Scope
+
+- **Plan repair** — `repairAiPlan()` pads warmup/cooldown/mobility and clones missing week/day slots from the nearest prior workout
+- **Richer AI text** — schema asks for 3–5 sentence summaries + 4–8 sentence coaching notes; goals textarea enlarged (8 rows) and editable on Review; notes shown after generate and on Training
+- **API hardening** — higher `max_tokens`, longer prompt limit (6000), clearer 422 hints, graceful fallback if `coaching_notes` column not migrated yet
+- **Bug reporter** — floating **Bug** button → modal → `POST /api/bug-reports` → `st_bug_reports` (RLS: user inserts/selects own rows)
+- **Frontend testing** — agents can exercise UI when the app is running with credentials; bug reports give reproducible context between runs
+
+### Files Changed
+
+- `lib/training/aiProgramPlan.ts` — repair layer, coaching_notes, softer validation
+- `lib/training/scheduleSuggestion.ts` — longer coach_message guidance
+- `app/api/programs/generate/route.ts` — tokens, hints, coaching_notes response
+- `app/api/programs/suggest-schedule/route.ts` — 6000-char goals limit
+- `app/api/bug-reports/route.ts` — new
+- `app/page.tsx` — larger prompt box, notes UI, bug FAB/modal
+- `app/globals.css` — summary/coaching/bug styles
+- `supabase/migrations/20250711_015_coaching_notes_and_bug_reports.sql` — new
+- `CHANGELOG.md`
+
+### Database Changes
+
+Run in Supabase SQL Editor:
+
+`supabase/migrations/20250711_015_coaching_notes_and_bug_reports.sql`
+
+- `st_programs.coaching_notes text`
+- `st_bug_reports` table + RLS (insert/select own)
+
+### Testing Steps
+
+1. Run migration `20250711_015_coaching_notes_and_bug_reports.sql`
+2. Confirm `OPENAI_API_KEY` is set on the server
+3. Sign in → Training → Program Setup
+4. Enter a longer goals paragraph → Plan schedule → Generate with AI
+5. Confirm generation succeeds (no false 422 on short warmup/cooldown)
+6. Confirm **AI plan write-up** and **Coaching notes** appear on Training
+7. Force a known failure (optional) or tap **Bug** FAB → submit a report → confirm success message
+8. In Supabase, confirm a row in `st_bug_reports` for your user
+9. Mobile: large goals textarea + Bug button usable on narrow viewport
+10. `npm run build` passes with env vars set
+
+### Known Issues
+
+- Repair may clone week N from week N−1 when AI omits a day (structure preserved; intensity variation may be weaker for that day)
+- Bug reports are user-visible only to the reporter until an admin/service-role viewer is added
+- Cloud agent frontend testing still requires deployed URL + test credentials (or local env)
+
+### Follow-up (same PR)
+
+- Clearer sign-in/sign-up errors when Safari reports **Load failed** (usually missing Vercel Supabase env vars or Site URL not allowlisted)
+
+### Recommended Commit Message
+
+```text
+BIQ-0018 Harden AI plan generation, richer coaching text, in-app bug reports
+```
+
+### Frontend testing with Cursor agents
+
+Yes — cloud agents can help test the frontend when:
+
+1. The app is running (local `npm run dev` or a deployed preview) with Supabase + OpenAI configured
+2. You share a test login or use bug reports from your own login as the signal
+
+Practical workflow:
+
+- Reproduce an issue in the app → tap **Bug** and describe steps/error
+- Ask a Cursor cloud agent to fix from that report (or paste the error text)
+- Agent implements, builds, and opens a PR; you re-test in the browser
+
+Automated browser E2E (Playwright) can be added later; for now bug reports + manual steps are the lightest reliable loop.
+
+---

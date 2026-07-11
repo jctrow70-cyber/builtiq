@@ -113,7 +113,17 @@
  .focus-chip{border:1px solid var(--line);background:#0b1119;color:#cbd5e1;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800}
  .focus-chip.active{border-color:var(--purple);background:#1b1634;color:#fff}
  .ai-prompt-input{width:100%;margin:6px 0 10px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:#0b1119;color:var(--text);font:inherit;line-height:1.4;resize:vertical;min-height:88px}
- .program-ai-summary{padding:8px 10px;border-radius:10px;background:#0f1422;border:1px solid var(--line)}
+ .ai-prompt-input-lg{min-height:140px;line-height:1.5}
+ .ai-prompt-count{margin:-4px 0 10px;font-size:11px}
+ .program-ai-summary{padding:8px 10px;border-radius:10px;background:#0f1422;border:1px solid var(--line);white-space:pre-wrap;line-height:1.5}
+ .program-ai-summary-box{margin:10px 0;padding:12px;border-radius:12px;background:#0f1422;border:1px solid #3b335f}
+ .program-ai-summary-box label{display:block;margin-bottom:6px;font-size:12px;font-weight:800;color:#c4b5fd}
+ .program-ai-coaching{margin:0;padding:8px 10px;border-radius:10px;background:#0b1119;border:1px solid var(--line);white-space:pre-wrap;line-height:1.55;color:#e2e8f0}
+ .program-ai-error{margin:10px 0;padding:10px 12px;border-radius:12px;background:#2a1215;border:1px solid #7f1d1d;color:#fecaca;line-height:1.45}
+ .training-program-notes{margin-bottom:12px}
+ .bug-fab{position:fixed;right:16px;bottom:16px;z-index:60;width:48px;height:48px;border-radius:14px;border:1px solid #4c3f78;background:#1b1634;color:#e9d5ff;font-weight:800;font-size:12px;box-shadow:0 8px 24px rgba(0,0,0,.35);cursor:pointer}
+ .bug-fab:hover{background:#241c44}
+ .bug-report-panel{width:100%;max-width:480px;max-height:88vh;overflow:auto;margin:0}
  .progression-hints{margin-top:4px;padding:6px 8px;border-radius:10px;background:#0f1422;border:1px solid var(--line)}
  .progression-next{font-size:12px;font-weight:800;color:#c4b5fd;margin-top:2px}
  .progression-note{font-size:10px;margin-top:2px}

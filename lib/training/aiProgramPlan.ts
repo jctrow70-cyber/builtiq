@@ -27,6 +27,7 @@ export type AiWorkout = {
 export type AiProgramPlan = {
   program_name?: string;
   program_summary: string;
+  coaching_notes?: string;
   program_style?: string;
   workouts: AiWorkout[];
 };
@@ -239,7 +240,8 @@ ${sportPresets}
 JSON schema:
 {
   "program_name": "string (optional short title)",
-  "program_summary": "string (1-2 sentences: sport/goals, weekly structure, periodization)",
+  "program_summary": "string (3-5 sentences: sport/goals, weekly structure, periodization phases, what success looks like)",
+  "coaching_notes": "string (4-8 sentences of practical coaching: how to progress loads, recovery tips, form cues tied to the user's sport/goals, deload guidance — general wellness only, not medical advice)",
   "program_style": "general|hypertrophy|strength|athletic_performance",
   "workouts": [
     {
@@ -255,7 +257,7 @@ JSON schema:
   ]
 }
 
-Generate exactly one workout entry per (week × training day) for all ${config.weeks} weeks and days: ${config.days.join(', ')}.`;
+Generate exactly one workout entry per (week × training day) for all ${config.weeks} weeks and days: ${config.days.join(', ')}. Always fill program_summary and coaching_notes with helpful, specific text for this athlete.`;
 
   const user = JSON.stringify(
     {
@@ -392,6 +394,7 @@ export function parseAndValidateAiPlan(
 
   const summary = String(parsed.program_summary || '').trim();
   if (!summary) return { plan: null, error: 'AI plan missing program_summary' };
+  const coachingNotes = String(parsed.coaching_notes || '').trim();
 
   const workoutsIn = Array.isArray(parsed.workouts) ? parsed.workouts : [];
   if (!workoutsIn.length) return { plan: null, error: 'AI plan has no workouts' };
@@ -405,6 +408,7 @@ export function parseAndValidateAiPlan(
   const seen = new Set<string>();
   const catMap = catalogByName(catalog);
   const includeCooldown = config.includeCooldown !== false;
+  const softIssues: string[] = [];
 
   for (const row of workoutsIn) {
     const week = Number(row?.week);
@@ -435,27 +439,25 @@ export function parseAndValidateAiPlan(
     const isStrengthSession = !isCardioSession && !isMobilitySession;
 
     if (isMobilitySession) {
-      const mobilityCount = countMobilityInItems(strength, catalog, catMap);
       if (strengthCount < MIN_MOBILITY_EXERCISES) {
-        return {
-          plan: null,
-          error: `Too few mobility exercises in week ${week} ${dayLabel} (${strengthCount}; minimum ${MIN_MOBILITY_EXERCISES})`,
-        };
-      }
-      if (mobilityCount < MIN_MOBILITY_EXERCISES) {
-        return {
-          plan: null,
-          error: `Too few mobility-classified exercises in week ${week} ${dayLabel} Mobility day (${mobilityCount}; minimum ${MIN_MOBILITY_EXERCISES})`,
-        };
+        softIssues.push(
+          `Too few mobility exercises in week ${week} ${dayLabel} (${strengthCount}; minimum ${MIN_MOBILITY_EXERCISES})`
+        );
+      } else {
+        const mobilityCount = countMobilityInItems(strength, catalog, catMap);
+        if (mobilityCount < MIN_MOBILITY_EXERCISES) {
+          softIssues.push(
+            `Too few mobility-classified exercises in week ${week} ${dayLabel} Mobility day (${mobilityCount}; minimum ${MIN_MOBILITY_EXERCISES})`
+          );
+        }
       }
     } else {
       const minExercises = isCardioSession ? MIN_CARDIO_EXERCISES : MIN_STRENGTH_EXERCISES;
       if (strengthCount < minExercises) {
         const label = isCardioSession ? 'conditioning' : 'strength';
-        return {
-          plan: null,
-          error: `Too few ${label} exercises in week ${week} ${dayLabel} (${strengthCount}; minimum ${minExercises})`,
-        };
+        softIssues.push(
+          `Too few ${label} exercises in week ${week} ${dayLabel} (${strengthCount}; minimum ${minExercises})`
+        );
       }
     }
 
@@ -463,16 +465,14 @@ export function parseAndValidateAiPlan(
       const warmupCount = countWorkoutItems(warmup);
       const mobilityInWarmup = countMobilityInItems(warmup, catalog, catMap);
       if (warmupCount < 3 || mobilityInWarmup < 2) {
-        return {
-          plan: null,
-          error: `Warmup mobility insufficient in week ${week} ${dayLabel} (warmup ${warmupCount}, mobility items ${mobilityInWarmup}; need warmup >= 3 with >= 2 mobility)`,
-        };
+        softIssues.push(
+          `Warmup mobility insufficient in week ${week} ${dayLabel} (warmup ${warmupCount}, mobility items ${mobilityInWarmup}; need warmup >= 3 with >= 2 mobility)`
+        );
       }
       if (includeCooldown && cooldown.length < 2) {
-        return {
-          plan: null,
-          error: `Cooldown too short in week ${week} ${dayLabel} (${cooldown.length}; minimum 2 on strength days)`,
-        };
+        softIssues.push(
+          `Cooldown too short in week ${week} ${dayLabel} (${cooldown.length}; minimum 2 on strength days)`
+        );
       }
     }
 
@@ -484,18 +484,200 @@ export function parseAndValidateAiPlan(
   if (!workouts.length) return { plan: null, error: 'No valid workouts after validation' };
 
   const missing = Array.from(expectedKeys).filter((k) => !seen.has(k));
-  if (missing.length > config.days.length) {
-    return { plan: null, error: `AI plan incomplete — missing workouts for: ${missing.slice(0, 5).join(', ')}${missing.length > 5 ? '…' : ''}` };
+  // Allow filling gaps from nearest completed week when most of the plan is present
+  if (missing.length > Math.max(config.days.length, Math.floor(expectedKeys.size * 0.35))) {
+    return {
+      plan: null,
+      error: `AI plan incomplete — missing workouts for: ${missing.slice(0, 5).join(', ')}${missing.length > 5 ? '…' : ''}`,
+    };
   }
 
-  const plan: AiProgramPlan = {
+  let plan: AiProgramPlan = {
     program_name: parsed.program_name ? String(parsed.program_name).trim() : undefined,
     program_summary: summary,
+    coaching_notes: coachingNotes || undefined,
     program_style: parsed.program_style ? String(parsed.program_style) : 'athletic_performance',
     workouts: workouts.sort((a, b) => a.week - b.week || DAY_ORDER.indexOf(a.day_label) - DAY_ORDER.indexOf(b.day_label)),
   };
 
+  if (missing.length || softIssues.length) {
+    plan = repairAiPlan(plan, config, catalog, missing);
+  }
+
+  // Hard-fail only if repair still left critical gaps (no strength work)
+  const stillBroken = plan.workouts.some((w) => {
+    const isCardio = w.workout_type === 'Cardio' || config.dayTypes[w.day_label] === 'Cardio';
+    const isMob = w.workout_type === 'Mobility' || config.dayTypes[w.day_label] === 'Mobility';
+    const min = isMob ? MIN_MOBILITY_EXERCISES : isCardio ? MIN_CARDIO_EXERCISES : MIN_STRENGTH_EXERCISES;
+    return countStrengthExercises(w.strength || []) < min;
+  });
+  if (stillBroken) {
+    return {
+      plan: null,
+      error: softIssues[0] || 'AI plan still missing required exercises after repair — please retry',
+    };
+  }
+
   return { plan, error: null };
+}
+
+function mobilityFallbackExercises(catalog: any[], count: number, seed: string): AiExercise[] {
+  const pool = selectMobilityCatalogForAi(catalog, seed || 'mobility stretch hips shoulders', 40);
+  const picks = pool.length
+    ? pool
+    : [
+        { name: 'Worlds Greatest Stretch', muscle_group: 'Full Body', exercise_type: 'mobility', has_form_guide: false },
+        { name: 'Cat Cow', muscle_group: 'Back', exercise_type: 'mobility', has_form_guide: false },
+        { name: 'Hip Flexor Stretch', muscle_group: 'Hips', exercise_type: 'mobility', has_form_guide: false },
+        { name: 'Pigeon Stretch', muscle_group: 'Glutes', exercise_type: 'mobility', has_form_guide: false },
+        { name: 'Thoracic Rotation', muscle_group: 'Back', exercise_type: 'mobility', has_form_guide: false },
+        { name: 'Shoulder Dislocates', muscle_group: 'Shoulders', exercise_type: 'mobility', has_form_guide: false },
+        { name: 'Hamstring Stretch', muscle_group: 'Hamstrings', exercise_type: 'mobility', has_form_guide: false },
+        { name: 'Foam Roll Quads', muscle_group: 'Quads', exercise_type: 'mobility', has_form_guide: false },
+      ];
+  const out: AiExercise[] = [];
+  for (let i = 0; i < count; i++) {
+    const item = picks[i % picks.length];
+    out.push({
+      name: item.name,
+      muscle_group: item.muscle_group || 'Mobility',
+      sets: 1,
+      reps: '30-45 sec',
+      rpe: '',
+    });
+  }
+  return out;
+}
+
+function activationFallback(): AiExercise {
+  return { name: 'Easy Bike or Brisk Walk', muscle_group: 'Cardio', sets: 1, reps: '3-5 min', rpe: '4-5' };
+}
+
+function cloneWorkoutForGap(source: AiWorkout, week: number, dayLabel: string, workoutType: string): AiWorkout {
+  return {
+    week,
+    day_label: dayLabel,
+    workout_type: workoutType,
+    warmup: JSON.parse(JSON.stringify(source.warmup || [])),
+    strength: JSON.parse(JSON.stringify(source.strength || [])),
+    cooldown: source.cooldown ? JSON.parse(JSON.stringify(source.cooldown)) : undefined,
+  };
+}
+
+/** Pad warmup/cooldown/mobility and fill missing week/day slots from nearest prior workout. */
+export function repairAiPlan(
+  plan: AiProgramPlan,
+  config: GenerationConfig,
+  catalog: any[],
+  missingKeys: string[] = []
+): AiProgramPlan {
+  const catMap = catalogByName(catalog);
+  const includeCooldown = config.includeCooldown !== false;
+  const byKey = new Map(plan.workouts.map((w) => [`${w.week}|${w.day_label}`, w]));
+
+  for (const key of missingKeys) {
+    const [weekStr, dayLabel] = key.split('|');
+    const week = Number(weekStr);
+    const workoutType = config.dayTypes[dayLabel] || 'Full Body';
+    let donor: AiWorkout | undefined;
+    for (let w = week - 1; w >= 1 && !donor; w--) {
+      donor = byKey.get(`${w}|${dayLabel}`);
+    }
+    if (!donor) {
+      donor = plan.workouts.find((x) => x.day_label === dayLabel) || plan.workouts[0];
+    }
+    if (!donor) continue;
+    const cloned = cloneWorkoutForGap(donor, week, dayLabel, workoutType);
+    byKey.set(key, cloned);
+  }
+
+  const repaired: AiWorkout[] = [];
+  for (const w of Array.from(byKey.values())) {
+    const isCardioSession = w.workout_type === 'Cardio' || config.dayTypes[w.day_label] === 'Cardio';
+    const isMobilitySession = w.workout_type === 'Mobility' || config.dayTypes[w.day_label] === 'Mobility';
+    const isStrengthSession = !isCardioSession && !isMobilitySession;
+    let warmup = [...(w.warmup || [])];
+    let strength = [...(w.strength || [])];
+    let cooldown = [...(w.cooldown || [])];
+    const seed = `${config.prompt} ${w.workout_type} ${w.day_label}`;
+
+    if (isStrengthSession) {
+      while (countWorkoutItems(warmup) < 3 || countMobilityInItems(warmup, catalog, catMap) < 2) {
+        const needMobility = countMobilityInItems(warmup, catalog, catMap) < 2;
+        if (needMobility) warmup.push(...mobilityFallbackExercises(catalog, 1, seed + ' warmup'));
+        else warmup.unshift(activationFallback());
+        if (countWorkoutItems(warmup) > 6) break;
+      }
+      if (includeCooldown) {
+        while (cooldown.length < 2) {
+          cooldown.push(...mobilityFallbackExercises(catalog, 1, seed + ' cooldown'));
+          if (cooldown.length > 4) break;
+        }
+      }
+    }
+
+    if (isMobilitySession) {
+      while (
+        countStrengthExercises(strength) < MIN_MOBILITY_EXERCISES ||
+        countMobilityInItems(strength, catalog, catMap) < MIN_MOBILITY_EXERCISES
+      ) {
+        strength.push(...mobilityFallbackExercises(catalog, 1, seed + ' mobility day'));
+        if (countStrengthExercises(strength) > 12) break;
+      }
+      if (!warmup.length) warmup = [activationFallback()];
+    }
+
+    if (isCardioSession && countStrengthExercises(strength) < MIN_CARDIO_EXERCISES) {
+      const cardioPads: AiExercise[] = [
+        { name: 'Assault Bike Intervals', muscle_group: 'Cardio', sets: 4, reps: '30 sec hard / 60 sec easy', rpe: '8' },
+        { name: 'Row Erg Steady', muscle_group: 'Cardio', sets: 1, reps: '8-10 min', rpe: '6-7' },
+        { name: 'Jump Rope', muscle_group: 'Cardio', sets: 3, reps: '45 sec', rpe: '7' },
+        { name: 'Treadmill Incline Walk', muscle_group: 'Cardio', sets: 1, reps: '10 min', rpe: '5-6' },
+      ];
+      let i = 0;
+      while (countStrengthExercises(strength) < MIN_CARDIO_EXERCISES && i < cardioPads.length) {
+        strength.push(cardioPads[i++]);
+      }
+    }
+
+    if (!isCardioSession && !isMobilitySession && countStrengthExercises(strength) < MIN_STRENGTH_EXERCISES) {
+      // Cannot invent safe heavy lifts without context — leave for hard-fail / AI retry
+    }
+
+    const next: AiWorkout = {
+      week: w.week,
+      day_label: w.day_label,
+      workout_type: w.workout_type,
+      warmup,
+      strength,
+    };
+    if (includeCooldown && cooldown.length) next.cooldown = cooldown;
+    repaired.push(next);
+  }
+
+  const expectedKeys = new Set<string>();
+  for (let week = 1; week <= config.weeks; week++) {
+    config.days.forEach((d) => expectedKeys.add(`${week}|${d}`));
+  }
+  const finalWorkouts = repaired
+    .filter((w) => expectedKeys.has(`${w.week}|${w.day_label}`))
+    .sort((a, b) => a.week - b.week || DAY_ORDER.indexOf(a.day_label) - DAY_ORDER.indexOf(b.day_label));
+
+  let summary = plan.program_summary;
+  if (!summary || summary.length < 40) {
+    summary = `${plan.program_name || 'BuiltIQ program'} — ${config.weeks}-week plan on ${config.days.join(', ')}. Built around your goals: ${config.prompt.slice(0, 180)}. Progress intensity across weeks and keep form quality high.`;
+  }
+  let coaching = plan.coaching_notes || '';
+  if (!coaching || coaching.length < 60) {
+    coaching = `Use week 1 to establish technique and baseline loads. Add small weekly progressions on main lifts when all sets feel controlled. Prioritize sleep and a light walk on rest days. If a movement feels painful (not just challenging), swap to a catalog alternative that matches your equipment. This is general fitness guidance, not medical advice.`;
+  }
+
+  return {
+    ...plan,
+    program_summary: summary,
+    coaching_notes: coaching,
+    workouts: finalWorkouts,
+  };
 }
 
 export function catalogByName(items: any[]): Record<string, any> {
@@ -679,6 +861,7 @@ export async function persistAiProgramPlan(
     generation_prompt: config.prompt.trim(),
     generation_method: 'ai',
     program_summary: plan.program_summary,
+    coaching_notes: plan.coaching_notes || null,
     program_style: plan.program_style || null,
   };
 

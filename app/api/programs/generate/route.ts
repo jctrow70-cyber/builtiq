@@ -12,6 +12,7 @@ import { builtinCatalogItems } from '../../../../lib/training/catalogSearch';
 import { normalizeEquipmentList } from '../../../../lib/training/equipmentFilter';
 
 export const runtime = 'nodejs';
+export const maxDuration = 60;
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -46,8 +47,8 @@ export async function POST(request: Request) {
   if (!prompt || prompt.length < 8) {
     return NextResponse.json({ error: 'Provide a program prompt (at least 8 characters)' }, { status: 400 });
   }
-  if (prompt.length > 4000) {
-    return NextResponse.json({ error: 'Prompt is too long (max 4000 characters)' }, { status: 400 });
+  if (prompt.length > 6000) {
+    return NextResponse.json({ error: 'Prompt is too long (max 6000 characters)' }, { status: 400 });
   }
 
   const weeks = Math.max(1, Math.min(12, Number(body?.weeks) || 6));
@@ -111,7 +112,8 @@ export async function POST(request: Request) {
     if (extraSystem) messages.push({ role: 'system', content: extraSystem });
     const completion = await openai.chat.completions.create({
       model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-      temperature: 0.5,
+      temperature: 0.45,
+      max_tokens: 12000,
       response_format: { type: 'json_object' },
       messages,
     });
@@ -122,7 +124,14 @@ export async function POST(request: Request) {
     rawContent = await callAi();
   } catch (err: any) {
     const msg = err?.message || 'OpenAI request failed';
-    return NextResponse.json({ error: msg }, { status: 502 });
+    return NextResponse.json(
+      {
+        error: msg.includes('timeout')
+          ? 'AI timed out building your plan — try fewer weeks or retry.'
+          : msg,
+      },
+      { status: 502 }
+    );
   }
 
   if (!rawContent) {
@@ -134,7 +143,7 @@ export async function POST(request: Request) {
   if ((validateError || !plan) && isRetryablePlanError(validateError)) {
     try {
       const retryContent = await callAi(
-        'Previous plan failed validation. Ensure strength days have warmup with at least 3 items including 2 mobility stretches, cooldown with at least 2 stretches when enabled, at least 6-8 strength exercises per session, and Mobility days have 6+ mobility exercises in strength section.'
+        'Previous plan failed validation. Ensure strength days have warmup with at least 3 items including 2 mobility stretches, cooldown with at least 2 stretches when enabled, at least 6-8 strength exercises per session, and Mobility days have 6+ mobility exercises in strength section. Also provide a detailed program_summary (3-5 sentences) and coaching_notes (4-8 sentences).'
       );
       if (retryContent) {
         rawContent = retryContent;
@@ -152,17 +161,42 @@ export async function POST(request: Request) {
   }
 
   if (validateError || !plan) {
-    return NextResponse.json({ error: validateError || 'Invalid AI plan' }, { status: 422 });
+    return NextResponse.json(
+      {
+        error: validateError || 'Invalid AI plan',
+        hint: 'Try again, shorten the week count, or add more detail in your goals box.',
+      },
+      { status: 422 }
+    );
   }
 
   const { programId, error: persistError } = await persistAiProgramPlan(supabase, user.id, plan, config, builtinCatalog);
   if (persistError || !programId) {
-    return NextResponse.json({ error: persistError || 'Failed to save program' }, { status: 500 });
+    const msg = persistError || 'Failed to save program';
+    // coaching_notes column may not exist until migration runs — retry without it
+    if (/coaching_notes/i.test(msg)) {
+      const fallbackPlan = { ...plan, coaching_notes: undefined };
+      const mergedSummary = [plan.program_summary, plan.coaching_notes].filter(Boolean).join('\n\n');
+      fallbackPlan.program_summary = mergedSummary;
+      const retry = await persistAiProgramPlan(supabase, user.id, fallbackPlan, config, builtinCatalog);
+      if (retry.programId) {
+        return NextResponse.json({
+          programId: retry.programId,
+          program_summary: plan.program_summary,
+          coaching_notes: plan.coaching_notes || '',
+          program_name: plan.program_name || programName,
+          workout_count: plan.workouts.length,
+          generation_method: 'ai',
+        });
+      }
+    }
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 
   return NextResponse.json({
     programId,
     program_summary: plan.program_summary,
+    coaching_notes: plan.coaching_notes || '',
     program_name: plan.program_name || programName,
     workout_count: plan.workouts.length,
     generation_method: 'ai',
