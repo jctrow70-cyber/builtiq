@@ -75,7 +75,7 @@ Rules:
 4. Valid day_types per day: "Lower Body", "Upper Body", "Full Body", "Cardio", "Mobility" — every training day in "days" must have a matching entry in day_types.
 5. Option ids: opt_a, opt_b, opt_c, opt_d (use sequential ids for each option).
 6. recommended_option_id must match one option id — pick the best default for their goals and experience.
-7. coach_message: 1–2 friendly sentences asking the user to pick a schedule.
+7. coach_message: 2–4 friendly sentences summarizing how the splits fit their goals and what to consider when picking.
 8. asks_cardio: true if user should consider adding cardio days (when includeCardio is null and goals may benefit).
 9. asks_mobility: true if user should consider adding a mobility/recovery day (when includeMobility is null and goals may benefit).
 10. includes_cardio on each option: true if any day_types value is "Cardio".

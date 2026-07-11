@@ -32,8 +32,8 @@ export async function POST(request: Request) {
   if (!goalsPrompt || goalsPrompt.length < 8) {
     return NextResponse.json({ error: 'Provide your goals (at least 8 characters)' }, { status: 400 });
   }
-  if (goalsPrompt.length > 4000) {
-    return NextResponse.json({ error: 'Goals text is too long (max 4000 characters)' }, { status: 400 });
+  if (goalsPrompt.length > 6000) {
+    return NextResponse.json({ error: 'Goals text is too long (max 6000 characters)' }, { status: 400 });
   }
 
   let includeCardio: boolean | null = null;
