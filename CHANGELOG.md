@@ -1861,6 +1861,10 @@ Run in Supabase SQL Editor:
 - Bug reports are user-visible only to the reporter until an admin/service-role viewer is added
 - Cloud agent frontend testing still requires deployed URL + test credentials (or local env)
 
+### Follow-up (same PR)
+
+- Clearer sign-in/sign-up errors when Safari reports **Load failed** (usually missing Vercel Supabase env vars or Site URL not allowlisted)
+
 ### Recommended Commit Message
 
 ```text

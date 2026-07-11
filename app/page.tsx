@@ -1,7 +1,7 @@
 
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { supabase } from '../lib/supabaseClient';
+import { supabase, friendlyAuthError, getSupabaseConfigError } from '../lib/supabaseClient';
 import { FOCUS_MUSCLES, focusVolumeSummary } from '../lib/training/focusMuscles';
 import { applyFocusToWorkoutTemplate, estimateWeeklyFocusSets } from '../lib/training/programGenerator';
 import { recommendNextTarget, buildLastPerformance } from '../lib/training/progression';
@@ -169,25 +169,37 @@ export default function Page(){
  async function boot(){await loadProfile(); await loadTeams(); await loadCatalog();}
  async function loadCatalog(){if(!session?.user)return; const{data,error}=await supabase.from('st_exercise_catalog').select('*').order('name'); if(error){setCatalogError(error.message); return console.warn(error.message);} setCatalogError(''); setCatalog(data||[]);}
  async function signIn(){
-  const{error}=await supabase.auth.signInWithPassword({email:email.trim(),password});
-  if(error)return alert(error.message);
-  if(typeof window!=='undefined'){
-   if(rememberEmail)localStorage.setItem(REMEMBER_EMAIL_KEY,email.trim());
-   else localStorage.removeItem(REMEMBER_EMAIL_KEY);
+  const configError=getSupabaseConfigError();
+  if(configError)return alert(configError);
+  try{
+   const{error}=await supabase.auth.signInWithPassword({email:email.trim(),password});
+   if(error)return alert(friendlyAuthError(error.message));
+   if(typeof window!=='undefined'){
+    if(rememberEmail)localStorage.setItem(REMEMBER_EMAIL_KEY,email.trim());
+    else localStorage.removeItem(REMEMBER_EMAIL_KEY);
+   }
+  }catch(e:any){
+   alert(friendlyAuthError(e?.message||e?.toString?.()));
   }
  }
  async function signUp(){
+  const configError=getSupabaseConfigError();
+  if(configError)return alert(configError);
   if(password.length<6)return alert('Password must be at least 6 characters.');
   if(password!==confirmPassword)return alert('Passwords do not match.');
   const name=String(profileDraft.display_name||'').trim();
   if(!name)return alert('Enter your name.');
   if(!profileDraft.height_inches||!profileDraft.weight_lbs)return alert('Enter height and weight.');
-  const{data,error}=await supabase.auth.signUp({email:email.trim(),password});
-  if(error)return alert(error.message);
-  if(typeof window!=='undefined'&&rememberEmail)localStorage.setItem(REMEMBER_EMAIL_KEY,email.trim());
-  if(data.session){await saveProfile(true);return;}
-  alert('Account created. Confirm your email, then sign in to finish profile setup.');
-  setAuthMode('signin');
+  try{
+   const{data,error}=await supabase.auth.signUp({email:email.trim(),password});
+   if(error)return alert(friendlyAuthError(error.message));
+   if(typeof window!=='undefined'&&rememberEmail)localStorage.setItem(REMEMBER_EMAIL_KEY,email.trim());
+   if(data.session){await saveProfile(true);return;}
+   alert('Account created. Confirm your email, then sign in to finish profile setup.');
+   setAuthMode('signin');
+  }catch(e:any){
+   alert(friendlyAuthError(e?.message||e?.toString?.()));
+  }
  }
  async function loadProfile(){
   const{data}=await supabase.from('st_profiles').select('*').eq('user_id',session.user.id).maybeSingle();
