@@ -2,8 +2,9 @@ import type { ExternalExerciseRecord } from '../types';
 
 /** https://github.com/yuhonas/free-exercise-db — The Unlicense (public domain) */
 export const FREE_EXERCISE_DB_SOURCE = 'free_exercise_db';
+/** Prefer jsDelivr over raw.githubusercontent for reliable browser image loads */
 export const FREE_EXERCISE_DB_IMAGE_BASE =
-  'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
+  'https://cdn.jsdelivr.net/gh/yuhonas/free-exercise-db@main/exercises/';
 
 export type FreeExerciseDbRow = {
   id: string;
