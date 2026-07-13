@@ -95,13 +95,11 @@ powershell -ExecutionPolicy Bypass -File scripts/setup-windows.ps1
 
 Or **double-click** `builtiq-setup.cmd` in the repo root.
 
-**First time only:** install Node.js LTS if the script says it's missing:
+**First time only:** install Node.js LTS if the script says it's missing.
 
-```powershell
-winget install OpenJS.NodeJS.LTS
-```
+**No admin rights?** Double-click `builtiq-install-node.cmd` (installs portable Node to your user folder), then `builtiq-setup.cmd`.
 
-Close PowerShell, open a new window, run `builtiq-setup.cmd` again.
+**With admin:** `winget install OpenJS.NodeJS.LTS`
 
 **Exercise import:** after `.env.local` has `SUPABASE_SERVICE_ROLE_KEY`, double-click `builtiq-import.cmd` or run:
 

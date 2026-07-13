@@ -27,7 +27,7 @@ function Resolve-Npm {
   $candidates = @(
     "${env:ProgramFiles}\nodejs\npm.cmd",
     "${env:ProgramFiles(x86)}\nodejs\npm.cmd",
-    "$env:LOCALAPPDATA\fnm_multishells\*\npm.cmd"
+    "$env:LOCALAPPDATA\builtiq-node\node-v22.16.0-win-x64\npm.cmd"
   )
   foreach ($path in $candidates) {
     $resolved = Get-Item $path -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -50,9 +50,12 @@ function Ensure-Node {
 
   Write-Host ""
   Write-Host "Node.js is not installed or not on PATH." -ForegroundColor Yellow
-  Write-Host "One-time fix (pick one):" -ForegroundColor Yellow
-  Write-Host "  1. winget install OpenJS.NodeJS.LTS"
-  Write-Host "  2. https://nodejs.org/ — download LTS, check Add to PATH"
+  Write-Host "No admin? Run portable install (user folder only):" -ForegroundColor Yellow
+  Write-Host "  powershell -ExecutionPolicy Bypass -File scripts/install-node-portable.ps1"
+  Write-Host ""
+  Write-Host "Or with admin:" -ForegroundColor Yellow
+  Write-Host "  winget install OpenJS.NodeJS.LTS"
+  Write-Host "  https://nodejs.org/ — download LTS, check Add to PATH"
   Write-Host ""
   Write-Host "Then CLOSE this PowerShell window, open a NEW one, and run:" -ForegroundColor Yellow
   Write-Host "  powershell -ExecutionPolicy Bypass -File scripts/setup-windows.ps1"
