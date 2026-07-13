@@ -32,7 +32,7 @@ export default function DateInput({ value, onChange, disabled, id }: DateInputPr
       id={id}
       type="text"
       inputMode="numeric"
-      placeholder="dd/mm/yy"
+      placeholder="mm/dd/yy"
       autoComplete="off"
       value={text}
       disabled={disabled}

@@ -24,21 +24,21 @@ export function todayYmd(): string {
   return formatYmd(new Date());
 }
 
-/** User-facing date format: dd/mm/yy */
+/** User-facing date format: mm/dd/yy */
 export function formatDisplayDate(ymd: string): string {
   const [y, m, d] = String(ymd || '')
     .slice(0, 10)
     .split('-');
   if (!y || !m || !d) return '';
-  return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y.slice(-2)}`;
+  return `${m.padStart(2, '0')}/${d.padStart(2, '0')}/${y.slice(-2)}`;
 }
 
-/** Parse dd/mm/yy (or dd/mm/yyyy) into YYYY-MM-DD. */
+/** Parse mm/dd/yy (or mm/dd/yyyy) into YYYY-MM-DD. */
 export function parseDisplayDate(input: string): string | null {
   const m = String(input || '').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
   if (!m) return null;
-  const day = Number(m[1]);
-  const month = Number(m[2]);
+  const month = Number(m[1]);
+  const day = Number(m[2]);
   let year = Number(m[3]);
   if (year < 100) year += 2000;
   if (day < 1 || day > 31 || month < 1 || month > 12) return null;
