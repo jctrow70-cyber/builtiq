@@ -1933,3 +1933,109 @@ BIQ-0019 Fix sign-out client crash from null session access
 ```
 
 ---
+
+---
+
+## BIQ-0020 - Restore Exercise Form Guide Thumbnails
+
+Date: 2026-07-11  
+Branch: cursor/exercise-form-guide-thumbnails-8e87  
+Status: **Completed**
+
+### Summary
+
+Form guide still photos were missing or unreliable on exercise cards and in the Form guide panel. Media helpers now normalize Free Exercise DB image URLs to jsDelivr, treat GIFs as images (not blank `<video>` tags), always render stills in the guide panel, and fall back to still `media_url` for card thumbnails.
+
+### Purpose
+
+On the workout logging redesign, users reported no thumbnails in exercise form guides. Root causes: (1) guide UI hid all stills whenever any `media_url` was classified as video — including GIFs, which browsers do not show in `<video>`; (2) card thumbs only read `image_url` and ignored still `media_url`; (3) `raw.githubusercontent.com` hotlinks are less reliable than a CDN mirror.
+
+### Files changed
+
+- `lib/training/exerciseMedia.ts` — CDN URL resolve, thumb fallback, GIF-as-image, stills always collected
+- `app/page.tsx` — always show guide stills; eager load + `referrerPolicy`; clickable card thumb opens guide; catalog thumbs use resolved URLs
+- `app/globals.css` — thumb button styles; explicit thumb display sizing
+- `scripts/import-exercises/sources/freeExerciseDb.ts` — new imports store jsDelivr image URLs
+- `CHANGELOG.md` — this entry
+
+### Database changes
+
+- None (client-side URL rewrite covers existing `raw.githubusercontent.com` rows)
+
+### Testing steps
+
+1. Training → open a workout with catalog-linked exercises that have form guides
+2. Confirm each exercise shows a thumbnail beside the name (not an empty dark square)
+3. Tap thumbnail or **Form guide** → panel shows form photo(s); multi-angle when available
+4. Exercises with video demos still show the still thumbnails above/alongside video
+5. Add/Change exercise search results show thumbnails
+6. Mobile: thumbs remain visible in the exercise header
+7. `npm run build` passes
+
+### Known issues
+
+- Exercises with instructions only (no `image_url` / still `media_url`) correctly have no thumbnail
+- Existing DB rows keep raw GitHub URLs; display rewrites them — re-import optional for permanent CDN URLs
+
+### Recommended commit message
+
+```text
+BIQ-0020 Restore exercise form guide thumbnails and still media display
+```
+
+---
+
+## BIQ-0021 - Branch Consolidation
+
+Date: 2026-07-13  
+Branch: cursor/branch-consolidation-976f  
+Status: **In Progress**
+
+### Summary
+
+Merged remaining open feature branches into `main` via a consolidation branch: workout logging redesign and exercise form-guide thumbnail fixes. Confirmed older branches (`Develop`, `cursor/biq-0005-exercise-catalog`) and already-merged PRs are superseded by current `main`.
+
+### Purpose
+
+User requested merging all branches. Several remotes were stale or already landed; this change brings the two remaining unique feature branches onto one PR targeting `main`.
+
+### Branches included
+
+| Branch | Result |
+|--------|--------|
+| `feature/workout-logging-redesign` | Merged (PR #4 work) |
+| `cursor/exercise-form-guide-thumbnails-8e87` | Merged (PR #3 / BIQ-0020) |
+| `cursor/fix-signout-crash-bf79` | Already on `main` (PR #2) |
+| `cursor/plan-gen-bug-report-bf79` | Already on `main` (PR #1) |
+| `cursor/biq-0005-exercise-catalog` | Superseded — BIQ-0005 already on `main`; skipped (conflicts + Office lock junk) |
+| `Develop` | Superseded — lift history already evolved on `main`; skipped (conflicts) |
+
+### Files changed
+
+- Merged from workout logging redesign: `WorkoutSetLogger.tsx`, `logFieldUI.ts`, `logFields.ts`, related CSS/page wiring; removed stray Office lock migration files
+- Merged from BIQ-0020: `exerciseMedia.ts`, form-guide UI, Free Exercise DB import URL fix
+- `CHANGELOG.md` — this entry
+
+### Database changes
+
+None.
+
+### Testing steps
+
+1. Sign in → Training → open a workout and log sets with the redesigned logger UI
+2. Confirm form-guide thumbnails appear and open the guide panel
+3. Confirm Sign Out still returns to login (BIQ-0019)
+4. Confirm Bug FAB still works (BIQ-0018)
+5. Mobile layout check
+6. `npm run build` passes
+
+### Known issues
+
+- After this PR merges, close obsolete open PRs #3 and #4 and delete stale remote branches
+- Remaining `~$*.sql` Office lock files under `supabase/migrations/` should be deleted in a follow-up cleanup
+
+### Recommended commit message
+
+```text
+BIQ-0021 Consolidate open feature branches into main
+```
