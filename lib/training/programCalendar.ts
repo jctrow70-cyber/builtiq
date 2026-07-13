@@ -1,6 +1,6 @@
 /**
  * Map program week numbers to calendar dates using st_programs.start_date.
- * Week 1 begins on start_date; week N spans start+(N-1)*7 .. start+N*7-1.
+ * Weeks run Monday–Sunday. Week 1 is the Mon–Sun block containing start_date.
  */
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
@@ -20,10 +20,63 @@ export function formatYmd(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
+export function todayYmd(): string {
+  return formatYmd(new Date());
+}
+
+/** User-facing date format: mm/dd/yy */
+export function formatDisplayDate(ymd: string): string {
+  const [y, m, d] = String(ymd || '')
+    .slice(0, 10)
+    .split('-');
+  if (!y || !m || !d) return '';
+  return `${m.padStart(2, '0')}/${d.padStart(2, '0')}/${y.slice(-2)}`;
+}
+
+/** Parse mm/dd/yy (or mm/dd/yyyy) into YYYY-MM-DD. */
+export function parseDisplayDate(input: string): string | null {
+  const m = String(input || '').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if (!m) return null;
+  const month = Number(m[1]);
+  const day = Number(m[2]);
+  let year = Number(m[3]);
+  if (year < 100) year += 2000;
+  if (day < 1 || day > 31 || month < 1 || month > 12) return null;
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return null;
+  return formatYmd(date);
+}
+
 export function addDaysYmd(ymd: string, days: number): string {
   const d = parseYmd(ymd);
   d.setDate(d.getDate() + days);
   return formatYmd(d);
+}
+
+function daysBetweenYmd(fromYmd: string, toYmd: string): number {
+  const from = parseYmd(fromYmd);
+  const to = parseYmd(toYmd);
+  return Math.floor((to.getTime() - from.getTime()) / 86400000);
+}
+
+/** Monday on or before the given date (Sunday belongs to the preceding week). */
+export function mondayOfWeek(ymd: string): string {
+  const d = parseYmd(ymd);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return formatYmd(d);
+}
+
+/** Sunday ending the Mon–Sun week that contains the given date. */
+export function sundayOfWeek(ymd: string): string {
+  return addDaysYmd(mondayOfWeek(ymd), 6);
+}
+
+/** Monday–Sunday bounds for the calendar week containing refDate. */
+export function currentCalendarWeekBounds(refDate = new Date()): { monday: string; sunday: string } {
+  const monday = mondayOfWeek(formatYmd(refDate));
+  return { monday, sunday: addDaysYmd(monday, 6) };
 }
 
 export function dayLabelFromYmd(ymd: string): string {
@@ -37,17 +90,20 @@ export function dayOrderFromLabel(dayLabel: string): number {
 }
 
 /** Prefer explicit start_date; fall back to created_at date. */
-export function resolveProgramStartDate(program: { start_date?: string | null; created_at?: string | null } | null | undefined, fallback = formatYmd(new Date())): string {
+export function resolveProgramStartDate(program: { start_date?: string | null; created_at?: string | null } | null | undefined, fallback = todayYmd()): string {
   if (program?.start_date) return String(program.start_date).slice(0, 10);
   if (program?.created_at) return String(program.created_at).slice(0, 10);
   return fallback;
 }
 
+/** Monday anchor for program week blocks (Week 1 = Mon–Sun containing start_date). */
+export function programWeekAnchor(startDate: string): string {
+  return mondayOfWeek(startDate);
+}
+
 export function weekForDate(startDate: string, dateYmd: string, totalWeeks = 6): number {
-  const start = parseYmd(startDate);
-  const date = parseYmd(dateYmd);
-  const diffMs = date.getTime() - start.getTime();
-  const diffDays = Math.floor(diffMs / 86400000);
+  const anchor = programWeekAnchor(startDate);
+  const diffDays = daysBetweenYmd(anchor, dateYmd);
   if (diffDays < 0) return 1;
   const week = Math.floor(diffDays / 7) + 1;
   const max = Math.max(1, Number(totalWeeks) || 6);
@@ -56,7 +112,7 @@ export function weekForDate(startDate: string, dateYmd: string, totalWeeks = 6):
 
 export function weekStartDate(startDate: string, week: number): string {
   const w = Math.max(1, Number(week) || 1);
-  return addDaysYmd(startDate, (w - 1) * 7);
+  return addDaysYmd(programWeekAnchor(startDate), (w - 1) * 7);
 }
 
 export function weekEndDate(startDate: string, week: number): string {
@@ -66,7 +122,7 @@ export function weekEndDate(startDate: string, week: number): string {
 export function weekRangeLabel(startDate: string, week: number): string {
   const a = weekStartDate(startDate, week);
   const b = weekEndDate(startDate, week);
-  return `${a} → ${b}`;
+  return `${formatDisplayDate(a)} – ${formatDisplayDate(b)}`;
 }
 
 /**

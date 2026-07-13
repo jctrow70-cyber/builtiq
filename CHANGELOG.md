@@ -2104,3 +2104,61 @@ Run in Supabase SQL Editor:
 ```text
 BIQ-0022 Fix set log persistence, Copy last, and week/date alignment
 ```
+
+---
+
+## BIQ-0023 - mm/dd/yy Date Format and Monday Week Start
+
+Date: 2026-07-13  
+Branch: cursor/date-format-monday-week-7d3b  
+Status: Completed
+
+### Summary
+
+Switched user-facing dates to **mm/dd/yy** and aligned program and dashboard weeks to **Monday–Sunday** (Sunday is the last day of the week).
+
+### Purpose
+
+Users wanted US-style dates and calendar weeks that start on Monday instead of rolling 7-day windows or ISO-style `YYYY-MM-DD` display.
+
+### Changes
+
+- **Display format** — `formatDisplayDate` / `parseDisplayDate` in `programCalendar.ts`; Progress, Dashboard, Training, and team views show mm/dd/yy
+- **Date inputs** — new `DateInput` component accepts mm/dd/yy while storing `YYYY-MM-DD` internally for Supabase
+- **Monday week blocks** — program weeks anchor to the Monday of the week containing `start_date`; week ranges run Mon–Sun
+- **Program start** — new and AI-generated programs snap `start_date` to Monday; editing Program start also snaps to Monday
+- **Weekly stats** — dashboard compliance and weekly progress use the current calendar week (Mon–Sun), not a rolling last-7-days window
+
+### Files changed
+
+- `lib/training/programCalendar.ts`
+- `lib/training/aiProgramPlan.ts`
+- `app/components/DateInput.tsx` (new)
+- `app/page.tsx`
+- `CHANGELOG.md`
+
+### Database changes
+
+None.
+
+### Testing steps
+
+1. Open Training — Date and Program start fields accept **mm/dd/yy** (e.g. `07/13/26`)
+2. Confirm week selector shows ranges like `07/07/26 – 07/13/26` (Mon–Sun)
+3. Confirm day tabs show mm/dd/yy next to each workout day
+4. Change week — weekday stays aligned; Sunday tabs appear at the end of the week block
+5. Dashboard — today’s date and weekly set counts reflect the current Mon–Sun week
+6. Progress — history dates display as mm/dd/yy
+7. Create a new program — Program start should land on the Monday of the current week
+8. Mobile — date fields remain usable with numeric keyboard
+
+### Known issues
+
+- Native browser locale is no longer used for date pickers; users type mm/dd/yy manually
+- Existing `start_date` values are unchanged in the database; week math normalizes to Monday via `programWeekAnchor`
+
+### Recommended commit message
+
+```text
+BIQ-0023 Use mm/dd/yy dates and Monday–Sunday week alignment
+```
