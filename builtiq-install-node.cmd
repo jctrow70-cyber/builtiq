@@ -1,5 +1,5 @@
 @echo off
-REM Install Node.js to your user folder — NO admin rights required
+REM Install Node.js to your user folder — NO admin, Constrained PowerShell safe
 cd /d "%~dp0"
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\install-node-portable.ps1"
+call "%~dp0scripts\install-node-portable.cmd"
 if errorlevel 1 pause

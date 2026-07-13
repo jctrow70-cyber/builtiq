@@ -13,6 +13,20 @@ $Root = Resolve-Path (Join-Path $PSScriptRoot '..')
 Set-Location $Root
 Write-Host "BuiltIQ root: $Root" -ForegroundColor Cyan
 
+# Corporate PCs often block .NET calls in Constrained Language Mode — use .cmd instead
+try {
+  $test = [Environment]::GetEnvironmentVariable('Path', 'User')
+} catch {
+  Write-Host ""
+  Write-Host "PowerShell is restricted on this PC (Constrained Language Mode)." -ForegroundColor Yellow
+  Write-Host "Use the .cmd files instead (no admin, no PATH edit):" -ForegroundColor Yellow
+  Write-Host "  Double-click builtiq-install-node.cmd"
+  Write-Host "  Double-click builtiq-setup.cmd"
+  Write-Host "  Double-click builtiq-import.cmd   (alternatives only)"
+  Write-Host ""
+  exit 1
+}
+
 function Refresh-Path {
   $machine = [System.Environment]::GetEnvironmentVariable('Path', 'Machine')
   $user = [System.Environment]::GetEnvironmentVariable('Path', 'User')

@@ -97,7 +97,13 @@ Or **double-click** `builtiq-setup.cmd` in the repo root.
 
 **First time only:** install Node.js LTS if the script says it's missing.
 
-**No admin rights?** Double-click `builtiq-install-node.cmd` (installs portable Node to your user folder), then `builtiq-setup.cmd`.
+**No admin rights?** Double-click these (work on locked-down corporate PCs):
+
+1. `builtiq-install-node.cmd` — downloads portable Node once  
+2. `builtiq-setup.cmd` — runs `npm install`  
+3. `builtiq-import.cmd` — runs alternatives import (needs `.env.local`)
+
+If PowerShell shows *Constrained Language Mode*, use the `.cmd` files — not the `.ps1` scripts.
 
 **With admin:** `winget install OpenJS.NodeJS.LTS`
 

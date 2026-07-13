@@ -1,5 +1,5 @@
 @echo off
-REM Double-click to set up BuiltIQ on Windows (Node PATH + npm install)
+REM Setup BuiltIQ — npm install (no admin, constrained PowerShell safe)
 cd /d "%~dp0"
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\setup-windows.ps1" %*
+call "%~dp0builtiq-npm.cmd" install
 if errorlevel 1 pause
