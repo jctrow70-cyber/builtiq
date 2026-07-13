@@ -1,5 +1,5 @@
 @echo off
-REM Double-click to run exercise import (requires .env.local with service role key)
+REM Import exercises + alternatives (needs .env.local with SUPABASE_SERVICE_ROLE_KEY)
 cd /d "%~dp0"
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\setup-windows.ps1" -ImportExercises
+call "%~dp0builtiq-npm.cmd" run import:alternatives
 if errorlevel 1 pause
