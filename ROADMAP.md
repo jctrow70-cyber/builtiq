@@ -278,12 +278,11 @@ See `CHANGELOG.md` BIQ-0013 and BIQ-0024 for full scope.
 
 ### Next priorities
 
-1. Run `import:exercises:production` + `import:alternatives` on production Supabase (BIQ-0013 operational step)
+1. ~~PR detection and strength trends on Progress tab~~ (BIQ-0026)
 2. AI program regeneration / edit-from-prompt for existing programs
-3. PR detection and strength trends on Progress tab
-4. Nutrition MVP placeholder → functional tracking
-5. AI Coach hook-up (consumes `coaching_metadata` + program context)
-6. Split `page.tsx` into focused components
+3. Nutrition MVP placeholder → functional tracking
+4. AI Coach hook-up (consumes `coaching_metadata` + program context)
+5. Split `page.tsx` into focused components
 
 Run pending Supabase migrations on each environment before testing:
 

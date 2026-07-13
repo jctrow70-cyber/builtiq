@@ -167,6 +167,19 @@
 .training-subnav button{flex:1 1 auto;min-width:0;text-align:center;font-size:11px;padding:7px 8px}
 .history-row{display:grid;grid-template-columns:1fr;gap:4px;padding:8px 0;border-top:1px solid var(--line)}
 .history-row b{display:block}
+.progress-summary-metrics{margin-top:4px}
+.progress-pr-list{margin-top:8px}
+.progress-pr-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.progress-pr-row:first-child{border-top:none;padding-top:0}
+.progress-pr-main{display:grid;gap:4px;min-width:0}
+.progress-pr-main b{font-size:14px}
+.progress-pr-badge{background:#3b2f63;color:#e9d5ff;margin-left:6px;font-size:10px}
+.progress-pr-date{font-size:11px;white-space:nowrap}
+.progress-trend-chart{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px;align-items:end;min-height:160px;margin-top:12px;padding-top:8px}
+.progress-trend-bar-wrap{display:flex;flex-direction:column;align-items:center;gap:4px;min-height:140px;justify-content:flex-end}
+.progress-trend-bar{width:100%;max-width:36px;border-radius:8px 8px 4px 4px;background:linear-gradient(180deg,#8b5cf6,#5b21b6);min-height:4px;transition:height .2s ease}
+.progress-trend-label{font-size:10px;font-weight:800}
+.progress-trend-meta{font-size:9px;text-align:center;line-height:1.2}
 /* BIQ — Premium workout set logging (feature/workout-logging-redesign) */
 .workout-set-logger{max-width:520px;margin:10px 0 0}
 .log-pref-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;padding:8px 10px;border-radius:12px;background:#0f1422;border:1px solid var(--line)}
@@ -198,4 +211,4 @@
 .log-chip.active{border-color:#7c5cff;background:#1b1634;color:#fff}
 .log-chip:disabled{opacity:.5}
 .log-save-hint{margin:10px 0 0;font-size:11px;text-align:center}
- @media(max-width:900px){.add-exercise-row{grid-template-columns:1fr auto auto}.catalog-edit-grid{grid-template-columns:1fr}.catalog-search-filters{grid-template-columns:1fr}.setgrid,.setgrid-edit{grid-template-columns:1fr 1fr 1fr}.exercise-add-row{grid-template-columns:1fr auto auto}.team-compliance-card .dash-metrics{grid-template-columns:1fr 1fr}.panel-overlay{align-items:flex-end;padding:0}.add-exercise-panel{border-radius:18px 18px 0 0;max-height:90vh}.log-field-row{grid-template-columns:1fr}.workout-set-logger{max-width:100%}.log-dup-btn,.set-done-check{min-height:44px}}
+ @media(max-width:900px){.add-exercise-row{grid-template-columns:1fr auto auto}.catalog-edit-grid{grid-template-columns:1fr}.catalog-search-filters{grid-template-columns:1fr}.setgrid,.setgrid-edit{grid-template-columns:1fr 1fr 1fr}.exercise-add-row{grid-template-columns:1fr auto auto}.team-compliance-card .dash-metrics{grid-template-columns:1fr 1fr}.progress-trend-chart{grid-template-columns:repeat(4,minmax(0,1fr))}.progress-summary-metrics{grid-template-columns:1fr 1fr}.panel-overlay{align-items:flex-end;padding:0}.add-exercise-panel{border-radius:18px 18px 0 0;max-height:90vh}.log-field-row{grid-template-columns:1fr}.workout-set-logger{max-width:100%}.log-dup-btn,.set-done-check{min-height:44px}}
