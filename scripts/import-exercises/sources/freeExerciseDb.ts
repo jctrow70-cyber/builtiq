@@ -90,12 +90,67 @@ function inferTypeAndCategory(row: FreeExerciseDbRow): { exercise_type: string; 
   return { exercise_type: 'strength', category: 'strength' };
 }
 
+function inferTrainingGoal(row: FreeExerciseDbRow): string | undefined {
+  const cat = String(row.category || '').toLowerCase();
+  const level = String(row.level || '').toLowerCase();
+  const mechanic = String(row.mechanic || '').toLowerCase();
+  if (cat === 'stretching') return 'mobility';
+  if (cat === 'cardio') return 'endurance';
+  if (cat === 'plyometrics') return 'power';
+  if (mechanic === 'isolation') return 'hypertrophy';
+  if (level === 'beginner') return 'hypertrophy';
+  if (level === 'intermediate' || level === 'expert') return 'strength';
+  return 'hypertrophy';
+}
+
+function buildCoachingMetadata(row: FreeExerciseDbRow): Record<string, unknown> {
+  const level = String(row.level || '').toLowerCase();
+  const mechanic = String(row.mechanic || '').toLowerCase();
+  const force = String(row.force || '').toLowerCase();
+  const equipment = mapFreeExerciseDbEquipment(row.equipment);
+  const skill =
+    level === 'expert' ? 'high' : level === 'intermediate' ? 'moderate' : level === 'beginner' ? 'low' : 'moderate';
+  const fatigue =
+    mechanic === 'compound' || force === 'push' || force === 'pull'
+      ? 'high'
+      : mechanic === 'isolation'
+        ? 'moderate'
+        : 'low';
+  const programming_role =
+    mechanic === 'compound' ? 'primary_compound' : mechanic === 'isolation' ? 'accessory' : 'conditioning';
+
+  return {
+    source_dataset: 'yuhonas/free-exercise-db',
+    license: 'Unlicense',
+    level: row.level || null,
+    force: row.force || null,
+    mechanic: row.mechanic || null,
+    programming_role,
+    fatigue_cost: fatigue,
+    skill_demand: skill,
+    equipment_constraints: equipment && equipment !== 'bodyweight' ? [equipment] : [],
+    substitution_triggers:
+      equipment && equipment !== 'bodyweight' ? [`no_${equipment.replace(/\s+/g, '_')}`] : [],
+    rep_range_hints: {
+      strength: mechanic === 'compound' ? '3-6' : '6-10',
+      hypertrophy: mechanic === 'isolation' ? '10-15' : '8-12',
+      endurance: catToEnduranceReps(row),
+    },
+  };
+}
+
+function catToEnduranceReps(row: FreeExerciseDbRow): string {
+  const cat = String(row.category || '').toLowerCase();
+  return cat === 'cardio' ? '15-30 min' : '12-20';
+}
+
 export function convertFreeExerciseDbRow(row: FreeExerciseDbRow): ExternalExerciseRecord {
   const { exercise_type, category } = inferTypeAndCategory(row);
   const primary = row.primaryMuscles?.[0] ? titleMuscle(row.primaryMuscles[0]) : '';
   const secondaries = (row.secondaryMuscles || []).map(titleMuscle);
   const movement = inferFreeExerciseDbMovementPattern(row);
-    const thumbnail = row.images?.[0] ? FREE_EXERCISE_DB_IMAGE_BASE + row.images[0] : undefined;
+  const training_goal = inferTrainingGoal(row);
+  const thumbnail = row.images?.[0] ? FREE_EXERCISE_DB_IMAGE_BASE + row.images[0] : undefined;
   const media = row.images?.[1] ? FREE_EXERCISE_DB_IMAGE_BASE + row.images[1] : undefined;
 
   return {
@@ -108,16 +163,11 @@ export function convertFreeExerciseDbRow(row: FreeExerciseDbRow): ExternalExerci
     secondary_muscles: secondaries,
     equipment: mapFreeExerciseDbEquipment(row.equipment),
     ...(movement ? { movement_pattern: movement } : {}),
+    ...(training_goal ? { training_goal } : {}),
     instructions: (row.instructions || []).join('\n\n'),
     thumbnail_url: thumbnail,
     media_url: media,
-    coaching_metadata: {
-      source_dataset: 'yuhonas/free-exercise-db',
-      license: 'Unlicense',
-      level: row.level || null,
-      force: row.force || null,
-      mechanic: row.mechanic || null,
-    },
+    coaching_metadata: buildCoachingMetadata(row),
   };
 }
 
