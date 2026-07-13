@@ -3,6 +3,7 @@
 import { inferExerciseType } from './exerciseTypes';
 import { hasExerciseGuide } from './exerciseMedia';
 import { filterCatalogByEquipment, hasEquipmentFilter, normalizeEquipmentList } from './equipmentFilter';
+import { mondayOfWeek, todayYmd } from './programCalendar';
 
 export type AiExercise = {
   name: string;
@@ -857,7 +858,7 @@ export async function persistAiProgramPlan(
     visibility: config.mode,
     name: plan.program_name || config.programName || 'AI Strength Program',
     weeks: config.weeks,
-    start_date: new Date().toISOString().slice(0, 10),
+    start_date: mondayOfWeek(todayYmd()),
     focus_muscles: config.focusMuscles?.length ? config.focusMuscles : null,
     generation_prompt: config.prompt.trim(),
     generation_method: 'ai',
