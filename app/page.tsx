@@ -11,6 +11,14 @@ import { buildCatalogFilterOptions, builtinCatalogItems, catalogResultMeta, coun
 import { getExerciseGuidePayload, getExerciseThumb, hasExerciseGuide } from '../lib/training/exerciseMedia';
 import { matchExerciseToCatalog } from '../lib/training/aiProgramPlan';
 import { EQUIPMENT_OPTIONS, hasEquipmentFilter, normalizeEquipmentList, equipmentFilterLabel } from '../lib/training/equipmentFilter';
+import {
+  dateForWeekAndDay,
+  dateForWeekKeepingWeekday,
+  dayLabelFromYmd,
+  resolveProgramStartDate,
+  weekForDate,
+  weekRangeLabel,
+} from '../lib/training/programCalendar';
 import WorkoutSetLogger from './components/WorkoutSetLogger';
 
 const NAV=['Dashboard','Training','Team','Nutrition','Progress','AI Coach','Settings'];
@@ -63,7 +71,18 @@ const logCatalogId=(row:any,joinEx?:any)=>row.snapshot_catalog_exercise_id||join
 const logSetType=(row:any,joinPs?:any)=>row.snapshot_set_type||joinPs?.set_type||'working';
 const logSetNumber=(row:any,joinPs?:any)=>row.snapshot_set_number??joinPs?.set_number??1;
 const exerciseHistoryKey=(catalogId:string,name:string)=>catalogId||String(name||'').toLowerCase().trim();
-const logHistoryKeys=(row:any)=>{const joinEx=row.st_planned_sets?.st_exercises;const joinPs=row.st_planned_sets;const catalogId=logCatalogId(row,joinEx);const exerciseKey=exerciseHistoryKey(catalogId,logExerciseName(row,joinEx));const setKey=`${exerciseKey}|${logSetType(row,joinPs)}|${logSetNumber(row,joinPs)}`;return {exerciseKey,setKey,catalogId};};
+const exerciseHistoryAliases=(catalogId:string,name:string)=>{
+  const aliases:string[]=[];
+  const id=String(catalogId||'').trim();
+  const nm=String(name||'').toLowerCase().trim();
+  if(id)aliases.push(id);
+  if(nm)aliases.push(nm);
+  return aliases;
+};
+const logHistoryKeys=(row:any)=>{const joinEx=row.st_planned_sets?.st_exercises;const joinPs=row.st_planned_sets;const catalogId=logCatalogId(row,joinEx);const name=logExerciseName(row,joinEx);const exerciseKey=exerciseHistoryKey(catalogId,name);const setType=logSetType(row,joinPs);const setNumber=logSetNumber(row,joinPs);const setKey=`${exerciseKey}|${setType}|${setNumber}`;return {exerciseKey,setKey,catalogId,name,setType,setNumber};};
+const logHasPerformance=(row:any)=>!!(
+  row&&(String(row.actual_weight||'').trim()||String(row.actual_reps||'').trim()||String(row.actual_duration||'').trim()||String(row.actual_distance||'').trim()||String(row.log_notes||'').trim())
+);
 const snapshotForLog=(ex:any,set:any,workoutRef:any,catItem?:any)=>({snapshot_exercise_name:ex?.name||'',snapshot_catalog_exercise_id:ex?.catalog_exercise_id||null,snapshot_superset_group_id:ex?.superset_group_id||null,snapshot_muscle_group:ex?.muscle_group||'',snapshot_section:exerciseSection(ex),snapshot_exercise_type:exerciseTypeOf(ex,catItem),snapshot_set_type:set?.set_type||'working',snapshot_set_number:set?.set_number||1,snapshot_target_weight:set?.target_weight||'',snapshot_target_reps:set?.target_reps||'',snapshot_target_rpe:'',snapshot_day_label:workoutRef?.day_label||'',snapshot_workout_type:workoutRef?.workout_type||'',snapshot_week:workoutRef?.week??null,snapshot_day_order:workoutRef?.day_order??null});
 const catalogByName=(items:any[])=>{const map:any={};(items||[]).filter((c:any)=>!c.is_archived).forEach((c:any)=>{map[String(c.name||'').toLowerCase()]=c;});return map;};
 const today=()=>new Date().toISOString().slice(0,10);
@@ -134,6 +153,8 @@ export default function Page(){
  const [logDistanceUnit,setLogDistanceUnit]=useState<'mi'|'km'>('mi');
  const refs=useRef<any[]>([]);
  const namePickRef=useRef(false);
+ const logsRef=useRef<any>({});
+ const syncingCalendarRef=useRef(false);
 
  useEffect(()=>{
   supabase.auth.getSession().then(({data})=>{setSession(data.session);setAuthReady(true);});
@@ -156,7 +177,15 @@ export default function Page(){
  },[session?.user?.id]);
  useEffect(()=>{if(profile) loadPrograms()},[mode,selectedTeamId,teams,profile,viewingMember?.user_id]);
  useEffect(()=>{if(program&&session?.user) loadLogs(program,viewingMember?.user_id||session.user.id)},[program,logDate,viewingMember?.user_id,session?.user?.id]);
- useEffect(()=>{if(program&&session?.user) loadLiftHistory()},[program,logDate,session?.user?.id]);
+ useEffect(()=>{if(program&&session?.user) loadLiftHistory()},[program,logDate,viewingMember?.user_id,session?.user?.id]);
+ useEffect(()=>{logsRef.current=logs;},[logs]);
+ useEffect(()=>{
+  if(!program||syncingCalendarRef.current)return;
+  const start=resolveProgramStartDate(program);
+  const total=program.weeks||weeks||6;
+  const nextWeek=weekForDate(start,logDate,total);
+  if(nextWeek!==week)setWeek(nextWeek);
+ },[program?.id,program?.start_date,program?.created_at,program?.weeks,logDate]);
  useEffect(()=>{if(profile&&appNav==='Dashboard')loadProgressLogs();},[profile,appNav]);
  useEffect(()=>{if(appNav==='Training'&&!program&&trainingSubNav!=='setup')setShowProgramSetup(true);},[appNav,program,trainingSubNav]);
  useEffect(()=>{if(appNav==='Training'&&trainingSubNav!=='setup')setMode(trainingSubNav==='team'?'team':'personal');},[appNav,trainingSubNav]);
@@ -313,8 +342,18 @@ export default function Page(){
   setPrograms(list);
   const picked=pickProgram(list,!usePersonal?activeTeam?.default_program_id:null);
   setProgram(picked);
-  const first=picked?.st_workouts?.sort((a:any,b:any)=>a.week-b.week||a.day_order-b.day_order)?.[0];
-  if(first)setActiveWorkout(first.id);
+  if(picked){
+    const start=resolveProgramStartDate(picked);
+    const alignedWeek=weekForDate(start,logDate,picked.weeks||weeks||6);
+    setWeek(alignedWeek);
+    const dayLabel=dayLabelFromYmd(logDate);
+    const match=(picked.st_workouts||[]).find((w:any)=>w.week===alignedWeek&&w.day_label===dayLabel)
+      ||(picked.st_workouts||[]).filter((w:any)=>w.week===alignedWeek).sort((a:any,b:any)=>a.day_order-b.day_order)[0]
+      ||picked.st_workouts?.sort((a:any,b:any)=>a.week-b.week||a.day_order-b.day_order)?.[0];
+    if(match)setActiveWorkout(match.id);
+  } else {
+    setActiveWorkout('');
+  }
  }
  async function openMemberDashboard(member:any){
   if(!member)return;
@@ -390,20 +429,20 @@ export default function Page(){
   await loadTeams();
   await loadPrograms();
  }
- async function loadLogs(p:any,userId?:string){const uid=userId||session?.user?.id; if(!uid){setLogs({});return;} const ids:any[]=[];(p.st_workouts||[]).forEach((w:any)=>(w.st_exercises||[]).forEach((e:any)=>(e.st_planned_sets||[]).forEach((s:any)=>ids.push(s.id)))); if(!ids.length){setLogs({});return} const{data}=await supabase.from('st_set_logs').select('*').in('planned_set_id',ids).eq('user_id',uid).eq('log_date',logDate); const by:any={};(data||[]).forEach((l:any)=>by[l.planned_set_id]=l);setLogs(by);}
+ async function loadLogs(p:any,userId?:string){const uid=userId||session?.user?.id; if(!uid){setLogs({});logsRef.current={};return;} const ids:any[]=[];(p.st_workouts||[]).forEach((w:any)=>(w.st_exercises||[]).forEach((e:any)=>(e.st_planned_sets||[]).forEach((s:any)=>ids.push(s.id)))); if(!ids.length){setLogs({});logsRef.current={};return} const{data}=await supabase.from('st_set_logs').select('*').in('planned_set_id',ids).eq('user_id',uid).eq('log_date',logDate); const by:any={};(data||[]).forEach((l:any)=>by[l.planned_set_id]=l);logsRef.current=by;setLogs(by);}
 
  async function loadLiftHistory(){
-  if(!session?.user) return;
+  const uid=logUserId();
+  if(!uid) return;
 
   const { data, error } = await supabase
     .from('st_set_logs')
     .select('*, st_planned_sets(set_type,set_number,st_exercises(name,muscle_group,section,catalog_exercise_id))')
-    .eq('user_id', session.user.id)
+    .eq('user_id', uid)
     .lt('log_date', logDate)
-    .eq('completed', true)
     .order('log_date', { ascending:false })
     .order('updated_at', { ascending:false })
-    .limit(500);
+    .limit(800);
 
   if(error){
     console.warn(error.message);
@@ -412,13 +451,17 @@ export default function Page(){
 
   const by:any = {};
   (data || []).forEach((row:any)=>{
-    const { exerciseKey, setKey } = logHistoryKeys(row);
+    if(!(row.completed===true || logHasPerformance(row))) return;
+    const { exerciseKey, setType, setNumber, catalogId, name } = logHistoryKeys(row);
     if(!exerciseKey) return;
 
-    if(!by[exerciseKey]) by[exerciseKey] = [];
-    by[exerciseKey].push(row);
-
-    if(!by[setKey]) by[setKey] = row;
+    const aliases=exerciseHistoryAliases(catalogId,name);
+    aliases.forEach((ek)=>{
+      if(!by[ek]) by[ek] = [];
+      by[ek].push(row);
+      const setKey=`${ek}|${setType}|${setNumber}`;
+      if(!by[setKey]) by[setKey] = row;
+    });
   });
 
   setHistory(by);
@@ -439,16 +482,36 @@ export default function Page(){
  }
 
  function previousFor(ex:any, set:any){
-  const exerciseKey = exerciseHistoryKey(ex.catalog_exercise_id || '', ex.name || '');
-  const setKey = `${exerciseKey}|${set.set_type}|${set.set_number}`;
-  return history[setKey] || null;
+  const aliases=exerciseHistoryAliases(ex.catalog_exercise_id||'',ex.name||'');
+  const setType=set?.set_type||'working';
+  const setNumber=set?.set_number??1;
+  for(const ek of aliases){
+    const hit=history[`${ek}|${setType}|${setNumber}`];
+    if(hit&&logHasPerformance(hit)) return hit;
+  }
+  // Fallback: same exercise + set number with any type (e.g. working↔backoff renames)
+  for(const ek of aliases){
+    const rows=history[ek]||[];
+    const match=rows.find((r:any)=>{
+      const joinPs=r.st_planned_sets;
+      return Number(logSetNumber(r,joinPs))===Number(setNumber)&&logHasPerformance(r);
+    });
+    if(match) return match;
+  }
+  // Last resort: most recent set for this exercise
+  for(const ek of aliases){
+    const rows=history[ek]||[];
+    const match=rows.find((r:any)=>logHasPerformance(r));
+    if(match) return match;
+  }
+  return null;
  }
 
  function exerciseLastSummary(ex:any){
   const catItem=catalog.find((c:any)=>c.id===ex.catalog_exercise_id);
   const exType=exerciseTypeOf(ex,catItem);
-  const exerciseKey = exerciseHistoryKey(ex.catalog_exercise_id || '', ex.name || '');
-  const rows = history[exerciseKey] || [];
+  const aliases=exerciseHistoryAliases(ex.catalog_exercise_id||'',ex.name||'');
+  const rows = aliases.flatMap((ek)=>history[ek]||[]);
   if(!rows.length) return '';
   const latestDate = rows[0].log_date;
   const sameDay = rows.filter((r:any)=>r.log_date === latestDate).slice(0,4);
@@ -460,7 +523,7 @@ export default function Page(){
  function goToReviewStep(){if(!days.length)return alert('Select at least one training day.'); setSetupStep('review');}
  async function generateWithAi(){if(!session?.access_token)return alert('Sign in to generate programs.'); if(mode==='team'&&!activeTeam)return alert('Create or join a team first.'); if(mode==='team'&&!canEdit())return alert('Only owner/editors can create team programs.'); const prompt=aiPrompt.trim(); if(prompt.length<8)return alert('Describe your program in a few words (e.g. baseball throw/hit power).'); await persistEquipmentPreference(); const equipment=normalizeEquipmentList(profileDraft.available_equipment); setAiGenerating(true); setAiSummary(''); setAiCoachingNotes(''); setAiGenError(''); try{const res=await fetch('/api/programs/generate',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`},body:JSON.stringify({prompt,weeks,days,dayTypes,focusMuscles,programName,mode,teamId:mode==='team'?activeTeam?.id:null,includeCooldown,availableEquipment:equipment})}); const data=await res.json().catch(()=>({})); if(!res.ok){const hint=data?.hint?` ${data.hint}`:''; throw new Error((data?.error||`Generation failed (${res.status})`)+hint);} setAiSummary(data.program_summary||''); setAiCoachingNotes(data.coaching_notes||''); if(data.program_name)setProgramName(data.program_name); await loadPrograms(); setTrainingSubNav(mode); setAppNav('Training'); setSetupStep('goals');}catch(e:any){const msg=e?.message||'AI program generation failed.'; setAiGenError(msg); alert(msg);}finally{setAiGenerating(false);}}
  async function submitBugReport(){if(!session?.access_token)return alert('Sign in to report a bug.'); const description=bugDescription.trim(); if(description.length<8)return alert('Please describe what went wrong (at least 8 characters).'); setBugSending(true); try{const res=await fetch('/api/bug-reports',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`},body:JSON.stringify({title:bugTitle.trim(),description,pageContext:`nav=${appNav}; training=${trainingSubNav}; mode=${mode}; program=${program?.id||'none'}; week=${week}; error=${aiGenError||'none'}`,appNav,userAgent:typeof navigator!=='undefined'?navigator.userAgent:''})}); const data=await res.json().catch(()=>({})); if(!res.ok)throw new Error(data?.error||`Could not send report (${res.status})`); setBugSentId(data.id||'ok'); setBugTitle(''); setBugDescription('');}catch(e:any){alert(e?.message||'Could not send bug report.');}finally{setBugSending(false);}}
- async function generate(){if(mode==='team'&&!activeTeam)return alert('Create or join a team first.'); if(mode==='team'&&!canEdit())return alert('Only owner/editors can create team programs.'); const catMap=catalogByName(catalog); const payload:any={owner_user_id:session.user.id,team_id:mode==='team'?activeTeam.id:null,visibility:mode,name:programName,weeks,generation_method:'template'}; if(focusMuscles.length)payload.focus_muscles=focusMuscles; const{data:p,error}=await supabase.from('st_programs').insert(payload).select().single(); if(error)return alert(error.message); const wr:any=[]; for(let w=1;w<=weeks;w++)days.forEach(d=>wr.push({program_id:p.id,week:w,day_order:DAYS.indexOf(d),day_label:d,workout_type:dayTypes[d]||'Full Body'})); const{data:ws,error:we}=await supabase.from('st_workouts').insert(wr).select(); if(we)return alert(we.message); for(const w of ws||[]){const baseTpl=WORKOUT_TEMPLATES[w.workout_type]||WORKOUT_TEMPLATES['Full Body']; const tpl=applyFocusToWorkoutTemplate(baseTpl,focusMuscles,catalog); for(const sec of SECTIONS){const list=tpl[sec.id]||[]; if(!list.length)continue; const startSort=SECTION_SORT_BASE[sec.id]??0; const{error:ie}=await insertTemplateSectionItems(supabase,w.id,sec.id,list,startSort,catMap); if(ie)return alert(ie.message);}} await loadPrograms();setTrainingSubNav(mode);setAppNav('Training');}
+ async function generate(){if(mode==='team'&&!activeTeam)return alert('Create or join a team first.'); if(mode==='team'&&!canEdit())return alert('Only owner/editors can create team programs.'); const catMap=catalogByName(catalog); const payload:any={owner_user_id:session.user.id,team_id:mode==='team'?activeTeam.id:null,visibility:mode,name:programName,weeks,generation_method:'template',start_date:today()}; if(focusMuscles.length)payload.focus_muscles=focusMuscles; const{data:p,error}=await supabase.from('st_programs').insert(payload).select().single(); if(error)return alert(error.message); const wr:any=[]; for(let w=1;w<=weeks;w++)days.forEach(d=>wr.push({program_id:p.id,week:w,day_order:DAYS.indexOf(d),day_label:d,workout_type:dayTypes[d]||'Full Body'})); const{data:ws,error:we}=await supabase.from('st_workouts').insert(wr).select(); if(we)return alert(we.message); for(const w of ws||[]){const baseTpl=WORKOUT_TEMPLATES[w.workout_type]||WORKOUT_TEMPLATES['Full Body']; const tpl=applyFocusToWorkoutTemplate(baseTpl,focusMuscles,catalog); for(const sec of SECTIONS){const list=tpl[sec.id]||[]; if(!list.length)continue; const startSort=SECTION_SORT_BASE[sec.id]??0; const{error:ie}=await insertTemplateSectionItems(supabase,w.id,sec.id,list,startSort,catMap); if(ie)return alert(ie.message);}} await loadPrograms();setTrainingSubNav(mode);setAppNav('Training');}
  function catalogPayloadFromItem(catalogItem:any,section:string){return{name:catalogItem.name,muscle_group:catalogItem.muscle_group||'',catalog_exercise_id:catalogItem.id,exercise_type:inferExerciseType(catalogItem.name,catalogItem.muscle_group,section,catalogItem.exercise_type)};}
  function openAddExercisePanel(section:string,supersetGroupId?:string|null){if(!canEdit())return; const pending=supersetGroupId||pendingSupersetGroup[section]; const config=pending?{...emptyAddPanelConfig(),mode:'superset' as const,supersetGroupId:pending}:emptyAddPanelConfig(); if(supersetGroupId)setPendingSupersetGroup({...pendingSupersetGroup,[section]:supersetGroupId}); setAddExercisePanel({section,step:'search',query:'',filters:emptyAddPanelFilters(),picked:null,config,custom:emptyAddPanelCustom(),replaceTarget:null});}
  function openReplaceExercisePanel(ex:any){if(!canEdit())return; const section=exerciseSection(ex); setAddExercisePanel({section,step:'search',query:ex.name||'',filters:emptyAddPanelFilters(),picked:null,config:emptyAddPanelConfig(),custom:emptyAddPanelCustom(),replaceTarget:ex});}
@@ -672,7 +735,11 @@ export default function Page(){
 }
  async function saveLog(sid:string,field:string,value:any,opts?:{completed?:boolean}){
   if(!canLog())return;
-  const old=logs[sid]||{};
+  return upsertSetLog(sid,{[field]:value},opts);
+ }
+ async function upsertSetLog(sid:string,fieldUpdates:Record<string,any>,opts?:{completed?:boolean}){
+  if(!canLog())return;
+  const old=logsRef.current[sid]||{};
   let ex:any=null, ps:any=null;
   for(const e of workout?.st_exercises||[]){
     const found=(e.st_planned_sets||[]).find((s:any)=>s.id===sid);
@@ -686,7 +753,10 @@ export default function Page(){
   if(!session?.user||!uid)return;
   const coachLogging=uid!==session.user.id;
   const logTeamId=mode==='team'&&activeTeam&&activeTeam.training_source!=='personal'?activeTeam.id:null;
-  const markComplete=field==='completed'?!!opts?.completed:(opts?.completed??true);
+  const updatingCompleted=Object.prototype.hasOwnProperty.call(fieldUpdates,'completed')||opts?.completed!==undefined;
+  const markComplete=updatingCompleted
+    ?(opts?.completed!==undefined?!!opts.completed:!!fieldUpdates.completed)
+    :(old.completed??true);
   const payload:any={
     planned_set_id:sid,
     user_id:uid,
@@ -696,22 +766,67 @@ export default function Page(){
     completed:markComplete,
     ...snapshotForLog(ex,ps,workout,catItem)
   };
-  fieldKeys.forEach((k:string)=>{payload[k]=field===k?value:(old[k]||'');});
-  if(!fieldKeys.includes('actual_weight'))payload.actual_weight=old.actual_weight||'';
-  if(!fieldKeys.includes('actual_reps'))payload.actual_reps=old.actual_reps||'';
+  const allKeys=Array.from(new Set([...fieldKeys,'actual_weight','actual_reps','actual_rpe','actual_duration','actual_distance','actual_pace','actual_hr','actual_calories','log_notes']));
+  allKeys.forEach((k:string)=>{
+    if(Object.prototype.hasOwnProperty.call(fieldUpdates,k))payload[k]=fieldUpdates[k]==null?'':String(fieldUpdates[k]);
+    else payload[k]=old[k]??'';
+  });
+  // If user logged weight/reps/duration, treat as completed unless explicitly marked incomplete
+  if(opts?.completed===undefined&&!Object.prototype.hasOwnProperty.call(fieldUpdates,'completed')){
+    if(logHasPerformance(payload)) payload.completed=true;
+  }
   const{data,error}=await supabase.from('st_set_logs').upsert(payload,{onConflict:'planned_set_id,user_id,log_date'}).select().single();
   if(error)return alert(error.message);
-  setLogs({...logs,[sid]:data});
+  setLogs((prev:any)=>{
+    const next={...prev,[sid]:data};
+    logsRef.current=next;
+    return next;
+  });
+  return data;
  }
  async function duplicateSetLog(sid:string,source:any){
   if(!canLog()||!source)return;
   const keys=['actual_weight','actual_reps','actual_rpe','actual_duration','actual_distance','actual_pace','actual_hr','actual_calories','log_notes'];
-  for(const k of keys){
-    if(source[k]) await saveLog(sid,k,String(source[k]),{completed:false});
-  }
+  const updates:Record<string,any>={};
+  keys.forEach((k)=>{
+    if(source[k]!=null&&String(source[k]).trim()!=='') updates[k]=String(source[k]);
+  });
+  if(!Object.keys(updates).length)return alert('No previous values found to copy.');
+  await upsertSetLog(sid,updates,{completed:false});
  }
  async function setRole(member:any,role:string){if(!isOwner())return alert('Only owner can change roles.'); await supabase.from('st_team_members').update({role}).eq('id',member.id); await loadMembers(); await loadTeams();}
  function next(e:any){if(e.key==='Enter'||e.key==='ArrowRight'){e.preventDefault(); const i=refs.current.indexOf(e.currentTarget); if(refs.current[i+1])refs.current[i+1].focus();}}
+ function onLogDateChange(ymd:string){setLogDate(ymd);}
+ function onWeekChange(nextWeek:number){
+  const w=Number(nextWeek)||1;
+  if(!program){setWeek(w);return;}
+  syncingCalendarRef.current=true;
+  setWeek(w);
+  const start=resolveProgramStartDate(program);
+  const nextDate=dateForWeekKeepingWeekday(start,w,logDate);
+  setLogDate(nextDate);
+  const dayLabel=dayLabelFromYmd(nextDate);
+  const match=(program.st_workouts||[]).find((x:any)=>x.week===w&&x.day_label===dayLabel)
+    ||(program.st_workouts||[]).filter((x:any)=>x.week===w).sort((a:any,b:any)=>a.day_order-b.day_order)[0];
+  if(match)setActiveWorkout(match.id);
+  queueMicrotask(()=>{syncingCalendarRef.current=false;});
+ }
+ function onSelectWorkoutDay(w:any){
+  setActiveWorkout(w.id);
+  if(!program)return;
+  syncingCalendarRef.current=true;
+  const start=resolveProgramStartDate(program);
+  setLogDate(dateForWeekAndDay(start,week,w.day_label));
+  queueMicrotask(()=>{syncingCalendarRef.current=false;});
+ }
+ async function updateProgramStartDate(ymd:string){
+  if(!program||!canEdit()||!ymd)return;
+  const{error}=await supabase.from('st_programs').update({start_date:ymd}).eq('id',program.id);
+  if(error)return alert(error.message);
+  setProgram({...program,start_date:ymd});
+  const aligned=weekForDate(ymd,logDate,program.weeks||weeks||6);
+  setWeek(aligned);
+ }
  async function reloadKeepDay(){
   const keep = activeWorkout;
   await loadPrograms();
@@ -786,7 +901,8 @@ const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sor
  const todayDayLabel=dayNames[new Date().getDay()];
  const greetingHour=new Date().getHours();
  const greeting=greetingHour<12?'Good morning':greetingHour<18?'Good afternoon':'Good evening';
- const todayWorkout=program?(program.st_workouts||[]).find((w:any)=>w.week===week&&w.day_label===todayDayLabel):null;
+ const calendarWeek=program?weekForDate(resolveProgramStartDate(program),today(),program.weeks||weeks||6):week;
+ const todayWorkout=program?(program.st_workouts||[]).find((w:any)=>w.week===calendarWeek&&w.day_label===todayDayLabel):null;
  const weekStart=new Date(); weekStart.setDate(weekStart.getDate()-6);
  const weekStartStr=weekStart.toISOString().slice(0,10);
  const weeklyLogs=progressLogs.filter((r:any)=>String(r.log_date)>=weekStartStr);
@@ -817,7 +933,7 @@ const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sor
  const pendingGroupInfo=pendingGroupId?panelSupersetGroups.find((g:any)=>g.id===pendingGroupId):null;
  const trainingModeStat=<div className="stat"><span className="muted">Plan</span><b>{mode==='team'?(activeTeam?.training_source==='personal'?'Personal':'Team'):'Personal'}</b></div>;
  const memberAssignment=memberDashboard?memberAssignments[memberDashboard.user_id]:null;
- const renderExerciseCard=(ex:any,inSuperset=false)=>{const catItem=catalog.find((c:any)=>c.id===ex.catalog_exercise_id);const exType=exerciseTypeOf(ex,catItem);const exerciseKey=exerciseHistoryKey(ex.catalog_exercise_id||'',ex.name||'');const histRows=history[exerciseKey]||[];const lastPerf=buildLastPerformance(histRows);const plannedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).length;const progression=recommendNextTarget(lastPerf,plannedSets,ex.name,ex.muscle_group||'');const exThumb=getExerciseThumb(catItem);const showGuide=hasExerciseGuide(catItem);const guidePayload=getExerciseGuidePayload(catItem,ex.name);const cardKey=`${ex.id}:${ex.catalog_exercise_id||'n'}:${ex.name}`;const isEditingName=exerciseNameSearch?.exerciseId===ex.id;const nameQuery=isEditingName?exerciseNameSearch!.query:(ex.name||'');const nameSearchResults=isEditingName&&nameQuery.trim()?searchCatalog(builtinCatalog,{query:nameQuery,filters:{availableEquipment:hasEquipmentFilter(equipmentForSearch)?equipmentForSearch:undefined},limit:8}):[];const sortedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));const prevBySetId:Record<string,any>={};sortedSets.forEach((s:any)=>{prevBySetId[s.id]=previousFor(ex,s);});const weightUnit=profileDraft?.units_preference==='metric'?'kg':'lb';return <div className={`card exercise-card${inSuperset?' in-superset':''}`} key={cardKey}>
+ const renderExerciseCard=(ex:any,inSuperset=false)=>{const catItem=catalog.find((c:any)=>c.id===ex.catalog_exercise_id);const exType=exerciseTypeOf(ex,catItem);const aliases=exerciseHistoryAliases(ex.catalog_exercise_id||'',ex.name||'');const histRows=aliases.flatMap((ek)=>history[ek]||[]);const lastPerf=buildLastPerformance(histRows);const plannedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).length;const progression=recommendNextTarget(lastPerf,plannedSets,ex.name,ex.muscle_group||'');const exThumb=getExerciseThumb(catItem);const showGuide=hasExerciseGuide(catItem);const guidePayload=getExerciseGuidePayload(catItem,ex.name);const cardKey=`${ex.id}:${ex.catalog_exercise_id||'n'}:${ex.name}`;const isEditingName=exerciseNameSearch?.exerciseId===ex.id;const nameQuery=isEditingName?exerciseNameSearch!.query:(ex.name||'');const nameSearchResults=isEditingName&&nameQuery.trim()?searchCatalog(builtinCatalog,{query:nameQuery,filters:{availableEquipment:hasEquipmentFilter(equipmentForSearch)?equipmentForSearch:undefined},limit:8}):[];const sortedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));const prevBySetId:Record<string,any>={};sortedSets.forEach((s:any)=>{prevBySetId[s.id]=previousFor(ex,s);});const weightUnit=profileDraft?.units_preference==='metric'?'kg':'lb';return <div className={`card exercise-card${inSuperset?' in-superset':''}`} key={cardKey}>
         <div className="exercise-head"><div className="exercise-head-main">{exThumb&&(showGuide&&guidePayload?<button type="button" className="exercise-card-thumb-btn" title={guidePayload.hasVideo?"Watch form":"Form guide"} onClick={()=>setExerciseGuide(guidePayload)}><img className="exercise-card-thumb" src={exThumb} alt="" loading="lazy" referrerPolicy="no-referrer"/></button>:<img className="exercise-card-thumb" src={exThumb} alt="" loading="lazy" referrerPolicy="no-referrer"/>)}<div className="exercise-meta">{canEdit()?<>
           <div className="exercise-title-row">
             <div className="typeahead-wrap exercise-name-wrap"><textarea className="exercise-name" rows={1} key={`${cardKey}-name`} value={nameQuery} title="Type to search catalog — pick a match or blur to save custom name" onFocus={()=>setExerciseNameSearch({exerciseId:ex.id,query:ex.name||''})} onChange={e=>setExerciseNameSearch({exerciseId:ex.id,query:e.target.value})} onBlur={e=>{const v=e.target.value.trim();setTimeout(()=>{if(namePickRef.current){namePickRef.current=false;return;}setExerciseNameSearch((cur:any)=>cur?.exerciseId===ex.id?null:cur);if(v&&v!==ex.name)updateExerciseField(ex,'name',v);},180);}} onKeyDown={e=>{if(e.key==='Escape')setExerciseNameSearch(null);}}/>{isEditingName&&nameQuery.trim()&&nameSearchResults.length>0&&<div className="typeahead-menu exercise-name-menu">{nameSearchResults.map((item:any)=><button type="button" key={item.id} className="typeahead-item catalog-search-item" onMouseDown={ev=>ev.preventDefault()} onClick={()=>{namePickRef.current=true;setExerciseNameSearch(null);replaceExerciseWithCatalog(ex,item);}}>{getExerciseThumb(item)&&<img className="catalog-search-thumb" src={getExerciseThumb(item)} alt="" loading="lazy" referrerPolicy="no-referrer"/>}<span className="catalog-search-body"><b>{item.name}</b><span className="muted">{catalogResultMeta(item)}</span></span></button>)}</div>}{isEditingName&&nameQuery.trim()&&!nameSearchResults.length&&<div className="typeahead-menu exercise-name-menu"><p className="muted typeahead-empty">No catalog matches — blur to keep a custom name</p></div>}</div>
@@ -862,7 +978,7 @@ const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sor
  </header>
  <div className="app-shell" key={session?.user?.id||'signed-out'}>
  <main className="main page-main">
-  {appNav==='Dashboard'&&<section className="dashboard"><div className="dash-hero"><h1>{greeting}, {displayName||'there'}</h1><p className="muted">Your wellness dashboard for {today()}.</p></div><div className="dash-grid"><div className="dash-card dash-featured"><div className="dash-card-head"><h2>Today&apos;s Workout</h2><span className="badge">{todayDayLabel}</span></div>{todayWorkout?<><p className="dash-title">{todayWorkout.day_label} · {todayWorkout.workout_type}</p><p className="muted">Week {week} · {workoutExerciseCount(todayWorkout)} exercises planned</p><div className="actions" style={{marginTop:10}}><button className="btn green" onClick={()=>{setActiveWorkout(todayWorkout.id);setTrainingSubNav('personal');setAppNav('Training');}}>Start Training</button></div></>:program?<><p className="muted">No workout scheduled for {todayDayLabel} this week.</p><button className="btn secondary" onClick={()=>goNav('Training')}>View program</button></>:<><p className="muted">Create a program to see today&apos;s workout.</p><button className="btn green" onClick={()=>{setTrainingSubNav('setup');setShowProgramSetup(true);setAppNav('Training');}}>Set up program</button></>}</div>{teams.length>0&&activeTeam&&<div className="dash-card dash-accent"><div className="dash-card-head"><h2>Team Compliance</h2><span className="badge">{teamCompliancePct}%</span></div><p className="dash-title">{activeTeam.name}</p><div className="dash-metrics"><div><b>{teamActiveCount}/{members.length||0}</b><span className="muted">Active (7d)</span></div><div><b>{teamTotalSets}</b><span className="muted">Team sets</span></div></div><button className="btn secondary" style={{marginTop:10}} onClick={()=>goNav('Team')}>View team</button></div>}<div className="dash-card"><div className="dash-card-head"><h2>Weekly Progress</h2><span className="badge">{weeklyWorkoutDays} days</span></div><div className="dash-metrics"><div><b>{weeklySetCount}</b><span className="muted">Sets logged (7d)</span></div><div><b>{todaySetCount}</b><span className="muted">Sets today</span></div></div><button className="btn secondary" style={{marginTop:10}} onClick={()=>goNav('Progress')}>View history</button></div><div className="dash-card"><div className="dash-card-head"><h2>Nutrition</h2><span className="badge">Soon</span></div><p className="muted">Daily macros, meals, and hydration will appear here.</p><div className="dash-placeholder"><span>Calories —</span><span>Protein —</span><span>Carbs —</span><span>Fats —</span></div></div><div className="dash-card dash-accent"><div className="dash-card-head"><h2>AI Coach Insight</h2><span className="badge">Preview</span></div><p className="muted">Personalized coaching based on your training, nutrition, and recovery is coming soon.</p><p className="dash-insight">&ldquo;Stay consistent this week. Log today&apos;s sets to build your progress baseline.&rdquo;</p></div></div></section>}
+  {appNav==='Dashboard'&&<section className="dashboard"><div className="dash-hero"><h1>{greeting}, {displayName||'there'}</h1><p className="muted">Your wellness dashboard for {today()}.</p></div><div className="dash-grid"><div className="dash-card dash-featured"><div className="dash-card-head"><h2>Today&apos;s Workout</h2><span className="badge">{todayDayLabel}</span></div>{todayWorkout?<><p className="dash-title">{todayWorkout.day_label} · {todayWorkout.workout_type}</p><p className="muted">Week {calendarWeek} · {workoutExerciseCount(todayWorkout)} exercises planned</p><div className="actions" style={{marginTop:10}}><button className="btn green" onClick={()=>{setActiveWorkout(todayWorkout.id);setWeek(calendarWeek);setLogDate(today());setTrainingSubNav('personal');setAppNav('Training');}}>Start Training</button></div></>:program?<><p className="muted">No workout scheduled for {todayDayLabel} this week.</p><button className="btn secondary" onClick={()=>goNav('Training')}>View program</button></>:<><p className="muted">Create a program to see today&apos;s workout.</p><button className="btn green" onClick={()=>{setTrainingSubNav('setup');setShowProgramSetup(true);setAppNav('Training');}}>Set up program</button></>}</div>{teams.length>0&&activeTeam&&<div className="dash-card dash-accent"><div className="dash-card-head"><h2>Team Compliance</h2><span className="badge">{teamCompliancePct}%</span></div><p className="dash-title">{activeTeam.name}</p><div className="dash-metrics"><div><b>{teamActiveCount}/{members.length||0}</b><span className="muted">Active (7d)</span></div><div><b>{teamTotalSets}</b><span className="muted">Team sets</span></div></div><button className="btn secondary" style={{marginTop:10}} onClick={()=>goNav('Team')}>View team</button></div>}<div className="dash-card"><div className="dash-card-head"><h2>Weekly Progress</h2><span className="badge">{weeklyWorkoutDays} days</span></div><div className="dash-metrics"><div><b>{weeklySetCount}</b><span className="muted">Sets logged (7d)</span></div><div><b>{todaySetCount}</b><span className="muted">Sets today</span></div></div><button className="btn secondary" style={{marginTop:10}} onClick={()=>goNav('Progress')}>View history</button></div><div className="dash-card"><div className="dash-card-head"><h2>Nutrition</h2><span className="badge">Soon</span></div><p className="muted">Daily macros, meals, and hydration will appear here.</p><div className="dash-placeholder"><span>Calories —</span><span>Protein —</span><span>Carbs —</span><span>Fats —</span></div></div><div className="dash-card dash-accent"><div className="dash-card-head"><h2>AI Coach Insight</h2><span className="badge">Preview</span></div><p className="muted">Personalized coaching based on your training, nutrition, and recovery is coming soon.</p><p className="dash-insight">&ldquo;Stay consistent this week. Log today&apos;s sets to build your progress baseline.&rdquo;</p></div></div></section>}
   {appNav==='Nutrition'&&<section><div className="card"><h2>Nutrition</h2><p className="muted">Macro tracking and meal logging will live here in a future release.</p></div></section>}
   {appNav==='AI Coach'&&<section><div className="card dash-accent"><h2>AI Coach</h2><p className="muted">Your BuiltIQ wellness coach will analyze workouts, nutrition, and recovery to give safe, practical guidance.</p><p className="dash-insight">Coming soon: readiness check-ins, workout adjustments, and weekly coaching summaries.</p></div></section>}
   {appNav==='Progress'&&<section><div className="card"><div className="topline" style={{justifyContent:'space-between'}}><h2>Progress</h2><button className="btn small secondary" onClick={loadProgressLogs}>Refresh</button></div><p className="muted">Saved lift history uses snapshots, so past workouts stay accurate even if the program template changes later.</p></div>{progressDays.length===0&&<div className="card"><p className="muted">No completed sets yet. Log a workout in Training to build history.</p></div>}{progressDays.map((day:any)=><div className="card" key={day.date}><h3>{day.date}{day.label?` · ${day.label}`:''}{day.type?` · ${day.type}`:''}</h3>{Object.values(day.rows.reduce((acc:any,row:any)=>{const name=logExerciseName(row);if(!acc[name]) acc[name]=[]; acc[name].push(row);return acc;},{})).map((rows:any)=>{const label=logExerciseName(rows[0]);const exType=(rows[0].snapshot_exercise_type||'strength') as any;return <div key={label} className="history-row"><b>{label}</b><span className="muted">{rows.sort((a:any,b:any)=>(logSetNumber(a)-logSetNumber(b))).map((r:any)=>formatLogSummary(r,exType)).join(' · ')}</span></div>})}</div>)}</section>}
@@ -878,8 +994,9 @@ const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sor
     {!viewingMember&&canEdit()&&<div className="applybox"><label>When changing workout structure, apply edits to:</label><select value={applyScope} onChange={e=>setApplyScope(e.target.value as any)}><option value="future">This week and all future weeks</option><option value="current">This workout only</option></select></div>}
     <div className="stats">{trainingModeStat}<div className="stat"><span className="muted">Week</span><b>{week}</b></div><div className="stat"><span className="muted">Sets</span><b>{planned}</b></div><div className="stat"><span className="muted">Logged</span><b>{logged}</b></div></div>
     {program?.focus_muscles?.length>0&&<p className="muted">Program focus: <b>{program.focus_muscles.join(', ')}</b></p>}{(program?.program_summary||program?.coaching_notes||aiSummary||aiCoachingNotes)&&<div className="program-ai-summary-box training-program-notes"><label>AI program notes</label>{(program?.program_summary||aiSummary)&&<p className="program-ai-summary">{program?.program_summary||aiSummary}</p>}{(program?.coaching_notes||aiCoachingNotes)&&<><label style={{marginTop:10}}>Coaching notes</label><p className="program-ai-coaching">{program?.coaching_notes||aiCoachingNotes}</p></>}</div>}
-    <div className="row"><div><label>Date</label><input type="date" value={logDate} onChange={e=>setLogDate(e.target.value)}/></div><div><label>Week</label><select value={week} onChange={e=>setWeek(Number(e.target.value))}>{Array.from({length:program?.weeks||weeks},(_,i)=><option key={i+1} value={i+1}>Week {i+1}</option>)}</select></div></div>
-    <div className="tabs">{(program?.st_workouts||[]).filter((w:any)=>w.week===week).sort((a:any,b:any)=>a.day_order-b.day_order).map((w:any)=><button key={w.id} className={workout?.id===w.id?'active':''} onClick={()=>setActiveWorkout(w.id)}>{w.day_label} · {w.workout_type}</button>)}</div>
+    <div className="row"><div><label>Date</label><input type="date" value={logDate} onChange={e=>onLogDateChange(e.target.value)}/></div><div><label>Week</label><select value={week} onChange={e=>onWeekChange(Number(e.target.value))}>{Array.from({length:program?.weeks||weeks},(_,i)=><option key={i+1} value={i+1}>Week {i+1}{program?` · ${weekRangeLabel(resolveProgramStartDate(program),i+1).slice(5).replace(' → ','–')}`:''}</option>)}</select></div>{program&&<div><label>Program start</label><input type="date" value={resolveProgramStartDate(program)} onChange={e=>updateProgramStartDate(e.target.value)} disabled={!canEdit()}/></div>}</div>
+    {program&&<p className="muted" style={{marginTop:4}}>Week {week} covers {weekRangeLabel(resolveProgramStartDate(program),week)}. Logging on {logDate} ({dayLabelFromYmd(logDate)}).</p>}
+    <div className="tabs">{(program?.st_workouts||[]).filter((w:any)=>w.week===week).sort((a:any,b:any)=>a.day_order-b.day_order).map((w:any)=><button key={w.id} className={workout?.id===w.id?'active':''} onClick={()=>onSelectWorkoutDay(w)}>{w.day_label} · {w.workout_type}<span className="muted" style={{marginLeft:6}}>{dateForWeekAndDay(resolveProgramStartDate(program),week,w.day_label).slice(5)}</span></button>)}</div>
     {!program&&<div className="card"><h2>No program yet</h2><p className="muted">Open the Program Setup tab to generate your first plan.</p><button className="btn secondary" onClick={()=>setTrainingSubNav('setup')}>Program Setup</button></div>}
     {workout&&<div className="card"><div className="topline" style={{justifyContent:'space-between'}}><h2>{workout.day_label} · {workout.workout_type}</h2><span className="muted">{workoutExerciseCount(workout)} exercises · Week {week}</span></div></div>}
     {workout&&SECTIONS.map((sec:any)=>{

@@ -647,3 +647,30 @@ Stretching is currently incidental. Athletes need predictable hip, shoulder, and
 - Schedule wizard and `scheduleSuggestion.ts` gain Mobility day type
 - `selectMobilityCatalogForAi()` biases stretch picks from imported catalog
 - Documented in BIQ-0016
+
+---
+
+## Decision 025 - Program Week Calendar Alignment
+
+Date: 2026-07-13  
+Status: Accepted  
+Category: Training UX
+
+### Decision
+
+Store `st_programs.start_date` as the calendar day Week 1 begins. Map log dates to week numbers with `floor((date - start_date) / 7) + 1`. Keep Training Date, Week, and day-of-week tabs synchronized so logging always targets the correct program week.
+
+### Reason
+
+Week numbers alone do not tell users which calendar days belong to Week 2 vs Week 3. Without alignment, last-session history and Copy last look broken when the selected date does not match the selected week.
+
+### Alternatives Considered
+
+- Use only `st_program_assignments.start_date` — deferred; personal programs also need an anchor on the program row
+- Infer week from first logged set — rejected; too implicit and breaks empty weeks
+
+### Impact
+
+- New programs set `start_date` to generation day
+- Existing programs backfill from `created_at`
+- Documented in BIQ-0022
