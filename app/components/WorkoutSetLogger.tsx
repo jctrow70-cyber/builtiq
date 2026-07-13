@@ -166,12 +166,22 @@ function SetLogCard({
     onSaveField(set.id, key, value);
   };
 
+  const resolvePrevHint = (key: string) => {
+    if (!prev) return undefined;
+    if (key === '_assist_weight') {
+      const a = parseAssistFromNotes(String(prev.log_notes || ''));
+      return a || undefined;
+    }
+    if (prev[key]) return String(prev[key]);
+    return undefined;
+  };
+
   const renderField = (f: (typeof layout.primary)[0]) => (
     <FieldCard
       key={f.key}
       field={f}
       value={resolveValue(f.key)}
-      prevHint={prev?.[f.key] ? String(prev[f.key]) : undefined}
+      prevHint={resolvePrevHint(f.key)}
       unitLabel={unitFor(f)}
       disabled={!canLog && f.key !== 'log_notes'}
       onBlur={(v) => saveVirtual(f.key, v)}

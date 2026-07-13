@@ -857,6 +857,7 @@ export async function persistAiProgramPlan(
     visibility: config.mode,
     name: plan.program_name || config.programName || 'AI Strength Program',
     weeks: config.weeks,
+    start_date: new Date().toISOString().slice(0, 10),
     focus_muscles: config.focusMuscles?.length ? config.focusMuscles : null,
     generation_prompt: config.prompt.trim(),
     generation_method: 'ai',

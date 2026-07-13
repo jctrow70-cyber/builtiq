@@ -2039,3 +2039,68 @@ None.
 ```text
 BIQ-0021 Consolidate open feature branches into main
 ```
+
+---
+
+## BIQ-0022 - Reliable Set Logging, Copy Last, and Week/Date Alignment
+
+Date: 2026-07-13  
+Branch: cursor/fix-logging-week-dates-976f  
+Status: **In Progress**
+
+### Summary
+
+Fixed inconsistent set/reps persistence caused by stale React state during sequential upserts (including **Copy last** wiping earlier fields). Aligned program week numbers with calendar dates via `st_programs.start_date`, so Training date, week selector, and day tabs stay in sync. Improved previous-session lookup so next-week logging shows last weight/reps and Copy last fills them correctly.
+
+### Purpose
+
+Users reported logged sets/reps not sticking, Copy last not filling prior values, and generated plans not lining up with real calendar weeks.
+
+### Changes
+
+- **Atomic log upserts** — `upsertSetLog` merges from `logsRef` and writes all fields in one DB upsert; Copy last no longer loops field-by-field
+- **History matching** — index prior logs by catalog ID *and* exercise name; fallback by set number / latest performance
+- **Week ↔ date** — `start_date` on programs; changing date updates week; changing week/day tab updates date; day tabs show MM-DD
+- **Program start control** — editable Program start date on Training (editors)
+- New helpers in `lib/training/programCalendar.ts`
+
+### Files changed
+
+- `app/page.tsx`
+- `app/components/WorkoutSetLogger.tsx`
+- `lib/training/programCalendar.ts` (new)
+- `lib/training/aiProgramPlan.ts`
+- `supabase/migrations/20250713_016_program_start_date.sql` (new)
+- `CHANGELOG.md`
+- `DECISIONS.md`
+
+### Database changes
+
+Run in Supabase SQL Editor:
+
+`supabase/migrations/20250713_016_program_start_date.sql`
+
+- Adds `st_programs.start_date date`
+- Backfills from `created_at` for existing programs
+
+### Testing steps
+
+1. Run migration `20250713_016_program_start_date.sql`
+2. Sign in → Training → log weight then reps on a set; refresh page; confirm both values remain
+3. Tap **Copy last** on the same exercise in a later week/date; confirm weight *and* reps populate
+4. Change **Date** → Week selector updates; change **Week** → Date moves by 7 days keeping weekday
+5. Tap a day tab (e.g. Fri) → Date jumps to that Friday in the selected week
+6. Generate a new program → Program start defaults to today; Week 1 matches that week
+7. Mobile: date/week controls usable; logs still save
+8. `npx tsc --noEmit` passes
+
+### Known issues
+
+- Existing programs use `created_at` as start until Program start is edited
+- Copy last still requires a prior log before the selected date (same-day earlier sessions are not used)
+
+### Recommended commit message
+
+```text
+BIQ-0022 Fix set log persistence, Copy last, and week/date alignment
+```
