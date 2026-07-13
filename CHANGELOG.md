@@ -2255,3 +2255,60 @@ Added Windows setup shortcuts so developers do not need to manually fix Node/npm
 ```text
 BIQ-0025 Add Windows one-click dev and import setup
 ```
+
+---
+
+## BIQ-0026 - Progress PRs and Strength Volume Trends
+
+Date: 2026-07-13  
+Branch: cursor/progress-prs-trends-7d3b  
+Status: Completed
+
+### Summary
+
+Added personal record tracking and an 8-week strength volume trend chart to the Progress tab, using completed set snapshots (catalog ID + exercise name keys).
+
+### Purpose
+
+Users need to see improvement over time, not only a flat workout history list. Phase 4 analytics starts with PR detection and weekly volume trends before full charting and bodyweight tracking.
+
+### Changes
+
+- **`lib/training/progressAnalytics.ts`** — PR computation (max weight, est. 1RM Epley, best volume), Mon–Sun weekly volume buckets, summary stats
+- **`app/components/ProgressInsights.tsx`** — Strength overview, PR list with “New PR” badges (14d), CSS bar chart for weekly volume
+- **Progress tab** — Insights section above existing workout history; history relabeled “Workout history”
+- Increased progress log fetch limit to 500 sets
+
+### Files changed
+
+- `lib/training/progressAnalytics.ts` (new)
+- `app/components/ProgressInsights.tsx` (new)
+- `app/page.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+- `ROADMAP.md`
+
+### Database changes
+
+None.
+
+### Testing steps
+
+1. Log completed strength sets with weight + reps across multiple weeks
+2. Open **Progress** — confirm Strength overview metrics
+3. Confirm **Personal records** shows best lifts per exercise; recent PRs get “New PR” badge
+4. Confirm **Weekly volume** bar chart shows last 8 Mon–Sun weeks
+5. **Workout history** section still lists day-by-day sets below insights
+6. Mobile — chart uses 4-column grid on narrow screens
+
+### Known issues
+
+- Volume uses logged numbers as entered (lb assumed in labels; metric preference shows kg label only)
+- Cardio/mobility sets excluded from PR/volume analytics (strength-like types only)
+- No per-exercise detail drill-down yet
+
+### Recommended commit message
+
+```text
+BIQ-0026 Add Progress personal records and weekly volume trends
+```
