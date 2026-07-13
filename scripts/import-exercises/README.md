@@ -54,11 +54,22 @@ Output: `scripts/import-exercises/data/free-exercise-db/builtiq-import.json`
 ### 3. Dry-run, then live import
 
 ```powershell
-npm.cmd run import:exercises:dry -- --file scripts/import-exercises/data/free-exercise-db/builtiq-import.json
-npm.cmd run import:exercises -- --file scripts/import-exercises/data/free-exercise-db/builtiq-import.json
+npm.cmd run import:exercises:production:dry
+npm.cmd run import:exercises:production
 ```
 
-### 4. Verify in Supabase
+`import:exercises:production` converts the dataset and imports with `--enrich-legacy` so the 13 exact-name BIQ-0005 staples (e.g. Goblet Squat, Dumbbell Bench Press) gain form guides and `external_source` instead of being skipped.
+
+### 4. Seed exercise alternatives (after catalog import)
+
+```powershell
+npm.cmd run import:alternatives:dry
+npm.cmd run import:alternatives
+```
+
+Also run migration `20250713_017_exercise_alternatives_seed.sql` for curated name-based pairs.
+
+### 5. Verify in Supabase
 
 ```sql
 select count(*) from st_exercise_catalog where external_source = 'free_exercise_db';
@@ -131,7 +142,8 @@ npm run import:exercises -- --file path/to/your-dataset.json
 - **Upsert by** `(external_source, external_id)` — no duplicate imports.
 - **Only writes** `is_system = true`, `user_id = null` rows.
 - **Never updates** user custom exercises (`user_id IS NOT NULL`).
-- **Preserves BIQ-0005 seed rows** — skips import when name matches a legacy system exercise without `external_source`.
+- **Preserves BIQ-0005 seed rows** — by default skips import when name matches a legacy system exercise without `external_source`
+- **`--enrich-legacy`** — updates matching BIQ-0005 seed rows with import data (images, instructions, `external_source`) instead of skipping; used by `import:exercises:production`
 - **Dry-run** validates mapping and prints counts before live import.
 
 ## Report output

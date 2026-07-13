@@ -39,9 +39,11 @@ function loadEnvFiles() {
 function parseArgs(argv: string[]) {
   let file = '';
   let dryRun = false;
+  let enrichLegacy = false;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--dry-run' || a === '-n') dryRun = true;
+    else if (a === '--enrich-legacy') enrichLegacy = true;
     else if ((a === '--file' || a === '-f') && argv[i + 1]) file = argv[++i];
     else if (a === '--help' || a === '-h') {
       console.log(`BuiltIQ exercise import (BIQ-0013)
@@ -49,6 +51,7 @@ function parseArgs(argv: string[]) {
 Options:
   --file, -f <path>   JSON array or JSONL file (required)
   --dry-run, -n       Validate and log actions without writing
+  --enrich-legacy     Update BIQ-0005 seed rows on exact name match instead of skipping
   --help, -h          Show this help
 
 Env:
@@ -58,7 +61,7 @@ Env:
       process.exit(0);
     }
   }
-  return { file, dryRun };
+  return { file, dryRun, enrichLegacy };
 }
 
 function loadRecords(filePath: string): ExternalExerciseRecord[] {
@@ -153,7 +156,8 @@ async function fetchExistingForRecords(
 
 function planActions(
   records: ExternalExerciseRecord[],
-  existing: Awaited<ReturnType<typeof fetchExistingForRecords>>
+  existing: Awaited<ReturnType<typeof fetchExistingForRecords>>,
+  enrichLegacy: boolean
 ): { actions: ImportAction[]; stats: ImportStats } {
   const stats = emptyStats();
   stats.totalFound = records.length;
@@ -205,6 +209,10 @@ function planActions(
 
     const legacy = existing.legacyNames.get(mapped.name.toLowerCase());
     if (legacy && !legacy.user_id) {
+      if (enrichLegacy) {
+        actions.push({ kind: 'update', id: legacy.id, row: mapped });
+        return;
+      }
       bumpSkip(stats, 'legacy_system_name_preserved');
       actions.push({
         kind: 'skip',
@@ -287,7 +295,7 @@ function printReport(stats: ImportStats, dryRun: boolean) {
 
 async function main() {
   loadEnvFiles();
-  const { file, dryRun } = parseArgs(process.argv.slice(2));
+  const { file, dryRun, enrichLegacy } = parseArgs(process.argv.slice(2));
   if (!file) {
     console.error('Error: --file <path> is required. Use --help for usage.');
     process.exit(1);
@@ -317,7 +325,7 @@ async function main() {
     ? await fetchExistingForRecords(supabase, records)
     : { byExternal: new Map(), legacyNames: new Map() };
 
-  const { actions, stats } = planActions(records, existing);
+  const { actions, stats } = planActions(records, existing, enrichLegacy);
 
   if (supabase) {
     await applyActions(supabase, actions, stats, dryRun);

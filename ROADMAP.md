@@ -225,15 +225,24 @@ See `CHANGELOG.md` BIQ-0016 for full scope, testing, and file list.
 
 ### Active change request
 
-**BIQ-0013 — Exercise Intelligence Database** (In Progress — import pipeline scaffolded)
+**BIQ-0013 — Exercise Intelligence Database** (Completed)
 
 | Part | Deliverable |
 |------|-------------|
 | 1 | Import-ready fields (`external_source`, `external_id`, `media_url`, instructions) |
 | 2 | BuiltIQ intelligence columns (movement, goal, progression, volume %) |
-| 3 | `st_exercise_alternatives` substitution graph |
+| 3 | `st_exercise_alternatives` substitution graph + seed scripts |
 | 4 | `coaching_metadata` JSONB for AI programming |
-| 5 | Bulk import pipeline (CLI, dry-run, upsert) — **scaffolded** |
+| 5 | Bulk import pipeline — Free Exercise DB (873 exercises) via `import:exercises:production` |
+
+Run on each Supabase environment:
+
+```bash
+npm run import:exercises:production
+npm run import:alternatives
+```
+
+See `CHANGELOG.md` BIQ-0013 and BIQ-0024 for full scope.
 
 **BIQ-0014 — AI Program Generator** (Completed)
 
@@ -269,15 +278,17 @@ See `CHANGELOG.md` BIQ-0016 for full scope, testing, and file list.
 
 ### Next priorities
 
-1. AI program regeneration / edit-from-prompt for existing programs
-2. PR detection and strength trends on Progress tab
-3. Nutrition MVP placeholder → functional tracking
-4. AI Coach hook-up (consumes `coaching_metadata` + program context)
-5. Split `page.tsx` into focused components
+1. Run `import:exercises:production` + `import:alternatives` on production Supabase (BIQ-0013 operational step)
+2. AI program regeneration / edit-from-prompt for existing programs
+3. PR detection and strength trends on Progress tab
+4. Nutrition MVP placeholder → functional tracking
+5. AI Coach hook-up (consumes `coaching_metadata` + program context)
+6. Split `page.tsx` into focused components
 
 Run pending Supabase migrations on each environment before testing:
 
 - `20250707_001` through `20250707_009` (see prior list)
 - `20250708_010_exercise_types_and_program_assignments.sql` (BIQ-0012)
 - `20250708_011_exercise_intelligence_database.sql` (BIQ-0013)
+- `20250713_017_exercise_alternatives_seed.sql` (BIQ-0013 / BIQ-0024)
 - `20250709_013_program_generator_v2.sql` (BIQ-0014)

@@ -1154,7 +1154,7 @@ Run migration `20250708_010_exercise_types_and_program_assignments.sql` in Supab
 
 Date: 2026-07-08  
 Branch: main  
-Status: **In Progress** (schema + import pipeline scaffolded; production dataset import not run)
+Status: **Completed** (production import pipeline ready; run `import:exercises:production` on each Supabase environment)
 
 > **Note:** Requestor referenced BIQ-0008 for import; official **BIQ-0008** is supersets (unchanged). Catalog intelligence is **BIQ-0013**.
 
@@ -2161,4 +2161,72 @@ None.
 
 ```text
 BIQ-0023 Use mm/dd/yy dates and Monday–Sunday week alignment
+```
+
+---
+
+## BIQ-0024 - Complete Exercise Intelligence Database (BIQ-0013)
+
+Date: 2026-07-13  
+Branch: cursor/finish-biq-0013-7d3b  
+Status: Completed
+
+### Summary
+
+Finished BIQ-0013 by hardening the production import pipeline for the Free Exercise DB (873 exercises), enriching legacy BIQ-0005 seed rows, inferring `training_goal` and richer `coaching_metadata`, and adding curated + auto-generated exercise alternatives.
+
+### Purpose
+
+BIQ-0013 schema and CLI were scaffolded but production data was never imported. This change delivers the full operational workflow so each environment can load 800+ exercises with form guides, intelligence fields, and substitution links.
+
+### Changes
+
+- **Production import commands** — `import:exercises:production` and `import:exercises:production:dry` (convert + import in one step)
+- **Legacy enrichment** — `--enrich-legacy` updates 13 exact-name BIQ-0005 staples with `external_source`, images, and instructions instead of skipping
+- **Richer converter** — `freeExerciseDb.ts` infers `training_goal`, `programming_role`, `fatigue_cost`, `skill_demand`, and `rep_range_hints` in `coaching_metadata`
+- **Alternatives pipeline** — `importAlternatives.ts` + `import:alternatives` scripts; migration `20250713_017_exercise_alternatives_seed.sql` for curated pairs
+- **Docs** — updated `scripts/import-exercises/README.md`
+
+### Files changed
+
+- `scripts/import-exercises/importExercises.ts`
+- `scripts/import-exercises/importAlternatives.ts` (new)
+- `scripts/import-exercises/sources/freeExerciseDb.ts`
+- `scripts/import-exercises/README.md`
+- `supabase/migrations/20250713_017_exercise_alternatives_seed.sql` (new)
+- `package.json`
+- `CHANGELOG.md`
+- `ROADMAP.md`
+
+### Database changes
+
+- New migration: `20250713_017_exercise_alternatives_seed.sql` (curated substitution rows)
+
+### Production import steps (run per environment)
+
+1. Apply migrations through `20250713_017`
+2. Set `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in `.env.local`
+3. `npm run import:exercises:production:dry` — expect 873 records, 0 errors
+4. `npm run import:exercises:production` — inserts ~860 new rows; enriches ~13 legacy staples
+5. `npm run import:alternatives` — seeds curated + movement-pattern alternatives
+6. Verify: `select count(*) from st_exercise_catalog where external_source = 'free_exercise_db';`
+
+### Testing steps
+
+1. `npm run import:exercises:production:dry` passes with 873 records, 0 errors
+2. `npx tsc --noEmit` passes
+3. After live import: training search returns imported exercises with thumbnails
+4. Legacy staples (Goblet Squat, Dumbbell Bench Press, etc.) show form guides after `--enrich-legacy`
+5. `st_exercise_alternatives` contains Bench Press → Dumbbell Bench Press and related pairs
+
+### Known issues
+
+- Live import requires service role key (not run in cloud agent environment)
+- Auto-generated alternatives can be broad; curated pairs are preferred for common staples
+- `coaching_metadata` is stored but not yet consumed by AI Coach prompts (future BIQ)
+
+### Recommended commit message
+
+```text
+BIQ-0024 Complete exercise intelligence import pipeline and alternatives
 ```
