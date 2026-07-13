@@ -2230,3 +2230,28 @@ BIQ-0013 schema and CLI were scaffolded but production data was never imported. 
 ```text
 BIQ-0024 Complete exercise intelligence import pipeline and alternatives
 ```
+
+---
+
+## BIQ-0025 - Windows One-Click Dev Setup
+
+Date: 2026-07-13  
+Branch: cursor/windows-setup-7d3b  
+Status: Completed
+
+### Summary
+
+Added Windows setup shortcuts so developers do not need to manually fix Node/npm PATH every session.
+
+### Changes
+
+- `scripts/setup-windows.ps1` — finds repo root, refreshes PATH, locates npm, runs `npm install`
+- `builtiq-setup.cmd` — double-click setup
+- `builtiq-import.cmd` — double-click exercise import (after `.env.local`)
+- `README.md` — Windows quick start section
+
+### Recommended commit message
+
+```text
+BIQ-0025 Add Windows one-click dev and import setup
+```
