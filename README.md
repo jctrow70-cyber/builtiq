@@ -83,3 +83,28 @@ Before coding, ask Cursor to:
 ```text
 Review README.md, ROADMAP.md, CHANGELOG.md, DECISIONS.md, and .cursorrules before making changes. Follow the BuiltIQ change management process. Create or use the next BIQ change number, document files changed, database changes, testing steps, and recommended commit message.
 ```
+
+## Windows quick start (one-time per machine)
+
+If `npm` is not recognized in PowerShell, use the repo setup script instead of fixing PATH manually each time:
+
+```powershell
+cd "C:\Users\YOU\path\to\builtiq"
+powershell -ExecutionPolicy Bypass -File scripts/setup-windows.ps1
+```
+
+Or **double-click** `builtiq-setup.cmd` in the repo root.
+
+**First time only:** install Node.js LTS if the script says it's missing:
+
+```powershell
+winget install OpenJS.NodeJS.LTS
+```
+
+Close PowerShell, open a new window, run `builtiq-setup.cmd` again.
+
+**Exercise import:** after `.env.local` has `SUPABASE_SERVICE_ROLE_KEY`, double-click `builtiq-import.cmd` or run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/setup-windows.ps1 -ImportExercises
+```
