@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createSupabaseFromRequest, requireAuthUser } from '../../../../lib/supabaseServer';
+import { isCatalogAdmin } from '../../../../lib/training/catalogAdmin';
 import {
   countGuidedCatalogRows,
   createServiceRoleSupabase,
@@ -13,9 +14,11 @@ export async function GET(request: Request) {
   const { user, error: authError } = await requireAuthUser(supabase, token);
   if (!user) return NextResponse.json({ error: authError || 'Unauthorized' }, { status: 401 });
 
-  const canImport = hasGuidedImportServerConfig();
+  const isAdmin = isCatalogAdmin(user);
+  const serverReady = hasGuidedImportServerConfig();
+  const canImport = isAdmin && serverReady;
   let guidedCount = 0;
-  if (canImport) {
+  if (serverReady) {
     try {
       const admin = createServiceRoleSupabase();
       guidedCount = await countGuidedCatalogRows(admin);
@@ -25,14 +28,17 @@ export async function GET(request: Request) {
   }
 
   return NextResponse.json({
+    isCatalogAdmin: isAdmin,
     canImport,
     guidedCount,
     expectedCount: 1324,
-    message: canImport
-      ? guidedCount > 0
-        ? `${guidedCount} guided exercises in your database. You can re-import to refresh.`
-        : 'Ready to import ~1,324 exercises with GIF demos and form guides.'
-      : 'Add SUPABASE_SERVICE_ROLE_KEY to your server environment (.env.local) to enable one-click import.',
+    message: !isAdmin
+      ? 'Catalog import is restricted to BuiltIQ admins.'
+      : canImport
+        ? guidedCount > 0
+          ? `${guidedCount} guided exercises in your database. You can re-import to refresh.`
+          : 'Ready to import ~1,324 exercises with GIF demos and form guides.'
+        : 'Add SUPABASE_SERVICE_ROLE_KEY to your server environment (.env.local) to enable one-click import.',
   });
 }
 
@@ -41,6 +47,10 @@ export async function POST(request: Request) {
   const { supabase, token } = createSupabaseFromRequest(request);
   const { user, error: authError } = await requireAuthUser(supabase, token);
   if (!user) return NextResponse.json({ error: authError || 'Unauthorized' }, { status: 401 });
+
+  if (!isCatalogAdmin(user)) {
+    return NextResponse.json({ error: 'Only BuiltIQ catalog admins can run imports.' }, { status: 403 });
+  }
 
   if (!hasGuidedImportServerConfig()) {
     return NextResponse.json(

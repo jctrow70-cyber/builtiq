@@ -2519,3 +2519,56 @@ None (uses existing `st_exercise_catalog` schema).
 ```text
 BIQ-0029 Add one-click guided library import without npm
 ```
+
+---
+
+## BIQ-0030 - Restrict guided catalog import to admins
+
+Date: 2026-07-15  
+Branch: cursor/superset-catalog-collapse-23ec  
+Status: Completed
+
+### Summary
+
+Guided library import remains a **shared system catalog** for all users, but the Settings import UI and API are now limited to emails listed in `BUILTIQ_CATALOG_ADMIN_EMAILS`.
+
+### Purpose
+
+User imported the guided library successfully but did not want normal users to see or run the import controls in Settings.
+
+### Changes
+
+- **`lib/training/catalogAdmin.ts`** — admin email allowlist helper
+- **`GET/POST /api/catalog/import-guided`** — returns `isCatalogAdmin`; POST requires admin
+- **Settings UI** — Guided Exercise Library card hidden unless `isCatalogAdmin`
+- **`.env.example` / README** — document `BUILTIQ_CATALOG_ADMIN_EMAILS`
+
+### Files changed
+
+- `lib/training/catalogAdmin.ts` (new)
+- `app/api/catalog/import-guided/route.ts`
+- `app/page.tsx`
+- `.env.example`
+- `README.md`
+- `CHANGELOG.md`
+
+### Database changes
+
+None.
+
+### Testing steps
+
+1. Set `BUILTIQ_CATALOG_ADMIN_EMAILS=your@email.com` in Vercel (Preview + Production), redeploy
+2. Sign in as admin → Settings shows Guided Exercise Library card
+3. Sign in as another user → card is hidden; POST import returns 403
+4. Both users can enable **Guided Library** in Profile and search imported exercises
+
+### Known issues
+
+- Admin list is env-based (no in-app admin UI yet)
+
+### Recommended commit message
+
+```text
+BIQ-0030 Restrict guided catalog import to admin emails
+```

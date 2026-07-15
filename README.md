@@ -115,7 +115,9 @@ If PowerShell shows *Constrained Language Mode*, use the `.cmd` files — not th
    NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
    SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+   BUILTIQ_CATALOG_ADMIN_EMAILS=your@email.com
    ```
+   On Vercel, add the same variables (including **Preview** if using preview deploys). Only emails in `BUILTIQ_CATALOG_ADMIN_EMAILS` see the Settings import card.
 2. Start the app (`builtiq-npm.cmd run dev` or your hosted deploy with the same env vars).
 3. Sign in → **Settings** → **Guided Exercise Library** → click **Import Guided Library** (~1,324 exercises with GIF demos).
 
