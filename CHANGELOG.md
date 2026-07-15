@@ -2312,3 +2312,123 @@ None.
 ```text
 BIQ-0026 Add Progress personal records and weekly volume trends
 ```
+
+---
+
+## BIQ-0027 - Team Training Coach Platform Architecture
+
+Date: 2026-07-15  
+Branch: `preview/team-coach-biq-0027` (also `cursor/team-coach-architecture-7d3b`)  
+Status: **Preview branch only** — reverted from `main` pending preview QA (see BIQ-0028)
+
+### Summary
+
+Redesigned Team Training around the coach workflow while preserving a separate athlete experience. Personal Training remains the athlete logging view; Team Training becomes a coach management platform (dashboard, roster, athlete performance dashboard, structured program assignment) built on the same workout engine and set-log pipeline.
+
+### Purpose
+
+Support scalable athletic program management — high school teams, college programs, and performance facilities — without mirroring Personal Training UI for coaches or exposing other athletes’ data to members.
+
+### Changes
+
+- Added `lib/training/teamCoach/` module: types, permissions, program resolution, workout status, coach metrics
+- Added coach UI: `CoachTeamDashboard`, `CoachRoster`, `AthleteCoachDashboard`, `ProgramAssignmentPanel`, `TeamAthleteView`
+- Coaches see team overview metrics, alerts, roster cards, and per-athlete dashboards with strength trends
+- Athletes on Team Training see plan toggle + start workout (routes to Personal Training logger)
+- Four assignment modes surfaced via structured assignment panel (AI individual generate = future placeholder)
+- Shared permissions via `canAccessCoachPlatform`, `canLogWorkout`, `canEditProgramTemplate`
+
+### Files Changed
+
+- `lib/training/teamCoach/types.ts` (new)
+- `lib/training/teamCoach/permissions.ts` (new)
+- `lib/training/teamCoach/programResolution.ts` (new)
+- `lib/training/teamCoach/workoutStatus.ts` (new)
+- `lib/training/teamCoach/coachMetrics.ts` (new)
+- `lib/training/teamCoach/index.ts` (new)
+- `app/components/CoachTeamDashboard.tsx` (new)
+- `app/components/CoachRoster.tsx` (new)
+- `app/components/AthleteCoachDashboard.tsx` (new)
+- `app/components/ProgramAssignmentPanel.tsx` (new)
+- `app/components/TeamAthleteView.tsx` (new)
+- `app/page.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database changes
+
+None.
+
+### Testing steps
+
+1. Check out `preview/team-coach-biq-0027` (or deploy that branch on Vercel)
+2. Sign in as team **owner** or **editor**
+3. Open **Team** — confirm coach dashboard shows athlete count, training today, compliance %, PRs, alerts
+4. Confirm roster cards show status, program, compliance, PR/notes indicators
+5. Click an athlete — athlete dashboard with program, assignment panel (4 options), strength trends
+6. **Open workout** — coach can co-log sets; athlete log updates shared `st_set_logs`
+7. Sign in as **member** — Team Training shows athlete-only view (plan toggle, start workout); no other athletes’ roster
+8. Member **Start my workout** — switches to Personal Training logger
+9. Mobile — coach dashboard metrics and roster cards stack on narrow screens
+
+### Known issues
+
+- Full team analytics suite (volume graphs, compliance ranking, coach KPIs) not implemented — hooks only
+- AI individualized program generation for `individual_team` is a future placeholder
+- Cardio/bodyweight/nutrition sections on athlete dashboard are placeholders
+- Coach snapshot reloads on member/assignment changes; large rosters may need pagination later
+- Not on `main` until preview sign-off (BIQ-0028)
+
+### Recommended commit message
+
+```text
+BIQ-0027 Team Training coach platform architecture
+```
+
+---
+
+## BIQ-0028 - Revert BIQ-0027 from Main for Preview-First Rollout
+
+Date: 2026-07-15  
+Branch: main  
+Status: **Completed**
+
+### Summary
+
+Reverted the BIQ-0027 merge (PR #15) from `main` so the team coach platform ships on `preview/team-coach-biq-0027` first. `main` returns to pre-BIQ-0027 behavior until preview QA passes.
+
+### Purpose
+
+User requested preview-branch validation before promoting the team overhaul to stable `main` / production deploy.
+
+### Changes
+
+- `git revert -m 1 0c083d9` on `main` — removes coach platform code from stable branch
+- BIQ-0027 remains available on `preview/team-coach-biq-0027` and `cursor/team-coach-architecture-7d3b`
+
+### Files changed
+
+- Revert commit `08ed998` (16 files — coach components, `teamCoach` lib, `page.tsx`, `globals.css`, docs)
+
+### Database changes
+
+None.
+
+### Testing steps
+
+1. On `main` (or production deploy): confirm Team Training uses pre-BIQ-0027 UI (no coach dashboard/roster split)
+2. On `preview/team-coach-biq-0027`: confirm BIQ-0027 coach platform still works
+3. After preview sign-off: merge or cherry-pick BIQ-0027 back onto `main`
+
+### Known issues
+
+- `preview/team-coach-biq-0027` must be pushed to origin for Vercel preview deploy if not already
+- Re-merging BIQ-0027 to `main` later may need conflict resolution if `main` diverges
+
+### Recommended commit message
+
+```text
+BIQ-0028 Revert BIQ-0027 from main for preview-first rollout
+```
