@@ -26,20 +26,6 @@ import {
 import DateInput from './components/DateInput';
 import ProgressInsights from './components/ProgressInsights';
 import WorkoutSetLogger from './components/WorkoutSetLogger';
-import CoachTeamDashboard from './components/CoachTeamDashboard';
-import CoachRoster from './components/CoachRoster';
-import AthleteCoachDashboard from './components/AthleteCoachDashboard';
-import TeamAthleteView from './components/TeamAthleteView';
-import {
-  buildCoachSnapshot,
-  canAccessCoachPlatform,
-  canEditProgramTemplate,
-  canLogWorkout,
-  findTodayWorkout,
-  pickProgramForMember,
-  statusLabel,
-  workoutStatusFromLogs,
-} from '../lib/training/teamCoach';
 
 const NAV=['Dashboard','Training','Team','Nutrition','Progress','AI Coach','Settings'];
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -115,6 +101,9 @@ const emptyAddPanelConfig=()=>({mode:'normal' as 'normal'|'superset',supersetGro
 const emptyAddPanelCustom=()=>({name:'',category:'strength',muscle_group:'',equipment:'',movement_pattern:''});
 const emptyAddPanelFilters=()=>({muscle:'',equipment:'',exerciseType:''});
 const getSupersetGroupsForSection=(w:any,section:string)=>{const exs=sectionExercises(w,section);const groups:any[]=[];const seen=new Set();exs.forEach((ex:any)=>{if(!ex.superset_group_id||seen.has(ex.superset_group_id))return;seen.add(ex.superset_group_id);const members=exs.filter((e:any)=>e.superset_group_id===ex.superset_group_id).sort((a:any,b:any)=>(a.superset_order||0)-(b.superset_order||0));if(members.length>=1)groups.push({id:ex.superset_group_id,label:ex.superset_label||members.map((e:any)=>e.name).join(' + '),count:members.length,sortOrder:Math.min(...members.map((m:any)=>m.sort_order||0))});});return groups.sort((a:any,b:any)=>(a.sortOrder||0)-(b.sortOrder||0));};
+const workoutStatusFor=(workoutRef:any,logMap:any)=>{if(!workoutRef)return 'none';let planned=0,done=0;(workoutRef.st_exercises||[]).forEach((e:any)=>(e.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).forEach((s:any)=>{planned++;if(logMap[s.id]?.completed)done++;}));if(!planned)return 'none';if(done===0)return 'not_started';if(done<planned)return 'in_progress';return 'completed';};
+const statusLabel=(s:string)=>s==='completed'?'Completed':s==='in_progress'?'In progress':s==='not_started'?'Not started':'No workout';
+
 export default function Page(){
  const [session,setSession]=useState<any>(null),[authReady,setAuthReady]=useState(false),[profileLoading,setProfileLoading]=useState(false);
  const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[confirmPassword,setConfirmPassword]=useState('');
@@ -167,9 +156,6 @@ export default function Page(){
  const [memberStats,setMemberStats]=useState<any>({});
  const [memberAssignments,setMemberAssignments]=useState<any>({});
  const [assignDraft,setAssignDraft]=useState<any>({type:'team',programId:'',notes:''});
- const [coachSnapshot,setCoachSnapshot]=useState<{roster:any[];overview:any}|null>(null);
- const [coachTeamPrograms,setCoachTeamPrograms]=useState<any[]>([]);
- const [memberDashProgressLogs,setMemberDashProgressLogs]=useState<any[]>([]);
  const [logDistanceUnit,setLogDistanceUnit]=useState<'mi'|'km'>('mi');
  const refs=useRef<any[]>([]);
  const namePickRef=useRef(false);
@@ -216,8 +202,6 @@ export default function Page(){
  useEffect(()=>{if(memberDashboard)loadMemberDashboardData(memberDashboard);},[logDate,week,memberDashboard?.user_id,selectedTeamId]);
 
  const activeTeam=teams.find((t:any)=>t.id===selectedTeamId)||teams[0]||null;
-
- useEffect(()=>{if(selectedTeamId&&members.length&&activeTeam&&canAccessCoachPlatform(activeTeam.my_role,mode==='team'))loadCoachTeamSnapshot();else setCoachSnapshot(null);},[selectedTeamId,members.length,memberStats,memberAssignments,activeTeam?.my_role,activeTeam?.default_program_id,mode,logDate,week]);
 
  async function boot(){await loadProfile(); await loadTeams(); await loadCatalog();}
  async function loadCatalog(){if(!session?.user)return; const{data,error}=await supabase.from('st_exercise_catalog').select('*').order('name'); if(error){setCatalogError(error.message); return console.warn(error.message);} setCatalogError(''); setCatalog(data||[]);}
@@ -325,33 +309,6 @@ export default function Page(){
   (data||[]).forEach((r:any)=>{if(!stats[r.user_id])stats[r.user_id]={sets:0,days:new Set()}; stats[r.user_id].sets++; stats[r.user_id].days.add(r.log_date);});
   setMemberStats(Object.fromEntries(Object.entries(stats).map(([k,v]:any)=>[k,{sets:v.sets,days:v.days.size}])));
  }
- async function loadCoachTeamSnapshot(){
-  if(!activeTeam||!members.length||!canCoachView()){setCoachSnapshot(null);return;}
-  const logDateStr=today();
-  const{monday:weekStartStr,sunday:weekEndStr}=currentCalendarWeekBounds();
-  const ids=members.map((m:any)=>m.user_id);
-  const{data:teamProgs}=await supabase.from('st_programs').select('*, st_workouts(*, st_exercises(*, st_planned_sets(*)))').eq('visibility','team').eq('team_id',activeTeam.id).order('created_at',{ascending:false});
-  const teamPrograms=teamProgs||[];
-  setCoachTeamPrograms(teamPrograms);
-  const personalIds=members.filter((m:any)=>(m.training_source||'team')==='personal').map((m:any)=>m.user_id);
-  const personalByUser:any={};
-  if(personalIds.length){
-   const{data:pers}=await supabase.from('st_programs').select('*, st_workouts(*, st_exercises(*, st_planned_sets(*)))').eq('visibility','personal').in('owner_user_id',personalIds).order('created_at',{ascending:false});
-   (pers||[]).forEach((p:any)=>{if(!personalByUser[p.owner_user_id])personalByUser[p.owner_user_id]=[]; personalByUser[p.owner_user_id].push(p);});
-  }
-  const{data:weekLogs}=await supabase.from('st_set_logs').select('*').in('user_id',ids).eq('completed',true).gte('log_date',weekStartStr).lte('log_date',weekEndStr);
-  const weekLogsByUser:any={};
-  (weekLogs||[]).forEach((r:any)=>{if(!weekLogsByUser[r.user_id])weekLogsByUser[r.user_id]=[]; weekLogsByUser[r.user_id].push(r);});
-  const{data:todayLogs}=await supabase.from('st_set_logs').select('*').in('user_id',ids).eq('log_date',logDateStr);
-  const todayLogsByUser:any={};
-  (todayLogs||[]).forEach((r:any)=>{if(!todayLogsByUser[r.user_id])todayLogsByUser[r.user_id]=[]; todayLogsByUser[r.user_id].push(r);});
-  const{data:allCompleted}=await supabase.from('st_set_logs').select('user_id,log_date').in('user_id',ids).eq('completed',true).order('log_date',{ascending:false});
-  const lastByUser:any={};
-  (allCompleted||[]).forEach((r:any)=>{if(!lastByUser[r.user_id])lastByUser[r.user_id]=r.log_date;});
-  const defaultProgram=teamPrograms.find((p:any)=>p.id===activeTeam.default_program_id)||teamPrograms[0]||null;
-  const weekNum=defaultProgram?weekForDate(resolveProgramStartDate(defaultProgram),logDateStr,defaultProgram.weeks||weeks||6):week;
-  setCoachSnapshot(buildCoachSnapshot({members,memberStats,memberAssignments,teamPrograms,personalProgramsByUser:personalByUser,todayLogsByUser,weekLogsByUser,lastWorkoutDateByUser:lastByUser,defaultProgramId:activeTeam.default_program_id,teamDefaultName:defaultProgram?.name,sessionUserId:session?.user?.id,logDate:logDateStr,week:weekNum}));
- }
  async function loadMemberAssignments(){
   if(!activeTeam){setMemberAssignments({});return;}
   const{data}=await supabase.from('st_program_assignments').select('*, st_programs(name)').eq('team_id',activeTeam.id).eq('is_active',true);
@@ -366,12 +323,17 @@ export default function Page(){
   await loadMembers(); await loadMemberAssignments();
   if(memberDashboard?.user_id===member.user_id)await loadMemberDashboardData(member);
   if(viewingMember?.user_id===member.user_id){await openMemberView(member);}
-  await loadCoachTeamSnapshot();
  }
- function canCoachView(){return canAccessCoachPlatform(activeTeam?.my_role,mode==='team');}
+ function pickProgramForMember(list:any[],member:any,defaultId?:string|null){
+  const assignment=memberAssignments[member?.user_id];
+  if(assignment?.program_id){const hit=list.find((p:any)=>p.id===assignment.program_id); if(hit)return hit;}
+  if(defaultId)return list.find((p:any)=>p.id===defaultId)||list[0];
+  return list[0]||null;
+ }
+ function canCoachView(){return mode==='team'&&(activeTeam?.my_role==='owner'||activeTeam?.my_role==='editor');}
  function logUserId(){return viewingMember?.user_id||session?.user?.id;}
- function canLog(){if(!session?.user)return false; return canLogWorkout({sessionUserId:session.user.id,targetUserId:logUserId()||'',teamRole:activeTeam?.my_role,inTeamMode:mode==='team'});}
- function canEdit(){return canEditProgramTemplate({personalMode:mode==='personal',teamRole:activeTeam?.my_role,viewingOtherMember:!!(viewingMember&&viewingMember.user_id!==session?.user?.id)});}
+ function canLog(){if(!session?.user)return false; if(!viewingMember||viewingMember.user_id===session.user.id)return true;return canCoachView();}
+ function canEdit(){if(!session?.user)return false; if(viewingMember&&viewingMember.user_id!==session.user.id)return false; return mode==='personal'||activeTeam?.my_role==='owner'||activeTeam?.my_role==='editor';}
  function isOwner(){return mode==='team'&&activeTeam?.my_role==='owner'}
  function pickProgram(list:any[],defaultId?:string|null){if(!list.length)return null; if(defaultId)return list.find((p:any)=>p.id===defaultId)||list[0]; return list[0];}
  async function loadPrograms(){
@@ -407,14 +369,13 @@ export default function Page(){
   await loadMemberAssignments();
   await loadMemberDashboardData(member);
  }
- function openMemberDashboardByUserId(userId:string){const member=members.find((m:any)=>m.user_id===userId); if(member)openMemberDashboard(member);}
  async function loadMemberDashboardData(member:any){
   const usePersonal=(member.training_source||'team')==='personal';
   let q=supabase.from('st_programs').select('*, st_workouts(*, st_exercises(*, st_planned_sets(*)))').order('created_at',{ascending:false});
   q=usePersonal?q.eq('visibility','personal').eq('owner_user_id',member.user_id):q.eq('visibility','team').eq('team_id',activeTeam.id);
   const{data,error}=await q; if(error)return console.warn(error.message);
   const list=data||[];
-  const picked=pickProgramForMember(list,member,memberAssignments,!usePersonal?activeTeam?.default_program_id:null);
+  const picked=pickProgramForMember(list,member,!usePersonal?activeTeam?.default_program_id:null);
   setMemberDashProgram(picked);
   const assignment=memberAssignments[member.user_id];
   if(assignment)setAssignDraft({type:assignment.assignment_type||'team',programId:assignment.program_id||'',notes:assignment.notes||''});
@@ -431,8 +392,6 @@ export default function Page(){
   setMemberDashLogs(by);
   const{data:lastRow}=await supabase.from('st_set_logs').select('log_date').eq('user_id',member.user_id).eq('completed',true).order('log_date',{ascending:false}).limit(1).maybeSingle();
   setMemberDashLastDate(lastRow?.log_date||'');
-  const{data:progressRows}=await supabase.from('st_set_logs').select('*, st_planned_sets(set_type,set_number,st_exercises(name,muscle_group,section,catalog_exercise_id))').eq('user_id',member.user_id).eq('completed',true).order('log_date',{ascending:false}).limit(500);
-  setMemberDashProgressLogs(progressRows||[]);
  }
  async function openMemberView(member:any){
   if(!member)return;
@@ -446,7 +405,7 @@ export default function Page(){
   q=usePersonal?q.eq('visibility','personal').eq('owner_user_id',member.user_id):q.eq('visibility','team').eq('team_id',activeTeam.id);
   const{data,error}=await q; if(error)return alert(error.message);
   const list=data||[];
-  const picked=pickProgramForMember(list,member,memberAssignments,!usePersonal?activeTeam?.default_program_id:null);
+  const picked=pickProgramForMember(list,member,!usePersonal?activeTeam?.default_program_id:null);
   setPrograms(list);
   setProgram(picked);
   const first=picked?.st_workouts?.sort((a:any,b:any)=>a.week-b.week||a.day_order-b.day_order)?.[0];
@@ -467,7 +426,6 @@ export default function Page(){
   await loadMembers();
   await loadMemberStats();
   if(viewingMember?.user_id===member.user_id)setViewingMember({...member,training_source:source});
-  await loadCoachTeamSnapshot();
  }
  async function setTeamDefaultProgram(programId:string){
   if(!activeTeam||!canEdit())return;
@@ -884,9 +842,9 @@ export default function Page(){
   setAppNav(n);
   if(n==='Progress'||n==='Dashboard')loadProgressLogs();
   if(n==='Settings'){loadCatalog(); if(activeTeam)loadMembers();}
-  if(n==='Team'){if(teams.length)setMode('team'); loadMembers(); loadMemberStats(); loadMemberAssignments(); loadCoachTeamSnapshot();}
+  if(n==='Team'){if(teams.length)setMode('team'); loadMembers(); loadMemberStats();}
   if(n==='Dashboard'&&teams.length){loadMembers(); loadMemberStats();}
-  if(n==='Training'){if(!program&&trainingSubNav!=='setup')setShowProgramSetup(true); if(teams.length&&trainingSubNav==='team'){loadMembers();loadMemberStats();loadMemberAssignments();loadCoachTeamSnapshot();}}
+  if(n==='Training'){if(!program&&trainingSubNav!=='setup')setShowProgramSetup(true); if(teams.length&&trainingSubNav==='team'){loadMembers();loadMemberStats();loadMemberAssignments();}}
  }
 
 function targetWorkoutsFrom(current:any){
@@ -964,13 +922,10 @@ const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sor
  const teamModeControl=<div className="stat stat-mode"><span className="muted">Team</span><select className="mode-team-select" value={activeTeam?.id||''} onChange={e=>{setSelectedTeamId(e.target.value||null);setMode('team');}} aria-label="Select team"><option value="">{teams.length?'Select team':'No teams'}</option>{teams.map((t:any)=><option key={t.id} value={t.id}>{t.name}</option>)}</select>{activeTeam&&<span className="muted mode-team-meta">{activeTeam.my_role}{canEdit()?' · edit':' · log'}</span>}</div>;
  const teamPlanPanel=mode==='team'&&activeTeam?<div className="card team-plan-card"><div className="topline" style={{justifyContent:'space-between'}}><h2>My training plan</h2><span className="badge">{(activeTeam.training_source||'team')==='team'?'Team program':'Personal program'}</span></div><div className="tabs"><button type="button" className={(activeTeam.training_source||'team')!=='personal'?'active':''} onClick={()=>setMyTrainingSource('team')}>Team workout</button><button type="button" className={activeTeam.training_source==='personal'?'active':''} onClick={()=>setMyTrainingSource('personal')}>Personal plan</button></div></div>:null;
  const teamCompliancePanel=<div className="card team-compliance-card"><div className="topline" style={{justifyContent:'space-between'}}><h2>Compliance (this week)</h2><span className="badge">{teamCompliancePct}%</span></div><div className="dash-metrics"><div><b>{teamActiveCount}/{members.length||0}</b><span className="muted">Members active</span></div><div><b>{teamTotalSets}</b><span className="muted">Total sets</span></div><div><b>{teamPlanCount}</b><span className="muted">On team plan</span></div><div><b>{members.length-teamPlanCount}</b><span className="muted">Personal plan</span></div></div></div>;
- const teamRosterLegacy=<div className="card team-roster-card"><div className="topline" style={{justifyContent:'space-between'}}><h2>Members</h2><button className="btn small secondary" onClick={()=>{loadMembers();loadMemberStats();}}>Refresh</button></div><p className="muted">Your coach manages team programming from the coach dashboard.</p>{members.length===0&&<p className="muted">No members yet.</p>}{members.map((m:any)=>{const stats=memberStats[m.user_id]||{sets:0,days:0}; const isSelf=!!session?.user&&m.user_id===session.user.id; return <div key={m.id} className="team-member-row"><div className="team-member-main"><div><b>{m.display_name||'Member'}{isSelf?' (you)':''}</b><span className="muted">{m.role} · {(m.training_source||'team')==='team'?'Team':'Personal'} · {stats.sets} sets</span></div><span className="muted">{stats.days}d</span></div></div>})}</div>;
- const teamRosterPanel=canCoachView()&&coachSnapshot?<CoachRoster roster={coachSnapshot.roster} activeUserId={memberDashboard?.user_id} canManagePlans onSelectAthlete={openMemberDashboardByUserId} onSetTrainingSource={(userId,source)=>{const member=members.find((m:any)=>m.user_id===userId); if(member)setMemberTrainingSource(member,source);}} trainingSourceByUser={Object.fromEntries(members.map((m:any)=>[m.user_id,m.training_source||'team']))}/>:teamRosterLegacy;
- const coachTeamHeader=<div className="card coach-team-bar">{teamModeControl}{activeTeam&&<p className="muted coach-team-invite">Invite: <b>{activeTeam.invite_code}</b> · Role: {activeTeam.my_role}</p>}</div>;
- const emptyCoachOverview={athleteCount:0,trainingToday:0,completedToday:0,inProgressToday:0,missedToday:0,compliancePct:0,prsThisWeek:0,totalSetsThisWeek:0,alerts:[]};
- const athleteTodayWorkout=program?findTodayWorkout(program,calendarWeek,todayDayLabel):null;
- const memberTodayWorkout=memberDashProgram?findTodayWorkout(memberDashProgram,week,todayDayLabel):null;
- const memberWorkoutStatus=workoutStatusFromLogs(memberTodayWorkout,memberDashLogs);
+ const teamRosterPanel=<div className="card team-roster-card"><div className="topline" style={{justifyContent:'space-between'}}><h2>Members</h2><button className="btn small secondary" onClick={()=>{loadMembers();loadMemberStats();}}>Refresh</button></div><p className="muted">{canCoachView()?'Click a member for their training dashboard.':'Tap your name to open Training.'}</p>{members.length===0&&<p className="muted">No members yet.</p>}{members.map((m:any)=>{const stats=memberStats[m.user_id]||{sets:0,days:0}; const isSelf=!!session?.user&&m.user_id===session.user.id; return <div key={m.id} className="team-member-row"><button type="button" className="team-member-main" onClick={()=>openMemberDashboard(m)}><div><b>{m.display_name||'Member'}{isSelf?' (you)':''}</b><span className="muted">{m.role} · {(m.training_source||'team')==='team'?'Team':'Personal'} · {stats.sets} sets</span></div><span className="muted">{stats.days}d</span></button>{canCoachView()&&!isSelf&&<select className="team-member-plan" value={m.training_source||'team'} onChange={e=>setMemberTrainingSource(m,e.target.value)} onClick={e=>e.stopPropagation()} aria-label={`Plan for ${m.display_name||'member'}`}><option value="team">Team</option><option value="personal">Personal</option></select>}</div>})}</div>;
+ const trainingTeamRosterPanel=teams.length>0?<div className="card team-training-bar">{teamModeControl}{teamPlanPanel}<div className="team-roster-compact">{members.map((m:any)=>{const stats=memberStats[m.user_id]||{sets:0,days:0}; const isSelf=!!session?.user&&m.user_id===session.user.id; return <button key={m.id} type="button" className={`team-member-chip${memberDashboard?.user_id===m.user_id?' active':''}`} onClick={()=>openMemberDashboard(m)}>{m.display_name||'Member'}{isSelf?' (you)':''} · {stats.sets}s</button>})}</div></div>:<div className="card"><p className="muted">No teams yet. Create or join a team in Settings.</p></div>;
+ const memberTodayWorkout=memberDashProgram?(memberDashProgram.st_workouts||[]).find((w:any)=>w.week===week&&w.day_label===todayDayLabel)||(memberDashProgram.st_workouts||[]).find((w:any)=>w.week===1&&w.day_label===todayDayLabel):null;
+ const memberWorkoutStatus=workoutStatusFor(memberTodayWorkout,memberDashLogs);
  const focusVolumeEst=focusMuscles.length?estimateWeeklyFocusSets(focusMuscles,dayTypes,days):{};
  const builtinCatalog=useMemo(()=>builtinCatalogItems(catalog),[catalog]);
  const equipmentForSearch=normalizeEquipmentList(profileDraft.available_equipment);
@@ -1033,16 +988,14 @@ const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sor
   {appNav==='Nutrition'&&<section><div className="card"><h2>Nutrition</h2><p className="muted">Macro tracking and meal logging will live here in a future release.</p></div></section>}
   {appNav==='AI Coach'&&<section><div className="card dash-accent"><h2>AI Coach</h2><p className="muted">Your BuiltIQ wellness coach will analyze workouts, nutrition, and recovery to give safe, practical guidance.</p><p className="dash-insight">Coming soon: readiness check-ins, workout adjustments, and weekly coaching summaries.</p></div></section>}
   {appNav==='Progress'&&<section><div className="card"><div className="topline" style={{justifyContent:'space-between'}}><h2>Progress</h2><button className="btn small secondary" onClick={loadProgressLogs}>Refresh</button></div><p className="muted">Saved lift history uses snapshots, so past workouts stay accurate even if the program template changes later.</p></div><ProgressInsights logs={progressLogs} weightUnit={progressWeightUnit}/><div className="card"><h2>Workout history</h2><p className="muted">Completed sets grouped by training day.</p></div>{progressDays.length===0&&<div className="card"><p className="muted">No completed sets yet. Log a workout in Training to build history.</p></div>}{progressDays.map((day:any)=><div className="card" key={day.date}><h3>{formatDisplayDate(day.date)}{day.label?` · ${day.label}`:''}{day.type?` · ${day.type}`:''}</h3>{Object.values(day.rows.reduce((acc:any,row:any)=>{const name=logExerciseName(row);if(!acc[name]) acc[name]=[]; acc[name].push(row);return acc;},{})).map((rows:any)=>{const label=logExerciseName(rows[0]);const exType=(rows[0].snapshot_exercise_type||'strength') as any;return <div key={label} className="history-row"><b>{label}</b><span className="muted">{rows.sort((a:any,b:any)=>(logSetNumber(a)-logSetNumber(b))).map((r:any)=>formatLogSummary(r,exType)).join(' · ')}</span></div>})}</div>)}</section>}
-  {appNav==='Team'&&<section>{teams.length===0?<div className="card"><h2>Teams</h2><p className="muted">Create or join a team in Settings, then manage programs and track compliance here.</p><button className="btn secondary" onClick={()=>goNav('Settings')}>Go to Settings</button></div>:<>{coachTeamHeader}{canCoachView()?<><CoachTeamDashboard teamName={activeTeam?.name||'Team'} overview={coachSnapshot?.overview||emptyCoachOverview} onRefresh={()=>{loadMembers();loadMemberStats();loadMemberAssignments();loadCoachTeamSnapshot();}}/>{teamRosterPanel}</>:<>{teamPlanPanel}{teamCompliancePanel}{teamRosterLegacy}</>}</>}</section>}
+  {appNav==='Team'&&<section>{teams.length===0?<div className="card"><h2>Teams</h2><p className="muted">Create or join a team in Settings, then manage programs and track compliance here.</p><button className="btn secondary" onClick={()=>goNav('Settings')}>Go to Settings</button></div>:<><div className="card"><div className="topline" style={{justifyContent:'space-between'}}><h2>{activeTeam?.name||'Team'}</h2><div className="tabs"><button type="button" className={mode==='personal'?'active':''} onClick={()=>setMode('personal')}>Personal</button><button type="button" className={mode==='team'?'active':''} onClick={()=>setMode('team')}>Team</button></div></div>{teamModeControl}<p className="muted" style={{marginTop:8}}>{activeTeam&&<>Invite: <b>{activeTeam.invite_code}</b> · Role: {activeTeam.my_role}</>}</p></div>{teamPlanPanel}{teamCompliancePanel}{teamRosterPanel}</>}</section>}
   {appNav==='Settings'&&<section><div className="card"><div className="topline" style={{justifyContent:'space-between'}}><h2>Profile</h2><button className="btn small green" onClick={()=>saveProfile(true)} disabled={profileSaving}>{profileSaving?'Saving...':'Save Profile'}</button></div><p className="muted">Update your account details used across BuiltIQ.</p>{profileFields(true)}</div><div className="card"><div className="topline" style={{justifyContent:'space-between'}}><h2>My Exercise Catalog</h2><div className="actions">{activeUserCatalog.length>0&&<button className="btn small red" onClick={archiveAllCustomExercises}>Remove all custom exercises</button>}<button className="btn small secondary" onClick={loadCatalog}>Refresh</button></div></div><p className="muted">Custom exercises are private to your account. Built-in exercises with form guides are used in workout search and AI program generation.</p>{activeUserCatalog.length===0&&archivedUserCatalog.length===0&&<p className="muted">No custom exercises yet. Create one from Training or below.</p>}{activeUserCatalog.map((item:any)=><div key={item.id} className="catalog-row">{catalogEditId===item.id?<div className="catalog-edit-grid"><input value={catalogEditDraft.name} onChange={e=>setCatalogEditDraft({...catalogEditDraft,name:e.target.value})} placeholder="Name"/><select value={catalogEditDraft.category} onChange={e=>setCatalogEditDraft({...catalogEditDraft,category:e.target.value})}><option value="warmup">Warmup</option><option value="strength">Strength</option><option value="mobility">Mobility</option><option value="plyometric">Plyometric</option><option value="other">Other</option></select><input value={catalogEditDraft.muscle_group} onChange={e=>setCatalogEditDraft({...catalogEditDraft,muscle_group:e.target.value})} placeholder="Muscle group"/><input value={catalogEditDraft.equipment} onChange={e=>setCatalogEditDraft({...catalogEditDraft,equipment:e.target.value})} placeholder="Equipment"/><input value={catalogEditDraft.movement_pattern} onChange={e=>setCatalogEditDraft({...catalogEditDraft,movement_pattern:e.target.value})} placeholder="Movement pattern"/><div className="actions"><button className="btn small green" onClick={saveCustomExerciseEdit}>Save</button><button className="btn small secondary" onClick={()=>setCatalogEditId(null)}>Cancel</button></div></div>:<><div><b>{item.name}</b><div className="muted">{item.muscle_group||'Muscle'}{item.equipment?` · ${item.equipment}`:''}{item.movement_pattern?` · ${item.movement_pattern}`:''}</div></div><div className="actions"><button className="btn small secondary" onClick={()=>{setCatalogEditId(item.id); setCatalogEditDraft({name:item.name,category:item.category||'strength',muscle_group:item.muscle_group||'',equipment:item.equipment||'',movement_pattern:item.movement_pattern||''});}}>Edit</button><button className="btn small red" onClick={()=>archiveCustomExercise(item,true)}>Archive</button></div></>}</div>)}{archivedUserCatalog.length>0&&<><h3 style={{marginTop:12}}>Archived</h3>{archivedUserCatalog.map((item:any)=><div key={item.id} className="catalog-row archived"><div><b>{item.name}</b><div className="muted">Archived · not shown in workout search</div></div><button className="btn small secondary" onClick={()=>archiveCustomExercise(item,false)}>Restore</button></div>)}</>}</div><div className="card"><h2>Create Custom Exercise</h2><div className="catalog-edit-grid"><input value={customDraft.name} onChange={e=>setCustomDraft({...customDraft,name:e.target.value})} placeholder="Exercise name"/><select value={customDraft.category} onChange={e=>setCustomDraft({...customDraft,category:e.target.value})}><option value="warmup">Warmup</option><option value="strength">Strength</option><option value="mobility">Mobility</option><option value="plyometric">Plyometric</option><option value="other">Other</option></select><input value={customDraft.muscle_group} onChange={e=>setCustomDraft({...customDraft,muscle_group:e.target.value})} placeholder="Muscle group"/><input value={customDraft.equipment} onChange={e=>setCustomDraft({...customDraft,equipment:e.target.value})} placeholder="Equipment"/><input value={customDraft.movement_pattern} onChange={e=>setCustomDraft({...customDraft,movement_pattern:e.target.value})} placeholder="Movement pattern"/></div><button className="btn green" style={{marginTop:8}} onClick={()=>createCustomExercise(customDraft.category||'strength', false)}>Save to My Catalog</button></div><div className="card"><h2>Teams</h2><p className="muted">Shared programs and team roles. Owner/editor can edit plans; members log only.</p><div className="actions"><button className="btn secondary" onClick={createTeam}>Create Team</button><button className="btn secondary" onClick={joinTeam}>Join Team</button><button className="btn secondary" onClick={loadMembers}>Refresh Members</button></div>{activeTeam&&<p className="muted" style={{marginTop:8}}>Active: <b>{activeTeam.name}</b> · Invite: <b>{activeTeam.invite_code}</b> · Role: <b>{activeTeam.my_role}</b></p>}{teams.length===0&&<p className="muted" style={{marginTop:8}}>You are not on any team yet.</p>}{members.length>0&&<><h3 style={{marginTop:12}}>Members</h3>{members.map((m:any)=><div key={m.id} className="topline" style={{justifyContent:'space-between',marginTop:6}}><span>{m.display_name||m.user_id.slice(0,6)}</span><select disabled={!isOwner()||m.user_id===session.user.id} value={m.role} onChange={e=>setRole(m,e.target.value)} style={{maxWidth:115}}><option>owner</option><option>editor</option><option>member</option></select></div>)}</>}</div></section>}
   {appNav==='Training'&&<section>
     <div className="tabs training-subnav"><button type="button" className={trainingSubNav==='personal'?'active':''} onClick={()=>{setTrainingSubNav('personal');setMemberDashboard(null);setViewingMember(null);}}>Personal Training</button><button type="button" className={trainingSubNav==='team'?'active':''} onClick={()=>{setTrainingSubNav('team');if(teams.length&&!selectedTeamId)setSelectedTeamId(teams[0].id);loadMembers();loadMemberStats();loadMemberAssignments();}}>Team Training</button><button type="button" className={trainingSubNav==='setup'?'active':''} onClick={()=>{setTrainingSubNav('setup');setShowProgramSetup(true);setMemberDashboard(null);setViewingMember(null);}}>Program Setup</button></div>
     {trainingSubNav==='setup'&&programSetupPanel}
-    {trainingSubNav==='team'&&teams.length===0&&<div className="card"><p className="muted">No teams yet. Create or join a team in Settings.</p></div>}
-    {trainingSubNav==='team'&&teams.length>0&&canCoachView()&&!memberDashboard&&!viewingMember&&<>{coachTeamHeader}<CoachTeamDashboard teamName={activeTeam?.name||'Team'} overview={coachSnapshot?.overview||emptyCoachOverview} onRefresh={()=>{loadMembers();loadMemberStats();loadMemberAssignments();loadCoachTeamSnapshot();}}/>{teamRosterPanel}</>}
-    {trainingSubNav==='team'&&teams.length>0&&!canCoachView()&&!viewingMember&&<TeamAthleteView teamName={activeTeam?.name||'Team'} trainingSource={(activeTeam?.training_source||'team')==='personal'?'personal':'team'} programName={program?.name} todayWorkoutLabel={athleteTodayWorkout?`${athleteTodayWorkout.day_label} · ${athleteTodayWorkout.workout_type}`:undefined} onSetTrainingSource={setMyTrainingSource} onStartWorkout={()=>{setTrainingSubNav('personal');setMemberDashboard(null);setViewingMember(null);}}/>}
-    {trainingSubNav==='team'&&memberDashboard&&memberDashboard.user_id!==session.user.id&&!viewingMember&&<AthleteCoachDashboard member={memberDashboard} program={memberDashProgram} assignment={memberAssignment} todayWorkout={memberTodayWorkout} todayStatus={memberWorkoutStatus} lastWorkoutDate={memberDashLastDate} setsThisWeek={memberStats[memberDashboard.user_id]?.sets||0} daysActiveThisWeek={memberStats[memberDashboard.user_id]?.days||0} progressLogs={memberDashProgressLogs} weightUnit={profileDraft?.units_preference==='metric'?'kg':'lb'} assignDraft={assignDraft} teamPrograms={coachTeamPrograms.length?coachTeamPrograms:programs} logDate={logDate} week={week} canAssign={canCoachView()} onBack={()=>setMemberDashboard(null)} onOpenWorkout={()=>openMemberView(memberDashboard)} onAssignDraftChange={setAssignDraft} onApplyAssignment={()=>assignMemberProgram(memberDashboard,assignDraft.type,assignDraft.programId||null,assignDraft.notes)}/>}
-    {(trainingSubNav==='personal'||(trainingSubNav==='team'&&(viewingMember||(!memberDashboard&&!canCoachView()))))&&<>
+    {trainingSubNav==='team'&&trainingTeamRosterPanel}
+    {trainingSubNav==='team'&&memberDashboard&&memberDashboard.user_id!==session.user.id&&!viewingMember&&<div className="card member-dashboard"><div className="topline" style={{justifyContent:'space-between'}}><div><h2>{memberDashboard.display_name||'Member'}</h2><p className="muted">{assignmentTypeLabel(memberAssignment?.assignment_type||(memberDashboard.training_source||'team')==='personal'?'personal':'team')} · {memberDashProgram?.name||'No program'}</p></div><div className="actions"><button className="btn small secondary" onClick={()=>setMemberDashboard(null)}>Back</button><button className="btn small green" onClick={()=>openMemberView(memberDashboard)}>Open workout</button></div></div><div className="dash-metrics member-dash-metrics"><div><b>{statusLabel(memberWorkoutStatus)}</b><span className="muted">Today ({formatDisplayDate(logDate)})</span></div><div><b>{memberTodayWorkout?`${memberTodayWorkout.day_label} · ${memberTodayWorkout.workout_type}`:'Rest / none'}</b><span className="muted">Assigned workout</span></div><div><b>{memberDashLastDate?formatDisplayDate(memberDashLastDate):'—'}</b><span className="muted">Last completed</span></div><div><b>{memberStats[memberDashboard.user_id]?.sets||0}</b><span className="muted">Sets this week</span></div></div>{canCoachView()&&<div className="member-assignment-panel"><label>Program assignment</label><select value={assignDraft.type} onChange={e=>setAssignDraft({...assignDraft,type:e.target.value})}><option value="team">Follow Team Plan</option><option value="personal">Use Personal Plan</option><option value="individual_team">Individual Team Plan</option><option value="manual">Manual Assignment</option></select>{(assignDraft.type==='individual_team'||assignDraft.type==='manual')&&<><label>Program</label><select value={assignDraft.programId} onChange={e=>setAssignDraft({...assignDraft,programId:e.target.value})}><option value="">Select program</option>{programs.map((p:any)=><option key={p.id} value={p.id}>{p.name}</option>)}</select></>}<label>Coach notes</label><input value={assignDraft.notes} onChange={e=>setAssignDraft({...assignDraft,notes:e.target.value})} placeholder="Assignment notes"/><button className="btn small green" style={{marginTop:8}} onClick={()=>assignMemberProgram(memberDashboard,assignDraft.type,assignDraft.programId||null,assignDraft.notes)}>Apply assignment</button></div>}{!memberTodayWorkout&&<p className="muted">No workout scheduled for today in week {week}.</p>}{memberTodayWorkout&&<><h3 style={{marginTop:12}}>Today&apos;s exercises</h3>{SECTIONS.flatMap((sec:any)=>sectionExercises(memberTodayWorkout,sec.id)).map((ex:any)=>{const sets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted);const done=sets.filter((s:any)=>memberDashLogs[s.id]?.completed).length;const exType=exerciseTypeOf(ex);const summaries=sets.map((s:any)=>memberDashLogs[s.id]).filter(Boolean).map((l:any)=>formatLogSummary(l,exType)).filter((x:string)=>x&&x!=='—');return <div key={ex.id} className="member-exercise-row"><b>{ex.name}</b><span className="muted">{ex.muscle_group||'Muscle'} · {exType} · {done}/{sets.length} logged{summaries.length?` · ${summaries.join(' · ')}`:''}</span></div>})}</>}{memberAssignment?.notes&&<p className="muted dash-insight" style={{marginTop:10}}>Coach notes: {memberAssignment.notes}</p>}{memberStats[memberDashboard.user_id]?.days>0&&<p className="muted dash-insight" style={{marginTop:10}}>Active {memberStats[memberDashboard.user_id].days} days this week — {memberStats[memberDashboard.user_id].sets} sets logged.</p>}</div>}
+    {(trainingSubNav==='personal'||(trainingSubNav==='team'&&(viewingMember||!memberDashboard)))&&<>
     {viewingMember&&viewingMember.user_id!==session.user.id&&<div className="card viewing-banner"><div className="topline" style={{justifyContent:'space-between'}}><div><h2>{viewingMember.display_name||'Member'}&apos;s workout</h2><p className="muted">{assignmentTypeLabel(memberAssignments[viewingMember.user_id]?.assignment_type||(viewingMember.training_source||'team')==='personal'?'personal':'team')} · {program?.name||'No program'}{canCoachView()?' · coach can log':''}</p></div><button className="btn small secondary" onClick={closeMemberView}>Back</button></div></div>}
     {!viewingMember&&canEdit()&&<div className="applybox"><label>When changing workout structure, apply edits to:</label><select value={applyScope} onChange={e=>setApplyScope(e.target.value as any)}><option value="future">This week and all future weeks</option><option value="current">This workout only</option></select></div>}
     <div className="stats">{trainingModeStat}<div className="stat"><span className="muted">Week</span><b>{week}</b></div><div className="stat"><span className="muted">Sets</span><b>{planned}</b></div><div className="stat"><span className="muted">Logged</span><b>{logged}</b></div></div>

@@ -130,52 +130,6 @@
  .progression-next{font-size:12px;font-weight:800;color:#c4b5fd;margin-top:2px}
  .progression-note{font-size:10px;margin-top:2px}
  .member-dashboard{border-color:#4c3f78}
- .coach-dashboard-card{border-color:#4c3f78;margin-bottom:10px}
- .coach-dashboard-sub{margin-top:2px}
- .coach-dash-metrics{grid-template-columns:repeat(4,1fr);margin-top:10px}
- .coach-alerts{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
- .coach-alerts h3{margin:0 0 8px;font-size:14px}
- .coach-alert-list{list-style:none;margin:0;padding:0;display:grid;gap:6px}
- .coach-alert{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border-radius:10px;background:#0f1422;border:1px solid var(--line);font-size:12px;line-height:1.4}
- .coach-alert-missed_session{border-color:#7f1d1d}
- .coach-alert-low_compliance{border-color:#854d0e}
- .coach-alert-new_pr{border-color:#4c3f78}
- .coach-alert-stalled{border-color:#334155}
- .coach-alert-icon{font-weight:900;min-width:14px}
- .coach-alerts-empty{margin-top:10px}
- .coach-team-bar{margin-bottom:10px}
- .coach-team-invite{margin-top:8px}
- .coach-roster-card{margin-bottom:10px}
- .coach-roster-grid{display:grid;gap:8px;margin-top:8px}
- .coach-athlete-card{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start;padding:10px;border:1px solid var(--line);border-radius:12px;background:#0b1119}
- .coach-athlete-card.active{border-color:var(--purple);background:#121827}
- .coach-athlete-card-main{display:block;width:100%;text-align:left;border:0;background:transparent;color:inherit;padding:0}
- .coach-athlete-card-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
- .coach-athlete-card-head b{font-size:14px}
- .coach-athlete-program{display:block;margin-top:4px;font-size:11px}
- .coach-athlete-meta,.coach-athlete-indicators{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;font-size:11px}
- .coach-status-badge{font-size:10px}
- .status-completed{background:#14532d;color:#bbf7d0}
- .status-progress{background:#1e3a5f;color:#bfdbfe}
- .status-pending{background:#422006;color:#fde68a}
- .status-muted{background:#1f2937;color:#cbd5e1}
- .coach-indicator-pr{background:#312654;color:#ddd6fe}
- .coach-indicator-notes{background:#1f2937;color:#93c5fd}
- .coach-athlete-plan-select{max-width:120px;padding:6px 8px;font-size:11px}
- .coach-assignment-panel{margin-top:10px}
- .coach-assignment-options{display:grid;gap:8px;margin:8px 0 12px}
- .coach-assignment-option{display:block;width:100%;text-align:left;border:1px solid var(--line);background:#0b1119;color:inherit;border-radius:12px;padding:10px}
- .coach-assignment-option.active{border-color:var(--purple);background:#171628}
- .coach-assignment-option b{display:block;font-size:13px}
- .coach-assignment-option .muted{display:block;margin-top:4px;font-size:11px;line-height:1.4}
- .coach-assignment-hint{margin:6px 0 10px;font-size:11px}
- .coach-athlete-dashboard{display:grid;gap:10px}
- .coach-athlete-dashboard-head{margin-bottom:0}
- .coach-athlete-section h3{margin:0 0 6px;font-size:14px}
- .coach-future-module{opacity:.92}
- .team-athlete-view{display:grid;gap:10px}
- .team-athlete-hero,.team-athlete-today,.team-athlete-hint{margin-bottom:0}
- .team-athlete-tabs{margin-top:8px}
  .member-dash-metrics{margin-top:10px}
  .member-exercise-row{padding:8px 0;border-top:1px solid var(--line)}
  .member-exercise-row b{display:block;font-size:14px}
@@ -257,4 +211,4 @@
 .log-chip.active{border-color:#7c5cff;background:#1b1634;color:#fff}
 .log-chip:disabled{opacity:.5}
 .log-save-hint{margin:10px 0 0;font-size:11px;text-align:center}
- @media(max-width:900px){.add-exercise-row{grid-template-columns:1fr auto auto}.catalog-edit-grid{grid-template-columns:1fr}.catalog-search-filters{grid-template-columns:1fr}.setgrid,.setgrid-edit{grid-template-columns:1fr 1fr 1fr}.exercise-add-row{grid-template-columns:1fr auto auto}.team-compliance-card .dash-metrics{grid-template-columns:1fr 1fr}.coach-dash-metrics{grid-template-columns:1fr 1fr}.progress-trend-chart{grid-template-columns:repeat(4,minmax(0,1fr))}.progress-summary-metrics{grid-template-columns:1fr 1fr}.panel-overlay{align-items:flex-end;padding:0}.add-exercise-panel{border-radius:18px 18px 0 0;max-height:90vh}.log-field-row{grid-template-columns:1fr}.workout-set-logger{max-width:100%}.log-dup-btn,.set-done-check{min-height:44px}}
+ @media(max-width:900px){.add-exercise-row{grid-template-columns:1fr auto auto}.catalog-edit-grid{grid-template-columns:1fr}.catalog-search-filters{grid-template-columns:1fr}.setgrid,.setgrid-edit{grid-template-columns:1fr 1fr 1fr}.exercise-add-row{grid-template-columns:1fr auto auto}.team-compliance-card .dash-metrics{grid-template-columns:1fr 1fr}.progress-trend-chart{grid-template-columns:repeat(4,minmax(0,1fr))}.progress-summary-metrics{grid-template-columns:1fr 1fr}.panel-overlay{align-items:flex-end;padding:0}.add-exercise-panel{border-radius:18px 18px 0 0;max-height:90vh}.log-field-row{grid-template-columns:1fr}.workout-set-logger{max-width:100%}.log-dup-btn,.set-done-check{min-height:44px}}

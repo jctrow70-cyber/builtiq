@@ -90,13 +90,6 @@ Goal: Complete the core workout logging experience.
 - `st_program_assignments` with four assignment modes
 - Enhanced member dashboard + coach co-logging permissions
 
-### BIQ-0027 additions (completed)
-
-- Coach-centric Team Training architecture (`lib/training/teamCoach/`)
-- Coach dashboard, roster cards, athlete performance dashboard
-- Athlete-only Team Training view (no roster mirror)
-- Extensible metrics hooks for future team analytics (compliance ranking, volume graphs, coach KPIs)
-
 ## Phase 4 — Progress and Analytics
 
 Goal: Help users see improvement over time.
