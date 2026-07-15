@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import type { ExerciseType } from '../../lib/training/exerciseTypes';
 import {
   INTENSITY_CHIPS,
@@ -47,6 +47,7 @@ function FieldCard({
   unitLabel,
   disabled,
   onBlur,
+  onChangeValue,
   onChipPick,
   registerRef,
   onKeyDown,
@@ -58,6 +59,7 @@ function FieldCard({
   unitLabel?: string;
   disabled: boolean;
   onBlur: (v: string) => void;
+  onChangeValue?: (v: string) => void;
   onChipPick?: (v: string) => void;
   registerRef?: (el: HTMLInputElement | null) => void;
   onKeyDown?: (e: React.KeyboardEvent) => void;
@@ -94,6 +96,7 @@ function FieldCard({
             disabled={disabled}
             defaultValue={value}
             placeholder={prevHint ? `Last ${prevHint}` : field.placeholder || ''}
+            onChange={(e) => onChangeValue?.(e.target.value)}
             onBlur={(e) => onBlur(e.target.value)}
             onKeyDown={onKeyDown}
           />
@@ -120,6 +123,8 @@ function SetLogCard({
   onDuplicateSet,
   registerInputRef,
   onInputKeyDown,
+  scheduleSave,
+  flushSaves,
 }: {
   set: SetRow;
   log: LogRow;
@@ -136,6 +141,8 @@ function SetLogCard({
   onDuplicateSet: Props['onDuplicateSet'];
   registerInputRef?: Props['registerInputRef'];
   onInputKeyDown?: Props['onInputKeyDown'];
+  scheduleSave: (key: string, value: string, save: () => void) => void;
+  flushSaves: () => void;
 }) {
   const notes = String(log.log_notes || '');
   const assist = parseAssistFromNotes(notes);
@@ -184,7 +191,8 @@ function SetLogCard({
       prevHint={resolvePrevHint(f.key)}
       unitLabel={unitFor(f)}
       disabled={!canLog && f.key !== 'log_notes'}
-      onBlur={(v) => saveVirtual(f.key, v)}
+      onBlur={(v) => { flushSaves(); saveVirtual(f.key, v); }}
+      onChangeValue={(v) => scheduleSave(`${set.id}:${f.key}`, v, () => saveVirtual(f.key, v))}
       registerRef={registerInputRef}
       onKeyDown={onInputKeyDown}
       inputKey={`${set.id}-${f.key}-${resolveValue(f.key)}`}
@@ -296,6 +304,29 @@ export default function WorkoutSetLogger({
 }: Props) {
   const layout = useMemo(() => logLayoutForType(exType), [exType]);
   const showDistToggle = allLogFieldsFlat(exType).some((f) => f.unitGroup === 'distance');
+  const saveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const pendingSavesRef = useRef<Record<string, () => void>>({});
+
+  const scheduleSave = (key: string, _value: string, save: () => void) => {
+    pendingSavesRef.current[key] = save;
+    if (saveTimersRef.current[key]) clearTimeout(saveTimersRef.current[key]);
+    saveTimersRef.current[key] = setTimeout(() => {
+      delete saveTimersRef.current[key];
+      const run = pendingSavesRef.current[key];
+      delete pendingSavesRef.current[key];
+      run?.();
+    }, 450);
+  };
+
+  const flushSaves = () => {
+    Object.values(saveTimersRef.current).forEach((t) => clearTimeout(t));
+    saveTimersRef.current = {};
+    const pending = { ...pendingSavesRef.current };
+    pendingSavesRef.current = {};
+    Object.values(pending).forEach((run) => run());
+  };
+
+  useEffect(() => () => flushSaves(), []);
 
   return (
     <div className="workout-set-logger">
@@ -336,11 +367,13 @@ export default function WorkoutSetLogger({
             onDuplicateSet={onDuplicateSet}
             registerInputRef={registerInputRef}
             onInputKeyDown={onInputKeyDown}
+            scheduleSave={scheduleSave}
+            flushSaves={flushSaves}
           />
         ))}
       </div>
 
-      {canLog && sets.length > 0 && <p className="muted log-save-hint">Values save when you leave each field.</p>}
+      {canLog && sets.length > 0 && <p className="muted log-save-hint">Values save automatically as you type.</p>}
     </div>
   );
 }
