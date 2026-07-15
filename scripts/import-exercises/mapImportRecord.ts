@@ -88,6 +88,7 @@ export function mapImportRecord(record: ExternalExerciseRecord): MappedCatalogRo
     instructions: String(record.instructions || '').trim() || null,
     media_url: String(record.media_url || '').trim() || null,
     image_url: String(record.thumbnail_url || '').trim() || null,
+    gif_url: String(record.gif_url || record.media_url || '').trim() || null,
     external_source,
     external_id,
     training_goal,

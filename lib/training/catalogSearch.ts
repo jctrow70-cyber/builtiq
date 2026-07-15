@@ -1,5 +1,6 @@
 import { exerciseMatchesEquipment, hasEquipmentFilter } from './equipmentFilter';
-import { filterCatalogBySources, normalizeCatalogSources, type CatalogSourceId } from './catalogSources';
+import { catalogItemHasGuide, filterCatalogBySources, normalizeCatalogSources, type CatalogSourceId } from './catalogSources';
+import { hasExerciseGuide } from './exerciseMedia';
 
 /** System/imported exercises only — excludes user custom rows (no form guides). */
 export function builtinCatalogItems(items: any[], sources?: CatalogSourceId[] | null) {
@@ -17,6 +18,8 @@ export type CatalogSearchFilters = {
   muscle?: string;
   equipment?: string;
   exerciseType?: string;
+  /** When true, only exercises with thumbnail, GIF, or instructions */
+  guidesOnly?: boolean;
   /** When set (and not full_gym), limit to exercises matching user equipment */
   availableEquipment?: string[];
 };
@@ -49,6 +52,7 @@ function haystack(item: any): string {
 function relevanceScore(item: any, tokens: string[]): number {
   const name = String(item?.name || '').toLowerCase();
   let score = 0;
+  if (catalogItemHasGuide(item) || hasExerciseGuide(item)) score += 25;
   tokens.forEach((t, i) => {
     if (!t) return;
     if (name === t) score += 120;
@@ -68,6 +72,7 @@ function applyFilters(pool: any[], filters?: CatalogSearchFilters) {
   if (muscle) out = out.filter((c) => String(c.muscle_group || '') === muscle);
   if (equipment) out = out.filter((c) => String(c.equipment || '') === equipment);
   if (exerciseType) out = out.filter((c) => String(c.exercise_type || '') === exerciseType);
+  if (filters?.guidesOnly) out = out.filter((c) => catalogItemHasGuide(c) || hasExerciseGuide(c));
   if (hasEquipmentFilter(filters?.availableEquipment)) {
     out = out.filter((c) => exerciseMatchesEquipment(c, filters!.availableEquipment!));
   }
@@ -85,6 +90,7 @@ export function searchCatalog(items: any[], opts: CatalogSearchOptions = {}) {
     opts.filters?.muscle ||
     opts.filters?.equipment ||
     opts.filters?.exerciseType ||
+    opts.filters?.guidesOnly ||
     hasEquipmentFilter(opts.filters?.availableEquipment)
   );
 
@@ -112,6 +118,7 @@ export function countCatalogMatches(items: any[], opts: CatalogSearchOptions = {
     opts.filters?.muscle ||
     opts.filters?.equipment ||
     opts.filters?.exerciseType ||
+    opts.filters?.guidesOnly ||
     hasEquipmentFilter(opts.filters?.availableEquipment)
   );
   if (!tokens.length && !hasFilters) return 0;
@@ -142,7 +149,7 @@ export function catalogResultMeta(item: any): string {
 export function hasCatalogSearchInput(query = '', filters?: CatalogSearchFilters) {
   return (
     !!query.trim() ||
-    !!(filters?.muscle || filters?.equipment || filters?.exerciseType) ||
+    !!(filters?.muscle || filters?.equipment || filters?.exerciseType || filters?.guidesOnly) ||
     hasEquipmentFilter(filters?.availableEquipment)
   );
 }

@@ -2380,3 +2380,76 @@ Users reported set removal failing on later superset exercises (caused by shared
 ```text
 BIQ-0027 Fix superset set removal, add basic catalog, exercise collapse
 ```
+
+---
+
+## BIQ-0028 - ExerciseDB Guided Library (GIF demos + form guides)
+
+Date: 2026-07-15  
+Branch: cursor/superset-catalog-collapse-23ec  
+Status: Completed
+
+### Summary
+
+Integrated **ExerciseDB v1** as the primary **Guided Library** (~1,324 exercises) with animated GIF demos, thumbnails, and step-by-step instructions. Added bulk import pipeline, `gif_url` catalog support, search ranking/filter for exercises with guides, and updated default library preferences.
+
+### Purpose
+
+Users need a comprehensive exercise database with form guides and visual demos — not just text-only Essentials/Basic entries or the legacy still-photo library with odd names.
+
+### Changes
+
+- **`scripts/import-exercises/sources/exerciseDb.ts`** — ExerciseDB API + bulk mirror converter
+- **`scripts/import-exercises/fetchExerciseDb.ts`** — Bulk download (recommended) or paginated API fetch
+- **`npm run import:exercises:exercisedb`** — One-command fetch + Supabase import
+- **`lib/training/catalogSources.ts`** — New `exercisedb` Guided Library source (default on)
+- **`lib/training/exerciseMedia.ts`** — `gif_url` support; GIF demos show as animated form guides
+- **`lib/training/catalogSearch.ts`** — `guidesOnly` filter; boost guided exercises in search results
+- **Add Exercise panel** — Default “With form guide” filter; library list in search
+- **Migration `20250715_019_exercisedb_catalog_defaults.sql`** — Default `catalog_sources` includes `exercisedb`
+
+### Files changed
+
+- `scripts/import-exercises/sources/exerciseDb.ts` (new)
+- `scripts/import-exercises/fetchExerciseDb.ts` (new)
+- `scripts/import-exercises/types.ts`
+- `scripts/import-exercises/mapImportRecord.ts`
+- `scripts/import-exercises/README.md`
+- `lib/training/catalogSources.ts`
+- `lib/training/catalogSearch.ts`
+- `lib/training/exerciseMedia.ts`
+- `app/page.tsx`
+- `app/globals.css`
+- `package.json`
+- `supabase/migrations/20250715_019_exercisedb_catalog_defaults.sql` (new)
+- `CHANGELOG.md`
+
+### Database changes
+
+- Run migration `20250715_019_exercisedb_catalog_defaults.sql`
+- Import ~1,324 rows: `npm run import:exercises:exercisedb` (requires `.env.local` service role key)
+- Rows use `external_source = 'exercisedb'` with `gif_url`, `image_url`, `media_url`, `instructions`
+
+### Testing steps
+
+1. Apply migrations `018` and `019`
+2. Run `npm run import:exercises:exercisedb:dry` then `npm run import:exercises:exercisedb`
+3. Verify SQL count for `exercisedb` source (~1324)
+4. Settings → Profile → **Guided Library** enabled
+5. Training → Add Exercise → search “bench press” — results show GIF thumbnails
+6. Pick exercise → **Watch form** / **Preview form guide** shows animated GIF + instructions
+7. Toggle off “With form guide” filter — text-only Essentials/Basic may appear
+8. Workout card for guided exercise shows thumbnail + form guide button
+
+### Known issues
+
+- Free OSS tier uses 180p GIFs (not MP4 video); animated GIFs play in form guide panel
+- API paginated fetch rate-limits (~250 requests); use bulk import (`npm run import:fetch:exercisedb`) instead
+- Exercise names from ExerciseDB are descriptive (e.g. “Barbell Bench Press”) not always matching Essentials short names
+- Attribution to ExerciseDB/AscendAPI required per OSS license
+
+### Recommended commit message
+
+```text
+BIQ-0028 Add ExerciseDB guided library with GIF form guides
+```

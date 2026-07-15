@@ -12,6 +12,7 @@ export type ExternalExerciseRecord = {
   instructions?: string;
   media_url?: string;
   thumbnail_url?: string;
+  gif_url?: string;
   category?: string;
   training_goal?: string;
   progression_type?: string;
@@ -40,6 +41,7 @@ export type MappedCatalogRow = {
   instructions: string | null;
   media_url: string | null;
   image_url: string | null;
+  gif_url: string | null;
   external_source: string;
   external_id: string;
   training_goal: string | null;
