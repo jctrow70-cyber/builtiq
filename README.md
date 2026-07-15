@@ -101,13 +101,34 @@ Or **double-click** `builtiq-setup.cmd` in the repo root.
 
 1. `builtiq-install-node.cmd` — downloads portable Node once  
 2. `builtiq-setup.cmd` — runs `npm install`  
-3. `builtiq-import.cmd` — runs alternatives import (needs `.env.local`)
+3. `builtiq-import-guided.cmd` — guided library (~1,324 GIF exercises)  
+4. `builtiq-import.cmd` — guided library + alternatives (needs `.env.local`)
 
 If PowerShell shows *Constrained Language Mode*, use the `.cmd` files — not the `.ps1` scripts.
 
 **With admin:** `winget install OpenJS.NodeJS.LTS`
 
-**Exercise import:** after `.env.local` has `SUPABASE_SERVICE_ROLE_KEY`, double-click `builtiq-import.cmd` or run:
+**Exercise import (easiest — no npm):**
+
+1. Add to `.env.local` in the repo root (get keys from Supabase → Project Settings → API):
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+   SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+   ```
+2. Start the app (`builtiq-npm.cmd run dev` or your hosted deploy with the same env vars).
+3. Sign in → **Settings** → **Guided Exercise Library** → click **Import Guided Library** (~1,324 exercises with GIF demos).
+
+No admin rights or npm required for the in-app import — only the service role key on the server.
+
+**Windows CMD fallback (if you prefer double-click):**
+
+1. `builtiq-install-node.cmd` — portable Node (no admin)  
+2. `builtiq-setup.cmd` — `npm install` once  
+3. `builtiq-import-guided.cmd` — guided library import (needs `.env.local`)  
+4. `builtiq-import.cmd` — guided library + alternatives
+
+**Legacy npm command:**
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/setup-windows.ps1 -ImportExercises
