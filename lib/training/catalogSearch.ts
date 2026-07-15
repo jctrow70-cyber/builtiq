@@ -1,7 +1,16 @@
 import { exerciseMatchesEquipment, hasEquipmentFilter } from './equipmentFilter';
+import {
+  catalogItemHasGuide,
+  catalogItemPreferenceScore,
+  filterCatalogBySources,
+  normalizeCatalogNameKey,
+  normalizeCatalogSources,
+  UNIFIED_CATALOG_SOURCES,
+  type CatalogSourceId,
+} from './catalogSources';
+import { hasExerciseGuide } from './exerciseMedia';
 
-/** System/imported exercises only — excludes user custom rows (no form guides). */
-export function builtinCatalogItems(items: any[]) {
+function systemCatalogPool(items: any[]) {
   return (items || []).filter((c) => {
     if (c?.is_archived) return false;
     if (c?.user_id) return false;
@@ -11,10 +20,33 @@ export function builtinCatalogItems(items: any[]) {
   });
 }
 
+/** Prefer guided / curated rows when the same exercise name exists in multiple libraries. */
+export function dedupeCatalogByName(items: any[]) {
+  const byName = new Map<string, any>();
+  for (const item of items) {
+    const key = normalizeCatalogNameKey(item?.name);
+    if (!key) continue;
+    const existing = byName.get(key);
+    if (!existing || catalogItemPreferenceScore(item) > catalogItemPreferenceScore(existing)) {
+      byName.set(key, item);
+    }
+  }
+  return Array.from(byName.values()).sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+}
+
+/** System/imported exercises only — excludes user custom rows. Merges all built-in libraries by default. */
+export function builtinCatalogItems(items: any[], sources?: CatalogSourceId[] | null) {
+  const pool = systemCatalogPool(items);
+  const enabled = sources == null ? UNIFIED_CATALOG_SOURCES : normalizeCatalogSources(sources);
+  return dedupeCatalogByName(filterCatalogBySources(pool, enabled));
+}
+
 export type CatalogSearchFilters = {
   muscle?: string;
   equipment?: string;
   exerciseType?: string;
+  /** When true, only exercises with thumbnail, GIF, or instructions */
+  guidesOnly?: boolean;
   /** When set (and not full_gym), limit to exercises matching user equipment */
   availableEquipment?: string[];
 };
@@ -47,6 +79,7 @@ function haystack(item: any): string {
 function relevanceScore(item: any, tokens: string[]): number {
   const name = String(item?.name || '').toLowerCase();
   let score = 0;
+  if (catalogItemHasGuide(item) || hasExerciseGuide(item)) score += 25;
   tokens.forEach((t, i) => {
     if (!t) return;
     if (name === t) score += 120;
@@ -66,6 +99,7 @@ function applyFilters(pool: any[], filters?: CatalogSearchFilters) {
   if (muscle) out = out.filter((c) => String(c.muscle_group || '') === muscle);
   if (equipment) out = out.filter((c) => String(c.equipment || '') === equipment);
   if (exerciseType) out = out.filter((c) => String(c.exercise_type || '') === exerciseType);
+  if (filters?.guidesOnly) out = out.filter((c) => catalogItemHasGuide(c) || hasExerciseGuide(c));
   if (hasEquipmentFilter(filters?.availableEquipment)) {
     out = out.filter((c) => exerciseMatchesEquipment(c, filters!.availableEquipment!));
   }
@@ -83,6 +117,7 @@ export function searchCatalog(items: any[], opts: CatalogSearchOptions = {}) {
     opts.filters?.muscle ||
     opts.filters?.equipment ||
     opts.filters?.exerciseType ||
+    opts.filters?.guidesOnly ||
     hasEquipmentFilter(opts.filters?.availableEquipment)
   );
 
@@ -110,6 +145,7 @@ export function countCatalogMatches(items: any[], opts: CatalogSearchOptions = {
     opts.filters?.muscle ||
     opts.filters?.equipment ||
     opts.filters?.exerciseType ||
+    opts.filters?.guidesOnly ||
     hasEquipmentFilter(opts.filters?.availableEquipment)
   );
   if (!tokens.length && !hasFilters) return 0;
@@ -140,7 +176,7 @@ export function catalogResultMeta(item: any): string {
 export function hasCatalogSearchInput(query = '', filters?: CatalogSearchFilters) {
   return (
     !!query.trim() ||
-    !!(filters?.muscle || filters?.equipment || filters?.exerciseType) ||
+    !!(filters?.muscle || filters?.equipment || filters?.exerciseType || filters?.guidesOnly) ||
     hasEquipmentFilter(filters?.availableEquipment)
   );
 }

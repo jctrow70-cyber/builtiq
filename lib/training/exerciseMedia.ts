@@ -88,10 +88,14 @@ function pushUniqueImage(images: string[], raw?: string | null) {
 
 export function getExerciseThumb(item?: {
   image_url?: string | null;
+  gif_url?: string | null;
   media_url?: string | null;
 } | null): string | null {
   const fromImage = resolveExerciseMediaUrl(item?.image_url);
   if (fromImage) return fromImage;
+
+  const fromGif = resolveExerciseMediaUrl(item?.gif_url);
+  if (fromGif) return fromGif;
 
   const media = resolveExerciseMediaUrl(item?.media_url);
   if (media && isStillImageUrl(media)) return media;
@@ -100,17 +104,24 @@ export function getExerciseThumb(item?: {
 
 export function hasExerciseGuide(item?: {
   image_url?: string | null;
+  gif_url?: string | null;
   media_url?: string | null;
   instructions?: string | null;
 } | null): boolean {
   if (!item) return false;
-  return !!(cleanUrl(item.image_url) || cleanUrl(item.media_url) || String(item.instructions || '').trim());
+  return !!(
+    cleanUrl(item.image_url) ||
+    cleanUrl(item.gif_url) ||
+    cleanUrl(item.media_url) ||
+    String(item.instructions || '').trim()
+  );
 }
 
 export function getExerciseGuidePayload(
   item?: {
     name?: string;
     image_url?: string | null;
+    gif_url?: string | null;
     media_url?: string | null;
     instructions?: string | null;
   } | null,
@@ -120,16 +131,20 @@ export function getExerciseGuidePayload(
 
   const images: string[] = [];
   const thumb = resolveExerciseMediaUrl(item.image_url);
+  const gif = resolveExerciseMediaUrl(item.gif_url);
   const media = resolveExerciseMediaUrl(item.media_url);
 
   pushUniqueImage(images, thumb);
   if (thumb) pushUniqueImage(images, deriveAlternateImage(thumb));
+  pushUniqueImage(images, gif);
 
   // Still images / GIFs belong in the photo strip — not the video player
-  if (media && isStillImageUrl(media)) {
-    pushUniqueImage(images, media);
-  } else if (media && !isDirectVideoUrl(media) && !isYoutubeUrl(media) && !isVimeoUrl(media)) {
-    pushUniqueImage(images, media);
+  if (media && media !== gif) {
+    if (isStillImageUrl(media)) {
+      pushUniqueImage(images, media);
+    } else if (!isDirectVideoUrl(media) && !isYoutubeUrl(media) && !isVimeoUrl(media)) {
+      pushUniqueImage(images, media);
+    }
   }
 
   let embedUrl: string | null = null;
@@ -146,6 +161,6 @@ export function getExerciseGuidePayload(
     videoUrl,
     embedUrl,
     instructions: String(item.instructions || '').trim() || null,
-    hasVideo: !!(embedUrl || videoUrl),
+    hasVideo: !!(embedUrl || videoUrl || gif),
   };
 }

@@ -1,5 +1,9 @@
 @echo off
-REM Import exercises + alternatives (needs .env.local with SUPABASE_SERVICE_ROLE_KEY)
+REM Import all exercise datasets (guided library + alternatives)
 cd /d "%~dp0"
+call "%~dp0builtiq-import-guided.cmd"
+if errorlevel 1 exit /b 1
+echo.
+echo Importing exercise alternatives...
 call "%~dp0builtiq-npm.cmd" run import:alternatives
-if errorlevel 1 pause
+pause

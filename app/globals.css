@@ -20,6 +20,13 @@
 .section-head h2{margin:0;font-size:15px;color:#e5e7eb}
 .section-empty{padding:8px 4px 12px}
 .exercise-card{margin-bottom:10px}
+.exercise-card.exercise-collapsed .exercise-head{margin-bottom:0}
+.exercise-card.exercise-collapsed{padding-bottom:8px}
+.exercise-collapse-summary{margin:4px 0 0;font-size:12px}
+.exercise-collapse-btn{flex-shrink:0}
+.section-head-actions{display:flex;align-items:center;gap:6px;margin-left:auto;flex-wrap:wrap}
+.catalog-guides-filter{margin:0;font-size:12px;white-space:nowrap}
+.guided-import-card code{font-size:12px;background:#101827;padding:2px 6px;border-radius:6px}
 .exercise-meta{display:flex;flex-direction:column;gap:4px;min-width:0}
 .exercise-title-row{display:flex;align-items:center;gap:8px;min-width:0;flex-wrap:wrap}
 .exercise-name-text{margin:0;font-size:15px;font-weight:800;flex:1;min-width:0;line-height:1.35;word-break:break-word;white-space:pre-wrap}

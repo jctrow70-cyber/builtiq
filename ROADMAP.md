@@ -279,10 +279,27 @@ See `CHANGELOG.md` BIQ-0013 and BIQ-0024 for full scope.
 ### Next priorities
 
 1. ~~PR detection and strength trends on Progress tab~~ (BIQ-0026)
-2. AI program regeneration / edit-from-prompt for existing programs
-3. Nutrition MVP placeholder → functional tracking
-4. AI Coach hook-up (consumes `coaching_metadata` + program context)
-5. Split `page.tsx` into focused components
+2. **App admin roles** — move beyond env-only catalog import admin (see below)
+3. AI program regeneration / edit-from-prompt for existing programs
+4. Nutrition MVP placeholder → functional tracking
+5. AI Coach hook-up (consumes `coaching_metadata` + program context)
+6. Split `page.tsx` into focused components
+
+### Planned — Platform admin and catalog operations
+
+**Current (shipped in PR #16):** Catalog import admin via `BUILTIQ_CATALOG_ADMIN_EMAILS` in Vercel / `.env.local`. Only allowlisted emails see **Settings → Guided Exercise Library** and can run `POST /api/catalog/import-guided`. Normal users get the unified exercise search with no import controls.
+
+**Roadmap — proper admin model (not started):**
+
+| Part | Deliverable |
+|------|-------------|
+| 1 | `is_admin` (or role) on `st_profiles` or Supabase custom claim — not email env var only |
+| 2 | Admin-only Settings section: guided library import, future wger/other bulk imports |
+| 3 | Optional: view catalog import status, re-import, dry-run stats without npm |
+| 4 | Audit log for admin actions (who imported, when) |
+| 5 | Document admin onboarding: first deploy sets `BUILTIQ_CATALOG_ADMIN_EMAILS`; later migrate to DB roles |
+
+**Out of scope for v1 admin:** End-user library picking (removed — unified catalog is default).
 
 Run pending Supabase migrations on each environment before testing:
 

@@ -2315,6 +2315,8 @@ BIQ-0026 Add Progress personal records and weekly volume trends
 
 ---
 
+---
+
 ## BIQ-0027 - Team Training Coach Platform Architecture
 
 Date: 2026-07-15  
@@ -2431,4 +2433,327 @@ None.
 
 ```text
 BIQ-0028 Revert BIQ-0027 from main for preview-first rollout
+```
+
+---
+
+> **Note:** BIQ numbers **0027** and **0028** on `main` refer to the **team coach** workstream. The same numbers on `cursor/superset-catalog-collapse-23ec` refer to **superset/catalog** work — distinct parallel changes documented below.
+
+## BIQ-0027 - Superset Set Removal, Basic Catalog, and Exercise Collapse
+
+Date: 2026-07-15  
+Branch: cursor/superset-catalog-collapse-23ec  
+Status: Completed
+
+### Summary
+
+Fixed removing planned sets from the second (or third) exercise in a superset, added a **Basic Gym** exercise library alongside existing Essentials and the full imported database, and added per-exercise collapse/expand plus section and workout-level collapse controls to reduce scrolling.
+
+### Purpose
+
+Users reported set removal failing on later superset exercises (caused by shared `sort_order` across superset members breaking cross-week exercise matching). The large imported exercise database also surfaced obscure exercise names; users wanted simpler libraries while keeping the full DB available. Workout plans with many exercises required too much scrolling.
+
+### Changes
+
+- **`matchingExercise` / `matchingSet` / `removeSet`** — Match superset exercises by `superset_order` first; prefer set id on the current workout; surface DB errors on failed removal
+- **`confirmAddExercise`** — New superset members use the group's shared `sort_order` (not a new sort slot)
+- **`lib/training/catalogSources.ts`** — Source packs: BuiltIQ Essentials, Basic Gym, Guided Library
+- **`lib/training/catalogSearch.ts`** — Unified catalog merge + dedupe by exercise name
+- **Migration `20250715_018_basic_catalog_and_sources.sql`** — Tag legacy system seed as `builtiq_essentials`; seed ~45 `builtiq_basic` exercises
+- **Training UI** — Collapse/Expand per exercise; Collapse/Expand per section; Collapse all / Expand all on workout header
+
+### Files changed
+
+- `app/page.tsx`
+- `app/globals.css`
+- `lib/training/catalogSearch.ts`
+- `lib/training/catalogSources.ts` (new)
+- `supabase/migrations/20250715_018_basic_catalog_and_sources.sql` (new)
+- `CHANGELOG.md`
+
+### Database changes
+
+- `st_profiles.catalog_sources text[]` (column retained; app no longer uses per-user library toggles as of BIQ-0031)
+- Existing system catalog rows tagged `external_source = 'builtiq_essentials'`
+- New `builtiq_basic` system exercises inserted (idempotent by `external_id`)
+
+### Testing steps
+
+1. Apply migration `20250715_018_basic_catalog_and_sources.sql` in Supabase
+2. Open a workout with a **superset** (2 exercises, 3+ sets each)
+3. Remove a set from the **second** exercise — confirm it disappears (bug fix)
+4. **Training** — Collapse one exercise; **Collapse all** / **Expand all** on workout header
+5. Section-level **Collapse** / **Expand** buttons affect only that section
+6. Mobile — collapsed cards show summary line; buttons remain tappable
+
+### Known issues
+
+- Collapse state resets on page refresh (session-only, not persisted)
+
+### Recommended commit message
+
+```text
+BIQ-0027 Fix superset set removal, add basic catalog, exercise collapse
+```
+
+---
+
+## BIQ-0028 - ExerciseDB Guided Library (GIF demos + form guides)
+
+Date: 2026-07-15  
+Branch: cursor/superset-catalog-collapse-23ec  
+Status: Completed
+
+### Summary
+
+Integrated **ExerciseDB v1** as the primary **Guided Library** (~1,324 exercises) with animated GIF demos, thumbnails, and step-by-step instructions. Added bulk import pipeline, `gif_url` catalog support, search ranking/filter for exercises with guides, and updated default library preferences.
+
+### Purpose
+
+Users need a comprehensive exercise database with form guides and visual demos — not just text-only Essentials/Basic entries or the legacy still-photo library with odd names.
+
+### Changes
+
+- **`scripts/import-exercises/sources/exerciseDb.ts`** — ExerciseDB API + bulk mirror converter
+- **`scripts/import-exercises/fetchExerciseDb.ts`** — Bulk download (recommended) or paginated API fetch
+- **`npm run import:exercises:exercisedb`** — One-command fetch + Supabase import
+- **`lib/training/catalogSources.ts`** — New `exercisedb` Guided Library source (default on)
+- **`lib/training/exerciseMedia.ts`** — `gif_url` support; GIF demos show as animated form guides
+- **`lib/training/catalogSearch.ts`** — `guidesOnly` filter; boost guided exercises in search results
+- **Add Exercise panel** — Default “With form guide” filter; library list in search
+- **Migration `20250715_019_exercisedb_catalog_defaults.sql`** — Default `catalog_sources` includes `exercisedb`
+
+### Files changed
+
+- `scripts/import-exercises/sources/exerciseDb.ts` (new)
+- `scripts/import-exercises/fetchExerciseDb.ts` (new)
+- `scripts/import-exercises/types.ts`
+- `scripts/import-exercises/mapImportRecord.ts`
+- `scripts/import-exercises/README.md`
+- `lib/training/catalogSources.ts`
+- `lib/training/catalogSearch.ts`
+- `lib/training/exerciseMedia.ts`
+- `app/page.tsx`
+- `app/globals.css`
+- `package.json`
+- `supabase/migrations/20250715_019_exercisedb_catalog_defaults.sql` (new)
+- `CHANGELOG.md`
+
+### Database changes
+
+- Run migration `20250715_019_exercisedb_catalog_defaults.sql`
+- Import ~1,324 rows: `npm run import:exercises:exercisedb` (requires `.env.local` service role key)
+- Rows use `external_source = 'exercisedb'` with `gif_url`, `image_url`, `media_url`, `instructions`
+
+### Testing steps
+
+1. Apply migrations `018` and `019`
+2. Run `npm run import:exercises:exercisedb:dry` then `npm run import:exercises:exercisedb`
+3. Verify SQL count for `exercisedb` source (~1324)
+4. Training → Add Exercise → search “bench press” — results show GIF thumbnails
+5. Pick exercise → **Watch form** / **Preview form guide** shows animated GIF + instructions
+6. Workout card for guided exercise shows thumbnail + form guide button
+
+### Known issues
+
+- Free OSS tier uses 180p GIFs (not MP4 video); animated GIFs play in form guide panel
+- API paginated fetch rate-limits (~250 requests); use bulk import (`npm run import:fetch:exercisedb`) instead
+- Attribution to ExerciseDB/AscendAPI required per OSS license
+
+### Recommended commit message
+
+```text
+BIQ-0028 Add ExerciseDB guided library with GIF form guides
+```
+
+---
+
+## BIQ-0029 - One-click guided library import (no npm)
+
+Date: 2026-07-15  
+Branch: cursor/superset-catalog-collapse-23ec  
+Status: Completed
+
+### Summary
+
+Added **Settings → Import Guided Library** so operators can load ~1,324 exercises with GIF form guides **without npm**. Server uses `SUPABASE_SERVICE_ROLE_KEY`. Improved Windows `builtiq-import-guided.cmd` double-click flow.
+
+### Purpose
+
+User reported npm never works and they lack admin privileges — needed a path that only requires the running app + Supabase service role key.
+
+### Changes
+
+- **`POST /api/catalog/import-guided`** — authenticated one-click import from ExerciseDB bulk dataset
+- **`GET /api/catalog/import-guided`** — status (count, whether server is configured)
+- **`lib/training/guidedCatalogImport.ts`** — shared server import logic
+- **`lib/training/catalogImportMap.ts`** — moved import mapping into `lib/` for app + CLI reuse
+- **Settings UI** — Guided Exercise Library card with import button and setup instructions
+- **`builtiq-import-guided.cmd`** — Windows double-click import with portable Node
+- **README** — no-npm import steps documented first
+
+### Files changed
+
+- `app/api/catalog/import-guided/route.ts` (new)
+- `app/page.tsx`
+- `app/globals.css`
+- `lib/training/guidedCatalogImport.ts` (new)
+- `lib/training/catalogImportMap.ts` (new)
+- `lib/training/catalogImportTypes.ts` (new)
+- `lib/training/exerciseDbImport.ts` (new)
+- `scripts/import-exercises/*.ts` (re-export from lib)
+- `builtiq-import.cmd`
+- `builtiq-import-guided.cmd` (new)
+- `README.md`
+- `CHANGELOG.md`
+
+### Database changes
+
+None (uses existing `st_exercise_catalog` schema).
+
+### Testing steps
+
+1. Add `SUPABASE_SERVICE_ROLE_KEY` to Vercel env vars, redeploy
+2. Sign in as admin → Settings → **Import Guided Library**
+3. Training → Add Exercise → search "squat" — GIF thumbnails appear
+
+### Known issues
+
+- Import requires redeploy after adding env vars
+- Large import may timeout on very slow hosting — re-run import (upserts safely)
+
+### Recommended commit message
+
+```text
+BIQ-0029 Add one-click guided library import without npm
+```
+
+---
+
+## BIQ-0030 - Restrict guided catalog import to admins
+
+Date: 2026-07-15  
+Branch: cursor/superset-catalog-collapse-23ec  
+Status: Completed
+
+### Summary
+
+Guided library import remains a **shared system catalog** for all users, but the Settings import UI and API are now limited to emails listed in `BUILTIQ_CATALOG_ADMIN_EMAILS`.
+
+### Purpose
+
+User imported the guided library successfully but did not want normal users to see or run the import controls in Settings.
+
+### Changes
+
+- **`lib/training/catalogAdmin.ts`** — admin email allowlist helper
+- **`GET/POST /api/catalog/import-guided`** — returns `isCatalogAdmin`; POST requires admin
+- **Settings UI** — Guided Exercise Library card hidden unless `isCatalogAdmin`
+- **`.env.example` / README** — document `BUILTIQ_CATALOG_ADMIN_EMAILS`
+
+### Files changed
+
+- `lib/training/catalogAdmin.ts` (new)
+- `app/api/catalog/import-guided/route.ts`
+- `app/page.tsx`
+- `.env.example`
+- `README.md`
+- `CHANGELOG.md`
+
+### Database changes
+
+None.
+
+### Testing steps
+
+1. Set `BUILTIQ_CATALOG_ADMIN_EMAILS=your@email.com` in Vercel (Preview + Production), redeploy
+2. Sign in as admin → Settings shows Guided Exercise Library card
+3. Sign in as another user → card is hidden; POST import returns 403
+
+### Known issues
+
+- Admin list is env-based (no in-app admin UI yet)
+
+### Recommended commit message
+
+```text
+BIQ-0030 Restrict guided catalog import to admin emails
+```
+
+---
+
+## BIQ-0031 - Unified seamless exercise library (no user library picker)
+
+Date: 2026-07-15  
+Branch: cursor/superset-catalog-collapse-23ec  
+Status: Completed
+
+### Summary
+
+Removed per-user exercise library toggles. All users now search one merged BuiltIQ catalog (Essentials + Basic + Guided + legacy photo library), with duplicate names collapsed to the best version (prefers GIF guides).
+
+### Purpose
+
+User wants a seamless experience — extensive library without asking users to pick sources.
+
+### Changes
+
+- **`builtinCatalogItems()`** — merges all system libraries; dedupes by exercise name
+- **Settings Profile** — removed Exercise libraries chip picker
+- **Add Exercise search** — full catalog by default; optional “With form guide” filter off by default
+- Search ranking still boosts exercises with GIFs/instructions
+
+### Files changed
+
+- `lib/training/catalogSources.ts`
+- `lib/training/catalogSearch.ts`
+- `app/page.tsx`
+- `CHANGELOG.md`
+
+### Database changes
+
+None (`catalog_sources` column retained but no longer used by the app).
+
+### Testing steps
+
+1. Settings → Profile has no Exercise libraries picker
+2. Training → Add Exercise → search “squat” — one entry per name when possible, guided version preferred
+3. Exercise count in search placeholder reflects merged catalog (~1,400+ depending on imports)
+4. Optional “With form guide” filter still works
+
+### Recommended commit message
+
+```text
+BIQ-0031 Unify exercise catalog search without user library picker
+```
+
+---
+
+## BIQ-0032 - Roadmap: platform admin roles
+
+Date: 2026-07-15  
+Branch: cursor/superset-catalog-collapse-23ec  
+Status: Completed (documentation)
+
+### Summary
+
+Added **Platform admin and catalog operations** to `ROADMAP.md`: current env-based catalog import admin (BIQ-0030) and planned database-backed admin roles for imports and ops.
+
+### Purpose
+
+User asked to track admin capabilities on the product roadmap beyond the temporary email allowlist.
+
+### Files changed
+
+- `ROADMAP.md`
+- `CHANGELOG.md`
+
+### Database changes
+
+None.
+
+### Recommended commit message
+
+```text
+BIQ-0032 Add platform admin roles to roadmap
 ```
