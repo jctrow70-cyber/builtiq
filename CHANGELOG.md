@@ -2757,3 +2757,49 @@ None.
 ```text
 BIQ-0032 Add platform admin roles to roadmap
 ```
+
+---
+
+## BIQ-0033 - Fix workout logs not showing after logging
+
+Date: 2026-07-15  
+Branch: cursor/workout-log-persist-23ec  
+Status: Completed
+
+### Summary
+
+Fixed workout values disappearing after logging and the dashboard always showing **Start Training** even when today's workout was already logged.
+
+### Purpose
+
+Users reported entering set data during a workout, then returning to find empty fields and the dashboard unchanged. Root causes: saves only fired on input blur (easy to miss on mobile), the dashboard never loaded today's log status, the active workout tab could drift from the selected date (wrong set IDs), and saves only looked up sets on the currently visible workout tab.
+
+### Files changed
+
+- `app/page.tsx` — sync active workout to selected date; load dashboard today logs; show Completed / In progress / Start / Continue; save sets via full-program lookup; refresh dashboard cache on save
+- `app/components/WorkoutSetLogger.tsx` — debounced auto-save while typing; flush pending saves on blur/unmount
+- `CHANGELOG.md`
+
+### Database changes
+
+None.
+
+### Testing steps
+
+1. Sign in and open **Training** for today's scheduled workout.
+2. Enter weight/reps on a set — wait ~1 second without leaving the field.
+3. Switch to **Dashboard** — badge should show **In progress** or **Completed**; button should say **Continue Workout** or **View Workout** (not always Start Training).
+4. Return to **Training** — entered values should still appear on today's workout.
+5. Change the date picker to another day, then back to today — correct workout tab and values should load.
+6. On mobile, type values and tap another nav tab immediately — values should still persist after refresh.
+7. **Progress** tab should list completed sets after logging.
+
+### Known issues
+
+- Dashboard "Sets today" metric still counts only `completed=true` rows (unchanged); status badge uses performance data too.
+
+### Recommended commit message
+
+```text
+BIQ-0033 Fix workout log persistence and dashboard workout status
+```
