@@ -2312,3 +2312,71 @@ None.
 ```text
 BIQ-0026 Add Progress personal records and weekly volume trends
 ```
+
+---
+
+## BIQ-0027 - Superset Set Removal, Basic Catalog, and Exercise Collapse
+
+Date: 2026-07-15  
+Branch: cursor/superset-catalog-collapse-23ec  
+Status: Completed
+
+### Summary
+
+Fixed removing planned sets from the second (or third) exercise in a superset, added a **Basic Gym** exercise library alongside existing Essentials and the full imported database, and added per-exercise collapse/expand plus section and workout-level collapse controls to reduce scrolling.
+
+### Purpose
+
+Users reported set removal failing on later superset exercises (caused by shared `sort_order` across superset members breaking cross-week exercise matching). The large imported exercise database also surfaced obscure exercise names; users wanted simpler libraries while keeping the full DB available. Workout plans with many exercises required too much scrolling.
+
+### Changes
+
+- **`matchingExercise` / `matchingSet` / `removeSet`** — Match superset exercises by `superset_order` first; prefer set id on the current workout; surface DB errors on failed removal
+- **`confirmAddExercise`** — New superset members use the group's shared `sort_order` (not a new sort slot)
+- **`lib/training/catalogSources.ts`** — Source packs: BuiltIQ Essentials, Basic Gym, Full Exercise DB
+- **`lib/training/catalogSearch.ts`** — Filter builtin catalog by enabled source packs
+- **Migration `20250715_018_basic_catalog_and_sources.sql`** — Tag legacy system seed as `builtiq_essentials`; seed ~45 `builtiq_basic` exercises; add `st_profiles.catalog_sources`
+- **Training UI** — Collapse/Expand per exercise; Collapse/Expand per section; Collapse all / Expand all on workout header
+- **Settings / Profile** — Exercise library toggles (at least one must stay enabled)
+
+### Files changed
+
+- `app/page.tsx`
+- `app/globals.css`
+- `lib/training/catalogSearch.ts`
+- `lib/training/catalogSources.ts` (new)
+- `supabase/migrations/20250715_018_basic_catalog_and_sources.sql` (new)
+- `CHANGELOG.md`
+
+### Database changes
+
+- `st_profiles.catalog_sources text[]` default `['builtiq_essentials','builtiq_basic']`
+- Existing system catalog rows tagged `external_source = 'builtiq_essentials'`
+- New `builtiq_basic` system exercises inserted (idempotent by `external_id`)
+
+### Testing steps
+
+1. Apply migration `20250715_018_basic_catalog_and_sources.sql` in Supabase
+2. Open a workout with a **superset** (2 exercises, 3+ sets each)
+3. Set apply scope to **This week and all future weeks**
+4. Remove a set from the **first** exercise — confirm it disappears
+5. Remove a set from the **second** exercise — confirm it disappears (bug fix)
+6. **Settings → Profile** — toggle exercise libraries; confirm Add Exercise search count changes
+7. Enable only **Basic Gym** + **Essentials** — search should show familiar names, not obscure full-DB-only entries
+8. Enable **Full Exercise DB** — niche exercises appear again
+9. **Training** — Collapse one exercise (sets hidden); Expand restores set logger
+10. Use **Collapse all** on workout header — all exercises collapse; **Expand all** restores
+11. Section-level **Collapse** / **Expand** buttons affect only that section
+12. Mobile — collapsed cards show summary line; buttons remain tappable
+
+### Known issues
+
+- Collapse state resets on page refresh (session-only, not persisted)
+- AI program generation still uses its own catalog ranking; library toggles affect search/add UI primarily
+- `builtiq_basic` does not duplicate every Essentials exercise by design (complementary library)
+
+### Recommended commit message
+
+```text
+BIQ-0027 Fix superset set removal, add basic catalog, exercise collapse
+```
