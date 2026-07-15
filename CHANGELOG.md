@@ -2619,3 +2619,34 @@ None (`catalog_sources` column retained but no longer used by the app).
 ```text
 BIQ-0031 Unify exercise catalog search without user library picker
 ```
+
+---
+
+## BIQ-0032 - Roadmap: platform admin roles
+
+Date: 2026-07-15  
+Branch: cursor/superset-catalog-collapse-23ec  
+Status: Completed (documentation)
+
+### Summary
+
+Added **Platform admin and catalog operations** to `ROADMAP.md`: current env-based catalog import admin (BIQ-0030) and planned database-backed admin roles for imports and ops.
+
+### Purpose
+
+User asked to track admin capabilities on the product roadmap beyond the temporary email allowlist.
+
+### Files changed
+
+- `ROADMAP.md`
+- `CHANGELOG.md`
+
+### Database changes
+
+None.
+
+### Recommended commit message
+
+```text
+BIQ-0032 Add platform admin roles to roadmap
+```
