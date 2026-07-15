@@ -47,6 +47,34 @@ export const DEFAULT_CATALOG_SOURCES: CatalogSourceId[] = CATALOG_SOURCES.filter
   (s) => s.id
 );
 
+/** All built-in libraries merged for seamless user search (no per-user toggles). */
+export const UNIFIED_CATALOG_SOURCES: CatalogSourceId[] = CATALOG_SOURCES.map((s) => s.id);
+
+/** Lower rank = preferred when the same exercise name exists in multiple libraries. */
+export const CATALOG_SOURCE_PREFERENCE: Record<CatalogSourceId, number> = {
+  exercisedb: 0,
+  builtiq_essentials: 1,
+  builtiq_basic: 2,
+  free_exercise_db: 3,
+};
+
+export function normalizeCatalogNameKey(name: string): string {
+  return String(name || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+}
+
+export function catalogItemPreferenceScore(item: any): number {
+  const src = catalogItemSource(item);
+  const rank = CATALOG_SOURCE_PREFERENCE[src] ?? 9;
+  let score = (10 - rank) * 100;
+  if (catalogItemHasGuide(item)) score += 40;
+  if (String(item?.gif_url || '').trim()) score += 25;
+  if (String(item?.instructions || '').trim()) score += 10;
+  return score;
+}
+
 export function normalizeCatalogSources(raw?: string[] | null): CatalogSourceId[] {
   const allowed = new Set(CATALOG_SOURCES.map((s) => s.id));
   const list = (raw || []).filter((id): id is CatalogSourceId => allowed.has(id as CatalogSourceId));

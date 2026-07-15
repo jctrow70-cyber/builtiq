@@ -1,17 +1,44 @@
 import { exerciseMatchesEquipment, hasEquipmentFilter } from './equipmentFilter';
-import { catalogItemHasGuide, filterCatalogBySources, normalizeCatalogSources, type CatalogSourceId } from './catalogSources';
+import {
+  catalogItemHasGuide,
+  catalogItemPreferenceScore,
+  filterCatalogBySources,
+  normalizeCatalogNameKey,
+  normalizeCatalogSources,
+  UNIFIED_CATALOG_SOURCES,
+  type CatalogSourceId,
+} from './catalogSources';
 import { hasExerciseGuide } from './exerciseMedia';
 
-/** System/imported exercises only — excludes user custom rows (no form guides). */
-export function builtinCatalogItems(items: any[], sources?: CatalogSourceId[] | null) {
-  const pool = (items || []).filter((c) => {
+function systemCatalogPool(items: any[]) {
+  return (items || []).filter((c) => {
     if (c?.is_archived) return false;
     if (c?.user_id) return false;
     if (c?.is_system === true) return true;
     if (c?.external_source) return true;
     return false;
   });
-  return filterCatalogBySources(pool, normalizeCatalogSources(sources));
+}
+
+/** Prefer guided / curated rows when the same exercise name exists in multiple libraries. */
+export function dedupeCatalogByName(items: any[]) {
+  const byName = new Map<string, any>();
+  for (const item of items) {
+    const key = normalizeCatalogNameKey(item?.name);
+    if (!key) continue;
+    const existing = byName.get(key);
+    if (!existing || catalogItemPreferenceScore(item) > catalogItemPreferenceScore(existing)) {
+      byName.set(key, item);
+    }
+  }
+  return Array.from(byName.values()).sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+}
+
+/** System/imported exercises only — excludes user custom rows. Merges all built-in libraries by default. */
+export function builtinCatalogItems(items: any[], sources?: CatalogSourceId[] | null) {
+  const pool = systemCatalogPool(items);
+  const enabled = sources == null ? UNIFIED_CATALOG_SOURCES : normalizeCatalogSources(sources);
+  return dedupeCatalogByName(filterCatalogBySources(pool, enabled));
 }
 
 export type CatalogSearchFilters = {

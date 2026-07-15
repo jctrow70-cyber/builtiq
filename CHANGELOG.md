@@ -2572,3 +2572,50 @@ None.
 ```text
 BIQ-0030 Restrict guided catalog import to admin emails
 ```
+
+---
+
+## BIQ-0031 - Unified seamless exercise library (no user library picker)
+
+Date: 2026-07-15  
+Branch: cursor/superset-catalog-collapse-23ec  
+Status: Completed
+
+### Summary
+
+Removed per-user exercise library toggles. All users now search one merged BuiltIQ catalog (Essentials + Basic + Guided + legacy photo library), with duplicate names collapsed to the best version (prefers GIF guides).
+
+### Purpose
+
+User wants a seamless experience — extensive library without asking users to pick sources.
+
+### Changes
+
+- **`builtinCatalogItems()`** — merges all system libraries; dedupes by exercise name
+- **Settings Profile** — removed Exercise libraries chip picker
+- **Add Exercise search** — full catalog by default; optional “With form guide” filter off by default
+- Search ranking still boosts exercises with GIFs/instructions
+
+### Files changed
+
+- `lib/training/catalogSources.ts`
+- `lib/training/catalogSearch.ts`
+- `app/page.tsx`
+- `CHANGELOG.md`
+
+### Database changes
+
+None (`catalog_sources` column retained but no longer used by the app).
+
+### Testing steps
+
+1. Settings → Profile has no Exercise libraries picker
+2. Training → Add Exercise → search “squat” — one entry per name when possible, guided version preferred
+3. Exercise count in search placeholder reflects merged catalog (~1,400+ depending on imports)
+4. Optional “With form guide” filter still works
+
+### Recommended commit message
+
+```text
+BIQ-0031 Unify exercise catalog search without user library picker
+```
