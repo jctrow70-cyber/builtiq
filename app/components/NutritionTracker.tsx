@@ -34,6 +34,12 @@ import {
   FoodCatalogItem,
   searchFoodCatalog,
 } from '../../lib/nutrition/foodCatalogSearch';
+import {
+  AiFoodEstimateItem,
+  AiFoodEstimateResult,
+  AI_FOOD_DISCLAIMER,
+  aiEstimateToDraft,
+} from '../../lib/nutrition/aiFoodEstimate';
 import { currentCalendarWeekBounds, formatDisplayDate, parseYmd, todayYmd } from '../../lib/training/programCalendar';
 
 type NutritionTrackerProps = {
@@ -231,6 +237,10 @@ export default function NutritionTracker({
   const [foodSearch, setFoodSearch] = useState('');
   const [catalogSearch, setCatalogSearch] = useState('');
   const [pickedCatalogId, setPickedCatalogId] = useState<string | null>(null);
+  const [aiDescribe, setAiDescribe] = useState('');
+  const [aiEstimating, setAiEstimating] = useState(false);
+  const [aiEstimateError, setAiEstimateError] = useState('');
+  const [aiEstimateResult, setAiEstimateResult] = useState<AiFoodEstimateResult | null>(null);
 
   const totals = useMemo(() => sumMacros(entries), [entries]);
   const grouped = useMemo(() => groupEntriesByMeal(entries), [entries]);
@@ -763,7 +773,89 @@ export default function NutritionTracker({
     setAddDraft(emptyFoodDraft(meal));
     setCatalogSearch('');
     setPickedCatalogId(null);
+    setAiDescribe('');
+    setAiEstimateError('');
+    setAiEstimateResult(null);
     setShowAdd(true);
+  }
+
+  async function estimateWithAi() {
+    const description = aiDescribe.trim();
+    if (description.length < 4) return alert('Describe your food (e.g. 6 oz chicken breast and rice).');
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session?.access_token) return alert('Sign in to use AI food estimates.');
+
+    setAiEstimating(true);
+    setAiEstimateError('');
+    setAiEstimateResult(null);
+    try {
+      const res = await fetch('/api/nutrition/estimate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ description, meal_type: addDraft.meal_type }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || `Estimate failed (${res.status})`);
+      setAiEstimateResult(data as AiFoodEstimateResult);
+      if ((data as AiFoodEstimateResult)?.items?.length === 1) {
+        setPickedCatalogId(null);
+        setAddDraft({
+          ...addDraft,
+          ...aiEstimateToDraft((data as AiFoodEstimateResult).items[0], addDraft.meal_type),
+        });
+      }
+    } catch (e: any) {
+      setAiEstimateError(e?.message || 'Could not estimate food.');
+    } finally {
+      setAiEstimating(false);
+    }
+  }
+
+  function applyAiEstimate(item: AiFoodEstimateItem) {
+    setPickedCatalogId(null);
+    setAddDraft({
+      ...addDraft,
+      ...aiEstimateToDraft(item, addDraft.meal_type),
+    });
+  }
+
+  async function logAiEstimates(items: AiFoodEstimateItem[]) {
+    if (!userId || !items.length) return;
+    setSaving(true);
+    setError('');
+    const notePrefix = aiEstimateResult?.notes ? `AI estimate: ${aiEstimateResult.notes}` : 'AI estimate';
+    try {
+      const rows = items.map((item) => ({
+        user_id: userId,
+        log_date: logDate,
+        meal_type: addDraft.meal_type,
+        food_name: item.food_name,
+        serving_qty: 1,
+        calories: item.calories,
+        protein_g: item.protein_g,
+        carbs_g: item.carbs_g,
+        fat_g: item.fat_g,
+        notes: notePrefix,
+      }));
+      const inserted = await insertMealRows(rows);
+      setEntries((prev) => [...prev, ...inserted]);
+      notifyParent();
+      await loadData();
+      setShowAdd(false);
+      setAiDescribe('');
+      setAiEstimateResult(null);
+      setCatalogSearch('');
+      setPickedCatalogId(null);
+    } catch (e: any) {
+      setError(e?.message || 'Could not log AI estimate.');
+    } finally {
+      setSaving(false);
+    }
   }
 
   function shiftDate(days: number) {
@@ -948,6 +1040,70 @@ export default function NutritionTracker({
               <p className="muted">No catalog matches. Enter the food manually below.</p>
             )}
           </div>
+
+          <div className="catalog-picker nutrition-ai-picker">
+            <label htmlFor="ai-food-describe">Describe your food (AI estimate)</label>
+            <textarea
+              id="ai-food-describe"
+              rows={2}
+              value={aiDescribe}
+              onChange={(e) => setAiDescribe(e.target.value)}
+              placeholder="e.g. 6 oz grilled chicken breast with 1 cup rice and broccoli"
+            />
+            <p className="muted nutrition-ai-disclaimer">{AI_FOOD_DISCLAIMER}</p>
+            <div className="actions" style={{ marginTop: 8 }}>
+              <button
+                type="button"
+                className="btn secondary"
+                onClick={estimateWithAi}
+                disabled={saving || aiEstimating}
+              >
+                {aiEstimating ? 'Estimating...' : 'Estimate with AI'}
+              </button>
+            </div>
+            {aiEstimateError && <p className="nutrition-error">{aiEstimateError}</p>}
+            {aiEstimateResult && (
+              <div className="nutrition-ai-results">
+                {aiEstimateResult.notes && (
+                  <p className="dash-insight nutrition-ai-notes">{aiEstimateResult.notes}</p>
+                )}
+                <div className="nutrition-food-grid">
+                  {aiEstimateResult.items.map((item, idx) => (
+                    <div key={`${item.food_name}-${idx}`} className="nutrition-food-chip">
+                      <div>
+                        <b>{item.food_name}</b>
+                        <span className="muted">
+                          {item.serving_label} · {formatMacroLine(item)}
+                        </span>
+                      </div>
+                      <div className="nutrition-food-chip-actions">
+                        <button
+                          type="button"
+                          className="btn small secondary"
+                          onClick={() => applyAiEstimate(item)}
+                          disabled={saving}
+                        >
+                          Use
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {aiEstimateResult.items.length > 1 && (
+                  <button
+                    type="button"
+                    className="btn small green"
+                    style={{ marginTop: 8 }}
+                    onClick={() => logAiEstimates(aiEstimateResult.items)}
+                    disabled={saving}
+                  >
+                    Log all {aiEstimateResult.items.length} items
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
           <FoodFormFields
             draft={addDraft}
             setDraft={(next) => {
@@ -975,6 +1131,9 @@ export default function NutritionTracker({
                 setShowAdd(false);
                 setCatalogSearch('');
                 setPickedCatalogId(null);
+                setAiDescribe('');
+                setAiEstimateError('');
+                setAiEstimateResult(null);
               }}
             >
               Cancel

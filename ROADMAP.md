@@ -206,9 +206,21 @@ Goal: Prepare BuiltIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
-Completed through **BIQ-0036** on `main`: starter food catalog search for faster nutrition logging.
+Completed through **BIQ-0037** on `main`: AI natural-language food macro estimation.
 
 ### Recently completed
+
+**BIQ-0037 — AI Natural-Language Food Estimation** (Completed)
+
+| Part | Deliverable |
+|------|-------------|
+| 1 | `POST /api/nutrition/estimate` with auth + OpenAI |
+| 2 | Prompt + JSON validation + wellness disclaimer |
+| 3 | Describe food → Estimate with AI in Add food panel |
+| 4 | Use / Log all estimated items |
+| 5 | AI notes on meal entries |
+
+See `CHANGELOG.md` BIQ-0037 for full scope.
 
 **BIQ-0036 — Starter Food Catalog Search** (Completed)
 

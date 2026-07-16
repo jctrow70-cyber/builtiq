@@ -3000,3 +3000,68 @@ Creates `st_food_catalog`, seeds starter foods, adds `st_meal_entries.food_catal
 BIQ-0036 Add starter food catalog search for nutrition logging
 ```
 
+---
+
+## BIQ-0037 - AI Natural-Language Food Estimation
+
+Date: 2026-07-16  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Added server-side AI macro estimation so users can describe food in plain language (e.g. “6 oz chicken breast and rice”) and get calories, protein, carbs, and fat prefilled for logging.
+
+### Purpose
+
+Complete the nutrition logging UX vision from BuiltIQ_Context.md. Catalog search (BIQ-0036) covers common staples; AI handles free-form descriptions and combined meals before AI Coach consumes nutrition context.
+
+### Changes
+
+- Added `lib/nutrition/aiFoodEstimate.ts` — prompt, JSON validation, macro clamping, wellness disclaimer
+- Added `POST /api/nutrition/estimate` — authenticated OpenAI route (same pattern as program generator)
+- **Add food** panel: describe food → **Estimate with AI** → review items → **Use** or **Log all**
+- Single-item estimates auto-fill the manual form; multi-item estimates can log all at once
+- AI notes stored on meal entries (`notes` column) for transparency
+- Safety framing: general wellness estimates only, not medical or dietary advice
+
+### Files Changed
+
+- `lib/nutrition/aiFoodEstimate.ts`
+- `app/api/nutrition/estimate/route.ts`
+- `app/components/NutritionTracker.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None (uses existing `st_meal_entries.notes`).
+
+Requires `OPENAI_API_KEY` on the server (same as program generator).
+
+### Testing Steps
+
+1. Confirm `OPENAI_API_KEY` is set locally / on Vercel.
+2. **Nutrition** → **Add food** → describe `6 oz chicken breast and 1 cup rice` → **Estimate with AI**.
+3. Confirm calories/protein/carbs/fat appear with a disclaimer and optional notes.
+4. **Use** an item → confirm manual form prefills → **Log food**.
+5. Describe `2 eggs, 2 slices toast, and coffee with milk` → estimate → **Log all** if multiple items returned.
+6. Empty/short description → validation error.
+7. Sign out → AI button shows sign-in message.
+8. Remove API key temporarily → friendly 503 error.
+9. Mobile: textarea and result chips usable.
+10. Verify logged entries include AI note in database when applicable.
+
+### Known Issues
+
+- Estimates are approximate; no brand-specific packaged food accuracy.
+- No AI estimate on edit-entry flow yet.
+- Uses `OPENAI_MODEL` env or defaults to `gpt-4o-mini`.
+
+### Recommended Commit Message
+
+```text
+BIQ-0037 Add AI natural-language food macro estimation
+```
+
