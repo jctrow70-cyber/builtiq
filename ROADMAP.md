@@ -206,7 +206,19 @@ Goal: Prepare BuiltIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
-Completed through **BIQ-0016** on `develop`: mobility warmup rules, cooldown / stretch section, Mobility day type in schedule wizard, and AI catalog bias for stretches.
+Completed through **BIQ-0033** on `develop`: workout log persistence and dashboard workout status.
+
+**BIQ-0034 — Nutrition Tracker Foundation** (Completed)
+
+| Part | Deliverable |
+|------|-------------|
+| 1 | `st_nutrition_goals`, `st_food_library`, `st_meal_entries` + RLS |
+| 2 | Daily macro summary with progress vs goals |
+| 3 | Meal logging (breakfast/lunch/dinner/snacks) |
+| 4 | Saved foods library + quick-add |
+| 5 | Copy yesterday + dashboard nutrition card |
+
+See `CHANGELOG.md` BIQ-0034 for full scope, testing, and file list.
 
 ### Recently completed
 
@@ -281,7 +293,7 @@ See `CHANGELOG.md` BIQ-0013 and BIQ-0024 for full scope.
 1. ~~PR detection and strength trends on Progress tab~~ (BIQ-0026)
 2. **App admin roles** — move beyond env-only catalog import admin (see below)
 3. AI program regeneration / edit-from-prompt for existing programs
-4. Nutrition MVP placeholder → functional tracking
+4. ~~Nutrition MVP placeholder → functional tracking~~ (BIQ-0034)
 5. AI Coach hook-up (consumes `coaching_metadata` + program context)
 6. Split `page.tsx` into focused components
 
@@ -308,3 +320,4 @@ Run pending Supabase migrations on each environment before testing:
 - `20250708_011_exercise_intelligence_database.sql` (BIQ-0013)
 - `20250713_017_exercise_alternatives_seed.sql` (BIQ-0013 / BIQ-0024)
 - `20250709_013_program_generator_v2.sql` (BIQ-0014)
+- `20250716_020_nutrition_tracker_foundation.sql` (BIQ-0034)

@@ -2803,3 +2803,75 @@ None.
 ```text
 BIQ-0033 Fix workout log persistence and dashboard workout status
 ```
+
+---
+
+## BIQ-0034 - Nutrition Tracker Foundation
+
+Date: 2026-07-15  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Replaced the Nutrition placeholder with a functional macro tracking MVP: daily meal logging, saved foods library, macro goals, copy-yesterday, and a live dashboard nutrition card.
+
+### Purpose
+
+Phase 5 nutrition work. Users need to log calories, protein, carbs, and fat by meal before AI Coach can consume nutrition context. Meal entries snapshot macros at log time so saved-food edits do not rewrite history.
+
+### Changes
+
+- Added `st_nutrition_goals`, `st_food_library`, and `st_meal_entries` tables with user-scoped RLS
+- Added `lib/nutrition/macros.ts` for macro math, meal grouping, and goal helpers
+- Added `NutritionTracker` component: date navigation, daily summary, meals (breakfast/lunch/dinner/snacks), add food, edit goals, saved foods quick-add, copy yesterday
+- Wired Nutrition tab and Dashboard nutrition card to show today's totals vs goals
+- Mobile-friendly nutrition styles in `globals.css`
+
+### Files Changed
+
+- `supabase/migrations/20250716_020_nutrition_tracker_foundation.sql`
+- `lib/nutrition/macros.ts`
+- `app/components/NutritionTracker.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+Run in Supabase SQL Editor:
+
+- `supabase/migrations/20250716_020_nutrition_tracker_foundation.sql`
+
+Creates:
+
+- `st_nutrition_goals` — per-user daily macro targets
+- `st_food_library` — saved custom foods
+- `st_meal_entries` — daily food log with snapshotted macros
+
+### Testing Steps
+
+1. Run migration `20250716_020` on your Supabase project.
+2. Sign in → **Nutrition** → confirm date picker and empty daily summary.
+3. **Edit goals** → save calorie/protein/carb/fat targets → confirm progress bars update.
+4. **Add food** → log breakfast item with macros → confirm it appears under Breakfast and totals update.
+5. Check **Save to my foods** → log again from **My foods** quick-add → confirm macros copy correctly.
+6. **Copy yesterday** after logging prior day → confirm entries duplicate to selected date.
+7. Return to **Dashboard** → Nutrition card shows today's calories/macros and **View log** / **Log food** button.
+8. Remove an entry → confirm totals decrease and history does not change other days.
+9. Test on mobile width: date row, macro tiles, and meal cards stack cleanly.
+10. Sign in as a second user → confirm you cannot see another user's meals or saved foods.
+
+### Known Issues
+
+- No external food database or barcode scanning yet (future Phase 5/6).
+- AI natural-language food estimation not implemented yet.
+- Dashboard nutrition summary loads today's date only (not the Nutrition tab's selected date).
+
+### Recommended Commit Message
+
+```text
+BIQ-0034 Add nutrition tracker foundation with meal logging and macro goals
+```
+
