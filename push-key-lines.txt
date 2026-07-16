@@ -1,0 +1,8 @@
+origin	https://github.com/jctrow70-cyber/builtiq.git (fetch)
+origin	https://github.com/jctrow70-cyber/builtiq.git (push)
+=== Step 2: gh auth status === 
+=== Step 3a: gh auth setup-git === 
+=== Step 3b: git push origin main === 
+fatal: could not read Username for 'https://github.com': No such file or directory
+git_push_exit: 128
+fatal: could not read Username for 'https://github.com': No such file or directory

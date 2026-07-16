@@ -1,0 +1,23 @@
+  Develop
+  cursor/biq-0005-exercise-catalog
+  cursor/superset-catalog-collapse-23ec
+  cursor/team-coach-architecture-7d3b
+  cursor/workout-log-persist-23ec
+  feature/workout-logging-redesign
+* main
+  preview/team-coach-biq-0027
+  remotes/origin/Develop
+  remotes/origin/HEAD -> origin/main
+  remotes/origin/cursor/biq-0005-exercise-catalog
+  remotes/origin/cursor/biq-0021-changelog-complete-976f
+  remotes/origin/cursor/branch-consolidation-976f
+  remotes/origin/cursor/exercise-form-guide-thumbnails-8e87
+  remotes/origin/cursor/fix-catalog-sources-migration-23ec
+  remotes/origin/cursor/fix-logging-week-dates-976f
+  remotes/origin/cursor/fix-signout-crash-bf79
+  remotes/origin/cursor/plan-gen-bug-report-bf79
+  remotes/origin/cursor/superset-catalog-collapse-23ec
+  remotes/origin/cursor/team-coach-architecture-7d3b
+  remotes/origin/cursor/workout-log-persist-23ec
+  remotes/origin/feature/workout-logging-redesign
+  remotes/origin/main

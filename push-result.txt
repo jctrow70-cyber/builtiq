@@ -1,0 +1,47 @@
+=== Step 1: git remote -v === 
+origin	https://github.com/jctrow70-cyber/builtiq.git (fetch)
+origin	https://github.com/jctrow70-cyber/builtiq.git (push)
+ 
+=== Step 2: gh auth status === 
+INFO: Could not find files for the given pattern(s).
+ 
+=== Step 3a: gh auth setup-git === 
+'gh' is not recognized as an internal or external command,
+operable program or batch file.
+ 
+=== Step 3b: git push origin main === 
+bash: line 1: /dev/tty: No such device or address
+error: failed to execute prompt script (exit code 1)
+fatal: could not read Username for 'https://github.com': No such file or directory
+git_push_exit: 128
+ 
+=== Step 3d: gh repo sync SKIPPED === 
+reason: blocked in agent environment; run manually if needed 
+gh_sync_exit: skipped 
+ 
+=== Local vs remote main === 
+30332a1691c4551be7ebb56d72dd5a554057f462
+1497aa72fad28feb2fd646c3444b66d8c30cd053	refs/heads/main
+ 
+=== OVERALL push succeeded: NO === 
+final_exit: 128
+=== Step 3b retry output === 
+bash: line 1: /dev/tty: No such device or address
+error: failed to execute prompt script (exit code 1)
+fatal: could not read Username for 'https://github.com': No such file or directory
+ 
+=== Verification === 
+30332a1691c4551be7ebb56d72dd5a554057f462
+1497aa72fad28feb2fd646c3444b66d8c30cd053	refs/heads/main
+Comparing files C:\USERS\JESSETROWBRIDGE\APPDATA\LOCAL\TEMP\biq-local.sha and C:\USERS\JESSETROWBRIDGE\APPDATA\LOCAL\TEMP\BIQ-REMOTE.SHA
+***** C:\USERS\JESSETROWBRIDGE\APPDATA\LOCAL\TEMP\biq-local.sha
+30332a1691c4551be7ebb56d72dd5a554057f462
+***** C:\USERS\JESSETROWBRIDGE\APPDATA\LOCAL\TEMP\BIQ-REMOTE.SHA
+1497aa72fad28feb2fd646c3444b66d8c30cd053        refs/heads/main
+*****
+
+ 
+=== SUMMARY === 
+push_succeeded: false 
+documented_final_exit: 128 
+agent_note: HTTPS git credentials unavailable in non-interactive agent shell

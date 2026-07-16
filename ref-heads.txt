@@ -1,0 +1,8 @@
+b10e59f5af54136c00d385952da290c5b2476517 refs/heads/Develop
+64a36363299023a91295104c22a5fef94b6c3a11 refs/heads/cursor/biq-0005-exercise-catalog
+a2b4cdcf1ab94436343b0fb41214dc44ae9b5713 refs/heads/cursor/superset-catalog-collapse-23ec
+ad8359cd6acc6518a39a6bb3cc05d7e0d636cf1f refs/heads/cursor/team-coach-architecture-7d3b
+c91580ce3385b6075320752dc2e9f5fbfeb69c26 refs/heads/cursor/workout-log-persist-23ec
+075027c6029ca1fd4ee2c4bfea2d367b5d50b5f4 refs/heads/feature/workout-logging-redesign
+1497aa72fad28feb2fd646c3444b66d8c30cd053 refs/heads/main
+0c083d91acb5bbd31761ae6e78ba776d58a4e385 refs/heads/preview/team-coach-biq-0027

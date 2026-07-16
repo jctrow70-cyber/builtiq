@@ -1,0 +1,36 @@
+[main 30332a1] BIQ-0034 Add nutrition tracker foundation with meal logging and macro goals
+ 7 files changed, 1083 insertions(+), 7 deletions(-)
+ create mode 100644 app/components/NutritionTracker.tsx
+ create mode 100644 lib/nutrition/macros.ts
+ create mode 100644 supabase/migrations/20250716_020_nutrition_tracker_foundation.sql
+30332a1 BIQ-0034 Add nutrition tracker foundation with meal logging and macro goals
+1497aa7 Merge pull request #17 from jctrow70-cyber/cursor/workout-log-persist-23ec
+## main...origin/main [ahead 1]
+?? .git-agent-report.txt
+?? .git-agent-status.txt
+?? _out.txt
+?? biq-0034-commit-msg.txt
+?? biq-commit-out.txt
+?? biq-commit.cmd
+?? checkout-main.txt
+?? final-log.txt
+?? final-status.txt
+?? git-branch.err
+?? git-branch.txt
+?? git-branches.err
+?? git-branches.txt
+?? git-log.err
+?? git-log.txt
+?? git-status.err
+?? git-status.txt
+?? merge-develop.txt
+?? merge-result.txt
+?? porcelain-after.txt
+?? porcelain.err
+?? porcelain.txt
+?? ref-head-after.txt
+?? ref-head-final.txt
+?? ref-head.err
+?? ref-head.txt
+?? ref-heads.err
+?? ref-heads.txt
