@@ -18,6 +18,7 @@ export type MealEntry = {
   meal_type: MealType;
   food_name: string;
   food_library_id?: string | null;
+  food_catalog_id?: string | null;
   serving_qty: number;
   calories: number;
   protein_g: number;

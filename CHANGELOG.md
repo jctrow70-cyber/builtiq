@@ -2932,3 +2932,71 @@ Creates `st_meal_templates` for reusable meal snapshots.
 BIQ-0035 Add nutrition UX polish with templates, edits, and weekly view
 ```
 
+---
+
+## BIQ-0036 - Starter Food Catalog Search
+
+Date: 2026-07-16  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Added a searchable BuiltIQ starter food catalog (~50 common whole foods) so users can find and log foods faster without typing macros manually.
+
+### Purpose
+
+Phase 5 nutrition logging UX. Manual macro entry is too slow for daily use. A curated starter catalog gives immediate search value before external APIs or AI food estimation (BIQ-0037).
+
+### Changes
+
+- Added `st_food_catalog` system food table with RLS (read-only for all users)
+- Seeded ~50 common foods with serving labels and approximate macros
+- Added optional `food_catalog_id` on `st_meal_entries` for catalog-sourced logs
+- Added `lib/nutrition/foodCatalogSearch.ts` for ranked name/category search
+- **Add food** panel now includes catalog search → pick result → prefill macros → log (manual entry still supported)
+
+### Files Changed
+
+- `supabase/migrations/20250716_022_food_catalog.sql`
+- `lib/nutrition/foodCatalogSearch.ts`
+- `lib/nutrition/macros.ts`
+- `app/components/NutritionTracker.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+Run in Supabase SQL Editor (after BIQ-0034/0035 migrations):
+
+- `supabase/migrations/20250716_022_food_catalog.sql`
+
+Creates `st_food_catalog`, seeds starter foods, adds `st_meal_entries.food_catalog_id`.
+
+### Testing Steps
+
+1. Run migration `20250716_022` on Supabase.
+2. **Nutrition** → **Add food** → search `chicken` → pick **Chicken breast** → confirm macros prefilled.
+3. Adjust servings → **Log food** → confirm entry totals scale correctly.
+4. Search `rice` → pick **Brown rice** → log → confirm `food_catalog_id` stored (optional Supabase check).
+5. Search nonsense term → confirm manual entry fallback message appears.
+6. Edit prefilled macros manually → log → confirm catalog link cleared if values changed.
+7. **Save to my foods** still works after catalog pick (manual flow).
+8. App works gracefully if migration not run yet (empty catalog, manual entry only).
+9. Mobile: catalog results scroll and tap targets work.
+10. Users cannot insert/update system catalog rows (RLS).
+
+### Known Issues
+
+- Starter catalog is approximate USDA-style values, not brand-specific packaged foods.
+- No barcode scanning or external API yet.
+- Catalog search only on Add food panel (not edit entry yet).
+- AI natural-language food logging planned for BIQ-0037.
+
+### Recommended Commit Message
+
+```text
+BIQ-0036 Add starter food catalog search for nutrition logging
+```
+

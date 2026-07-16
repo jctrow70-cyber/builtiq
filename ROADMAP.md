@@ -206,9 +206,21 @@ Goal: Prepare BuiltIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
-Completed through **BIQ-0035** on `main`: nutrition UX polish — edit entries, meal templates, weekly view, and dashboard sync.
+Completed through **BIQ-0036** on `main`: starter food catalog search for faster nutrition logging.
 
 ### Recently completed
+
+**BIQ-0036 — Starter Food Catalog Search** (Completed)
+
+| Part | Deliverable |
+|------|-------------|
+| 1 | `st_food_catalog` system table + ~50 seeded foods |
+| 2 | Ranked catalog search in Add food panel |
+| 3 | Pick catalog item → prefill macros → log |
+| 4 | Manual entry fallback when no match |
+| 5 | Optional `food_catalog_id` on meal entries |
+
+See `CHANGELOG.md` BIQ-0036 for full scope.
 
 **BIQ-0035 — Nutrition UX Polish** (Completed)
 
@@ -336,3 +348,4 @@ Run pending Supabase migrations on each environment before testing:
 - `20250709_013_program_generator_v2.sql` (BIQ-0014)
 - `20250716_020_nutrition_tracker_foundation.sql` (BIQ-0034)
 - `20250716_021_nutrition_ux_polish.sql` (BIQ-0035)
+- `20250716_022_food_catalog.sql` (BIQ-0036)

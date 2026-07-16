@@ -27,6 +27,13 @@ import {
   templateItemsFromEntries,
 } from '../../lib/nutrition/macros';
 import { buildWeeklyNutritionSummary } from '../../lib/nutrition/weeklySummary';
+import {
+  countFoodCatalogMatches,
+  foodCatalogLabel,
+  foodCatalogMeta,
+  FoodCatalogItem,
+  searchFoodCatalog,
+} from '../../lib/nutrition/foodCatalogSearch';
 import { currentCalendarWeekBounds, formatDisplayDate, parseYmd, todayYmd } from '../../lib/training/programCalendar';
 
 type NutritionTrackerProps = {
@@ -208,6 +215,7 @@ export default function NutritionTracker({
   const [weekEntries, setWeekEntries] = useState<any[]>([]);
   const [goals, setGoals] = useState<NutritionGoals>({ ...DEFAULT_NUTRITION_GOALS });
   const [savedFoods, setSavedFoods] = useState<FoodLibraryItem[]>([]);
+  const [foodCatalog, setFoodCatalog] = useState<FoodCatalogItem[]>([]);
   const [mealTemplates, setMealTemplates] = useState<MealTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -221,6 +229,8 @@ export default function NutritionTracker({
   const [foodEditDraft, setFoodEditDraft] = useState<LibraryEditDraft | null>(null);
   const [goalsDraft, setGoalsDraft] = useState<NutritionGoals>({ ...DEFAULT_NUTRITION_GOALS });
   const [foodSearch, setFoodSearch] = useState('');
+  const [catalogSearch, setCatalogSearch] = useState('');
+  const [pickedCatalogId, setPickedCatalogId] = useState<string | null>(null);
 
   const totals = useMemo(() => sumMacros(entries), [entries]);
   const grouped = useMemo(() => groupEntriesByMeal(entries), [entries]);
@@ -236,6 +246,16 @@ export default function NutritionTracker({
       .filter((f) => !q || String(f.name || '').toLowerCase().includes(q))
       .slice(0, 12);
   }, [savedFoods, foodSearch]);
+
+  const catalogMatches = useMemo(
+    () => searchFoodCatalog(foodCatalog, catalogSearch, 12),
+    [foodCatalog, catalogSearch]
+  );
+
+  const catalogMatchCount = useMemo(
+    () => countFoodCatalogMatches(foodCatalog, catalogSearch),
+    [foodCatalog, catalogSearch]
+  );
 
   const activeTemplates = useMemo(
     () => (mealTemplates || []).filter((t) => !t.is_archived),
@@ -260,7 +280,7 @@ export default function NutritionTracker({
     setError('');
     const { monday, sunday } = currentCalendarWeekBounds(parseYmd(logDate));
     try {
-      const [entriesRes, weekRes, goalsRes, foodsRes, templatesRes] = await Promise.all([
+      const [entriesRes, weekRes, goalsRes, foodsRes, templatesRes, catalogRes] = await Promise.all([
         supabase
           .from('st_meal_entries')
           .select('*')
@@ -284,6 +304,12 @@ export default function NutritionTracker({
           .from('st_meal_templates')
           .select('*')
           .eq('user_id', userId)
+          .eq('is_archived', false)
+          .order('name', { ascending: true }),
+        supabase
+          .from('st_food_catalog')
+          .select('*')
+          .eq('is_system', true)
           .eq('is_archived', false)
           .order('name', { ascending: true }),
       ]);
@@ -310,6 +336,14 @@ export default function NutritionTracker({
             .map(parseMealTemplate)
             .filter(Boolean) as MealTemplate[]
         );
+      }
+      if (catalogRes.error) {
+        if (!String(catalogRes.error.message || '').includes('st_food_catalog')) {
+          throw catalogRes.error;
+        }
+        setFoodCatalog([]);
+      } else {
+        setFoodCatalog((catalogRes.data || []) as FoodCatalogItem[]);
       }
     } catch (e: any) {
       setError(e?.message || 'Could not load nutrition data.');
@@ -354,7 +388,7 @@ export default function NutritionTracker({
     return (data || []) as MealEntry[];
   }
 
-  async function addFoodEntry(fromLibrary?: FoodLibraryItem, qty = 1, meal?: MealType) {
+  async function addFoodEntry(fromLibrary?: FoodLibraryItem, qty = 1, meal?: MealType, fromCatalog?: FoodCatalogItem) {
     if (!userId) return;
     const mealType = meal || addDraft.meal_type;
 
@@ -366,14 +400,25 @@ export default function NutritionTracker({
     };
     let foodName = addDraft.food_name.trim();
     let libraryId: string | null = null;
-    const servingQty = Math.max(0.25, parseMacroInput(fromLibrary ? qty : addDraft.serving_qty) || 1);
+    let catalogId: string | null = pickedCatalogId;
+    const servingQty = Math.max(
+      0.25,
+      parseMacroInput(fromCatalog || fromLibrary ? qty : addDraft.serving_qty) || 1
+    );
 
-    if (fromLibrary) {
+    if (fromCatalog) {
+      foodName = foodCatalogLabel(fromCatalog);
+      catalogId = fromCatalog.id;
+      libraryId = null;
+      macros = scaleMacros(fromCatalog, servingQty);
+    } else if (fromLibrary) {
       foodName = fromLibrary.name;
       libraryId = fromLibrary.id;
+      catalogId = null;
       macros = scaleMacros(fromLibrary, servingQty);
     } else {
       if (!foodName) return alert('Enter a food name.');
+      catalogId = pickedCatalogId;
       macros = scaleMacros(
         {
           calories: parseMacroInput(addDraft.calories),
@@ -389,7 +434,7 @@ export default function NutritionTracker({
     setError('');
 
     try {
-      if (!fromLibrary && addDraft.saveToLibrary && foodName) {
+      if (!fromLibrary && !fromCatalog && addDraft.saveToLibrary && foodName) {
         const { data: libRow, error: libError } = await supabase
           .from('st_food_library')
           .insert({
@@ -419,6 +464,7 @@ export default function NutritionTracker({
           meal_type: mealType,
           food_name: foodName,
           food_library_id: libraryId,
+          food_catalog_id: catalogId,
           serving_qty: servingQty,
           ...macros,
         },
@@ -434,8 +480,10 @@ export default function NutritionTracker({
           fat_g: row.fat_g,
         })),
       ]);
-      if (!fromLibrary) {
+      if (!fromLibrary && !fromCatalog) {
         setAddDraft(emptyFoodDraft(mealType));
+        setCatalogSearch('');
+        setPickedCatalogId(null);
         setShowAdd(false);
       }
       notifyParent();
@@ -697,6 +745,27 @@ export default function NutritionTracker({
     setMealTemplates((prev) => prev.filter((t) => t.id !== id));
   }
 
+  function pickCatalogFood(item: FoodCatalogItem) {
+    setPickedCatalogId(item.id);
+    setAddDraft({
+      ...addDraft,
+      food_name: foodCatalogLabel(item),
+      serving_qty: '1',
+      calories: String(item.calories),
+      protein_g: String(item.protein_g),
+      carbs_g: String(item.carbs_g),
+      fat_g: String(item.fat_g),
+      saveToLibrary: false,
+    });
+  }
+
+  function openAddFood(meal: MealType = 'breakfast') {
+    setAddDraft(emptyFoodDraft(meal));
+    setCatalogSearch('');
+    setPickedCatalogId(null);
+    setShowAdd(true);
+  }
+
   function shiftDate(days: number) {
     const d = new Date(`${logDate}T12:00:00`);
     d.setDate(d.getDate() + days);
@@ -753,7 +822,7 @@ export default function NutritionTracker({
           </>
         )}
         <div className="actions" style={{ marginTop: 10 }}>
-          <button type="button" className="btn green" onClick={() => setShowAdd(true)} disabled={saving}>
+          <button type="button" className="btn green" onClick={() => openAddFood()} disabled={saving}>
             Add food
           </button>
           <button type="button" className="btn secondary" onClick={() => setShowGoals(true)} disabled={saving}>
@@ -835,12 +904,79 @@ export default function NutritionTracker({
       {showAdd && (
         <div className="card nutrition-add-card">
           <h3>Add food</h3>
-          <FoodFormFields draft={addDraft} setDraft={setAddDraft} idPrefix="add" showSaveToLibrary />
+          <div className="catalog-picker nutrition-catalog-picker">
+            <label htmlFor="catalog-search">Search food catalog</label>
+            <input
+              id="catalog-search"
+              value={catalogSearch}
+              onChange={(e) => setCatalogSearch(e.target.value)}
+              placeholder={
+                foodCatalog.length
+                  ? `Search ${foodCatalog.length} common foods (e.g. chicken, rice, yogurt)`
+                  : 'Search common foods (run BIQ-0036 migration for catalog)'
+              }
+            />
+            {foodCatalog.length > 0 && (
+              <p className="muted nutrition-catalog-meta">
+                {catalogSearch.trim()
+                  ? `${catalogMatchCount} match${catalogMatchCount === 1 ? '' : 'es'}`
+                  : 'Type to search or enter food manually below'}
+              </p>
+            )}
+            {catalogMatches.length > 0 && (
+              <div className="catalog-results">
+                {catalogMatches.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`catalog-result${pickedCatalogId === item.id ? ' picked' : ''}`}
+                    onClick={() => pickCatalogFood(item)}
+                  >
+                    <span>
+                      <b>{foodCatalogLabel(item)}</b>
+                      <span className="muted">
+                        {foodCatalogMeta(item)} · {item.calories} cal · {item.protein_g}P · {item.carbs_g}C ·{' '}
+                        {item.fat_g}F
+                      </span>
+                    </span>
+                    <span className="badge">Use</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {catalogSearch.trim() && catalogMatches.length === 0 && foodCatalog.length > 0 && (
+              <p className="muted">No catalog matches. Enter the food manually below.</p>
+            )}
+          </div>
+          <FoodFormFields
+            draft={addDraft}
+            setDraft={(next) => {
+              const manualEdit =
+                !!pickedCatalogId &&
+                (next.food_name !== addDraft.food_name ||
+                  next.calories !== addDraft.calories ||
+                  next.protein_g !== addDraft.protein_g ||
+                  next.carbs_g !== addDraft.carbs_g ||
+                  next.fat_g !== addDraft.fat_g);
+              setAddDraft(next);
+              if (manualEdit) setPickedCatalogId(null);
+            }}
+            idPrefix="add"
+            showSaveToLibrary
+          />
           <div className="actions" style={{ marginTop: 10 }}>
             <button type="button" className="btn green" onClick={() => addFoodEntry()} disabled={saving}>
               {saving ? 'Saving...' : 'Log food'}
             </button>
-            <button type="button" className="btn secondary" onClick={() => setShowAdd(false)}>
+            <button
+              type="button"
+              className="btn secondary"
+              onClick={() => {
+                setShowAdd(false);
+                setCatalogSearch('');
+                setPickedCatalogId(null);
+              }}
+            >
               Cancel
             </button>
           </div>
@@ -1096,10 +1232,7 @@ export default function NutritionTracker({
               <button
                 type="button"
                 className="btn small secondary"
-                onClick={() => {
-                  setAddDraft(emptyFoodDraft(meal));
-                  setShowAdd(true);
-                }}
+                onClick={() => openAddFood(meal)}
               >
                 + Add to {MEAL_TYPE_LABELS[meal]}
               </button>
