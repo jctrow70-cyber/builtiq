@@ -2803,3 +2803,45 @@ None.
 ```text
 BIQ-0033 Fix workout log persistence and dashboard workout status
 ```
+
+---
+
+## BIQ-0034 - Fix catalog_sources migration error
+
+Date: 2026-07-16  
+Branch: cursor/fix-catalog-sources-migration-23ec  
+Status: Completed
+
+### Summary
+
+Fixed Supabase error `column "catalog_sources" of relation "st_profiles" does not exist` when migration `20250715_019` ran before `20250715_018`.
+
+### Purpose
+
+Users running SQL migrations manually (or out of order) hit a failure because `019` altered a column that `018` creates. The app no longer reads `catalog_sources` (unified catalog since BIQ-0031), but the column is kept for schema compatibility.
+
+### Files changed
+
+- `supabase/migrations/20250715_019_exercisedb_catalog_defaults.sql` — add column if missing before altering default
+- `supabase/migrations/20250716_020_catalog_sources_column_repair.sql` — idempotent repair migration
+- `CHANGELOG.md`
+
+### Database changes
+
+- `st_profiles.catalog_sources text[]` — added if missing (legacy column, not used by app UI)
+
+### Testing steps
+
+1. On a database without `catalog_sources`, run `20250716_020_catalog_sources_column_repair.sql` in Supabase SQL Editor — should succeed.
+2. Re-run `20250715_019` — should succeed without error.
+3. App exercise search and guided import should work without referencing `catalog_sources`.
+
+### Known issues
+
+None.
+
+### Recommended commit message
+
+```text
+BIQ-0034 Fix catalog_sources migration order and repair script
+```
