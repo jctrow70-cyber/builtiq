@@ -206,9 +206,21 @@ Goal: Prepare BuiltIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
-Completed through **BIQ-0034** on `main`: nutrition tracker foundation with meal logging, saved foods, macro goals, and dashboard card.
+Completed through **BIQ-0035** on `main`: nutrition UX polish — edit entries, meal templates, weekly view, and dashboard sync.
 
 ### Recently completed
+
+**BIQ-0035 — Nutrition UX Polish** (Completed)
+
+| Part | Deliverable |
+|------|-------------|
+| 1 | Edit meal entries |
+| 2 | Edit/archive saved foods |
+| 3 | Meal templates (save + log in one tap) |
+| 4 | Weekly nutrition chart |
+| 5 | Dashboard refresh after logging |
+
+See `CHANGELOG.md` BIQ-0035 for full scope, testing, and file list.
 
 **BIQ-0034 — Nutrition Tracker Foundation** (Completed)
 
@@ -323,3 +335,4 @@ Run pending Supabase migrations on each environment before testing:
 - `20250713_017_exercise_alternatives_seed.sql` (BIQ-0013 / BIQ-0024)
 - `20250709_013_program_generator_v2.sql` (BIQ-0014)
 - `20250716_020_nutrition_tracker_foundation.sql` (BIQ-0034)
+- `20250716_021_nutrition_ux_polish.sql` (BIQ-0035)

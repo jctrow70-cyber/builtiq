@@ -2862,3 +2862,73 @@ Run in Supabase SQL Editor:
 BIQ-0034 Add nutrition tracker foundation with meal logging and macro goals
 ```
 
+---
+
+## BIQ-0035 - Nutrition UX Polish
+
+Date: 2026-07-16  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Extended the nutrition tracker with edit flows, saved-food management, meal templates, a weekly macro summary chart, and dashboard refresh after logging.
+
+### Purpose
+
+Complete Phase 5 MVP polish from BIQ-0034. Users need to fix logged entries, manage saved foods, reuse whole meals, and see weekly compliance without leaving the Nutrition tab.
+
+### Changes
+
+- **Edit meal entries** — update name, meal, servings, and macros on existing logs
+- **Manage saved foods** — edit serving/macros and archive items in My foods
+- **Meal templates** — save a logged meal section as a template; log all items in one tap
+- **Weekly nutrition view** — 7-day calorie chart, days logged, avg calories, protein goal %
+- **Dashboard sync** — dashboard nutrition card refreshes after any log/edit/delete when viewing today
+- Added `st_meal_templates` table with user-scoped RLS and JSONB item snapshots
+
+### Files Changed
+
+- `supabase/migrations/20250716_021_nutrition_ux_polish.sql`
+- `lib/nutrition/macros.ts`
+- `lib/nutrition/weeklySummary.ts`
+- `app/components/NutritionTracker.tsx`
+- `app/components/NutritionWeeklySummary.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+Run in Supabase SQL Editor (after BIQ-0034 migration):
+
+- `supabase/migrations/20250716_021_nutrition_ux_polish.sql`
+
+Creates `st_meal_templates` for reusable meal snapshots.
+
+### Testing Steps
+
+1. Run migration `20250716_021` on Supabase.
+2. **Nutrition** → log a breakfast item → **Edit** → change calories → confirm totals update.
+3. Save a food to **My foods** → **Edit** → change macros → quick-add again → confirm new macros log correctly; past entries unchanged.
+4. Archive a saved food → confirm it disappears from quick-add list.
+5. Log 2+ items under Lunch → **Save as template** → **Log today** from templates → confirm all items appear.
+6. Archive a template → confirm it is removed from the list.
+7. Log meals on multiple days this week → confirm **This week** chart shows bars and tap a day to jump dates.
+8. Log food for today → switch to **Dashboard** without changing date → nutrition card reflects new totals.
+9. Test mobile layout for weekly chart and entry action buttons.
+10. Second user cannot see or edit another user's templates or foods.
+
+### Known Issues
+
+- Meal templates store item snapshots; editing a template after save is not implemented (archive + recreate).
+- Weekly chart uses calendar Mon–Sun for the week containing the selected log date.
+- No food database search or AI estimation yet (BIQ-0036+).
+
+### Recommended Commit Message
+
+```text
+BIQ-0035 Add nutrition UX polish with templates, edits, and weekly view
+```
+

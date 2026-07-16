@@ -3,32 +3,40 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import DateInput from './DateInput';
+import NutritionWeeklySummary from './NutritionWeeklySummary';
 import {
   DEFAULT_NUTRITION_GOALS,
+  entryToPerServing,
   FoodLibraryItem,
   formatMacro,
   formatMacroLine,
   goalsFromRow,
   groupEntriesByMeal,
   macroProgress,
+  mealEntryFromDraft,
   MEAL_TYPE_LABELS,
   MEAL_TYPES,
   MealEntry,
+  MealTemplate,
   MealType,
   NutritionGoals,
   parseMacroInput,
+  parseMealTemplate,
   scaleMacros,
   sumMacros,
+  templateItemsFromEntries,
 } from '../../lib/nutrition/macros';
-import { formatDisplayDate, todayYmd } from '../../lib/training/programCalendar';
+import { buildWeeklyNutritionSummary } from '../../lib/nutrition/weeklySummary';
+import { currentCalendarWeekBounds, formatDisplayDate, parseYmd, todayYmd } from '../../lib/training/programCalendar';
 
 type NutritionTrackerProps = {
   userId: string;
   initialDate?: string;
   onDateChange?: (date: string) => void;
+  onDataChange?: () => void;
 };
 
-type AddFoodDraft = {
+type FoodDraft = {
   meal_type: MealType;
   food_name: string;
   serving_qty: string;
@@ -39,7 +47,16 @@ type AddFoodDraft = {
   saveToLibrary: boolean;
 };
 
-const emptyAddDraft = (meal: MealType = 'breakfast'): AddFoodDraft => ({
+type LibraryEditDraft = {
+  name: string;
+  serving_label: string;
+  calories: string;
+  protein_g: string;
+  carbs_g: string;
+  fat_g: string;
+};
+
+const emptyFoodDraft = (meal: MealType = 'breakfast'): FoodDraft => ({
   meal_type: meal,
   food_name: '',
   serving_qty: '1',
@@ -79,26 +96,138 @@ function MacroBar({
   );
 }
 
+function FoodFormFields({
+  draft,
+  setDraft,
+  idPrefix,
+  showSaveToLibrary,
+}: {
+  draft: FoodDraft;
+  setDraft: (next: FoodDraft) => void;
+  idPrefix: string;
+  showSaveToLibrary?: boolean;
+}) {
+  return (
+    <>
+      <label htmlFor={`${idPrefix}-meal`}>Meal</label>
+      <select
+        id={`${idPrefix}-meal`}
+        value={draft.meal_type}
+        onChange={(e) => setDraft({ ...draft, meal_type: e.target.value as MealType })}
+      >
+        {MEAL_TYPES.map((meal) => (
+          <option key={meal} value={meal}>
+            {MEAL_TYPE_LABELS[meal]}
+          </option>
+        ))}
+      </select>
+      <label htmlFor={`${idPrefix}-name`}>Food name</label>
+      <input
+        id={`${idPrefix}-name`}
+        value={draft.food_name}
+        onChange={(e) => setDraft({ ...draft, food_name: e.target.value })}
+        placeholder="e.g. Chicken breast and rice"
+      />
+      <div className="row">
+        <div>
+          <label htmlFor={`${idPrefix}-qty`}>Servings</label>
+          <input
+            id={`${idPrefix}-qty`}
+            type="number"
+            min="0.25"
+            step="0.25"
+            value={draft.serving_qty}
+            onChange={(e) => setDraft({ ...draft, serving_qty: e.target.value })}
+          />
+        </div>
+        <div>
+          <label htmlFor={`${idPrefix}-cal`}>Calories (per serving)</label>
+          <input
+            id={`${idPrefix}-cal`}
+            type="number"
+            min="0"
+            value={draft.calories}
+            onChange={(e) => setDraft({ ...draft, calories: e.target.value })}
+          />
+        </div>
+      </div>
+      <div className="row">
+        <div>
+          <label htmlFor={`${idPrefix}-protein`}>Protein g</label>
+          <input
+            id={`${idPrefix}-protein`}
+            type="number"
+            min="0"
+            value={draft.protein_g}
+            onChange={(e) => setDraft({ ...draft, protein_g: e.target.value })}
+          />
+        </div>
+        <div>
+          <label htmlFor={`${idPrefix}-carbs`}>Carbs g</label>
+          <input
+            id={`${idPrefix}-carbs`}
+            type="number"
+            min="0"
+            value={draft.carbs_g}
+            onChange={(e) => setDraft({ ...draft, carbs_g: e.target.value })}
+          />
+        </div>
+        <div>
+          <label htmlFor={`${idPrefix}-fat`}>Fat g</label>
+          <input
+            id={`${idPrefix}-fat`}
+            type="number"
+            min="0"
+            value={draft.fat_g}
+            onChange={(e) => setDraft({ ...draft, fat_g: e.target.value })}
+          />
+        </div>
+      </div>
+      {showSaveToLibrary && (
+        <label className="remember-row">
+          <input
+            type="checkbox"
+            checked={draft.saveToLibrary}
+            onChange={(e) => setDraft({ ...draft, saveToLibrary: e.target.checked })}
+          />
+          Save to my foods for quick add later
+        </label>
+      )}
+    </>
+  );
+}
+
 export default function NutritionTracker({
   userId,
   initialDate,
   onDateChange,
+  onDataChange,
 }: NutritionTrackerProps) {
   const [logDate, setLogDate] = useState(initialDate || todayYmd());
   const [entries, setEntries] = useState<MealEntry[]>([]);
+  const [weekEntries, setWeekEntries] = useState<any[]>([]);
   const [goals, setGoals] = useState<NutritionGoals>({ ...DEFAULT_NUTRITION_GOALS });
   const [savedFoods, setSavedFoods] = useState<FoodLibraryItem[]>([]);
+  const [mealTemplates, setMealTemplates] = useState<MealTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [showGoals, setShowGoals] = useState(false);
-  const [addDraft, setAddDraft] = useState<AddFoodDraft>(emptyAddDraft());
+  const [addDraft, setAddDraft] = useState<FoodDraft>(emptyFoodDraft());
+  const [editEntryId, setEditEntryId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<FoodDraft | null>(null);
+  const [editFoodId, setEditFoodId] = useState<string | null>(null);
+  const [foodEditDraft, setFoodEditDraft] = useState<LibraryEditDraft | null>(null);
   const [goalsDraft, setGoalsDraft] = useState<NutritionGoals>({ ...DEFAULT_NUTRITION_GOALS });
   const [foodSearch, setFoodSearch] = useState('');
 
   const totals = useMemo(() => sumMacros(entries), [entries]);
   const grouped = useMemo(() => groupEntriesByMeal(entries), [entries]);
+  const weeklySummary = useMemo(
+    () => buildWeeklyNutritionSummary(weekEntries, goals, logDate),
+    [weekEntries, goals, logDate]
+  );
 
   const filteredFoods = useMemo(() => {
     const q = foodSearch.trim().toLowerCase();
@@ -107,6 +236,15 @@ export default function NutritionTracker({
       .filter((f) => !q || String(f.name || '').toLowerCase().includes(q))
       .slice(0, 12);
   }, [savedFoods, foodSearch]);
+
+  const activeTemplates = useMemo(
+    () => (mealTemplates || []).filter((t) => !t.is_archived),
+    [mealTemplates]
+  );
+
+  const notifyParent = useCallback(() => {
+    onDataChange?.();
+  }, [onDataChange]);
 
   const setDate = useCallback(
     (next: string) => {
@@ -120,14 +258,21 @@ export default function NutritionTracker({
     if (!userId) return;
     setLoading(true);
     setError('');
+    const { monday, sunday } = currentCalendarWeekBounds(parseYmd(logDate));
     try {
-      const [entriesRes, goalsRes, foodsRes] = await Promise.all([
+      const [entriesRes, weekRes, goalsRes, foodsRes, templatesRes] = await Promise.all([
         supabase
           .from('st_meal_entries')
           .select('*')
           .eq('user_id', userId)
           .eq('log_date', logDate)
           .order('created_at', { ascending: true }),
+        supabase
+          .from('st_meal_entries')
+          .select('log_date,calories,protein_g,carbs_g,fat_g')
+          .eq('user_id', userId)
+          .gte('log_date', monday)
+          .lte('log_date', sunday),
         supabase.from('st_nutrition_goals').select('*').eq('user_id', userId).maybeSingle(),
         supabase
           .from('st_food_library')
@@ -135,17 +280,37 @@ export default function NutritionTracker({
           .eq('user_id', userId)
           .eq('is_archived', false)
           .order('name', { ascending: true }),
+        supabase
+          .from('st_meal_templates')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('is_archived', false)
+          .order('name', { ascending: true }),
       ]);
 
       if (entriesRes.error) throw entriesRes.error;
+      if (weekRes.error) throw weekRes.error;
       if (goalsRes.error) throw goalsRes.error;
       if (foodsRes.error) throw foodsRes.error;
 
       setEntries((entriesRes.data || []) as MealEntry[]);
+      setWeekEntries(weekRes.data || []);
       const nextGoals = goalsFromRow(goalsRes.data);
       setGoals(nextGoals);
       setGoalsDraft(nextGoals);
       setSavedFoods((foodsRes.data || []) as FoodLibraryItem[]);
+      if (templatesRes.error) {
+        if (!String(templatesRes.error.message || '').includes('st_meal_templates')) {
+          throw templatesRes.error;
+        }
+        setMealTemplates([]);
+      } else {
+        setMealTemplates(
+          (templatesRes.data || [])
+            .map(parseMealTemplate)
+            .filter(Boolean) as MealTemplate[]
+        );
+      }
     } catch (e: any) {
       setError(e?.message || 'Could not load nutrition data.');
     } finally {
@@ -179,6 +344,14 @@ export default function NutritionTracker({
     if (upsertError) return setError(upsertError.message);
     setGoals({ ...goalsDraft });
     setShowGoals(false);
+    notifyParent();
+    await loadData();
+  }
+
+  async function insertMealRows(rows: any[]) {
+    const { data, error: insertError } = await supabase.from('st_meal_entries').insert(rows).select();
+    if (insertError) throw insertError;
+    return (data || []) as MealEntry[];
   }
 
   async function addFoodEntry(fromLibrary?: FoodLibraryItem, qty = 1, meal?: MealType) {
@@ -215,53 +388,109 @@ export default function NutritionTracker({
     setSaving(true);
     setError('');
 
-    if (!fromLibrary && addDraft.saveToLibrary && foodName) {
-      const { data: libRow, error: libError } = await supabase
-        .from('st_food_library')
-        .insert({
-          user_id: userId,
-          name: foodName,
-          serving_label: servingQty === 1 ? '1 serving' : `${servingQty} servings`,
-          calories: parseMacroInput(addDraft.calories),
-          protein_g: parseMacroInput(addDraft.protein_g),
-          carbs_g: parseMacroInput(addDraft.carbs_g),
-          fat_g: parseMacroInput(addDraft.fat_g),
-        })
-        .select()
-        .single();
-      if (libError) {
-        setSaving(false);
-        return setError(libError.message);
+    try {
+      if (!fromLibrary && addDraft.saveToLibrary && foodName) {
+        const { data: libRow, error: libError } = await supabase
+          .from('st_food_library')
+          .insert({
+            user_id: userId,
+            name: foodName,
+            serving_label: servingQty === 1 ? '1 serving' : `${servingQty} servings`,
+            calories: parseMacroInput(addDraft.calories),
+            protein_g: parseMacroInput(addDraft.protein_g),
+            carbs_g: parseMacroInput(addDraft.carbs_g),
+            fat_g: parseMacroInput(addDraft.fat_g),
+          })
+          .select()
+          .single();
+        if (libError) throw libError;
+        if (libRow) {
+          libraryId = libRow.id;
+          setSavedFoods((prev) =>
+            [...prev, libRow as FoodLibraryItem].sort((a, b) => a.name.localeCompare(b.name))
+          );
+        }
       }
-      if (libRow) {
-        libraryId = libRow.id;
-        setSavedFoods((prev) => [...prev, libRow as FoodLibraryItem].sort((a, b) => a.name.localeCompare(b.name)));
-      }
-    }
 
-    const { data, error: insertError } = await supabase
+      const inserted = await insertMealRows([
+        {
+          user_id: userId,
+          log_date: logDate,
+          meal_type: mealType,
+          food_name: foodName,
+          food_library_id: libraryId,
+          serving_qty: servingQty,
+          ...macros,
+        },
+      ]);
+      setEntries((prev) => [...prev, ...inserted]);
+      setWeekEntries((prev) => [
+        ...prev,
+        ...inserted.map((row) => ({
+          log_date: row.log_date,
+          calories: row.calories,
+          protein_g: row.protein_g,
+          carbs_g: row.carbs_g,
+          fat_g: row.fat_g,
+        })),
+      ]);
+      if (!fromLibrary) {
+        setAddDraft(emptyFoodDraft(mealType));
+        setShowAdd(false);
+      }
+      notifyParent();
+    } catch (e: any) {
+      setError(e?.message || 'Could not log food.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function openEditEntry(entry: MealEntry) {
+    const per = entryToPerServing(entry);
+    setEditEntryId(entry.id);
+    setEditDraft({
+      meal_type: entry.meal_type,
+      food_name: per.food_name,
+      serving_qty: String(per.serving_qty),
+      calories: String(per.calories),
+      protein_g: String(per.protein_g),
+      carbs_g: String(per.carbs_g),
+      fat_g: String(per.fat_g),
+      saveToLibrary: false,
+    });
+    setShowAdd(false);
+  }
+
+  async function saveEditedEntry() {
+    if (!userId || !editEntryId || !editDraft) return;
+    const built = mealEntryFromDraft(editDraft, editDraft.meal_type);
+    if (!built.food_name) return alert('Enter a food name.');
+
+    setSaving(true);
+    setError('');
+    const { data, error: updateError } = await supabase
       .from('st_meal_entries')
-      .insert({
-        user_id: userId,
-        log_date: logDate,
-        meal_type: mealType,
-        food_name: foodName,
-        food_library_id: libraryId,
-        serving_qty: servingQty,
-        calories: macros.calories,
-        protein_g: macros.protein_g,
-        carbs_g: macros.carbs_g,
-        fat_g: macros.fat_g,
+      .update({
+        meal_type: editDraft.meal_type,
+        food_name: built.food_name,
+        serving_qty: built.serving_qty,
+        calories: built.calories,
+        protein_g: built.protein_g,
+        carbs_g: built.carbs_g,
+        fat_g: built.fat_g,
       })
+      .eq('id', editEntryId)
       .select()
       .single();
-
     setSaving(false);
-    if (insertError) return setError(insertError.message);
-    if (data) setEntries((prev) => [...prev, data as MealEntry]);
-    if (!fromLibrary) {
-      setAddDraft(emptyAddDraft(mealType));
-      setShowAdd(false);
+    if (updateError) return setError(updateError.message);
+    if (data) {
+      setEntries((prev) => prev.map((e) => (e.id === editEntryId ? (data as MealEntry) : e)));
+      setEditEntryId(null);
+      setEditDraft(null);
+      notifyParent();
+      await loadData();
     }
   }
 
@@ -270,31 +499,38 @@ export default function NutritionTracker({
     const { error: delError } = await supabase.from('st_meal_entries').delete().eq('id', id);
     if (delError) return setError(delError.message);
     setEntries((prev) => prev.filter((e) => e.id !== id));
+    notifyParent();
+    await loadData();
   }
 
   async function duplicateEntry(entry: MealEntry) {
     if (!userId) return;
     setSaving(true);
-    const { data, error: insertError } = await supabase
-      .from('st_meal_entries')
-      .insert({
-        user_id: userId,
-        log_date: logDate,
-        meal_type: entry.meal_type,
-        food_name: entry.food_name,
-        food_library_id: entry.food_library_id || null,
-        serving_qty: entry.serving_qty,
-        calories: entry.calories,
-        protein_g: entry.protein_g,
-        carbs_g: entry.carbs_g,
-        fat_g: entry.fat_g,
-        notes: entry.notes || null,
-      })
-      .select()
-      .single();
-    setSaving(false);
-    if (insertError) return setError(insertError.message);
-    if (data) setEntries((prev) => [...prev, data as MealEntry]);
+    setError('');
+    try {
+      const inserted = await insertMealRows([
+        {
+          user_id: userId,
+          log_date: logDate,
+          meal_type: entry.meal_type,
+          food_name: entry.food_name,
+          food_library_id: entry.food_library_id || null,
+          serving_qty: entry.serving_qty,
+          calories: entry.calories,
+          protein_g: entry.protein_g,
+          carbs_g: entry.carbs_g,
+          fat_g: entry.fat_g,
+          notes: entry.notes || null,
+        },
+      ]);
+      setEntries((prev) => [...prev, ...inserted]);
+      notifyParent();
+      await loadData();
+    } catch (e: any) {
+      setError(e?.message || 'Could not duplicate entry.');
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function copyYesterday() {
@@ -312,26 +548,153 @@ export default function NutritionTracker({
     if (!confirm(`Copy ${data.length} item(s) from ${formatDisplayDate(prevYmd)}?`)) return;
 
     setSaving(true);
-    const rows = data.map((row: MealEntry) => ({
-      user_id: userId,
-      log_date: logDate,
-      meal_type: row.meal_type,
-      food_name: row.food_name,
-      food_library_id: row.food_library_id || null,
-      serving_qty: row.serving_qty,
-      calories: row.calories,
-      protein_g: row.protein_g,
-      carbs_g: row.carbs_g,
-      fat_g: row.fat_g,
-      notes: row.notes || null,
-    }));
-    const { data: inserted, error: insertError } = await supabase
-      .from('st_meal_entries')
-      .insert(rows)
-      .select();
+    setError('');
+    try {
+      const rows = data.map((row: MealEntry) => ({
+        user_id: userId,
+        log_date: logDate,
+        meal_type: row.meal_type,
+        food_name: row.food_name,
+        food_library_id: row.food_library_id || null,
+        serving_qty: row.serving_qty,
+        calories: row.calories,
+        protein_g: row.protein_g,
+        carbs_g: row.carbs_g,
+        fat_g: row.fat_g,
+        notes: row.notes || null,
+      }));
+      const inserted = await insertMealRows(rows);
+      setEntries((prev) => [...prev, ...inserted]);
+      notifyParent();
+      await loadData();
+    } catch (e: any) {
+      setError(e?.message || 'Could not copy yesterday.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function openEditFood(food: FoodLibraryItem) {
+    setEditFoodId(food.id);
+    setFoodEditDraft({
+      name: food.name,
+      serving_label: food.serving_label || '1 serving',
+      calories: String(food.calories),
+      protein_g: String(food.protein_g),
+      carbs_g: String(food.carbs_g),
+      fat_g: String(food.fat_g),
+    });
+  }
+
+  async function saveEditedFood() {
+    if (!editFoodId || !foodEditDraft) return;
+    const name = foodEditDraft.name.trim();
+    if (!name) return alert('Enter a food name.');
+    setSaving(true);
+    setError('');
+    const { data, error: updateError } = await supabase
+      .from('st_food_library')
+      .update({
+        name,
+        serving_label: foodEditDraft.serving_label.trim() || '1 serving',
+        calories: parseMacroInput(foodEditDraft.calories),
+        protein_g: parseMacroInput(foodEditDraft.protein_g),
+        carbs_g: parseMacroInput(foodEditDraft.carbs_g),
+        fat_g: parseMacroInput(foodEditDraft.fat_g),
+      })
+      .eq('id', editFoodId)
+      .select()
+      .single();
+    setSaving(false);
+    if (updateError) return setError(updateError.message);
+    if (data) {
+      setSavedFoods((prev) =>
+        prev.map((f) => (f.id === editFoodId ? (data as FoodLibraryItem) : f)).sort((a, b) => a.name.localeCompare(b.name))
+      );
+      setEditFoodId(null);
+      setFoodEditDraft(null);
+    }
+  }
+
+  async function archiveFood(id: string) {
+    if (!confirm('Archive this saved food? Past meal logs stay unchanged.')) return;
+    const { error: updateError } = await supabase
+      .from('st_food_library')
+      .update({ is_archived: true })
+      .eq('id', id);
+    if (updateError) return setError(updateError.message);
+    setSavedFoods((prev) => prev.filter((f) => f.id !== id));
+    if (editFoodId === id) {
+      setEditFoodId(null);
+      setFoodEditDraft(null);
+    }
+  }
+
+  async function saveMealAsTemplate(meal: MealType) {
+    const mealEntries = grouped[meal];
+    if (!mealEntries.length) return alert(`Log items in ${MEAL_TYPE_LABELS[meal]} first.`);
+    const defaultName = `${MEAL_TYPE_LABELS[meal]} template`;
+    const name = prompt('Template name', defaultName)?.trim();
+    if (!name) return;
+
+    setSaving(true);
+    setError('');
+    const { data, error: insertError } = await supabase
+      .from('st_meal_templates')
+      .insert({
+        user_id: userId,
+        name,
+        meal_type: meal,
+        items: templateItemsFromEntries(mealEntries),
+      })
+      .select()
+      .single();
     setSaving(false);
     if (insertError) return setError(insertError.message);
-    setEntries((prev) => [...prev, ...((inserted || []) as MealEntry[])]);
+    const parsed = parseMealTemplate(data);
+    if (parsed) {
+      setMealTemplates((prev) => [...prev, parsed].sort((a, b) => a.name.localeCompare(b.name)));
+    }
+  }
+
+  async function logMealTemplate(template: MealTemplate) {
+    if (!template.items.length) return alert('This template has no items.');
+    if (!confirm(`Log "${template.name}" (${template.items.length} item(s)) to ${formatDisplayDate(logDate)}?`)) return;
+
+    setSaving(true);
+    setError('');
+    try {
+      const rows = template.items.map((item) => ({
+        user_id: userId,
+        log_date: logDate,
+        meal_type: template.meal_type,
+        food_name: item.food_name,
+        food_library_id: item.food_library_id || null,
+        serving_qty: item.serving_qty,
+        calories: item.calories,
+        protein_g: item.protein_g,
+        carbs_g: item.carbs_g,
+        fat_g: item.fat_g,
+      }));
+      const inserted = await insertMealRows(rows);
+      setEntries((prev) => [...prev, ...inserted]);
+      notifyParent();
+      await loadData();
+    } catch (e: any) {
+      setError(e?.message || 'Could not log template.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function archiveTemplate(id: string) {
+    if (!confirm('Archive this meal template?')) return;
+    const { error: updateError } = await supabase
+      .from('st_meal_templates')
+      .update({ is_archived: true })
+      .eq('id', id);
+    if (updateError) return setError(updateError.message);
+    setMealTemplates((prev) => prev.filter((t) => t.id !== id));
   }
 
   function shiftDate(days: number) {
@@ -403,6 +766,14 @@ export default function NutritionTracker({
         {error && <p className="nutrition-error">{error}</p>}
       </div>
 
+      {!loading && (
+        <NutritionWeeklySummary
+          summary={weeklySummary}
+          activeDate={logDate}
+          onSelectDate={setDate}
+        />
+      )}
+
       {showGoals && (
         <div className="card nutrition-goals-card">
           <h3>Daily macro goals</h3>
@@ -464,88 +835,7 @@ export default function NutritionTracker({
       {showAdd && (
         <div className="card nutrition-add-card">
           <h3>Add food</h3>
-          <label htmlFor="add-meal">Meal</label>
-          <select
-            id="add-meal"
-            value={addDraft.meal_type}
-            onChange={(e) => setAddDraft({ ...addDraft, meal_type: e.target.value as MealType })}
-          >
-            {MEAL_TYPES.map((meal) => (
-              <option key={meal} value={meal}>
-                {MEAL_TYPE_LABELS[meal]}
-              </option>
-            ))}
-          </select>
-          <label htmlFor="add-name">Food name</label>
-          <input
-            id="add-name"
-            value={addDraft.food_name}
-            onChange={(e) => setAddDraft({ ...addDraft, food_name: e.target.value })}
-            placeholder="e.g. Chicken breast and rice"
-          />
-          <div className="row">
-            <div>
-              <label htmlFor="add-qty">Servings</label>
-              <input
-                id="add-qty"
-                type="number"
-                min="0.25"
-                step="0.25"
-                value={addDraft.serving_qty}
-                onChange={(e) => setAddDraft({ ...addDraft, serving_qty: e.target.value })}
-              />
-            </div>
-            <div>
-              <label htmlFor="add-cal">Calories (per serving)</label>
-              <input
-                id="add-cal"
-                type="number"
-                min="0"
-                value={addDraft.calories}
-                onChange={(e) => setAddDraft({ ...addDraft, calories: e.target.value })}
-              />
-            </div>
-          </div>
-          <div className="row">
-            <div>
-              <label htmlFor="add-protein">Protein g</label>
-              <input
-                id="add-protein"
-                type="number"
-                min="0"
-                value={addDraft.protein_g}
-                onChange={(e) => setAddDraft({ ...addDraft, protein_g: e.target.value })}
-              />
-            </div>
-            <div>
-              <label htmlFor="add-carbs">Carbs g</label>
-              <input
-                id="add-carbs"
-                type="number"
-                min="0"
-                value={addDraft.carbs_g}
-                onChange={(e) => setAddDraft({ ...addDraft, carbs_g: e.target.value })}
-              />
-            </div>
-            <div>
-              <label htmlFor="add-fat">Fat g</label>
-              <input
-                id="add-fat"
-                type="number"
-                min="0"
-                value={addDraft.fat_g}
-                onChange={(e) => setAddDraft({ ...addDraft, fat_g: e.target.value })}
-              />
-            </div>
-          </div>
-          <label className="remember-row">
-            <input
-              type="checkbox"
-              checked={addDraft.saveToLibrary}
-              onChange={(e) => setAddDraft({ ...addDraft, saveToLibrary: e.target.checked })}
-            />
-            Save to my foods for quick add later
-          </label>
+          <FoodFormFields draft={addDraft} setDraft={setAddDraft} idPrefix="add" showSaveToLibrary />
           <div className="actions" style={{ marginTop: 10 }}>
             <button type="button" className="btn green" onClick={() => addFoodEntry()} disabled={saving}>
               {saving ? 'Saving...' : 'Log food'}
@@ -556,6 +846,71 @@ export default function NutritionTracker({
           </div>
         </div>
       )}
+
+      {editEntryId && editDraft && (
+        <div className="card nutrition-add-card">
+          <h3>Edit food entry</h3>
+          <FoodFormFields draft={editDraft} setDraft={setEditDraft} idPrefix="edit" />
+          <div className="actions" style={{ marginTop: 10 }}>
+            <button type="button" className="btn green" onClick={saveEditedEntry} disabled={saving}>
+              {saving ? 'Saving...' : 'Save changes'}
+            </button>
+            <button
+              type="button"
+              className="btn secondary"
+              onClick={() => {
+                setEditEntryId(null);
+                setEditDraft(null);
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="card nutrition-library-card">
+        <h3>Meal templates</h3>
+        <p className="muted">Save a logged meal as a template, then log the whole meal in one tap.</p>
+        {activeTemplates.length === 0 ? (
+          <p className="muted">No templates yet. Use &ldquo;Save as template&rdquo; on a meal section below.</p>
+        ) : (
+          <div className="nutrition-template-grid">
+            {activeTemplates.map((template) => {
+              const templateTotals = sumMacros(template.items);
+              return (
+                <div key={template.id} className="nutrition-template-chip">
+                  <div>
+                    <b>{template.name}</b>
+                    <span className="muted">
+                      {MEAL_TYPE_LABELS[template.meal_type]} · {template.items.length} item(s) ·{' '}
+                      {formatMacroLine(templateTotals)}
+                    </span>
+                  </div>
+                  <div className="nutrition-food-chip-actions">
+                    <button
+                      type="button"
+                      className="btn small green"
+                      onClick={() => logMealTemplate(template)}
+                      disabled={saving}
+                    >
+                      Log today
+                    </button>
+                    <button
+                      type="button"
+                      className="btn small red"
+                      onClick={() => archiveTemplate(template.id)}
+                      disabled={saving}
+                    >
+                      Archive
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       <div className="card nutrition-library-card">
         <h3>My foods</h3>
@@ -576,6 +931,14 @@ export default function NutritionTracker({
                   <span className="muted">{formatMacroLine(food)}</span>
                 </div>
                 <div className="nutrition-food-chip-actions">
+                  <button
+                    type="button"
+                    className="btn small secondary"
+                    onClick={() => openEditFood(food)}
+                    disabled={saving}
+                  >
+                    Edit
+                  </button>
                   {MEAL_TYPES.map((meal) => (
                     <button
                       key={meal}
@@ -594,6 +957,86 @@ export default function NutritionTracker({
           </div>
         )}
       </div>
+
+      {editFoodId && foodEditDraft && (
+        <div className="card nutrition-add-card">
+          <h3>Edit saved food</h3>
+          <label htmlFor="food-edit-name">Name</label>
+          <input
+            id="food-edit-name"
+            value={foodEditDraft.name}
+            onChange={(e) => setFoodEditDraft({ ...foodEditDraft, name: e.target.value })}
+          />
+          <label htmlFor="food-edit-serving">Serving label</label>
+          <input
+            id="food-edit-serving"
+            value={foodEditDraft.serving_label}
+            onChange={(e) => setFoodEditDraft({ ...foodEditDraft, serving_label: e.target.value })}
+          />
+          <div className="row">
+            <div>
+              <label htmlFor="food-edit-cal">Calories</label>
+              <input
+                id="food-edit-cal"
+                type="number"
+                min="0"
+                value={foodEditDraft.calories}
+                onChange={(e) => setFoodEditDraft({ ...foodEditDraft, calories: e.target.value })}
+              />
+            </div>
+            <div>
+              <label htmlFor="food-edit-protein">Protein g</label>
+              <input
+                id="food-edit-protein"
+                type="number"
+                min="0"
+                value={foodEditDraft.protein_g}
+                onChange={(e) => setFoodEditDraft({ ...foodEditDraft, protein_g: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="row">
+            <div>
+              <label htmlFor="food-edit-carbs">Carbs g</label>
+              <input
+                id="food-edit-carbs"
+                type="number"
+                min="0"
+                value={foodEditDraft.carbs_g}
+                onChange={(e) => setFoodEditDraft({ ...foodEditDraft, carbs_g: e.target.value })}
+              />
+            </div>
+            <div>
+              <label htmlFor="food-edit-fat">Fat g</label>
+              <input
+                id="food-edit-fat"
+                type="number"
+                min="0"
+                value={foodEditDraft.fat_g}
+                onChange={(e) => setFoodEditDraft({ ...foodEditDraft, fat_g: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="actions" style={{ marginTop: 10 }}>
+            <button type="button" className="btn green" onClick={saveEditedFood} disabled={saving}>
+              {saving ? 'Saving...' : 'Save food'}
+            </button>
+            <button type="button" className="btn red" onClick={() => archiveFood(editFoodId)} disabled={saving}>
+              Archive
+            </button>
+            <button
+              type="button"
+              className="btn secondary"
+              onClick={() => {
+                setEditFoodId(null);
+                setFoodEditDraft(null);
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {MEAL_TYPES.map((meal) => {
         const mealEntries = grouped[meal];
@@ -623,6 +1066,14 @@ export default function NutritionTracker({
                       <button
                         type="button"
                         className="btn small secondary"
+                        onClick={() => openEditEntry(entry)}
+                        disabled={saving}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="btn small secondary"
                         onClick={() => duplicateEntry(entry)}
                         disabled={saving}
                       >
@@ -641,17 +1092,28 @@ export default function NutritionTracker({
                 ))}
               </div>
             )}
-            <button
-              type="button"
-              className="btn small secondary"
-              style={{ marginTop: 8 }}
-              onClick={() => {
-                setAddDraft(emptyAddDraft(meal));
-                setShowAdd(true);
-              }}
-            >
-              + Add to {MEAL_TYPE_LABELS[meal]}
-            </button>
+            <div className="actions" style={{ marginTop: 8 }}>
+              <button
+                type="button"
+                className="btn small secondary"
+                onClick={() => {
+                  setAddDraft(emptyFoodDraft(meal));
+                  setShowAdd(true);
+                }}
+              >
+                + Add to {MEAL_TYPE_LABELS[meal]}
+              </button>
+              {mealEntries.length > 0 && (
+                <button
+                  type="button"
+                  className="btn small secondary"
+                  onClick={() => saveMealAsTemplate(meal)}
+                  disabled={saving}
+                >
+                  Save as template
+                </button>
+              )}
+            </div>
           </div>
         );
       })}
