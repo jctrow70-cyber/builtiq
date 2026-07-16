@@ -40,6 +40,15 @@ import {
   AI_FOOD_DISCLAIMER,
   aiEstimateToDraft,
 } from '../../lib/nutrition/aiFoodEstimate';
+import {
+  applyGoalSuggestion,
+  goalsMatchDefaults,
+  ProfileForGoalSuggestion,
+  suggestNutritionGoals,
+} from '../../lib/nutrition/goalSuggestions';
+import { barcodeResultToDraft, type BarcodeLookupResponse } from '../../lib/nutrition/barcodeLookup';
+import { LABEL_OCR_DISCLAIMER } from '../../lib/nutrition/labelOcr';
+import NutritionBarcodeScanner from './NutritionBarcodeScanner';
 import { currentCalendarWeekBounds, formatDisplayDate, parseYmd, todayYmd } from '../../lib/training/programCalendar';
 
 type NutritionTrackerProps = {
@@ -241,6 +250,15 @@ export default function NutritionTracker({
   const [aiEstimating, setAiEstimating] = useState(false);
   const [aiEstimateError, setAiEstimateError] = useState('');
   const [aiEstimateResult, setAiEstimateResult] = useState<AiFoodEstimateResult | null>(null);
+  const [profileForGoals, setProfileForGoals] = useState<ProfileForGoalSuggestion | null>(null);
+  const [hasSavedGoals, setHasSavedGoals] = useState(false);
+  const [barcodeValue, setBarcodeValue] = useState('');
+  const [barcodeLoading, setBarcodeLoading] = useState(false);
+  const [barcodeError, setBarcodeError] = useState('');
+  const [barcodeNotes, setBarcodeNotes] = useState('');
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  const [labelScanning, setLabelScanning] = useState(false);
+  const [labelScanError, setLabelScanError] = useState('');
 
   const totals = useMemo(() => sumMacros(entries), [entries]);
   const grouped = useMemo(() => groupEntriesByMeal(entries), [entries]);
@@ -248,6 +266,14 @@ export default function NutritionTracker({
     () => buildWeeklyNutritionSummary(weekEntries, goals, logDate),
     [weekEntries, goals, logDate]
   );
+
+  const goalSuggestion = useMemo(
+    () => suggestNutritionGoals(profileForGoals, profileForGoals?.experience_level),
+    [profileForGoals]
+  );
+
+  const showGoalSuggestionBanner =
+    goalSuggestion.canSuggest && (!hasSavedGoals || goalsMatchDefaults(goals));
 
   const filteredFoods = useMemo(() => {
     const q = foodSearch.trim().toLowerCase();
@@ -290,7 +316,7 @@ export default function NutritionTracker({
     setError('');
     const { monday, sunday } = currentCalendarWeekBounds(parseYmd(logDate));
     try {
-      const [entriesRes, weekRes, goalsRes, foodsRes, templatesRes, catalogRes] = await Promise.all([
+      const [entriesRes, weekRes, goalsRes, profileRes, foodsRes, templatesRes, catalogRes] = await Promise.all([
         supabase
           .from('st_meal_entries')
           .select('*')
@@ -304,6 +330,11 @@ export default function NutritionTracker({
           .gte('log_date', monday)
           .lte('log_date', sunday),
         supabase.from('st_nutrition_goals').select('*').eq('user_id', userId).maybeSingle(),
+        supabase
+          .from('st_profiles')
+          .select('weight_lbs,height_inches,birth_year,sex,primary_goal,experience_level')
+          .eq('user_id', userId)
+          .maybeSingle(),
         supabase
           .from('st_food_library')
           .select('*')
@@ -327,6 +358,7 @@ export default function NutritionTracker({
       if (entriesRes.error) throw entriesRes.error;
       if (weekRes.error) throw weekRes.error;
       if (goalsRes.error) throw goalsRes.error;
+      if (profileRes.error) throw profileRes.error;
       if (foodsRes.error) throw foodsRes.error;
 
       setEntries((entriesRes.data || []) as MealEntry[]);
@@ -334,6 +366,8 @@ export default function NutritionTracker({
       const nextGoals = goalsFromRow(goalsRes.data);
       setGoals(nextGoals);
       setGoalsDraft(nextGoals);
+      setHasSavedGoals(!!goalsRes.data);
+      setProfileForGoals((profileRes.data as ProfileForGoalSuggestion) || null);
       setSavedFoods((foodsRes.data || []) as FoodLibraryItem[]);
       if (templatesRes.error) {
         if (!String(templatesRes.error.message || '').includes('st_meal_templates')) {
@@ -387,6 +421,38 @@ export default function NutritionTracker({
     setSaving(false);
     if (upsertError) return setError(upsertError.message);
     setGoals({ ...goalsDraft });
+    setHasSavedGoals(true);
+    setShowGoals(false);
+    notifyParent();
+    await loadData();
+  }
+
+  function applySuggestedGoals() {
+    if (!goalSuggestion.canSuggest) return;
+    setGoalsDraft(applyGoalSuggestion(goalSuggestion));
+    setShowGoals(true);
+  }
+
+  async function saveSuggestedGoals() {
+    if (!goalSuggestion.canSuggest || !userId) return;
+    const next = applyGoalSuggestion(goalSuggestion);
+    setGoalsDraft(next);
+    setSaving(true);
+    setError('');
+    const { error: upsertError } = await supabase.from('st_nutrition_goals').upsert(
+      {
+        user_id: userId,
+        calories_target: next.calories,
+        protein_g_target: next.protein_g,
+        carbs_g_target: next.carbs_g,
+        fat_g_target: next.fat_g,
+      },
+      { onConflict: 'user_id' }
+    );
+    setSaving(false);
+    if (upsertError) return setError(upsertError.message);
+    setGoals(next);
+    setHasSavedGoals(true);
     setShowGoals(false);
     notifyParent();
     await loadData();
@@ -769,14 +835,116 @@ export default function NutritionTracker({
     });
   }
 
-  function openAddFood(meal: MealType = 'breakfast') {
-    setAddDraft(emptyFoodDraft(meal));
+  function resetAddFoodExtras() {
     setCatalogSearch('');
     setPickedCatalogId(null);
     setAiDescribe('');
     setAiEstimateError('');
     setAiEstimateResult(null);
+    setBarcodeValue('');
+    setBarcodeLoading(false);
+    setBarcodeError('');
+    setBarcodeNotes('');
+    setShowBarcodeScanner(false);
+    setLabelScanning(false);
+    setLabelScanError('');
+  }
+
+  function openAddFood(meal: MealType = 'breakfast') {
+    setAddDraft(emptyFoodDraft(meal));
+    resetAddFoodExtras();
     setShowAdd(true);
+  }
+
+  async function getAuthToken(): Promise<string | null> {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    return session?.access_token || null;
+  }
+
+  async function lookupBarcodeProduct(code?: string) {
+    const barcode = String(code ?? barcodeValue).trim();
+    if (!barcode) return alert('Enter or scan a product barcode.');
+    const token = await getAuthToken();
+    if (!token) return alert('Sign in to look up barcodes.');
+
+    setBarcodeLoading(true);
+    setBarcodeError('');
+    setBarcodeNotes('');
+    setAiEstimateResult(null);
+    setAiEstimateError('');
+    try {
+      const res = await fetch('/api/nutrition/barcode', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ barcode }),
+      });
+      const data = (await res.json().catch(() => ({}))) as BarcodeLookupResponse & { error?: string };
+      if (!res.ok) throw new Error(data?.error || `Lookup failed (${res.status})`);
+      if (!data.found) {
+        setBarcodeError(data.message || 'Product not found.');
+        return;
+      }
+      setBarcodeValue(data.barcode);
+      setBarcodeNotes(data.notes || '');
+      setPickedCatalogId(null);
+      setAddDraft({
+        ...addDraft,
+        ...barcodeResultToDraft(data, addDraft.meal_type),
+      });
+    } catch (e: any) {
+      setBarcodeError(e?.message || 'Barcode lookup failed.');
+    } finally {
+      setBarcodeLoading(false);
+      setShowBarcodeScanner(false);
+    }
+  }
+
+  async function scanNutritionLabel(file: File | null) {
+    if (!file) return;
+    const token = await getAuthToken();
+    if (!token) return alert('Sign in to scan nutrition labels.');
+
+    setLabelScanning(true);
+    setLabelScanError('');
+    setAiEstimateResult(null);
+    setAiEstimateError('');
+    setBarcodeError('');
+    setBarcodeNotes('');
+    try {
+      const buffer = await file.arrayBuffer();
+      const bytes = new Uint8Array(buffer);
+      let binary = '';
+      for (let i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i]);
+      const image_base64 = btoa(binary);
+      const mime_type = file.type || 'image/jpeg';
+      const res = await fetch('/api/nutrition/scan-label', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ image_base64, mime_type }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || `Label scan failed (${res.status})`);
+      setAiEstimateResult(data as AiFoodEstimateResult);
+      setPickedCatalogId(null);
+      if ((data as AiFoodEstimateResult)?.items?.length === 1) {
+        setAddDraft({
+          ...addDraft,
+          ...aiEstimateToDraft((data as AiFoodEstimateResult).items[0], addDraft.meal_type),
+        });
+      }
+    } catch (e: any) {
+      setLabelScanError(e?.message || 'Could not read nutrition label.');
+    } finally {
+      setLabelScanning(false);
+    }
   }
 
   async function estimateWithAi() {
@@ -790,6 +958,9 @@ export default function NutritionTracker({
     setAiEstimating(true);
     setAiEstimateError('');
     setAiEstimateResult(null);
+    setLabelScanError('');
+    setBarcodeError('');
+    setBarcodeNotes('');
     try {
       const res = await fetch('/api/nutrition/estimate', {
         method: 'POST',
@@ -927,6 +1098,42 @@ export default function NutritionTracker({
         {error && <p className="nutrition-error">{error}</p>}
       </div>
 
+      {!loading && showGoalSuggestionBanner && (
+        <div className="card nutrition-goals-suggest-card">
+          <div className="topline" style={{ justifyContent: 'space-between' }}>
+            <h3>Suggested macro goals</h3>
+            <span className="badge">From profile</span>
+          </div>
+          <p className="muted">{goalSuggestion.summary}</p>
+          <div className="nutrition-totals-grid">
+            <div className="nutrition-total-tile">
+              <b>{formatMacro(goalSuggestion.calories)}</b>
+              <span className="muted">Calories</span>
+            </div>
+            <div className="nutrition-total-tile">
+              <b>{formatMacro(goalSuggestion.protein_g)}g</b>
+              <span className="muted">Protein</span>
+            </div>
+            <div className="nutrition-total-tile">
+              <b>{formatMacro(goalSuggestion.carbs_g)}g</b>
+              <span className="muted">Carbs</span>
+            </div>
+            <div className="nutrition-total-tile">
+              <b>{formatMacro(goalSuggestion.fat_g)}g</b>
+              <span className="muted">Fat</span>
+            </div>
+          </div>
+          <div className="actions" style={{ marginTop: 10 }}>
+            <button type="button" className="btn green" onClick={saveSuggestedGoals} disabled={saving}>
+              {saving ? 'Saving...' : 'Apply suggested goals'}
+            </button>
+            <button type="button" className="btn secondary" onClick={applySuggestedGoals} disabled={saving}>
+              Review & edit
+            </button>
+          </div>
+        </div>
+      )}
+
       {!loading && (
         <NutritionWeeklySummary
           summary={weeklySummary}
@@ -938,6 +1145,21 @@ export default function NutritionTracker({
       {showGoals && (
         <div className="card nutrition-goals-card">
           <h3>Daily macro goals</h3>
+          {goalSuggestion.canSuggest && (
+            <div className="nutrition-goals-suggest-inline">
+              <p className="muted">{goalSuggestion.summary}</p>
+              <div className="actions" style={{ marginBottom: 10 }}>
+                <button
+                  type="button"
+                  className="btn small secondary"
+                  onClick={() => setGoalsDraft(applyGoalSuggestion(goalSuggestion))}
+                  disabled={saving}
+                >
+                  Fill from profile suggestion
+                </button>
+              </div>
+            </div>
+          )}
           <div className="row">
             <div>
               <label htmlFor="goal-calories">Calories</label>
@@ -1041,6 +1263,70 @@ export default function NutritionTracker({
             )}
           </div>
 
+          <div className="catalog-picker nutrition-scan-picker">
+            <label htmlFor="barcode-input">Barcode lookup (packaged food)</label>
+            <div className="nutrition-barcode-row">
+              <input
+                id="barcode-input"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={barcodeValue}
+                onChange={(e) => setBarcodeValue(e.target.value.replace(/\D/g, ''))}
+                placeholder="UPC / EAN barcode"
+              />
+              <button
+                type="button"
+                className="btn secondary"
+                onClick={() => lookupBarcodeProduct()}
+                disabled={saving || barcodeLoading}
+              >
+                {barcodeLoading ? 'Looking up...' : 'Look up'}
+              </button>
+            </div>
+            <div className="actions" style={{ marginTop: 8 }}>
+              <button
+                type="button"
+                className="btn secondary"
+                onClick={() => setShowBarcodeScanner((v) => !v)}
+                disabled={saving || barcodeLoading}
+              >
+                {showBarcodeScanner ? 'Hide camera' : 'Scan with camera'}
+              </button>
+            </div>
+            {showBarcodeScanner && (
+              <NutritionBarcodeScanner
+                onDetected={(code) => {
+                  setBarcodeValue(code);
+                  lookupBarcodeProduct(code);
+                }}
+                onClose={() => setShowBarcodeScanner(false)}
+              />
+            )}
+            {barcodeNotes && <p className="muted nutrition-scan-notes">{barcodeNotes}</p>}
+            {barcodeError && <p className="nutrition-error">{barcodeError}</p>}
+            <p className="muted nutrition-scan-hint">
+              Uses Open Food Facts when available. If not found, scan the Nutrition Facts panel below.
+            </p>
+            <label htmlFor="label-photo-input" className="nutrition-label-upload">
+              Scan nutrition label (photo)
+            </label>
+            <input
+              id="label-photo-input"
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/*"
+              capture="environment"
+              disabled={saving || labelScanning}
+              onChange={(e) => {
+                const file = e.target.files?.[0] || null;
+                scanNutritionLabel(file);
+                e.target.value = '';
+              }}
+            />
+            <p className="muted nutrition-ai-disclaimer">{LABEL_OCR_DISCLAIMER}</p>
+            {labelScanError && <p className="nutrition-error">{labelScanError}</p>}
+            {labelScanning && <p className="muted">Reading nutrition label...</p>}
+          </div>
+
           <div className="catalog-picker nutrition-ai-picker">
             <label htmlFor="ai-food-describe">Describe your food (AI estimate)</label>
             <textarea
@@ -1129,11 +1415,7 @@ export default function NutritionTracker({
               className="btn secondary"
               onClick={() => {
                 setShowAdd(false);
-                setCatalogSearch('');
-                setPickedCatalogId(null);
-                setAiDescribe('');
-                setAiEstimateError('');
-                setAiEstimateResult(null);
+                resetAddFoodExtras();
               }}
             >
               Cancel

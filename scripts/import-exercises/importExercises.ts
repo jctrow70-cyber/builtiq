@@ -46,7 +46,7 @@ function parseArgs(argv: string[]) {
     else if (a === '--enrich-legacy') enrichLegacy = true;
     else if ((a === '--file' || a === '-f') && argv[i + 1]) file = argv[++i];
     else if (a === '--help' || a === '-h') {
-      console.log(`Build IQ exercise import (BIQ-0013)
+      console.log(`BuildIQ exercise import (BIQ-0013)
 
 Options:
   --file, -f <path>   JSON array or JSONL file (required)
@@ -272,7 +272,7 @@ async function applyActions(
 }
 
 function printReport(stats: ImportStats, dryRun: boolean) {
-  console.log('\n--- Build IQ Exercise Import Report ---');
+  console.log('\n--- BuildIQ Exercise Import Report ---');
   console.log(`Mode: ${dryRun ? 'DRY RUN (no writes)' : 'LIVE'}`);
   console.log(`Total records found:     ${stats.totalFound}`);
   console.log(`Records imported:        ${stats.imported} (${stats.inserted} inserted, ${stats.updated} updated)`);

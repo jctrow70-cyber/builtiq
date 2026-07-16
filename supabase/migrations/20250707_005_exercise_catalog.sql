@@ -76,7 +76,7 @@ create policy "exercise_catalog_update" on public.st_exercise_catalog
     and user_id = auth.uid()
   );
 
--- Build IQ system exercise library (available to all users)
+-- BuildIQ system exercise library (available to all users)
 insert into public.st_exercise_catalog (
   name, category, muscle_group, equipment, movement_pattern, is_system, user_id
 )

@@ -1,10 +1,10 @@
-# Build IQ Application Context
+# BuildIQ Application Context
 
 ## Product Vision
 
-Build IQ is an AI-powered health, fitness, and wellness platform.
+BuildIQ is an AI-powered health, fitness, and wellness platform.
 
-The goal is not just workout tracking. Build IQ should become a complete personal fitness operating system combining:
+The goal is not just workout tracking. BuildIQ should become a complete personal fitness operating system combining:
 
 - Strength training
 - Nutrition tracking
@@ -69,7 +69,7 @@ If a workout template changes:
 
 # User Structure
 
-Build IQ supports:
+BuildIQ supports:
 
 ## Personal Mode
 
@@ -452,7 +452,7 @@ Avoid:
 
 # Product Goal
 
-Build IQ should feel like:
+BuildIQ should feel like:
 
 A personal trainer
 A nutrition coach
@@ -464,4 +464,4 @@ The user should never wonder:
 
 "What should I do today?"
 
-Build IQ answers that.
+BuildIQ answers that.

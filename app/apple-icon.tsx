@@ -18,16 +18,14 @@ export default function AppleIcon() {
       >
         <div
           style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 2,
+            fontSize: 72,
+            fontWeight: 900,
+            letterSpacing: -3,
+            color: '#f7f7fb',
             lineHeight: 1,
           }}
         >
-          <div style={{ fontSize: 28, fontWeight: 900, color: '#f7f7fb' }}>Build</div>
-          <div style={{ fontSize: 44, fontWeight: 900, color: '#7c5cff' }}>IQ</div>
+          Build<span style={{ color: '#7c5cff' }}>IQ</span>
         </div>
       </div>
     ),

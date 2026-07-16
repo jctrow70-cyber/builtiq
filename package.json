@@ -1,5 +1,5 @@
 {
-  "name": "build-iq-app-shell-strength-functional",
+  "name": "buildiq-app-shell-strength-functional",
   "version": "1.2.0",
   "private": true,
   "scripts": {
@@ -8,12 +8,12 @@
     "start": "next start",
     "import:exercises": "tsx scripts/import-exercises/importExercises.ts",
     "import:exercises:dry": "tsx scripts/import-exercises/importExercises.ts --dry-run",
-    "import:exercises:production": "npm run import:convert:free-exercise-db && tsx scripts/import-exercises/importExercises.ts --enrich-legacy --file scripts/import-exercises/data/free-exercise-db/build-iq-import.json",
-    "import:exercises:production:dry": "npm run import:convert:free-exercise-db && tsx scripts/import-exercises/importExercises.ts --dry-run --enrich-legacy --file scripts/import-exercises/data/free-exercise-db/build-iq-import.json",
+    "import:exercises:production": "npm run import:convert:free-exercise-db && tsx scripts/import-exercises/importExercises.ts --enrich-legacy --file scripts/import-exercises/data/free-exercise-db/buildiq-import.json",
+    "import:exercises:production:dry": "npm run import:convert:free-exercise-db && tsx scripts/import-exercises/importExercises.ts --dry-run --enrich-legacy --file scripts/import-exercises/data/free-exercise-db/buildiq-import.json",
     "import:fetch:exercisedb": "tsx scripts/import-exercises/fetchExerciseDb.ts --bulk",
     "import:fetch:exercisedb:api": "tsx scripts/import-exercises/fetchExerciseDb.ts",
-    "import:exercises:exercisedb": "npm run import:fetch:exercisedb && tsx scripts/import-exercises/importExercises.ts --file scripts/import-exercises/data/exercisedb/build-iq-import.json",
-    "import:exercises:exercisedb:dry": "npm run import:fetch:exercisedb && tsx scripts/import-exercises/importExercises.ts --dry-run --file scripts/import-exercises/data/exercisedb/build-iq-import.json",
+    "import:exercises:exercisedb": "npm run import:fetch:exercisedb && tsx scripts/import-exercises/importExercises.ts --file scripts/import-exercises/data/exercisedb/buildiq-import.json",
+    "import:exercises:exercisedb:dry": "npm run import:fetch:exercisedb && tsx scripts/import-exercises/importExercises.ts --dry-run --file scripts/import-exercises/data/exercisedb/buildiq-import.json",
     "import:alternatives": "tsx scripts/import-exercises/importAlternatives.ts",
     "import:alternatives:dry": "tsx scripts/import-exercises/importAlternatives.ts --dry-run",
     "import:convert:free-exercise-db": "tsx scripts/import-exercises/convertFreeExerciseDb.ts",

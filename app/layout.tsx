@@ -3,15 +3,15 @@ import InstallAppPrompt from './components/InstallAppPrompt';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Build IQ Health',
+  title: 'BuildIQ Health',
   description:
     'Train smarter with workout logging, nutrition tracking, progress insights, and AI wellness coaching.',
-  applicationName: 'Build IQ Health',
+  applicationName: 'BuildIQ Health',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Build IQ',
+    title: 'BuildIQ',
   },
   formatDetection: {
     telephone: false,

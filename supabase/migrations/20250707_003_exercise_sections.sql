@@ -1,4 +1,4 @@
--- Build IQ: workout sections (warmup, strength)
+-- BuildIQ: workout sections (warmup, strength)
 -- Safe additive migration. Does not drop data.
 
 alter table public.st_exercises

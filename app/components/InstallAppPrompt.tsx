@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-const DISMISS_KEY = 'build_iq_install_prompt_dismissed';
+const DISMISS_KEY = 'buildiq_install_prompt_dismissed';
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -66,14 +66,14 @@ export default function InstallAppPrompt() {
   if (!visible) return null;
 
   return (
-    <div className="install-app-banner" role="region" aria-label="Install Build IQ app">
+    <div className="install-app-banner" role="region" aria-label="Install BuildIQ app">
       <div className="install-app-banner-inner">
         <div>
-          <strong>Install Build IQ</strong>
+          <strong>Install BuildIQ</strong>
           <p className="muted">
             {showIosHint && !installEvent
               ? 'Tap Share, then Add to Home Screen for a full-screen app experience.'
-              : 'Add Build IQ to your home screen for quick access while you train.'}
+              : 'Add BuildIQ to your home screen for quick access while you train.'}
           </p>
         </div>
         <div className="install-app-banner-actions">

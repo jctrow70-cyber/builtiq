@@ -1,14 +1,14 @@
-# Build IQ Health
+# BuildIQ Health
 
-Build IQ Health is a wellness and fitness application focused on helping users build themselves physically, mentally, and spiritually through exercise tracking, nutrition tracking, progress history, and future AI coaching.
+BuildIQ Health is a wellness and fitness application focused on helping users build themselves physically, mentally, and spiritually through exercise tracking, nutrition tracking, progress history, and future AI coaching.
 
 ## Product Vision
 
-Build IQ Health helps people become stronger, healthier, and more consistent by combining workout tracking, nutrition tracking, wellness habits, progress insights, and personalized AI coaching in one simple platform.
+BuildIQ Health helps people become stronger, healthier, and more consistent by combining workout tracking, nutrition tracking, wellness habits, progress insights, and personalized AI coaching in one simple platform.
 
 ## Core Concept
 
-Build IQ Health is built around the idea that health is wealth and that users are always building themselves for the present and the future.
+BuildIQ Health is built around the idea that health is wealth and that users are always building themselves for the present and the future.
 
 ## Current MVP Focus
 
@@ -61,7 +61,7 @@ For now, if only `main` exists, create a `develop` branch before making major ch
 
 ## Change Management
 
-Every meaningful change should use a Build IQ change number:
+Every meaningful change should use a BuildIQ change number:
 
 Example:
 
@@ -81,7 +81,7 @@ Each change should update `CHANGELOG.md` and include testing steps.
 Before coding, ask Cursor to:
 
 ```text
-Review README.md, ROADMAP.md, CHANGELOG.md, DECISIONS.md, and .cursorrules before making changes. Follow the Build IQ change management process. Create or use the next BIQ change number, document files changed, database changes, testing steps, and recommended commit message.
+Review README.md, ROADMAP.md, CHANGELOG.md, DECISIONS.md, and .cursorrules before making changes. Follow the BuildIQ change management process. Create or use the next BIQ change number, document files changed, database changes, testing steps, and recommended commit message.
 ```
 
 ## Windows quick start (one-time per machine)
@@ -89,20 +89,20 @@ Review README.md, ROADMAP.md, CHANGELOG.md, DECISIONS.md, and .cursorrules befor
 If `npm` is not recognized in PowerShell, use the repo setup script instead of fixing PATH manually each time:
 
 ```powershell
-cd "C:\Users\YOU\path\to\build-iq"
+cd "C:\Users\YOU\path\to\buildiq"
 powershell -ExecutionPolicy Bypass -File scripts/setup-windows.ps1
 ```
 
-Or **double-click** `build-iq-setup.cmd` in the repo root.
+Or **double-click** `buildiq-setup.cmd` in the repo root.
 
 **First time only:** install Node.js LTS if the script says it's missing.
 
 **No admin rights?** Double-click these (work on locked-down corporate PCs):
 
-1. `build-iq-install-node.cmd` — downloads portable Node once  
-2. `build-iq-setup.cmd` — runs `npm install`  
-3. `build-iq-import-guided.cmd` — guided library (~1,324 GIF exercises)  
-4. `build-iq-import.cmd` — guided library + alternatives (needs `.env.local`)
+1. `buildiq-install-node.cmd` — downloads portable Node once  
+2. `buildiq-setup.cmd` — runs `npm install`  
+3. `buildiq-import-guided.cmd` — guided library (~1,324 GIF exercises)  
+4. `buildiq-import.cmd` — guided library + alternatives (needs `.env.local`)
 
 If PowerShell shows *Constrained Language Mode*, use the `.cmd` files — not the `.ps1` scripts.
 
@@ -115,20 +115,20 @@ If PowerShell shows *Constrained Language Mode*, use the `.cmd` files — not th
    NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
    NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
    SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-   BUILD_IQ_CATALOG_ADMIN_EMAILS=your@email.com
+   BUILDIQ_CATALOG_ADMIN_EMAILS=your@email.com
    ```
-   On Vercel, add the same variables (including **Preview** if using preview deploys). Only emails in `BUILD_IQ_CATALOG_ADMIN_EMAILS` see the Settings import card.
-2. Start the app (`build-iq-npm.cmd run dev` or your hosted deploy with the same env vars).
+   On Vercel, add the same variables (including **Preview** if using preview deploys). Only emails in `BUILDIQ_CATALOG_ADMIN_EMAILS` see the Settings import card.
+2. Start the app (`buildiq-npm.cmd run dev` or your hosted deploy with the same env vars).
 3. Sign in → **Settings** → **Guided Exercise Library** → click **Import Guided Library** (~1,324 exercises with GIF demos).
 
 No admin rights or npm required for the in-app import — only the service role key on the server.
 
 **Windows CMD fallback (if you prefer double-click):**
 
-1. `build-iq-install-node.cmd` — portable Node (no admin)  
-2. `build-iq-setup.cmd` — `npm install` once  
-3. `build-iq-import-guided.cmd` — guided library import (needs `.env.local`)  
-4. `build-iq-import.cmd` — guided library + alternatives
+1. `buildiq-install-node.cmd` — portable Node (no admin)  
+2. `buildiq-setup.cmd` — `npm install` once  
+3. `buildiq-import-guided.cmd` — guided library import (needs `.env.local`)  
+4. `buildiq-import.cmd` — guided library + alternatives
 
 **Legacy npm command:**
 

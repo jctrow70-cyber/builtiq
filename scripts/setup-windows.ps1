@@ -1,4 +1,4 @@
-# Build IQ Windows dev setup — run once per machine, or anytime npm "is not recognized"
+# BuildIQ Windows dev setup — run once per machine, or anytime npm "is not recognized"
 # Usage:
 #   powershell -ExecutionPolicy Bypass -File scripts/setup-windows.ps1
 #   powershell -ExecutionPolicy Bypass -File scripts/setup-windows.ps1 -ImportExercises
@@ -11,7 +11,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $Root = Resolve-Path (Join-Path $PSScriptRoot '..')
 Set-Location $Root
-Write-Host "Build IQ root: $Root" -ForegroundColor Cyan
+Write-Host "BuildIQ root: $Root" -ForegroundColor Cyan
 
 # Corporate PCs often block .NET calls in Constrained Language Mode — use .cmd instead
 try {
@@ -20,9 +20,9 @@ try {
   Write-Host ""
   Write-Host "PowerShell is restricted on this PC (Constrained Language Mode)." -ForegroundColor Yellow
   Write-Host "Use the .cmd files instead (no admin, no PATH edit):" -ForegroundColor Yellow
-  Write-Host "  Double-click build-iq-install-node.cmd"
-  Write-Host "  Double-click build-iq-setup.cmd"
-  Write-Host "  Double-click build-iq-import.cmd   (alternatives only)"
+  Write-Host "  Double-click buildiq-install-node.cmd"
+  Write-Host "  Double-click buildiq-setup.cmd"
+  Write-Host "  Double-click buildiq-import.cmd   (alternatives only)"
   Write-Host ""
   exit 1
 }
@@ -41,7 +41,7 @@ function Resolve-Npm {
   $candidates = @(
     "${env:ProgramFiles}\nodejs\npm.cmd",
     "${env:ProgramFiles(x86)}\nodejs\npm.cmd",
-    "$env:LOCALAPPDATA\build-iq-node\node-v22.16.0-win-x64\npm.cmd"
+    "$env:LOCALAPPDATA\buildiq-node\node-v22.16.0-win-x64\npm.cmd"
   )
   foreach ($path in $candidates) {
     $resolved = Get-Item $path -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -109,4 +109,4 @@ Write-Host "  npm run dev"
 Write-Host "  npm run import:exercises:production:dry"
 Write-Host "  npm run import:exercises:production"
 Write-Host ""
-Write-Host "Shortcut: double-click build-iq-setup.cmd in the repo root." -ForegroundColor Green
+Write-Host "Shortcut: double-click buildiq-setup.cmd in the repo root." -ForegroundColor Green

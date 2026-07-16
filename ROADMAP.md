@@ -1,10 +1,10 @@
-# Build IQ Health Roadmap
+# BuildIQ Health Roadmap
 
-This roadmap tracks the planned development path for Build IQ Health.
+This roadmap tracks the planned development path for BuildIQ Health.
 
 ## Product Mission
 
-Build IQ Health helps users build long-term health, strength, discipline, and confidence through fitness tracking, nutrition tracking, progress insights, and personalized AI wellness coaching.
+BuildIQ Health helps users build long-term health, strength, discipline, and confidence through fitness tracking, nutrition tracking, progress insights, and personalized AI wellness coaching.
 
 ## Phase 1 — Product Foundation
 
@@ -184,7 +184,7 @@ Goal: Create a realistic business model.
 
 ## Phase 8 — Mobile Launch Preparation
 
-Goal: Prepare Build IQ Health for iOS and Android users.
+Goal: Prepare BuildIQ Health for iOS and Android users.
 
 ### Priorities
 
@@ -206,9 +206,32 @@ Goal: Prepare Build IQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
-Completed through **BIQ-0038** on `main`: installable PWA app shell.
+Completed through **BIQ-0041** on `main`: barcode lookup, nutrition label OCR, and profile-based macro goal suggestions.
 
 ### Recently completed
+
+**BIQ-0041 — Barcode Lookup and Nutrition Label OCR** (Completed)
+
+| Part | Deliverable |
+|------|-------------|
+| 1 | Open Food Facts barcode lookup API route |
+| 2 | Nutrition Facts photo OCR via OpenAI vision |
+| 3 | Camera barcode scan (BarcodeDetector) + manual UPC entry |
+| 4 | Add food panel: lookup → prefilled macros; miss → label scan fallback |
+| 5 | Reuses AI result chips for label OCR multi-item edge cases |
+
+See `CHANGELOG.md` BIQ-0041 for full scope.
+
+**BIQ-0040 — Profile-Based Macro Goal Suggestions** (Completed)
+
+| Part | Deliverable |
+|------|-------------|
+| 1 | Mifflin-St Jeor BMR + goal-based macro math |
+| 2 | Suggested goals banner from `st_profiles` |
+| 3 | Apply / review / fill-from-profile in Edit goals |
+| 4 | Wellness framing (not medical advice) |
+
+See `CHANGELOG.md` BIQ-0040 for full scope.
 
 **BIQ-0038 — Installable PWA App Shell** (Completed)
 
@@ -292,7 +315,7 @@ See `CHANGELOG.md` BIQ-0016 for full scope, testing, and file list.
 | Part | Deliverable |
 |------|-------------|
 | 1 | Import-ready fields (`external_source`, `external_id`, `media_url`, instructions) |
-| 2 | Build IQ intelligence columns (movement, goal, progression, volume %) |
+| 2 | BuildIQ intelligence columns (movement, goal, progression, volume %) |
 | 3 | `st_exercise_alternatives` substitution graph + seed scripts |
 | 4 | `coaching_metadata` JSONB for AI programming |
 | 5 | Bulk import pipeline — Free Exercise DB (873 exercises) via `import:exercises:production` |
@@ -344,12 +367,15 @@ See `CHANGELOG.md` BIQ-0013 and BIQ-0024 for full scope.
 2. **App admin roles** — move beyond env-only catalog import admin (see below)
 3. AI program regeneration / edit-from-prompt for existing programs
 4. ~~Nutrition MVP placeholder → functional tracking~~ (BIQ-0034)
-5. AI Coach hook-up (consumes `coaching_metadata` + program context)
-6. Split `page.tsx` into focused components
+5. ~~Profile-based macro goal suggestions~~ (BIQ-0040)
+6. ~~Barcode / label OCR for packaged foods~~ (BIQ-0041)
+7. AI Coach hook-up (consumes `coaching_metadata` + program + nutrition context)
+8. Progress tab nutrition trends
+9. Split `page.tsx` into focused components
 
 ### Planned — Platform admin and catalog operations
 
-**Current (shipped in PR #16):** Catalog import admin via `BUILD_IQ_CATALOG_ADMIN_EMAILS` in Vercel / `.env.local`. Only allowlisted emails see **Settings → Guided Exercise Library** and can run `POST /api/catalog/import-guided`. Normal users get the unified exercise search with no import controls.
+**Current (shipped in PR #16):** Catalog import admin via `BUILDIQ_CATALOG_ADMIN_EMAILS` in Vercel / `.env.local`. Only allowlisted emails see **Settings → Guided Exercise Library** and can run `POST /api/catalog/import-guided`. Normal users get the unified exercise search with no import controls.
 
 **Roadmap — proper admin model (not started):**
 
@@ -359,7 +385,7 @@ See `CHANGELOG.md` BIQ-0013 and BIQ-0024 for full scope.
 | 2 | Admin-only Settings section: guided library import, future wger/other bulk imports |
 | 3 | Optional: view catalog import status, re-import, dry-run stats without npm |
 | 4 | Audit log for admin actions (who imported, when) |
-| 5 | Document admin onboarding: first deploy sets `BUILD_IQ_CATALOG_ADMIN_EMAILS`; later migrate to DB roles |
+| 5 | Document admin onboarding: first deploy sets `BUILDIQ_CATALOG_ADMIN_EMAILS`; later migrate to DB roles |
 
 **Out of scope for v1 admin:** End-user library picking (removed — unified catalog is default).
 

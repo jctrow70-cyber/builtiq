@@ -24,7 +24,7 @@ export const CATALOG_SOURCES: CatalogSourceMeta[] = [
   },
   {
     id: 'builtiq_essentials',
-    label: 'Build IQ Essentials',
+    label: 'BuildIQ Essentials',
     description: 'Curated staples used in templates and AI plans (squat, bench, rows, etc.)',
     defaultEnabled: true,
   },

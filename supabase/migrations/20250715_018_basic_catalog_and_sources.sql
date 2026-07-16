@@ -1,7 +1,7 @@
 -- BIQ-0027: Basic exercise catalog pack + user source preferences
 -- Tags existing system seed as builtiq_essentials; adds builtiq_basic library; profile source filter.
 
--- Tag legacy Build IQ system seed rows
+-- Tag legacy BuildIQ system seed rows
 update public.st_exercise_catalog
 set external_source = 'builtiq_essentials',
     external_id = coalesce(external_id, 'essentials_' || lower(regexp_replace(name, '[^a-zA-Z0-9]+', '_', 'g')))

@@ -1,5 +1,5 @@
 -- BIQ-0013: Exercise Intelligence Database
--- Schema for large external imports + Build IQ programming intelligence.
+-- Schema for large external imports + BuildIQ programming intelligence.
 -- Does NOT seed exercises. Existing BIQ-0005 seed rows remain; future bulk import replaces expansion strategy.
 
 -- ---------------------------------------------------------------------------
@@ -24,7 +24,7 @@ create unique index if not exists st_exercise_catalog_external_uidx
   where external_source is not null and external_id is not null;
 
 -- ---------------------------------------------------------------------------
--- Build IQ intelligence fields
+-- BuildIQ intelligence fields
 -- ---------------------------------------------------------------------------
 alter table public.st_exercise_catalog
   add column if not exists training_goal text,

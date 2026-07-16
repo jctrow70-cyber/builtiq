@@ -1,4 +1,4 @@
-# Build IQ Health Decision Log
+# BuildIQ Health Decision Log
 
 This file documents important product, technical, and business decisions.
 
@@ -28,7 +28,7 @@ Category: Branding
 
 ### Decision
 
-Use **Build IQ** as the product brand and **Build IQ Health** as the full product name (replacing BuiltIQ / BuiltIQ Health).
+Use **BuildIQ** as the product brand and **BuildIQ Health** as the full product name (replacing BuiltIQ / BuiltIQ Health).
 
 ### Reason
 
@@ -36,7 +36,7 @@ The name supports the broader vision of helping users build themselves physicall
 
 ### Alternatives Considered
 
-- Build IQ
+- BuildIQ
 - Exervise
 - Other fitness-focused names
 
@@ -54,7 +54,7 @@ Category: Product Strategy
 
 ### Decision
 
-Position Build IQ Health as an AI Wellness Coach platform, not just a workout tracker.
+Position BuildIQ Health as an AI Wellness Coach platform, not just a workout tracker.
 
 ### Reason
 
@@ -218,7 +218,7 @@ Separate auth boot from profile onboarding. Show a loading state while session +
 
 ### Reason
 
-The previous `if (!profile)` check ran before `loadProfile()` finished, causing a setup-screen flash on every login. Remembered email and browser password autofill improve daily sign-in. Richer profiles support future program generation and progress features aligned with Build_IQ_Context.md.
+The previous `if (!profile)` check ran before `loadProfile()` finished, causing a setup-screen flash on every login. Remembered email and browser password autofill improve daily sign-in. Richer profiles support future program generation and progress features aligned with BuildIQ_Context.md.
 
 ### Alternatives Considered
 
@@ -240,7 +240,7 @@ Category: Workout Data Model
 
 ### Decision
 
-Introduce `st_exercise_catalog` as the canonical exercise library. Build IQ seeds **system exercises** (`is_system = true`, `user_id = null`) available to all users. Users may create **custom exercises** (`is_system = false`, `user_id = auth.uid()`) visible only to themselves. Workout template rows (`st_exercises`) link via `catalog_exercise_id`. Set logs store both `snapshot_catalog_exercise_id` and `snapshot_exercise_name` at save time.
+Introduce `st_exercise_catalog` as the canonical exercise library. BuildIQ seeds **system exercises** (`is_system = true`, `user_id = null`) available to all users. Users may create **custom exercises** (`is_system = false`, `user_id = auth.uid()`) visible only to themselves. Workout template rows (`st_exercises`) link via `catalog_exercise_id`. Set logs store both `snapshot_catalog_exercise_id` and `snapshot_exercise_name` at save time.
 
 ### Reason
 
@@ -270,7 +270,7 @@ Replace the sidebar configuration layout with a top-nav, dashboard-first experie
 
 ### Reason
 
-Build IQ should present as a premium wellness product, not a builder tool. Most daily use is logging workouts and reviewing progress — not editing program structure. Separating configuration into Training reduces noise while preserving all existing functionality.
+BuildIQ should present as a premium wellness product, not a builder tool. Most daily use is logging workouts and reviewing progress — not editing program structure. Separating configuration into Training reduces noise while preserving all existing functionality.
 
 ### Alternatives Considered
 
@@ -575,11 +575,11 @@ Category: Workout Data Model
 
 ### Decision
 
-Do **not** expand Build IQ by manually curating a small system exercise list. Evolve `st_exercise_catalog` into an **Exercise Intelligence Database** prepared for importing 1000+ exercises from external datasets. Store `external_source`, `external_id`, and `media_url` for idempotent imports. Add Build IQ intelligence columns (`movement_pattern`, `training_goal`, `progression_type`, muscle volume percentages, `coaching_metadata` JSONB) and a substitution graph via `st_exercise_alternatives`.
+Do **not** expand BuildIQ by manually curating a small system exercise list. Evolve `st_exercise_catalog` into an **Exercise Intelligence Database** prepared for importing 1000+ exercises from external datasets. Store `external_source`, `external_id`, and `media_url` for idempotent imports. Add BuildIQ intelligence columns (`movement_pattern`, `training_goal`, `progression_type`, muscle volume percentages, `coaching_metadata` JSONB) and a substitution graph via `st_exercise_alternatives`.
 
 ### Reason
 
-Build IQ differentiation is smarter programming — movement classification, volume attribution, progression type, substitutions, and AI-ready metadata — not owning another exercise name list. External libraries already provide names, media, and instructions at scale.
+BuildIQ differentiation is smarter programming — movement classification, volume attribution, progression type, substitutions, and AI-ready metadata — not owning another exercise name list. External libraries already provide names, media, and instructions at scale.
 
 ### Alternatives Considered
 
@@ -605,7 +605,7 @@ Program generation uses **OpenAI on the server** as the primary path. Users desc
 
 ### Reason
 
-Sport-specific goals are too varied for hardcoded profiles alone. Natural-language prompts let athletes and coaches express intent once; AI can vary exercises and rep schemes week to week while grounding picks in the Build IQ catalog.
+Sport-specific goals are too varied for hardcoded profiles alone. Natural-language prompts let athletes and coaches express intent once; AI can vary exercises and rep schemes week to week while grounding picks in the BuildIQ catalog.
 
 ### Alternatives Considered
 

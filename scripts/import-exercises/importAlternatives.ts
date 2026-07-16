@@ -22,7 +22,7 @@ type CuratedPair = {
   notes?: string;
 };
 
-/** Curated substitutions for common Build IQ / gym staples */
+/** Curated substitutions for common BuildIQ / gym staples */
 const CURATED_PAIRS: CuratedPair[] = [
   { exercise: 'Bench Press', alternative: 'Dumbbell Bench Press', reason: 'equipment_unavailable', priority: 1, notes: 'No barbell or rack' },
   { exercise: 'Bench Press', alternative: 'Push-Up', reason: 'equipment_unavailable', priority: 2, notes: 'Bodyweight option' },
@@ -67,7 +67,7 @@ function parseArgs(argv: string[]) {
     if (a === '--dry-run' || a === '-n') dryRun = true;
     else if (a === '--curated-only') autoMatch = false;
     else if (a === '--help' || a === '-h') {
-      console.log(`Build IQ exercise alternatives import (BIQ-0013)
+      console.log(`BuildIQ exercise alternatives import (BIQ-0013)
 
 Options:
   --dry-run, -n     Log actions without writing

@@ -257,6 +257,16 @@
 .nutrition-ai-disclaimer{margin:6px 0 0;font-size:11px;line-height:1.4}
 .nutrition-ai-results{margin-top:10px}
 .nutrition-ai-notes{margin-top:0;margin-bottom:8px;font-size:12px}
+.nutrition-goals-suggest-card,.nutrition-goals-suggest-inline{margin-bottom:4px}
+.nutrition-goals-suggest-inline .muted{font-size:12px;line-height:1.45}
+.nutrition-scan-picker{margin-bottom:10px}
+.nutrition-barcode-row{display:flex;gap:8px;align-items:center}
+.nutrition-barcode-row input{flex:1;min-width:0}
+.nutrition-barcode-scanner{margin-top:10px;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--card)}
+.nutrition-barcode-video{width:100%;max-height:220px;border-radius:8px;background:#111;object-fit:cover}
+.nutrition-scan-hint,.nutrition-scan-notes{margin:6px 0 0;font-size:11px;line-height:1.4}
+.nutrition-label-upload{display:block;margin-top:10px;font-weight:600}
+.nutrition-scan-picker input[type=file]{margin-top:6px;font-size:13px;max-width:100%}
 .install-app-banner{position:sticky;top:0;z-index:30;padding:calc(8px + var(--safe-top)) 12px 8px;background:linear-gradient(180deg,#121826,#0b1119);border-bottom:1px solid var(--line)}
 .install-app-banner-inner{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;max-width:980px;margin:0 auto}
 .install-app-banner strong{display:block;font-size:14px;margin-bottom:2px}

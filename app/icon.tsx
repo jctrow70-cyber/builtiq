@@ -28,25 +28,14 @@ export default function Icon() {
         >
           <div
             style={{
-              fontSize: 96,
+              fontSize: 168,
               fontWeight: 900,
-              letterSpacing: -4,
+              letterSpacing: -8,
               color: '#f7f7fb',
               lineHeight: 1,
             }}
           >
-            Build
-          </div>
-          <div
-            style={{
-              fontSize: 120,
-              fontWeight: 900,
-              letterSpacing: -6,
-              color: '#7c5cff',
-              lineHeight: 1,
-            }}
-          >
-            IQ
+            Build<span style={{ color: '#7c5cff' }}>IQ</span>
           </div>
           <div
             style={{

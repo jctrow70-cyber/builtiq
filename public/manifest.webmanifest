@@ -1,6 +1,6 @@
 {
-  "name": "Build IQ Health",
-  "short_name": "Build IQ",
+  "name": "BuildIQ Health",
+  "short_name": "BuildIQ",
   "description": "Train smarter with workouts, nutrition tracking, progress insights, and AI wellness coaching.",
   "start_url": "/",
   "scope": "/",
