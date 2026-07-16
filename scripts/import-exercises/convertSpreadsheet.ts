@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * Convert Excel/CSV exercise spreadsheet → BuiltIQ import JSON.
+ * Convert Excel/CSV exercise spreadsheet → Build IQ import JSON.
  * Save Excel as "CSV UTF-8" or use .csv from the template.
  *
  * Usage:
  *   npm run import:convert:spreadsheet -- --file my-exercises.csv
- *   npm run import:convert:spreadsheet -- --file my-exercises.csv --source my_gym --out builtiq.json
+ *   npm run import:convert:spreadsheet -- --file my-exercises.csv --source my_gym --out build-iq.json
  */
 
 import fs from 'fs';
@@ -54,11 +54,11 @@ function parseArgs(argv: string[]) {
     else if ((a === '--out' || a === '-o') && argv[i + 1]) out = argv[++i];
     else if ((a === '--source' || a === '-s') && argv[i + 1]) source = argv[++i];
     else if (a === '--help' || a === '-h') {
-      console.log(`Convert CSV spreadsheet to BuiltIQ import JSON
+      console.log(`Convert CSV spreadsheet to Build IQ import JSON
 
 Options:
   --file, -f <path>     CSV file (required). In Excel: File → Save As → CSV UTF-8
-  --out, -o <path>      Output JSON path (default: <file>-builtiq.json)
+  --out, -o <path>      Output JSON path (default: <file>-build-iq.json)
   --source, -s <name>   external_source when column blank (default: spreadsheet_import)
   --help, -h            Show help
 `);
@@ -208,7 +208,7 @@ function main() {
     out ||
     path.join(
       path.dirname(abs),
-      `${path.basename(abs, path.extname(abs))}-builtiq.json`
+      `${path.basename(abs, path.extname(abs))}-build-iq.json`
     );
 
   fs.writeFileSync(outPath, JSON.stringify(records, null, 2), 'utf8');

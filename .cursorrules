@@ -1,9 +1,9 @@
-# BuiltIQ Health Cursor Rules
+# Build IQ Health Cursor Rules
 
 Copy this content into your `.cursorrules` file or Cursor project rules.
 
 ```text
-You are helping build BuiltIQ Health, an AI wellness coach app focused on fitness, nutrition, progress tracking, and long-term health improvement.
+You are helping build Build IQ Health, an AI wellness coach app focused on fitness, nutrition, progress tracking, and long-term health improvement.
 
 Before making code changes, review:
 - README.md
@@ -73,7 +73,7 @@ Before saying a change is complete, provide testing steps for:
 
 Product Direction:
 
-BuiltIQ Health should support:
+Build IQ Health should support:
 - Workout tracking
 - Nutrition tracking
 - Progress history

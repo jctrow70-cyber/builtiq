@@ -45,7 +45,7 @@ JSON **array** or **JSONL** (one object per line).
 npm run import:fetch:exercisedb
 ```
 
-Output: `scripts/import-exercises/data/exercisedb/builtiq-import.json`
+Output: `scripts/import-exercises/data/exercisedb/build-iq-import.json`
 
 Optional: live API paginated fetch (may 429): `npm run import:fetch:exercisedb:api`
 
@@ -80,13 +80,13 @@ New-Item -ItemType Directory -Force -Path "scripts/import-exercises/data/free-ex
 Invoke-WebRequest -Uri "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json" -OutFile "scripts/import-exercises/data/free-exercise-db/exercises.json"
 ```
 
-### 2. Convert to BuiltIQ format
+### 2. Convert to Build IQ format
 
 ```powershell
 npm.cmd run import:convert:free-exercise-db
 ```
 
-Output: `scripts/import-exercises/data/free-exercise-db/builtiq-import.json`
+Output: `scripts/import-exercises/data/free-exercise-db/build-iq-import.json`
 
 ### 3. Dry-run, then live import
 
@@ -125,7 +125,7 @@ Use `scripts/import-exercises/exercise-import-template.csv` as your starting poi
 
 | Column | Required | Example | Notes |
 |--------|----------|---------|-------|
-| `name` | **yes** | Kettlebell Swing | Display name in BuiltIQ |
+| `name` | **yes** | Kettlebell Swing | Display name in Build IQ |
 | `external_id` | no | kb-swing-2arm | Unique per source; auto-slug from name if blank |
 | `external_source` | no | spreadsheet_import | Dataset tag; default `spreadsheet_import` |
 | `exercise_type` | no | strength | strength, cardio, mobility, bodyweight, timed, custom |
@@ -152,8 +152,8 @@ npm.cmd run import:convert:spreadsheet -- --file scripts/import-exercises/my-exe
 3. Dry-run, then import:
 
 ```powershell
-npm.cmd run import:exercises:dry -- --file scripts/import-exercises/my-exercises-builtiq.json
-npm.cmd run import:exercises -- --file scripts/import-exercises/my-exercises-builtiq.json
+npm.cmd run import:exercises:dry -- --file scripts/import-exercises/my-exercises-build-iq.json
+npm.cmd run import:exercises -- --file scripts/import-exercises/my-exercises-build-iq.json
 ```
 
 Re-importing the same `external_source` + `external_id` **updates** the exercise (name, muscles, thumbnail, etc.).

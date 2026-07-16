@@ -1,10 +1,10 @@
-# BuiltIQ Health Roadmap
+# Build IQ Health Roadmap
 
-This roadmap tracks the planned development path for BuiltIQ Health.
+This roadmap tracks the planned development path for Build IQ Health.
 
 ## Product Mission
 
-BuiltIQ Health helps users build long-term health, strength, discipline, and confidence through fitness tracking, nutrition tracking, progress insights, and personalized AI wellness coaching.
+Build IQ Health helps users build long-term health, strength, discipline, and confidence through fitness tracking, nutrition tracking, progress insights, and personalized AI wellness coaching.
 
 ## Phase 1 — Product Foundation
 
@@ -184,12 +184,12 @@ Goal: Create a realistic business model.
 
 ## Phase 8 — Mobile Launch Preparation
 
-Goal: Prepare BuiltIQ Health for iOS and Android users.
+Goal: Prepare Build IQ Health for iOS and Android users.
 
 ### Priorities
 
 - Mobile-first UI polish
-- PWA support or native app wrapper decision
+- ~~PWA support or native app wrapper decision~~ (BIQ-0038 — PWA install shell shipped; native wrapper TBD)
 - App Store readiness
 - Google Play readiness
 - Privacy policy
@@ -206,9 +206,21 @@ Goal: Prepare BuiltIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
-Completed through **BIQ-0037** on `main`: AI natural-language food macro estimation.
+Completed through **BIQ-0038** on `main`: installable PWA app shell.
 
 ### Recently completed
+
+**BIQ-0038 — Installable PWA App Shell** (Completed)
+
+| Part | Deliverable |
+|------|-------------|
+| 1 | `manifest.webmanifest` with standalone display |
+| 2 | Dynamic app icons (`app/icon.tsx`, `app/apple-icon.tsx`) |
+| 3 | Layout metadata + Apple web app tags |
+| 4 | Install prompt (Chrome + iOS guidance) |
+| 5 | Safe-area CSS for notched phones in standalone mode |
+
+See `CHANGELOG.md` BIQ-0038 for full scope.
 
 **BIQ-0037 — AI Natural-Language Food Estimation** (Completed)
 
@@ -280,7 +292,7 @@ See `CHANGELOG.md` BIQ-0016 for full scope, testing, and file list.
 | Part | Deliverable |
 |------|-------------|
 | 1 | Import-ready fields (`external_source`, `external_id`, `media_url`, instructions) |
-| 2 | BuiltIQ intelligence columns (movement, goal, progression, volume %) |
+| 2 | Build IQ intelligence columns (movement, goal, progression, volume %) |
 | 3 | `st_exercise_alternatives` substitution graph + seed scripts |
 | 4 | `coaching_metadata` JSONB for AI programming |
 | 5 | Bulk import pipeline — Free Exercise DB (873 exercises) via `import:exercises:production` |
@@ -337,7 +349,7 @@ See `CHANGELOG.md` BIQ-0013 and BIQ-0024 for full scope.
 
 ### Planned — Platform admin and catalog operations
 
-**Current (shipped in PR #16):** Catalog import admin via `BUILTIQ_CATALOG_ADMIN_EMAILS` in Vercel / `.env.local`. Only allowlisted emails see **Settings → Guided Exercise Library** and can run `POST /api/catalog/import-guided`. Normal users get the unified exercise search with no import controls.
+**Current (shipped in PR #16):** Catalog import admin via `BUILD_IQ_CATALOG_ADMIN_EMAILS` in Vercel / `.env.local`. Only allowlisted emails see **Settings → Guided Exercise Library** and can run `POST /api/catalog/import-guided`. Normal users get the unified exercise search with no import controls.
 
 **Roadmap — proper admin model (not started):**
 
@@ -347,7 +359,7 @@ See `CHANGELOG.md` BIQ-0013 and BIQ-0024 for full scope.
 | 2 | Admin-only Settings section: guided library import, future wger/other bulk imports |
 | 3 | Optional: view catalog import status, re-import, dry-run stats without npm |
 | 4 | Audit log for admin actions (who imported, when) |
-| 5 | Document admin onboarding: first deploy sets `BUILTIQ_CATALOG_ADMIN_EMAILS`; later migrate to DB roles |
+| 5 | Document admin onboarding: first deploy sets `BUILD_IQ_CATALOG_ADMIN_EMAILS`; later migrate to DB roles |
 
 **Out of scope for v1 admin:** End-user library picking (removed — unified catalog is default).
 

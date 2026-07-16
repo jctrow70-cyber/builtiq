@@ -223,7 +223,7 @@ Sport-aware mobility reference patterns (adapt to user goals — do not copy bli
 | General strength | Hip opener, T-spine, shoulder CARs | Muscles trained that day |
 | Fat loss / conditioning | Dynamic full-body | Lower intensity static stretch |`;
 
-  const system = `You are BuiltIQ Health's strength & conditioning program designer. You create science-based, periodized training plans as strict JSON only — no markdown, no prose outside JSON.
+  const system = `You are Build IQ Health's strength & conditioning program designer. You create science-based, periodized training plans as strict JSON only — no markdown, no prose outside JSON.
 
 Rules:
 1. Interpret the user's natural-language goal (sport, position, throw/hit power, hypertrophy, etc.) and design accordingly.
@@ -666,7 +666,7 @@ export function repairAiPlan(
 
   let summary = plan.program_summary;
   if (!summary || summary.length < 40) {
-    summary = `${plan.program_name || 'BuiltIQ program'} — ${config.weeks}-week plan on ${config.days.join(', ')}. Built around your goals: ${config.prompt.slice(0, 180)}. Progress intensity across weeks and keep form quality high.`;
+    summary = `${plan.program_name || 'Build IQ program'} — ${config.weeks}-week plan on ${config.days.join(', ')}. Built around your goals: ${config.prompt.slice(0, 180)}. Progress intensity across weeks and keep form quality high.`;
   }
   let coaching = plan.coaching_notes || '';
   if (!coaching || coaching.length < 60) {

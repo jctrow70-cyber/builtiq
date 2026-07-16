@@ -2,8 +2,8 @@
 REM Import Guided Exercise Library (~1,324 GIF + form guides) — no admin, uses portable Node
 cd /d "%~dp0"
 echo.
-echo BuiltIQ Guided Library Import
-echo =============================
+echo Build IQ Guided Library Import
+echo ==============================
 echo.
 if not exist ".env.local" (
   echo ERROR: .env.local not found in this folder.
@@ -17,22 +17,22 @@ if not exist ".env.local" (
   exit /b 1
 )
 echo Step 1: Ensure portable Node is installed...
-call "%~dp0builtiq-npm.cmd" -v >nul 2>&1
+call "%~dp0build-iq-npm.cmd" -v >nul 2>&1
 if errorlevel 1 (
-  call "%~dp0builtiq-install-node.cmd"
+  call "%~dp0build-iq-install-node.cmd"
   if errorlevel 1 pause & exit /b 1
 )
 echo Step 2: Install packages if needed...
 if not exist "node_modules" (
-  call "%~dp0builtiq-setup.cmd"
+  call "%~dp0build-iq-setup.cmd"
   if errorlevel 1 pause & exit /b 1
 )
 echo Step 3: Import guided exercises to Supabase...
-call "%~dp0builtiq-npm.cmd" run import:exercises:exercisedb
+call "%~dp0build-iq-npm.cmd" run import:exercises:exercisedb
 echo.
 if errorlevel 1 (
   echo Import failed. See messages above.
 ) else (
-  echo Done. Open BuiltIQ - Settings - enable Guided Library - search exercises in Training.
+  echo Done. Open Build IQ - Settings - enable Guided Library - search exercises in Training.
 )
 pause

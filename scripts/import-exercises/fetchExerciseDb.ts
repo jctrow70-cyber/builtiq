@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * Fetch ExerciseDB v1 OSS API and convert to BuiltIQ import JSON.
+ * Fetch ExerciseDB v1 OSS API and convert to Build IQ import JSON.
  * https://oss.exercisedb.dev/docs — attribution required on free tier.
  *
  * Usage:
  *   npm run import:fetch:exercisedb
- *   npm run import:fetch:exercisedb -- --out scripts/import-exercises/data/exercisedb/builtiq-import.json
+ *   npm run import:fetch:exercisedb -- --out scripts/import-exercises/data/exercisedb/build-iq-import.json
  */
 
 import fs from 'fs';
@@ -16,7 +16,7 @@ const API_BASE = 'https://oss.exercisedb.dev/api/v1/exercises';
 const BULK_JSON_URL =
   'https://raw.githubusercontent.com/AbdelrahmanElghoul/exercises-dataset/main/data/exercises.json';
 const DEFAULT_RAW = 'scripts/import-exercises/data/exercisedb/exercises-raw.json';
-const DEFAULT_OUT = 'scripts/import-exercises/data/exercisedb/builtiq-import.json';
+const DEFAULT_OUT = 'scripts/import-exercises/data/exercisedb/build-iq-import.json';
 const PAGE_SIZE = 25;
 const PAGE_DELAY_MS = 500;
 const MAX_RETRIES = 4;
@@ -91,10 +91,10 @@ function parseArgs(argv: string[]) {
     else if (a === '--from-file' && argv[i + 1]) fromFile = argv[++i];
     else if (a === '--bulk') useBulk = true;
     else if (a === '--help' || a === '-h') {
-      console.log(`Fetch ExerciseDB OSS → BuiltIQ import format
+      console.log(`Fetch ExerciseDB OSS → Build IQ import format
 
 Options:
-  --out <path>       BuiltIQ import JSON (default: ${DEFAULT_OUT})
+  --out <path>       Build IQ import JSON (default: ${DEFAULT_OUT})
   --raw-out <path>   Cached raw API dump (default: ${DEFAULT_RAW})
   --from-file <path> Skip fetch; convert existing raw JSON
   --bulk             Download static JSON mirror (~1,324 exercises, recommended)

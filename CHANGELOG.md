@@ -1,4 +1,4 @@
-# BuiltIQ Health Change Log
+# Build IQ Health Change Log
 
 All meaningful product, code, database, design, and documentation changes should be tracked here.
 
@@ -19,7 +19,7 @@ Status: Completed
 
 ### Summary
 
-Created the initial documentation foundation for BuiltIQ Health so development can be tracked consistently as the app grows.
+Created the initial documentation foundation for Build IQ Health so development can be tracked consistently as the app grows.
 
 ### Purpose
 
@@ -205,7 +205,7 @@ Improved program generation and workout editing with distinct **Warm Up / Prep**
 
 ### Purpose
 
-Phase 3 workout MVP work. Generated plans previously mixed warmup sets into every lift and used browser prompts for editing. Workouts needed clearer structure aligned with BuiltIQ training module design.
+Phase 3 workout MVP work. Generated plans previously mixed warmup sets into every lift and used browser prompts for editing. Workouts needed clearer structure aligned with Build IQ training module design.
 
 ### Changes
 
@@ -262,7 +262,7 @@ Status: Completed
 
 ### Summary
 
-Added a shared exercise catalog with BuiltIQ system exercises and per-user custom exercises. Workout templates and logging now link to catalog entries so progress history aggregates by exercise identity, not free-text names alone.
+Added a shared exercise catalog with Build IQ system exercises and per-user custom exercises. Workout templates and logging now link to catalog entries so progress history aggregates by exercise identity, not free-text names alone.
 
 ### Purpose
 
@@ -271,7 +271,7 @@ Progress, PR tracking, and “last time” placeholders need a stable exercise i
 ### Changes
 
 - Added `st_exercise_catalog` with system and user-owned exercises
-- Seeded BuiltIQ system exercises (template lifts + common starter library)
+- Seeded Build IQ system exercises (template lifts + common starter library)
 - Added `catalog_exercise_id` on `st_exercises`
 - Added `snapshot_catalog_exercise_id` on `st_set_logs` (with existing name snapshots)
 - RLS: all users read system exercises; users read/write only their own custom exercises
@@ -297,7 +297,7 @@ Creates `st_exercise_catalog`, seeds system exercises, adds FK columns, backfill
 ### Testing Steps
 
 1. Run migration `20250707_005_exercise_catalog.sql` in Supabase
-2. **System catalog** — open Training, search “Bench Press”, add from results; confirm BuiltIQ badge and muscle/equipment metadata
+2. **System catalog** — open Training, search “Bench Press”, add from results; confirm Build IQ badge and muscle/equipment metadata
 3. **Create custom exercise** — use “Create custom exercise” in Training or Settings; save and add to workout
 4. **Search** — confirm custom exercise appears in your search results but not for another user account
 5. **Edit custom exercise** — Settings → My Exercise Catalog → Edit name/metadata; confirm changes save
@@ -313,7 +313,7 @@ Creates `st_exercise_catalog`, seeds system exercises, adds FK columns, backfill
 - Legacy logs without catalog links still fall back to name-based matching
 - Workout inline name edits change display name only; catalog link drives progress aggregation
 - No duplicate-name prevention for user custom exercises yet
-- System catalog is seed data only; admin tooling for BuiltIQ-managed exercises not built yet
+- System catalog is seed data only; admin tooling for Build IQ-managed exercises not built yet
 - **Superseded by BIQ-0013:** manual catalog growth → bulk import + intelligence fields
 
 ### Recommended Commit Message
@@ -392,11 +392,11 @@ Status: Completed
 
 ### Summary
 
-Redesigned BuiltIQ from a configuration sidebar layout into a premium wellness dashboard with top navigation, personalized home cards, and program setup moved into Training.
+Redesigned Build IQ from a configuration sidebar layout into a premium wellness dashboard with top navigation, personalized home cards, and program setup moved into Training.
 
 ### Purpose
 
-BuiltIQ should feel like a wellness product on login — not a builder tool. Users land on a dashboard with today's workout and progress snapshot, while program setup lives in Training.
+Build IQ should feel like a wellness product on login — not a builder tool. Users land on a dashboard with today's workout and progress snapshot, while program setup lives in Training.
 
 ### Changes
 
@@ -459,7 +459,7 @@ Added superset support so 2–3 exercises can be grouped back-to-back in workout
 
 ### Purpose
 
-Athletes and coaches commonly program antagonist or complementary pairs (e.g. leg curl + leg extension). BuiltIQ needed a first-class way to represent, display, and log supersets without breaking future-week edit sync or set-log snapshots.
+Athletes and coaches commonly program antagonist or complementary pairs (e.g. leg curl + leg extension). Build IQ needed a first-class way to represent, display, and log supersets without breaking future-week edit sync or set-log snapshots.
 
 ### Changes
 
@@ -896,7 +896,7 @@ Status: **Completed**
 
 ### Summary
 
-Extend BuiltIQ training with multi-type exercise logging (strength + cardio), faster labeled superset UX, three-tab Training navigation (Personal / Team / Program Setup), flexible team program assignment, enhanced member dashboards, and coach-or-member logging with clear permission rules.
+Extend Build IQ training with multi-type exercise logging (strength + cardio), faster labeled superset UX, three-tab Training navigation (Personal / Team / Program Setup), flexible team program assignment, enhanced member dashboards, and coach-or-member logging with clear permission rules.
 
 ### Purpose
 
@@ -1160,11 +1160,11 @@ Status: **Completed** (production import pipeline ready; run `import:exercises:p
 
 ### Summary
 
-Evolve `st_exercise_catalog` into a scalable **Exercise Intelligence Database** prepared for importing 1000+ exercises from external datasets, enriched with BuiltIQ programming fields, substitution links, and AI coaching metadata. BuiltIQ value is not the raw exercise list — it is how exercises are classified, substituted, and used to build smarter plans.
+Evolve `st_exercise_catalog` into a scalable **Exercise Intelligence Database** prepared for importing 1000+ exercises from external datasets, enriched with Build IQ programming fields, substitution links, and AI coaching metadata. Build IQ value is not the raw exercise list — it is how exercises are classified, substituted, and used to build smarter plans.
 
 ### Purpose
 
-The BIQ-0005 seed (~40 exercises) was sufficient for MVP templates but does not scale. Manually curating a small catalog is the wrong long-term strategy. BuiltIQ needs import-ready storage, intelligence columns, and alternative exercise graphs so future AI Coach and program generation can reason about movement patterns, volume, progression type, and substitutions (e.g. Bench Press → Dumbbell Press when no barbell).
+The BIQ-0005 seed (~40 exercises) was sufficient for MVP templates but does not scale. Manually curating a small catalog is the wrong long-term strategy. Build IQ needs import-ready storage, intelligence columns, and alternative exercise graphs so future AI Coach and program generation can reason about movement patterns, volume, progression type, and substitutions (e.g. Bench Press → Dumbbell Press when no barbell).
 
 ### Strategy Shift
 
@@ -1191,7 +1191,7 @@ Support large third-party exercise libraries:
 
 Unique index on `(external_source, external_id)` prevents duplicate imports.
 
-### Part 2 — BuiltIQ Intelligence Fields
+### Part 2 — Build IQ Intelligence Fields
 
 | Field | Values / purpose |
 |-------|------------------|
@@ -1330,7 +1330,7 @@ Replaced static template photocopying as the primary program path with **AI-driv
 
 ### Purpose
 
-Users need sport- and goal-specific programming without hand-picking every exercise. Rule-based sport profiles alone cannot cover the variety of athlete prompts. AI interprets intent, varies workouts week to week, and maps exercises to the BuiltIQ catalog for logging and history integrity.
+Users need sport- and goal-specific programming without hand-picking every exercise. Rule-based sport profiles alone cannot cover the variety of athlete prompts. AI interprets intent, varies workouts week to week, and maps exercises to the Build IQ catalog for logging and history integrity.
 
 ### Scope
 
@@ -1900,7 +1900,7 @@ Fixed a client-side crash when tapping **Sign Out** (`Application error: a clien
 
 ### Purpose
 
-Users on the Vercel deploy (`builtiq-duf7.vercel.app`) hit a white error screen after Sign Out instead of returning to the login screen.
+Users on the Vercel deploy (`build-iq-duf7.vercel.app`) hit a white error screen after Sign Out instead of returning to the login screen.
 
 ### Changes
 
@@ -2246,8 +2246,8 @@ Added Windows setup shortcuts so developers do not need to manually fix Node/npm
 ### Changes
 
 - `scripts/setup-windows.ps1` — finds repo root, refreshes PATH, locates npm, runs `npm install`
-- `builtiq-setup.cmd` — double-click setup
-- `builtiq-import.cmd` — double-click exercise import (after `.env.local`)
+- `build-iq-setup.cmd` — double-click setup
+- `build-iq-import.cmd` — double-click exercise import (after `.env.local`)
 - `README.md` — Windows quick start section
 
 ### Recommended commit message
@@ -2457,7 +2457,7 @@ Users reported set removal failing on later superset exercises (caused by shared
 
 - **`matchingExercise` / `matchingSet` / `removeSet`** — Match superset exercises by `superset_order` first; prefer set id on the current workout; surface DB errors on failed removal
 - **`confirmAddExercise`** — New superset members use the group's shared `sort_order` (not a new sort slot)
-- **`lib/training/catalogSources.ts`** — Source packs: BuiltIQ Essentials, Basic Gym, Guided Library
+- **`lib/training/catalogSources.ts`** — Source packs: Build IQ Essentials, Basic Gym, Guided Library
 - **`lib/training/catalogSearch.ts`** — Unified catalog merge + dedupe by exercise name
 - **Migration `20250715_018_basic_catalog_and_sources.sql`** — Tag legacy system seed as `builtiq_essentials`; seed ~45 `builtiq_basic` exercises
 - **Training UI** — Collapse/Expand per exercise; Collapse/Expand per section; Collapse all / Expand all on workout header
@@ -2576,7 +2576,7 @@ Status: Completed
 
 ### Summary
 
-Added **Settings → Import Guided Library** so operators can load ~1,324 exercises with GIF form guides **without npm**. Server uses `SUPABASE_SERVICE_ROLE_KEY`. Improved Windows `builtiq-import-guided.cmd` double-click flow.
+Added **Settings → Import Guided Library** so operators can load ~1,324 exercises with GIF form guides **without npm**. Server uses `SUPABASE_SERVICE_ROLE_KEY`. Improved Windows `build-iq-import-guided.cmd` double-click flow.
 
 ### Purpose
 
@@ -2589,7 +2589,7 @@ User reported npm never works and they lack admin privileges — needed a path t
 - **`lib/training/guidedCatalogImport.ts`** — shared server import logic
 - **`lib/training/catalogImportMap.ts`** — moved import mapping into `lib/` for app + CLI reuse
 - **Settings UI** — Guided Exercise Library card with import button and setup instructions
-- **`builtiq-import-guided.cmd`** — Windows double-click import with portable Node
+- **`build-iq-import-guided.cmd`** — Windows double-click import with portable Node
 - **README** — no-npm import steps documented first
 
 ### Files changed
@@ -2602,8 +2602,8 @@ User reported npm never works and they lack admin privileges — needed a path t
 - `lib/training/catalogImportTypes.ts` (new)
 - `lib/training/exerciseDbImport.ts` (new)
 - `scripts/import-exercises/*.ts` (re-export from lib)
-- `builtiq-import.cmd`
-- `builtiq-import-guided.cmd` (new)
+- `build-iq-import.cmd`
+- `build-iq-import-guided.cmd` (new)
 - `README.md`
 - `CHANGELOG.md`
 
@@ -2638,7 +2638,7 @@ Status: Completed
 
 ### Summary
 
-Guided library import remains a **shared system catalog** for all users, but the Settings import UI and API are now limited to emails listed in `BUILTIQ_CATALOG_ADMIN_EMAILS`.
+Guided library import remains a **shared system catalog** for all users, but the Settings import UI and API are now limited to emails listed in `BUILD_IQ_CATALOG_ADMIN_EMAILS`.
 
 ### Purpose
 
@@ -2649,7 +2649,7 @@ User imported the guided library successfully but did not want normal users to s
 - **`lib/training/catalogAdmin.ts`** — admin email allowlist helper
 - **`GET/POST /api/catalog/import-guided`** — returns `isCatalogAdmin`; POST requires admin
 - **Settings UI** — Guided Exercise Library card hidden unless `isCatalogAdmin`
-- **`.env.example` / README** — document `BUILTIQ_CATALOG_ADMIN_EMAILS`
+- **`.env.example` / README** — document `BUILD_IQ_CATALOG_ADMIN_EMAILS`
 
 ### Files changed
 
@@ -2666,7 +2666,7 @@ None.
 
 ### Testing steps
 
-1. Set `BUILTIQ_CATALOG_ADMIN_EMAILS=your@email.com` in Vercel (Preview + Production), redeploy
+1. Set `BUILD_IQ_CATALOG_ADMIN_EMAILS=your@email.com` in Vercel (Preview + Production), redeploy
 2. Sign in as admin → Settings shows Guided Exercise Library card
 3. Sign in as another user → card is hidden; POST import returns 403
 
@@ -2690,7 +2690,7 @@ Status: Completed
 
 ### Summary
 
-Removed per-user exercise library toggles. All users now search one merged BuiltIQ catalog (Essentials + Basic + Guided + legacy photo library), with duplicate names collapsed to the best version (prefers GIF guides).
+Removed per-user exercise library toggles. All users now search one merged Build IQ catalog (Essentials + Basic + Guided + legacy photo library), with duplicate names collapsed to the best version (prefers GIF guides).
 
 ### Purpose
 
@@ -2942,7 +2942,7 @@ Status: Completed
 
 ### Summary
 
-Added a searchable BuiltIQ starter food catalog (~50 common whole foods) so users can find and log foods faster without typing macros manually.
+Added a searchable Build IQ starter food catalog (~50 common whole foods) so users can find and log foods faster without typing macros manually.
 
 ### Purpose
 
@@ -3014,7 +3014,7 @@ Added server-side AI macro estimation so users can describe food in plain langua
 
 ### Purpose
 
-Complete the nutrition logging UX vision from BuiltIQ_Context.md. Catalog search (BIQ-0036) covers common staples; AI handles free-form descriptions and combined meals before AI Coach consumes nutrition context.
+Complete the nutrition logging UX vision from Build_IQ_Context.md. Catalog search (BIQ-0036) covers common staples; AI handles free-form descriptions and combined meals before AI Coach consumes nutrition context.
 
 ### Changes
 
@@ -3063,5 +3063,133 @@ Requires `OPENAI_API_KEY` on the server (same as program generator).
 
 ```text
 BIQ-0037 Add AI natural-language food macro estimation
+```
+
+---
+
+## BIQ-0038 - Installable PWA App Shell
+
+Date: 2026-07-16  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Turned Build IQ Health into an installable mobile app via PWA support: web manifest, generated app icons, standalone display mode, safe-area layout, and an install prompt for Android and iOS.
+
+### Purpose
+
+Phase 8 mobile launch prep. Users should be able to add Build IQ to their home screen and use it full-screen like a native app without waiting for App Store / Play Store wrappers.
+
+### Changes
+
+- Added `public/manifest.webmanifest` with standalone display, theme colors, and icon references
+- Added dynamic `app/icon.tsx` and `app/apple-icon.tsx` (Build IQ branded PNG icons)
+- Expanded `app/layout.tsx` metadata: manifest link, Apple web app tags, viewport fit for notched devices
+- Added `InstallAppPrompt` — Chrome install button + iOS Share → Add to Home Screen guidance
+- Safe-area CSS for sticky header and body padding in standalone mode
+- `next.config.js` serves manifest with correct content type
+
+### Files Changed
+
+- `public/manifest.webmanifest`
+- `app/icon.tsx`
+- `app/apple-icon.tsx`
+- `app/layout.tsx`
+- `app/components/InstallAppPrompt.tsx`
+- `app/globals.css`
+- `next.config.js`
+- `CHANGELOG.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Run `npm run build && npm run start` (or deploy to Vercel with HTTPS).
+2. Open on Android Chrome → confirm install banner appears → **Install** → app opens standalone without browser chrome.
+3. Open on iPhone Safari → confirm banner shows Share → Add to Home Screen instructions → add icon → launch full-screen.
+4. Confirm home screen icon shows Build IQ branding.
+5. Sign in, log a workout and meal → confirm sticky header respects notch/safe area.
+6. Dismiss install banner → refresh → banner stays hidden until localStorage cleared.
+7. After installing, banner should not show in standalone mode.
+
+### Known Issues
+
+- No offline service worker yet (requires auth-aware caching strategy).
+- iOS does not expose a native install API; users must use Share → Add to Home Screen manually.
+- App Store / Google Play native wrappers not started (future Phase 8 work).
+
+### Recommended Commit Message
+
+```text
+BIQ-0038 Add installable PWA shell with manifest, icons, and install prompt
+```
+
+---
+
+## BIQ-0039 - Rebrand BuiltIQ to Build IQ
+
+Date: 2026-07-16  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Renamed the product brand from BuiltIQ to **Build IQ** across the app UI, PWA metadata, AI prompts, documentation, and Windows helper scripts.
+
+### Purpose
+
+Product naming should read as two words — **Build IQ** — for clearer branding in the app, install prompts, and docs.
+
+### Changes
+
+- App header, auth screens, settings copy, install banner, and metadata now say **Build IQ** / **Build IQ Health**
+- PWA manifest, layout metadata, and app icons updated for new branding
+- Renamed Windows helper scripts: `build-iq-npm.cmd`, `build-iq-setup.cmd`, `build-iq-import.cmd`, etc.
+- Renamed `BuiltIQ_Context.md` → `Build_IQ_Context.md`, `CURSOR_RULES_BUILTIQ.md` → `CURSOR_RULES_BUILD_IQ.md`
+- Env var `BUILD_IQ_CATALOG_ADMIN_EMAILS` (legacy `BUILTIQ_CATALOG_ADMIN_EMAILS` still supported)
+- Package name → `build-iq-app-shell-strength-functional`
+
+### Files changed
+
+- `app/page.tsx`, `app/layout.tsx`, `app/icon.tsx`, `app/apple-icon.tsx`
+- `app/components/InstallAppPrompt.tsx`
+- `lib/supabaseClient.ts`, `lib/training/catalogAdmin.ts`, `lib/training/catalogSources.ts`
+- `lib/training/aiProgramPlan.ts`, `lib/training/scheduleSuggestion.ts`, `lib/nutrition/aiFoodEstimate.ts`
+- `public/manifest.webmanifest`, `package.json`, `package-lock.json`, `.env.example`
+- `build-iq-*.cmd` (replaced `builtiq-*.cmd`)
+- `scripts/install-node-portable.cmd`, `scripts/install-node-portable.ps1`, `scripts/setup-windows.ps1`
+- `scripts/import-exercises/*`
+- `README.md`, `ROADMAP.md`, `DECISIONS.md`, `CHANGELOG.md`, `.cursorrules`, `.cursor/rules.md`
+- `Build_IQ_Context.md`, `CURSOR_RULES_BUILD_IQ.md`
+- Selected migration SQL comments
+
+### Database changes
+
+None. Internal catalog source keys (`builtiq_essentials`, `builtiq_basic`, etc.) unchanged for data compatibility.
+
+### Testing steps
+
+1. Sign in — confirm header shows **Build IQ** (Build with purple IQ).
+2. Check browser tab title: **Build IQ Health**.
+3. Open install prompt — copy says **Install Build IQ**.
+4. Settings, AI Coach, and bug report copy reference **Build IQ**.
+5. Catalog source label shows **Build IQ Essentials**.
+6. Double-click `build-iq-setup.cmd` — npm install still works.
+7. If using catalog admin import, set `BUILD_IQ_CATALOG_ADMIN_EMAILS` (or keep legacy `BUILTIQ_CATALOG_ADMIN_EMAILS`).
+
+### Known issues
+
+- GitHub repo folder and remote URL still use `builtiq` (infrastructure rename not included).
+- Portable Node installs to `%LOCALAPPDATA%\build-iq-node` — existing `builtiq-node` folder is not migrated automatically.
+- Remembered email / install-dismiss localStorage keys changed; users may need to re-check remember-email or see install prompt once more.
+
+### Recommended commit message
+
+```text
+BIQ-0039 Rebrand BuiltIQ to Build IQ across app, docs, and scripts
 ```
 

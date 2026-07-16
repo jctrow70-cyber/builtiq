@@ -1,0 +1,26 @@
+{
+  "name": "Build IQ Health",
+  "short_name": "Build IQ",
+  "description": "Train smarter with workouts, nutrition tracking, progress insights, and AI wellness coaching.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#070a11",
+  "theme_color": "#080b12",
+  "categories": ["health", "fitness", "lifestyle"],
+  "icons": [
+    {
+      "src": "/icon",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/apple-icon",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

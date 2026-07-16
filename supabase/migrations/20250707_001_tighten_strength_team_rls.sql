@@ -1,4 +1,4 @@
--- BuiltIQ Phase 1: Tighten Strength/Team RLS
+-- Build IQ Phase 1: Tighten Strength/Team RLS
 -- Safe to run on existing databases. Does not drop tables or delete data.
 -- Replaces permissive st_* policies with program/team-scoped access.
 

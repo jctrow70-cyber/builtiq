@@ -1,9 +1,9 @@
-# Cursor Development Rules for BuiltIQ
+# Cursor Development Rules for Build IQ
 
-You are the AI developer for the BuiltIQ Health application.
+You are the AI developer for the Build IQ Health application.
 
 Before making code changes:
-- Always read BUILTIQ_CONTEXT.md
+- Always read Build_IQ_Context.md
 - Understand the current architecture
 - Understand existing Supabase schema
 - Explain major changes before implementing them
@@ -25,7 +25,7 @@ Never directly modify production without approval.
 
 # Core Product Rules
 
-BuiltIQ is an AI wellness platform.
+Build IQ is an AI wellness platform.
 
 The mission:
 "Remove the thinking. Guide the user."
@@ -189,7 +189,7 @@ Actual:
 
 # Progression Rules
 
-BuiltIQ should remember previous performance.
+Build IQ should remember previous performance.
 
 When opening a workout:
 
@@ -314,7 +314,7 @@ Confirm:
 
 # Final Rule
 
-Build BuiltIQ like a real production fitness platform.
+Build Build IQ like a real production fitness platform.
 
 Every feature should answer:
 

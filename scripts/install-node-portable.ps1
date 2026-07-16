@@ -7,11 +7,11 @@ $ErrorActionPreference = 'Stop'
 $NodeVersion = '22.16.0'
 $ZipName = "node-v$NodeVersion-win-x64.zip"
 $Url = "https://nodejs.org/dist/v$NodeVersion/$ZipName"
-$InstallRoot = Join-Path $env:LOCALAPPDATA 'builtiq-node'
+$InstallRoot = Join-Path $env:LOCALAPPDATA 'build-iq-node'
 $NodeDir = Join-Path $InstallRoot "node-v$NodeVersion-win-x64"
 $ZipPath = Join-Path $InstallRoot $ZipName
 
-Write-Host "BuiltIQ portable Node (no admin)" -ForegroundColor Cyan
+Write-Host "Build IQ portable Node (no admin)" -ForegroundColor Cyan
 Write-Host "Install folder: $NodeDir"
 
 if (Test-Path (Join-Path $NodeDir 'npm.cmd')) {
@@ -38,6 +38,6 @@ $env:Path = "$NodeDir;$env:Path"
 Write-Host "node: $(& (Join-Path $NodeDir 'node.exe') -v)"
 Write-Host "npm:  $(& (Join-Path $NodeDir 'npm.cmd') -v)"
 Write-Host ""
-Write-Host "Close and reopen PowerShell, then run builtiq-setup.cmd" -ForegroundColor Yellow
+Write-Host "Close and reopen PowerShell, then run build-iq-setup.cmd" -ForegroundColor Yellow
 Write-Host "Or continue now from repo root:" -ForegroundColor Yellow
 Write-Host "  powershell -ExecutionPolicy Bypass -File scripts/setup-windows.ps1"

@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * Convert yuhonas/free-exercise-db JSON → BuiltIQ import format.
+ * Convert yuhonas/free-exercise-db JSON → Build IQ import format.
  * License: The Unlicense (public domain) — https://github.com/yuhonas/free-exercise-db
  *
  * Usage:
  *   npm run import:convert:free-exercise-db
- *   npm run import:convert:free-exercise-db -- --in path/to/exercises.json --out path/to/builtiq-import.json
+ *   npm run import:convert:free-exercise-db -- --in path/to/exercises.json --out path/to/build-iq-import.json
  */
 
 import fs from 'fs';
@@ -13,7 +13,7 @@ import path from 'path';
 import { convertFreeExerciseDbRows, type FreeExerciseDbRow } from './sources/freeExerciseDb';
 
 const DEFAULT_IN = 'scripts/import-exercises/data/free-exercise-db/exercises.json';
-const DEFAULT_OUT = 'scripts/import-exercises/data/free-exercise-db/builtiq-import.json';
+const DEFAULT_OUT = 'scripts/import-exercises/data/free-exercise-db/build-iq-import.json';
 
 function parseArgs(argv: string[]) {
   let input = DEFAULT_IN;
@@ -23,7 +23,7 @@ function parseArgs(argv: string[]) {
     if (a === '--in' && argv[i + 1]) input = argv[++i];
     else if (a === '--out' && argv[i + 1]) output = argv[++i];
     else if (a === '--help' || a === '-h') {
-      console.log(`Convert free-exercise-db JSON to BuiltIQ import format
+      console.log(`Convert free-exercise-db JSON to Build IQ import format
 
 Options:
   --in <path>   Source exercises.json (default: ${DEFAULT_IN})

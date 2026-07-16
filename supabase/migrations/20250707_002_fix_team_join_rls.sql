@@ -1,4 +1,4 @@
--- BuiltIQ Phase 1 fix: allow invite-based team join through RLS
+-- Build IQ Phase 1 fix: allow invite-based team join through RLS
 -- Supabase applies RLS even inside SECURITY DEFINER functions.
 -- The join RPC validates the invite, sets a transaction-local flag, then inserts.
 

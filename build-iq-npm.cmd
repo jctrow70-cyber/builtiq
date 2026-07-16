@@ -2,7 +2,7 @@
 REM Run npm without admin and without adding Node to system PATH
 setlocal
 set NODEVER=22.16.0
-set NODEDIR=%LOCALAPPDATA%\builtiq-node\node-v%NODEVER%-win-x64
+set NODEDIR=%LOCALAPPDATA%\build-iq-node\node-v%NODEVER%-win-x64
 set NPM=%NODEDIR%\npm.cmd
 
 if not exist "%NPM%" (

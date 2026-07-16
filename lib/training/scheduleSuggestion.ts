@@ -66,7 +66,7 @@ export function buildScheduleSuggestionPrompt(
         ? 'User does NOT want a dedicated mobility day — no Mobility day_types.'
         : 'User has not decided on mobility days — include a mix when goals imply high training load, rotational sport (baseball, golf), or recovery needs. Set asks_mobility true when offering both styles.';
 
-  const system = `You are BuiltIQ Health's training schedule coach. Recommend weekly workout splits tailored to the user's goals. Output ONLY valid JSON — no markdown.
+  const system = `You are Build IQ Health's training schedule coach. Recommend weekly workout splits tailored to the user's goals. Output ONLY valid JSON — no markdown.
 
 Rules:
 1. Provide 2–4 schedule options with distinct training frequencies (e.g. 3-day, 4-day, 5-day).

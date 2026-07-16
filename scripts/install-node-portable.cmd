@@ -2,7 +2,7 @@
 REM Portable Node.js — no admin, works when PowerShell is in Constrained Language Mode
 setlocal
 set NODEVER=22.16.0
-set INSTALL=%LOCALAPPDATA%\builtiq-node
+set INSTALL=%LOCALAPPDATA%\build-iq-node
 set NODEDIR=%INSTALL%\node-v%NODEVER%-win-x64
 set NODEZIP=%INSTALL%\node-v%NODEVER%-win-x64.zip
 set NODEURL=https://nodejs.org/dist/v%NODEVER%/node-v%NODEVER%-win-x64.zip
@@ -35,5 +35,5 @@ set "PATH=%NODEDIR%;%PATH%"
 "%NODEDIR%\node.exe" -v
 "%NODEDIR%\npm.cmd" -v
 echo.
-echo OK. Use builtiq-setup.cmd or builtiq-npm.cmd — no PATH edit required.
+echo OK. Use build-iq-setup.cmd or build-iq-npm.cmd — no PATH edit required.
 endlocal

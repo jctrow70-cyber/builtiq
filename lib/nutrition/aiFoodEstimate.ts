@@ -42,7 +42,7 @@ function cleanText(value: unknown, maxLen: number): string {
 
 export function buildFoodEstimatePrompt(description: string, mealType?: string): { system: string; user: string } {
   const mealHint = mealType ? `Meal context: ${mealType}.` : '';
-  const system = `You are BuiltIQ Health's nutrition estimation assistant for general fitness and wellness tracking.
+  const system = `You are Build IQ Health's nutrition estimation assistant for general fitness and wellness tracking.
 
 Rules:
 - Provide practical macro estimates (calories, protein_g, carbs_g, fat_g) for foods the user describes.
