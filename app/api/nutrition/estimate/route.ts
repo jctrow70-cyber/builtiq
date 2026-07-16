@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   }
 
   const mealType = String(body?.meal_type || '').trim() || undefined;
-  const { system, user } = buildFoodEstimatePrompt(description, mealType);
+  const { system, user: userContent } = buildFoodEstimatePrompt(description, mealType);
 
   const openai = new OpenAI({ apiKey });
   let rawContent = '';
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
       response_format: { type: 'json_object' },
       messages: [
         { role: 'system', content: system },
-        { role: 'user', content: user },
+        { role: 'user', content: userContent },
       ],
     });
     rawContent = completion.choices[0]?.message?.content || '';
