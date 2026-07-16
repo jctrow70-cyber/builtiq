@@ -2803,3 +2803,62 @@ None.
 ```text
 BIQ-0033 Fix workout log persistence and dashboard workout status
 ```
+
+---
+
+## BIQ-0034 - Nutrition Tracker Foundation
+
+Date: 2026-07-15  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Replaced the Nutrition placeholder with a functional macro tracking MVP: daily meal logging, saved foods library, macro goals, copy-yesterday, and a live dashboard nutrition card.
+
+### Purpose
+
+Phase 5 nutrition work. Users need to log calories, protein, carbs, and fat by meal before AI Coach can consume nutrition context. Meal entries snapshot macros at log time so saved-food edits do not rewrite history.
+
+### Changes
+
+- Added `st_nutrition_goals`, `st_food_library`, and `st_meal_entries` tables with user-scoped RLS
+- Added `lib/nutrition/macros.ts` for macro math, meal grouping, and goal helpers
+- Added `NutritionTracker` component: date navigation, daily summary, meals (breakfast/lunch/dinner/snacks), add food, edit goals, saved foods quick-add, copy yesterday
+- Wired Nutrition tab and Dashboard nutrition card to show today's totals vs goals
+- Mobile-friendly nutrition styles in `globals.css`
+
+### Files Changed
+
+- `supabase/migrations/20250716_020_nutrition_tracker_foundation.sql`
+- `lib/nutrition/macros.ts`
+- `app/components/NutritionTracker.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+Run in Supabase SQL Editor:
+
+- `supabase/migrations/20250716_020_nutrition_tracker_foundation.sql`
+
+### Testing Steps
+
+1. Run migration `20250716_020` on your Supabase project.
+2. Sign in → **Nutrition** → confirm date picker and empty daily summary.
+3. **Edit goals** → save targets → confirm progress bars update.
+4. **Add food** → log breakfast item with macros → confirm totals update.
+5. Check **Save to my foods** → quick-add from **My foods**.
+6. **Copy yesterday** after logging prior day.
+7. **Dashboard** → Nutrition card shows today's macros.
+8. Test on mobile width.
+9. Second user cannot see another user's meals.
+
+### Recommended Commit Message
+
+```text
+BIQ-0034 Add nutrition tracker foundation with meal logging and macro goals
+```
+

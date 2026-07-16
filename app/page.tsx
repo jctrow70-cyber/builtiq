@@ -24,8 +24,10 @@ import {
   weekRangeLabel,
 } from '../lib/training/programCalendar';
 import DateInput from './components/DateInput';
+import NutritionTracker, { fetchNutritionDaySummary } from './components/NutritionTracker';
 import ProgressInsights from './components/ProgressInsights';
 import WorkoutSetLogger from './components/WorkoutSetLogger';
+import { formatMacro, macroProgress } from '../lib/nutrition/macros';
 
 const NAV=['Dashboard','Training','Team','Nutrition','Progress','AI Coach','Settings'];
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -156,6 +158,7 @@ export default function Page(){
  const [memberDashProgram,setMemberDashProgram]=useState<any>(null);
  const [memberDashLogs,setMemberDashLogs]=useState<any>({});
  const [dashboardTodayLogs,setDashboardTodayLogs]=useState<any>({});
+ const [nutritionTodaySummary,setNutritionTodaySummary]=useState<any>(null);
  const [memberDashLastDate,setMemberDashLastDate]=useState('');
  const [memberStats,setMemberStats]=useState<any>({});
  const [memberAssignments,setMemberAssignments]=useState<any>({});
@@ -199,7 +202,7 @@ export default function Page(){
   const nextWeek=weekForDate(start,logDate,total);
   if(nextWeek!==week)setWeek(nextWeek);
  },[program?.id,program?.start_date,program?.created_at,program?.weeks,logDate]);
- useEffect(()=>{if(profile&&appNav==='Dashboard'){loadProgressLogs();loadDashboardTodayLogs();}},[profile,appNav,program?.id]);
+ useEffect(()=>{if(profile&&appNav==='Dashboard'){loadProgressLogs();loadDashboardTodayLogs();loadDashboardTodayNutrition();}},[profile,appNav,program?.id,session?.user?.id]);
  useEffect(()=>{
   if(!program||syncingCalendarRef.current)return;
   const match=workoutForDate(program,logDate,week);
@@ -510,6 +513,17 @@ export default function Page(){
   if(error){console.warn(error.message);return;}
   const by:any={};(data||[]).forEach((l:any)=>by[l.planned_set_id]=l);
   setDashboardTodayLogs(by);
+ }
+
+ async function loadDashboardTodayNutrition(){
+  if(!session?.user){setNutritionTodaySummary(null);return;}
+  try{
+   const summary=await fetchNutritionDaySummary(session.user.id,today());
+   setNutritionTodaySummary(summary);
+  }catch(e:any){
+   console.warn(e?.message||'Could not load nutrition summary.');
+   setNutritionTodaySummary(null);
+  }
  }
 
  function previousFor(ex:any, set:any){
@@ -869,7 +883,8 @@ export default function Page(){
 }
  function goNav(n:string){
   setAppNav(n);
-  if(n==='Progress'||n==='Dashboard'){loadProgressLogs();if(n==='Dashboard')loadDashboardTodayLogs();}
+  if(n==='Progress'||n==='Dashboard'){loadProgressLogs();if(n==='Dashboard'){loadDashboardTodayLogs();loadDashboardTodayNutrition();}}
+  if(n==='Nutrition')loadDashboardTodayNutrition();
   if(n==='Settings'){loadCatalog(); loadGuidedImportStatus(); if(activeTeam)loadMembers();}
   if(n==='Team'){if(teams.length)setMode('team'); loadMembers(); loadMemberStats();}
   if(n==='Dashboard'&&teams.length){loadMembers(); loadMemberStats();}
@@ -950,6 +965,10 @@ const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sor
  const weeklySetCount=weeklyLogs.length;
  const weeklyWorkoutDays=new Set(weeklyLogs.map((r:any)=>r.log_date)).size;
  const todaySetCount=progressLogs.filter((r:any)=>String(r.log_date)===today()).length;
+ const nutritionTotals=nutritionTodaySummary?.totals||{calories:0,protein_g:0,carbs_g:0,fat_g:0};
+ const nutritionGoals=nutritionTodaySummary?.goals||{calories:2000,protein_g:150,carbs_g:200,fat_g:65};
+ const nutritionEntryCount=nutritionTodaySummary?.entryCount||0;
+ const nutritionCalPct=macroProgress(nutritionTotals.calories,nutritionGoals.calories);
  const teamActiveCount=members.filter((m:any)=>(memberStats[m.user_id]?.sets||0)>0).length;
  const teamCompliancePct=members.length?Math.round(teamActiveCount/members.length*100):0;
  const teamTotalSets=members.reduce((n:number,m:any)=>n+(memberStats[m.user_id]?.sets||0),0);
@@ -1019,8 +1038,8 @@ const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sor
  </header>
  <div className="app-shell" key={session?.user?.id||'signed-out'}>
  <main className="main page-main">
-  {appNav==='Dashboard'&&<section className="dashboard"><div className="dash-hero"><h1>{greeting}, {displayName||'there'}</h1><p className="muted">Your wellness dashboard for {formatDisplayDate(today())}.</p></div><div className="dash-grid"><div className="dash-card dash-featured"><div className="dash-card-head"><h2>Today&apos;s Workout</h2><span className="badge">{todayDayLabel}{todayWorkout&&todayWorkoutStatus!=='none'?` · ${statusLabel(todayWorkoutStatus)}`:''}</span></div>{todayWorkout?<><p className="dash-title">{todayWorkout.day_label} · {todayWorkout.workout_type}</p><p className="muted">Week {calendarWeek} · {workoutExerciseCount(todayWorkout)} exercises planned{todayWorkoutStatus==='in_progress'?' · workout in progress':todayWorkoutStatus==='completed'?' · completed today':''}</p><div className="actions" style={{marginTop:10}}><button className={`btn ${todayWorkoutStatus==='completed'?'secondary':'green'}`} onClick={()=>{setActiveWorkout(todayWorkout.id);setWeek(calendarWeek);setLogDate(today());setTrainingSubNav('personal');setAppNav('Training');}}>{todayWorkoutBtnLabel}</button></div></>:program?<><p className="muted">No workout scheduled for {todayDayLabel} this week.</p><button className="btn secondary" onClick={()=>goNav('Training')}>View program</button></>:<><p className="muted">Create a program to see today&apos;s workout.</p><button className="btn green" onClick={()=>{setTrainingSubNav('setup');setShowProgramSetup(true);setAppNav('Training');}}>Set up program</button></>}</div>{teams.length>0&&activeTeam&&<div className="dash-card dash-accent"><div className="dash-card-head"><h2>Team Compliance</h2><span className="badge">{teamCompliancePct}%</span></div><p className="dash-title">{activeTeam.name}</p><div className="dash-metrics"><div><b>{teamActiveCount}/{members.length||0}</b><span className="muted">Active this week</span></div><div><b>{teamTotalSets}</b><span className="muted">Team sets</span></div></div><button className="btn secondary" style={{marginTop:10}} onClick={()=>goNav('Team')}>View team</button></div>}<div className="dash-card"><div className="dash-card-head"><h2>Weekly Progress</h2><span className="badge">{weeklyWorkoutDays} days</span></div><div className="dash-metrics"><div><b>{weeklySetCount}</b><span className="muted">Sets this week</span></div><div><b>{todaySetCount}</b><span className="muted">Sets today</span></div></div><button className="btn secondary" style={{marginTop:10}} onClick={()=>goNav('Progress')}>View history</button></div><div className="dash-card"><div className="dash-card-head"><h2>Nutrition</h2><span className="badge">Soon</span></div><p className="muted">Daily macros, meals, and hydration will appear here.</p><div className="dash-placeholder"><span>Calories —</span><span>Protein —</span><span>Carbs —</span><span>Fats —</span></div></div><div className="dash-card dash-accent"><div className="dash-card-head"><h2>AI Coach Insight</h2><span className="badge">Preview</span></div><p className="muted">Personalized coaching based on your training, nutrition, and recovery is coming soon.</p><p className="dash-insight">&ldquo;Stay consistent this week. Log today&apos;s sets to build your progress baseline.&rdquo;</p></div></div></section>}
-  {appNav==='Nutrition'&&<section><div className="card"><h2>Nutrition</h2><p className="muted">Macro tracking and meal logging will live here in a future release.</p></div></section>}
+  {appNav==='Dashboard'&&<section className="dashboard"><div className="dash-hero"><h1>{greeting}, {displayName||'there'}</h1><p className="muted">Your wellness dashboard for {formatDisplayDate(today())}.</p></div><div className="dash-grid"><div className="dash-card dash-featured"><div className="dash-card-head"><h2>Today&apos;s Workout</h2><span className="badge">{todayDayLabel}{todayWorkout&&todayWorkoutStatus!=='none'?` · ${statusLabel(todayWorkoutStatus)}`:''}</span></div>{todayWorkout?<><p className="dash-title">{todayWorkout.day_label} · {todayWorkout.workout_type}</p><p className="muted">Week {calendarWeek} · {workoutExerciseCount(todayWorkout)} exercises planned{todayWorkoutStatus==='in_progress'?' · workout in progress':todayWorkoutStatus==='completed'?' · completed today':''}</p><div className="actions" style={{marginTop:10}}><button className={`btn ${todayWorkoutStatus==='completed'?'secondary':'green'}`} onClick={()=>{setActiveWorkout(todayWorkout.id);setWeek(calendarWeek);setLogDate(today());setTrainingSubNav('personal');setAppNav('Training');}}>{todayWorkoutBtnLabel}</button></div></>:program?<><p className="muted">No workout scheduled for {todayDayLabel} this week.</p><button className="btn secondary" onClick={()=>goNav('Training')}>View program</button></>:<><p className="muted">Create a program to see today&apos;s workout.</p><button className="btn green" onClick={()=>{setTrainingSubNav('setup');setShowProgramSetup(true);setAppNav('Training');}}>Set up program</button></>}</div>{teams.length>0&&activeTeam&&<div className="dash-card dash-accent"><div className="dash-card-head"><h2>Team Compliance</h2><span className="badge">{teamCompliancePct}%</span></div><p className="dash-title">{activeTeam.name}</p><div className="dash-metrics"><div><b>{teamActiveCount}/{members.length||0}</b><span className="muted">Active this week</span></div><div><b>{teamTotalSets}</b><span className="muted">Team sets</span></div></div><button className="btn secondary" style={{marginTop:10}} onClick={()=>goNav('Team')}>View team</button></div>}<div className="dash-card"><div className="dash-card-head"><h2>Weekly Progress</h2><span className="badge">{weeklyWorkoutDays} days</span></div><div className="dash-metrics"><div><b>{weeklySetCount}</b><span className="muted">Sets this week</span></div><div><b>{todaySetCount}</b><span className="muted">Sets today</span></div></div><button className="btn secondary" style={{marginTop:10}} onClick={()=>goNav('Progress')}>View history</button></div><div className="dash-card"><div className="dash-card-head"><h2>Nutrition</h2><span className="badge">{nutritionEntryCount?`${nutritionCalPct}% cal`:'Today'}</span></div>{nutritionEntryCount>0?<><p className="dash-title">{formatMacro(nutritionTotals.calories)} / {formatMacro(nutritionGoals.calories)} cal</p><div className="dash-metrics"><div><b>{formatMacro(nutritionTotals.protein_g)}g</b><span className="muted">Protein</span></div><div><b>{formatMacro(nutritionTotals.carbs_g)}g</b><span className="muted">Carbs</span></div><div><b>{formatMacro(nutritionTotals.fat_g)}g</b><span className="muted">Fat</span></div><div><b>{nutritionEntryCount}</b><span className="muted">Items logged</span></div></div></>:<><p className="muted">Log meals to track daily macros.</p><div className="dash-placeholder"><span>Calories —</span><span>Protein —</span><span>Carbs —</span><span>Fats —</span></div></>}<button className="btn secondary" style={{marginTop:10}} onClick={()=>goNav('Nutrition')}>{nutritionEntryCount?'View log':'Log food'}</button></div><div className="dash-card dash-accent"><div className="dash-card-head"><h2>AI Coach Insight</h2><span className="badge">Preview</span></div><p className="muted">Personalized coaching based on your training, nutrition, and recovery is coming soon.</p><p className="dash-insight">&ldquo;Stay consistent this week. Log today&apos;s sets to build your progress baseline.&rdquo;</p></div></div></section>}
+  {appNav==='Nutrition'&&session?.user&&<NutritionTracker userId={session.user.id} onDateChange={()=>loadDashboardTodayNutrition()}/>}
   {appNav==='AI Coach'&&<section><div className="card dash-accent"><h2>AI Coach</h2><p className="muted">Your BuiltIQ wellness coach will analyze workouts, nutrition, and recovery to give safe, practical guidance.</p><p className="dash-insight">Coming soon: readiness check-ins, workout adjustments, and weekly coaching summaries.</p></div></section>}
   {appNav==='Progress'&&<section><div className="card"><div className="topline" style={{justifyContent:'space-between'}}><h2>Progress</h2><button className="btn small secondary" onClick={loadProgressLogs}>Refresh</button></div><p className="muted">Saved lift history uses snapshots, so past workouts stay accurate even if the program template changes later.</p></div><ProgressInsights logs={progressLogs} weightUnit={progressWeightUnit}/><div className="card"><h2>Workout history</h2><p className="muted">Completed sets grouped by training day.</p></div>{progressDays.length===0&&<div className="card"><p className="muted">No completed sets yet. Log a workout in Training to build history.</p></div>}{progressDays.map((day:any)=><div className="card" key={day.date}><h3>{formatDisplayDate(day.date)}{day.label?` · ${day.label}`:''}{day.type?` · ${day.type}`:''}</h3>{Object.values(day.rows.reduce((acc:any,row:any)=>{const name=logExerciseName(row);if(!acc[name]) acc[name]=[]; acc[name].push(row);return acc;},{})).map((rows:any)=>{const label=logExerciseName(rows[0]);const exType=(rows[0].snapshot_exercise_type||'strength') as any;return <div key={label} className="history-row"><b>{label}</b><span className="muted">{rows.sort((a:any,b:any)=>(logSetNumber(a)-logSetNumber(b))).map((r:any)=>formatLogSummary(r,exType)).join(' · ')}</span></div>})}</div>)}</section>}
   {appNav==='Team'&&<section>{teams.length===0?<div className="card"><h2>Teams</h2><p className="muted">Create or join a team in Settings, then manage programs and track compliance here.</p><button className="btn secondary" onClick={()=>goNav('Settings')}>Go to Settings</button></div>:<><div className="card"><div className="topline" style={{justifyContent:'space-between'}}><h2>{activeTeam?.name||'Team'}</h2><div className="tabs"><button type="button" className={mode==='personal'?'active':''} onClick={()=>setMode('personal')}>Personal</button><button type="button" className={mode==='team'?'active':''} onClick={()=>setMode('team')}>Team</button></div></div>{teamModeControl}<p className="muted" style={{marginTop:8}}>{activeTeam&&<>Invite: <b>{activeTeam.invite_code}</b> · Role: {activeTeam.my_role}</>}</p></div>{teamPlanPanel}{teamCompliancePanel}{teamRosterPanel}</>}</section>}
