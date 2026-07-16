@@ -1,5 +1,9 @@
 -- BIQ-0028: ExerciseDB guided library defaults
 -- Updates profile catalog_sources default to include exercisedb guided library.
+-- Safe if 20250715_018 was skipped: create column before altering default.
+
+alter table public.st_profiles
+  add column if not exists catalog_sources text[] default array['builtiq_essentials', 'builtiq_basic']::text[];
 
 alter table public.st_profiles
   alter column catalog_sources set default array['exercisedb', 'builtiq_essentials']::text[];
