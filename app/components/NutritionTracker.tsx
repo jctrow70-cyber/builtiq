@@ -46,7 +46,7 @@ import {
   ProfileForGoalSuggestion,
   suggestNutritionGoals,
 } from '../../lib/nutrition/goalSuggestions';
-import { barcodeResultToDraft, type BarcodeLookupResponse } from '../../lib/nutrition/barcodeLookup';
+import { barcodeResultToDraft, isBarcodeLookupResult, type BarcodeLookupResponse } from '../../lib/nutrition/barcodeLookup';
 import { LABEL_OCR_DISCLAIMER } from '../../lib/nutrition/labelOcr';
 import NutritionBarcodeScanner from './NutritionBarcodeScanner';
 import { currentCalendarWeekBounds, formatDisplayDate, parseYmd, todayYmd } from '../../lib/training/programCalendar';
@@ -889,7 +889,7 @@ export default function NutritionTracker({
         throw new Error(err?.error || `Lookup failed (${res.status})`);
       }
       const data = raw as BarcodeLookupResponse;
-      if (!data.found) {
+      if (!isBarcodeLookupResult(data)) {
         setBarcodeError(data.message || 'Product not found.');
         return;
       }

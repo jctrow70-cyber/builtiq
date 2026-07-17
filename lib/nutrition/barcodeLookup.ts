@@ -24,6 +24,10 @@ export type BarcodeLookupNotFound = {
 
 export type BarcodeLookupResponse = BarcodeLookupResult | BarcodeLookupNotFound;
 
+export function isBarcodeLookupResult(data: BarcodeLookupResponse): data is BarcodeLookupResult {
+  return data.found === true;
+}
+
 const OFF_USER_AGENT = 'BuildIQ-Health/1.0 (nutrition@buildiq.health)';
 const MAX_CALORIES = 5000;
 const MAX_MACRO_G = 400;
