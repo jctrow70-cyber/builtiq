@@ -375,7 +375,7 @@ See `CHANGELOG.md` BIQ-0013 and BIQ-0024 for full scope.
 
 ### Next priorities
 
-1. **Group Training platform (BIQ-0043)** — Phase 1 nav/permissions shipped; Phases 2–8: schema, My Groups hub, Assigned Workouts in Training, targeting, personal copy, member performance, AI hooks
+1. **Group Training platform (BIQ-0043)** — P1 nav + P2 schema shipped; Phases 3–8: My Groups hub, Assigned Workouts in Training, targeting UI, personal copy, member performance, AI hooks
 2. ~~PR detection and strength trends on Progress tab~~ (BIQ-0026)
 3. **App admin roles** — move beyond env-only catalog import admin (see below)
 4. AI program regeneration / edit-from-prompt for existing programs

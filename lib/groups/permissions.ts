@@ -49,11 +49,9 @@ export function canEditGroupProgram(role: string | null | undefined): boolean {
   return canManageGroup(role);
 }
 
-/** Role value to persist — Phase 1 keeps `editor` in DB for RLS compatibility. */
+/** Role value to persist — BIQ-0043-P2 stores `manager` in DB (editor backfilled). */
 export function roleForDatabase(uiRole: string): StoredMemberRole {
-  const n = normalizeRole(uiRole);
-  if (n === 'manager') return 'editor';
-  return n;
+  return normalizeRole(uiRole);
 }
 
 /** UI select value from stored DB role. */

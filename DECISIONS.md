@@ -708,5 +708,5 @@ Team Training mixed logging and management in one surface. Members need a single
 ### Impact
 
 - `lib/groups/permissions.ts` centralizes role checks
-- BIQ-0043 phased epic; Phase 1 nav and permissions only
-- Documented in BIQ-0043-P1
+- BIQ-0043 phased epic; P1 nav, P2 schema (classifications, workout assignments, participation)
+- Documented in BIQ-0043-P1 and BIQ-0043-P2

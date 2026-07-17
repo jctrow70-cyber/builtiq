@@ -3,7 +3,7 @@
 export const GROUP_ROLES = ['owner', 'manager', 'member'] as const;
 export type GroupRole = (typeof GROUP_ROLES)[number];
 
-/** Stored DB roles until migration renames editor → manager. */
+/** Legacy rows may still read `editor` until backfill; new writes use `manager`. */
 export type StoredMemberRole = GroupRole | 'editor';
 
 export type GroupMembership = {
@@ -14,4 +14,5 @@ export type GroupMembership = {
   training_source?: 'team' | 'personal';
   default_program_id?: string | null;
   membership_id?: string;
+  is_active_participant?: boolean;
 };

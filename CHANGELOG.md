@@ -3477,12 +3477,122 @@ None. Tables remain `st_teams`, `st_team_members`, `st_program_assignments`.
 ### Known Issues
 
 - Assigned Workouts section is a placeholder until BIQ-0043 Phase 4
-- Internal code still uses `mode: 'team'`, `st_teams`, and DB role `editor` for managers (intentional P1 compat)
-- Member invite/remove UI not yet built (Phase 2+)
+- Internal code still uses `mode: 'team'` and table name `st_teams` (user-facing label is Group)
+- Member invite/remove UI not yet built (Phase 3+)
 
 ### Recommended Commit Message
 
 ```text
 BIQ-0043-P1 Add groups permission module and Group Training nav foundation
+```
+
+---
+
+## BIQ-0043-P2 - Group Training Schema (Phase 2)
+
+Date: 2026-07-17  
+Branch: preview/groups-v2-biq-0043  
+Status: Completed
+
+### Summary
+
+Added database foundation for Group Training: member participation flag, group classifications, workout assignments with recipient rows, program-assignment targeting columns, manager role backfill (`editor` → `manager`), and three RPCs. **No UI changes** — app behavior unchanged until Phase 3+.
+
+### Purpose
+
+Enable future Assigned Workouts delivery (P4), classification targeting (P5), and participation controls without another breaking schema pass. Keeps RLS aligned with Owner / Manager / Member.
+
+### Changes
+
+- `st_team_members.is_active_participant` (default `true`) — permission role vs training participation
+- Backfill `role = 'manager'` where `role = 'editor'`; CHECK constraint `owner | manager | member`
+- **`st_group_classifications`** — group-scoped tags (Pitchers, JV, Rehab, etc.)
+- **`st_group_member_classifications`** — many-to-many member ↔ classification
+- **`st_workout_assignments`** — one-time workout delivery with `target_type`, schedule/due dates, snapshot version
+- **`st_assignment_recipients`** — per-user delivery + status (personal copy column reserved for P6)
+- **`st_program_assignments`** — `target_type`, `target_classification_id`; existing rows backfilled to `individual`
+- Updated `st_user_can_edit_team`, coach-read helpers, program/set-log RLS for `manager` role
+- RPCs: `st_assign_workout_to_targets`, `st_promote_member_to_manager`, `st_set_member_participation`
+- Updated `st_assign_member_program` to set `target_type = 'individual'`
+- `lib/groups/schema.ts` — TypeScript types/constants for new tables
+- `roleForDatabase()` now persists `manager` (not `editor`)
+
+### Files Changed
+
+- `supabase/migrations/20250717_023_group_training_schema.sql` (new)
+- `lib/groups/types.ts`
+- `lib/groups/permissions.ts`
+- `lib/groups/schema.ts` (new)
+- `lib/groups/index.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+**Apply migration:** run `20250717_023_group_training_schema.sql` in Supabase SQL Editor (or `supabase db push` if linked).
+
+| Object | Action |
+|--------|--------|
+| `st_team_members.is_active_participant` | Added |
+| `st_team_members.role` | Backfill + CHECK |
+| `st_group_classifications` | New table + RLS |
+| `st_group_member_classifications` | New table + RLS |
+| `st_workout_assignments` | New table + RLS |
+| `st_assignment_recipients` | New table + RLS |
+| `st_program_assignments.target_type` | Added + backfill |
+| `st_program_assignments.target_classification_id` | Added |
+| RPCs | 3 new + 2 updated |
+
+### Testing Steps (SQL — run in Supabase as authenticated users)
+
+Use two test accounts: **Owner/Manager** (User A) and **Member** (User B) in the same group.
+
+**1. Migration smoke**
+- [ ] Migration runs without error on dev Supabase
+- [ ] `select role, is_active_participant from st_team_members` — no `editor` rows remain; all active members `is_active_participant = true`
+- [ ] `select target_type from st_program_assignments where is_active` — all `individual` or null backfilled
+
+**2. Classifications (manager)**
+- [ ] As User A: `insert into st_group_classifications (team_id, name, slug) values (...)` succeeds
+- [ ] Link User B: insert into `st_group_member_classifications` succeeds
+- [ ] As User B: can `select` classifications for their group
+- [ ] As User B: cannot insert/update classifications (RLS denied)
+
+**3. Participation RPC**
+- [ ] As User A: `select st_set_member_participation(team_id, user_b, false)` — User B row updates
+- [ ] As User B: same RPC fails with "Not authorized"
+
+**4. Promote manager RPC**
+- [ ] As Owner: `select st_promote_member_to_manager(team_id, user_b)` when User B is `member` → role becomes `manager`
+- [ ] As Manager (non-owner): RPC fails "Only owner can promote"
+
+**5. Workout assignment RPC**
+- [ ] As User A: `select st_assign_workout_to_targets(team_id, workout_id, ..., 'individual', null, array[user_b]::uuid[], ...)` returns assignment UUID
+- [ ] Verify `st_assignment_recipients` has one row for User B
+- [ ] As User B: `select * from st_workout_assignments` — sees only assignments where they are a recipient
+- [ ] As User B: cannot see other members' recipient rows for assignments not theirs
+- [ ] As User A: `target_type = 'group'` creates recipients for all `is_active_participant = true` members
+
+**6. Regression (P1 behavior)**
+- [ ] `st_assign_member_program` still works from Groups UI
+- [ ] Manager can still co-log member sets on group programs
+- [ ] Settings role dropdown saves Owner / Manager / Member (writes `manager`, not `editor`)
+- [ ] `npm run build` passes locally
+
+**7. App UI (unchanged — expect no new screens)**
+- [ ] Training / Groups / Settings behave as after P1
+- [ ] Assigned Workouts placeholder still shows (no live assignments yet)
+
+### Known Issues
+
+- No UI for classifications, workout assignments, or participation toggle until P3–P5
+- `st_assignment_instances` and copy-to-personal flow deferred to P6
+- `st_assign_workout_to_targets` does not snapshot workout template yet (`template_snapshot_version` reserved)
+
+### Recommended Commit Message
+
+```text
+BIQ-0043-P2 Add group classifications and workout assignment schema
 ```
 
