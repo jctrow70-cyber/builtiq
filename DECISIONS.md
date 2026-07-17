@@ -675,3 +675,38 @@ Week numbers alone do not tell users which calendar days belong to Week 2 vs Wee
 - New programs set `start_date` to generation day
 - Existing programs backfill from `created_at`
 - Documented in BIQ-0022
+
+---
+
+## Decision 026 - Group Training Platform (Personal vs Groups Split)
+
+Date: 2026-07-17  
+Status: Accepted  
+Category: Product Architecture
+
+### Decision
+
+Rebrand user-facing **Team** to **Group** while keeping `st_teams` in the database for now. Split the product into:
+
+- **Training** — unified workout logging (personal program today; assigned group workouts in Phase 4)
+- **Groups** — management only (owners/managers: roster, compliance, assignments, member performance)
+
+Roles are **Owner**, **Manager**, and **Member** in the UI. Managers may invite and remove members. DB role `editor` maps to Manager until a later migration.
+
+Remove the legacy Team tab and Training → Team Training sub-tab immediately (no gradual deprecation).
+
+### Reason
+
+Team Training mixed logging and management in one surface. Members need a single place to log; managers need a dedicated hub without duplicating the workout logger.
+
+### Alternatives Considered
+
+- Keep Team tab alongside Groups — rejected; confusing duplicate surfaces
+- Rename DB tables in Phase 1 — deferred; RLS and RPC stability first
+- Coach terminology — rejected; use Owner / Manager / Member only
+
+### Impact
+
+- `lib/groups/permissions.ts` centralizes role checks
+- BIQ-0043 phased epic; Phase 1 nav and permissions only
+- Documented in BIQ-0043-P1

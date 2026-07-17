@@ -3418,3 +3418,71 @@ Requires HTTPS (Vercel production). Label OCR still requires `OPENAI_API_KEY` on
 BIQ-0042 Add iPhone-compatible live barcode scanner with ZXing and product review UI
 ```
 
+---
+
+## BIQ-0043-P1 - Group Training Nav Foundation (Phase 1)
+
+Date: 2026-07-17  
+Branch: preview/groups-v2-biq-0043  
+Status: Completed
+
+### Summary
+
+Introduced the Group Training platform foundation: shared permissions module (Owner / Manager / Member), renamed user-facing Team → Group, replaced the Team tab with a Groups management tab, and unified Training to Personal Training + Program Setup only.
+
+### Purpose
+
+Separate group management from workout logging so Training becomes the unified logging hub (personal + assigned group workouts in later phases) while Groups handles roster, compliance, and member performance for owners and managers.
+
+### Changes
+
+- Added `lib/groups/` — `types.ts`, `permissions.ts`, `index.ts` with `normalizeRole`, `roleLabel`, `canManageGroup`, `canLogWorkout`, `roleForDatabase` / `roleForUi` (DB keeps `editor` for RLS)
+- Top nav: **Team** → **Groups**; removed legacy Team tab and Training → Team Training sub-tab
+- **Groups tab:** group selector, invite code, compliance, roster, member dashboard (managers), plan source toggle
+- **Training tab:** Personal Training + Program Setup; Assigned Workouts placeholder for Phase 4
+- User-facing copy: Team → Group; editor → Manager; coach → manager where shown
+- Settings: Groups create/join; role dropdown Owner / Manager / Member
+- Dashboard: Group Compliance card links to Groups
+- `assignmentTypeLabel`: Group Plan labels in `lib/training/exerciseTypes.ts`
+- AI generate route accepts `manager` role and updated error copy
+
+### Files Changed
+
+- `lib/groups/types.ts` (new)
+- `lib/groups/permissions.ts` (new)
+- `lib/groups/index.ts` (new)
+- `app/page.tsx`
+- `lib/training/exerciseTypes.ts`
+- `app/api/programs/generate/route.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None. Tables remain `st_teams`, `st_team_members`, `st_program_assignments`.
+
+### Testing Steps
+
+- Sign in; confirm top nav shows **Groups** (not Team)
+- Settings → Create Group / Join Group; confirm invite code and role labels (Owner / Manager / Member)
+- Groups tab: select group, view compliance and roster; as manager, click member → dashboard → Open workout → lands in Training
+- Training tab: only **Personal Training** and **Program Setup** sub-tabs; Assigned Workouts placeholder visible when in a group
+- Log a personal workout; confirm set logs save
+- Manager: open member workout from Groups, log a set on their behalf
+- Dashboard Group Compliance card opens Groups tab
+- Program Setup → Group program (manager only); AI/template generate still works
+- Mobile: nav tabs and Groups roster readable on narrow viewport
+
+### Known Issues
+
+- Assigned Workouts section is a placeholder until BIQ-0043 Phase 4
+- Internal code still uses `mode: 'team'`, `st_teams`, and DB role `editor` for managers (intentional P1 compat)
+- Member invite/remove UI not yet built (Phase 2+)
+
+### Recommended Commit Message
+
+```text
+BIQ-0043-P1 Add groups permission module and Group Training nav foundation
+```
+
