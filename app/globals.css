@@ -262,8 +262,22 @@
 .nutrition-scan-picker{margin-bottom:10px}
 .nutrition-barcode-row{display:flex;gap:8px;align-items:center}
 .nutrition-barcode-row input{flex:1;min-width:0}
-.nutrition-barcode-scanner{margin-top:10px;padding:10px;border:1px solid var(--border);border-radius:10px;background:var(--card)}
-.nutrition-barcode-video{width:100%;max-height:220px;border-radius:8px;background:#111;object-fit:cover}
+.nutrition-barcode-scanner{margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#0b1119}
+.nutrition-barcode-preview-wrap{position:relative;border-radius:12px;overflow:hidden;background:#111}
+.nutrition-barcode-video{width:100%;max-height:280px;object-fit:cover;display:block;background:#111}
+.nutrition-barcode-guide{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.nutrition-barcode-guide-frame{width:78%;max-width:320px;height:34%;border:2px solid rgba(124,92,255,.95);border-radius:12px;box-shadow:0 0 0 9999px rgba(0,0,0,.35)}
+.nutrition-barcode-status,.nutrition-barcode-tip{margin:8px 0 0;font-size:12px;line-height:1.45}
+.nutrition-barcode-loading{margin:8px 0;font-size:12px}
+.nutrition-barcode-fallback{margin-top:12px}
+.nutrition-barcode-fallback summary{cursor:pointer;font-weight:800;font-size:13px}
+.nutrition-barcode-product,.nutrition-barcode-not-found{margin-top:12px;padding:12px;background:#0b1119;border:1px solid var(--line);border-radius:12px}
+.nutrition-barcode-product-head{display:grid;grid-template-columns:72px 1fr;gap:10px;align-items:start}
+.nutrition-barcode-product-image{width:72px;height:72px;border-radius:10px;object-fit:cover;background:#111;border:1px solid var(--line)}
+.nutrition-barcode-product-image-fallback{display:flex;align-items:center;justify-content:center;font-size:28px}
+.nutrition-barcode-nutrient-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px}
+.nutrition-barcode-nutrient{background:#070a11;border:1px solid var(--line);border-radius:10px;padding:8px}
+.nutrition-barcode-nutrient b{display:block;margin-top:2px}
 .nutrition-scan-hint,.nutrition-scan-notes{margin:6px 0 0;font-size:11px;line-height:1.4}
 .nutrition-label-upload{display:block;margin-top:10px;font-weight:600}
 .nutrition-scan-picker input[type=file]{margin-top:6px;font-size:13px;max-width:100%}

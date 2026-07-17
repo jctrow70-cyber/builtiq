@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import DateInput from './DateInput';
 import NutritionWeeklySummary from './NutritionWeeklySummary';
@@ -46,9 +46,19 @@ import {
   ProfileForGoalSuggestion,
   suggestNutritionGoals,
 } from '../../lib/nutrition/goalSuggestions';
-import { barcodeResultToDraft, isBarcodeLookupResult, type BarcodeLookupResponse } from '../../lib/nutrition/barcodeLookup';
+import {
+  barcodeDisplayName,
+  barcodeExtraNutritionNote,
+  barcodeResultToDraft,
+  isBarcodeLookupResult,
+  scaleBarcodeNutrition,
+  type BarcodeLookupNotFound,
+  type BarcodeLookupResponse,
+  type BarcodeLookupResult,
+} from '../../lib/nutrition/barcodeLookup';
 import { LABEL_OCR_DISCLAIMER } from '../../lib/nutrition/labelOcr';
 import NutritionBarcodeScanner from './NutritionBarcodeScanner';
+import { NutritionBarcodeNotFoundCard, NutritionBarcodeProductCard } from './NutritionBarcodeProduct';
 import { currentCalendarWeekBounds, formatDisplayDate, parseYmd, todayYmd } from '../../lib/training/programCalendar';
 
 type NutritionTrackerProps = {
@@ -255,8 +265,12 @@ export default function NutritionTracker({
   const [barcodeValue, setBarcodeValue] = useState('');
   const [barcodeLoading, setBarcodeLoading] = useState(false);
   const [barcodeError, setBarcodeError] = useState('');
-  const [barcodeNotes, setBarcodeNotes] = useState('');
+  const [barcodeProduct, setBarcodeProduct] = useState<BarcodeLookupResult | null>(null);
+  const [barcodeNotFound, setBarcodeNotFound] = useState<BarcodeLookupNotFound | null>(null);
+  const [barcodeServingQty, setBarcodeServingQty] = useState('1');
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  const fallbackDetailsRef = useRef<HTMLDetailsElement>(null);
+  const [scannerError, setScannerError] = useState('');
   const [labelScanning, setLabelScanning] = useState(false);
   const [labelScanError, setLabelScanError] = useState('');
 
@@ -844,10 +858,31 @@ export default function NutritionTracker({
     setBarcodeValue('');
     setBarcodeLoading(false);
     setBarcodeError('');
-    setBarcodeNotes('');
+    setBarcodeProduct(null);
+    setBarcodeNotFound(null);
+    setBarcodeServingQty('1');
     setShowBarcodeScanner(false);
+    setScannerError('');
     setLabelScanning(false);
     setLabelScanError('');
+  }
+
+  function clearBarcodeResults() {
+    setBarcodeProduct(null);
+    setBarcodeNotFound(null);
+    setBarcodeServingQty('1');
+    setBarcodeError('');
+  }
+
+  function openBarcodeScanner() {
+    clearBarcodeResults();
+    setScannerError('');
+    setShowBarcodeScanner(true);
+  }
+
+  function closeBarcodeScanner() {
+    setShowBarcodeScanner(false);
+    setScannerError('');
   }
 
   function closeAddFood() {
@@ -875,15 +910,23 @@ export default function NutritionTracker({
 
   async function lookupBarcodeProduct(code?: string) {
     const barcode = String(code ?? barcodeValue).trim();
-    if (!barcode) return alert('Enter or scan a product barcode.');
+    if (!barcode) {
+      setBarcodeError('Enter a valid UPC or EAN barcode.');
+      return;
+    }
     const token = await getAuthToken();
-    if (!token) return alert('Sign in to look up barcodes.');
+    if (!token) {
+      setBarcodeError('Sign in to look up barcodes.');
+      return;
+    }
 
     setBarcodeLoading(true);
     setBarcodeError('');
-    setBarcodeNotes('');
+    clearBarcodeResults();
     setAiEstimateResult(null);
     setAiEstimateError('');
+    closeBarcodeScanner();
+
     try {
       const res = await fetch('/api/nutrition/barcode', {
         method: 'POST',
@@ -899,23 +942,108 @@ export default function NutritionTracker({
         throw new Error(err?.error || `Lookup failed (${res.status})`);
       }
       const data = raw as BarcodeLookupResponse;
+      setBarcodeValue(data.barcode || barcode);
       if (!isBarcodeLookupResult(data)) {
-        setBarcodeError(data.message || 'Product not found.');
+        setBarcodeNotFound(data);
         return;
       }
-      setBarcodeValue(data.barcode);
-      setBarcodeNotes(data.notes || '');
-      setPickedCatalogId(null);
-      setAddDraft({
-        ...addDraft,
-        ...barcodeResultToDraft(data, addDraft.meal_type),
-      });
+      setBarcodeProduct(data);
+      setBarcodeServingQty('1');
     } catch (e: any) {
       setBarcodeError(e?.message || 'Barcode lookup failed.');
     } finally {
       setBarcodeLoading(false);
-      setShowBarcodeScanner(false);
     }
+  }
+
+  function applyBarcodeProductToManual(product: BarcodeLookupResult, qty = barcodeServingQty) {
+    setPickedCatalogId(null);
+    setAddDraft({
+      ...addDraft,
+      ...barcodeResultToDraft(product, addDraft.meal_type, parseMacroInput(qty) || 1),
+    });
+  }
+
+  async function logBarcodeProduct(saveToLibrary: boolean) {
+    if (!barcodeProduct || !userId) return;
+    const qty = Math.max(0.25, parseMacroInput(barcodeServingQty) || 1);
+    const scaled = scaleBarcodeNutrition(barcodeProduct.per_serving, qty);
+    const foodName = barcodeDisplayName(barcodeProduct);
+    const extra = barcodeExtraNutritionNote(scaled);
+    const notes = [barcodeProduct.notes, extra, `Barcode ${barcodeProduct.barcode}`].filter(Boolean).join(' · ');
+
+    setSaving(true);
+    setError('');
+    let libraryId: string | null = null;
+
+    try {
+      if (saveToLibrary) {
+        const { data: libRow, error: libError } = await supabase
+          .from('st_food_library')
+          .insert({
+            user_id: userId,
+            name: foodName,
+            serving_label: barcodeProduct.serving_label,
+            calories: scaled.calories,
+            protein_g: scaled.protein_g,
+            carbs_g: scaled.carbs_g,
+            fat_g: scaled.fat_g,
+          })
+          .select()
+          .single();
+        if (libError) throw libError;
+        if (libRow) {
+          libraryId = libRow.id;
+          setSavedFoods((prev) =>
+            [...prev, libRow as FoodLibraryItem].sort((a, b) => a.name.localeCompare(b.name))
+          );
+        }
+      }
+
+      const inserted = await insertMealRows([
+        {
+          user_id: userId,
+          log_date: logDate,
+          meal_type: addDraft.meal_type,
+          food_name: foodName,
+          food_library_id: libraryId,
+          serving_qty: qty,
+          calories: scaled.calories,
+          protein_g: scaled.protein_g,
+          carbs_g: scaled.carbs_g,
+          fat_g: scaled.fat_g,
+          notes: notes || null,
+        },
+      ]);
+      setEntries((prev) => [...prev, ...inserted]);
+      setWeekEntries((prev) => [
+        ...prev,
+        ...inserted.map((row) => ({
+          log_date: row.log_date,
+          calories: row.calories,
+          protein_g: row.protein_g,
+          carbs_g: row.carbs_g,
+          fat_g: row.fat_g,
+        })),
+      ]);
+      notifyParent();
+      clearBarcodeResults();
+    } catch (e: any) {
+      setError(e?.message || 'Could not log scanned food.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function openManualBarcodeFallback() {
+    clearBarcodeResults();
+    if (fallbackDetailsRef.current) fallbackDetailsRef.current.open = true;
+    window.setTimeout(() => document.getElementById('barcode-input')?.focus(), 0);
+  }
+
+  function focusLabelPhotoInput() {
+    if (fallbackDetailsRef.current) fallbackDetailsRef.current.open = true;
+    document.getElementById('label-photo-input')?.click();
   }
 
   async function scanNutritionLabel(file: File | null) {
@@ -974,7 +1102,7 @@ export default function NutritionTracker({
     setAiEstimateResult(null);
     setLabelScanError('');
     setBarcodeError('');
-    setBarcodeNotes('');
+    clearBarcodeResults();
     try {
       const res = await fetch('/api/nutrition/estimate', {
         method: 'POST',
@@ -1241,73 +1369,124 @@ export default function NutritionTracker({
               </button>
             </div>
             <p className="muted nutrition-add-intro">
-              Scan a barcode or nutrition label for packaged food, search the catalog, describe a meal with AI, or
-              enter macros manually.
+              Tap <b>Scan Barcode</b> to use your rear camera on iPhone or Android. Fallback options appear if the
+              product is not found.
             </p>
 
           <div className="catalog-picker nutrition-scan-picker">
-            <h4 className="nutrition-add-section-title">Packaged food scan</h4>
-            <label htmlFor="barcode-input">Barcode lookup</label>
-            <div className="nutrition-barcode-row">
-              <input
-                id="barcode-input"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={barcodeValue}
-                onChange={(e) => setBarcodeValue(e.target.value.replace(/\D/g, ''))}
-                placeholder="UPC / EAN barcode"
-              />
-              <button
-                type="button"
-                className="btn secondary"
-                onClick={() => lookupBarcodeProduct()}
-                disabled={saving || barcodeLoading}
-              >
-                {barcodeLoading ? 'Looking up...' : 'Look up'}
-              </button>
-            </div>
-            <div className="actions" style={{ marginTop: 8 }}>
-              <button
-                type="button"
-                className="btn secondary"
-                onClick={() => setShowBarcodeScanner((v) => !v)}
-                disabled={saving || barcodeLoading}
-              >
-                {showBarcodeScanner ? 'Hide camera' : 'Scan with camera'}
-              </button>
-            </div>
+            <h4 className="nutrition-add-section-title">Packaged food</h4>
+
+            {!showBarcodeScanner && !barcodeProduct && !barcodeNotFound && (
+              <div className="actions" style={{ marginTop: 0 }}>
+                <button
+                  type="button"
+                  className="btn green"
+                  onClick={openBarcodeScanner}
+                  disabled={saving || barcodeLoading}
+                >
+                  Scan Barcode
+                </button>
+              </div>
+            )}
+
+            {barcodeLoading && (
+              <p className="muted nutrition-barcode-loading">Looking up product in Open Food Facts…</p>
+            )}
+
             {showBarcodeScanner && (
               <NutritionBarcodeScanner
                 onDetected={(code) => {
                   setBarcodeValue(code);
                   lookupBarcodeProduct(code);
                 }}
-                onClose={() => setShowBarcodeScanner(false)}
+                onClose={closeBarcodeScanner}
+                onError={(code, message) => setScannerError(message)}
               />
             )}
-            {barcodeNotes && <p className="muted nutrition-scan-notes">{barcodeNotes}</p>}
+
+            {scannerError && !showBarcodeScanner && <p className="nutrition-error">{scannerError}</p>}
             {barcodeError && <p className="nutrition-error">{barcodeError}</p>}
-            <p className="muted nutrition-scan-hint">
-              Uses Open Food Facts when available. If not found, scan the Nutrition Facts panel below.
-            </p>
-            <label htmlFor="label-photo-input" className="nutrition-label-upload">
-              Scan nutrition label (photo)
-            </label>
-            <input
-              id="label-photo-input"
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/*"
-              capture="environment"
-              disabled={saving || labelScanning}
-              onChange={(e) => {
-                const file = e.target.files?.[0] || null;
-                scanNutritionLabel(file);
-                e.target.value = '';
-              }}
-            />
-            <p className="muted nutrition-ai-disclaimer">{LABEL_OCR_DISCLAIMER}</p>
-            {labelScanError && <p className="nutrition-error">{labelScanError}</p>}
-            {labelScanning && <p className="muted">Reading nutrition label...</p>}
+
+            {barcodeProduct && (
+              <NutritionBarcodeProductCard
+                product={barcodeProduct}
+                mealType={addDraft.meal_type}
+                servingQty={barcodeServingQty}
+                onServingQtyChange={setBarcodeServingQty}
+                saving={saving}
+                onLog={logBarcodeProduct}
+                onReviewManual={() => applyBarcodeProductToManual(barcodeProduct)}
+              />
+            )}
+
+            {barcodeNotFound && (
+              <NutritionBarcodeNotFoundCard
+                result={barcodeNotFound}
+                onScanAgain={openBarcodeScanner}
+                onEnterManualUpc={openManualBarcodeFallback}
+                onLabelPhoto={focusLabelPhotoInput}
+                onManualEntry={() => {
+                  clearBarcodeResults();
+                  document.getElementById('add-name')?.focus();
+                }}
+                onSaveCustom={() => {
+                  setAddDraft({
+                    ...emptyFoodDraft(addDraft.meal_type),
+                    food_name: barcodeNotFound.barcode
+                      ? `Custom item (${barcodeNotFound.barcode})`
+                      : 'Custom packaged food',
+                    saveToLibrary: true,
+                  });
+                  clearBarcodeResults();
+                }}
+              />
+            )}
+
+            {!showBarcodeScanner && !barcodeProduct && !barcodeNotFound && (
+              <details className="nutrition-barcode-fallback" ref={fallbackDetailsRef}>
+                <summary>Fallback options</summary>
+                <p className="muted nutrition-scan-hint">
+                  Use these only if live scanning is unavailable or the product was not found.
+                </p>
+                <label htmlFor="barcode-input">Enter UPC / EAN manually</label>
+                <div className="nutrition-barcode-row">
+                  <input
+                    id="barcode-input"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={barcodeValue}
+                    onChange={(e) => setBarcodeValue(e.target.value.replace(/\D/g, ''))}
+                    placeholder="UPC / EAN barcode"
+                  />
+                  <button
+                    type="button"
+                    className="btn secondary"
+                    onClick={() => lookupBarcodeProduct()}
+                    disabled={saving || barcodeLoading}
+                  >
+                    Look up
+                  </button>
+                </div>
+                <label htmlFor="label-photo-input" className="nutrition-label-upload">
+                  Photograph nutrition label
+                </label>
+                <input
+                  id="label-photo-input"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/*"
+                  capture="environment"
+                  disabled={saving || labelScanning}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null;
+                    scanNutritionLabel(file);
+                    e.target.value = '';
+                  }}
+                />
+                <p className="muted nutrition-ai-disclaimer">{LABEL_OCR_DISCLAIMER}</p>
+                {labelScanError && <p className="nutrition-error">{labelScanError}</p>}
+                {labelScanning && <p className="muted">Reading nutrition label…</p>}
+              </details>
+            )}
           </div>
 
           <div className="catalog-picker nutrition-catalog-picker">

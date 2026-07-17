@@ -206,9 +206,21 @@ Goal: Prepare BuildIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
-Completed through **BIQ-0041** on `main`: barcode lookup, nutrition label OCR, and profile-based macro goal suggestions.
+Completed through **BIQ-0042** on `main`: iPhone-compatible live barcode scanner for PWA.
 
 ### Recently completed
+
+**BIQ-0042 — iPhone-Compatible Live Barcode Scanner** (Completed)
+
+| Part | Deliverable |
+|------|-------------|
+| 1 | `@zxing/browser` live camera decode for iPhone Safari / Home Screen PWA |
+| 2 | BarcodeDetector progressive enhancement on Chrome/Android |
+| 3 | Product review card with servings, image, extended nutrients |
+| 4 | Structured not-found fallbacks (manual UPC, label OCR, custom food) |
+| 5 | HTTPS-only camera with permission and error messaging |
+
+See `CHANGELOG.md` BIQ-0042 for full scope and iPhone PWA test steps.
 
 **BIQ-0041 — Barcode Lookup and Nutrition Label OCR** (Completed)
 
@@ -369,9 +381,10 @@ See `CHANGELOG.md` BIQ-0013 and BIQ-0024 for full scope.
 4. ~~Nutrition MVP placeholder → functional tracking~~ (BIQ-0034)
 5. ~~Profile-based macro goal suggestions~~ (BIQ-0040)
 6. ~~Barcode / label OCR for packaged foods~~ (BIQ-0041)
-7. AI Coach hook-up (consumes `coaching_metadata` + program + nutrition context)
-8. Progress tab nutrition trends
-9. Split `page.tsx` into focused components
+7. ~~iPhone PWA live barcode scanner~~ (BIQ-0042)
+8. AI Coach hook-up (consumes `coaching_metadata` + program + nutrition context)
+9. Progress tab nutrition trends
+10. Split `page.tsx` into focused components
 
 ### Planned — Platform admin and catalog operations
 

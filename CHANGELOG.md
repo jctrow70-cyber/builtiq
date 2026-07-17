@@ -3318,3 +3318,103 @@ Requires network access to Open Food Facts for barcode lookup and `OPENAI_API_KE
 BIQ-0041 Add barcode lookup and nutrition label OCR for packaged foods
 ```
 
+---
+
+## BIQ-0042 - iPhone-Compatible Live Barcode Scanner (PWA)
+
+Date: 2026-07-16  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Replaced BarcodeDetector-only scanning with a cross-browser live camera scanner using `@zxing/browser` on iPhone Safari and Home Screen PWA, with native `BarcodeDetector` as progressive enhancement on supported browsers. Added full product review UI, serving adjustment, extended nutrients, and structured fallback flows.
+
+### Purpose
+
+BIQ-0041 barcode lookup worked on desktop/Android Chrome but failed as the primary iPhone PWA experience because iOS Safari does not support `BarcodeDetector`. Users need live rear-camera scanning from the installed app without choosing a scanning engine.
+
+### Changes
+
+- Added `@zxing/browser` for UPC-A, UPC-E, EAN-8, and EAN-13 decode from live video frames
+- **Progressive enhancement:** `BarcodeDetector` when available; automatic ZXing fallback when not (no user engine choice)
+- Camera starts only after **Scan Barcode** tap; rear camera via `facingMode: { ideal: "environment" }`; HTTPS required
+- Live preview with visible scan guide; camera tracks stopped on close or successful read; duplicate reads locked after first decode
+- Extended Open Food Facts lookup: alternate UPC-A/EAN-13 candidates without stripping meaningful leading zeros; fiber, sugar, sodium, product image
+- **Product found UI:** name, brand, serving, image, macros, servings control, add to log, save food & log, review & edit
+- **Product not found UI:** scan again, enter UPC manually, label photo, manual entry, save as custom food (fallbacks only — not primary flow)
+- Specific error messages for permission denied, insecure context, camera unavailable, scanner init failure, etc.
+- Label OCR remains server-side (`OPENAI_API_KEY` on Vercel only); scanner does not use OpenAI
+
+### Files Changed
+
+- `package.json`, `package-lock.json` — `@zxing/browser`
+- `lib/nutrition/barcodeLookup.ts` — extended product model, UPC/EAN candidates, extra nutrients
+- `lib/nutrition/barcodeScannerErrors.ts` — scanner error codes and messages
+- `app/components/NutritionBarcodeScanner.tsx` — live scanner rewrite
+- `app/components/NutritionBarcodeProduct.tsx` — product found / not found cards
+- `app/components/NutritionTracker.tsx` — scan-first UX, product review, fallbacks
+- `app/globals.css`
+- `CHANGELOG.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None.
+
+Requires HTTPS (Vercel production). Label OCR still requires `OPENAI_API_KEY` on the server.
+
+### Testing Steps
+
+#### iPhone Safari (browser)
+
+1. Open `https://builtiq-duf7.vercel.app` (or latest production URL) in **Safari** over HTTPS.
+2. Sign in → **Nutrition** → **Add food** or **+ Add to Lunch**.
+3. Tap **Scan Barcode** → allow camera when prompted.
+4. Confirm rear-camera live preview with purple scan guide (not a static “unsupported” message).
+5. Scan a packaged **UPC-A** product → confirm lookup loading → product card with name, brand, serving, calories, protein, carbs, fat.
+6. Change **Servings** → confirm macros scale → **Add to Lunch** → entry appears under Lunch.
+7. Scan an unknown barcode → **Product not found** card with fallback buttons (not the primary flow).
+8. Deny camera permission → confirm specific permission-denied message and fallback options.
+9. Close scanner → reopen → confirm camera restarts cleanly.
+
+#### iPhone Home Screen PWA
+
+1. Install BuildIQ to Home Screen (Share → Add to Home Screen) if not already installed.
+2. Launch from Home Screen icon (standalone mode).
+3. Repeat steps 3–9 above in the installed PWA.
+4. Confirm scanner works the same as Safari browser (live preview + successful UPC scan).
+
+#### Android Chrome
+
+1. Open production URL in Chrome → **Nutrition** → **Scan Barcode**.
+2. Confirm scan works (may use native `BarcodeDetector` path).
+3. Successful EAN-13 scan → product card → log food.
+
+#### Desktop fallback
+
+1. Open on desktop Chrome/Edge with webcam.
+2. **Scan Barcode** → scan a product or confirm ZXing/BarcodeDetector initializes.
+3. Use **Fallback options** → manual UPC entry → lookup succeeds.
+
+#### Other cases
+
+1. **Permission denial:** deny camera → readable error + fallbacks visible.
+2. **Close/reopen:** close scanner mid-scan → tracks stop → reopen works.
+3. **Label photo fallback:** unknown barcode → **Photograph nutrition label** → confirm OCR prefills manual form (requires `OPENAI_API_KEY`).
+4. **Manual entry fallback:** product not found → **Enter nutrition manually** → manual form focused.
+5. **Save as custom food:** not found → **Save as custom food** → form opens with save-to-library checked.
+
+### Known Issues
+
+- ZXing continuous decode may use more battery than native BarcodeDetector on Android.
+- Open Food Facts coverage still varies; unknown products require fallbacks.
+- UPC-E expansion to UPC-A not implemented (8-digit compressed codes may miss unless database has UPC-E form).
+- Extended nutrients (fiber/sugar/sodium) stored in entry notes, not separate DB columns.
+
+### Recommended Commit Message
+
+```text
+BIQ-0042 Add iPhone-compatible live barcode scanner with ZXing and product review UI
+```
+
