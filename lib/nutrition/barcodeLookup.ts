@@ -60,7 +60,7 @@ export function barcodeLookupCandidates(raw: string): string[] {
     candidates.push(`0${digits}`);
   }
 
-  return [...new Set(candidates)];
+  return Array.from(new Set(candidates));
 }
 
 export function normalizeBarcode(raw: string): string | null {
