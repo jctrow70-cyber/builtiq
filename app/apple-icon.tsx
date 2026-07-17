@@ -18,6 +18,9 @@ export default function AppleIcon() {
       >
         <div
           style={{
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
             fontSize: 72,
             fontWeight: 900,
             letterSpacing: -3,

@@ -28,6 +28,9 @@ export default function Icon() {
         >
           <div
             style={{
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'center',
               fontSize: 168,
               fontWeight: 900,
               letterSpacing: -8,
