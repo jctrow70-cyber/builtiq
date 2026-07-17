@@ -226,7 +226,7 @@ export async function lookupBarcode(raw: string): Promise<BarcodeLookupResponse>
         continue;
       }
       const parsed = parseProduct(candidate, product);
-      if (parsed.found) return parsed;
+      if (isBarcodeLookupResult(parsed)) return parsed;
       lastNotFound = parsed;
     }
   } catch {
