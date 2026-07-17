@@ -560,7 +560,7 @@ export default function NutritionTracker({
         setAddDraft(emptyFoodDraft(mealType));
         setCatalogSearch('');
         setPickedCatalogId(null);
-        setShowAdd(false);
+        closeAddFood();
       }
       notifyParent();
     } catch (e: any) {
@@ -850,7 +850,17 @@ export default function NutritionTracker({
     setLabelScanError('');
   }
 
+  function closeAddFood() {
+    setShowAdd(false);
+    resetAddFoodExtras();
+  }
+
   function openAddFood(meal: MealType = 'breakfast') {
+    setShowGoals(false);
+    setEditEntryId(null);
+    setEditDraft(null);
+    setEditFoodId(null);
+    setFoodEditDraft(null);
     setAddDraft(emptyFoodDraft(meal));
     resetAddFoodExtras();
     setShowAdd(true);
@@ -1021,11 +1031,7 @@ export default function NutritionTracker({
       setEntries((prev) => [...prev, ...inserted]);
       notifyParent();
       await loadData();
-      setShowAdd(false);
-      setAiDescribe('');
-      setAiEstimateResult(null);
-      setCatalogSearch('');
-      setPickedCatalogId(null);
+      closeAddFood();
     } catch (e: any) {
       setError(e?.message || 'Could not log AI estimate.');
     } finally {
@@ -1220,55 +1226,28 @@ export default function NutritionTracker({
       )}
 
       {showAdd && (
-        <div className="card nutrition-add-card">
-          <h3>Add food</h3>
-          <div className="catalog-picker nutrition-catalog-picker">
-            <label htmlFor="catalog-search">Search food catalog</label>
-            <input
-              id="catalog-search"
-              value={catalogSearch}
-              onChange={(e) => setCatalogSearch(e.target.value)}
-              placeholder={
-                foodCatalog.length
-                  ? `Search ${foodCatalog.length} common foods (e.g. chicken, rice, yogurt)`
-                  : 'Search common foods (run BIQ-0036 migration for catalog)'
-              }
-            />
-            {foodCatalog.length > 0 && (
-              <p className="muted nutrition-catalog-meta">
-                {catalogSearch.trim()
-                  ? `${catalogMatchCount} match${catalogMatchCount === 1 ? '' : 'es'}`
-                  : 'Type to search or enter food manually below'}
-              </p>
-            )}
-            {catalogMatches.length > 0 && (
-              <div className="catalog-results">
-                {catalogMatches.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className={`catalog-result${pickedCatalogId === item.id ? ' picked' : ''}`}
-                    onClick={() => pickCatalogFood(item)}
-                  >
-                    <span>
-                      <b>{foodCatalogLabel(item)}</b>
-                      <span className="muted">
-                        {foodCatalogMeta(item)} · {item.calories} cal · {item.protein_g}P · {item.carbs_g}C ·{' '}
-                        {item.fat_g}F
-                      </span>
-                    </span>
-                    <span className="badge">Use</span>
-                  </button>
-                ))}
-              </div>
-            )}
-            {catalogSearch.trim() && catalogMatches.length === 0 && foodCatalog.length > 0 && (
-              <p className="muted">No catalog matches. Enter the food manually below.</p>
-            )}
-          </div>
+        <div className="panel-overlay" onClick={closeAddFood}>
+          <div
+            className="nutrition-add-panel card nutrition-add-card"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="nutrition-add-title"
+          >
+            <div className="topline" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
+              <h3 id="nutrition-add-title">Add food · {MEAL_TYPE_LABELS[addDraft.meal_type]}</h3>
+              <button type="button" className="btn small secondary" onClick={closeAddFood}>
+                Close
+              </button>
+            </div>
+            <p className="muted nutrition-add-intro">
+              Scan a barcode or nutrition label for packaged food, search the catalog, describe a meal with AI, or
+              enter macros manually.
+            </p>
 
           <div className="catalog-picker nutrition-scan-picker">
-            <label htmlFor="barcode-input">Barcode lookup (packaged food)</label>
+            <h4 className="nutrition-add-section-title">Packaged food scan</h4>
+            <label htmlFor="barcode-input">Barcode lookup</label>
             <div className="nutrition-barcode-row">
               <input
                 id="barcode-input"
@@ -1331,7 +1310,54 @@ export default function NutritionTracker({
             {labelScanning && <p className="muted">Reading nutrition label...</p>}
           </div>
 
+          <div className="catalog-picker nutrition-catalog-picker">
+            <h4 className="nutrition-add-section-title">Food catalog</h4>
+            <label htmlFor="catalog-search">Search food catalog</label>
+            <input
+              id="catalog-search"
+              value={catalogSearch}
+              onChange={(e) => setCatalogSearch(e.target.value)}
+              placeholder={
+                foodCatalog.length
+                  ? `Search ${foodCatalog.length} common foods (e.g. chicken, rice, yogurt)`
+                  : 'Search common foods (run BIQ-0036 migration for catalog)'
+              }
+            />
+            {foodCatalog.length > 0 && (
+              <p className="muted nutrition-catalog-meta">
+                {catalogSearch.trim()
+                  ? `${catalogMatchCount} match${catalogMatchCount === 1 ? '' : 'es'}`
+                  : 'Type to search or enter food manually below'}
+              </p>
+            )}
+            {catalogMatches.length > 0 && (
+              <div className="catalog-results">
+                {catalogMatches.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`catalog-result${pickedCatalogId === item.id ? ' picked' : ''}`}
+                    onClick={() => pickCatalogFood(item)}
+                  >
+                    <span>
+                      <b>{foodCatalogLabel(item)}</b>
+                      <span className="muted">
+                        {foodCatalogMeta(item)} · {item.calories} cal · {item.protein_g}P · {item.carbs_g}C ·{' '}
+                        {item.fat_g}F
+                      </span>
+                    </span>
+                    <span className="badge">Use</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            {catalogSearch.trim() && catalogMatches.length === 0 && foodCatalog.length > 0 && (
+              <p className="muted">No catalog matches. Enter the food manually below.</p>
+            )}
+          </div>
+
           <div className="catalog-picker nutrition-ai-picker">
+            <h4 className="nutrition-add-section-title">AI estimate</h4>
             <label htmlFor="ai-food-describe">Describe your food (AI estimate)</label>
             <textarea
               id="ai-food-describe"
@@ -1394,6 +1420,7 @@ export default function NutritionTracker({
             )}
           </div>
 
+          <h4 className="nutrition-add-section-title">Manual entry</h4>
           <FoodFormFields
             draft={addDraft}
             setDraft={(next) => {
@@ -1412,18 +1439,12 @@ export default function NutritionTracker({
           />
           <div className="actions" style={{ marginTop: 10 }}>
             <button type="button" className="btn green" onClick={() => addFoodEntry()} disabled={saving}>
-              {saving ? 'Saving...' : 'Log food'}
+              {saving ? 'Saving...' : `Log to ${MEAL_TYPE_LABELS[addDraft.meal_type]}`}
             </button>
-            <button
-              type="button"
-              className="btn secondary"
-              onClick={() => {
-                setShowAdd(false);
-                resetAddFoodExtras();
-              }}
-            >
+            <button type="button" className="btn secondary" onClick={closeAddFood}>
               Cancel
             </button>
+          </div>
           </div>
         </div>
       )}
@@ -1529,7 +1550,7 @@ export default function NutritionTracker({
                       disabled={saving}
                       title={`Add to ${MEAL_TYPE_LABELS[meal]}`}
                     >
-                      + {MEAL_TYPE_LABELS[meal].slice(0, 1)}
+                      + {MEAL_TYPE_LABELS[meal]}
                     </button>
                   ))}
                 </div>
