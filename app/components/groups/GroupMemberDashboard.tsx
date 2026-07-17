@@ -1,7 +1,7 @@
 'use client';
 
-import { assignmentTypeLabel } from '../../../lib/training/exerciseTypes';
-import { exerciseTypeOf, formatLogSummary } from '../../../lib/training/logFields';
+import { assignmentTypeLabel, exerciseTypeOf } from '../../../lib/training/exerciseTypes';
+import { formatLogSummary } from '../../../lib/training/logFields';
 import { formatDisplayDate } from '../../../lib/training/programCalendar';
 
 const SECTIONS = [
