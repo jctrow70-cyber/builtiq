@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { BarcodeFormat, BrowserMultiFormatReader, DecodeHintType } from '@zxing/browser';
+import { BarcodeFormat, BrowserMultiFormatReader, type IScannerControls } from '@zxing/browser';
+import { DecodeHintType } from '@zxing/library';
 import { barcodeLookupCandidates, digitsOnly } from '../../lib/nutrition/barcodeLookup';
 import {
   BARCODE_SCANNER_ERRORS,
@@ -31,6 +32,7 @@ export default function NutritionBarcodeScanner({ onDetected, onClose, onError }
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number | null>(null);
   const zxingReaderRef = useRef<BrowserMultiFormatReader | null>(null);
+  const zxingControlsRef = useRef<IScannerControls | null>(null);
   const lockedRef = useRef(false);
   const [status, setStatus] = useState<'starting' | 'scanning' | 'locked'>('starting');
   const [error, setError] = useState('');
@@ -40,7 +42,8 @@ export default function NutritionBarcodeScanner({ onDetected, onClose, onError }
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
-    zxingReaderRef.current?.reset();
+    zxingControlsRef.current?.stop();
+    zxingControlsRef.current = null;
     zxingReaderRef.current = null;
     streamRef.current?.getTracks().forEach((track) => track.stop());
     streamRef.current = null;
@@ -121,10 +124,10 @@ export default function NutritionBarcodeScanner({ onDetected, onClose, onError }
       const hints = new Map();
       hints.set(DecodeHintType.POSSIBLE_FORMATS, SCAN_FORMATS);
       hints.set(DecodeHintType.TRY_HARDER, true);
-      const reader = new BrowserMultiFormatReader(hints, 250);
+      const reader = new BrowserMultiFormatReader(hints, { delayBetweenScanAttempts: 250 });
       zxingReaderRef.current = reader;
 
-      await reader.decodeFromConstraints(
+      const controls = await reader.decodeFromConstraints(
         { video: { facingMode: { ideal: 'environment' } } },
         video,
         (result, err) => {
@@ -138,6 +141,7 @@ export default function NutritionBarcodeScanner({ onDetected, onClose, onError }
           }
         }
       );
+      zxingControlsRef.current = controls;
 
       const mediaStream = video.srcObject;
       if (mediaStream instanceof MediaStream) {
