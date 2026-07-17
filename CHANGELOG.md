@@ -3596,3 +3596,72 @@ Use two test accounts: **Owner/Manager** (User A) and **Member** (User B) in the
 BIQ-0043-P2 Add group classifications and workout assignment schema
 ```
 
+---
+
+## BIQ-0043-P3 - My Groups Hub (Phase 3)
+
+Date: 2026-07-17  
+Branch: preview/groups-v2-biq-0043  
+Status: Completed
+
+### Summary
+
+Built the **My Groups** hub on the Groups tab: create/join forms (no `prompt()`), multi-group list/detail navigation, Owner/Manager vs Member views, roster management (remove member, participation toggle, role change), and extracted member dashboard. Removed group management from Settings and Program Setup create/join buttons.
+
+### Purpose
+
+Centralize all group lifecycle and roster management in the Groups tab so Training stays focused on logging and program setup. Managers get compliance and member dashboards in one place; members see a simplified view with Open Training.
+
+### Changes
+
+- **`app/components/groups/GroupsHub.tsx`** — list/detail hub, role-based panels, roster actions
+- **`app/components/groups/GroupCreateJoinPanel.tsx`** — create/join forms with validation
+- **`app/components/groups/GroupMemberDashboard.tsx`** — extracted manager member dashboard
+- **`app/page.tsx`** — wire `GroupsHub`; `createTeam`/`joinTeam` accept form args; `removeMember`, `setMemberParticipation`; remove Settings Groups card and inline group panels
+- **`supabase/migrations/20250717_024_group_remove_member.sql`** — `st_remove_group_member` RPC
+- **`app/globals.css`** — `.groups-hub`, group cards, roster action layout
+
+### Files Changed
+
+- `app/components/groups/GroupsHub.tsx` (new)
+- `app/components/groups/GroupCreateJoinPanel.tsx` (new)
+- `app/components/groups/GroupMemberDashboard.tsx` (new)
+- `app/page.tsx`
+- `app/globals.css`
+- `supabase/migrations/20250717_024_group_remove_member.sql` (new)
+- `CHANGELOG.md`
+
+### Database Changes
+
+**Apply migration:** run `20250717_024_group_remove_member.sql` in Supabase SQL Editor before testing remove member.
+
+| Object | Action |
+|--------|--------|
+| `st_remove_group_member(team_id, user_id)` | Added RPC — soft-removes member (`status = 'removed'`) |
+
+### Testing Steps
+
+1. **Empty state:** Sign in with no groups → Groups tab shows create/join forms (not Settings redirect).
+2. **Create group:** Enter name → group created, lands on detail view with invite code and owner role.
+3. **Join group:** Second account joins via invite code → appears in roster.
+4. **Multi-group:** User in 2+ groups sees list → tap card → detail → “All groups” back.
+5. **Manager view:** Owner/manager sees compliance metrics, member dashboard on row click, plan dropdown, participation checkbox, Remove button.
+6. **Owner role:** Owner can change member roles via roster dropdown.
+7. **Member view:** Regular member sees plan toggle, activity stats, limited roster; no compliance or remove controls.
+8. **Open Training:** Member “Open Training” navigates to Training tab.
+9. **Settings:** No Groups section; profile and catalog only.
+10. **Program Setup:** Group program mode with no groups shows link to Groups tab (no Create/Join buttons).
+11. **Remove member:** After migration 024, manager removes member → member disappears from roster.
+12. **Mobile:** Groups list, forms, and roster actions readable on narrow viewport.
+
+### Known Issues
+
+- Classifications UI and workout assignment delivery still Phase 4–5
+- Leave-group (self-remove) flow not built — owners cannot remove themselves via Remove button (by design)
+
+### Recommended Commit Message
+
+```text
+BIQ-0043-P3 Add My Groups hub and move group management from Settings
+```
+
