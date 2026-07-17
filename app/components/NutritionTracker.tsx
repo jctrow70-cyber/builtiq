@@ -1055,8 +1055,7 @@ export default function NutritionTracker({
     setLabelScanError('');
     setAiEstimateResult(null);
     setAiEstimateError('');
-    setBarcodeError('');
-    setBarcodeNotes('');
+    clearBarcodeResults();
     try {
       const buffer = await file.arrayBuffer();
       const bytes = new Uint8Array(buffer);
