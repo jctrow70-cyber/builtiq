@@ -883,8 +883,12 @@ export default function NutritionTracker({
         },
         body: JSON.stringify({ barcode }),
       });
-      const data = (await res.json().catch(() => ({}))) as BarcodeLookupResponse & { error?: string };
-      if (!res.ok) throw new Error(data?.error || `Lookup failed (${res.status})`);
+      const raw = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const err = raw as { error?: string };
+        throw new Error(err?.error || `Lookup failed (${res.status})`);
+      }
+      const data = raw as BarcodeLookupResponse;
       if (!data.found) {
         setBarcodeError(data.message || 'Product not found.');
         return;
