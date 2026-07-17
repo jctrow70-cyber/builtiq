@@ -1,5 +1,0 @@
-﻿=== package.json ===
-    "@zxing/browser": "^0.1.5",
-=== package-lock (first 3) ===
-=== node_modules exists ===
-False
