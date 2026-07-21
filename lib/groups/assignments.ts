@@ -1,3 +1,4 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   dayLabelFromYmd,
   resolveProgramStartDate,
@@ -79,12 +80,12 @@ export function assignedHasPersonalCopy(row: AssignedWorkoutRow): boolean {
 }
 
 export async function copyAssignmentToPersonal(
-  supabase: { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: string | null; error: { message: string } | null }> },
+  supabase: SupabaseClient,
   recipientId: string,
 ): Promise<{ programId: string | null; error: string | null }> {
   const { data, error } = await supabase.rpc('st_copy_assignment_to_personal', {
     p_recipient_id: recipientId,
   });
   if (error) return { programId: null, error: error.message };
-  return { programId: data, error: null };
+  return { programId: typeof data === 'string' ? data : null, error: null };
 }
