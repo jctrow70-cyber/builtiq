@@ -4005,3 +4005,7 @@ Removed the **My training plan** card from the Groups tab (duplicate of Training
 BIQ-0043 Remove duplicate My training plan card from Groups tab
 ```
 
+### Deploy note
+
+2026-07-21: Commit `93a881b` reached GitHub but did not appear in Vercel; follow-up push with this changelog entry to trigger preview redeploy.
+
