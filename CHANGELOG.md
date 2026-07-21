@@ -3420,6 +3420,655 @@ BIQ-0042 Add iPhone-compatible live barcode scanner with ZXing and product revie
 
 ---
 
+## BIQ-0043-P1 - Group Training Nav Foundation (Phase 1)
+
+Date: 2026-07-17  
+Branch: preview/groups-v2-biq-0043  
+Status: Completed
+
+### Summary
+
+Introduced the Group Training platform foundation: shared permissions module (Owner / Manager / Member), renamed user-facing Team → Group, replaced the Team tab with a Groups management tab, and unified Training to Personal Training + Program Setup only.
+
+### Purpose
+
+Separate group management from workout logging so Training becomes the unified logging hub (personal + assigned group workouts in later phases) while Groups handles roster, compliance, and member performance for owners and managers.
+
+### Changes
+
+- Added `lib/groups/` — `types.ts`, `permissions.ts`, `index.ts` with `normalizeRole`, `roleLabel`, `canManageGroup`, `canLogWorkout`, `roleForDatabase` / `roleForUi` (DB keeps `editor` for RLS)
+- Top nav: **Team** → **Groups**; removed legacy Team tab and Training → Team Training sub-tab
+- **Groups tab:** group selector, invite code, compliance, roster, member dashboard (managers), plan source toggle
+- **Training tab:** Personal Training + Program Setup; Assigned Workouts placeholder for Phase 4
+- User-facing copy: Team → Group; editor → Manager; coach → manager where shown
+- Settings: Groups create/join; role dropdown Owner / Manager / Member
+- Dashboard: Group Compliance card links to Groups
+- `assignmentTypeLabel`: Group Plan labels in `lib/training/exerciseTypes.ts`
+- AI generate route accepts `manager` role and updated error copy
+
+### Files Changed
+
+- `lib/groups/types.ts` (new)
+- `lib/groups/permissions.ts` (new)
+- `lib/groups/index.ts` (new)
+- `app/page.tsx`
+- `lib/training/exerciseTypes.ts`
+- `app/api/programs/generate/route.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None. Tables remain `st_teams`, `st_team_members`, `st_program_assignments`.
+
+### Testing Steps
+
+- Sign in; confirm top nav shows **Groups** (not Team)
+- Settings → Create Group / Join Group; confirm invite code and role labels (Owner / Manager / Member)
+- Groups tab: select group, view compliance and roster; as manager, click member → dashboard → Open workout → lands in Training
+- Training tab: only **Personal Training** and **Program Setup** sub-tabs; Assigned Workouts placeholder visible when in a group
+- Log a personal workout; confirm set logs save
+- Manager: open member workout from Groups, log a set on their behalf
+- Dashboard Group Compliance card opens Groups tab
+- Program Setup → Group program (manager only); AI/template generate still works
+- Mobile: nav tabs and Groups roster readable on narrow viewport
+
+### Known Issues
+
+- Assigned Workouts section is a placeholder until BIQ-0043 Phase 4
+- Internal code still uses `mode: 'team'` and table name `st_teams` (user-facing label is Group)
+- Member invite/remove UI not yet built (Phase 3+)
+
+### Recommended Commit Message
+
+```text
+BIQ-0043-P1 Add groups permission module and Group Training nav foundation
+```
+
+---
+
+## BIQ-0043-P2 - Group Training Schema (Phase 2)
+
+Date: 2026-07-17  
+Branch: preview/groups-v2-biq-0043  
+Status: Completed
+
+### Summary
+
+Added database foundation for Group Training: member participation flag, group classifications, workout assignments with recipient rows, program-assignment targeting columns, manager role backfill (`editor` → `manager`), and three RPCs. **No UI changes** — app behavior unchanged until Phase 3+.
+
+### Purpose
+
+Enable future Assigned Workouts delivery (P4), classification targeting (P5), and participation controls without another breaking schema pass. Keeps RLS aligned with Owner / Manager / Member.
+
+### Changes
+
+- `st_team_members.is_active_participant` (default `true`) — permission role vs training participation
+- Backfill `role = 'manager'` where `role = 'editor'`; CHECK constraint `owner | manager | member`
+- **`st_group_classifications`** — group-scoped tags (Pitchers, JV, Rehab, etc.)
+- **`st_group_member_classifications`** — many-to-many member ↔ classification
+- **`st_workout_assignments`** — one-time workout delivery with `target_type`, schedule/due dates, snapshot version
+- **`st_assignment_recipients`** — per-user delivery + status (personal copy column reserved for P6)
+- **`st_program_assignments`** — `target_type`, `target_classification_id`; existing rows backfilled to `individual`
+- Updated `st_user_can_edit_team`, coach-read helpers, program/set-log RLS for `manager` role
+- RPCs: `st_assign_workout_to_targets`, `st_promote_member_to_manager`, `st_set_member_participation`
+- Updated `st_assign_member_program` to set `target_type = 'individual'`
+- `lib/groups/schema.ts` — TypeScript types/constants for new tables
+- `roleForDatabase()` now persists `manager` (not `editor`)
+
+### Files Changed
+
+- `supabase/migrations/20250717_023_group_training_schema.sql` (new)
+- `lib/groups/types.ts`
+- `lib/groups/permissions.ts`
+- `lib/groups/schema.ts` (new)
+- `lib/groups/index.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+**Apply migration:** run `20250717_023_group_training_schema.sql` in Supabase SQL Editor (or `supabase db push` if linked).
+
+| Object | Action |
+|--------|--------|
+| `st_team_members.is_active_participant` | Added |
+| `st_team_members.role` | Backfill + CHECK |
+| `st_group_classifications` | New table + RLS |
+| `st_group_member_classifications` | New table + RLS |
+| `st_workout_assignments` | New table + RLS |
+| `st_assignment_recipients` | New table + RLS |
+| `st_program_assignments.target_type` | Added + backfill |
+| `st_program_assignments.target_classification_id` | Added |
+| RPCs | 3 new + 2 updated |
+
+### Testing Steps (SQL — run in Supabase as authenticated users)
+
+Use two test accounts: **Owner/Manager** (User A) and **Member** (User B) in the same group.
+
+**1. Migration smoke**
+- [ ] Migration runs without error on dev Supabase
+- [ ] `select role, is_active_participant from st_team_members` — no `editor` rows remain; all active members `is_active_participant = true`
+- [ ] `select target_type from st_program_assignments where is_active` — all `individual` or null backfilled
+
+**2. Classifications (manager)**
+- [ ] As User A: `insert into st_group_classifications (team_id, name, slug) values (...)` succeeds
+- [ ] Link User B: insert into `st_group_member_classifications` succeeds
+- [ ] As User B: can `select` classifications for their group
+- [ ] As User B: cannot insert/update classifications (RLS denied)
+
+**3. Participation RPC**
+- [ ] As User A: `select st_set_member_participation(team_id, user_b, false)` — User B row updates
+- [ ] As User B: same RPC fails with "Not authorized"
+
+**4. Promote manager RPC**
+- [ ] As Owner: `select st_promote_member_to_manager(team_id, user_b)` when User B is `member` → role becomes `manager`
+- [ ] As Manager (non-owner): RPC fails "Only owner can promote"
+
+**5. Workout assignment RPC**
+- [ ] As User A: `select st_assign_workout_to_targets(team_id, workout_id, ..., 'individual', null, array[user_b]::uuid[], ...)` returns assignment UUID
+- [ ] Verify `st_assignment_recipients` has one row for User B
+- [ ] As User B: `select * from st_workout_assignments` — sees only assignments where they are a recipient
+- [ ] As User B: cannot see other members' recipient rows for assignments not theirs
+- [ ] As User A: `target_type = 'group'` creates recipients for all `is_active_participant = true` members
+
+**6. Regression (P1 behavior)**
+- [ ] `st_assign_member_program` still works from Groups UI
+- [ ] Manager can still co-log member sets on group programs
+- [ ] Settings role dropdown saves Owner / Manager / Member (writes `manager`, not `editor`)
+- [ ] `npm run build` passes locally
+
+**7. App UI (unchanged — expect no new screens)**
+- [ ] Training / Groups / Settings behave as after P1
+- [ ] Assigned Workouts placeholder still shows (no live assignments yet)
+
+### Known Issues
+
+- No UI for classifications, workout assignments, or participation toggle until P3–P5
+- `st_assignment_instances` and copy-to-personal flow deferred to P6
+- `st_assign_workout_to_targets` does not snapshot workout template yet (`template_snapshot_version` reserved)
+
+### Recommended Commit Message
+
+```text
+BIQ-0043-P2 Add group classifications and workout assignment schema
+```
+
+---
+
+## BIQ-0043-P3 - My Groups Hub (Phase 3)
+
+Date: 2026-07-17  
+Branch: preview/groups-v2-biq-0043  
+Status: Completed
+
+### Summary
+
+Built the **My Groups** hub on the Groups tab: create/join forms (no `prompt()`), multi-group list/detail navigation, Owner/Manager vs Member views, roster management (remove member, participation toggle, role change), and extracted member dashboard. Removed group management from Settings and Program Setup create/join buttons.
+
+### Purpose
+
+Centralize all group lifecycle and roster management in the Groups tab so Training stays focused on logging and program setup. Managers get compliance and member dashboards in one place; members see a simplified view with Open Training.
+
+### Changes
+
+- **`app/components/groups/GroupsHub.tsx`** — list/detail hub, role-based panels, roster actions
+- **`app/components/groups/GroupCreateJoinPanel.tsx`** — create/join forms with validation
+- **`app/components/groups/GroupMemberDashboard.tsx`** — extracted manager member dashboard
+- **`app/page.tsx`** — wire `GroupsHub`; `createTeam`/`joinTeam` accept form args; `removeMember`, `setMemberParticipation`; remove Settings Groups card and inline group panels
+- **`supabase/migrations/20250717_024_group_remove_member.sql`** — `st_remove_group_member` RPC
+- **`app/globals.css`** — `.groups-hub`, group cards, roster action layout
+
+### Files Changed
+
+- `app/components/groups/GroupsHub.tsx` (new)
+- `app/components/groups/GroupCreateJoinPanel.tsx` (new)
+- `app/components/groups/GroupMemberDashboard.tsx` (new)
+- `app/page.tsx`
+- `app/globals.css`
+- `supabase/migrations/20250717_024_group_remove_member.sql` (new)
+- `CHANGELOG.md`
+
+### Database Changes
+
+**Apply migration:** run `20250717_024_group_remove_member.sql` in Supabase SQL Editor before testing remove member.
+
+| Object | Action |
+|--------|--------|
+| `st_remove_group_member(team_id, user_id)` | Added RPC — soft-removes member (`status = 'removed'`) |
+
+### Testing Steps
+
+1. **Empty state:** Sign in with no groups → Groups tab shows create/join forms (not Settings redirect).
+2. **Create group:** Enter name → group created, lands on detail view with invite code and owner role.
+3. **Join group:** Second account joins via invite code → appears in roster.
+4. **Multi-group:** User in 2+ groups sees list → tap card → detail → “All groups” back.
+5. **Manager view:** Owner/manager sees compliance metrics, member dashboard on row click, plan dropdown, participation checkbox, Remove button.
+6. **Owner role:** Owner can change member roles via roster dropdown.
+7. **Member view:** Regular member sees plan toggle, activity stats, limited roster; no compliance or remove controls.
+8. **Open Training:** Member “Open Training” navigates to Training tab.
+9. **Settings:** No Groups section; profile and catalog only.
+10. **Program Setup:** Group program mode with no groups shows link to Groups tab (no Create/Join buttons).
+11. **Remove member:** After migration 024, manager removes member → member disappears from roster.
+12. **Mobile:** Groups list, forms, and roster actions readable on narrow viewport.
+
+### Known Issues
+
+- Classifications UI and workout assignment delivery still Phase 4–5
+- Leave-group (self-remove) flow not built — owners cannot remove themselves via Remove button (by design)
+
+### Recommended Commit Message
+
+```text
+BIQ-0043-P3 Add My Groups hub and move group management from Settings
+```
+
+---
+
+## BIQ-0043-P4 - Assigned Workouts in Training (Phase 4)
+
+Date: 2026-07-20  
+Branch: preview/groups-v2-biq-0043  
+Status: Completed
+
+### Summary
+
+Members see group-assigned workouts in **Training → Assigned Workouts**, can start/continue logging with the existing workout logger, and auto-complete recipient status when all sets are logged. Managers assign workouts from the **Groups** tab (whole group or selected members) via `st_assign_workout_to_targets`.
+
+### Purpose
+
+Deliver one-time group workout assignments into the unified Training logger — the core product split from Decision 026. Managers assign; members log in one place alongside their personal program.
+
+### Changes
+
+- **`AssignedWorkoutsPanel`** — member inbox in Training (pending/started/completed)
+- **`GroupAssignWorkoutPanel`** — manager assign form on Groups detail (group or selected members)
+- **`lib/groups/assignments.ts`** — assignment helpers, workout resolution, display labels
+- **`app/page.tsx`** — load assignments, open/close assigned workout context, log with group `team_id`, auto-complete recipient
+- **`GroupsHub`** — assign workout panel for managers
+- **`app/globals.css`** — assigned workout + assign form styles
+
+### Files Changed
+
+- `app/components/groups/AssignedWorkoutsPanel.tsx` (new)
+- `app/components/groups/GroupAssignWorkoutPanel.tsx` (new)
+- `app/components/groups/GroupsHub.tsx`
+- `lib/groups/assignments.ts` (new)
+- `lib/groups/index.ts`
+- `app/page.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None — uses P2 schema and `st_assign_workout_to_targets` RPC. Ensure migration `20250717_023_group_training_schema.sql` is applied.
+
+### Testing Steps
+
+1. **Manager setup:** Owner/manager creates a group program in Training → Program Setup (Group program mode).
+2. **Assign whole group:** Groups tab → Assign workout → pick workout → Whole group → Assign.
+3. **Member inbox:** Member opens Training → Assigned Workouts shows the assignment with group name and date.
+4. **Start logging:** Member taps Start → assigned workout banner appears, logger loads (read-only template).
+5. **Complete:** Log all sets → recipient status becomes Completed; appears under Recently completed.
+6. **Back to personal:** Back to personal program restores member's personal program below.
+7. **Selected members:** Manager assigns to 1–2 members only → only those members see it.
+8. **Regression:** Personal program logging still works; manager co-log on member view unchanged.
+
+### Known Issues
+
+- No workout template snapshot on assign yet (`template_snapshot_version` reserved)
+- Personal copy of assigned workout deferred to Phase 6
+
+### Recommended Commit Message
+
+```text
+BIQ-0043-P4 Add assigned workouts delivery in Training and manager assign UI
+```
+
+---
+
+## BIQ-0043-P5 - Classification Targeting UI (Phase 5)
+
+Date: 2026-07-20  
+Branch: preview/groups-v2-biq-0043  
+Status: Completed
+
+### Summary
+
+Managers can create **classifications** (Pitchers, JV, Rehab, etc.), tag members on the roster, and assign workouts to a **classification** target — in addition to whole group or selected members. Uses P2 `st_group_classifications`, `st_group_member_classifications`, and `st_assign_workout_to_targets` with `target_type = 'classification'`.
+
+### Purpose
+
+Enable segment-based coaching (sport teams, training groups, rehab tracks) without assigning workouts one member at a time. Completes the targeting model from Decision 026 / P2 schema.
+
+### Changes
+
+- **`GroupClassificationsPanel`** — create/delete classifications with member counts
+- **Roster tag chips** — managers toggle member ↔ classification links; all members see tags on roster
+- **`GroupAssignWorkoutPanel`** — new **Classification** send target with member count preview
+- **`lib/groups/classifications.ts`** — slug helper, member count, display helpers
+- **`app/page.tsx`** — load/save classifications and member links
+
+### Files Changed
+
+- `app/components/groups/GroupClassificationsPanel.tsx` (new)
+- `app/components/groups/GroupAssignWorkoutPanel.tsx`
+- `app/components/groups/GroupsHub.tsx`
+- `lib/groups/classifications.ts` (new)
+- `lib/groups/index.ts`
+- `app/page.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None — uses P2 tables and RPC. Ensure `20250717_023_group_training_schema.sql` is applied.
+
+### Testing Steps
+
+1. **Create classification:** Groups → Classifications → add "Pitchers".
+2. **Tag members:** On roster, check Pitchers for 2 members → tags show in member subtitle.
+3. **Assign to classification:** Assign workout → Classification → Pitchers → Assign.
+4. **Recipient check:** Only tagged members see assignment in Training → Assigned Workouts.
+5. **Untagged member:** Member not tagged does not receive assignment.
+6. **Delete classification:** Delete tag → member links removed; assign dropdown updates.
+7. **Duplicate slug:** Adding classification with same slug name fails gracefully (unique constraint).
+8. **Member read-only:** Regular member sees tags on roster but cannot edit classifications.
+
+### Known Issues
+
+- Program assignment by classification not in UI yet (workout assignments only)
+- No bulk import of classifications
+
+### Follow-up fix (same branch)
+
+- **Group program not showing in Training:** P1 accidentally forced `mode='personal'` on the Personal Training tab, hiding existing group programs. Fixed by syncing mode from `training_source`, adding an **Active plan** toggle on Training, and ensuring `setMyTrainingSource` reloads the correct program.
+
+### Recommended Commit Message
+
+```text
+BIQ-0043-P5 Add group classifications and classification workout targeting
+```
+
+---
+
+## BIQ-0043-P6 - Personal Copy of Assigned Workouts (Phase 6)
+
+Date: 2026-07-21  
+Branch: preview/groups-v2-biq-0043  
+Status: Completed
+
+### Summary
+
+Members can **copy an assigned group workout into a personal one-week program**, customize exercises and sets, and still log against the group assignment. The copy is linked on `st_assignment_recipients.personal_copy_program_id` and reused on reopen.
+
+### Purpose
+
+Coaches assign a shared template; athletes often need to swap exercises (equipment, injury, preference) without losing assignment tracking. Personal copy keeps the group assignment context while allowing member-owned edits.
+
+### Changes
+
+- **`st_copy_assignment_to_personal` RPC** — atomic copy of one workout (exercises, planned sets, supersets) into a personal program; idempotent if copy already exists
+- **`lib/groups/assignments.ts`** — `personal_copy_program_id` on row type, `assignedHasPersonalCopy`, `copyAssignmentToPersonal`
+- **`openAssignedWorkout` / `canEdit`** — load personal copy when present; enable structure edits on copy only; group template stays read-only
+- **`AssignedWorkoutsPanel`** — Copy action + personal copy badge on open assignments
+- **Assigned workout banner** — copy CTA, read-only vs personal-copy messaging
+- **Logging** — unchanged: logs still attach group `team_id` from the assignment
+
+### Files Changed
+
+- `supabase/migrations/20250717_025_copy_assignment_to_personal.sql` (new)
+- `lib/groups/assignments.ts`
+- `app/page.tsx`
+- `app/components/groups/AssignedWorkoutsPanel.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+- New RPC: `st_copy_assignment_to_personal(p_recipient_id uuid) returns uuid`
+- Uses existing `st_assignment_recipients.personal_copy_program_id` column from P2
+
+Apply migration `20250717_025_copy_assignment_to_personal.sql` in Supabase before testing.
+
+### Testing Steps
+
+1. **Assign workout:** Manager assigns a group workout to a member (P4/P5 flow).
+2. **Read-only open:** Member taps Start → sees assigned banner with read-only template (no add/remove exercise).
+3. **Copy:** Tap **Copy to personal plan** (banner or Assigned Workouts row) → personal copy loads; member can add/replace exercises and edit sets.
+4. **Reopen:** Back out and Continue → same personal copy loads (not group template).
+5. **Log & complete:** Log all sets on personal copy → recipient status becomes Completed; group `team_id` on logs preserved.
+6. **Idempotent copy:** Tap Copy again on same assignment → no duplicate program; existing copy reused.
+7. **Regression:** Personal program and group program logging unchanged when not in assigned context.
+
+### Known Issues
+
+- Logs started on the group template before copy do not transfer to the personal copy (new planned set IDs)
+- `st_assignment_instances` deferred; copy is one program per recipient per assignment
+
+### Recommended Commit Message
+
+```text
+BIQ-0043-P6 Add personal copy of assigned workouts for member customization
+```
+
+---
+
+## BIQ-0043-P7 - Member Performance Dashboard (Phase 7)
+
+Date: 2026-07-21  
+Branch: preview/groups-v2-biq-0043  
+Status: Completed
+
+### Summary
+
+Managers see **assignment compliance, PRs, 8-week volume trends, and recent workout history** when opening a member from the Groups roster. Roster rows show **New PR**, open assignment count, and overdue badges.
+
+### Purpose
+
+Complete the Groups management hub with performance visibility — compliance for assigned workouts plus strength progress reused from the Progress tab analytics.
+
+### Changes
+
+- **`lib/groups/memberPerformance.ts`** — fetch logs/assignments, compliance math, history, roster meta
+- **`MemberPerformancePanel.tsx`** — assignment compliance + reuses `ProgressInsights` + history list
+- **`GroupMemberDashboard.tsx`** — embeds performance panel for managers
+- **`GroupsHub.tsx`** — roster badges (PR, assigned, overdue)
+- **`app/page.tsx`** — load member performance bundle and roster meta
+
+### Files Changed
+
+- `lib/groups/memberPerformance.ts` (new)
+- `lib/groups/index.ts`
+- `app/components/groups/MemberPerformancePanel.tsx` (new)
+- `app/components/groups/GroupMemberDashboard.tsx`
+- `app/components/groups/GroupsHub.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None — uses existing `st_set_logs`, `st_assignment_recipients`, `st_workout_assignments`.
+
+### Testing Steps
+
+1. Manager opens member from roster → sees assignment compliance, PRs, trends, history.
+2. Member with recent max weight → roster shows **New PR** badge.
+3. Member with open assignments → roster shows assignment count; overdue if past due date.
+4. Member with no logs → empty states, no errors.
+5. Regression: member self-view and Training logging unchanged.
+
+### Known Issues
+
+- PR/trend analytics use all member logs (not group-scoped only) for richer history
+- Roster meta refreshes on Groups tab load / member refresh, not live on every log
+
+### Recommended Commit Message
+
+```text
+BIQ-0043-P7 Add member performance dashboard for group managers
+```
+
+---
+
+## BIQ-0043-P8 - AI Readiness Metadata Hooks (Phase 8)
+
+Date: 2026-07-21  
+Branch: preview/groups-v2-biq-0043  
+Status: Completed
+
+### Summary
+
+Added **`coaching_metadata` JSONB** on group assignments, program assignments, and teams. Extended assign RPCs to accept metadata. **No AI UI** — structure only for future AI Coach integration.
+
+### Purpose
+
+Prepare group/program assignment rows for future AI progression and coaching without shipping AI features in this epic.
+
+### Changes
+
+- **Migration `20250717_026_group_ai_metadata_hooks.sql`** — columns + RPC param `p_coaching_metadata`
+- **`lib/groups/aiMetadata.ts`** — TypeScript types and normalize helpers
+- **`lib/groups/schema.ts`** — `coaching_metadata` on workout assignment type
+- **`app/page.tsx`** — passes `{}` on assign calls (defaults preserved)
+
+### Files Changed
+
+- `supabase/migrations/20250717_026_group_ai_metadata_hooks.sql` (new)
+- `lib/groups/aiMetadata.ts` (new)
+- `lib/groups/schema.ts`
+- `lib/groups/index.ts`
+- `app/page.tsx`
+- `CHANGELOG.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+- `st_workout_assignments.coaching_metadata jsonb default '{}'`
+- `st_program_assignments.coaching_metadata jsonb default '{}'`
+- `st_teams.coaching_metadata jsonb default '{}'`
+- `st_assign_workout_to_targets` + `st_assign_member_program` accept `p_coaching_metadata`
+
+Apply migration `20250717_026_group_ai_metadata_hooks.sql` in Supabase.
+
+### Testing Steps
+
+1. Apply migration; existing rows default to `{}`.
+2. Assign workout / member program → succeeds (metadata defaults empty).
+3. App behavior unchanged for users.
+4. Optional SQL: set metadata on assignment row → persists.
+
+### Known Issues
+
+- No UI to edit assignment metadata yet (future AI/admin work)
+- `st_assignment_instances` still deferred
+
+### Recommended Commit Message
+
+```text
+BIQ-0043-P8 Add coaching_metadata hooks on group assignments for future AI
+```
+
+---
+
+## BIQ-0043-P3 follow-up - Remove duplicate plan toggle from Groups
+
+Date: 2026-07-21  
+Branch: preview/groups-v2-biq-0043  
+Status: Completed
+
+### Summary
+
+Removed the **My training plan** card from the Groups tab (duplicate of Training → **Active plan**). Per Decision 026, Groups is management-only; members choose group vs personal program in Training.
+
+### What stayed
+
+- `training_source` in database and **Active plan** toggle on Training
+- Manager roster dropdown (Group / Personal per member)
+- Compliance metrics (On group plan / Personal plan)
+
+### Files Changed
+
+- `app/components/groups/GroupsHub.tsx`
+- `app/page.tsx`
+- `docs/BIQ-0043-QA-Checklist.csv`
+- `CHANGELOG.md`
+
+### Recommended Commit Message
+
+```text
+BIQ-0043 Remove duplicate My training plan card from Groups tab
+```
+
+### Deploy note
+
+2026-07-21: Commit `93a881b` reached GitHub but did not appear in Vercel; follow-up push with this changelog entry to trigger preview redeploy.
+
+---
+
+## BIQ-0044 - Nutrition Dashboard Circular Progress Rings
+
+Date: 2026-07-21  
+Branch: preview/groups-v2-biq-0043  
+Status: Completed
+
+### Summary
+
+Replaced the top-of-page numeric tiles and horizontal macro bars with a responsive 2×2 grid of animated circular progress rings for calories, protein, carbs, and fat. Reordered the Nutrition screen so daily progress is visible first, followed by remaining calories, meal logs, food library tools, and weekly history.
+
+### Purpose
+
+Users should understand daily nutrition progress within seconds of opening Nutrition. Visual rings communicate goal status faster than tables of numbers while preserving all logging, barcode, AI, and history features.
+
+### Changes
+
+- Added `NutritionMacroRing` and `NutritionMacroDashboard` components with SVG rings
+- Added `lib/nutrition/macroRing.ts` for arc math, status colors, and remaining-calorie copy
+- Ring colors: primary purple (0–89%), green (90–100%), amber when over goal
+- Added compact daily calories remaining strip below the dashboard
+- Reordered sections: dashboard → remaining → meals → templates/my foods → weekly chart
+- Removed legacy `MacroBar` horizontal progress bars from the summary card
+
+### Files Changed
+
+- `app/components/NutritionMacroRing.tsx` (new)
+- `app/components/NutritionMacroDashboard.tsx` (new)
+- `app/components/NutritionTracker.tsx`
+- `lib/nutrition/macroRing.ts` (new)
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+- Open Nutrition on mobile and desktop; confirm four rings fit above the fold on common phone sizes
+- Log food and confirm rings animate smoothly when totals change
+- Set goals and verify ring fill matches consumed ÷ goal
+- Confirm purple below 90%, green from 90–100%, amber when slightly over goal
+- Confirm remaining calories strip shows “X Remaining” or “X Over”
+- Verify meal cards, Add food modal, barcode scan, templates, my foods, and weekly history still work
+- Change dates and confirm rings reflect the selected day
+
+### Known Issues
+
+None.
+
+### Recommended Commit Message
+
+```text
+BIQ-0044 Add circular macro progress dashboard to Nutrition screen
+```
+
+---
+
 ## BIQ-0045 - Paginate exercise catalog load (fix missing search results)
 
 Date: 2026-07-21  

@@ -86,7 +86,7 @@ Goal: Complete the core workout logging experience.
 
 - `exercise_type` with strength vs cardio adaptive logging UI
 - Labeled supersets (Superset A / 1A / 1B) with rename and reorder
-- Training tabs: Personal Training · Team Training · Program Setup
+- Training tabs: Personal Training · Program Setup (Group management moved to **Groups** tab — BIQ-0043-P1)
 - `st_program_assignments` with four assignment modes
 - Enhanced member dashboard + coach co-logging permissions
 
@@ -367,7 +367,7 @@ See `CHANGELOG.md` BIQ-0013 and BIQ-0024 for full scope.
 |------|-------------|
 | 1 | `exercise_type` + adaptive strength/cardio logging |
 | 2 | Labeled supersets with rename/reorder |
-| 3 | Personal / Team / Program Setup tabs |
+| 3 | Personal / Program Setup tabs; group management on **Groups** tab (BIQ-0043-P1) |
 | 4 | Program assignments (team, personal, individual, manual) |
 | 5 | Enhanced member dashboard |
 | 6 | Coach + member logging permissions |
@@ -375,16 +375,17 @@ See `CHANGELOG.md` BIQ-0013 and BIQ-0024 for full scope.
 
 ### Next priorities
 
-1. ~~PR detection and strength trends on Progress tab~~ (BIQ-0026)
-2. **App admin roles** — move beyond env-only catalog import admin (see below)
-3. AI program regeneration / edit-from-prompt for existing programs
-4. ~~Nutrition MVP placeholder → functional tracking~~ (BIQ-0034)
-5. ~~Profile-based macro goal suggestions~~ (BIQ-0040)
-6. ~~Barcode / label OCR for packaged foods~~ (BIQ-0041)
-7. ~~iPhone PWA live barcode scanner~~ (BIQ-0042)
-8. AI Coach hook-up (consumes `coaching_metadata` + program + nutrition context)
-9. Progress tab nutrition trends
-10. Split `page.tsx` into focused components
+1. **Group Training platform (BIQ-0043)** — P1–P8 complete; epic ready for preview QA
+2. ~~PR detection and strength trends on Progress tab~~ (BIQ-0026)
+3. **App admin roles** — move beyond env-only catalog import admin (see below)
+4. AI program regeneration / edit-from-prompt for existing programs
+5. ~~Nutrition MVP placeholder → functional tracking~~ (BIQ-0034)
+6. ~~Profile-based macro goal suggestions~~ (BIQ-0040)
+7. ~~Barcode / label OCR for packaged foods~~ (BIQ-0041)
+8. ~~iPhone PWA live barcode scanner~~ (BIQ-0042)
+9. AI Coach hook-up (consumes `coaching_metadata` + program + nutrition context)
+10. Progress tab nutrition trends
+11. Split `page.tsx` into focused components
 
 ### Planned — Platform admin and catalog operations
 

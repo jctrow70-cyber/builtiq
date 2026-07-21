@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import DateInput from './DateInput';
 import NutritionWeeklySummary from './NutritionWeeklySummary';
+import NutritionMacroDashboard from './NutritionMacroDashboard';
 import {
   DEFAULT_NUTRITION_GOALS,
   entryToPerServing,
@@ -12,7 +12,6 @@ import {
   formatMacroLine,
   goalsFromRow,
   groupEntriesByMeal,
-  macroProgress,
   mealEntryFromDraft,
   MEAL_TYPE_LABELS,
   MEAL_TYPES,
@@ -99,32 +98,72 @@ const emptyFoodDraft = (meal: MealType = 'breakfast'): FoodDraft => ({
   saveToLibrary: false,
 });
 
-function MacroBar({
-  label,
-  actual,
-  target,
-  unit = 'g',
-}: {
-  label: string;
-  actual: number;
-  target: number;
-  unit?: string;
-}) {
-  const pct = macroProgress(actual, target);
+type MyFoodsPanelProps = {
+  foodSearch: string;
+  setFoodSearch: (value: string) => void;
+  foods: FoodLibraryItem[];
+  saving: boolean;
+  onEdit: (food: FoodLibraryItem) => void;
+  onAddToMeal: (food: FoodLibraryItem, meal: MealType) => void;
+};
+
+function MyFoodsPanel({
+  foodSearch,
+  setFoodSearch,
+  foods,
+  saving,
+  onEdit,
+  onAddToMeal,
+}: MyFoodsPanelProps) {
   return (
-    <div className="nutrition-macro-bar">
-      <div className="nutrition-macro-bar-head">
-        <span>{label}</span>
-        <span className="muted">
-          {formatMacro(actual)}
-          {unit === 'g' ? 'g' : ''} / {formatMacro(target)}
-          {unit === 'g' ? 'g' : ''}
-        </span>
-      </div>
-      <div className="nutrition-progress-track">
-        <div className="nutrition-progress-fill" style={{ width: `${pct}%` }} />
-      </div>
-    </div>
+    <>
+      <p className="muted nutrition-add-intro">
+        Quick-add saved foods. Macros are snapshotted when logged so history stays accurate.
+      </p>
+      <input
+        value={foodSearch}
+        onChange={(e) => setFoodSearch(e.target.value)}
+        placeholder="Search saved foods"
+      />
+      {foods.length === 0 ? (
+        <p className="muted">
+          No saved foods yet. Log a food and check &ldquo;Save to my foods&rdquo; to build your library.
+        </p>
+      ) : (
+        <div className="nutrition-food-grid">
+          {foods.map((food) => (
+            <div key={food.id} className="nutrition-food-chip">
+              <div>
+                <b>{food.name}</b>
+                <span className="muted">{formatMacroLine(food)}</span>
+              </div>
+              <div className="nutrition-food-chip-actions">
+                <button
+                  type="button"
+                  className="btn small secondary"
+                  onClick={() => onEdit(food)}
+                  disabled={saving}
+                >
+                  Edit
+                </button>
+                {MEAL_TYPES.map((meal) => (
+                  <button
+                    key={meal}
+                    type="button"
+                    className="btn small secondary"
+                    onClick={() => onAddToMeal(food, meal)}
+                    disabled={saving}
+                    title={`Add to ${MEAL_TYPE_LABELS[meal]}`}
+                  >
+                    + {MEAL_TYPE_LABELS[meal]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
   );
 }
 
@@ -243,9 +282,14 @@ export default function NutritionTracker({
   const [foodCatalog, setFoodCatalog] = useState<FoodCatalogItem[]>([]);
   const [mealTemplates, setMealTemplates] = useState<MealTemplate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dayRefreshing, setDayRefreshing] = useState(false);
+  const [dayAnimDir, setDayAnimDir] = useState<'forward' | 'back' | 'none'>('none');
+  const hasLoadedRef = useRef(false);
+  const daySwipeStartX = useRef<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [showAdd, setShowAdd] = useState(false);
+  const [showMyFoods, setShowMyFoods] = useState(false);
   const [showGoals, setShowGoals] = useState(false);
   const [addDraft, setAddDraft] = useState<FoodDraft>(emptyFoodDraft());
   const [editEntryId, setEditEntryId] = useState<string | null>(null);
@@ -318,15 +362,26 @@ export default function NutritionTracker({
 
   const setDate = useCallback(
     (next: string) => {
+      if (next !== logDate) {
+        const current = parseYmd(logDate).getTime();
+        const target = parseYmd(next).getTime();
+        setDayAnimDir(target > current ? 'forward' : target < current ? 'back' : 'none');
+        setEntries([]);
+        setShowAdd(false);
+        setShowMyFoods(false);
+        setShowGoals(false);
+      }
       setLogDate(next);
       onDateChange?.(next);
     },
-    [onDateChange]
+    [logDate, onDateChange]
   );
 
   const loadData = useCallback(async () => {
     if (!userId) return;
-    setLoading(true);
+    const isInitial = !hasLoadedRef.current;
+    if (isInitial) setLoading(true);
+    else setDayRefreshing(true);
     setError('');
     const { monday, sunday } = currentCalendarWeekBounds(parseYmd(logDate));
     try {
@@ -406,7 +461,9 @@ export default function NutritionTracker({
     } catch (e: any) {
       setError(e?.message || 'Could not load nutrition data.');
     } finally {
+      hasLoadedRef.current = true;
       setLoading(false);
+      setDayRefreshing(false);
     }
   }, [userId, logDate]);
 
@@ -885,12 +942,24 @@ export default function NutritionTracker({
     setScannerError('');
   }
 
+  function closeMyFoods() {
+    setShowMyFoods(false);
+    setFoodSearch('');
+  }
+
+  function openMyFoods() {
+    setShowAdd(false);
+    resetAddFoodExtras();
+    setShowMyFoods(true);
+  }
+
   function closeAddFood() {
     setShowAdd(false);
     resetAddFoodExtras();
   }
 
   function openAddFood(meal: MealType = 'breakfast') {
+    setShowMyFoods(false);
     setShowGoals(false);
     setEditEntryId(null);
     setEditDraft(null);
@@ -1172,70 +1241,84 @@ export default function NutritionTracker({
     setDate(d.toISOString().slice(0, 10));
   }
 
+  function onDaySwipeStart(e: React.TouchEvent) {
+    daySwipeStartX.current = e.touches[0]?.clientX ?? null;
+  }
+
+  function onDaySwipeEnd(e: React.TouchEvent) {
+    if (daySwipeStartX.current == null) return;
+    const endX = e.changedTouches[0]?.clientX ?? daySwipeStartX.current;
+    const delta = endX - daySwipeStartX.current;
+    daySwipeStartX.current = null;
+    if (Math.abs(delta) < 56) return;
+    shiftDate(delta > 0 ? -1 : 1);
+  }
+
+  const dayPanelClass = `nutrition-day-view nutrition-day-view--${dayAnimDir}${
+    dayRefreshing ? ' is-refreshing' : ''
+  }`;
+
   return (
     <section className="nutrition-tracker">
-      <div className="card nutrition-summary-card">
-        <div className="topline" style={{ justifyContent: 'space-between' }}>
-          <h2>Daily nutrition</h2>
-          <span className="badge">{formatDisplayDate(logDate)}</span>
-        </div>
-        <div className="nutrition-date-row">
-          <button type="button" className="btn small secondary" onClick={() => shiftDate(-1)}>
-            Prev
-          </button>
-          <DateInput value={logDate} onChange={setDate} />
-          <button type="button" className="btn small secondary" onClick={() => shiftDate(1)}>
-            Next
-          </button>
-          <button type="button" className="btn small secondary" onClick={() => setDate(todayYmd())}>
-            Today
-          </button>
-        </div>
-        {loading ? (
+      {loading ? (
+        <div className="card nutrition-summary-card">
+          <div className="topline nutrition-summary-head">
+            <h2>Daily nutrition</h2>
+            <span className="badge">{formatDisplayDate(logDate)}</span>
+          </div>
           <p className="muted">Loading nutrition log...</p>
-        ) : (
-          <>
-            <div className="nutrition-totals-grid">
-              <div className="nutrition-total-tile">
-                <b>{formatMacro(totals.calories)}</b>
-                <span className="muted">Calories</span>
-              </div>
-              <div className="nutrition-total-tile">
-                <b>{formatMacro(totals.protein_g)}g</b>
-                <span className="muted">Protein</span>
-              </div>
-              <div className="nutrition-total-tile">
-                <b>{formatMacro(totals.carbs_g)}g</b>
-                <span className="muted">Carbs</span>
-              </div>
-              <div className="nutrition-total-tile">
-                <b>{formatMacro(totals.fat_g)}g</b>
-                <span className="muted">Fat</span>
-              </div>
-            </div>
-            <div className="nutrition-macro-bars">
-              <MacroBar label="Calories" actual={totals.calories} target={goals.calories} unit="" />
-              <MacroBar label="Protein" actual={totals.protein_g} target={goals.protein_g} />
-              <MacroBar label="Carbs" actual={totals.carbs_g} target={goals.carbs_g} />
-              <MacroBar label="Fat" actual={totals.fat_g} target={goals.fat_g} />
-            </div>
-          </>
-        )}
-        <div className="actions" style={{ marginTop: 10 }}>
-          <button type="button" className="btn green" onClick={() => openAddFood()} disabled={saving}>
-            Add food
-          </button>
-          <button type="button" className="btn secondary" onClick={() => setShowGoals(true)} disabled={saving}>
-            Edit goals
-          </button>
-          <button type="button" className="btn secondary" onClick={copyYesterday} disabled={saving}>
-            Copy yesterday
-          </button>
         </div>
-        {error && <p className="nutrition-error">{error}</p>}
-      </div>
+      ) : (
+        <div
+          className="nutrition-day-swipe"
+          onTouchStart={onDaySwipeStart}
+          onTouchEnd={onDaySwipeEnd}
+        >
+          <div key={logDate} className={dayPanelClass}>
+            <div className="card nutrition-summary-card">
+              <div className="topline nutrition-summary-head">
+                <h2>Daily nutrition</h2>
+                <div className="nutrition-date-nav">
+                  <button
+                    type="button"
+                    className="btn small secondary nutrition-date-arrow"
+                    onClick={() => shiftDate(-1)}
+                    aria-label="Previous day"
+                    disabled={dayRefreshing}
+                  >
+                    ‹
+                  </button>
+                  <button
+                    type="button"
+                    className="btn small secondary nutrition-date-arrow"
+                    onClick={() => shiftDate(1)}
+                    aria-label="Next day"
+                    disabled={dayRefreshing}
+                  >
+                    ›
+                  </button>
+                  <span className="badge">{formatDisplayDate(logDate)}</span>
+                </div>
+              </div>
+              <NutritionMacroDashboard totals={totals} goals={goals} />
+              <div className="actions nutrition-summary-actions">
+                <button type="button" className="btn green" onClick={() => openAddFood()} disabled={saving}>
+                  Add food
+                </button>
+                <button type="button" className="btn secondary" onClick={() => setShowGoals(true)} disabled={saving}>
+                  Edit goals
+                </button>
+                <button type="button" className="btn secondary" onClick={copyYesterday} disabled={saving}>
+                  Copy yesterday
+                </button>
+                <button type="button" className="btn secondary" onClick={openMyFoods} disabled={saving}>
+                  My foods
+                </button>
+              </div>
+              {error && <p className="nutrition-error">{error}</p>}
+            </div>
 
-      {!loading && showGoalSuggestionBanner && (
+            {showGoalSuggestionBanner && (
         <div className="card nutrition-goals-suggest-card">
           <div className="topline" style={{ justifyContent: 'space-between' }}>
             <h3>Suggested macro goals</h3>
@@ -1269,14 +1352,6 @@ export default function NutritionTracker({
             </button>
           </div>
         </div>
-      )}
-
-      {!loading && (
-        <NutritionWeeklySummary
-          summary={weeklySummary}
-          activeDate={logDate}
-          onSelectDate={setDate}
-        />
       )}
 
       {showGoals && (
@@ -1627,6 +1702,36 @@ export default function NutritionTracker({
         </div>
       )}
 
+      {showMyFoods && (
+        <div className="panel-overlay" onClick={closeMyFoods}>
+          <div
+            className="nutrition-add-panel card nutrition-my-foods-panel"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="nutrition-my-foods-title"
+          >
+            <div className="topline" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
+              <h3 id="nutrition-my-foods-title">My foods</h3>
+              <button type="button" className="btn small secondary" onClick={closeMyFoods}>
+                Close
+              </button>
+            </div>
+            <MyFoodsPanel
+              foodSearch={foodSearch}
+              setFoodSearch={setFoodSearch}
+              foods={filteredFoods}
+              saving={saving}
+              onEdit={(food) => {
+                closeMyFoods();
+                openEditFood(food);
+              }}
+              onAddToMeal={(food, meal) => addFoodEntry(food, 1, meal)}
+            />
+          </div>
+        </div>
+      )}
+
       {editEntryId && editDraft && (
         <div className="card nutrition-add-card">
           <h3>Edit food entry</h3>
@@ -1641,175 +1746,6 @@ export default function NutritionTracker({
               onClick={() => {
                 setEditEntryId(null);
                 setEditDraft(null);
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div className="card nutrition-library-card">
-        <h3>Meal templates</h3>
-        <p className="muted">Save a logged meal as a template, then log the whole meal in one tap.</p>
-        {activeTemplates.length === 0 ? (
-          <p className="muted">No templates yet. Use &ldquo;Save as template&rdquo; on a meal section below.</p>
-        ) : (
-          <div className="nutrition-template-grid">
-            {activeTemplates.map((template) => {
-              const templateTotals = sumMacros(template.items);
-              return (
-                <div key={template.id} className="nutrition-template-chip">
-                  <div>
-                    <b>{template.name}</b>
-                    <span className="muted">
-                      {MEAL_TYPE_LABELS[template.meal_type]} · {template.items.length} item(s) ·{' '}
-                      {formatMacroLine(templateTotals)}
-                    </span>
-                  </div>
-                  <div className="nutrition-food-chip-actions">
-                    <button
-                      type="button"
-                      className="btn small green"
-                      onClick={() => logMealTemplate(template)}
-                      disabled={saving}
-                    >
-                      Log today
-                    </button>
-                    <button
-                      type="button"
-                      className="btn small red"
-                      onClick={() => archiveTemplate(template.id)}
-                      disabled={saving}
-                    >
-                      Archive
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      <div className="card nutrition-library-card">
-        <h3>My foods</h3>
-        <p className="muted">Quick-add saved foods. Macros are snapshotted when logged so history stays accurate.</p>
-        <input
-          value={foodSearch}
-          onChange={(e) => setFoodSearch(e.target.value)}
-          placeholder="Search saved foods"
-        />
-        {filteredFoods.length === 0 ? (
-          <p className="muted">No saved foods yet. Log a food and check &ldquo;Save to my foods&rdquo; to build your library.</p>
-        ) : (
-          <div className="nutrition-food-grid">
-            {filteredFoods.map((food) => (
-              <div key={food.id} className="nutrition-food-chip">
-                <div>
-                  <b>{food.name}</b>
-                  <span className="muted">{formatMacroLine(food)}</span>
-                </div>
-                <div className="nutrition-food-chip-actions">
-                  <button
-                    type="button"
-                    className="btn small secondary"
-                    onClick={() => openEditFood(food)}
-                    disabled={saving}
-                  >
-                    Edit
-                  </button>
-                  {MEAL_TYPES.map((meal) => (
-                    <button
-                      key={meal}
-                      type="button"
-                      className="btn small secondary"
-                      onClick={() => addFoodEntry(food, 1, meal)}
-                      disabled={saving}
-                      title={`Add to ${MEAL_TYPE_LABELS[meal]}`}
-                    >
-                      + {MEAL_TYPE_LABELS[meal]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {editFoodId && foodEditDraft && (
-        <div className="card nutrition-add-card">
-          <h3>Edit saved food</h3>
-          <label htmlFor="food-edit-name">Name</label>
-          <input
-            id="food-edit-name"
-            value={foodEditDraft.name}
-            onChange={(e) => setFoodEditDraft({ ...foodEditDraft, name: e.target.value })}
-          />
-          <label htmlFor="food-edit-serving">Serving label</label>
-          <input
-            id="food-edit-serving"
-            value={foodEditDraft.serving_label}
-            onChange={(e) => setFoodEditDraft({ ...foodEditDraft, serving_label: e.target.value })}
-          />
-          <div className="row">
-            <div>
-              <label htmlFor="food-edit-cal">Calories</label>
-              <input
-                id="food-edit-cal"
-                type="number"
-                min="0"
-                value={foodEditDraft.calories}
-                onChange={(e) => setFoodEditDraft({ ...foodEditDraft, calories: e.target.value })}
-              />
-            </div>
-            <div>
-              <label htmlFor="food-edit-protein">Protein g</label>
-              <input
-                id="food-edit-protein"
-                type="number"
-                min="0"
-                value={foodEditDraft.protein_g}
-                onChange={(e) => setFoodEditDraft({ ...foodEditDraft, protein_g: e.target.value })}
-              />
-            </div>
-          </div>
-          <div className="row">
-            <div>
-              <label htmlFor="food-edit-carbs">Carbs g</label>
-              <input
-                id="food-edit-carbs"
-                type="number"
-                min="0"
-                value={foodEditDraft.carbs_g}
-                onChange={(e) => setFoodEditDraft({ ...foodEditDraft, carbs_g: e.target.value })}
-              />
-            </div>
-            <div>
-              <label htmlFor="food-edit-fat">Fat g</label>
-              <input
-                id="food-edit-fat"
-                type="number"
-                min="0"
-                value={foodEditDraft.fat_g}
-                onChange={(e) => setFoodEditDraft({ ...foodEditDraft, fat_g: e.target.value })}
-              />
-            </div>
-          </div>
-          <div className="actions" style={{ marginTop: 10 }}>
-            <button type="button" className="btn green" onClick={saveEditedFood} disabled={saving}>
-              {saving ? 'Saving...' : 'Save food'}
-            </button>
-            <button type="button" className="btn red" onClick={() => archiveFood(editFoodId)} disabled={saving}>
-              Archive
-            </button>
-            <button
-              type="button"
-              className="btn secondary"
-              onClick={() => {
-                setEditFoodId(null);
-                setFoodEditDraft(null);
               }}
             >
               Cancel
@@ -1894,6 +1830,138 @@ export default function NutritionTracker({
           </div>
         );
       })}
+
+      <div className="card nutrition-library-card">
+        <h3>Meal templates</h3>
+        <p className="muted">Save a logged meal as a template, then log the whole meal in one tap.</p>
+        {activeTemplates.length === 0 ? (
+          <p className="muted">No templates yet. Use &ldquo;Save as template&rdquo; on a meal section above.</p>
+        ) : (
+          <div className="nutrition-template-grid">
+            {activeTemplates.map((template) => {
+              const templateTotals = sumMacros(template.items);
+              return (
+                <div key={template.id} className="nutrition-template-chip">
+                  <div>
+                    <b>{template.name}</b>
+                    <span className="muted">
+                      {MEAL_TYPE_LABELS[template.meal_type]} · {template.items.length} item(s) ·{' '}
+                      {formatMacroLine(templateTotals)}
+                    </span>
+                  </div>
+                  <div className="nutrition-food-chip-actions">
+                    <button
+                      type="button"
+                      className="btn small green"
+                      onClick={() => logMealTemplate(template)}
+                      disabled={saving}
+                    >
+                      Log today
+                    </button>
+                    <button
+                      type="button"
+                      className="btn small red"
+                      onClick={() => archiveTemplate(template.id)}
+                      disabled={saving}
+                    >
+                      Archive
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {editFoodId && foodEditDraft && (
+        <div className="card nutrition-add-card">
+          <h3>Edit saved food</h3>
+          <label htmlFor="food-edit-name">Name</label>
+          <input
+            id="food-edit-name"
+            value={foodEditDraft.name}
+            onChange={(e) => setFoodEditDraft({ ...foodEditDraft, name: e.target.value })}
+          />
+          <label htmlFor="food-edit-serving">Serving label</label>
+          <input
+            id="food-edit-serving"
+            value={foodEditDraft.serving_label}
+            onChange={(e) => setFoodEditDraft({ ...foodEditDraft, serving_label: e.target.value })}
+          />
+          <div className="row">
+            <div>
+              <label htmlFor="food-edit-cal">Calories</label>
+              <input
+                id="food-edit-cal"
+                type="number"
+                min="0"
+                value={foodEditDraft.calories}
+                onChange={(e) => setFoodEditDraft({ ...foodEditDraft, calories: e.target.value })}
+              />
+            </div>
+            <div>
+              <label htmlFor="food-edit-protein">Protein g</label>
+              <input
+                id="food-edit-protein"
+                type="number"
+                min="0"
+                value={foodEditDraft.protein_g}
+                onChange={(e) => setFoodEditDraft({ ...foodEditDraft, protein_g: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="row">
+            <div>
+              <label htmlFor="food-edit-carbs">Carbs g</label>
+              <input
+                id="food-edit-carbs"
+                type="number"
+                min="0"
+                value={foodEditDraft.carbs_g}
+                onChange={(e) => setFoodEditDraft({ ...foodEditDraft, carbs_g: e.target.value })}
+              />
+            </div>
+            <div>
+              <label htmlFor="food-edit-fat">Fat g</label>
+              <input
+                id="food-edit-fat"
+                type="number"
+                min="0"
+                value={foodEditDraft.fat_g}
+                onChange={(e) => setFoodEditDraft({ ...foodEditDraft, fat_g: e.target.value })}
+              />
+            </div>
+          </div>
+          <div className="actions" style={{ marginTop: 10 }}>
+            <button type="button" className="btn green" onClick={saveEditedFood} disabled={saving}>
+              {saving ? 'Saving...' : 'Save food'}
+            </button>
+            <button type="button" className="btn red" onClick={() => archiveFood(editFoodId)} disabled={saving}>
+              Archive
+            </button>
+            <button
+              type="button"
+              className="btn secondary"
+              onClick={() => {
+                setEditFoodId(null);
+                setFoodEditDraft(null);
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+            <NutritionWeeklySummary
+              summary={weeklySummary}
+              activeDate={logDate}
+              onSelectDate={setDate}
+            />
+          </div>
+        </div>
+      )}
     </section>
   );
 }

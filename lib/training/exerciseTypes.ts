@@ -33,11 +33,11 @@ export function isStrengthLike(type: ExerciseType) {
 }
 
 export function assignmentTypeLabel(t: string) {
-  if (t === 'team') return 'Team Plan';
+  if (t === 'team') return 'Group Plan';
   if (t === 'personal') return 'Personal Plan';
-  if (t === 'individual_team') return 'Individual Team Plan';
+  if (t === 'individual_team') return 'Individual Group Plan';
   if (t === 'manual') return 'Manual';
-  return t || 'Team Plan';
+  return t || 'Group Plan';
 }
 
 function exerciseSection(ex: any) {

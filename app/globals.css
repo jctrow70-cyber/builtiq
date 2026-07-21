@@ -60,7 +60,51 @@
 .exercise-card.in-superset{margin-bottom:0;border:1px solid rgba(109,92,174,.55);background:rgba(15,23,42,.72);box-shadow:inset 0 1px 0 rgba(167,139,250,.08)}
 .catalog-result.picked{border-color:var(--purple);background:#171628}
 .team-plan-card,.team-roster-card{margin-bottom:10px}
-.team-member-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.groups-hub{display:flex;flex-direction:column;gap:10px}
+.groups-hub-back{align-self:flex-start;margin-bottom:2px}
+.groups-hub-list{display:flex;flex-direction:column;gap:8px}
+.group-card-btn{display:block;width:100%;text-align:left;border:1px solid var(--line);background:#0f172a;color:inherit;border-radius:14px;padding:12px 14px;cursor:pointer}
+.group-card-btn:hover{border-color:#4c3f78;background:#121827}
+.group-card-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}
+.group-create-join{margin-top:0}
+.group-create-join-compact{margin-top:4px}
+.team-member-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end}
+.team-member-participation{font-size:11px;color:var(--muted);margin:0!important;white-space:nowrap}
+.assigned-workouts-panel,.group-assign-workout{margin-bottom:10px}
+.assigned-workout-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;padding:12px 0;border-top:1px solid var(--line)}
+.assigned-workout-row.active{background:#121827;border-radius:12px;padding:12px;margin:0 -4px}
+.assigned-workout-row.completed{opacity:.85}
+.assigned-workout-main b{display:block;font-size:14px}
+.assigned-workout-main .muted{display:block;font-size:11px;margin-top:2px}
+.assigned-workout-notes{display:block;font-size:11px;margin-top:4px;font-style:italic}
+.assigned-workout-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end}
+.assigned-status-badge{background:#312654;color:#ddd6fe}
+.personal-copy-badge{background:#1e3a2f;color:#bbf7d0}
+.assigned-copy-hint{margin-top:6px;font-size:12px}
+.assigned-banner-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end}
+.assigned-workout-banner{border-color:#4c3f78}
+.member-performance-panel{margin-top:12px;display:grid;gap:10px}
+.member-assignment-compliance,.member-workout-history{margin-top:0}
+.member-history-row{padding:10px 0;border-top:1px solid var(--line)}
+.member-history-row b{display:block;font-size:13px}
+.member-history-row .muted{display:block;font-size:11px;margin-top:2px}
+.member-roster-badges{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end;margin-top:6px}
+.member-overdue-badge{background:#4a1d1d;color:#fecaca}
+.team-member-main{align-items:flex-start}
+.assign-member-picks{display:flex;flex-wrap:wrap;gap:8px 14px;margin:8px 0}
+.assign-member-pick{margin:0!important;font-size:12px}
+.assign-error{color:#f87171;font-size:12px;margin-top:8px}
+.assign-success{color:#86efac;font-size:12px;margin-top:8px}
+.group-classifications-card{margin-bottom:10px}
+.classification-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.classification-row b{display:block;font-size:14px}
+.classification-row .muted{display:block;font-size:11px;margin-top:2px}
+.classification-add-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin-top:6px}
+.member-classification-picks{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.classification-chip-toggle{font-size:11px;color:var(--muted);margin:0!important;padding:4px 8px;border:1px solid var(--line);border-radius:999px;background:#0f172a}
+.classification-chip-toggle input{margin-right:4px}
+.assign-target-tabs{flex-wrap:wrap}
+.team-member-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start;padding:10px 0;border-top:1px solid var(--line)}
 .team-member-row.active{background:#121827;border-radius:12px;padding:10px;margin:0 -4px}
 .team-member-main{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:transparent;color:inherit;padding:0}
 .team-member-main b{display:block;font-size:14px}
@@ -218,7 +262,35 @@
 .log-chip.active{border-color:#7c5cff;background:#1b1634;color:#fff}
 .log-chip:disabled{opacity:.5}
 .log-save-hint{margin:10px 0 0;font-size:11px;text-align:center}
-.nutrition-tracker{display:grid;gap:10px}
+.nutrition-tracker{display:grid;gap:8px}
+.nutrition-summary-card{padding:10px 12px}
+.nutrition-summary-head{align-items:center}
+.nutrition-date-nav{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.nutrition-date-arrow{min-width:32px;padding:5px 8px;font-size:16px;line-height:1;font-weight:900}
+.nutrition-day-swipe{touch-action:pan-y}
+.nutrition-day-view{display:grid;gap:8px}
+.nutrition-day-view.is-refreshing{opacity:.72;pointer-events:none}
+@keyframes nutrition-day-forward{from{opacity:.35;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
+@keyframes nutrition-day-back{from{opacity:.35;transform:translateX(-16px)}to{opacity:1;transform:translateX(0)}}
+.nutrition-day-view--forward{animation:nutrition-day-forward .32s ease}
+.nutrition-day-view--back{animation:nutrition-day-back .32s ease}
+@media (prefers-reduced-motion:reduce){.nutrition-day-view--forward,.nutrition-day-view--back{animation:none}.nutrition-day-view.is-refreshing{opacity:1}}
+.nutrition-summary-actions{margin-top:8px}
+.nutrition-macro-dashboard{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 10px;margin:4px 0 2px}
+.nutrition-macro-ring-cell{display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;padding:2px 0}
+.nutrition-macro-ring-label{font-size:10px;font-weight:800;color:#cbd5e1;text-transform:uppercase;letter-spacing:.05em}
+.nutrition-macro-ring-wrap{position:relative;width:100%;max-width:132px;aspect-ratio:1;margin:0 auto}
+.nutrition-macro-ring-wrap svg{width:100%;height:100%;display:block}
+.nutrition-macro-ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:16% 6px 10px}
+.nutrition-macro-ring-value{font-size:clamp(17px,4.8vw,22px);font-weight:900;line-height:1.05}
+.nutrition-macro-ring-subtitle{font-size:10px;color:var(--muted);line-height:1.2}
+.nutrition-macro-ring-footer{font-size:10px;font-weight:800;color:#cbd5e1;line-height:1.2;margin-top:1px}
+.nutrition-ring-track{stroke:#1a2230;opacity:.95}
+.nutrition-ring-progress{transition:stroke-dashoffset .65s ease,stroke .35s ease}
+@media (prefers-reduced-motion:reduce){.nutrition-ring-progress{transition:none}}
+.nutrition-ring--primary .nutrition-ring-progress{stroke:var(--purple)}
+.nutrition-ring--near .nutrition-ring-progress{stroke:var(--green)}
+.nutrition-ring--over .nutrition-ring-progress{stroke:var(--amber)}
 .nutrition-date-row{display:grid;grid-template-columns:auto 1fr auto auto;gap:6px;align-items:center;margin:8px 0}
 .nutrition-totals-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
 .nutrition-total-tile{background:#0b1119;border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}
@@ -282,6 +354,7 @@
 .nutrition-label-upload{display:block;margin-top:10px;font-weight:600}
 .nutrition-scan-picker input[type=file]{margin-top:6px;font-size:13px;max-width:100%}
 .nutrition-add-panel{width:100%;max-width:560px;max-height:90vh;overflow:auto;margin:0}
+.nutrition-my-foods-panel{width:100%;max-width:560px;max-height:90vh;overflow:auto;margin:0}
 .nutrition-add-intro{margin:0 0 12px;font-size:12px;line-height:1.45}
 .nutrition-add-section-title{margin:0 0 8px;font-size:13px;font-weight:800;color:var(--text)}
 .install-app-banner{position:sticky;top:0;z-index:30;padding:calc(8px + var(--safe-top)) 12px 8px;background:linear-gradient(180deg,#121826,#0b1119);border-bottom:1px solid var(--line)}
@@ -290,5 +363,5 @@
 .install-app-banner p{margin:0;font-size:12px;line-height:1.35}
 .install-app-banner-actions{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
 @media(display-mode:standalone){.install-app-banner{display:none}}
- @media(max-width:900px){.add-exercise-row{grid-template-columns:1fr auto auto}.catalog-edit-grid{grid-template-columns:1fr}.catalog-search-filters{grid-template-columns:1fr}.setgrid,.setgrid-edit{grid-template-columns:1fr 1fr 1fr}.exercise-add-row{grid-template-columns:1fr auto auto}.team-compliance-card .dash-metrics{grid-template-columns:1fr 1fr}.progress-trend-chart{grid-template-columns:repeat(4,minmax(0,1fr))}.progress-summary-metrics{grid-template-columns:1fr 1fr}.panel-overlay{align-items:flex-end;padding:0}.add-exercise-panel,.nutrition-add-panel{border-radius:18px 18px 0 0;max-height:90vh}.log-field-row{grid-template-columns:1fr}.workout-set-logger{max-width:100%}.log-dup-btn,.set-done-check{min-height:44px}.nutrition-totals-grid,.nutrition-date-row,.nutrition-weekly-metrics{grid-template-columns:1fr 1fr}.nutrition-date-row input{grid-column:span 2}.nutrition-weekly-chart{grid-template-columns:repeat(4,minmax(0,1fr))}}
+ @media(max-width:900px){.add-exercise-row{grid-template-columns:1fr auto auto}.catalog-edit-grid{grid-template-columns:1fr}.catalog-search-filters{grid-template-columns:1fr}.setgrid,.setgrid-edit{grid-template-columns:1fr 1fr 1fr}.exercise-add-row{grid-template-columns:1fr auto auto}.team-compliance-card .dash-metrics{grid-template-columns:1fr 1fr}.progress-trend-chart{grid-template-columns:repeat(4,minmax(0,1fr))}.progress-summary-metrics{grid-template-columns:1fr 1fr}.panel-overlay{align-items:flex-end;padding:0}.add-exercise-panel,.nutrition-add-panel,.nutrition-my-foods-panel{border-radius:18px 18px 0 0;max-height:90vh}.log-field-row{grid-template-columns:1fr}.workout-set-logger{max-width:100%}.log-dup-btn,.set-done-check{min-height:44px}.nutrition-totals-grid,.nutrition-date-row,.nutrition-weekly-metrics{grid-template-columns:1fr 1fr}.nutrition-date-row{margin:4px 0}.nutrition-date-row input{grid-column:span 2}.nutrition-macro-ring-wrap{max-width:118px}.nutrition-weekly-chart{grid-template-columns:repeat(4,minmax(0,1fr))}}
  @media(max-width:600px){.nutrition-totals-grid,.nutrition-date-row{grid-template-columns:1fr}.nutrition-food-chip,.nutrition-entry-row{grid-template-columns:1fr}}

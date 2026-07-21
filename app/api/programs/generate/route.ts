@@ -70,8 +70,8 @@ export async function POST(request: Request) {
       .eq('user_id', user.id)
       .eq('status', 'active')
       .maybeSingle();
-    if (!membership || !['owner', 'editor'].includes(membership.role)) {
-      return NextResponse.json({ error: 'Only team owners/editors can create team programs' }, { status: 403 });
+    if (!membership || !['owner', 'editor', 'manager'].includes(membership.role)) {
+      return NextResponse.json({ error: 'Only group owners and managers can create group programs' }, { status: 403 });
     }
   }
 
