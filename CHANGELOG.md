@@ -4231,3 +4231,58 @@ None.
 BIQ-0047 Compact workout logging UI for faster mobile set entry
 ```
 
+---
+
+## BIQ-0048 - Set Row Layout and Set Type Acronyms
+
+Date: 2026-07-21  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Refined set row controls: Copy last beside set type, remove (×) after Copy last, Done checkbox to the right of RPE/intensity chips, and compact set-type acronyms during logging with full names in the type picker.
+
+### Purpose
+
+Further reduce header clutter and make set types scannable during active training while keeping full descriptive labels when choosing a set type.
+
+### Changes
+
+- Set header order: **Set # → type acronym → Copy last → ×**
+- **Done** moved to the right of RPE / intensity / side chip rows
+- New set type acronyms: WU, WK, BO, DS, AMRAP (full names in picker menu)
+- `SetTypePicker` shows acronym when closed; dropdown lists acronym + full label
+- Auto-advance scroll targets the **exercise header** (`block: start`) so the next exercise name stays visible above the set logger
+
+### Files changed
+
+- `lib/training/setTypes.ts` (new)
+- `app/components/WorkoutSetLogger.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Database changes
+
+None (set_type values unchanged: warmup, working, backoff, dropset, amrap).
+
+### Testing steps
+
+1. Log a strength set — type shows **WK** (or current acronym); tap to open picker with full names
+2. Confirm **Copy last** is beside set type; **×** is to its right (when editing program)
+3. Confirm **Done** sits to the right of RPE chips
+4. Test cardio (intensity chips) and mobility (side chips) for Done placement
+5. Test timed/custom exercises (no chips) — Done stays in set header
+6. Complete the last set of an exercise — view scrolls to the **next exercise name** at the top, not the first set row
+
+### Known issues
+
+None.
+
+### Recommended commit message
+
+```text
+BIQ-0048 Set row layout tweaks and set type acronyms for logging
+```
+

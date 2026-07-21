@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ExerciseType } from '../../lib/training/exerciseTypes';
 import {
   INTENSITY_CHIPS,
@@ -14,6 +14,7 @@ import {
   parseSideFromNotes,
   type LogFieldUI,
 } from '../../lib/training/logFieldUI';
+import { SET_TYPES, setTypeAcronym, setTypeLabel, type SetTypeValue } from '../../lib/training/setTypes';
 
 type SetRow = {
   id: string;
@@ -49,6 +50,88 @@ function fieldSizeClass(field: LogFieldUI) {
 
 function stripEmbeddedNotes(notes: string) {
   return notes.replace(/(?:^|\s)(assist|side):\s*[^\s·]+/gi, '').replace(/\s*·\s*/g, ' ').trim();
+}
+
+function SetTypePicker({
+  value,
+  canEdit,
+  onChange,
+}: {
+  value: string;
+  canEdit: boolean;
+  onChange: (value: SetTypeValue) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [open]);
+
+  if (!canEdit) {
+    return (
+      <span className="badge set-type-badge" title={setTypeLabel(value)}>
+        {setTypeAcronym(value)}
+      </span>
+    );
+  }
+
+  return (
+    <div className="set-type-picker" ref={wrapRef}>
+      <button
+        type="button"
+        className="badge set-type-badge set-type-picker-btn"
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        title={setTypeLabel(value)}
+        onClick={() => setOpen((v) => !v)}
+      >
+        {setTypeAcronym(value)}
+      </button>
+      {open && (
+        <div className="set-type-menu" role="listbox">
+          {SET_TYPES.map((t) => (
+            <button
+              key={t.value}
+              type="button"
+              role="option"
+              aria-selected={value === t.value}
+              className={`set-type-option${value === t.value ? ' active' : ''}`}
+              onClick={() => {
+                onChange(t.value);
+                setOpen(false);
+              }}
+            >
+              <span className="set-type-option-acronym">{t.acronym}</span>
+              <span className="set-type-option-label">{t.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DoneCheck({
+  completed,
+  disabled,
+  onChange,
+}: {
+  completed: boolean;
+  disabled: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <label className="set-done-check">
+      <input type="checkbox" checked={completed} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
+      <span>Done</span>
+    </label>
+  );
 }
 
 function FieldCard({
@@ -209,47 +292,18 @@ function SetLogCard({
     />
   );
 
+  const hasChipRow = !!(layout.showRpeChips || layout.showIntensityChips || layout.showSideChips);
+
   return (
     <div className={`set-log-card${completed ? ' set-log-done' : ''}`}>
       <div className="set-log-head">
         <div className="set-log-head-left">
           <span className="set-log-num">Set {set.set_number}</span>
-          {canEdit ? (
-            <select
-              className="log-input-card log-set-type-select"
-              value={set.set_type}
-              disabled={!canEdit}
-              onChange={(e) => onEditSet(set, 'set_type', e.target.value)}
-            >
-              <option>warmup</option>
-              <option>working</option>
-              <option>backoff</option>
-              <option>dropset</option>
-              <option>amrap</option>
-            </select>
-          ) : (
-            <span className="badge set-type-badge">{set.set_type}</span>
-          )}
-          {canEdit && (
-            <button type="button" className="btn small red set-remove-btn" onClick={() => onRemoveSet(set)} aria-label="Remove set">
-              ×
-            </button>
-          )}
-        </div>
-        <label className="set-done-check">
-          <input
-            type="checkbox"
-            checked={completed}
-            disabled={!canLog}
-            onChange={(e) => onSaveField(set.id, 'completed', e.target.checked ? 'true' : '', { completed: e.target.checked })}
+          <SetTypePicker
+            value={set.set_type}
+            canEdit={canEdit}
+            onChange={(v) => onEditSet(set, 'set_type', v)}
           />
-          <span>Done</span>
-        </label>
-      </div>
-
-      <div className="set-log-fields">
-        <div className="set-log-metrics-row">
-          <div className="log-field-row log-field-row-compact">{layout.primary.map(renderField)}</div>
           {prev && canLog && (
             <button
               type="button"
@@ -260,36 +314,73 @@ function SetLogCard({
               Copy last
             </button>
           )}
+          {canEdit && (
+            <button type="button" className="btn small red set-remove-btn" onClick={() => onRemoveSet(set)} aria-label="Remove set">
+              ×
+            </button>
+          )}
         </div>
+        {!hasChipRow && (
+          <DoneCheck
+            completed={completed}
+            disabled={!canLog}
+            onChange={(checked) => onSaveField(set.id, 'completed', checked ? 'true' : '', { completed: checked })}
+          />
+        )}
+      </div>
+
+      <div className="set-log-fields">
+        <div className="log-field-row log-field-row-compact">{layout.primary.map(renderField)}</div>
 
         {layout.showRpeChips && (
-          <FieldCard
-            field={{ key: 'actual_rpe', label: 'RPE', chipOptions: RPE_CHIPS, size: 'wide' }}
-            value={String(log.actual_rpe || '')}
-            disabled={!canLog}
-            onChipPick={(v) => onSaveField(set.id, 'actual_rpe', v)}
-            onBlur={() => {}}
-          />
+          <div className="set-log-chip-done-row">
+            <FieldCard
+              field={{ key: 'actual_rpe', label: 'RPE', chipOptions: RPE_CHIPS, size: 'wide' }}
+              value={String(log.actual_rpe || '')}
+              disabled={!canLog}
+              onChipPick={(v) => onSaveField(set.id, 'actual_rpe', v)}
+              onBlur={() => {}}
+            />
+            <DoneCheck
+              completed={completed}
+              disabled={!canLog}
+              onChange={(checked) => onSaveField(set.id, 'completed', checked ? 'true' : '', { completed: checked })}
+            />
+          </div>
         )}
 
         {layout.showIntensityChips && (
-          <FieldCard
-            field={{ key: 'actual_rpe', label: 'Intensity', chipOptions: INTENSITY_CHIPS, size: 'wide' }}
-            value={String(log.actual_rpe || '')}
-            disabled={!canLog}
-            onChipPick={(v) => onSaveField(set.id, 'actual_rpe', v)}
-            onBlur={() => {}}
-          />
+          <div className="set-log-chip-done-row">
+            <FieldCard
+              field={{ key: 'actual_rpe', label: 'Intensity', chipOptions: INTENSITY_CHIPS, size: 'wide' }}
+              value={String(log.actual_rpe || '')}
+              disabled={!canLog}
+              onChipPick={(v) => onSaveField(set.id, 'actual_rpe', v)}
+              onBlur={() => {}}
+            />
+            <DoneCheck
+              completed={completed}
+              disabled={!canLog}
+              onChange={(checked) => onSaveField(set.id, 'completed', checked ? 'true' : '', { completed: checked })}
+            />
+          </div>
         )}
 
         {layout.showSideChips && (
-          <FieldCard
-            field={{ key: '_side', label: 'Side', chipOptions: SIDE_CHIPS, size: 'wide' }}
-            value={side}
-            disabled={!canLog}
-            onChipPick={(v) => onSaveField(set.id, 'log_notes', mergeSideIntoNotes(notes, v))}
-            onBlur={() => {}}
-          />
+          <div className="set-log-chip-done-row">
+            <FieldCard
+              field={{ key: '_side', label: 'Side', chipOptions: SIDE_CHIPS, size: 'wide' }}
+              value={side}
+              disabled={!canLog}
+              onChipPick={(v) => onSaveField(set.id, 'log_notes', mergeSideIntoNotes(notes, v))}
+              onBlur={() => {}}
+            />
+            <DoneCheck
+              completed={completed}
+              disabled={!canLog}
+              onChange={(checked) => onSaveField(set.id, 'completed', checked ? 'true' : '', { completed: checked })}
+            />
+          </div>
         )}
 
         {layout.optional && layout.optional.length > 0 && (
