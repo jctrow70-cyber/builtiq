@@ -28,8 +28,9 @@ import NutritionTracker, { fetchNutritionDaySummary } from './components/Nutriti
 import ProgressInsights from './components/ProgressInsights';
 import WorkoutSetLogger from './components/WorkoutSetLogger';
 import GroupsHub from './components/groups/GroupsHub';
+import AssignedWorkoutsPanel from './components/groups/AssignedWorkoutsPanel';
 import { formatMacro, macroProgress } from '../lib/nutrition/macros';
-import { canManageGroup, canLogWorkout, canEditGroupProgram, isGroupOwner, roleLabel, roleForDatabase } from '../lib/groups';
+import { canManageGroup, canLogWorkout, canEditGroupProgram, isGroupOwner, roleLabel, roleForDatabase, resolveAssignmentWorkout, type AssignedWorkoutRow } from '../lib/groups';
 
 const NAV=['Dashboard','Training','Groups','Nutrition','Progress','AI Coach','Settings'];
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -165,6 +166,9 @@ export default function Page(){
  const [memberStats,setMemberStats]=useState<any>({});
  const [memberAssignments,setMemberAssignments]=useState<any>({});
  const [assignDraft,setAssignDraft]=useState<any>({type:'team',programId:'',notes:''});
+ const [assignedWorkouts,setAssignedWorkouts]=useState<AssignedWorkoutRow[]>([]);
+ const [activeAssignedRecipient,setActiveAssignedRecipient]=useState<AssignedWorkoutRow|null>(null);
+ const [groupProgramForAssign,setGroupProgramForAssign]=useState<any>(null);
  const [logDistanceUnit,setLogDistanceUnit]=useState<'mi'|'km'>('mi');
  const [collapsedExercises,setCollapsedExercises]=useState<Record<string,boolean>>({});
  const [guidedImportStatus,setGuidedImportStatus]=useState<any>(null);
@@ -186,32 +190,33 @@ export default function Page(){
  },[]);
  useEffect(()=>{
   if(!session?.user){
-   setProfile(null);setProfileLoading(false);setSelectedTeamId(null);setTeams([]);setMembers([]);setPrograms([]);setProgram(null);setMode('personal');
+   setProfile(null);setProfileLoading(false);setSelectedTeamId(null);setTeams([]);setMembers([]);setPrograms([]);setProgram(null);setMode('personal');setAssignedWorkouts([]);setActiveAssignedRecipient(null);setGroupProgramForAssign(null);
    return;
   }
   setProfileLoading(true);
   setSelectedTeamId(null);setTeams([]);setMembers([]);setMode('personal');
   boot().finally(()=>setProfileLoading(false));
  },[session?.user?.id]);
- useEffect(()=>{if(profile) loadPrograms()},[mode,selectedTeamId,teams,profile,viewingMember?.user_id]);
+ useEffect(()=>{if(profile&&!activeAssignedRecipient) loadPrograms()},[mode,selectedTeamId,teams,profile,viewingMember?.user_id,activeAssignedRecipient?.id]);
+ useEffect(()=>{if(session?.user?.id) loadAssignedWorkouts()},[session?.user?.id]);
  useEffect(()=>{if(program&&session?.user) loadLogs(program,viewingMember?.user_id||session.user.id)},[program,logDate,viewingMember?.user_id,session?.user?.id]);
  useEffect(()=>{if(program&&session?.user) loadLiftHistory()},[program,logDate,viewingMember?.user_id,session?.user?.id]);
  useEffect(()=>{logsRef.current=logs;},[logs]);
  useEffect(()=>{
-  if(!program||syncingCalendarRef.current)return;
+  if(!program||syncingCalendarRef.current||activeAssignedRecipient)return;
   const start=resolveProgramStartDate(program);
   const total=program.weeks||weeks||6;
   const nextWeek=weekForDate(start,logDate,total);
   if(nextWeek!==week)setWeek(nextWeek);
- },[program?.id,program?.start_date,program?.created_at,program?.weeks,logDate]);
+ },[program?.id,program?.start_date,program?.created_at,program?.weeks,logDate,activeAssignedRecipient?.id]);
  useEffect(()=>{if(profile&&appNav==='Dashboard'){loadProgressLogs();loadDashboardTodayLogs();loadDashboardTodayNutrition();}},[profile,appNav,program?.id,session?.user?.id]);
  useEffect(()=>{
-  if(!program||syncingCalendarRef.current)return;
+  if(!program||syncingCalendarRef.current||activeAssignedRecipient)return;
   const match=workoutForDate(program,logDate,week);
   if(match&&match.id!==activeWorkout)setActiveWorkout(match.id);
- },[program?.id,program?.start_date,program?.created_at,program?.weeks,logDate]);
+ },[program?.id,program?.start_date,program?.created_at,program?.weeks,logDate,activeAssignedRecipient?.id]);
  useEffect(()=>{if(appNav==='Training'&&!program&&trainingSubNav!=='setup')setShowProgramSetup(true);},[appNav,program,trainingSubNav]);
- useEffect(()=>{if(appNav==='Training'&&trainingSubNav==='personal')setMode('personal');},[appNav,trainingSubNav]);
+ useEffect(()=>{if(appNav==='Training'&&trainingSubNav==='personal'&&!activeAssignedRecipient)setMode('personal');},[appNav,trainingSubNav,activeAssignedRecipient?.id]);
  useEffect(()=>{if(trainingSubNav==='personal'){setMemberDashboard(null);setViewingMember(null);}if(trainingSubNav==='setup'){setShowProgramSetup(true);setMemberDashboard(null);setViewingMember(null);}},[trainingSubNav]);
  useEffect(()=>{setViewingMember(null);setMemberDashboard(null);},[selectedTeamId]);
  useEffect(()=>{if(selectedTeamId&&teams.length){loadMembers();loadMemberAssignments();}},[selectedTeamId,teams.length]);
@@ -219,6 +224,7 @@ export default function Page(){
  useEffect(()=>{if(memberDashboard)loadMemberDashboardData(memberDashboard);},[logDate,week,memberDashboard?.user_id,selectedTeamId]);
 
  const activeTeam=teams.find((t:any)=>t.id===selectedTeamId)||teams[0]||null;
+ useEffect(()=>{if(activeTeam&&canManageGroup(activeTeam.my_role)) loadGroupProgramForAssign(); else setGroupProgramForAssign(null);},[activeTeam?.id,activeTeam?.default_program_id,activeTeam?.my_role,appNav]);
 
  async function boot(){await loadProfile(); await loadTeams(); await loadCatalog();}
  async function loadCatalog(){if(!session?.user)return; const{data,error}=await supabase.from('st_exercise_catalog').select('*').order('name'); if(error){setCatalogError(error.message); return console.warn(error.message);} setCatalogError(''); setCatalog(data||[]);}
@@ -351,12 +357,13 @@ export default function Page(){
  }
  function canManageGroupView(){return !!activeTeam&&canManageGroup(activeTeam.my_role);}
  function canLog(){if(!session?.user)return false; const uid=viewingMember?.user_id||session.user.id; return canLogWorkout(session.user.id,uid,activeTeam?.my_role);}
- function canEdit(){if(!session?.user)return false; if(viewingMember&&viewingMember.user_id!==session.user.id)return false; return mode==='personal'||canEditGroupProgram(activeTeam?.my_role);}
+ function canEdit(){if(!session?.user)return false; if(activeAssignedRecipient)return false; if(viewingMember&&viewingMember.user_id!==session.user.id)return false; return mode==='personal'||canEditGroupProgram(activeTeam?.my_role);}
  function isOwner(){return isGroupOwner(activeTeam?.my_role);}
  function logUserId(){return viewingMember?.user_id||session?.user?.id;}
  function pickProgram(list:any[],defaultId?:string|null){if(!list.length)return null; if(defaultId)return list.find((p:any)=>p.id===defaultId)||list[0]; return list[0];}
  async function loadPrograms(){
   if(!session?.user)return;
+  if(activeAssignedRecipient)return;
   if(viewingMember&&viewingMember.user_id!==session.user.id)return;
   let q=supabase.from('st_programs').select('*, st_workouts(*, st_exercises(*, st_planned_sets(*)))').order('created_at',{ascending:false});
   const usePersonal=mode==='personal'||(mode==='team'&&activeTeam?.training_source==='personal');
@@ -433,6 +440,93 @@ export default function Page(){
   if(first)setActiveWorkout(first.id);
  }
  async function closeMemberView(){setViewingMember(null); setMemberDashboard(null); await loadPrograms();}
+ async function loadAssignedWorkouts(){
+  if(!session?.user){setAssignedWorkouts([]);return;}
+  const{data,error}=await supabase.from('st_assignment_recipients').select('*, st_workout_assignments(*, st_teams(id, name), st_workouts(id, week, day_label, workout_type, day_order), st_programs(id, name))').eq('user_id',session.user.id).in('status',['pending','started','completed']).order('created_at',{ascending:false}).limit(30);
+  if(error){console.warn(error.message);return;}
+  const rows=((data||[]) as AssignedWorkoutRow[]).filter((r)=>r.st_workout_assignments?.is_active!==false);
+  setAssignedWorkouts(rows);
+ }
+ async function loadGroupProgramForAssign(){
+  if(!activeTeam||!canManageGroup(activeTeam.my_role)){setGroupProgramForAssign(null);return;}
+  const{data,error}=await supabase.from('st_programs').select('*, st_workouts(id, week, day_label, workout_type, day_order)').eq('visibility','team').eq('team_id',activeTeam.id).order('created_at',{ascending:false});
+  if(error){console.warn(error.message);return;}
+  const list=data||[];
+  setGroupProgramForAssign(pickProgram(list,activeTeam.default_program_id));
+ }
+ async function assignWorkoutToTargets(payload:{workoutId:string;targetType:'group'|'members';memberUserIds:string[];scheduledDate:string;dueDate:string;title:string;notes:string}){
+  if(!activeTeam||!canManageGroupView())throw new Error('Only owners and managers can assign workouts.');
+  const{data:assignmentId,error}=await supabase.rpc('st_assign_workout_to_targets',{
+    p_team_id:activeTeam.id,
+    p_workout_id:payload.workoutId,
+    p_program_id:groupProgramForAssign?.id||null,
+    p_workout_date:null,
+    p_target_type:payload.targetType,
+    p_target_classification_id:null,
+    p_target_user_ids:payload.targetType==='members'?payload.memberUserIds:null,
+    p_scheduled_date:payload.scheduledDate||today(),
+    p_due_date:payload.dueDate||null,
+    p_title:payload.title||null,
+    p_notes:payload.notes||null,
+  });
+  if(error)throw new Error(error.message);
+  return assignmentId;
+ }
+ async function openAssignedWorkout(row:AssignedWorkoutRow){
+  const wa=row.st_workout_assignments;
+  if(!wa)return alert('Assignment not found.');
+  let programId=wa.program_id||null;
+  if(!programId&&wa.workout_id){
+    const{data:workoutRow}=await supabase.from('st_workouts').select('program_id').eq('id',wa.workout_id).maybeSingle();
+    programId=workoutRow?.program_id||null;
+  }
+  if(!programId)return alert('This assignment is missing program data.');
+  const{data:fullProgram,error}=await supabase.from('st_programs').select('*, st_workouts(*, st_exercises(*, st_planned_sets(*)))').eq('id',programId).single();
+  if(error||!fullProgram)return alert(error?.message||'Program not found.');
+  const targetWorkout=resolveAssignmentWorkout(fullProgram,wa);
+  if(!targetWorkout)return alert('Could not resolve workout for this assignment.');
+  setActiveAssignedRecipient(row);
+  setViewingMember(null);
+  setMemberDashboard(null);
+  setMode('team');
+  setSelectedTeamId(wa.team_id);
+  setProgram(fullProgram);
+  setPrograms([fullProgram]);
+  setLogDate(wa.scheduled_date||today());
+  setWeek(targetWorkout.week||1);
+  setActiveWorkout(targetWorkout.id);
+  syncingCalendarRef.current=true;
+  await loadLogs(fullProgram,session.user.id);
+  queueMicrotask(()=>{syncingCalendarRef.current=false;});
+  if(row.status==='pending'){
+    await supabase.from('st_assignment_recipients').update({status:'started'}).eq('id',row.id);
+    await loadAssignedWorkouts();
+    setActiveAssignedRecipient((prev)=>prev&&prev.id===row.id?{...prev,status:'started'}:prev);
+  }
+  setAppNav('Training');
+  setTrainingSubNav('personal');
+ }
+ async function closeAssignedWorkout(){
+  setActiveAssignedRecipient(null);
+  setMode('personal');
+  await loadPrograms();
+  await loadAssignedWorkouts();
+ }
+ function assignmentPanelStatus(row:AssignedWorkoutRow){
+  if(row.status==='completed')return 'completed';
+  if(row.status==='started')return 'in_progress';
+  return 'not_started';
+ }
+ async function maybeCompleteAssignedWorkout(workoutRef:any,logMap:any){
+  if(!activeAssignedRecipient||!workoutRef)return;
+  const st=workoutStatusFor(workoutRef,logMap);
+  if(st!=='completed')return;
+  if(activeAssignedRecipient.status==='completed')return;
+  const{error}=await supabase.from('st_assignment_recipients').update({status:'completed'}).eq('id',activeAssignedRecipient.id);
+  if(error)return console.warn(error.message);
+  setActiveAssignedRecipient((prev)=>prev?{...prev,status:'completed'}:prev);
+  await loadAssignedWorkouts();
+ }
  async function setMyTrainingSource(source:'team'|'personal'){
   if(!activeTeam)return;
   const{error}=await supabase.rpc('st_set_my_training_source',{p_team_id:activeTeam.id,p_training_source:source});
@@ -803,7 +897,7 @@ export default function Page(){
   const uid=logUserId();
   if(!session?.user||!uid)return;
   const coachLogging=uid!==session.user.id;
-  const logTeamId=mode==='team'&&activeTeam&&activeTeam.training_source!=='personal'?activeTeam.id:null;
+  const logTeamId=activeAssignedRecipient?.st_workout_assignments?.team_id||(mode==='team'&&activeTeam&&activeTeam.training_source!=='personal'?activeTeam.id:null);
   const updatingCompleted=Object.prototype.hasOwnProperty.call(fieldUpdates,'completed')||opts?.completed!==undefined;
   const markComplete=updatingCompleted
     ?(opts?.completed!==undefined?!!opts.completed:!!fieldUpdates.completed)
@@ -834,6 +928,10 @@ export default function Page(){
     return next;
   });
   if(String(logDate)===today())setDashboardTodayLogs((prev:any)=>({...prev,[sid]:data}));
+  if(activeAssignedRecipient&&located?.workout){
+    const nextLogs={...logsRef.current,[sid]:data};
+    await maybeCompleteAssignedWorkout(located.workout,nextLogs);
+  }
   return data;
  }
  async function duplicateSetLog(sid:string,source:any){
@@ -905,7 +1003,7 @@ export default function Page(){
   if(n==='Progress'||n==='Dashboard'){loadProgressLogs();if(n==='Dashboard'){loadDashboardTodayLogs();loadDashboardTodayNutrition();}}
   if(n==='Nutrition')loadDashboardTodayNutrition();
   if(n==='Settings'){loadCatalog(); loadGuidedImportStatus(); if(activeTeam)loadMembers();}
-  if(n==='Groups'){if(teams.length){if(!selectedTeamId)setSelectedTeamId(teams[0].id);setMode('team');} loadMembers(); loadMemberStats(); loadMemberAssignments();}
+  if(n==='Groups'){if(teams.length){if(!selectedTeamId)setSelectedTeamId(teams[0].id);setMode('team');} loadMembers(); loadMemberStats(); loadMemberAssignments(); loadGroupProgramForAssign();}
   if(n==='Dashboard'&&teams.length){loadMembers(); loadMemberStats();}
   if(n==='Training'){if(!program&&trainingSubNav!=='setup')setShowProgramSetup(true);}
  }
@@ -1005,7 +1103,7 @@ const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sor
  const panelSupersetGroups=addExercisePanel&&workout?getSupersetGroupsForSection(workout,addExercisePanel.section).filter((g:any)=>g.count<3):[];
  const pendingGroupId=addExercisePanel?pendingSupersetGroup[addExercisePanel.section]:null;
  const pendingGroupInfo=pendingGroupId?panelSupersetGroups.find((g:any)=>g.id===pendingGroupId):null;
- const trainingModeStat=<div className="stat"><span className="muted">Plan</span><b>{viewingMember?'Member':mode==='team'?(activeTeam?.training_source==='personal'?'Personal':'Group'):'Personal'}</b></div>;
+ const trainingModeStat=<div className="stat"><span className="muted">Plan</span><b>{activeAssignedRecipient?'Assigned':viewingMember?'Member':mode==='team'?(activeTeam?.training_source==='personal'?'Personal':'Group'):'Personal'}</b></div>;
  const memberAssignment=memberDashboard?memberAssignments[memberDashboard.user_id]:null;
  const renderExerciseCard=(ex:any,inSuperset=false)=>{const catItem=catalog.find((c:any)=>c.id===ex.catalog_exercise_id);const exType=exerciseTypeOf(ex,catItem);const aliases=exerciseHistoryAliases(ex.catalog_exercise_id||'',ex.name||'');const histRows=aliases.flatMap((ek)=>history[ek]||[]);const lastPerf=buildLastPerformance(histRows);const plannedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).length;const progression=recommendNextTarget(lastPerf,plannedSets,ex.name,ex.muscle_group||'');const exThumb=getExerciseThumb(catItem);const showGuide=hasExerciseGuide(catItem);const guidePayload=getExerciseGuidePayload(catItem,ex.name);const cardKey=`${ex.id}:${ex.catalog_exercise_id||'n'}:${ex.name}`;const isEditingName=exerciseNameSearch?.exerciseId===ex.id;const nameQuery=isEditingName?exerciseNameSearch!.query:(ex.name||'');const nameSearchResults=isEditingName&&nameQuery.trim()?searchCatalog(builtinCatalog,{query:nameQuery,filters:{availableEquipment:hasEquipmentFilter(equipmentForSearch)?equipmentForSearch:undefined},limit:8}):[];const sortedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));const prevBySetId:Record<string,any>={};sortedSets.forEach((s:any)=>{prevBySetId[s.id]=previousFor(ex,s);});const weightUnit=profileDraft?.units_preference==='metric'?'kg':'lb';const isCollapsed=!!collapsedExercises[ex.id];const doneSets=sortedSets.filter((s:any)=>logs[s.id]?.completed).length;return <div className={`card exercise-card${inSuperset?' in-superset':''}${isCollapsed?' exercise-collapsed':''}`} key={cardKey}>
         <div className="exercise-head"><div className="exercise-head-main">{exThumb&&(showGuide&&guidePayload?<button type="button" className="exercise-card-thumb-btn" title={guidePayload.hasVideo?"Watch form":"Form guide"} onClick={()=>setExerciseGuide(guidePayload)}><img className="exercise-card-thumb" src={exThumb} alt="" loading="lazy" referrerPolicy="no-referrer"/></button>:<img className="exercise-card-thumb" src={exThumb} alt="" loading="lazy" referrerPolicy="no-referrer"/>)}<div className="exercise-meta">{canEdit()?<>
@@ -1056,21 +1154,22 @@ const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sor
   {appNav==='Nutrition'&&session?.user&&<NutritionTracker userId={session.user.id} onDateChange={()=>loadDashboardTodayNutrition()} onDataChange={()=>loadDashboardTodayNutrition()}/>}
   {appNav==='AI Coach'&&<section><div className="card dash-accent"><h2>AI Coach</h2><p className="muted">Your BuildIQ wellness coach will analyze workouts, nutrition, and recovery to give safe, practical guidance.</p><p className="dash-insight">Coming soon: readiness check-ins, workout adjustments, and weekly coaching summaries.</p></div></section>}
   {appNav==='Progress'&&<section><div className="card"><div className="topline" style={{justifyContent:'space-between'}}><h2>Progress</h2><button className="btn small secondary" onClick={loadProgressLogs}>Refresh</button></div><p className="muted">Saved lift history uses snapshots, so past workouts stay accurate even if the program template changes later.</p></div><ProgressInsights logs={progressLogs} weightUnit={progressWeightUnit}/><div className="card"><h2>Workout history</h2><p className="muted">Completed sets grouped by training day.</p></div>{progressDays.length===0&&<div className="card"><p className="muted">No completed sets yet. Log a workout in Training to build history.</p></div>}{progressDays.map((day:any)=><div className="card" key={day.date}><h3>{formatDisplayDate(day.date)}{day.label?` · ${day.label}`:''}{day.type?` · ${day.type}`:''}</h3>{Object.values(day.rows.reduce((acc:any,row:any)=>{const name=logExerciseName(row);if(!acc[name]) acc[name]=[]; acc[name].push(row);return acc;},{})).map((rows:any)=>{const label=logExerciseName(rows[0]);const exType=(rows[0].snapshot_exercise_type||'strength') as any;return <div key={label} className="history-row"><b>{label}</b><span className="muted">{rows.sort((a:any,b:any)=>(logSetNumber(a)-logSetNumber(b))).map((r:any)=>formatLogSummary(r,exType)).join(' · ')}</span></div>})}</div>)}</section>}
-  {appNav==='Groups'&&session?.user&&<GroupsHub sessionUserId={session.user.id} teams={teams} selectedTeamId={selectedTeamId} activeTeam={activeTeam} members={members} memberStats={memberStats} memberDashboard={memberDashboard} memberDashProgram={memberDashProgram} memberDashLogs={memberDashLogs} memberDashLastDate={memberDashLastDate} memberTodayWorkout={memberTodayWorkout} memberWorkoutStatus={memberWorkoutStatus} memberAssignment={memberAssignment} memberAssignments={memberAssignments} assignDraft={assignDraft} programs={programs} compliancePct={teamCompliancePct} teamActiveCount={teamActiveCount} teamTotalSets={teamTotalSets} teamPlanCount={teamPlanCount} canManage={canManageGroupView()} isOwner={isOwner()} logDate={logDate} week={week} onSelectTeam={(id)=>setSelectedTeamId(id||null)} onCreateGroup={createTeam} onJoinGroup={joinTeam} onRefreshMembers={()=>{loadMembers();loadMemberStats();}} onOpenMember={openMemberDashboard} onCloseMemberDashboard={()=>setMemberDashboard(null)} onOpenMemberWorkout={openMemberView} onSetMyTrainingSource={setMyTrainingSource} onSetMemberTrainingSource={setMemberTrainingSource} onSetMemberRole={setRole} onRemoveMember={removeMember} onSetParticipation={setMemberParticipation} onAssignDraftChange={setAssignDraft} onApplyAssignment={()=>memberDashboard&&assignMemberProgram(memberDashboard,assignDraft.type,assignDraft.programId||null,assignDraft.notes)} onOpenTraining={()=>{setAppNav('Training');setTrainingSubNav('personal');setMemberDashboard(null);setViewingMember(null);}} onGoProgramSetup={()=>{setAppNav('Training');setTrainingSubNav('setup');setShowProgramSetup(true);setMode('team');}} onSetModeTeam={()=>setMode('team')} sectionExercises={sectionExercises} statusLabel={statusLabel}/>}
+  {appNav==='Groups'&&session?.user&&<GroupsHub sessionUserId={session.user.id} teams={teams} selectedTeamId={selectedTeamId} activeTeam={activeTeam} members={members} memberStats={memberStats} memberDashboard={memberDashboard} memberDashProgram={memberDashProgram} memberDashLogs={memberDashLogs} memberDashLastDate={memberDashLastDate} memberTodayWorkout={memberTodayWorkout} memberWorkoutStatus={memberWorkoutStatus} memberAssignment={memberAssignment} memberAssignments={memberAssignments} assignDraft={assignDraft} programs={programs} groupProgramForAssign={groupProgramForAssign} compliancePct={teamCompliancePct} teamActiveCount={teamActiveCount} teamTotalSets={teamTotalSets} teamPlanCount={teamPlanCount} canManage={canManageGroupView()} isOwner={isOwner()} logDate={logDate} week={week} onSelectTeam={(id)=>setSelectedTeamId(id||null)} onCreateGroup={createTeam} onJoinGroup={joinTeam} onRefreshMembers={()=>{loadMembers();loadMemberStats();}} onOpenMember={openMemberDashboard} onCloseMemberDashboard={()=>setMemberDashboard(null)} onOpenMemberWorkout={openMemberView} onSetMyTrainingSource={setMyTrainingSource} onSetMemberTrainingSource={setMemberTrainingSource} onSetMemberRole={setRole} onRemoveMember={removeMember} onSetParticipation={setMemberParticipation} onAssignDraftChange={setAssignDraft} onApplyAssignment={()=>memberDashboard&&assignMemberProgram(memberDashboard,assignDraft.type,assignDraft.programId||null,assignDraft.notes)} onAssignWorkout={assignWorkoutToTargets} onOpenTraining={()=>{setAppNav('Training');setTrainingSubNav('personal');setMemberDashboard(null);setViewingMember(null);}} onGoProgramSetup={()=>{setAppNav('Training');setTrainingSubNav('setup');setShowProgramSetup(true);setMode('team');}} onSetModeTeam={()=>setMode('team')} sectionExercises={sectionExercises} statusLabel={statusLabel}/>}
   {appNav==='Settings'&&<section><div className="card"><div className="topline" style={{justifyContent:'space-between'}}><h2>Profile</h2><button className="btn small green" onClick={()=>saveProfile(true)} disabled={profileSaving}>{profileSaving?'Saving...':'Save Profile'}</button></div><p className="muted">Update your account details used across BuildIQ.</p>{profileFields(true)}</div>{guidedImportStatus?.isCatalogAdmin&&<div className="card guided-import-card"><div className="topline" style={{justifyContent:'space-between'}}><h2>Guided Exercise Library</h2><button className="btn small secondary" onClick={loadGuidedImportStatus} disabled={guidedImportRunning}>Refresh status</button></div><p className="muted">Import ~1,324 exercises with <b>animated GIF demos</b>, thumbnails, and step-by-step form instructions. <b>No npm required</b> — one click from here.</p><div className="dash-metrics" style={{marginTop:8}}><div><b>{guidedImportStatus?.guidedCount??'—'}</b><span className="muted">Guided exercises in database</span></div><div><b>{guidedImportStatus?.canImport?'Ready':'Setup needed'}</b><span className="muted">Server import</span></div></div><p className="muted" style={{marginTop:8}}>{guidedImportStatus?.message||'Open Settings to check import status.'}</p>{guidedImportStatus?.canImport?<button className="btn green" style={{marginTop:10}} onClick={importGuidedCatalog} disabled={guidedImportRunning}>{guidedImportRunning?'Importing… (1–2 min)':'Import Guided Library'}</button>:<><p className="muted dash-insight" style={{marginTop:10}}>One-time setup: in your BuildIQ project folder, open <b>.env.local</b> and add your Supabase <b>service role</b> key as <code>SUPABASE_SERVICE_ROLE_KEY=...</code> (Supabase Dashboard → Project Settings → API). Restart the app, then return here and click Import.</p><p className="muted" style={{marginTop:8}}>You do not need admin rights or npm for this — only the running app needs that key on the server.</p></>}</div>}<div className="card"><div className="topline" style={{justifyContent:'space-between'}}><h2>My Exercise Catalog</h2><div className="actions">{activeUserCatalog.length>0&&<button className="btn small red" onClick={archiveAllCustomExercises}>Remove all custom exercises</button>}<button className="btn small secondary" onClick={loadCatalog}>Refresh</button></div></div><p className="muted">Custom exercises are private to your account. Built-in exercises with form guides are used in workout search and AI program generation.</p>{activeUserCatalog.length===0&&archivedUserCatalog.length===0&&<p className="muted">No custom exercises yet. Create one from Training or below.</p>}{activeUserCatalog.map((item:any)=><div key={item.id} className="catalog-row">{catalogEditId===item.id?<div className="catalog-edit-grid"><input value={catalogEditDraft.name} onChange={e=>setCatalogEditDraft({...catalogEditDraft,name:e.target.value})} placeholder="Name"/><select value={catalogEditDraft.category} onChange={e=>setCatalogEditDraft({...catalogEditDraft,category:e.target.value})}><option value="warmup">Warmup</option><option value="strength">Strength</option><option value="mobility">Mobility</option><option value="plyometric">Plyometric</option><option value="other">Other</option></select><input value={catalogEditDraft.muscle_group} onChange={e=>setCatalogEditDraft({...catalogEditDraft,muscle_group:e.target.value})} placeholder="Muscle group"/><input value={catalogEditDraft.equipment} onChange={e=>setCatalogEditDraft({...catalogEditDraft,equipment:e.target.value})} placeholder="Equipment"/><input value={catalogEditDraft.movement_pattern} onChange={e=>setCatalogEditDraft({...catalogEditDraft,movement_pattern:e.target.value})} placeholder="Movement pattern"/><div className="actions"><button className="btn small green" onClick={saveCustomExerciseEdit}>Save</button><button className="btn small secondary" onClick={()=>setCatalogEditId(null)}>Cancel</button></div></div>:<><div><b>{item.name}</b><div className="muted">{item.muscle_group||'Muscle'}{item.equipment?` · ${item.equipment}`:''}{item.movement_pattern?` · ${item.movement_pattern}`:''}</div></div><div className="actions"><button className="btn small secondary" onClick={()=>{setCatalogEditId(item.id); setCatalogEditDraft({name:item.name,category:item.category||'strength',muscle_group:item.muscle_group||'',equipment:item.equipment||'',movement_pattern:item.movement_pattern||''});}}>Edit</button><button className="btn small red" onClick={()=>archiveCustomExercise(item,true)}>Archive</button></div></>}</div>)}{archivedUserCatalog.length>0&&<><h3 style={{marginTop:12}}>Archived</h3>{archivedUserCatalog.map((item:any)=><div key={item.id} className="catalog-row archived"><div><b>{item.name}</b><div className="muted">Archived · not shown in workout search</div></div><button className="btn small secondary" onClick={()=>archiveCustomExercise(item,false)}>Restore</button></div>)}</>}</div><div className="card"><h2>Create Custom Exercise</h2><div className="catalog-edit-grid"><input value={customDraft.name} onChange={e=>setCustomDraft({...customDraft,name:e.target.value})} placeholder="Exercise name"/><select value={customDraft.category} onChange={e=>setCustomDraft({...customDraft,category:e.target.value})}><option value="warmup">Warmup</option><option value="strength">Strength</option><option value="mobility">Mobility</option><option value="plyometric">Plyometric</option><option value="other">Other</option></select><input value={customDraft.muscle_group} onChange={e=>setCustomDraft({...customDraft,muscle_group:e.target.value})} placeholder="Muscle group"/><input value={customDraft.equipment} onChange={e=>setCustomDraft({...customDraft,equipment:e.target.value})} placeholder="Equipment"/><input value={customDraft.movement_pattern} onChange={e=>setCustomDraft({...customDraft,movement_pattern:e.target.value})} placeholder="Movement pattern"/></div><button className="btn green" style={{marginTop:8}} onClick={()=>createCustomExercise(customDraft.category||'strength', false)}>Save to My Catalog</button></div></section>}
   {appNav==='Training'&&<section>
     <div className="tabs training-subnav"><button type="button" className={trainingSubNav==='personal'?'active':''} onClick={()=>{setTrainingSubNav('personal');setMemberDashboard(null);setViewingMember(null);}}>Personal Training</button><button type="button" className={trainingSubNav==='setup'?'active':''} onClick={()=>{setTrainingSubNav('setup');setShowProgramSetup(true);setMemberDashboard(null);setViewingMember(null);}}>Program Setup</button></div>
     {trainingSubNav==='setup'&&programSetupPanel}
     {(trainingSubNav==='personal'||viewingMember)&&<>
-    {!viewingMember&&teams.length>0&&<div className="card assigned-workouts-placeholder"><div className="topline" style={{justifyContent:'space-between'}}><h2>Assigned Workouts</h2><span className="badge">Phase 4</span></div><p className="muted">Group workouts assigned by your owner or manager will appear here. For now, log your personal program below.</p></div>}
+    {!viewingMember&&<AssignedWorkoutsPanel assignments={assignedWorkouts} activeRecipientId={activeAssignedRecipient?.id||null} onOpen={openAssignedWorkout} onCloseActive={activeAssignedRecipient?closeAssignedWorkout:undefined} getWorkoutStatus={assignmentPanelStatus} statusLabel={statusLabel}/>}
+    {activeAssignedRecipient&&<div className="card viewing-banner assigned-workout-banner"><div className="topline" style={{justifyContent:'space-between'}}><div><h2>Assigned workout</h2><p className="muted">{activeAssignedRecipient.st_workout_assignments?.st_teams?.name||'Group'} · {formatDisplayDate(activeAssignedRecipient.st_workout_assignments?.scheduled_date||logDate)}{activeAssignedRecipient.st_workout_assignments?.notes?` · ${activeAssignedRecipient.st_workout_assignments.notes}`:''}</p></div><button className="btn small secondary" onClick={closeAssignedWorkout}>Back to personal program</button></div></div>}
     {viewingMember&&viewingMember.user_id!==session.user.id&&<div className="card viewing-banner"><div className="topline" style={{justifyContent:'space-between'}}><div><h2>{viewingMember.display_name||'Member'}&apos;s workout</h2><p className="muted">{assignmentTypeLabel(memberAssignments[viewingMember.user_id]?.assignment_type||(viewingMember.training_source||'team')==='personal'?'personal':'team')} · {program?.name||'No program'}{canManageGroupView()?' · manager can log':''}</p></div><button className="btn small secondary" onClick={closeMemberView}>Back</button></div></div>}
-    {!viewingMember&&canEdit()&&<div className="applybox"><label>When changing workout structure, apply edits to:</label><select value={applyScope} onChange={e=>setApplyScope(e.target.value as any)}><option value="future">This week and all future weeks</option><option value="current">This workout only</option></select></div>}
+    {!viewingMember&&!activeAssignedRecipient&&canEdit()&&<div className="applybox"><label>When changing workout structure, apply edits to:</label><select value={applyScope} onChange={e=>setApplyScope(e.target.value as any)}><option value="future">This week and all future weeks</option><option value="current">This workout only</option></select></div>}
     <div className="stats">{trainingModeStat}<div className="stat"><span className="muted">Week</span><b>{week}</b></div><div className="stat"><span className="muted">Sets</span><b>{planned}</b></div><div className="stat"><span className="muted">Logged</span><b>{logged}</b></div></div>
     {program?.focus_muscles?.length>0&&<p className="muted">Program focus: <b>{program.focus_muscles.join(', ')}</b></p>}{(program?.program_summary||program?.coaching_notes||aiSummary||aiCoachingNotes)&&<div className="program-ai-summary-box training-program-notes"><label>AI program notes</label>{(program?.program_summary||aiSummary)&&<p className="program-ai-summary">{program?.program_summary||aiSummary}</p>}{(program?.coaching_notes||aiCoachingNotes)&&<><label style={{marginTop:10}}>Coaching notes</label><p className="program-ai-coaching">{program?.coaching_notes||aiCoachingNotes}</p></>}</div>}
-    <div className="row"><div><label>Date</label><DateInput value={logDate} onChange={onLogDateChange}/></div><div><label>Week</label><select value={week} onChange={e=>onWeekChange(Number(e.target.value))}>{Array.from({length:program?.weeks||weeks},(_,i)=><option key={i+1} value={i+1}>Week {i+1}{program?` · ${weekRangeLabel(resolveProgramStartDate(program),i+1)}`:''}</option>)}</select></div>{program&&<div><label>Program start</label><DateInput value={resolveProgramStartDate(program)} onChange={updateProgramStartDate} disabled={!canEdit()}/></div>}</div>
+    <div className="row"><div><label>Date</label><DateInput value={logDate} onChange={onLogDateChange} disabled={!!activeAssignedRecipient}/></div><div><label>Week</label><select value={week} onChange={e=>onWeekChange(Number(e.target.value))} disabled={!!activeAssignedRecipient}>{Array.from({length:program?.weeks||weeks},(_,i)=><option key={i+1} value={i+1}>Week {i+1}{program?` · ${weekRangeLabel(resolveProgramStartDate(program),i+1)}`:''}</option>)}</select></div>{program&&<div><label>Program start</label><DateInput value={resolveProgramStartDate(program)} onChange={updateProgramStartDate} disabled={!canEdit()}/></div>}</div>
     {program&&<p className="muted" style={{marginTop:4}}>Week {week} covers {weekRangeLabel(resolveProgramStartDate(program),week)}. Logging on {formatDisplayDate(logDate)} ({dayLabelFromYmd(logDate)}).</p>}
-    <div className="tabs">{(program?.st_workouts||[]).filter((w:any)=>w.week===week).sort((a:any,b:any)=>a.day_order-b.day_order).map((w:any)=><button key={w.id} className={workout?.id===w.id?'active':''} onClick={()=>onSelectWorkoutDay(w)}>{w.day_label} · {w.workout_type}<span className="muted" style={{marginLeft:6}}>{formatDisplayDate(dateForWeekAndDay(resolveProgramStartDate(program),week,w.day_label))}</span></button>)}</div>
-    {!program&&<div className="card"><h2>No program yet</h2><p className="muted">Open the Program Setup tab to generate your first plan.</p><button className="btn secondary" onClick={()=>setTrainingSubNav('setup')}>Program Setup</button></div>}
+    {!activeAssignedRecipient&&<div className="tabs">{(program?.st_workouts||[]).filter((w:any)=>w.week===week).sort((a:any,b:any)=>a.day_order-b.day_order).map((w:any)=><button key={w.id} className={workout?.id===w.id?'active':''} onClick={()=>onSelectWorkoutDay(w)}>{w.day_label} · {w.workout_type}<span className="muted" style={{marginLeft:6}}>{formatDisplayDate(dateForWeekAndDay(resolveProgramStartDate(program),week,w.day_label))}</span></button>)}</div>}
+    {!program&&!activeAssignedRecipient&&<div className="card"><h2>No program yet</h2><p className="muted">Open the Program Setup tab to generate your first plan.</p><button className="btn secondary" onClick={()=>setTrainingSubNav('setup')}>Program Setup</button></div>}
     {workout&&<div className="card"><div className="topline" style={{justifyContent:'space-between'}}><h2>{workout.day_label} · {workout.workout_type}</h2><div className="actions"><button type="button" className="btn small secondary" onClick={()=>{const ids=(workout.st_exercises||[]).map((e:any)=>e.id);setCollapsedExercises((prev:any)=>{const next={...prev};ids.forEach((id:string)=>next[id]=false);return next;});}}>Expand all</button><button type="button" className="btn small secondary" onClick={()=>{const ids=(workout.st_exercises||[]).map((e:any)=>e.id);setCollapsedExercises((prev:any)=>{const next={...prev};ids.forEach((id:string)=>next[id]=true);return next;});}}>Collapse all</button><span className="muted">{workoutExerciseCount(workout)} exercises · Week {week}</span></div></div></div>}
     {workout&&SECTIONS.map((sec:any)=>{
       const exercises=sectionExercises(workout,sec.id);

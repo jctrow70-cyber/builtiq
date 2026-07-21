@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { roleForUi, roleLabel } from '../../../lib/groups';
 import GroupCreateJoinPanel from './GroupCreateJoinPanel';
 import GroupMemberDashboard from './GroupMemberDashboard';
+import GroupAssignWorkoutPanel from './GroupAssignWorkoutPanel';
 
 export type GroupsHubProps = {
   sessionUserId: string;
@@ -22,6 +23,7 @@ export type GroupsHubProps = {
   memberAssignments: Record<string, any>;
   assignDraft: { type: string; programId: string; notes: string };
   programs: any[];
+  groupProgramForAssign: any | null;
   compliancePct: number;
   teamActiveCount: number;
   teamTotalSets: number;
@@ -44,6 +46,15 @@ export type GroupsHubProps = {
   onSetParticipation: (member: any, active: boolean) => void;
   onAssignDraftChange: (draft: { type: string; programId: string; notes: string }) => void;
   onApplyAssignment: () => void;
+  onAssignWorkout: (payload: {
+    workoutId: string;
+    targetType: 'group' | 'members';
+    memberUserIds: string[];
+    scheduledDate: string;
+    dueDate: string;
+    title: string;
+    notes: string;
+  }) => Promise<void>;
   onOpenTraining: () => void;
   onGoProgramSetup: () => void;
   onSetModeTeam: () => void;
@@ -91,6 +102,7 @@ export default function GroupsHub(props: GroupsHubProps) {
     memberAssignment,
     assignDraft,
     programs,
+    groupProgramForAssign,
     compliancePct,
     teamActiveCount,
     teamTotalSets,
@@ -113,6 +125,7 @@ export default function GroupsHub(props: GroupsHubProps) {
     onSetParticipation,
     onAssignDraftChange,
     onApplyAssignment,
+    onAssignWorkout,
     onOpenTraining,
     onGoProgramSetup,
     onSetModeTeam,
@@ -414,6 +427,14 @@ export default function GroupsHub(props: GroupsHubProps) {
           );
         })}
       </div>
+
+      {canManage && (
+        <GroupAssignWorkoutPanel
+          groupProgram={groupProgramForAssign}
+          members={members}
+          onAssign={onAssignWorkout}
+        />
+      )}
 
       {canManage && <GroupCreateJoinPanel onCreate={onCreateGroup} onJoin={onJoinGroup} compact />}
     </section>

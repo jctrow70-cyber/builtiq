@@ -70,6 +70,20 @@
 .group-create-join-compact{margin-top:4px}
 .team-member-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end}
 .team-member-participation{font-size:11px;color:var(--muted);margin:0!important;white-space:nowrap}
+.assigned-workouts-panel,.group-assign-workout{margin-bottom:10px}
+.assigned-workout-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;padding:12px 0;border-top:1px solid var(--line)}
+.assigned-workout-row.active{background:#121827;border-radius:12px;padding:12px;margin:0 -4px}
+.assigned-workout-row.completed{opacity:.85}
+.assigned-workout-main b{display:block;font-size:14px}
+.assigned-workout-main .muted{display:block;font-size:11px;margin-top:2px}
+.assigned-workout-notes{display:block;font-size:11px;margin-top:4px;font-style:italic}
+.assigned-workout-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end}
+.assigned-status-badge{background:#312654;color:#ddd6fe}
+.assigned-workout-banner{border-color:#4c3f78}
+.assign-member-picks{display:flex;flex-wrap:wrap;gap:8px 14px;margin:8px 0}
+.assign-member-pick{margin:0!important;font-size:12px}
+.assign-error{color:#f87171;font-size:12px;margin-top:8px}
+.assign-success{color:#86efac;font-size:12px;margin-top:8px}
 .team-member-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start;padding:10px 0;border-top:1px solid var(--line)}
 .team-member-row.active{background:#121827;border-radius:12px;padding:10px;margin:0 -4px}
 .team-member-main{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:transparent;color:inherit;padding:0}

@@ -3665,3 +3665,66 @@ Centralize all group lifecycle and roster management in the Groups tab so Traini
 BIQ-0043-P3 Add My Groups hub and move group management from Settings
 ```
 
+---
+
+## BIQ-0043-P4 - Assigned Workouts in Training (Phase 4)
+
+Date: 2026-07-20  
+Branch: preview/groups-v2-biq-0043  
+Status: Completed
+
+### Summary
+
+Members see group-assigned workouts in **Training → Assigned Workouts**, can start/continue logging with the existing workout logger, and auto-complete recipient status when all sets are logged. Managers assign workouts from the **Groups** tab (whole group or selected members) via `st_assign_workout_to_targets`.
+
+### Purpose
+
+Deliver one-time group workout assignments into the unified Training logger — the core product split from Decision 026. Managers assign; members log in one place alongside their personal program.
+
+### Changes
+
+- **`AssignedWorkoutsPanel`** — member inbox in Training (pending/started/completed)
+- **`GroupAssignWorkoutPanel`** — manager assign form on Groups detail (group or selected members)
+- **`lib/groups/assignments.ts`** — assignment helpers, workout resolution, display labels
+- **`app/page.tsx`** — load assignments, open/close assigned workout context, log with group `team_id`, auto-complete recipient
+- **`GroupsHub`** — assign workout panel for managers
+- **`app/globals.css`** — assigned workout + assign form styles
+
+### Files Changed
+
+- `app/components/groups/AssignedWorkoutsPanel.tsx` (new)
+- `app/components/groups/GroupAssignWorkoutPanel.tsx` (new)
+- `app/components/groups/GroupsHub.tsx`
+- `lib/groups/assignments.ts` (new)
+- `lib/groups/index.ts`
+- `app/page.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None — uses P2 schema and `st_assign_workout_to_targets` RPC. Ensure migration `20250717_023_group_training_schema.sql` is applied.
+
+### Testing Steps
+
+1. **Manager setup:** Owner/manager creates a group program in Training → Program Setup (Group program mode).
+2. **Assign whole group:** Groups tab → Assign workout → pick workout → Whole group → Assign.
+3. **Member inbox:** Member opens Training → Assigned Workouts shows the assignment with group name and date.
+4. **Start logging:** Member taps Start → assigned workout banner appears, logger loads (read-only template).
+5. **Complete:** Log all sets → recipient status becomes Completed; appears under Recently completed.
+6. **Back to personal:** Back to personal program restores member's personal program below.
+7. **Selected members:** Manager assigns to 1–2 members only → only those members see it.
+8. **Regression:** Personal program logging still works; manager co-log on member view unchanged.
+
+### Known Issues
+
+- Classification targeting UI deferred to Phase 5
+- No workout template snapshot on assign yet (`template_snapshot_version` reserved)
+- Personal copy of assigned workout deferred to Phase 6
+
+### Recommended Commit Message
+
+```text
+BIQ-0043-P4 Add assigned workouts delivery in Training and manager assign UI
+```
+
