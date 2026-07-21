@@ -506,7 +506,7 @@ export default function Page(){
  }
  async function toggleMemberClassification(member:any,classificationId:string,active:boolean){
   const current=memberClassificationIds[member.id]||[];
-  const next=active?[...new Set([...current,classificationId])]:current.filter((id)=>id!==classificationId);
+  const next=active?(current.includes(classificationId)?current:[...current,classificationId]):current.filter((id)=>id!==classificationId);
   setMemberClassificationIds((prev)=>({...prev,[member.id]:next}));
   await setMemberClassifications(member,next);
  }
