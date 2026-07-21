@@ -262,7 +262,28 @@
 .log-chip.active{border-color:#7c5cff;background:#1b1634;color:#fff}
 .log-chip:disabled{opacity:.5}
 .log-save-hint{margin:10px 0 0;font-size:11px;text-align:center}
-.nutrition-tracker{display:grid;gap:10px}
+.nutrition-tracker{display:grid;gap:8px}
+.nutrition-summary-card{padding:10px 12px}
+.nutrition-summary-actions{margin-top:8px}
+.nutrition-macro-dashboard{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 10px;margin:4px 0 2px}
+.nutrition-macro-ring-cell{display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;padding:2px 0}
+.nutrition-macro-ring-label{font-size:10px;font-weight:800;color:#cbd5e1;text-transform:uppercase;letter-spacing:.05em}
+.nutrition-macro-ring-wrap{position:relative;width:100%;max-width:132px;aspect-ratio:1;margin:0 auto}
+.nutrition-macro-ring-wrap svg{width:100%;height:100%;display:block}
+.nutrition-macro-ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:16% 6px 10px}
+.nutrition-macro-ring-value{font-size:clamp(17px,4.8vw,22px);font-weight:900;line-height:1.05}
+.nutrition-macro-ring-subtitle{font-size:10px;color:var(--muted);line-height:1.2}
+.nutrition-macro-ring-footer{font-size:10px;font-weight:800;color:#cbd5e1;line-height:1.2;margin-top:1px}
+.nutrition-ring-track{stroke:#1a2230;opacity:.95}
+.nutrition-ring-progress{transition:stroke-dashoffset .65s ease,stroke .35s ease}
+@media (prefers-reduced-motion:reduce){.nutrition-ring-progress{transition:none}}
+.nutrition-ring--primary .nutrition-ring-progress{stroke:var(--purple)}
+.nutrition-ring--near .nutrition-ring-progress{stroke:var(--green)}
+.nutrition-ring--over .nutrition-ring-progress{stroke:var(--amber)}
+.nutrition-remaining-strip{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;border-radius:14px;background:linear-gradient(180deg,var(--card),#111827);border:1px solid var(--line)}
+.nutrition-remaining-strip strong{font-size:17px;font-weight:900;color:var(--green)}
+.nutrition-remaining-strip--over strong{color:var(--amber)}
+.nutrition-remaining-label{font-size:12px;font-weight:800;color:#cbd5e1}
 .nutrition-date-row{display:grid;grid-template-columns:auto 1fr auto auto;gap:6px;align-items:center;margin:8px 0}
 .nutrition-totals-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
 .nutrition-total-tile{background:#0b1119;border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}
@@ -334,5 +355,5 @@
 .install-app-banner p{margin:0;font-size:12px;line-height:1.35}
 .install-app-banner-actions{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
 @media(display-mode:standalone){.install-app-banner{display:none}}
- @media(max-width:900px){.add-exercise-row{grid-template-columns:1fr auto auto}.catalog-edit-grid{grid-template-columns:1fr}.catalog-search-filters{grid-template-columns:1fr}.setgrid,.setgrid-edit{grid-template-columns:1fr 1fr 1fr}.exercise-add-row{grid-template-columns:1fr auto auto}.team-compliance-card .dash-metrics{grid-template-columns:1fr 1fr}.progress-trend-chart{grid-template-columns:repeat(4,minmax(0,1fr))}.progress-summary-metrics{grid-template-columns:1fr 1fr}.panel-overlay{align-items:flex-end;padding:0}.add-exercise-panel,.nutrition-add-panel{border-radius:18px 18px 0 0;max-height:90vh}.log-field-row{grid-template-columns:1fr}.workout-set-logger{max-width:100%}.log-dup-btn,.set-done-check{min-height:44px}.nutrition-totals-grid,.nutrition-date-row,.nutrition-weekly-metrics{grid-template-columns:1fr 1fr}.nutrition-date-row input{grid-column:span 2}.nutrition-weekly-chart{grid-template-columns:repeat(4,minmax(0,1fr))}}
+ @media(max-width:900px){.add-exercise-row{grid-template-columns:1fr auto auto}.catalog-edit-grid{grid-template-columns:1fr}.catalog-search-filters{grid-template-columns:1fr}.setgrid,.setgrid-edit{grid-template-columns:1fr 1fr 1fr}.exercise-add-row{grid-template-columns:1fr auto auto}.team-compliance-card .dash-metrics{grid-template-columns:1fr 1fr}.progress-trend-chart{grid-template-columns:repeat(4,minmax(0,1fr))}.progress-summary-metrics{grid-template-columns:1fr 1fr}.panel-overlay{align-items:flex-end;padding:0}.add-exercise-panel,.nutrition-add-panel{border-radius:18px 18px 0 0;max-height:90vh}.log-field-row{grid-template-columns:1fr}.workout-set-logger{max-width:100%}.log-dup-btn,.set-done-check{min-height:44px}.nutrition-totals-grid,.nutrition-date-row,.nutrition-weekly-metrics{grid-template-columns:1fr 1fr}.nutrition-date-row{margin:4px 0}.nutrition-date-row input{grid-column:span 2}.nutrition-macro-ring-wrap{max-width:118px}.nutrition-weekly-chart{grid-template-columns:repeat(4,minmax(0,1fr))}}
  @media(max-width:600px){.nutrition-totals-grid,.nutrition-date-row{grid-template-columns:1fr}.nutrition-food-chip,.nutrition-entry-row{grid-template-columns:1fr}}

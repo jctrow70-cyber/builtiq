@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import DateInput from './DateInput';
 import NutritionWeeklySummary from './NutritionWeeklySummary';
+import NutritionMacroDashboard from './NutritionMacroDashboard';
 import {
   DEFAULT_NUTRITION_GOALS,
   entryToPerServing,
@@ -12,7 +13,6 @@ import {
   formatMacroLine,
   goalsFromRow,
   groupEntriesByMeal,
-  macroProgress,
   mealEntryFromDraft,
   MEAL_TYPE_LABELS,
   MEAL_TYPES,
@@ -56,6 +56,7 @@ import {
   type BarcodeLookupResponse,
   type BarcodeLookupResult,
 } from '../../lib/nutrition/barcodeLookup';
+import { formatCaloriesRemaining } from '../../lib/nutrition/macroRing';
 import { LABEL_OCR_DISCLAIMER } from '../../lib/nutrition/labelOcr';
 import NutritionBarcodeScanner from './NutritionBarcodeScanner';
 import { NutritionBarcodeNotFoundCard, NutritionBarcodeProductCard } from './NutritionBarcodeProduct';
@@ -98,35 +99,6 @@ const emptyFoodDraft = (meal: MealType = 'breakfast'): FoodDraft => ({
   fat_g: '',
   saveToLibrary: false,
 });
-
-function MacroBar({
-  label,
-  actual,
-  target,
-  unit = 'g',
-}: {
-  label: string;
-  actual: number;
-  target: number;
-  unit?: string;
-}) {
-  const pct = macroProgress(actual, target);
-  return (
-    <div className="nutrition-macro-bar">
-      <div className="nutrition-macro-bar-head">
-        <span>{label}</span>
-        <span className="muted">
-          {formatMacro(actual)}
-          {unit === 'g' ? 'g' : ''} / {formatMacro(target)}
-          {unit === 'g' ? 'g' : ''}
-        </span>
-      </div>
-      <div className="nutrition-progress-track">
-        <div className="nutrition-progress-fill" style={{ width: `${pct}%` }} />
-      </div>
-    </div>
-  );
-}
 
 function FoodFormFields({
   draft,
@@ -1194,34 +1166,9 @@ export default function NutritionTracker({
         {loading ? (
           <p className="muted">Loading nutrition log...</p>
         ) : (
-          <>
-            <div className="nutrition-totals-grid">
-              <div className="nutrition-total-tile">
-                <b>{formatMacro(totals.calories)}</b>
-                <span className="muted">Calories</span>
-              </div>
-              <div className="nutrition-total-tile">
-                <b>{formatMacro(totals.protein_g)}g</b>
-                <span className="muted">Protein</span>
-              </div>
-              <div className="nutrition-total-tile">
-                <b>{formatMacro(totals.carbs_g)}g</b>
-                <span className="muted">Carbs</span>
-              </div>
-              <div className="nutrition-total-tile">
-                <b>{formatMacro(totals.fat_g)}g</b>
-                <span className="muted">Fat</span>
-              </div>
-            </div>
-            <div className="nutrition-macro-bars">
-              <MacroBar label="Calories" actual={totals.calories} target={goals.calories} unit="" />
-              <MacroBar label="Protein" actual={totals.protein_g} target={goals.protein_g} />
-              <MacroBar label="Carbs" actual={totals.carbs_g} target={goals.carbs_g} />
-              <MacroBar label="Fat" actual={totals.fat_g} target={goals.fat_g} />
-            </div>
-          </>
+          <NutritionMacroDashboard totals={totals} goals={goals} />
         )}
-        <div className="actions" style={{ marginTop: 10 }}>
+        <div className="actions nutrition-summary-actions">
           <button type="button" className="btn green" onClick={() => openAddFood()} disabled={saving}>
             Add food
           </button>
@@ -1234,6 +1181,17 @@ export default function NutritionTracker({
         </div>
         {error && <p className="nutrition-error">{error}</p>}
       </div>
+
+      {!loading && (
+        <div
+          className={`nutrition-remaining-strip${
+            totals.calories > goals.calories ? ' nutrition-remaining-strip--over' : ''
+          }`}
+        >
+          <span className="nutrition-remaining-label">Daily calories</span>
+          <strong>{formatCaloriesRemaining(totals.calories, goals.calories)}</strong>
+        </div>
+      )}
 
       {!loading && showGoalSuggestionBanner && (
         <div className="card nutrition-goals-suggest-card">
@@ -1269,14 +1227,6 @@ export default function NutritionTracker({
             </button>
           </div>
         </div>
-      )}
-
-      {!loading && (
-        <NutritionWeeklySummary
-          summary={weeklySummary}
-          activeDate={logDate}
-          onSelectDate={setDate}
-        />
       )}
 
       {showGoals && (
@@ -1649,11 +1599,88 @@ export default function NutritionTracker({
         </div>
       )}
 
+      {MEAL_TYPES.map((meal) => {
+        const mealEntries = grouped[meal];
+        const mealTotals = sumMacros(mealEntries);
+        return (
+          <div className="card nutrition-meal-card" key={meal}>
+            <div className="topline" style={{ justifyContent: 'space-between' }}>
+              <h3>{MEAL_TYPE_LABELS[meal]}</h3>
+              <span className="badge">
+                {mealEntries.length ? formatMacroLine(mealTotals) : 'No items'}
+              </span>
+            </div>
+            {mealEntries.length === 0 ? (
+              <p className="muted">Nothing logged yet.</p>
+            ) : (
+              <div className="nutrition-entry-list">
+                {mealEntries.map((entry) => (
+                  <div className="nutrition-entry-row" key={entry.id}>
+                    <div className="nutrition-entry-main">
+                      <b>
+                        {entry.food_name}
+                        {entry.serving_qty !== 1 ? ` × ${entry.serving_qty}` : ''}
+                      </b>
+                      <span className="muted">{formatMacroLine(entry)}</span>
+                    </div>
+                    <div className="nutrition-entry-actions">
+                      <button
+                        type="button"
+                        className="btn small secondary"
+                        onClick={() => openEditEntry(entry)}
+                        disabled={saving}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="btn small secondary"
+                        onClick={() => duplicateEntry(entry)}
+                        disabled={saving}
+                      >
+                        Copy
+                      </button>
+                      <button
+                        type="button"
+                        className="btn small red"
+                        onClick={() => deleteEntry(entry.id)}
+                        disabled={saving}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="actions" style={{ marginTop: 8 }}>
+              <button
+                type="button"
+                className="btn small secondary"
+                onClick={() => openAddFood(meal)}
+              >
+                + Add to {MEAL_TYPE_LABELS[meal]}
+              </button>
+              {mealEntries.length > 0 && (
+                <button
+                  type="button"
+                  className="btn small secondary"
+                  onClick={() => saveMealAsTemplate(meal)}
+                  disabled={saving}
+                >
+                  Save as template
+                </button>
+              )}
+            </div>
+          </div>
+        );
+      })}
+
       <div className="card nutrition-library-card">
         <h3>Meal templates</h3>
         <p className="muted">Save a logged meal as a template, then log the whole meal in one tap.</p>
         {activeTemplates.length === 0 ? (
-          <p className="muted">No templates yet. Use &ldquo;Save as template&rdquo; on a meal section below.</p>
+          <p className="muted">No templates yet. Use &ldquo;Save as template&rdquo; on a meal section above.</p>
         ) : (
           <div className="nutrition-template-grid">
             {activeTemplates.map((template) => {
@@ -1818,82 +1845,13 @@ export default function NutritionTracker({
         </div>
       )}
 
-      {MEAL_TYPES.map((meal) => {
-        const mealEntries = grouped[meal];
-        const mealTotals = sumMacros(mealEntries);
-        return (
-          <div className="card nutrition-meal-card" key={meal}>
-            <div className="topline" style={{ justifyContent: 'space-between' }}>
-              <h3>{MEAL_TYPE_LABELS[meal]}</h3>
-              <span className="badge">
-                {mealEntries.length ? formatMacroLine(mealTotals) : 'No items'}
-              </span>
-            </div>
-            {mealEntries.length === 0 ? (
-              <p className="muted">Nothing logged yet.</p>
-            ) : (
-              <div className="nutrition-entry-list">
-                {mealEntries.map((entry) => (
-                  <div className="nutrition-entry-row" key={entry.id}>
-                    <div className="nutrition-entry-main">
-                      <b>
-                        {entry.food_name}
-                        {entry.serving_qty !== 1 ? ` × ${entry.serving_qty}` : ''}
-                      </b>
-                      <span className="muted">{formatMacroLine(entry)}</span>
-                    </div>
-                    <div className="nutrition-entry-actions">
-                      <button
-                        type="button"
-                        className="btn small secondary"
-                        onClick={() => openEditEntry(entry)}
-                        disabled={saving}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        className="btn small secondary"
-                        onClick={() => duplicateEntry(entry)}
-                        disabled={saving}
-                      >
-                        Copy
-                      </button>
-                      <button
-                        type="button"
-                        className="btn small red"
-                        onClick={() => deleteEntry(entry.id)}
-                        disabled={saving}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="actions" style={{ marginTop: 8 }}>
-              <button
-                type="button"
-                className="btn small secondary"
-                onClick={() => openAddFood(meal)}
-              >
-                + Add to {MEAL_TYPE_LABELS[meal]}
-              </button>
-              {mealEntries.length > 0 && (
-                <button
-                  type="button"
-                  className="btn small secondary"
-                  onClick={() => saveMealAsTemplate(meal)}
-                  disabled={saving}
-                >
-                  Save as template
-                </button>
-              )}
-            </div>
-          </div>
-        );
-      })}
+      {!loading && (
+        <NutritionWeeklySummary
+          summary={weeklySummary}
+          activeDate={logDate}
+          onSelectDate={setDate}
+        />
+      )}
     </section>
   );
 }

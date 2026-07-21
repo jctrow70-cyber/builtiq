@@ -4009,3 +4009,61 @@ BIQ-0043 Remove duplicate My training plan card from Groups tab
 
 2026-07-21: Commit `93a881b` reached GitHub but did not appear in Vercel; follow-up push with this changelog entry to trigger preview redeploy.
 
+---
+
+## BIQ-0044 - Nutrition Dashboard Circular Progress Rings
+
+Date: 2026-07-21  
+Branch: preview/groups-v2-biq-0043  
+Status: Completed
+
+### Summary
+
+Replaced the top-of-page numeric tiles and horizontal macro bars with a responsive 2×2 grid of animated circular progress rings for calories, protein, carbs, and fat. Reordered the Nutrition screen so daily progress is visible first, followed by remaining calories, meal logs, food library tools, and weekly history.
+
+### Purpose
+
+Users should understand daily nutrition progress within seconds of opening Nutrition. Visual rings communicate goal status faster than tables of numbers while preserving all logging, barcode, AI, and history features.
+
+### Changes
+
+- Added `NutritionMacroRing` and `NutritionMacroDashboard` components with SVG rings
+- Added `lib/nutrition/macroRing.ts` for arc math, status colors, and remaining-calorie copy
+- Ring colors: primary purple (0–89%), green (90–100%), amber when over goal
+- Added compact daily calories remaining strip below the dashboard
+- Reordered sections: dashboard → remaining → meals → templates/my foods → weekly chart
+- Removed legacy `MacroBar` horizontal progress bars from the summary card
+
+### Files Changed
+
+- `app/components/NutritionMacroRing.tsx` (new)
+- `app/components/NutritionMacroDashboard.tsx` (new)
+- `app/components/NutritionTracker.tsx`
+- `lib/nutrition/macroRing.ts` (new)
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+- Open Nutrition on mobile and desktop; confirm four rings fit above the fold on common phone sizes
+- Log food and confirm rings animate smoothly when totals change
+- Set goals and verify ring fill matches consumed ÷ goal
+- Confirm purple below 90%, green from 90–100%, amber when slightly over goal
+- Confirm remaining calories strip shows “X Remaining” or “X Over”
+- Verify meal cards, Add food modal, barcode scan, templates, my foods, and weekly history still work
+- Change dates and confirm rings reflect the selected day
+
+### Known Issues
+
+None.
+
+### Recommended Commit Message
+
+```text
+BIQ-0044 Add circular macro progress dashboard to Nutrition screen
+```
+
