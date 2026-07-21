@@ -79,6 +79,9 @@
 .assigned-workout-notes{display:block;font-size:11px;margin-top:4px;font-style:italic}
 .assigned-workout-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:flex-end}
 .assigned-status-badge{background:#312654;color:#ddd6fe}
+.personal-copy-badge{background:#1e3a2f;color:#bbf7d0}
+.assigned-copy-hint{margin-top:6px;font-size:12px}
+.assigned-banner-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end}
 .assigned-workout-banner{border-color:#4c3f78}
 .assign-member-picks{display:flex;flex-wrap:wrap;gap:8px 14px;margin:8px 0}
 .assign-member-pick{margin:0!important;font-size:12px}

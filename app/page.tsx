@@ -30,7 +30,7 @@ import WorkoutSetLogger from './components/WorkoutSetLogger';
 import GroupsHub from './components/groups/GroupsHub';
 import AssignedWorkoutsPanel from './components/groups/AssignedWorkoutsPanel';
 import { formatMacro, macroProgress } from '../lib/nutrition/macros';
-import { canManageGroup, canLogWorkout, canEditGroupProgram, isGroupOwner, roleLabel, roleForDatabase, resolveAssignmentWorkout, classificationSlug, type AssignedWorkoutRow, type GroupClassification } from '../lib/groups';
+import { canManageGroup, canLogWorkout, canEditGroupProgram, isGroupOwner, roleLabel, roleForDatabase, resolveAssignmentWorkout, assignedHasPersonalCopy, copyAssignmentToPersonal, classificationSlug, type AssignedWorkoutRow, type GroupClassification } from '../lib/groups';
 
 const NAV=['Dashboard','Training','Groups','Nutrition','Progress','AI Coach','Settings'];
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -168,6 +168,7 @@ export default function Page(){
  const [assignDraft,setAssignDraft]=useState<any>({type:'team',programId:'',notes:''});
  const [assignedWorkouts,setAssignedWorkouts]=useState<AssignedWorkoutRow[]>([]);
  const [activeAssignedRecipient,setActiveAssignedRecipient]=useState<AssignedWorkoutRow|null>(null);
+ const [assignmentCopyBusy,setAssignmentCopyBusy]=useState<string|null>(null);
  const [groupProgramForAssign,setGroupProgramForAssign]=useState<any>(null);
  const [classifications,setClassifications]=useState<GroupClassification[]>([]);
  const [memberClassificationIds,setMemberClassificationIds]=useState<Record<string,string[]>>({});
@@ -367,7 +368,7 @@ export default function Page(){
  }
  function canManageGroupView(){return !!activeTeam&&canManageGroup(activeTeam.my_role);}
  function canLog(){if(!session?.user)return false; const uid=viewingMember?.user_id||session.user.id; return canLogWorkout(session.user.id,uid,activeTeam?.my_role);}
- function canEdit(){if(!session?.user)return false; if(activeAssignedRecipient)return false; if(viewingMember&&viewingMember.user_id!==session.user.id)return false; return mode==='personal'||canEditGroupProgram(activeTeam?.my_role);}
+ function canEdit(){if(!session?.user)return false; if(activeAssignedRecipient)return assignedHasPersonalCopy(activeAssignedRecipient); if(viewingMember&&viewingMember.user_id!==session.user.id)return false; return mode==='personal'||canEditGroupProgram(activeTeam?.my_role);}
  function isOwner(){return isGroupOwner(activeTeam?.my_role);}
  function logUserId(){return viewingMember?.user_id||session?.user?.id;}
  function pickProgram(list:any[],defaultId?:string|null){if(!list.length)return null; if(defaultId)return list.find((p:any)=>p.id===defaultId)||list[0]; return list[0];}
@@ -531,25 +532,28 @@ export default function Page(){
  async function openAssignedWorkout(row:AssignedWorkoutRow){
   const wa=row.st_workout_assignments;
   if(!wa)return alert('Assignment not found.');
-  let programId=wa.program_id||null;
-  if(!programId&&wa.workout_id){
+  const usesPersonalCopy=assignedHasPersonalCopy(row);
+  let programId=usesPersonalCopy?row.personal_copy_program_id||null:wa.program_id||null;
+  if(!programId&&!usesPersonalCopy&&wa.workout_id){
     const{data:workoutRow}=await supabase.from('st_workouts').select('program_id').eq('id',wa.workout_id).maybeSingle();
     programId=workoutRow?.program_id||null;
   }
   if(!programId)return alert('This assignment is missing program data.');
   const{data:fullProgram,error}=await supabase.from('st_programs').select('*, st_workouts(*, st_exercises(*, st_planned_sets(*)))').eq('id',programId).single();
   if(error||!fullProgram)return alert(error?.message||'Program not found.');
-  const targetWorkout=resolveAssignmentWorkout(fullProgram,wa);
+  const targetWorkout=usesPersonalCopy
+    ?((fullProgram.st_workouts||[]).slice().sort((a:any,b:any)=>a.week-b.week||a.day_order-b.day_order)[0]||null)
+    :resolveAssignmentWorkout(fullProgram,wa);
   if(!targetWorkout)return alert('Could not resolve workout for this assignment.');
   setActiveAssignedRecipient(row);
   setViewingMember(null);
   setMemberDashboard(null);
-  setMode('team');
+  setMode(usesPersonalCopy?'personal':'team');
   setSelectedTeamId(wa.team_id);
   setProgram(fullProgram);
   setPrograms([fullProgram]);
   setLogDate(wa.scheduled_date||today());
-  setWeek(targetWorkout.week||1);
+  setWeek(usesPersonalCopy?1:(targetWorkout.week||1));
   setActiveWorkout(targetWorkout.id);
   syncingCalendarRef.current=true;
   await loadLogs(fullProgram,session.user.id);
@@ -561,6 +565,25 @@ export default function Page(){
   }
   setAppNav('Training');
   setTrainingSubNav('personal');
+ }
+ async function copyAssignedWorkoutToPersonal(row?:AssignedWorkoutRow){
+  const target=row||activeAssignedRecipient;
+  if(!target||assignmentCopyBusy)return;
+  if(assignedHasPersonalCopy(target)){
+    await openAssignedWorkout(target);
+    return;
+  }
+  setAssignmentCopyBusy(target.id);
+  try{
+    const{programId,error}=await copyAssignmentToPersonal(supabase,target.id);
+    if(error||!programId)return alert(error||'Could not copy workout.');
+    const nextRow:AssignedWorkoutRow={...target,personal_copy_program_id:programId};
+    setAssignedWorkouts((prev)=>prev.map((r)=>r.id===target.id?nextRow:r));
+    await openAssignedWorkout(nextRow);
+    await loadAssignedWorkouts();
+  }finally{
+    setAssignmentCopyBusy(null);
+  }
  }
  async function closeAssignedWorkout(){
   setActiveAssignedRecipient(null);
@@ -1160,7 +1183,7 @@ const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sor
  const panelSupersetGroups=addExercisePanel&&workout?getSupersetGroupsForSection(workout,addExercisePanel.section).filter((g:any)=>g.count<3):[];
  const pendingGroupId=addExercisePanel?pendingSupersetGroup[addExercisePanel.section]:null;
  const pendingGroupInfo=pendingGroupId?panelSupersetGroups.find((g:any)=>g.id===pendingGroupId):null;
- const trainingModeStat=<div className="stat"><span className="muted">Plan</span><b>{activeAssignedRecipient?'Assigned':viewingMember?'Member':mode==='team'?(activeTeam?.training_source==='personal'?'Personal':'Group'):'Personal'}</b></div>;
+ const trainingModeStat=<div className="stat"><span className="muted">Plan</span><b>{activeAssignedRecipient?(assignedHasPersonalCopy(activeAssignedRecipient)?'Assigned · personal copy':'Assigned'):viewingMember?'Member':mode==='team'?(activeTeam?.training_source==='personal'?'Personal':'Group'):'Personal'}</b></div>;
  const memberAssignment=memberDashboard?memberAssignments[memberDashboard.user_id]:null;
  const renderExerciseCard=(ex:any,inSuperset=false)=>{const catItem=catalog.find((c:any)=>c.id===ex.catalog_exercise_id);const exType=exerciseTypeOf(ex,catItem);const aliases=exerciseHistoryAliases(ex.catalog_exercise_id||'',ex.name||'');const histRows=aliases.flatMap((ek)=>history[ek]||[]);const lastPerf=buildLastPerformance(histRows);const plannedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).length;const progression=recommendNextTarget(lastPerf,plannedSets,ex.name,ex.muscle_group||'');const exThumb=getExerciseThumb(catItem);const showGuide=hasExerciseGuide(catItem);const guidePayload=getExerciseGuidePayload(catItem,ex.name);const cardKey=`${ex.id}:${ex.catalog_exercise_id||'n'}:${ex.name}`;const isEditingName=exerciseNameSearch?.exerciseId===ex.id;const nameQuery=isEditingName?exerciseNameSearch!.query:(ex.name||'');const nameSearchResults=isEditingName&&nameQuery.trim()?searchCatalog(builtinCatalog,{query:nameQuery,filters:{availableEquipment:hasEquipmentFilter(equipmentForSearch)?equipmentForSearch:undefined},limit:8}):[];const sortedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));const prevBySetId:Record<string,any>={};sortedSets.forEach((s:any)=>{prevBySetId[s.id]=previousFor(ex,s);});const weightUnit=profileDraft?.units_preference==='metric'?'kg':'lb';const isCollapsed=!!collapsedExercises[ex.id];const doneSets=sortedSets.filter((s:any)=>logs[s.id]?.completed).length;return <div className={`card exercise-card${inSuperset?' in-superset':''}${isCollapsed?' exercise-collapsed':''}`} key={cardKey}>
         <div className="exercise-head"><div className="exercise-head-main">{exThumb&&(showGuide&&guidePayload?<button type="button" className="exercise-card-thumb-btn" title={guidePayload.hasVideo?"Watch form":"Form guide"} onClick={()=>setExerciseGuide(guidePayload)}><img className="exercise-card-thumb" src={exThumb} alt="" loading="lazy" referrerPolicy="no-referrer"/></button>:<img className="exercise-card-thumb" src={exThumb} alt="" loading="lazy" referrerPolicy="no-referrer"/>)}<div className="exercise-meta">{canEdit()?<>
@@ -1217,9 +1240,9 @@ const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sor
     <div className="tabs training-subnav"><button type="button" className={trainingSubNav==='personal'?'active':''} onClick={()=>{setTrainingSubNav('personal');setMemberDashboard(null);setViewingMember(null);}}>Personal Training</button><button type="button" className={trainingSubNav==='setup'?'active':''} onClick={()=>{setTrainingSubNav('setup');setShowProgramSetup(true);setMemberDashboard(null);setViewingMember(null);}}>Program Setup</button></div>
     {trainingSubNav==='setup'&&programSetupPanel}
     {(trainingSubNav==='personal'||viewingMember)&&<>
-    {!viewingMember&&<AssignedWorkoutsPanel assignments={assignedWorkouts} activeRecipientId={activeAssignedRecipient?.id||null} onOpen={openAssignedWorkout} onCloseActive={activeAssignedRecipient?closeAssignedWorkout:undefined} getWorkoutStatus={assignmentPanelStatus} statusLabel={statusLabel}/>}
+    {!viewingMember&&<AssignedWorkoutsPanel assignments={assignedWorkouts} activeRecipientId={activeAssignedRecipient?.id||null} onOpen={openAssignedWorkout} onCloseActive={activeAssignedRecipient?closeAssignedWorkout:undefined} onCopyToPersonal={copyAssignedWorkoutToPersonal} copyingRecipientId={assignmentCopyBusy} getWorkoutStatus={assignmentPanelStatus} statusLabel={statusLabel}/>}
     {!viewingMember&&!activeAssignedRecipient&&teams.length>0&&activeTeam&&<div className="card team-plan-card"><div className="topline" style={{justifyContent:'space-between'}}><h2>Active plan</h2><span className="badge">{(activeTeam.training_source||'team')==='team'?'Group program':'Personal program'}</span></div>{teams.length>1&&<><label>Group</label><select value={activeTeam?.id||''} onChange={e=>{setSelectedTeamId(e.target.value||null);setMode((teams.find((t:any)=>t.id===e.target.value)?.training_source||'team')==='personal'?'personal':'team');}} aria-label="Select group">{teams.map((t:any)=><option key={t.id} value={t.id}>{t.name}</option>)}</select></>}<div className="tabs"><button type="button" className={(activeTeam.training_source||'team')!=='personal'?'active':''} onClick={()=>setMyTrainingSource('team')}>Group workout</button><button type="button" className={activeTeam.training_source==='personal'?'active':''} onClick={()=>setMyTrainingSource('personal')}>Personal plan</button></div>{(activeTeam.training_source||'team')!=='personal'&&program&&<p className="muted" style={{marginTop:8}}>Logging <b>{program.name}</b> · {activeTeam.name}. Managers edit the template in Program Setup → Group program.</p>}{(activeTeam.training_source||'team')!=='personal'&&!program&&<><p className="muted" style={{marginTop:8}}>No group program loaded for this group.</p><button type="button" className="btn small secondary" onClick={()=>{setTrainingSubNav('setup');setShowProgramSetup(true);setMode('team');}}>Open Program Setup → Group program</button></>}</div>}
-    {activeAssignedRecipient&&<div className="card viewing-banner assigned-workout-banner"><div className="topline" style={{justifyContent:'space-between'}}><div><h2>Assigned workout</h2><p className="muted">{activeAssignedRecipient.st_workout_assignments?.st_teams?.name||'Group'} · {formatDisplayDate(activeAssignedRecipient.st_workout_assignments?.scheduled_date||logDate)}{activeAssignedRecipient.st_workout_assignments?.notes?` · ${activeAssignedRecipient.st_workout_assignments.notes}`:''}</p></div><button className="btn small secondary" onClick={closeAssignedWorkout}>Back to personal program</button></div></div>}
+    {activeAssignedRecipient&&<div className="card viewing-banner assigned-workout-banner"><div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}><div><h2>Assigned workout</h2><p className="muted">{activeAssignedRecipient.st_workout_assignments?.st_teams?.name||'Group'} · {formatDisplayDate(activeAssignedRecipient.st_workout_assignments?.scheduled_date||logDate)}{activeAssignedRecipient.st_workout_assignments?.notes?` · ${activeAssignedRecipient.st_workout_assignments.notes}`:''}</p>{!assignedHasPersonalCopy(activeAssignedRecipient)?<p className="muted assigned-copy-hint">Group template is read-only. Copy to your personal plan to adjust exercises and sets.</p>:<p className="muted assigned-copy-hint">You are logging your personal copy. Edits stay on your account; completion still counts for the group assignment.</p>}</div><div className="assigned-banner-actions"><button className="btn small secondary" onClick={closeAssignedWorkout}>Back to personal program</button>{assignedHasPersonalCopy(activeAssignedRecipient)?<span className="badge personal-copy-badge">Personal copy</span>:<button type="button" className="btn small green" onClick={()=>copyAssignedWorkoutToPersonal()} disabled={!!assignmentCopyBusy}>{assignmentCopyBusy===activeAssignedRecipient.id?'Copying…':'Copy to personal plan'}</button>}</div></div></div>}
     {viewingMember&&viewingMember.user_id!==session.user.id&&<div className="card viewing-banner"><div className="topline" style={{justifyContent:'space-between'}}><div><h2>{viewingMember.display_name||'Member'}&apos;s workout</h2><p className="muted">{assignmentTypeLabel(memberAssignments[viewingMember.user_id]?.assignment_type||(viewingMember.training_source||'team')==='personal'?'personal':'team')} · {program?.name||'No program'}{canManageGroupView()?' · manager can log':''}</p></div><button className="btn small secondary" onClick={closeMemberView}>Back</button></div></div>}
     {!viewingMember&&!activeAssignedRecipient&&canEdit()&&<div className="applybox"><label>When changing workout structure, apply edits to:</label><select value={applyScope} onChange={e=>setApplyScope(e.target.value as any)}><option value="future">This week and all future weeks</option><option value="current">This workout only</option></select></div>}
     <div className="stats">{trainingModeStat}<div className="stat"><span className="muted">Week</span><b>{week}</b></div><div className="stat"><span className="muted">Sets</span><b>{planned}</b></div><div className="stat"><span className="muted">Logged</span><b>{logged}</b></div></div>

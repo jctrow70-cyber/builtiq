@@ -1,6 +1,11 @@
 'use client';
 
-import { assignmentDisplayTitle, RECIPIENT_STATUS_LABELS, type AssignedWorkoutRow } from '../../../lib/groups';
+import {
+  assignedHasPersonalCopy,
+  assignmentDisplayTitle,
+  RECIPIENT_STATUS_LABELS,
+  type AssignedWorkoutRow,
+} from '../../../lib/groups';
 import { formatDisplayDate } from '../../../lib/training/programCalendar';
 
 type AssignedWorkoutsPanelProps = {
@@ -8,6 +13,8 @@ type AssignedWorkoutsPanelProps = {
   activeRecipientId?: string | null;
   onOpen: (row: AssignedWorkoutRow) => void;
   onCloseActive?: () => void;
+  onCopyToPersonal?: (row: AssignedWorkoutRow) => void;
+  copyingRecipientId?: string | null;
   getWorkoutStatus?: (row: AssignedWorkoutRow) => string;
   statusLabel: (s: string) => string;
 };
@@ -17,6 +24,8 @@ export default function AssignedWorkoutsPanel({
   activeRecipientId,
   onOpen,
   onCloseActive,
+  onCopyToPersonal,
+  copyingRecipientId,
   getWorkoutStatus,
   statusLabel,
 }: AssignedWorkoutsPanelProps) {
@@ -35,7 +44,9 @@ export default function AssignedWorkoutsPanel({
           </button>
         )}
       </div>
-      <p className="muted">Group workouts assigned by your owner or manager. Log them here — your personal program stays below.</p>
+      <p className="muted">
+        Group workouts assigned by your owner or manager. Copy to your personal plan if you want to adjust the template before logging.
+      </p>
 
       {open.length === 0 && (
         <p className="muted" style={{ marginTop: 8 }}>
@@ -48,6 +59,8 @@ export default function AssignedWorkoutsPanel({
         const groupName = wa?.st_teams?.name || 'Group';
         const logStatus = getWorkoutStatus?.(row) || row.status;
         const isActive = row.id === activeRecipientId;
+        const hasCopy = assignedHasPersonalCopy(row);
+        const copying = copyingRecipientId === row.id;
         const btnLabel =
           logStatus === 'completed'
             ? 'View'
@@ -66,8 +79,19 @@ export default function AssignedWorkoutsPanel({
               {wa.notes && <span className="muted assigned-workout-notes">{wa.notes}</span>}
             </div>
             <div className="assigned-workout-actions">
+              {hasCopy && <span className="badge personal-copy-badge">Personal copy</span>}
               <span className="badge">{statusLabel(logStatus)}</span>
               <span className="badge assigned-status-badge">{RECIPIENT_STATUS_LABELS[row.status]}</span>
+              {!hasCopy && onCopyToPersonal && (
+                <button
+                  type="button"
+                  className="btn small secondary"
+                  onClick={() => onCopyToPersonal(row)}
+                  disabled={!!copyingRecipientId}
+                >
+                  {copying ? 'Copying…' : 'Copy'}
+                </button>
+              )}
               <button
                 type="button"
                 className={`btn small ${logStatus === 'completed' ? 'secondary' : 'green'}`}

@@ -10,6 +10,7 @@ export type AssignedWorkoutRow = {
   assignment_id: string;
   user_id: string;
   status: RecipientStatus;
+  personal_copy_program_id?: string | null;
   st_workout_assignments: {
     id: string;
     team_id: string;
@@ -71,4 +72,19 @@ export function resolveAssignmentWorkout(program: any, assignment: AssignedWorko
 export function workoutLabel(w: any): string {
   if (!w) return 'Workout';
   return `${w.day_label} · ${w.workout_type} (Week ${w.week})`;
+}
+
+export function assignedHasPersonalCopy(row: AssignedWorkoutRow): boolean {
+  return !!row.personal_copy_program_id;
+}
+
+export async function copyAssignmentToPersonal(
+  supabase: { rpc: (fn: string, args: Record<string, unknown>) => Promise<{ data: string | null; error: { message: string } | null }> },
+  recipientId: string,
+): Promise<{ programId: string | null; error: string | null }> {
+  const { data, error } = await supabase.rpc('st_copy_assignment_to_personal', {
+    p_recipient_id: recipientId,
+  });
+  if (error) return { programId: null, error: error.message };
+  return { programId: data, error: null };
 }

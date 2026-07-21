@@ -3792,3 +3792,66 @@ None — uses P2 tables and RPC. Ensure `20250717_023_group_training_schema.sql`
 BIQ-0043-P5 Add group classifications and classification workout targeting
 ```
 
+---
+
+## BIQ-0043-P6 - Personal Copy of Assigned Workouts (Phase 6)
+
+Date: 2026-07-21  
+Branch: preview/groups-v2-biq-0043  
+Status: Completed
+
+### Summary
+
+Members can **copy an assigned group workout into a personal one-week program**, customize exercises and sets, and still log against the group assignment. The copy is linked on `st_assignment_recipients.personal_copy_program_id` and reused on reopen.
+
+### Purpose
+
+Coaches assign a shared template; athletes often need to swap exercises (equipment, injury, preference) without losing assignment tracking. Personal copy keeps the group assignment context while allowing member-owned edits.
+
+### Changes
+
+- **`st_copy_assignment_to_personal` RPC** — atomic copy of one workout (exercises, planned sets, supersets) into a personal program; idempotent if copy already exists
+- **`lib/groups/assignments.ts`** — `personal_copy_program_id` on row type, `assignedHasPersonalCopy`, `copyAssignmentToPersonal`
+- **`openAssignedWorkout` / `canEdit`** — load personal copy when present; enable structure edits on copy only; group template stays read-only
+- **`AssignedWorkoutsPanel`** — Copy action + personal copy badge on open assignments
+- **Assigned workout banner** — copy CTA, read-only vs personal-copy messaging
+- **Logging** — unchanged: logs still attach group `team_id` from the assignment
+
+### Files Changed
+
+- `supabase/migrations/20250717_025_copy_assignment_to_personal.sql` (new)
+- `lib/groups/assignments.ts`
+- `app/page.tsx`
+- `app/components/groups/AssignedWorkoutsPanel.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+- New RPC: `st_copy_assignment_to_personal(p_recipient_id uuid) returns uuid`
+- Uses existing `st_assignment_recipients.personal_copy_program_id` column from P2
+
+Apply migration `20250717_025_copy_assignment_to_personal.sql` in Supabase before testing.
+
+### Testing Steps
+
+1. **Assign workout:** Manager assigns a group workout to a member (P4/P5 flow).
+2. **Read-only open:** Member taps Start → sees assigned banner with read-only template (no add/remove exercise).
+3. **Copy:** Tap **Copy to personal plan** (banner or Assigned Workouts row) → personal copy loads; member can add/replace exercises and edit sets.
+4. **Reopen:** Back out and Continue → same personal copy loads (not group template).
+5. **Log & complete:** Log all sets on personal copy → recipient status becomes Completed; group `team_id` on logs preserved.
+6. **Idempotent copy:** Tap Copy again on same assignment → no duplicate program; existing copy reused.
+7. **Regression:** Personal program and group program logging unchanged when not in assigned context.
+
+### Known Issues
+
+- Logs started on the group template before copy do not transfer to the personal copy (new planned set IDs)
+- `st_assignment_instances` deferred; copy is one program per recipient per assignment
+
+### Recommended Commit Message
+
+```text
+BIQ-0043-P6 Add personal copy of assigned workouts for member customization
+```
+
