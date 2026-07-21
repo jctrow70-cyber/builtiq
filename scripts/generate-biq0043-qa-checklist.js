@@ -32,7 +32,7 @@ const rows = [
   ['P3 — My Groups hub', '3.4', 'Owner promotes member to Manager', 'Role shows Manager on roster', '', '', '', ''],
   ['P3 — My Groups hub', '3.5', 'Manager removes another member', 'Member removed from roster', '', '', '', ''],
   ['P3 — My Groups hub', '3.6', 'Manager toggles member Active off', 'Member shows as observer on roster', '', '', '', ''],
-  ['P3 — My Groups hub', '3.7', 'Member toggles My training plan (Personal / Group)', 'Choice persists after refresh', '', '', '', ''],
+  ['P3 — My Groups hub', '3.7', 'Member toggles Active plan on Training (Group workout / Personal plan)', 'Choice persists after refresh', '', '', '', ''],
   // P4
   ['P4 — Assigned workouts', '4.1', 'Manager: Groups → Assign workout → whole group', 'Assignment created for all active participants', '', '', '', ''],
   ['P4 — Assigned workouts', '4.2', 'Member: Training → Assigned Workouts inbox', 'Assignment visible with group name and date', '', '', '', ''],

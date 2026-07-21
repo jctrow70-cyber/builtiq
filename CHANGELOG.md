@@ -3974,3 +3974,34 @@ Apply migration `20250717_026_group_ai_metadata_hooks.sql` in Supabase.
 BIQ-0043-P8 Add coaching_metadata hooks on group assignments for future AI
 ```
 
+---
+
+## BIQ-0043-P3 follow-up - Remove duplicate plan toggle from Groups
+
+Date: 2026-07-21  
+Branch: preview/groups-v2-biq-0043  
+Status: Completed
+
+### Summary
+
+Removed the **My training plan** card from the Groups tab (duplicate of Training → **Active plan**). Per Decision 026, Groups is management-only; members choose group vs personal program in Training.
+
+### What stayed
+
+- `training_source` in database and **Active plan** toggle on Training
+- Manager roster dropdown (Group / Personal per member)
+- Compliance metrics (On group plan / Personal plan)
+
+### Files Changed
+
+- `app/components/groups/GroupsHub.tsx`
+- `app/page.tsx`
+- `docs/BIQ-0043-QA-Checklist.csv`
+- `CHANGELOG.md`
+
+### Recommended Commit Message
+
+```text
+BIQ-0043 Remove duplicate My training plan card from Groups tab
+```
+

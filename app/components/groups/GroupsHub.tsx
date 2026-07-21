@@ -45,7 +45,6 @@ export type GroupsHubProps = {
   onOpenMember: (member: any) => void;
   onCloseMemberDashboard: () => void;
   onOpenMemberWorkout: (member: any) => void;
-  onSetMyTrainingSource: (source: 'team' | 'personal') => void;
   onSetMemberTrainingSource: (member: any, source: string) => void;
   onSetMemberRole: (member: any, role: string) => void;
   onRemoveMember: (member: any) => void;
@@ -65,8 +64,6 @@ export type GroupsHubProps = {
   onCreateClassification: (name: string) => Promise<void>;
   onDeleteClassification: (classification: GroupClassification) => Promise<void>;
   onToggleMemberClassification: (member: any, classificationId: string, active: boolean) => void;
-  onOpenTraining: () => void;
-  onGoProgramSetup: () => void;
   onSetModeTeam: () => void;
   sectionExercises: (workout: any, section: string) => any[];
   statusLabel: (s: string) => string;
@@ -133,7 +130,6 @@ export default function GroupsHub(props: GroupsHubProps) {
     onOpenMember,
     onCloseMemberDashboard,
     onOpenMemberWorkout,
-    onSetMyTrainingSource,
     onSetMemberTrainingSource,
     onSetMemberRole,
     onRemoveMember,
@@ -144,8 +140,6 @@ export default function GroupsHub(props: GroupsHubProps) {
     onCreateClassification,
     onDeleteClassification,
     onToggleMemberClassification,
-    onOpenTraining,
-    onGoProgramSetup,
     onSetModeTeam,
     sectionExercises,
     statusLabel,
@@ -246,43 +240,6 @@ export default function GroupsHub(props: GroupsHubProps) {
           </p>
         )}
       </div>
-
-      {activeTeam && (
-        <div className="card team-plan-card">
-          <div className="topline" style={{ justifyContent: 'space-between' }}>
-            <h2>My training plan</h2>
-            <span className="badge">
-              {(activeTeam.training_source || 'team') === 'team' ? 'Group program' : 'Personal program'}
-            </span>
-          </div>
-          <div className="tabs">
-            <button
-              type="button"
-              className={(activeTeam.training_source || 'team') !== 'personal' ? 'active' : ''}
-              onClick={() => onSetMyTrainingSource('team')}
-            >
-              Group workout
-            </button>
-            <button
-              type="button"
-              className={activeTeam.training_source === 'personal' ? 'active' : ''}
-              onClick={() => onSetMyTrainingSource('personal')}
-            >
-              Personal plan
-            </button>
-          </div>
-          <div className="actions" style={{ marginTop: 10 }}>
-            <button type="button" className="btn green" onClick={onOpenTraining}>
-              Open Training
-            </button>
-            {canManage && (
-              <button type="button" className="btn secondary" onClick={onGoProgramSetup}>
-                Group program setup
-              </button>
-            )}
-          </div>
-        </div>
-      )}
 
       {!canManage && selfMember && (
         <div className="card">
