@@ -2,24 +2,35 @@
 
 import { useMemo, useState } from 'react';
 import DateInput from '../DateInput';
-import { workoutLabel } from '../../../lib/groups';
+import { workoutLabel, countMembersInClassification, type GroupClassification } from '../../../lib/groups';
 import { todayYmd } from '../../../lib/training/programCalendar';
+
+export type AssignWorkoutPayload = {
+  workoutId: string;
+  targetType: 'group' | 'members' | 'classification';
+  memberUserIds: string[];
+  classificationId: string;
+  scheduledDate: string;
+  dueDate: string;
+  title: string;
+  notes: string;
+};
 
 type GroupAssignWorkoutPanelProps = {
   groupProgram: any | null;
   members: any[];
-  onAssign: (payload: {
-    workoutId: string;
-    targetType: 'group' | 'members';
-    memberUserIds: string[];
-    scheduledDate: string;
-    dueDate: string;
-    title: string;
-    notes: string;
-  }) => Promise<void>;
+  classifications: GroupClassification[];
+  memberClassificationIds: Record<string, string[]>;
+  onAssign: (payload: AssignWorkoutPayload) => Promise<void>;
 };
 
-export default function GroupAssignWorkoutPanel({ groupProgram, members, onAssign }: GroupAssignWorkoutPanelProps) {
+export default function GroupAssignWorkoutPanel({
+  groupProgram,
+  members,
+  classifications,
+  memberClassificationIds,
+  onAssign,
+}: GroupAssignWorkoutPanelProps) {
   const workouts = useMemo(() => {
     return (groupProgram?.st_workouts || [])
       .slice()
@@ -27,8 +38,9 @@ export default function GroupAssignWorkoutPanel({ groupProgram, members, onAssig
   }, [groupProgram]);
 
   const [workoutId, setWorkoutId] = useState('');
-  const [targetType, setTargetType] = useState<'group' | 'members'>('group');
+  const [targetType, setTargetType] = useState<'group' | 'members' | 'classification'>('group');
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
+  const [classificationId, setClassificationId] = useState('');
   const [scheduledDate, setScheduledDate] = useState(todayYmd());
   const [dueDate, setDueDate] = useState('');
   const [title, setTitle] = useState('');
@@ -38,6 +50,9 @@ export default function GroupAssignWorkoutPanel({ groupProgram, members, onAssig
   const [success, setSuccess] = useState('');
 
   const activeMembers = members.filter((m) => m.is_active_participant !== false);
+  const classificationMemberCount = classificationId
+    ? countMembersInClassification(classificationId, members, memberClassificationIds)
+    : 0;
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -51,12 +66,23 @@ export default function GroupAssignWorkoutPanel({ groupProgram, members, onAssig
       setError('Select at least one member.');
       return;
     }
+    if (targetType === 'classification') {
+      if (!classificationId) {
+        setError('Select a classification.');
+        return;
+      }
+      if (classificationMemberCount === 0) {
+        setError('No active members are tagged with that classification.');
+        return;
+      }
+    }
     setBusy(true);
     try {
       await onAssign({
         workoutId,
         targetType,
         memberUserIds: targetType === 'members' ? selectedMembers : [],
+        classificationId: targetType === 'classification' ? classificationId : '',
         scheduledDate,
         dueDate,
         title: title.trim(),
@@ -113,7 +139,7 @@ export default function GroupAssignWorkoutPanel({ groupProgram, members, onAssig
         </select>
 
         <label style={{ marginTop: 10 }}>Send to</label>
-        <div className="tabs">
+        <div className="tabs assign-target-tabs">
           <button
             type="button"
             className={targetType === 'group' ? 'active' : ''}
@@ -123,12 +149,53 @@ export default function GroupAssignWorkoutPanel({ groupProgram, members, onAssig
           </button>
           <button
             type="button"
+            className={targetType === 'classification' ? 'active' : ''}
+            onClick={() => setTargetType('classification')}
+          >
+            Classification
+          </button>
+          <button
+            type="button"
             className={targetType === 'members' ? 'active' : ''}
             onClick={() => setTargetType('members')}
           >
             Selected members
           </button>
         </div>
+
+        {targetType === 'classification' && (
+          <>
+            {classifications.length === 0 ? (
+              <p className="muted" style={{ marginTop: 8 }}>
+                Add classifications above first, then tag members on the roster.
+              </p>
+            ) : (
+              <>
+                <label htmlFor="assign-classification-pick">Classification</label>
+                <select
+                  id="assign-classification-pick"
+                  value={classificationId}
+                  onChange={(e) => setClassificationId(e.target.value)}
+                  disabled={busy}
+                >
+                  <option value="">Select classification</option>
+                  {classifications.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} (
+                      {countMembersInClassification(c.id, members, memberClassificationIds)} members)
+                    </option>
+                  ))}
+                </select>
+                {classificationId && (
+                  <p className="muted" style={{ marginTop: 6 }}>
+                    {classificationMemberCount} active member{classificationMemberCount === 1 ? '' : 's'} will
+                    receive this assignment.
+                  </p>
+                )}
+              </>
+            )}
+          </>
+        )}
 
         {targetType === 'members' && (
           <div className="assign-member-picks">

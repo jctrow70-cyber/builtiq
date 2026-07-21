@@ -3718,7 +3718,6 @@ None — uses P2 schema and `st_assign_workout_to_targets` RPC. Ensure migration
 
 ### Known Issues
 
-- Classification targeting UI deferred to Phase 5
 - No workout template snapshot on assign yet (`template_snapshot_version` reserved)
 - Personal copy of assigned workout deferred to Phase 6
 
@@ -3726,5 +3725,66 @@ None — uses P2 schema and `st_assign_workout_to_targets` RPC. Ensure migration
 
 ```text
 BIQ-0043-P4 Add assigned workouts delivery in Training and manager assign UI
+```
+
+---
+
+## BIQ-0043-P5 - Classification Targeting UI (Phase 5)
+
+Date: 2026-07-20  
+Branch: preview/groups-v2-biq-0043  
+Status: Completed
+
+### Summary
+
+Managers can create **classifications** (Pitchers, JV, Rehab, etc.), tag members on the roster, and assign workouts to a **classification** target — in addition to whole group or selected members. Uses P2 `st_group_classifications`, `st_group_member_classifications`, and `st_assign_workout_to_targets` with `target_type = 'classification'`.
+
+### Purpose
+
+Enable segment-based coaching (sport teams, training groups, rehab tracks) without assigning workouts one member at a time. Completes the targeting model from Decision 026 / P2 schema.
+
+### Changes
+
+- **`GroupClassificationsPanel`** — create/delete classifications with member counts
+- **Roster tag chips** — managers toggle member ↔ classification links; all members see tags on roster
+- **`GroupAssignWorkoutPanel`** — new **Classification** send target with member count preview
+- **`lib/groups/classifications.ts`** — slug helper, member count, display helpers
+- **`app/page.tsx`** — load/save classifications and member links
+
+### Files Changed
+
+- `app/components/groups/GroupClassificationsPanel.tsx` (new)
+- `app/components/groups/GroupAssignWorkoutPanel.tsx`
+- `app/components/groups/GroupsHub.tsx`
+- `lib/groups/classifications.ts` (new)
+- `lib/groups/index.ts`
+- `app/page.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None — uses P2 tables and RPC. Ensure `20250717_023_group_training_schema.sql` is applied.
+
+### Testing Steps
+
+1. **Create classification:** Groups → Classifications → add "Pitchers".
+2. **Tag members:** On roster, check Pitchers for 2 members → tags show in member subtitle.
+3. **Assign to classification:** Assign workout → Classification → Pitchers → Assign.
+4. **Recipient check:** Only tagged members see assignment in Training → Assigned Workouts.
+5. **Untagged member:** Member not tagged does not receive assignment.
+6. **Delete classification:** Delete tag → member links removed; assign dropdown updates.
+7. **Duplicate slug:** Adding classification with same slug name fails gracefully (unique constraint).
+8. **Member read-only:** Regular member sees tags on roster but cannot edit classifications.
+
+### Known Issues
+
+- Program assignment by classification not in UI yet (workout assignments only)
+- No bulk import of classifications
+
+### Recommended Commit Message
+
+```text
+BIQ-0043-P5 Add group classifications and classification workout targeting
 ```
 

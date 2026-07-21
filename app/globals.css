@@ -84,6 +84,15 @@
 .assign-member-pick{margin:0!important;font-size:12px}
 .assign-error{color:#f87171;font-size:12px;margin-top:8px}
 .assign-success{color:#86efac;font-size:12px;margin-top:8px}
+.group-classifications-card{margin-bottom:10px}
+.classification-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.classification-row b{display:block;font-size:14px}
+.classification-row .muted{display:block;font-size:11px;margin-top:2px}
+.classification-add-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin-top:6px}
+.member-classification-picks{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.classification-chip-toggle{font-size:11px;color:var(--muted);margin:0!important;padding:4px 8px;border:1px solid var(--line);border-radius:999px;background:#0f172a}
+.classification-chip-toggle input{margin-right:4px}
+.assign-target-tabs{flex-wrap:wrap}
 .team-member-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start;padding:10px 0;border-top:1px solid var(--line)}
 .team-member-row.active{background:#121827;border-radius:12px;padding:10px;margin:0 -4px}
 .team-member-main{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left;border:0;background:transparent;color:inherit;padding:0}

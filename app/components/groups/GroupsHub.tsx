@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { roleForUi, roleLabel } from '../../../lib/groups';
+import { roleForUi, roleLabel, classificationNamesForMember, type GroupClassification } from '../../../lib/groups';
 import GroupCreateJoinPanel from './GroupCreateJoinPanel';
 import GroupMemberDashboard from './GroupMemberDashboard';
 import GroupAssignWorkoutPanel from './GroupAssignWorkoutPanel';
+import GroupClassificationsPanel from './GroupClassificationsPanel';
 
 export type GroupsHubProps = {
   sessionUserId: string;
@@ -24,6 +25,8 @@ export type GroupsHubProps = {
   assignDraft: { type: string; programId: string; notes: string };
   programs: any[];
   groupProgramForAssign: any | null;
+  classifications: GroupClassification[];
+  memberClassificationIds: Record<string, string[]>;
   compliancePct: number;
   teamActiveCount: number;
   teamTotalSets: number;
@@ -48,13 +51,17 @@ export type GroupsHubProps = {
   onApplyAssignment: () => void;
   onAssignWorkout: (payload: {
     workoutId: string;
-    targetType: 'group' | 'members';
+    targetType: 'group' | 'members' | 'classification';
     memberUserIds: string[];
+    classificationId: string;
     scheduledDate: string;
     dueDate: string;
     title: string;
     notes: string;
   }) => Promise<void>;
+  onCreateClassification: (name: string) => Promise<void>;
+  onDeleteClassification: (classification: GroupClassification) => Promise<void>;
+  onToggleMemberClassification: (member: any, classificationId: string, active: boolean) => void;
   onOpenTraining: () => void;
   onGoProgramSetup: () => void;
   onSetModeTeam: () => void;
@@ -103,6 +110,8 @@ export default function GroupsHub(props: GroupsHubProps) {
     assignDraft,
     programs,
     groupProgramForAssign,
+    classifications,
+    memberClassificationIds,
     compliancePct,
     teamActiveCount,
     teamTotalSets,
@@ -126,6 +135,9 @@ export default function GroupsHub(props: GroupsHubProps) {
     onAssignDraftChange,
     onApplyAssignment,
     onAssignWorkout,
+    onCreateClassification,
+    onDeleteClassification,
+    onToggleMemberClassification,
     onOpenTraining,
     onGoProgramSetup,
     onSetModeTeam,
@@ -340,6 +352,16 @@ export default function GroupsHub(props: GroupsHubProps) {
           />
         )}
 
+      {canManage && (
+        <GroupClassificationsPanel
+          classifications={classifications}
+          members={members}
+          memberClassificationIds={memberClassificationIds}
+          onCreate={onCreateClassification}
+          onDelete={onDeleteClassification}
+        />
+      )}
+
       <div className="card team-roster-card">
         <div className="topline" style={{ justifyContent: 'space-between' }}>
           <h2>Members</h2>
@@ -357,6 +379,8 @@ export default function GroupsHub(props: GroupsHubProps) {
           const stats = memberStats[m.user_id] || { sets: 0, days: 0 };
           const isSelf = m.user_id === sessionUserId;
           const participating = m.is_active_participant !== false;
+          const memberTags = classificationNamesForMember(m.id, classifications, memberClassificationIds);
+          const memberTagIds = memberClassificationIds[m.id] || [];
           return (
             <div key={m.id} className="team-member-row">
               <button type="button" className="team-member-main" onClick={() => onOpenMember(m)}>
@@ -369,7 +393,23 @@ export default function GroupsHub(props: GroupsHubProps) {
                     {roleLabel(m.role)} · {(m.training_source || 'team') === 'team' ? 'Group' : 'Personal'} ·{' '}
                     {stats.sets} sets
                     {!participating ? ' · observer' : ''}
+                    {memberTags.length ? ` · ${memberTags.join(', ')}` : ''}
                   </span>
+                  {canManage && classifications.length > 0 && (
+                    <div className="member-classification-picks">
+                      {classifications.map((c) => (
+                        <label key={c.id} className="classification-chip-toggle remember-row">
+                          <input
+                            type="checkbox"
+                            checked={memberTagIds.includes(c.id)}
+                            onChange={(e) => onToggleMemberClassification(m, c.id, e.target.checked)}
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                          {c.name}
+                        </label>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <span className="muted">{stats.days}d</span>
               </button>
@@ -432,6 +472,8 @@ export default function GroupsHub(props: GroupsHubProps) {
         <GroupAssignWorkoutPanel
           groupProgram={groupProgramForAssign}
           members={members}
+          classifications={classifications}
+          memberClassificationIds={memberClassificationIds}
           onAssign={onAssignWorkout}
         />
       )}
