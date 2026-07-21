@@ -4067,3 +4067,54 @@ None.
 BIQ-0044 Add circular macro progress dashboard to Nutrition screen
 ```
 
+---
+
+## BIQ-0045 - Paginate exercise catalog load (fix missing search results)
+
+Date: 2026-07-21  
+Branch: preview/groups-v2-biq-0043  
+Status: Completed
+
+### Summary
+
+Fixed exercise search missing entries (e.g. **Seated Calf Raise**) that exist in Supabase but not in the app. The client loaded only the first 1,000 catalog rows (PostgREST default); with Guided + Photo libraries combined (~2,200 rows), exercises late in the alphabet were never fetched.
+
+### Purpose
+
+Users reported exercises visible in the database SQL editor but not findable in Add Exercise search.
+
+### Changes
+
+- **`lib/training/catalogFetch.ts`** — `fetchAllExerciseCatalog()` paginates in 1,000-row chunks until the full catalog is loaded
+- **`app/page.tsx`** — `loadCatalog()` uses paginated fetch
+- **`app/api/programs/generate/route.ts`** — AI program generation uses the same paginated fetch
+
+### Files changed
+
+- `lib/training/catalogFetch.ts` (new)
+- `app/page.tsx`
+- `app/api/programs/generate/route.ts`
+- `CHANGELOG.md`
+
+### Database changes
+
+None.
+
+### Testing steps
+
+1. Confirm Supabase has 1,000+ system exercises (Guided + Photo libraries imported)
+2. Refresh the app (or open Settings to trigger catalog reload)
+3. Training → Add Exercise → search **seated calf** — **Seated Calf Raise** should appear
+4. Search placeholder count should reflect full catalog (~2,000+ if both libraries imported)
+5. Generate an AI program — verify it can still pick catalog exercises normally
+
+### Known issues
+
+- Add Exercise search still respects profile **equipment** filters. Seated Calf Raise requires **Machines** (or Full gym); home-gym profiles without machines will not show machine-only exercises even after this fix.
+
+### Recommended commit message
+
+```text
+BIQ-0045 Paginate exercise catalog load to fix missing search results
+```
+

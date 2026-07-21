@@ -8,6 +8,7 @@ import {
   persistAiProgramPlan,
   type GenerationConfig,
 } from '../../../../lib/training/aiProgramPlan';
+import { fetchAllExerciseCatalog } from '../../../../lib/training/catalogFetch';
 import { builtinCatalogItems } from '../../../../lib/training/catalogSearch';
 import { normalizeEquipmentList } from '../../../../lib/training/equipmentFilter';
 
@@ -74,14 +75,16 @@ export async function POST(request: Request) {
     }
   }
 
-  const [{ data: profile }, { data: catalog, error: catErr }] = await Promise.all([
+  const [{ data: profile }, catalogResult] = await Promise.all([
     supabase.from('st_profiles').select('*').eq('user_id', user.id).maybeSingle(),
-    supabase.from('st_exercise_catalog').select('*').order('name'),
+    fetchAllExerciseCatalog(supabase),
   ]);
 
-  if (catErr) {
-    return NextResponse.json({ error: `Failed to load exercise catalog: ${catErr.message}` }, { status: 500 });
+  if (catalogResult.error) {
+    return NextResponse.json({ error: `Failed to load exercise catalog: ${catalogResult.error}` }, { status: 500 });
   }
+
+  const catalog = catalogResult.data;
 
   const config: GenerationConfig = {
     prompt,

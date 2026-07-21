@@ -7,6 +7,7 @@ import { applyFocusToWorkoutTemplate, estimateWeeklyFocusSets } from '../lib/tra
 import { recommendNextTarget, buildLastPerformance } from '../lib/training/progression';
 import { EXERCISE_TYPES, exerciseTypeOf, inferExerciseType, assignmentTypeLabel, isCardioType, isStrengthLike } from '../lib/training/exerciseTypes';
 import { logFieldsForType, formatLogSummary } from '../lib/training/logFields';
+import { fetchAllExerciseCatalog } from '../lib/training/catalogFetch';
 import { buildCatalogFilterOptions, builtinCatalogItems, catalogResultMeta, countCatalogMatches, hasCatalogSearchInput, searchCatalog } from '../lib/training/catalogSearch';
 import { getExerciseGuidePayload, getExerciseThumb, hasExerciseGuide } from '../lib/training/exerciseMedia';
 import { matchExerciseToCatalog } from '../lib/training/aiProgramPlan';
@@ -240,7 +241,7 @@ export default function Page(){
  useEffect(()=>{if(activeTeam&&canManageGroup(activeTeam.my_role)) loadGroupProgramForAssign(); else setGroupProgramForAssign(null);},[activeTeam?.id,activeTeam?.default_program_id,activeTeam?.my_role,appNav]);
 
  async function boot(){await loadProfile(); await loadTeams(); await loadCatalog();}
- async function loadCatalog(){if(!session?.user)return; const{data,error}=await supabase.from('st_exercise_catalog').select('*').order('name'); if(error){setCatalogError(error.message); return console.warn(error.message);} setCatalogError(''); setCatalog(data||[]);}
+ async function loadCatalog(){if(!session?.user)return; const{data,error}=await fetchAllExerciseCatalog(supabase); if(error){setCatalogError(error); return console.warn(error);} setCatalogError(''); setCatalog(data||[]);}
  async function loadGuidedImportStatus(){if(!session?.access_token)return; try{const res=await fetch('/api/catalog/import-guided',{headers:{Authorization:`Bearer ${session.access_token}`}}); const data=await res.json().catch(()=>({})); if(!res.ok)throw new Error(data?.error||`Status check failed (${res.status})`); setGuidedImportStatus(data);}catch(e:any){setGuidedImportStatus({canImport:false,guidedCount:0,message:e?.message||'Could not check import status.'});}}
  async function importGuidedCatalog(){if(!session?.access_token)return alert('Sign in first.'); if(guidedImportRunning)return; setGuidedImportRunning(true); try{const res=await fetch('/api/catalog/import-guided',{method:'POST',headers:{Authorization:`Bearer ${session.access_token}`}}); const data=await res.json().catch(()=>({})); if(!res.ok)throw new Error(data?.error||`Import failed (${res.status})`); alert(data?.message||'Guided library imported.'); await loadCatalog(); await loadGuidedImportStatus();}catch(e:any){alert(e?.message||'Import failed.');}finally{setGuidedImportRunning(false);}}
  async function signIn(){
