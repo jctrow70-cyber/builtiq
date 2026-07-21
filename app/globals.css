@@ -267,6 +267,14 @@
 .nutrition-summary-head{align-items:center}
 .nutrition-date-nav{display:flex;align-items:center;gap:4px;flex-shrink:0}
 .nutrition-date-arrow{min-width:32px;padding:5px 8px;font-size:16px;line-height:1;font-weight:900}
+.nutrition-day-swipe{touch-action:pan-y}
+.nutrition-day-view{display:grid;gap:8px}
+.nutrition-day-view.is-refreshing{opacity:.72;pointer-events:none}
+@keyframes nutrition-day-forward{from{opacity:.35;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
+@keyframes nutrition-day-back{from{opacity:.35;transform:translateX(-16px)}to{opacity:1;transform:translateX(0)}}
+.nutrition-day-view--forward{animation:nutrition-day-forward .32s ease}
+.nutrition-day-view--back{animation:nutrition-day-back .32s ease}
+@media (prefers-reduced-motion:reduce){.nutrition-day-view--forward,.nutrition-day-view--back{animation:none}.nutrition-day-view.is-refreshing{opacity:1}}
 .nutrition-summary-actions{margin-top:8px}
 .nutrition-macro-dashboard{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 10px;margin:4px 0 2px}
 .nutrition-macro-ring-cell{display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;padding:2px 0}

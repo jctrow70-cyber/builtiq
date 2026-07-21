@@ -282,6 +282,10 @@ export default function NutritionTracker({
   const [foodCatalog, setFoodCatalog] = useState<FoodCatalogItem[]>([]);
   const [mealTemplates, setMealTemplates] = useState<MealTemplate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dayRefreshing, setDayRefreshing] = useState(false);
+  const [dayAnimDir, setDayAnimDir] = useState<'forward' | 'back' | 'none'>('none');
+  const hasLoadedRef = useRef(false);
+  const daySwipeStartX = useRef<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [showAdd, setShowAdd] = useState(false);
@@ -358,15 +362,26 @@ export default function NutritionTracker({
 
   const setDate = useCallback(
     (next: string) => {
+      if (next !== logDate) {
+        const current = parseYmd(logDate).getTime();
+        const target = parseYmd(next).getTime();
+        setDayAnimDir(target > current ? 'forward' : target < current ? 'back' : 'none');
+        setEntries([]);
+        setShowAdd(false);
+        setShowMyFoods(false);
+        setShowGoals(false);
+      }
       setLogDate(next);
       onDateChange?.(next);
     },
-    [onDateChange]
+    [logDate, onDateChange]
   );
 
   const loadData = useCallback(async () => {
     if (!userId) return;
-    setLoading(true);
+    const isInitial = !hasLoadedRef.current;
+    if (isInitial) setLoading(true);
+    else setDayRefreshing(true);
     setError('');
     const { monday, sunday } = currentCalendarWeekBounds(parseYmd(logDate));
     try {
@@ -446,7 +461,9 @@ export default function NutritionTracker({
     } catch (e: any) {
       setError(e?.message || 'Could not load nutrition data.');
     } finally {
+      hasLoadedRef.current = true;
       setLoading(false);
+      setDayRefreshing(false);
     }
   }, [userId, logDate]);
 
@@ -1224,54 +1241,84 @@ export default function NutritionTracker({
     setDate(d.toISOString().slice(0, 10));
   }
 
+  function onDaySwipeStart(e: React.TouchEvent) {
+    daySwipeStartX.current = e.touches[0]?.clientX ?? null;
+  }
+
+  function onDaySwipeEnd(e: React.TouchEvent) {
+    if (daySwipeStartX.current == null) return;
+    const endX = e.changedTouches[0]?.clientX ?? daySwipeStartX.current;
+    const delta = endX - daySwipeStartX.current;
+    daySwipeStartX.current = null;
+    if (Math.abs(delta) < 56) return;
+    shiftDate(delta > 0 ? -1 : 1);
+  }
+
+  const dayPanelClass = `nutrition-day-view nutrition-day-view--${dayAnimDir}${
+    dayRefreshing ? ' is-refreshing' : ''
+  }`;
+
   return (
     <section className="nutrition-tracker">
-      <div className="card nutrition-summary-card">
-        <div className="topline nutrition-summary-head">
-          <h2>Daily nutrition</h2>
-          <div className="nutrition-date-nav">
-            <button
-              type="button"
-              className="btn small secondary nutrition-date-arrow"
-              onClick={() => shiftDate(-1)}
-              aria-label="Previous day"
-            >
-              ‹
-            </button>
-            <button
-              type="button"
-              className="btn small secondary nutrition-date-arrow"
-              onClick={() => shiftDate(1)}
-              aria-label="Next day"
-            >
-              ›
-            </button>
+      {loading ? (
+        <div className="card nutrition-summary-card">
+          <div className="topline nutrition-summary-head">
+            <h2>Daily nutrition</h2>
             <span className="badge">{formatDisplayDate(logDate)}</span>
           </div>
-        </div>
-        {loading ? (
           <p className="muted">Loading nutrition log...</p>
-        ) : (
-          <NutritionMacroDashboard totals={totals} goals={goals} />
-        )}
-        <div className="actions nutrition-summary-actions">
-          <button type="button" className="btn green" onClick={() => openAddFood()} disabled={saving}>
-            Add food
-          </button>
-          <button type="button" className="btn secondary" onClick={() => setShowGoals(true)} disabled={saving}>
-            Edit goals
-          </button>
-          <button type="button" className="btn secondary" onClick={copyYesterday} disabled={saving}>
-            Copy yesterday
-          </button>
-          <button type="button" className="btn secondary" onClick={openMyFoods} disabled={saving}>
-            My foods
-          </button>
         </div>
-        {error && <p className="nutrition-error">{error}</p>}
-      </div>
+      ) : (
+        <div
+          className="nutrition-day-swipe"
+          onTouchStart={onDaySwipeStart}
+          onTouchEnd={onDaySwipeEnd}
+        >
+          <div key={logDate} className={dayPanelClass}>
+            <div className="card nutrition-summary-card">
+              <div className="topline nutrition-summary-head">
+                <h2>Daily nutrition</h2>
+                <div className="nutrition-date-nav">
+                  <button
+                    type="button"
+                    className="btn small secondary nutrition-date-arrow"
+                    onClick={() => shiftDate(-1)}
+                    aria-label="Previous day"
+                    disabled={dayRefreshing}
+                  >
+                    ‹
+                  </button>
+                  <button
+                    type="button"
+                    className="btn small secondary nutrition-date-arrow"
+                    onClick={() => shiftDate(1)}
+                    aria-label="Next day"
+                    disabled={dayRefreshing}
+                  >
+                    ›
+                  </button>
+                  <span className="badge">{formatDisplayDate(logDate)}</span>
+                </div>
+              </div>
+              <NutritionMacroDashboard totals={totals} goals={goals} />
+              <div className="actions nutrition-summary-actions">
+                <button type="button" className="btn green" onClick={() => openAddFood()} disabled={saving}>
+                  Add food
+                </button>
+                <button type="button" className="btn secondary" onClick={() => setShowGoals(true)} disabled={saving}>
+                  Edit goals
+                </button>
+                <button type="button" className="btn secondary" onClick={copyYesterday} disabled={saving}>
+                  Copy yesterday
+                </button>
+                <button type="button" className="btn secondary" onClick={openMyFoods} disabled={saving}>
+                  My foods
+                </button>
+              </div>
+              {error && <p className="nutrition-error">{error}</p>}
+            </div>
 
-      {!loading && showGoalSuggestionBanner && (
+            {showGoalSuggestionBanner && (
         <div className="card nutrition-goals-suggest-card">
           <div className="topline" style={{ justifyContent: 'space-between' }}>
             <h3>Suggested macro goals</h3>
@@ -1907,12 +1954,13 @@ export default function NutritionTracker({
         </div>
       )}
 
-      {!loading && (
-        <NutritionWeeklySummary
-          summary={weeklySummary}
-          activeDate={logDate}
-          onSelectDate={setDate}
-        />
+            <NutritionWeeklySummary
+              summary={weeklySummary}
+              activeDate={logDate}
+              onSelectDate={setDate}
+            />
+          </div>
+        </div>
       )}
     </section>
   );
