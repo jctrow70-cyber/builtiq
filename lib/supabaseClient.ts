@@ -5,7 +5,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 export function getSupabaseConfigError(): string | null {
   if (!supabaseUrl || !supabaseAnonKey) {
-    return 'BuildIQ is missing Supabase settings on this deploy. In Vercel → Project → Settings → Environment Variables, set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY for Production and Preview, then Redeploy.';
+    return 'BuildIQ Health is missing Supabase settings on this deploy. In Vercel → Project → Settings → Environment Variables, set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY for Production and Preview, then Redeploy.';
   }
   if (!/^https:\/\//i.test(supabaseUrl)) {
     return 'NEXT_PUBLIC_SUPABASE_URL must start with https:// (use your project URL from Supabase → Settings → API).';

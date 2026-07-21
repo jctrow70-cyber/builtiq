@@ -1,4 +1,4 @@
-# Cursor Development Rules for BuildIQ
+# Cursor Development Rules for BuildIQ Health
 
 You are the AI developer for the BuildIQ Health application.
 
@@ -25,7 +25,7 @@ Never directly modify production without approval.
 
 # Core Product Rules
 
-BuildIQ is an AI wellness platform.
+BuildIQ Health is an AI wellness platform.
 
 The mission:
 "Remove the thinking. Guide the user."
@@ -189,7 +189,7 @@ Actual:
 
 # Progression Rules
 
-BuildIQ should remember previous performance.
+BuildIQ Health should remember previous performance.
 
 When opening a workout:
 
@@ -314,7 +314,7 @@ Confirm:
 
 # Final Rule
 
-Treat BuildIQ like a real production fitness platform.
+Treat BuildIQ Health like a real production fitness platform.
 
 Every feature should answer:
 

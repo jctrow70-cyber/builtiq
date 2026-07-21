@@ -33,7 +33,7 @@ export async function GET(request: Request) {
     guidedCount,
     expectedCount: 1324,
     message: !isAdmin
-      ? 'Catalog import is restricted to BuildIQ admins.'
+      ? 'Catalog import is restricted to BuildIQ Health admins.'
       : canImport
         ? guidedCount > 0
           ? `${guidedCount} guided exercises in your database. You can re-import to refresh.`
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: authError || 'Unauthorized' }, { status: 401 });
 
   if (!isCatalogAdmin(user)) {
-    return NextResponse.json({ error: 'Only BuildIQ catalog admins can run imports.' }, { status: 403 });
+    return NextResponse.json({ error: 'Only BuildIQ Health catalog admins can run imports.' }, { status: 403 });
   }
 
   if (!hasGuidedImportServerConfig()) {

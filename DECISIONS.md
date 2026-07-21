@@ -28,7 +28,7 @@ Category: Branding
 
 ### Decision
 
-Use **BuildIQ** as the product brand and **BuildIQ Health** as the full product name (replacing BuiltIQ / BuiltIQ Health).
+Use **BuildIQ Health** as the primary product name (replacing BuiltIQ / BuildIQ-only branding).
 
 ### Reason
 

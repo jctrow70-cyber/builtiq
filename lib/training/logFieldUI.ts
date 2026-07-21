@@ -12,11 +12,15 @@ export type LogFieldUI = {
   inputMode?: 'decimal' | 'numeric' | 'text';
   chipOptions?: string[];
   wide?: boolean;
+  /** compact = narrow numeric input; wide = full row */
+  size?: 'compact' | 'normal' | 'wide';
 };
 
 export type LogLayout = {
   primary: LogFieldUI[];
   optional?: LogFieldUI[];
+  /** Shown once above all sets for the exercise (not repeated per set). */
+  exerciseNotes?: LogFieldUI;
   showRpeChips?: boolean;
   showIntensityChips?: boolean;
   showSideChips?: boolean;
@@ -26,69 +30,88 @@ const RPE_CHIPS = ['6', '7', '8', '9', '10'];
 const INTENSITY_CHIPS = ['Easy', 'Moderate', 'Hard', 'Max'];
 const SIDE_CHIPS = ['Left', 'Right', 'Each'];
 
+const EXERCISE_NOTES: LogFieldUI = {
+  key: 'log_notes',
+  label: 'Notes',
+  placeholder: 'Form, tempo, how it felt…',
+  optional: true,
+  size: 'wide',
+};
+
+function layoutWithExerciseNotes(
+  primary: LogFieldUI[],
+  optional: LogFieldUI[] = [],
+  extras: Omit<LogLayout, 'primary' | 'optional' | 'exerciseNotes'> = {},
+): LogLayout {
+  const withoutNotes = optional.filter((f) => f.key !== 'log_notes');
+  const notesField = optional.find((f) => f.key === 'log_notes') || EXERCISE_NOTES;
+  return {
+    primary,
+    optional: withoutNotes.length ? withoutNotes : undefined,
+    exerciseNotes: notesField,
+    ...extras,
+  };
+}
+
 export function logLayoutForType(type: ExerciseType): LogLayout {
   if (isCardioType(type)) {
-    return {
-      primary: [
-        { key: 'actual_duration', label: 'Duration', placeholder: '30', unit: 'min', unitGroup: 'duration', inputMode: 'decimal' },
-        { key: 'actual_distance', label: 'Distance', placeholder: '3.1', unitGroup: 'distance', inputMode: 'decimal' },
-        { key: 'actual_pace', label: 'Pace / speed', placeholder: '9:30', unit: 'min/mi', inputMode: 'text' },
+    return layoutWithExerciseNotes(
+      [
+        { key: 'actual_duration', label: 'Duration', placeholder: '30', unit: 'min', unitGroup: 'duration', inputMode: 'decimal', size: 'compact' },
+        { key: 'actual_distance', label: 'Distance', placeholder: '3.1', unitGroup: 'distance', inputMode: 'decimal', size: 'compact' },
+        { key: 'actual_pace', label: 'Pace', placeholder: '9:30', unit: 'min/mi', inputMode: 'text', size: 'normal' },
       ],
-      optional: [
-        { key: 'actual_hr', label: 'Heart rate', placeholder: '145', unit: 'bpm', optional: true, inputMode: 'numeric' },
-        { key: 'actual_calories', label: 'Calories', placeholder: '320', unit: 'kcal', optional: true, inputMode: 'numeric' },
-        { key: 'log_notes', label: 'Notes', placeholder: 'How it felt…', optional: true, wide: true },
+      [
+        { key: 'actual_hr', label: 'HR', placeholder: '145', unit: 'bpm', optional: true, inputMode: 'numeric', size: 'compact' },
+        { key: 'actual_calories', label: 'Cal', placeholder: '320', unit: 'kcal', optional: true, inputMode: 'numeric', size: 'compact' },
+        { key: 'log_notes', label: 'Notes', placeholder: 'How it felt…', optional: true, size: 'wide' },
       ],
-      showIntensityChips: true,
-    };
+      { showIntensityChips: true },
+    );
   }
   if (type === 'timed') {
-    return {
-      primary: [
-        { key: 'actual_duration', label: 'Duration', placeholder: '60', unit: 'sec', unitGroup: 'duration', inputMode: 'decimal' },
-        { key: 'actual_weight', label: 'Load (optional)', placeholder: '0', unitGroup: 'weight', optional: true, inputMode: 'decimal' },
+    return layoutWithExerciseNotes(
+      [
+        { key: 'actual_duration', label: 'Duration', placeholder: '60', unit: 'sec', unitGroup: 'duration', inputMode: 'decimal', size: 'compact' },
+        { key: 'actual_weight', label: 'Load', placeholder: '0', unitGroup: 'weight', optional: true, inputMode: 'decimal', size: 'compact' },
       ],
-      optional: [{ key: 'log_notes', label: 'Notes', placeholder: 'Form, rest…', optional: true, wide: true }],
-    };
+      [{ key: 'log_notes', label: 'Notes', placeholder: 'Form, rest…', optional: true, size: 'wide' }],
+    );
   }
   if (type === 'mobility') {
-    return {
-      primary: [
-        { key: 'actual_duration', label: 'Duration', placeholder: '45', unit: 'sec', unitGroup: 'duration', inputMode: 'decimal' },
-      ],
-      optional: [{ key: 'log_notes', label: 'Notes', placeholder: 'ROM, tension…', optional: true, wide: true }],
-      showSideChips: true,
-    };
+    return layoutWithExerciseNotes(
+      [{ key: 'actual_duration', label: 'Duration', placeholder: '45', unit: 'sec', unitGroup: 'duration', inputMode: 'decimal', size: 'compact' }],
+      [{ key: 'log_notes', label: 'Notes', placeholder: 'ROM, tension…', optional: true, size: 'wide' }],
+      { showSideChips: true },
+    );
   }
   if (type === 'bodyweight') {
-    return {
-      primary: [
-        { key: 'actual_reps', label: 'Reps', placeholder: '12', unit: 'reps', inputMode: 'numeric' },
-        { key: 'actual_weight', label: 'Added weight', placeholder: '0', unitGroup: 'weight', optional: true, inputMode: 'decimal' },
+    return layoutWithExerciseNotes(
+      [
+        { key: 'actual_reps', label: 'Reps', placeholder: '12', unit: 'reps', inputMode: 'numeric', size: 'compact' },
+        { key: 'actual_weight', label: 'Added', placeholder: '0', unitGroup: 'weight', optional: true, inputMode: 'decimal', size: 'compact' },
       ],
-      optional: [
-        { key: '_assist_weight', label: 'Assistance', placeholder: '20', unitGroup: 'weight', optional: true, inputMode: 'decimal' },
-        { key: 'log_notes', label: 'Notes', placeholder: 'Tempo, form…', optional: true, wide: true },
+      [
+        { key: '_assist_weight', label: 'Assist', placeholder: '20', unitGroup: 'weight', optional: true, inputMode: 'decimal', size: 'compact' },
+        { key: 'log_notes', label: 'Notes', placeholder: 'Tempo, form…', optional: true, size: 'wide' },
       ],
-      showRpeChips: true,
-    };
+      { showRpeChips: true },
+    );
   }
   if (isStrengthLike(type)) {
-    return {
-      primary: [
-        { key: 'actual_weight', label: 'Weight', placeholder: '135', unitGroup: 'weight', inputMode: 'decimal' },
-        { key: 'actual_reps', label: 'Reps', placeholder: '8', unit: 'reps', inputMode: 'numeric' },
+    return layoutWithExerciseNotes(
+      [
+        { key: 'actual_weight', label: 'Weight', placeholder: '135', unitGroup: 'weight', inputMode: 'decimal', size: 'compact' },
+        { key: 'actual_reps', label: 'Reps', placeholder: '8', unit: 'reps', inputMode: 'numeric', size: 'compact' },
       ],
-      optional: [{ key: 'log_notes', label: 'Notes', placeholder: 'Felt strong, etc.', optional: true, wide: true }],
-      showRpeChips: true,
-    };
+      [{ key: 'log_notes', label: 'Notes', placeholder: 'Felt strong, etc.', optional: true, size: 'wide' }],
+      { showRpeChips: true },
+    );
   }
-  return {
-    primary: [
-      { key: 'actual_reps', label: 'Reps', placeholder: '10', unit: 'reps', inputMode: 'numeric' },
-    ],
-    optional: [{ key: 'log_notes', label: 'Notes', optional: true, wide: true }],
-  };
+  return layoutWithExerciseNotes(
+    [{ key: 'actual_reps', label: 'Reps', placeholder: '10', unit: 'reps', inputMode: 'numeric', size: 'compact' }],
+    [{ key: 'log_notes', label: 'Notes', optional: true, size: 'wide' }],
+  );
 }
 
 /** Keys persisted to st_set_logs for saveLog payload assembly. */
@@ -98,6 +121,7 @@ export function logFieldKeysForType(type: ExerciseType): string[] {
   [...layout.primary, ...(layout.optional || [])].forEach((f) => {
     if (!f.key.startsWith('_')) keys.add(f.key);
   });
+  if (layout.exerciseNotes && !layout.exerciseNotes.key.startsWith('_')) keys.add(layout.exerciseNotes.key);
   if (layout.showRpeChips) keys.add('actual_rpe');
   if (layout.showIntensityChips) keys.add('actual_rpe');
   return Array.from(keys);
@@ -105,7 +129,7 @@ export function logFieldKeysForType(type: ExerciseType): string[] {
 
 export function allLogFieldsFlat(type: ExerciseType): LogFieldUI[] {
   const layout = logLayoutForType(type);
-  return [...layout.primary, ...(layout.optional || [])];
+  return [...layout.primary, ...(layout.optional || []), ...(layout.exerciseNotes ? [layout.exerciseNotes] : [])];
 }
 
 export { RPE_CHIPS, INTENSITY_CHIPS, SIDE_CHIPS };

@@ -10,11 +10,11 @@ export type BarcodeScannerErrorCode =
 
 export const BARCODE_SCANNER_ERRORS: Record<BarcodeScannerErrorCode, string> = {
   insecure_context:
-    'Camera requires a secure connection (HTTPS). Open BuildIQ from your installed app or https URL, not an insecure page.',
+    'Camera requires a secure connection (HTTPS). Open BuildIQ Health from your installed app or https URL, not an insecure page.',
   camera_unavailable:
     'No camera was found on this device. Use fallback options below to enter the product another way.',
   permission_denied:
-    'Camera permission was denied. On iPhone: Settings → BuildIQ → Camera → Allow, then tap Scan Barcode again.',
+    'Camera permission was denied. On iPhone: Settings → BuildIQ Health → Camera → Allow, then tap Scan Barcode again.',
   no_rear_camera:
     'Could not open the rear camera. Try holding the phone farther from the barcode or use fallback options below.',
   scanner_init_failed:

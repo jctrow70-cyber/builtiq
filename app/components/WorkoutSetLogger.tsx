@@ -12,6 +12,7 @@ import {
   mergeSideIntoNotes,
   parseAssistFromNotes,
   parseSideFromNotes,
+  type LogFieldUI,
 } from '../../lib/training/logFieldUI';
 
 type SetRow = {
@@ -40,6 +41,16 @@ type Props = {
   onInputKeyDown?: (e: React.KeyboardEvent) => void;
 };
 
+function fieldSizeClass(field: LogFieldUI) {
+  if (field.wide || field.size === 'wide') return 'log-field-card-wide';
+  if (field.size === 'compact') return 'log-field-card-compact';
+  return 'log-field-card-normal';
+}
+
+function stripEmbeddedNotes(notes: string) {
+  return notes.replace(/(?:^|\s)(assist|side):\s*[^\s·]+/gi, '').replace(/\s*·\s*/g, ' ').trim();
+}
+
 function FieldCard({
   field,
   value,
@@ -53,7 +64,7 @@ function FieldCard({
   onKeyDown,
   inputKey,
 }: {
-  field: { key: string; label: string; placeholder?: string; optional?: boolean; wide?: boolean; inputMode?: string; chipOptions?: string[] };
+  field: LogFieldUI;
   value: string;
   prevHint?: string;
   unitLabel?: string;
@@ -65,11 +76,12 @@ function FieldCard({
   onKeyDown?: (e: React.KeyboardEvent) => void;
   inputKey?: string;
 }) {
+  const compact = field.size === 'compact';
   return (
-    <div className={`log-field-card${field.wide ? ' log-field-card-wide' : ''}`}>
+    <div className={`log-field-card ${fieldSizeClass(field)}`}>
       <label className="log-field-label">
         {field.label}
-        {field.optional && <span className="log-field-optional">optional</span>}
+        {field.optional && <span className="log-field-optional">opt</span>}
       </label>
       {field.chipOptions ? (
         <div className="log-chip-row">
@@ -90,7 +102,7 @@ function FieldCard({
           <input
             key={inputKey || `${field.key}-${value}`}
             ref={registerRef}
-            className="log-input-card"
+            className={`log-input-card${compact ? ' log-input-compact' : ''}`}
             type="text"
             inputMode={(field.inputMode as 'decimal' | 'numeric' | 'text') || 'text'}
             disabled={disabled}
@@ -111,7 +123,6 @@ function SetLogCard({
   set,
   log,
   prev,
-  exType,
   layout,
   weightUnit,
   distanceUnit,
@@ -129,7 +140,6 @@ function SetLogCard({
   set: SetRow;
   log: LogRow;
   prev: LogRow | null;
-  exType: ExerciseType;
   layout: ReturnType<typeof logLayoutForType>;
   weightUnit: 'lb' | 'kg';
   distanceUnit: 'mi' | 'km';
@@ -157,7 +167,7 @@ function SetLogCard({
 
   const resolveValue = (key: string) => {
     if (key === '_assist_weight') return assist;
-    if (key === 'log_notes') return notes.replace(/(?:^|\s)(assist|side):\s*[^\s·]+/gi, '').replace(/\s*·\s*/g, ' ').trim();
+    if (key === 'log_notes') return stripEmbeddedNotes(notes);
     return String(log[key] || '');
   };
 
@@ -183,7 +193,7 @@ function SetLogCard({
     return undefined;
   };
 
-  const renderField = (f: (typeof layout.primary)[0]) => (
+  const renderField = (f: LogFieldUI) => (
     <FieldCard
       key={f.key}
       field={f}
@@ -218,38 +228,43 @@ function SetLogCard({
               <option>amrap</option>
             </select>
           ) : (
-            <span className="badge">{set.set_type}</span>
+            <span className="badge set-type-badge">{set.set_type}</span>
           )}
-        </div>
-        <div className="set-log-head-actions">
-          {prev && canLog && (
-            <button type="button" className="btn small secondary log-dup-btn" onClick={() => onDuplicateSet(set.id, prev)}>
-              Copy last
-            </button>
-          )}
-          <label className="set-done-check">
-            <input
-              type="checkbox"
-              checked={completed}
-              disabled={!canLog}
-              onChange={(e) => onSaveField(set.id, 'completed', e.target.checked ? 'true' : '', { completed: e.target.checked })}
-            />
-            <span>Done</span>
-          </label>
           {canEdit && (
-            <button type="button" className="btn small red" onClick={() => onRemoveSet(set)} aria-label="Remove set">
+            <button type="button" className="btn small red set-remove-btn" onClick={() => onRemoveSet(set)} aria-label="Remove set">
               ×
             </button>
           )}
         </div>
+        <label className="set-done-check">
+          <input
+            type="checkbox"
+            checked={completed}
+            disabled={!canLog}
+            onChange={(e) => onSaveField(set.id, 'completed', e.target.checked ? 'true' : '', { completed: e.target.checked })}
+          />
+          <span>Done</span>
+        </label>
       </div>
 
       <div className="set-log-fields">
-        <div className="log-field-row">{layout.primary.map(renderField)}</div>
+        <div className="set-log-metrics-row">
+          <div className="log-field-row log-field-row-compact">{layout.primary.map(renderField)}</div>
+          {prev && canLog && (
+            <button
+              type="button"
+              className="btn small secondary log-dup-btn"
+              title="Copy values from last workout"
+              onClick={() => onDuplicateSet(set.id, prev)}
+            >
+              Copy last
+            </button>
+          )}
+        </div>
 
         {layout.showRpeChips && (
           <FieldCard
-            field={{ key: 'actual_rpe', label: 'RPE', chipOptions: RPE_CHIPS }}
+            field={{ key: 'actual_rpe', label: 'RPE', chipOptions: RPE_CHIPS, size: 'wide' }}
             value={String(log.actual_rpe || '')}
             disabled={!canLog}
             onChipPick={(v) => onSaveField(set.id, 'actual_rpe', v)}
@@ -259,7 +274,7 @@ function SetLogCard({
 
         {layout.showIntensityChips && (
           <FieldCard
-            field={{ key: 'actual_rpe', label: 'Intensity', chipOptions: INTENSITY_CHIPS }}
+            field={{ key: 'actual_rpe', label: 'Intensity', chipOptions: INTENSITY_CHIPS, size: 'wide' }}
             value={String(log.actual_rpe || '')}
             disabled={!canLog}
             onChipPick={(v) => onSaveField(set.id, 'actual_rpe', v)}
@@ -269,7 +284,7 @@ function SetLogCard({
 
         {layout.showSideChips && (
           <FieldCard
-            field={{ key: '_side', label: 'Side', chipOptions: SIDE_CHIPS }}
+            field={{ key: '_side', label: 'Side', chipOptions: SIDE_CHIPS, size: 'wide' }}
             value={side}
             disabled={!canLog}
             onChipPick={(v) => onSaveField(set.id, 'log_notes', mergeSideIntoNotes(notes, v))}
@@ -278,7 +293,7 @@ function SetLogCard({
         )}
 
         {layout.optional && layout.optional.length > 0 && (
-          <div className="log-field-row log-field-optional-row">{layout.optional.map(renderField)}</div>
+          <div className="log-field-row log-field-row-compact log-field-optional-row">{layout.optional.map(renderField)}</div>
         )}
       </div>
     </div>
@@ -307,6 +322,14 @@ export default function WorkoutSetLogger({
   const saveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const pendingSavesRef = useRef<Record<string, () => void>>({});
 
+  const firstSet = sets[0];
+  const firstSetLog = firstSet ? logs[firstSet.id] || {} : {};
+  const exerciseNotesRaw = String(firstSetLog.log_notes || '');
+  const exerciseNotesDisplay = stripEmbeddedNotes(exerciseNotesRaw);
+  const exerciseNotesPrev = firstSet && prevBySetId[firstSet.id]?.log_notes
+    ? stripEmbeddedNotes(String(prevBySetId[firstSet.id]!.log_notes))
+    : undefined;
+
   const scheduleSave = (key: string, _value: string, save: () => void) => {
     pendingSavesRef.current[key] = save;
     if (saveTimersRef.current[key]) clearTimeout(saveTimersRef.current[key]);
@@ -328,6 +351,16 @@ export default function WorkoutSetLogger({
 
   useEffect(() => () => flushSaves(), []);
 
+  const saveExerciseNotes = (value: string) => {
+    if (!firstSet) return;
+    let merged = value.trim();
+    const side = parseSideFromNotes(exerciseNotesRaw);
+    const assist = parseAssistFromNotes(exerciseNotesRaw);
+    if (side) merged = mergeSideIntoNotes(merged, side);
+    if (assist) merged = mergeAssistIntoNotes(merged, assist);
+    onSaveField(firstSet.id, 'log_notes', merged);
+  };
+
   return (
     <div className="workout-set-logger">
       {showDistToggle && (
@@ -348,6 +381,22 @@ export default function WorkoutSetLogger({
         </div>
       )}
 
+      {layout.exerciseNotes && firstSet && (
+        <div className="exercise-notes-section">
+          <FieldCard
+            field={layout.exerciseNotes}
+            value={exerciseNotesDisplay}
+            prevHint={exerciseNotesPrev || undefined}
+            disabled={!canLog}
+            onBlur={(v) => { flushSaves(); saveExerciseNotes(v); }}
+            onChangeValue={(v) => scheduleSave(`notes:${firstSet.id}`, v, () => saveExerciseNotes(v))}
+            registerRef={registerInputRef}
+            onKeyDown={onInputKeyDown}
+            inputKey={`notes-${firstSet.id}-${exerciseNotesDisplay}`}
+          />
+        </div>
+      )}
+
       <div className="set-log-list">
         {sets.map((s) => (
           <SetLogCard
@@ -355,7 +404,6 @@ export default function WorkoutSetLogger({
             set={s}
             log={logs[s.id] || {}}
             prev={prevBySetId[s.id] || null}
-            exType={exType}
             layout={layout}
             weightUnit={weightUnit}
             distanceUnit={distanceUnit}

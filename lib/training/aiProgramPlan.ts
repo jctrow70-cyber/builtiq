@@ -666,7 +666,7 @@ export function repairAiPlan(
 
   let summary = plan.program_summary;
   if (!summary || summary.length < 40) {
-    summary = `${plan.program_name || 'BuildIQ program'} — ${config.weeks}-week plan on ${config.days.join(', ')}. Built around your goals: ${config.prompt.slice(0, 180)}. Progress intensity across weeks and keep form quality high.`;
+    summary = `${plan.program_name || 'BuildIQ Health program'} — ${config.weeks}-week plan on ${config.days.join(', ')}. Built around your goals: ${config.prompt.slice(0, 180)}. Progress intensity across weeks and keep form quality high.`;
   }
   let coaching = plan.coaching_notes || '';
   if (!coaching || coaching.length < 60) {

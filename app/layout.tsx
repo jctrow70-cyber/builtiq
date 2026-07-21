@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'BuildIQ',
+    title: 'BuildIQ Health',
   },
   formatDetection: {
     telephone: false,

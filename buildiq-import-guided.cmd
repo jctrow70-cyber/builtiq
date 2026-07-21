@@ -2,7 +2,7 @@
 REM Import Guided Exercise Library (~1,324 GIF + form guides) — no admin, uses portable Node
 cd /d "%~dp0"
 echo.
-echo BuildIQ Guided Library Import
+echo BuildIQ Health Guided Library Import
 echo =============================
 echo.
 if not exist ".env.local" (
@@ -33,6 +33,6 @@ echo.
 if errorlevel 1 (
   echo Import failed. See messages above.
 ) else (
-  echo Done. Open BuildIQ - Settings - enable Guided Library - search exercises in Training.
+  echo Done. Open BuildIQ Health - Settings - enable Guided Library - search exercises in Training.
 )
 pause

@@ -4118,3 +4118,116 @@ None.
 BIQ-0045 Paginate exercise catalog load to fix missing search results
 ```
 
+---
+
+## BIQ-0046 - Use BuildIQ Health as full product name in UI
+
+Date: 2026-07-21  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Updated user-facing branding so the product reads as **BuildIQ Health** (not BuildIQ alone): header logo, in-app copy, PWA short name, install prompt, and related error messages.
+
+### Purpose
+
+The full product name should consistently include **Health** after BuildIQ for clearer wellness positioning.
+
+### Changes
+
+- Header brand: `BuildIQ Health` (Build + purple IQ + Health)
+- Profile setup, AI Coach, Settings, bug report, and catalog search copy use **BuildIQ Health**
+- PWA `short_name` and Apple web app title → **BuildIQ Health**
+- Install prompt, Supabase config error, barcode camera hints updated
+- Decision 001 and `BuildIQ_Context.md` aligned with full name
+
+### Files changed
+
+- `app/page.tsx`, `app/layout.tsx`, `app/components/InstallAppPrompt.tsx`
+- `public/manifest.webmanifest`
+- `lib/supabaseClient.ts`, `lib/nutrition/barcodeScannerErrors.ts`, `lib/training/aiProgramPlan.ts`
+- `app/api/catalog/import-guided/route.ts`
+- `buildiq-setup.cmd`, `buildiq-import-guided.cmd`
+- `DECISIONS.md`, `BuildIQ_Context.md`, `.cursor/rules.md`
+- `CHANGELOG.md`
+
+### Database changes
+
+None.
+
+### Testing steps
+
+1. Sign in — header shows **BuildIQ Health**
+2. Browser tab and home screen install name: **BuildIQ Health**
+3. Install banner: **Install BuildIQ Health**
+4. Profile setup button: **Continue to BuildIQ Health**
+5. iOS camera hint references **BuildIQ Health** in Settings path
+
+### Known issues
+
+- App icons still show **BuildIQ** only (limited space on 180px icon)
+- Catalog pack label remains **BuildIQ Essentials** (library name, not app name)
+
+### Recommended commit message
+
+```text
+BIQ-0046 Show BuildIQ Health as full product name in app UI and PWA
+```
+
+---
+
+## BIQ-0047 - Compact Workout Logging UI
+
+Date: 2026-07-21  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Refined the Training workout logger for faster mobile logging: compact weight/reps fields, reorganized set rows, exercise-level notes, and auto-collapse when an exercise is fully logged.
+
+### Purpose
+
+Reduce scrolling and visual clutter during active training so users can log sets quickly with fewer taps while preserving all existing log functionality.
+
+### Changes
+
+- **Field sizing:** Weight, reps, duration, HR, and similar numeric fields use compact inputs sized for typical values
+- **Set row layout:** Weight and reps sit side-by-side; Copy last is inline with metrics; delete (×) sits next to set type; Done stays on the right
+- **Exercise notes:** Single notes field above the first set (saved on set 1) instead of repeating per set
+- **Auto-collapse:** When all sets for an exercise are completed, the card collapses with a ✓ summary and the next exercise expands + scrolls into view
+- **CSS:** Tighter set cards, flex-based compact field rows that stay side-by-side on mobile
+
+### Files changed
+
+- `app/components/WorkoutSetLogger.tsx`
+- `lib/training/logFieldUI.ts`
+- `app/globals.css`
+- `app/page.tsx`
+- `CHANGELOG.md`
+
+### Database changes
+
+None.
+
+### Testing steps
+
+1. Open Training → log a strength exercise on a phone-width viewport
+2. Confirm weight and reps appear compact on one row; Copy last is beside them
+3. Confirm delete (×) is next to set type; Done is on the right
+4. Confirm notes appear once above set 1, not on every set
+5. Log all sets for an exercise — card should collapse with ✓ and next exercise should expand
+6. Verify RPE chips, copy last, auto-save, and set type editing still work
+7. Test cardio/bodyweight/mobility exercise types for layout regressions
+
+### Known issues
+
+- Exercise notes are stored on the first set’s log row only (existing data model); older per-set notes on sets 2+ are not merged into the exercise notes field automatically
+
+### Recommended commit message
+
+```text
+BIQ-0047 Compact workout logging UI for faster mobile set entry
+```
+

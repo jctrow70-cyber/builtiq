@@ -1,6 +1,6 @@
 
 :root{--bg:#070a11;--panel:#0e141d;--card:#151d28;--text:#f7f7fb;--muted:#9ca3af;--line:#273142;--purple:#7c5cff;--green:#22c55e;--red:#ef4444;--amber:#f59e0b;--safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px)}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;padding-bottom:calc(40px + var(--safe-bottom))}button,input,select,textarea{font:inherit}button{cursor:pointer}.header,.app-header{position:sticky;top:0;z-index:20;background:#070a11;border-bottom:1px solid var(--line)}.header{padding:calc(12px + var(--safe-top)) 14px 12px;display:flex;justify-content:space-between;align-items:center;gap:10px}.app-header{padding:0;padding-top:var(--safe-top)}.header-top{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px 8px}.header-sub{margin-top:2px}.brand{font-size:22px;font-weight:900}.brand span{color:var(--purple)}.muted{color:var(--muted);font-size:12px}.shell{max-width:1380px;margin:0 auto;padding:12px;display:grid;grid-template-columns:300px 1fr;gap:12px}.app-shell{max-width:980px;margin:0 auto;padding:12px}.page-main,.main{max-width:100%}.panel,.main,.card{background:linear-gradient(180deg,var(--panel),#0b1119);border:1px solid var(--line);border-radius:18px;padding:12px}.card{background:linear-gradient(180deg,var(--card),#111827);margin-bottom:8px}h1{margin:0 0 6px;font-size:28px}h2,h3{margin:0 0 7px}label{display:block;font-size:11px;color:#cbd5e1;font-weight:800;margin:8px 0 4px}input,select,textarea{width:100%;border:1px solid var(--line);background:#0b1119;color:var(--text);border-radius:12px;padding:8px}.btn{border:0;border-radius:12px;padding:8px 10px;background:linear-gradient(135deg,var(--purple),#5b4df5);color:white;font-weight:900}.btn.full{width:100%}.btn.secondary{background:#202a39;color:#e5e7eb}.btn.green{background:linear-gradient(135deg,#22c55e,#16a34a)}.btn.red{background:linear-gradient(135deg,#ef4444,#b91c1c)}.btn.small{padding:5px 7px;border-radius:8px;font-size:11px}.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.tabs,.appnav,.topnav{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.topnav{margin:0;padding:0 10px 10px;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch}.topnav button{white-space:nowrap;flex:0 0 auto}.tabs button,.appnav button,.topnav button{border:1px solid var(--line);background:#0b1119;color:#cbd5e1;border-radius:999px;padding:7px 12px;font-weight:900}.tabs button.active,.appnav button.active,.topnav button.active{background:#1b1634;color:white;border-color:var(--purple)}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px}.stat{background:#151d28;border:1px solid var(--line);border-radius:14px;padding:9px}.stat b{display:block;font-size:20px}.stat-mode .mode-toggle{margin:6px 0 0}.stat-mode .mode-toggle button{padding:5px 10px;font-size:11px}.mode-team-select{margin-top:6px;padding:6px 8px;font-size:12px}.mode-team-meta{display:block;margin-top:4px;font-size:10px;line-height:1.3}.badge{display:inline-flex;border-radius:999px;padding:3px 7px;background:#25213f;color:#c4b5fd;font-size:11px;font-weight:900;margin:2px 4px 2px 0}.exercise-head{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start}.setgrid{display:grid;grid-template-columns:72px 45px 1fr 1fr;gap:5px;align-items:center;margin-top:5px}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;padding-bottom:calc(40px + var(--safe-bottom))}button,input,select,textarea{font:inherit}button{cursor:pointer}.header,.app-header{position:sticky;top:0;z-index:20;background:#070a11;border-bottom:1px solid var(--line)}.header{padding:calc(12px + var(--safe-top)) 14px 12px;display:flex;justify-content:space-between;align-items:center;gap:10px}.app-header{padding:0;padding-top:var(--safe-top)}.header-top{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px 8px}.header-sub{margin-top:2px}.brand{font-size:20px;font-weight:900;letter-spacing:-0.02em}.brand span{color:var(--purple)}.muted{color:var(--muted);font-size:12px}.shell{max-width:1380px;margin:0 auto;padding:12px;display:grid;grid-template-columns:300px 1fr;gap:12px}.app-shell{max-width:980px;margin:0 auto;padding:12px}.page-main,.main{max-width:100%}.panel,.main,.card{background:linear-gradient(180deg,var(--panel),#0b1119);border:1px solid var(--line);border-radius:18px;padding:12px}.card{background:linear-gradient(180deg,var(--card),#111827);margin-bottom:8px}h1{margin:0 0 6px;font-size:28px}h2,h3{margin:0 0 7px}label{display:block;font-size:11px;color:#cbd5e1;font-weight:800;margin:8px 0 4px}input,select,textarea{width:100%;border:1px solid var(--line);background:#0b1119;color:var(--text);border-radius:12px;padding:8px}.btn{border:0;border-radius:12px;padding:8px 10px;background:linear-gradient(135deg,var(--purple),#5b4df5);color:white;font-weight:900}.btn.full{width:100%}.btn.secondary{background:#202a39;color:#e5e7eb}.btn.green{background:linear-gradient(135deg,#22c55e,#16a34a)}.btn.red{background:linear-gradient(135deg,#ef4444,#b91c1c)}.btn.small{padding:5px 7px;border-radius:8px;font-size:11px}.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}.tabs,.appnav,.topnav{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}.topnav{margin:0;padding:0 10px 10px;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch}.topnav button{white-space:nowrap;flex:0 0 auto}.tabs button,.appnav button,.topnav button{border:1px solid var(--line);background:#0b1119;color:#cbd5e1;border-radius:999px;padding:7px 12px;font-weight:900}.tabs button.active,.appnav button.active,.topnav button.active{background:#1b1634;color:white;border-color:var(--purple)}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px}.stat{background:#151d28;border:1px solid var(--line);border-radius:14px;padding:9px}.stat b{display:block;font-size:20px}.stat-mode .mode-toggle{margin:6px 0 0}.stat-mode .mode-toggle button{padding:5px 10px;font-size:11px}.mode-team-select{margin-top:6px;padding:6px 8px;font-size:12px}.mode-team-meta{display:block;margin-top:4px;font-size:10px;line-height:1.3}.badge{display:inline-flex;border-radius:999px;padding:3px 7px;background:#25213f;color:#c4b5fd;font-size:11px;font-weight:900;margin:2px 4px 2px 0}.exercise-head{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:start}.setgrid{display:grid;grid-template-columns:72px 45px 1fr 1fr;gap:5px;align-items:center;margin-top:5px}
 .setgrid.setgrid-edit{grid-template-columns:72px 45px 1fr 1fr 42px}.setgrid input,.setgrid select{text-align:center;padding:7px}.actions,.topline{display:flex;gap:5px;flex-wrap:wrap}.login{max-width:460px;margin:45px auto;padding:14px}
 .dashboard{display:grid;gap:14px}.dash-hero{padding:4px 2px 8px}.dash-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.dash-card{background:linear-gradient(180deg,var(--card),#111827);border:1px solid var(--line);border-radius:18px;padding:14px;min-height:180px;display:flex;flex-direction:column}.dash-featured{grid-column:span 2;background:linear-gradient(180deg,#171f31,#101827);border-color:#3b335f}.dash-accent{background:linear-gradient(180deg,#171628,#121827);border-color:#4c3f78}.dash-card-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}.dash-title{font-size:18px;font-weight:900;margin:0 0 6px}.dash-metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}.dash-metrics b{display:block;font-size:24px}.dash-placeholder{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.dash-placeholder span{background:#0b1119;border:1px dashed var(--line);border-radius:10px;padding:10px;text-align:center;color:var(--muted);font-size:12px}.dash-insight{margin-top:10px;padding:12px;border-radius:12px;background:#0f1422;border:1px solid var(--line);font-size:13px;line-height:1.5;color:#e5e7eb}.program-setup{margin-bottom:12px}
 .auth-shell{min-height:100vh}
@@ -19,10 +19,12 @@
 .section-head{display:flex;align-items:center;gap:8px;margin:10px 0 8px;padding-bottom:6px;border-bottom:1px solid var(--line)}
 .section-head h2{margin:0;font-size:15px;color:#e5e7eb}
 .section-empty{padding:8px 4px 12px}
-.exercise-card{margin-bottom:10px}
+.exercise-card{margin-bottom:10px;transition:padding .25s ease,box-shadow .25s ease}
 .exercise-card.exercise-collapsed .exercise-head{margin-bottom:0}
 .exercise-card.exercise-collapsed{padding-bottom:8px}
-.exercise-collapse-summary{margin:4px 0 0;font-size:12px}
+.exercise-card.exercise-all-done{border-color:rgba(34,197,94,.35);box-shadow:0 0 0 1px rgba(34,197,94,.08)}
+.exercise-collapse-summary{margin:4px 0 0;font-size:12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.exercise-done-badge{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:rgba(34,197,94,.2);color:var(--green);font-size:11px;font-weight:900;flex-shrink:0}
 .exercise-collapse-btn{flex-shrink:0}
 .section-head-actions{display:flex;align-items:center;gap:6px;margin-left:auto;flex-wrap:wrap}
 .catalog-guides-filter{margin:0;font-size:12px;white-space:nowrap}
@@ -231,37 +233,44 @@
 .progress-trend-bar{width:100%;max-width:36px;border-radius:8px 8px 4px 4px;background:linear-gradient(180deg,#8b5cf6,#5b21b6);min-height:4px;transition:height .2s ease}
 .progress-trend-label{font-size:10px;font-weight:800}
 .progress-trend-meta{font-size:9px;text-align:center;line-height:1.2}
-/* BIQ — Premium workout set logging (feature/workout-logging-redesign) */
-.workout-set-logger{max-width:520px;margin:10px 0 0}
-.log-pref-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;padding:8px 10px;border-radius:12px;background:#0f1422;border:1px solid var(--line)}
-.set-log-list{display:flex;flex-direction:column;gap:12px}
-.set-log-card{background:linear-gradient(180deg,#121a28,#0e141f);border:1px solid #334155;border-radius:16px;padding:12px;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+/* BIQ-0047 — Compact workout set logging UI */
+.workout-set-logger{max-width:100%;margin:8px 0 0}
+.log-pref-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;padding:6px 10px;border-radius:12px;background:#0f1422;border:1px solid var(--line)}
+.exercise-notes-section{margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid rgba(51,65,85,.5)}
+.set-log-list{display:flex;flex-direction:column;gap:8px}
+.set-log-card{background:linear-gradient(180deg,#121a28,#0e141f);border:1px solid #334155;border-radius:14px;padding:10px;box-shadow:0 1px 4px rgba(0,0,0,.2);transition:border-color .2s ease,box-shadow .2s ease}
 .set-log-card.set-log-done{border-color:rgba(34,197,94,.45);box-shadow:0 0 0 1px rgba(34,197,94,.12)}
-.set-log-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap}
-.set-log-head-left{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.set-log-num{font-size:13px;font-weight:900;color:#e2e8f0}
-.log-set-type-select{min-width:108px;padding:8px 10px;font-size:12px}
-.set-log-head-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.log-dup-btn{min-height:36px}
-.set-done-check{display:flex!important;align-items:center;gap:6px;margin:0!important;font-size:12px;font-weight:800;color:#cbd5e1;min-height:36px;padding:0 4px}
+.set-log-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.set-log-head-left{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
+.set-log-num{font-size:12px;font-weight:900;color:#e2e8f0;flex-shrink:0}
+.log-set-type-select{min-width:92px;max-width:108px;padding:6px 8px;font-size:11px;min-height:36px}
+.set-type-badge{font-size:10px;padding:2px 6px}
+.set-remove-btn{min-width:32px;min-height:32px;padding:4px 8px;line-height:1;font-size:16px;flex-shrink:0}
+.set-done-check{display:flex!important;align-items:center;gap:5px;margin:0!important;font-size:11px;font-weight:800;color:#cbd5e1;min-height:36px;padding:0 4px;flex-shrink:0}
 .set-done-check input{width:18px;height:18px;margin:0;accent-color:var(--green)}
-.set-log-fields{display:flex;flex-direction:column;gap:10px}
-.log-field-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.log-field-optional-row{margin-top:2px}
-.log-field-card{display:flex;flex-direction:column;gap:5px}
-.log-field-card-wide{grid-column:1/-1}
-.log-field-label{font-size:11px;font-weight:800;color:#cbd5e1;margin:0!important;letter-spacing:.02em}
-.log-field-optional{font-size:9px;font-weight:700;color:#64748b;margin-left:6px;text-transform:uppercase}
+.set-log-fields{display:flex;flex-direction:column;gap:8px}
+.set-log-metrics-row{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap}
+.log-field-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.log-field-row-compact{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;flex:1;min-width:0}
+.log-field-optional-row{margin-top:0}
+.log-field-card{display:flex;flex-direction:column;gap:4px;min-width:0}
+.log-field-card-compact{flex:0 0 auto;width:80px}
+.log-field-card-normal{flex:1 1 100px;min-width:88px;max-width:140px}
+.log-field-card-wide{flex:1 1 100%;width:100%;max-width:none}
+.log-field-label{font-size:10px;font-weight:800;color:#94a3b8;margin:0!important;letter-spacing:.03em;text-transform:uppercase}
+.log-field-optional{font-size:8px;font-weight:700;color:#64748b;margin-left:4px;text-transform:uppercase}
 .log-input-wrap{position:relative;display:flex;align-items:stretch}
-.log-input-card{width:100%;min-height:48px;padding:12px 44px 12px 14px;border-radius:14px;border:1px solid #3b4a63;background:#0a1018;color:#f8fafc;font-size:16px;font-weight:700;transition:border-color .15s,box-shadow .15s}
+.log-input-card{width:100%;min-height:44px;padding:10px 36px 10px 12px;border-radius:12px;border:1px solid #3b4a63;background:#0a1018;color:#f8fafc;font-size:16px;font-weight:700;transition:border-color .15s,box-shadow .15s}
+.log-input-compact{min-height:40px;padding:8px 32px 8px 10px;font-size:16px;border-radius:10px}
 .log-input-card:focus{border-color:#7c5cff;outline:none;box-shadow:0 0 0 3px rgba(124,92,255,.2)}
 .log-input-card:disabled{opacity:.55}
-.log-input-unit{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:12px;font-weight:800;color:#94a3b8;pointer-events:none}
-.log-chip-row{display:flex;flex-wrap:wrap;gap:6px}
-.log-chip{min-height:40px;padding:8px 14px;border-radius:12px;border:1px solid #334155;background:#0b1119;color:#cbd5e1;font-size:13px;font-weight:800}
+.log-input-unit{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:800;color:#64748b;pointer-events:none}
+.log-dup-btn{min-height:40px;flex-shrink:0;white-space:nowrap;font-size:11px;padding:6px 10px}
+.log-chip-row{display:flex;flex-wrap:wrap;gap:5px}
+.log-chip{min-height:36px;padding:6px 12px;border-radius:10px;border:1px solid #334155;background:#0b1119;color:#cbd5e1;font-size:12px;font-weight:800}
 .log-chip.active{border-color:#7c5cff;background:#1b1634;color:#fff}
 .log-chip:disabled{opacity:.5}
-.log-save-hint{margin:10px 0 0;font-size:11px;text-align:center}
+.log-save-hint{margin:8px 0 0;font-size:11px;text-align:center}
 .nutrition-tracker{display:grid;gap:8px}
 .nutrition-summary-card{padding:10px 12px}
 .nutrition-summary-head{align-items:center}
@@ -363,5 +372,5 @@
 .install-app-banner p{margin:0;font-size:12px;line-height:1.35}
 .install-app-banner-actions{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
 @media(display-mode:standalone){.install-app-banner{display:none}}
- @media(max-width:900px){.add-exercise-row{grid-template-columns:1fr auto auto}.catalog-edit-grid{grid-template-columns:1fr}.catalog-search-filters{grid-template-columns:1fr}.setgrid,.setgrid-edit{grid-template-columns:1fr 1fr 1fr}.exercise-add-row{grid-template-columns:1fr auto auto}.team-compliance-card .dash-metrics{grid-template-columns:1fr 1fr}.progress-trend-chart{grid-template-columns:repeat(4,minmax(0,1fr))}.progress-summary-metrics{grid-template-columns:1fr 1fr}.panel-overlay{align-items:flex-end;padding:0}.add-exercise-panel,.nutrition-add-panel,.nutrition-my-foods-panel{border-radius:18px 18px 0 0;max-height:90vh}.log-field-row{grid-template-columns:1fr}.workout-set-logger{max-width:100%}.log-dup-btn,.set-done-check{min-height:44px}.nutrition-totals-grid,.nutrition-date-row,.nutrition-weekly-metrics{grid-template-columns:1fr 1fr}.nutrition-date-row{margin:4px 0}.nutrition-date-row input{grid-column:span 2}.nutrition-macro-ring-wrap{max-width:118px}.nutrition-weekly-chart{grid-template-columns:repeat(4,minmax(0,1fr))}}
+ @media(max-width:900px){.add-exercise-row{grid-template-columns:1fr auto auto}.catalog-edit-grid{grid-template-columns:1fr}.catalog-search-filters{grid-template-columns:1fr}.setgrid,.setgrid-edit{grid-template-columns:1fr 1fr 1fr}.exercise-add-row{grid-template-columns:1fr auto auto}.team-compliance-card .dash-metrics{grid-template-columns:1fr 1fr}.progress-trend-chart{grid-template-columns:repeat(4,minmax(0,1fr))}.progress-summary-metrics{grid-template-columns:1fr 1fr}.panel-overlay{align-items:flex-end;padding:0}.add-exercise-panel,.nutrition-add-panel,.nutrition-my-foods-panel{border-radius:18px 18px 0 0;max-height:90vh}.log-field-row:not(.log-field-row-compact){grid-template-columns:1fr}.log-dup-btn,.set-done-check{min-height:44px}.nutrition-totals-grid,.nutrition-date-row,.nutrition-weekly-metrics{grid-template-columns:1fr 1fr}.nutrition-date-row{margin:4px 0}.nutrition-date-row input{grid-column:span 2}.nutrition-macro-ring-wrap{max-width:118px}.nutrition-weekly-chart{grid-template-columns:repeat(4,minmax(0,1fr))}}
  @media(max-width:600px){.nutrition-totals-grid,.nutrition-date-row{grid-template-columns:1fr}.nutrition-food-chip,.nutrition-entry-row{grid-template-columns:1fr}}

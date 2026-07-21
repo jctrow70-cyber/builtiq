@@ -66,14 +66,14 @@ export default function InstallAppPrompt() {
   if (!visible) return null;
 
   return (
-    <div className="install-app-banner" role="region" aria-label="Install BuildIQ app">
+    <div className="install-app-banner" role="region" aria-label="Install BuildIQ Health app">
       <div className="install-app-banner-inner">
         <div>
-          <strong>Install BuildIQ</strong>
+          <strong>Install BuildIQ Health</strong>
           <p className="muted">
             {showIosHint && !installEvent
               ? 'Tap Share, then Add to Home Screen for a full-screen app experience.'
-              : 'Add BuildIQ to your home screen for quick access while you train.'}
+              : 'Add BuildIQ Health to your home screen for quick access while you train.'}
           </p>
         </div>
         <div className="install-app-banner-actions">
