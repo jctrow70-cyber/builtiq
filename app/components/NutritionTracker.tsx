@@ -98,6 +98,75 @@ const emptyFoodDraft = (meal: MealType = 'breakfast'): FoodDraft => ({
   saveToLibrary: false,
 });
 
+type MyFoodsPanelProps = {
+  foodSearch: string;
+  setFoodSearch: (value: string) => void;
+  foods: FoodLibraryItem[];
+  saving: boolean;
+  onEdit: (food: FoodLibraryItem) => void;
+  onAddToMeal: (food: FoodLibraryItem, meal: MealType) => void;
+};
+
+function MyFoodsPanel({
+  foodSearch,
+  setFoodSearch,
+  foods,
+  saving,
+  onEdit,
+  onAddToMeal,
+}: MyFoodsPanelProps) {
+  return (
+    <>
+      <p className="muted nutrition-add-intro">
+        Quick-add saved foods. Macros are snapshotted when logged so history stays accurate.
+      </p>
+      <input
+        value={foodSearch}
+        onChange={(e) => setFoodSearch(e.target.value)}
+        placeholder="Search saved foods"
+      />
+      {foods.length === 0 ? (
+        <p className="muted">
+          No saved foods yet. Log a food and check &ldquo;Save to my foods&rdquo; to build your library.
+        </p>
+      ) : (
+        <div className="nutrition-food-grid">
+          {foods.map((food) => (
+            <div key={food.id} className="nutrition-food-chip">
+              <div>
+                <b>{food.name}</b>
+                <span className="muted">{formatMacroLine(food)}</span>
+              </div>
+              <div className="nutrition-food-chip-actions">
+                <button
+                  type="button"
+                  className="btn small secondary"
+                  onClick={() => onEdit(food)}
+                  disabled={saving}
+                >
+                  Edit
+                </button>
+                {MEAL_TYPES.map((meal) => (
+                  <button
+                    key={meal}
+                    type="button"
+                    className="btn small secondary"
+                    onClick={() => onAddToMeal(food, meal)}
+                    disabled={saving}
+                    title={`Add to ${MEAL_TYPE_LABELS[meal]}`}
+                  >
+                    + {MEAL_TYPE_LABELS[meal]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
 function FoodFormFields({
   draft,
   setDraft,
@@ -216,6 +285,7 @@ export default function NutritionTracker({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [showAdd, setShowAdd] = useState(false);
+  const [showMyFoods, setShowMyFoods] = useState(false);
   const [showGoals, setShowGoals] = useState(false);
   const [addDraft, setAddDraft] = useState<FoodDraft>(emptyFoodDraft());
   const [editEntryId, setEditEntryId] = useState<string | null>(null);
@@ -855,12 +925,24 @@ export default function NutritionTracker({
     setScannerError('');
   }
 
+  function closeMyFoods() {
+    setShowMyFoods(false);
+    setFoodSearch('');
+  }
+
+  function openMyFoods() {
+    setShowAdd(false);
+    resetAddFoodExtras();
+    setShowMyFoods(true);
+  }
+
   function closeAddFood() {
     setShowAdd(false);
     resetAddFoodExtras();
   }
 
   function openAddFood(meal: MealType = 'breakfast') {
+    setShowMyFoods(false);
     setShowGoals(false);
     setEditEntryId(null);
     setEditDraft(null);
@@ -1181,6 +1263,9 @@ export default function NutritionTracker({
           </button>
           <button type="button" className="btn secondary" onClick={copyYesterday} disabled={saving}>
             Copy yesterday
+          </button>
+          <button type="button" className="btn secondary" onClick={openMyFoods} disabled={saving}>
+            My foods
           </button>
         </div>
         {error && <p className="nutrition-error">{error}</p>}
@@ -1570,6 +1655,36 @@ export default function NutritionTracker({
         </div>
       )}
 
+      {showMyFoods && (
+        <div className="panel-overlay" onClick={closeMyFoods}>
+          <div
+            className="nutrition-add-panel card nutrition-my-foods-panel"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="nutrition-my-foods-title"
+          >
+            <div className="topline" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
+              <h3 id="nutrition-my-foods-title">My foods</h3>
+              <button type="button" className="btn small secondary" onClick={closeMyFoods}>
+                Close
+              </button>
+            </div>
+            <MyFoodsPanel
+              foodSearch={foodSearch}
+              setFoodSearch={setFoodSearch}
+              foods={filteredFoods}
+              saving={saving}
+              onEdit={(food) => {
+                closeMyFoods();
+                openEditFood(food);
+              }}
+              onAddToMeal={(food, meal) => addFoodEntry(food, 1, meal)}
+            />
+          </div>
+        </div>
+      )}
+
       {editEntryId && editDraft && (
         <div className="card nutrition-add-card">
           <h3>Edit food entry</h3>
@@ -1708,52 +1823,6 @@ export default function NutritionTracker({
                 </div>
               );
             })}
-          </div>
-        )}
-      </div>
-
-      <div className="card nutrition-library-card">
-        <h3>My foods</h3>
-        <p className="muted">Quick-add saved foods. Macros are snapshotted when logged so history stays accurate.</p>
-        <input
-          value={foodSearch}
-          onChange={(e) => setFoodSearch(e.target.value)}
-          placeholder="Search saved foods"
-        />
-        {filteredFoods.length === 0 ? (
-          <p className="muted">No saved foods yet. Log a food and check &ldquo;Save to my foods&rdquo; to build your library.</p>
-        ) : (
-          <div className="nutrition-food-grid">
-            {filteredFoods.map((food) => (
-              <div key={food.id} className="nutrition-food-chip">
-                <div>
-                  <b>{food.name}</b>
-                  <span className="muted">{formatMacroLine(food)}</span>
-                </div>
-                <div className="nutrition-food-chip-actions">
-                  <button
-                    type="button"
-                    className="btn small secondary"
-                    onClick={() => openEditFood(food)}
-                    disabled={saving}
-                  >
-                    Edit
-                  </button>
-                  {MEAL_TYPES.map((meal) => (
-                    <button
-                      key={meal}
-                      type="button"
-                      className="btn small secondary"
-                      onClick={() => addFoodEntry(food, 1, meal)}
-                      disabled={saving}
-                      title={`Add to ${MEAL_TYPE_LABELS[meal]}`}
-                    >
-                      + {MEAL_TYPE_LABELS[meal]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
           </div>
         )}
       </div>
