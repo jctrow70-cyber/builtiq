@@ -3782,6 +3782,10 @@ None — uses P2 tables and RPC. Ensure `20250717_023_group_training_schema.sql`
 - Program assignment by classification not in UI yet (workout assignments only)
 - No bulk import of classifications
 
+### Follow-up fix (same branch)
+
+- **Group program not showing in Training:** P1 accidentally forced `mode='personal'` on the Personal Training tab, hiding existing group programs. Fixed by syncing mode from `training_source`, adding an **Active plan** toggle on Training, and ensuring `setMyTrainingSource` reloads the correct program.
+
 ### Recommended Commit Message
 
 ```text
