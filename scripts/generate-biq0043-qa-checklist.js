@@ -1,0 +1,110 @@
+/* One-off generator — run: node scripts/generate-biq0043-qa-checklist.js */
+const fs = require('fs');
+const path = require('path');
+const XLSX = require('xlsx');
+
+const rows = [
+  ['BIQ-0043 Group Training — QA Checklist'],
+  ['Branch: preview/groups-v2-biq-0043'],
+  [''],
+  ['Migrations to apply before testing:'],
+  ['20250717_023_group_training_schema.sql'],
+  ['20250717_024_group_remove_member.sql'],
+  ['20250717_025_copy_assignment_to_personal.sql'],
+  ['20250717_026_group_ai_metadata_hooks.sql'],
+  [''],
+  ['Test accounts: Owner (creates group), Manager (promoted), Member (joins via invite)'],
+  [''],
+  ['Phase', 'Step', 'Action', 'Expected Result', 'Pass?', 'Notes', 'Tester', 'Date'],
+  // P1
+  ['P1 — Nav & permissions', '1.1', 'Sign in as any user', 'Top nav shows Groups (not Team)', '', '', '', ''],
+  ['P1 — Nav & permissions', '1.2', 'Open Training tab', 'Sub-nav: Personal Training + Program Setup only (no Team Training)', '', '', '', ''],
+  ['P1 — Nav & permissions', '1.3', 'Open Groups with no groups', 'Create/join panel shown', '', '', '', ''],
+  ['P1 — Nav & permissions', '1.4', 'Check Settings', 'No group management in Settings; groups only on Groups tab', '', '', '', ''],
+  // P2
+  ['P2 — Schema', '2.1', 'Apply migrations 023–026 in Supabase', 'No SQL errors', '', '', '', ''],
+  ['P2 — Schema', '2.2', 'Manager assigns workout (see P4)', 'No RPC/table errors', '', '', '', ''],
+  ['P2 — Schema', '2.3', 'Verify member receives assignment', 'st_assignment_recipients row created', '', '', '', ''],
+  // P3
+  ['P3 — My Groups hub', '3.1', 'Owner creates group', 'Group appears on Groups tab', '', '', '', ''],
+  ['P3 — My Groups hub', '3.2', 'Member joins with invite code', 'Member appears on roster', '', '', '', ''],
+  ['P3 — My Groups hub', '3.3', 'User in multiple groups', 'All groups list → tap group → detail view', '', '', '', ''],
+  ['P3 — My Groups hub', '3.4', 'Owner promotes member to Manager', 'Role shows Manager on roster', '', '', '', ''],
+  ['P3 — My Groups hub', '3.5', 'Manager removes another member', 'Member removed from roster', '', '', '', ''],
+  ['P3 — My Groups hub', '3.6', 'Manager toggles member Active off', 'Member shows as observer on roster', '', '', '', ''],
+  ['P3 — My Groups hub', '3.7', 'Member toggles My training plan (Personal / Group)', 'Choice persists after refresh', '', '', '', ''],
+  // P4
+  ['P4 — Assigned workouts', '4.1', 'Manager: Groups → Assign workout → whole group', 'Assignment created for all active participants', '', '', '', ''],
+  ['P4 — Assigned workouts', '4.2', 'Member: Training → Assigned Workouts inbox', 'Assignment visible with group name and date', '', '', '', ''],
+  ['P4 — Assigned workouts', '4.3', 'Member taps Start', 'Assigned workout banner; group template loads', '', '', '', ''],
+  ['P4 — Assigned workouts', '4.4', 'Member logs all sets', 'Recipient status becomes Completed', '', '', '', ''],
+  ['P4 — Assigned workouts', '4.5', 'Member taps Back to personal program', 'Personal program restored below', '', '', '', ''],
+  ['P4 — Assigned workouts', '4.6', 'Manager assigns to selected members only', 'Only selected members see assignment', '', '', '', ''],
+  ['P4 — Assigned workouts', '4.7', 'Manager co-logs on member workout view', 'Sets save under member account', '', '', '', ''],
+  // P5
+  ['P5 — Classifications', '5.1', 'Manager creates classification (e.g. Pitchers)', 'Classification appears in panel', '', '', '', ''],
+  ['P5 — Classifications', '5.2', 'Manager tags members on roster', 'Classification chips persist after refresh', '', '', '', ''],
+  ['P5 — Classifications', '5.3', 'Assign workout → target Classification', 'Only tagged members receive assignment', '', '', '', ''],
+  ['P5 — Classifications', '5.4', 'Manager deletes classification', 'Removed; member tags cleared', '', '', '', ''],
+  // P6
+  ['P6 — Personal copy', '6.1', 'Open assigned workout (no copy yet)', 'Read-only — cannot add/remove exercises', '', '', '', ''],
+  ['P6 — Personal copy', '6.2', 'Tap Copy to personal plan', 'Personal copy loads; can edit exercises and sets', '', '', '', ''],
+  ['P6 — Personal copy', '6.3', 'Back out → Continue assignment', 'Same personal copy reloads (not group template)', '', '', '', ''],
+  ['P6 — Personal copy', '6.4', 'Complete all sets on personal copy', 'Assignment Completed; logs retain group team_id', '', '', '', ''],
+  ['P6 — Personal copy', '6.5', 'Copy again on same assignment', 'No duplicate program (idempotent)', '', '', '', ''],
+  ['P6 — Personal copy', '6.6', 'Log on group template before copying', 'Those logs do NOT transfer to copy (known limitation)', '', '', '', ''],
+  // P7
+  ['P7 — Member performance', '7.1', 'Manager clicks member on roster', 'Member dashboard opens', '', '', '', ''],
+  ['P7 — Member performance', '7.2', 'Review today workout + exercise log status', 'Matches member actual logs for today', '', '', '', ''],
+  ['P7 — Member performance', '7.3', 'Review Assignment compliance section', 'Completed / open / overdue counts correct', '', '', '', ''],
+  ['P7 — Member performance', '7.4', 'Review Personal records + Weekly volume chart', 'Shows when member has strength logs', '', '', '', ''],
+  ['P7 — Member performance', '7.5', 'Review Recent workout history', 'Last logged days listed', '', '', '', ''],
+  ['P7 — Member performance', '7.6', 'Member hits new PR within 14 days', 'Roster shows New PR badge after refresh', '', '', '', ''],
+  ['P7 — Member performance', '7.7', 'Member has open/overdue assignments', 'Roster shows assigned / overdue badges', '', '', '', ''],
+  ['P7 — Member performance', '7.8', 'Regular member opens Groups', 'Cannot see other members performance detail', '', '', '', ''],
+  // P8
+  ['P8 — AI metadata hooks', '8.1', 'Assign workout after migration 026', 'Works normally (no user-visible change)', '', '', '', ''],
+  ['P8 — AI metadata hooks', '8.2', 'Assign member program', 'Works normally', '', '', '', ''],
+  ['P8 — AI metadata hooks', '8.3', 'Optional SQL: set coaching_metadata on assignment', 'JSON persists in database', '', '', '', ''],
+  // Regression
+  ['Regression', 'R.1', 'Personal program logging (no active assignment)', 'Works as before', '', '', '', ''],
+  ['Regression', 'R.2', 'Active plan toggle: Group workout / Personal plan', 'Group program loads when Group workout selected', '', '', '', ''],
+  ['Regression', 'R.3', 'Program Setup → Group program edit', 'Owner/manager can edit; member read-only on group template', '', '', '', ''],
+  ['Regression', 'R.4', 'Login / logout', 'Session clean; no stale assigned-workout state', '', '', '', ''],
+  ['Regression', 'R.5', 'Mobile width (~375px)', 'Groups roster, assigned workouts, member dashboard readable', '', '', '', ''],
+  ['Regression', 'R.6', 'Dashboard group compliance card', 'Matches Groups compliance %', '', '', '', ''],
+  ['Regression', 'R.7', 'Progress tab PRs/trends', 'Still works independently of Groups', '', '', '', ''],
+  ['Regression', 'R.8', 'Nutrition / Settings tabs', 'Unaffected by group changes', '', '', '', ''],
+];
+
+const wb = XLSX.utils.book_new();
+const ws = XLSX.utils.aoa_to_sheet(rows);
+
+ws['!cols'] = [
+  { wch: 28 },
+  { wch: 8 },
+  { wch: 52 },
+  { wch: 48 },
+  { wch: 8 },
+  { wch: 36 },
+  { wch: 14 },
+  { wch: 12 },
+];
+
+const headerRow = 11; // 0-indexed row with column headers
+const range = XLSX.utils.decode_range(ws['!ref']);
+for (let r = headerRow; r <= range.e.r; r++) {
+  for (let c = 0; c <= 7; c++) {
+    const addr = XLSX.utils.encode_cell({ r, c });
+    if (!ws[addr]) continue;
+    ws[addr].s = ws[addr].s || {};
+  }
+}
+
+XLSX.utils.book_append_sheet(wb, ws, 'BIQ-0043 QA');
+
+const outDir = path.join(__dirname, '..', 'docs');
+fs.mkdirSync(outDir, { recursive: true });
+const outPath = path.join(outDir, 'BIQ-0043-QA-Checklist.xlsx');
+XLSX.writeFile(wb, outPath);
+console.log('Wrote', outPath);

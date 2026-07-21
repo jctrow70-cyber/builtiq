@@ -3855,3 +3855,122 @@ Apply migration `20250717_025_copy_assignment_to_personal.sql` in Supabase befor
 BIQ-0043-P6 Add personal copy of assigned workouts for member customization
 ```
 
+---
+
+## BIQ-0043-P7 - Member Performance Dashboard (Phase 7)
+
+Date: 2026-07-21  
+Branch: preview/groups-v2-biq-0043  
+Status: Completed
+
+### Summary
+
+Managers see **assignment compliance, PRs, 8-week volume trends, and recent workout history** when opening a member from the Groups roster. Roster rows show **New PR**, open assignment count, and overdue badges.
+
+### Purpose
+
+Complete the Groups management hub with performance visibility — compliance for assigned workouts plus strength progress reused from the Progress tab analytics.
+
+### Changes
+
+- **`lib/groups/memberPerformance.ts`** — fetch logs/assignments, compliance math, history, roster meta
+- **`MemberPerformancePanel.tsx`** — assignment compliance + reuses `ProgressInsights` + history list
+- **`GroupMemberDashboard.tsx`** — embeds performance panel for managers
+- **`GroupsHub.tsx`** — roster badges (PR, assigned, overdue)
+- **`app/page.tsx`** — load member performance bundle and roster meta
+
+### Files Changed
+
+- `lib/groups/memberPerformance.ts` (new)
+- `lib/groups/index.ts`
+- `app/components/groups/MemberPerformancePanel.tsx` (new)
+- `app/components/groups/GroupMemberDashboard.tsx`
+- `app/components/groups/GroupsHub.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None — uses existing `st_set_logs`, `st_assignment_recipients`, `st_workout_assignments`.
+
+### Testing Steps
+
+1. Manager opens member from roster → sees assignment compliance, PRs, trends, history.
+2. Member with recent max weight → roster shows **New PR** badge.
+3. Member with open assignments → roster shows assignment count; overdue if past due date.
+4. Member with no logs → empty states, no errors.
+5. Regression: member self-view and Training logging unchanged.
+
+### Known Issues
+
+- PR/trend analytics use all member logs (not group-scoped only) for richer history
+- Roster meta refreshes on Groups tab load / member refresh, not live on every log
+
+### Recommended Commit Message
+
+```text
+BIQ-0043-P7 Add member performance dashboard for group managers
+```
+
+---
+
+## BIQ-0043-P8 - AI Readiness Metadata Hooks (Phase 8)
+
+Date: 2026-07-21  
+Branch: preview/groups-v2-biq-0043  
+Status: Completed
+
+### Summary
+
+Added **`coaching_metadata` JSONB** on group assignments, program assignments, and teams. Extended assign RPCs to accept metadata. **No AI UI** — structure only for future AI Coach integration.
+
+### Purpose
+
+Prepare group/program assignment rows for future AI progression and coaching without shipping AI features in this epic.
+
+### Changes
+
+- **Migration `20250717_026_group_ai_metadata_hooks.sql`** — columns + RPC param `p_coaching_metadata`
+- **`lib/groups/aiMetadata.ts`** — TypeScript types and normalize helpers
+- **`lib/groups/schema.ts`** — `coaching_metadata` on workout assignment type
+- **`app/page.tsx`** — passes `{}` on assign calls (defaults preserved)
+
+### Files Changed
+
+- `supabase/migrations/20250717_026_group_ai_metadata_hooks.sql` (new)
+- `lib/groups/aiMetadata.ts` (new)
+- `lib/groups/schema.ts`
+- `lib/groups/index.ts`
+- `app/page.tsx`
+- `CHANGELOG.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+- `st_workout_assignments.coaching_metadata jsonb default '{}'`
+- `st_program_assignments.coaching_metadata jsonb default '{}'`
+- `st_teams.coaching_metadata jsonb default '{}'`
+- `st_assign_workout_to_targets` + `st_assign_member_program` accept `p_coaching_metadata`
+
+Apply migration `20250717_026_group_ai_metadata_hooks.sql` in Supabase.
+
+### Testing Steps
+
+1. Apply migration; existing rows default to `{}`.
+2. Assign workout / member program → succeeds (metadata defaults empty).
+3. App behavior unchanged for users.
+4. Optional SQL: set metadata on assignment row → persists.
+
+### Known Issues
+
+- No UI to edit assignment metadata yet (future AI/admin work)
+- `st_assignment_instances` still deferred
+
+### Recommended Commit Message
+
+```text
+BIQ-0043-P8 Add coaching_metadata hooks on group assignments for future AI
+```
+

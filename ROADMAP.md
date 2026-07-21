@@ -375,7 +375,7 @@ See `CHANGELOG.md` BIQ-0013 and BIQ-0024 for full scope.
 
 ### Next priorities
 
-1. **Group Training platform (BIQ-0043)** — P1–P6 shipped; Phases 7–8: member performance, AI hooks
+1. **Group Training platform (BIQ-0043)** — P1–P8 complete; epic ready for preview QA
 2. ~~PR detection and strength trends on Progress tab~~ (BIQ-0026)
 3. **App admin roles** — move beyond env-only catalog import admin (see below)
 4. AI program regeneration / edit-from-prompt for existing programs

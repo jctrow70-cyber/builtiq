@@ -39,6 +39,7 @@ export type WorkoutAssignment = {
   is_active: boolean;
   title?: string | null;
   notes?: string | null;
+  coaching_metadata?: Record<string, unknown>;
   created_at?: string;
 };
 

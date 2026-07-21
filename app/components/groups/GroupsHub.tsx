@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { roleForUi, roleLabel, classificationNamesForMember, type GroupClassification } from '../../../lib/groups';
+import { roleForUi, roleLabel, classificationNamesForMember, type GroupClassification, type MemberPerformanceBundle, type MemberRosterMeta } from '../../../lib/groups';
 import GroupCreateJoinPanel from './GroupCreateJoinPanel';
 import GroupMemberDashboard from './GroupMemberDashboard';
 import GroupAssignWorkoutPanel from './GroupAssignWorkoutPanel';
@@ -14,6 +14,9 @@ export type GroupsHubProps = {
   activeTeam: any | null;
   members: any[];
   memberStats: Record<string, { sets: number; days: number }>;
+  memberRosterMeta?: Record<string, MemberRosterMeta>;
+  memberPerformance?: MemberPerformanceBundle | null;
+  weightUnit?: string;
   memberDashboard: any | null;
   memberDashProgram: any | null;
   memberDashLogs: Record<string, any>;
@@ -100,6 +103,9 @@ export default function GroupsHub(props: GroupsHubProps) {
     activeTeam,
     members,
     memberStats,
+    memberRosterMeta = {},
+    memberPerformance = null,
+    weightUnit = 'lb',
     memberDashboard,
     memberDashProgram,
     memberDashLogs,
@@ -349,6 +355,10 @@ export default function GroupsHub(props: GroupsHubProps) {
             onApplyAssignment={onApplyAssignment}
             sectionExercises={sectionExercises}
             statusLabel={statusLabel}
+            assignmentCompliance={memberPerformance?.assignmentCompliance}
+            performanceLogs={memberPerformance?.logs || []}
+            workoutHistory={memberPerformance?.history || []}
+            weightUnit={weightUnit}
           />
         )}
 
@@ -377,6 +387,11 @@ export default function GroupsHub(props: GroupsHubProps) {
         {members.length === 0 && <p className="muted">No members yet. Share your invite code.</p>}
         {members.map((m: any) => {
           const stats = memberStats[m.user_id] || { sets: 0, days: 0 };
+          const rosterMeta = memberRosterMeta[m.user_id] || {
+            recentPr: false,
+            assignmentPending: 0,
+            assignmentOverdue: 0,
+          };
           const isSelf = m.user_id === sessionUserId;
           const participating = m.is_active_participant !== false;
           const memberTags = classificationNamesForMember(m.id, classifications, memberClassificationIds);
@@ -412,6 +427,15 @@ export default function GroupsHub(props: GroupsHubProps) {
                   )}
                 </div>
                 <span className="muted">{stats.days}d</span>
+                <div className="member-roster-badges">
+                  {rosterMeta.recentPr && <span className="badge progress-pr-badge">New PR</span>}
+                  {rosterMeta.assignmentPending > 0 && (
+                    <span className="badge assigned-status-badge">{rosterMeta.assignmentPending} assigned</span>
+                  )}
+                  {rosterMeta.assignmentOverdue > 0 && (
+                    <span className="badge member-overdue-badge">{rosterMeta.assignmentOverdue} overdue</span>
+                  )}
+                </div>
               </button>
               <div className="team-member-actions">
                 {canManage && !isSelf && (

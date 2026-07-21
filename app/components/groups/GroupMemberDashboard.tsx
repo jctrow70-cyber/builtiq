@@ -3,6 +3,8 @@
 import { assignmentTypeLabel, exerciseTypeOf } from '../../../lib/training/exerciseTypes';
 import { formatLogSummary } from '../../../lib/training/logFields';
 import { formatDisplayDate } from '../../../lib/training/programCalendar';
+import type { AssignmentComplianceSummary, MemberWorkoutHistoryDay } from '../../../lib/groups/memberPerformance';
+import MemberPerformancePanel from './MemberPerformancePanel';
 
 const SECTIONS = [
   { id: 'warmup', label: 'Warm Up / Prep' },
@@ -30,6 +32,10 @@ type GroupMemberDashboardProps = {
   onApplyAssignment: () => void;
   sectionExercises: (workout: any, section: string) => any[];
   statusLabel: (s: string) => string;
+  assignmentCompliance?: AssignmentComplianceSummary;
+  performanceLogs?: any[];
+  workoutHistory?: MemberWorkoutHistoryDay[];
+  weightUnit?: string;
 };
 
 export default function GroupMemberDashboard({
@@ -52,6 +58,10 @@ export default function GroupMemberDashboard({
   onApplyAssignment,
   sectionExercises,
   statusLabel,
+  assignmentCompliance,
+  performanceLogs = [],
+  workoutHistory = [],
+  weightUnit = 'lb',
 }: GroupMemberDashboardProps) {
   const stats = memberStats[member.user_id] || { sets: 0, days: 0 };
   const assignmentType =
@@ -171,6 +181,23 @@ export default function GroupMemberDashboard({
           Active {stats.days} days this week — {stats.sets} sets logged.
         </p>
       )}
+
+      <MemberPerformancePanel
+        assignmentCompliance={
+          assignmentCompliance || {
+            total: 0,
+            completed: 0,
+            pending: 0,
+            started: 0,
+            skipped: 0,
+            overdue: 0,
+            completionPct: 0,
+          }
+        }
+        history={workoutHistory}
+        performanceLogs={performanceLogs}
+        weightUnit={weightUnit}
+      />
     </div>
   );
 }
