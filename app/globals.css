@@ -264,6 +264,9 @@
 .log-save-hint{margin:10px 0 0;font-size:11px;text-align:center}
 .nutrition-tracker{display:grid;gap:8px}
 .nutrition-summary-card{padding:10px 12px}
+.nutrition-summary-head{align-items:center}
+.nutrition-date-nav{display:flex;align-items:center;gap:4px;flex-shrink:0}
+.nutrition-date-arrow{min-width:32px;padding:5px 8px;font-size:16px;line-height:1;font-weight:900}
 .nutrition-summary-actions{margin-top:8px}
 .nutrition-macro-dashboard{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 10px;margin:4px 0 2px}
 .nutrition-macro-ring-cell{display:flex;flex-direction:column;align-items:center;text-align:center;gap:2px;padding:2px 0}
@@ -280,10 +283,6 @@
 .nutrition-ring--primary .nutrition-ring-progress{stroke:var(--purple)}
 .nutrition-ring--near .nutrition-ring-progress{stroke:var(--green)}
 .nutrition-ring--over .nutrition-ring-progress{stroke:var(--amber)}
-.nutrition-remaining-strip{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;border-radius:14px;background:linear-gradient(180deg,var(--card),#111827);border:1px solid var(--line)}
-.nutrition-remaining-strip strong{font-size:17px;font-weight:900;color:var(--green)}
-.nutrition-remaining-strip--over strong{color:var(--amber)}
-.nutrition-remaining-label{font-size:12px;font-weight:800;color:#cbd5e1}
 .nutrition-date-row{display:grid;grid-template-columns:auto 1fr auto auto;gap:6px;align-items:center;margin:8px 0}
 .nutrition-totals-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
 .nutrition-total-tile{background:#0b1119;border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}

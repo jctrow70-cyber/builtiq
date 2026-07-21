@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import DateInput from './DateInput';
 import NutritionWeeklySummary from './NutritionWeeklySummary';
 import NutritionMacroDashboard from './NutritionMacroDashboard';
 import {
@@ -56,7 +55,6 @@ import {
   type BarcodeLookupResponse,
   type BarcodeLookupResult,
 } from '../../lib/nutrition/barcodeLookup';
-import { formatCaloriesRemaining } from '../../lib/nutrition/macroRing';
 import { LABEL_OCR_DISCLAIMER } from '../../lib/nutrition/labelOcr';
 import NutritionBarcodeScanner from './NutritionBarcodeScanner';
 import { NutritionBarcodeNotFoundCard, NutritionBarcodeProductCard } from './NutritionBarcodeProduct';
@@ -1147,21 +1145,27 @@ export default function NutritionTracker({
   return (
     <section className="nutrition-tracker">
       <div className="card nutrition-summary-card">
-        <div className="topline" style={{ justifyContent: 'space-between' }}>
+        <div className="topline nutrition-summary-head">
           <h2>Daily nutrition</h2>
-          <span className="badge">{formatDisplayDate(logDate)}</span>
-        </div>
-        <div className="nutrition-date-row">
-          <button type="button" className="btn small secondary" onClick={() => shiftDate(-1)}>
-            Prev
-          </button>
-          <DateInput value={logDate} onChange={setDate} />
-          <button type="button" className="btn small secondary" onClick={() => shiftDate(1)}>
-            Next
-          </button>
-          <button type="button" className="btn small secondary" onClick={() => setDate(todayYmd())}>
-            Today
-          </button>
+          <div className="nutrition-date-nav">
+            <button
+              type="button"
+              className="btn small secondary nutrition-date-arrow"
+              onClick={() => shiftDate(-1)}
+              aria-label="Previous day"
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              className="btn small secondary nutrition-date-arrow"
+              onClick={() => shiftDate(1)}
+              aria-label="Next day"
+            >
+              ›
+            </button>
+            <span className="badge">{formatDisplayDate(logDate)}</span>
+          </div>
         </div>
         {loading ? (
           <p className="muted">Loading nutrition log...</p>
@@ -1181,17 +1185,6 @@ export default function NutritionTracker({
         </div>
         {error && <p className="nutrition-error">{error}</p>}
       </div>
-
-      {!loading && (
-        <div
-          className={`nutrition-remaining-strip${
-            totals.calories > goals.calories ? ' nutrition-remaining-strip--over' : ''
-          }`}
-        >
-          <span className="nutrition-remaining-label">Daily calories</span>
-          <strong>{formatCaloriesRemaining(totals.calories, goals.calories)}</strong>
-        </div>
-      )}
 
       {!loading && showGoalSuggestionBanner && (
         <div className="card nutrition-goals-suggest-card">
