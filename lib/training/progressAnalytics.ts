@@ -80,6 +80,70 @@ function isStrengthLog(row: any): boolean {
   return isStrengthLike(strengthType(row));
 }
 
+export type SetPrCelebration = {
+  exerciseName: string;
+  message: string;
+  subtext: string;
+};
+
+/** True when a newly completed set beats prior personal bests for that exercise. */
+export function detectSetPersonalRecord(newRow: any, priorLogs: any[], weightUnit = 'lb'): SetPrCelebration | null {
+  if (!newRow?.completed || !isStrengthLog(newRow)) return null;
+  const weight = parseNumeric(newRow.actual_weight);
+  const reps = parseReps(newRow.actual_reps);
+  if (weight == null && reps == null) return null;
+
+  const name = String(newRow.snapshot_exercise_name || 'Exercise').trim();
+  const key = exerciseKeyFromLog(newRow);
+  const prior = computePersonalRecords(priorLogs).find((p) => p.key === key);
+  const volume = weight != null && reps != null ? weight * reps : null;
+  const oneRm = weight != null && reps != null ? est1rm(weight, reps) : null;
+
+  const formatPerf = () => {
+    const parts: string[] = [];
+    if (weight != null && reps != null) parts.push(`${weight} ${weightUnit} × ${reps}`);
+    else if (weight != null) parts.push(`${weight} ${weightUnit}`);
+    else if (reps != null) parts.push(`${reps} reps`);
+    return parts.join(' · ');
+  };
+
+  if (!prior) {
+    return {
+      exerciseName: name,
+      message: 'New personal record!',
+      subtext: formatPerf() || 'First performance logged',
+    };
+  }
+
+  const beatsWeight = weight != null && (prior.maxWeight == null || weight > prior.maxWeight);
+  const beatsRepsAtMax =
+    reps != null &&
+    weight != null &&
+    prior.maxWeight != null &&
+    weight >= prior.maxWeight &&
+    (prior.bestReps == null || reps > prior.bestReps) &&
+    !beatsWeight;
+  const beatsVolume = volume != null && (prior.bestVolume == null || volume > (prior.bestVolume || 0));
+  const beats1rm = oneRm != null && (prior.est1rm == null || oneRm > (prior.est1rm || 0));
+
+  if (!beatsWeight && !beatsRepsAtMax && !beatsVolume && !beats1rm) return null;
+
+  let message = 'New personal record!';
+  if (beatsWeight) message = 'New weight PR!';
+  else if (beatsRepsAtMax) message = 'New rep PR!';
+  else if (beats1rm) message = 'New estimated 1RM PR!';
+  else if (beatsVolume) message = 'New set volume PR!';
+
+  const subtextParts = [formatPerf()];
+  if (beats1rm && oneRm != null) subtextParts.push(`est. 1RM ${oneRm} ${weightUnit}`);
+
+  return {
+    exerciseName: name,
+    message,
+    subtext: subtextParts.filter(Boolean).join(' · '),
+  };
+}
+
 export function computePersonalRecords(logs: any[]): PersonalRecord[] {
   const byKey = new Map<string, PersonalRecord>();
 

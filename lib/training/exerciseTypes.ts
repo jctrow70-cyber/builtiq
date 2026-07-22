@@ -32,6 +32,16 @@ export function isStrengthLike(type: ExerciseType) {
   return type === 'strength' || type === 'bodyweight' || type === 'custom';
 }
 
+const MOBILITY_STRETCH_CATEGORIES = new Set(['mobility', 'stretching']);
+
+/** Mobility and stretching work does not use last-session progression hints. */
+export function isMobilityStretchExercise(ex: any, catalogItem?: any, exType?: ExerciseType): boolean {
+  const type = exType || exerciseTypeOf(ex, catalogItem);
+  if (type === 'mobility') return true;
+  const cat = String(catalogItem?.category || ex?.st_exercise_catalog?.category || '').toLowerCase();
+  return MOBILITY_STRETCH_CATEGORIES.has(cat);
+}
+
 export function assignmentTypeLabel(t: string) {
   if (t === 'team') return 'Group Plan';
   if (t === 'personal') return 'Personal Plan';

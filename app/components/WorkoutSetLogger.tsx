@@ -32,6 +32,7 @@ type Props = {
   sets: SetRow[];
   logs: Record<string, LogRow>;
   prevBySetId: Record<string, LogRow | null>;
+  showPreviousSets?: boolean;
   weightUnit: 'lb' | 'kg';
   distanceUnit: 'mi' | 'km';
   onDistanceUnitChange: (u: 'mi' | 'km') => void;
@@ -280,8 +281,7 @@ function SetLogCard({
   onDuplicateSet,
   registerInputRef,
   onInputKeyDown,
-  scheduleSave,
-  flushSaves,
+  showPreviousSets = true,
 }: {
   set: SetRow;
   log: LogRow;
@@ -299,6 +299,7 @@ function SetLogCard({
   onInputKeyDown?: Props['onInputKeyDown'];
   scheduleSave: (key: string, value: string, save: () => void) => void;
   flushSaves: () => void;
+  showPreviousSets?: boolean;
 }) {
   const notes = String(log.log_notes || '');
   const assist = parseAssistFromNotes(notes);
@@ -330,7 +331,7 @@ function SetLogCard({
   };
 
   const resolvePrevHint = (key: string) => {
-    if (!prev) return undefined;
+    if (!showPreviousSets || !prev) return undefined;
     if (key === '_assist_weight') {
       const a = parseAssistFromNotes(String(prev.log_notes || ''));
       return a || undefined;
@@ -378,7 +379,7 @@ function SetLogCard({
             canEdit={canEdit}
             onChange={(v) => onEditSet(set, 'set_type', v)}
           />
-          {prev && canLog && (
+          {showPreviousSets && prev && canLog && (
             <button
               type="button"
               className="btn small secondary log-dup-btn"
@@ -445,6 +446,7 @@ export default function WorkoutSetLogger({
   onDuplicateSet,
   registerInputRef,
   onInputKeyDown,
+  showPreviousSets = true,
 }: Props) {
   const isWarmup = section === 'warmup';
   const layout = useMemo(() => logLayoutForType(exType), [exType]);
@@ -531,7 +533,7 @@ export default function WorkoutSetLogger({
           <FieldCard
             field={layout.exerciseNotes}
             value={exerciseNotesDisplay}
-            prevHint={exerciseNotesPrev || undefined}
+            prevHint={showPreviousSets ? exerciseNotesPrev || undefined : undefined}
             disabled={!canLog}
             onBlur={(v) => { flushSaves(); saveExerciseNotes(v); }}
             onChangeValue={(v) => scheduleSave(`notes:${firstSet.id}`, v, () => saveExerciseNotes(v))}
@@ -561,6 +563,7 @@ export default function WorkoutSetLogger({
             onInputKeyDown={onInputKeyDown}
             scheduleSave={scheduleSave}
             flushSaves={flushSaves}
+            showPreviousSets={showPreviousSets}
           />
         ))}
       </div>

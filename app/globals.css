@@ -241,6 +241,15 @@
 .progress-pr-main b{font-size:14px}
 .progress-pr-badge{background:#3b2f63;color:#e9d5ff;margin-left:6px;font-size:10px}
 .progress-pr-date{font-size:11px;white-space:nowrap}
+.pr-celebration-toast{position:fixed;left:50%;bottom:calc(72px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;width:min(420px,calc(100vw - 24px));pointer-events:none}
+.pr-celebration-card{pointer-events:auto;display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-radius:16px;background:linear-gradient(135deg,#2a1f4d 0%,#1a2744 100%);border:1px solid #6d28d9;box-shadow:0 12px 40px rgba(0,0,0,.45);animation:prCelebrationIn .35s ease-out}
+.pr-celebration-icon{font-size:28px;line-height:1;flex-shrink:0}
+.pr-celebration-body{display:grid;gap:4px;min-width:0;flex:1}
+.pr-celebration-body b{font-size:16px;color:#f5f3ff}
+.pr-celebration-exercise{font-size:14px;color:#e9d5ff}
+.pr-celebration-detail{font-size:12px}
+.pr-celebration-dismiss{flex-shrink:0;min-width:36px;padding:4px 8px}
+@keyframes prCelebrationIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 .progress-trend-chart{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px;align-items:end;min-height:160px;margin-top:12px;padding-top:8px}
 .progress-trend-bar-wrap{display:flex;flex-direction:column;align-items:center;gap:4px;min-height:140px;justify-content:flex-end}
 .progress-trend-bar{width:100%;max-width:36px;border-radius:8px 8px 4px 4px;background:linear-gradient(180deg,#8b5cf6,#5b21b6);min-height:4px;transition:height .2s ease}

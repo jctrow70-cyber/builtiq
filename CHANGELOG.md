@@ -4413,3 +4413,59 @@ None.
 BIQ-0051 Refine nutrition dashboard swipe to prevent accidental day changes
 ```
 
+---
+
+## BIQ-0052 - Mobility Context Cleanup and PR Celebration Toast
+
+Date: 2026-07-22  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Hides last-session context and previous-set hints for mobility and stretching exercises. Shows a congratulatory toast when a completed strength set beats a personal record.
+
+### Purpose
+
+Mobility and stretch work should not show strength progression boxes. Athletes should get immediate positive feedback when they hit a new PR during active logging.
+
+### Changes
+
+- **`isMobilityStretchExercise`:** Detects mobility type and stretching/mobility catalog categories
+- **Exercise context panel:** Hidden for mobility/stretch exercises (Last session, Suggested next, Logged today)
+- **Set logger:** Hides Copy last and dim previous-value placeholders for mobility/stretch
+- **`detectSetPersonalRecord`:** Compares completed sets against prior history for weight, reps, volume, and est. 1RM PRs
+- **PR toast:** Purple celebration banner appears when Done is checked on a new PR (auto-dismiss ~4.5s)
+
+### Files Changed
+
+- `lib/training/exerciseTypes.ts`
+- `lib/training/progressAnalytics.ts`
+- `app/components/WorkoutSetLogger.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+- Open a Mobility day or cooldown stretch — confirm no Last session / Logged today panel
+- Log a stretch — confirm no Copy last button or dim previous placeholders
+- Log a strength exercise and check Done with a weight/reps combo above your history — PR toast appears
+- Re-check Done on the same set without changing values — toast should not repeat
+- Uncheck Done — no toast
+
+### Known Issues
+
+- PR toast uses lb/kg from profile units; est. 1RM uses standard formula from Progress tab
+- Bodyweight exercises count toward PR detection when weight/reps are logged
+
+### Recommended Commit Message
+
+```text
+BIQ-0052 Hide mobility last-session hints and celebrate set PRs with toast
+```
+
