@@ -304,7 +304,7 @@
 .nutrition-summary-head{align-items:center}
 .nutrition-date-nav{display:flex;align-items:center;gap:4px;flex-shrink:0}
 .nutrition-date-arrow{min-width:32px;padding:5px 8px;font-size:16px;line-height:1;font-weight:900}
-.nutrition-day-swipe{touch-action:pan-y}
+.nutrition-dashboard-swipe{touch-action:pan-y}
 .nutrition-day-view{display:grid;gap:8px}
 .nutrition-day-view.is-refreshing{opacity:.72;pointer-events:none}
 @keyframes nutrition-day-forward{from{opacity:.35;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}

@@ -4363,3 +4363,53 @@ None.
 BIQ-0050 Stabilize workout logging inputs and streamline warmup view
 ```
 
+---
+
+## BIQ-0051 - Nutrition Dashboard Swipe Refinement
+
+Date: 2026-07-22  
+Branch: preview/workout-logging-biq-0047  
+Status: Completed
+
+### Summary
+
+Tightened nutrition day-change swipe so only deliberate horizontal swipes on the circular progress dashboard change dates, preventing accidental day switches while scrolling meal logs.
+
+### Purpose
+
+Subtle touches anywhere on the Nutrition screen were advancing or going back a day. Swipe should feel intentional and limited to the macro rings header area.
+
+### Changes
+
+- Moved swipe handlers from the full Nutrition page to the dashboard header + rings zone only
+- Raised minimum horizontal distance and require horizontal movement to dominate vertical drift
+- Ignore swipes while a day refresh is in progress; reset touch state on cancel
+
+### Files Changed
+
+- `app/components/NutritionTracker.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+- Swipe lightly on meal cards or weekly chart — day should not change
+- Scroll vertically through meals — no accidental day change
+- Deliberate horizontal swipe on the macro rings area — previous/next day with animation
+- Tap ‹ › arrows — still changes day normally
+- Swipe during day load — ignored until refresh completes
+
+### Known Issues
+
+None.
+
+### Recommended Commit Message
+
+```text
+BIQ-0051 Refine nutrition dashboard swipe to prevent accidental day changes
+```
+

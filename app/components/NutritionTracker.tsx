@@ -285,7 +285,7 @@ export default function NutritionTracker({
   const [dayRefreshing, setDayRefreshing] = useState(false);
   const [dayAnimDir, setDayAnimDir] = useState<'forward' | 'back' | 'none'>('none');
   const hasLoadedRef = useRef(false);
-  const daySwipeStartX = useRef<number | null>(null);
+  const daySwipeStart = useRef<{ x: number; y: number } | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [showAdd, setShowAdd] = useState(false);
@@ -1242,16 +1242,34 @@ export default function NutritionTracker({
   }
 
   function onDaySwipeStart(e: React.TouchEvent) {
-    daySwipeStartX.current = e.touches[0]?.clientX ?? null;
+    if (e.touches.length !== 1) return;
+    const touch = e.touches[0];
+    daySwipeStart.current = { x: touch.clientX, y: touch.clientY };
+  }
+
+  function onDaySwipeCancel() {
+    daySwipeStart.current = null;
   }
 
   function onDaySwipeEnd(e: React.TouchEvent) {
-    if (daySwipeStartX.current == null) return;
-    const endX = e.changedTouches[0]?.clientX ?? daySwipeStartX.current;
-    const delta = endX - daySwipeStartX.current;
-    daySwipeStartX.current = null;
-    if (Math.abs(delta) < 56) return;
-    shiftDate(delta > 0 ? -1 : 1);
+    const start = daySwipeStart.current;
+    daySwipeStart.current = null;
+    if (!start || dayRefreshing) return;
+
+    const touch = e.changedTouches[0];
+    if (!touch) return;
+
+    const deltaX = touch.clientX - start.x;
+    const deltaY = touch.clientY - start.y;
+    const absX = Math.abs(deltaX);
+    const absY = Math.abs(deltaY);
+
+    // Require a deliberate horizontal swipe on the dashboard rings area.
+    if (absX < 96) return;
+    if (absY > 40) return;
+    if (absX < absY * 1.75) return;
+
+    shiftDate(deltaX > 0 ? -1 : 1);
   }
 
   const dayPanelClass = `nutrition-day-view nutrition-day-view--${dayAnimDir}${
@@ -1269,38 +1287,40 @@ export default function NutritionTracker({
           <p className="muted">Loading nutrition log...</p>
         </div>
       ) : (
-        <div
-          className="nutrition-day-swipe"
-          onTouchStart={onDaySwipeStart}
-          onTouchEnd={onDaySwipeEnd}
-        >
           <div key={logDate} className={dayPanelClass}>
             <div className="card nutrition-summary-card">
-              <div className="topline nutrition-summary-head">
-                <h2>Daily nutrition</h2>
-                <div className="nutrition-date-nav">
-                  <button
-                    type="button"
-                    className="btn small secondary nutrition-date-arrow"
-                    onClick={() => shiftDate(-1)}
-                    aria-label="Previous day"
-                    disabled={dayRefreshing}
-                  >
-                    ‹
-                  </button>
-                  <button
-                    type="button"
-                    className="btn small secondary nutrition-date-arrow"
-                    onClick={() => shiftDate(1)}
-                    aria-label="Next day"
-                    disabled={dayRefreshing}
-                  >
-                    ›
-                  </button>
-                  <span className="badge">{formatDisplayDate(logDate)}</span>
+              <div
+                className="nutrition-dashboard-swipe"
+                onTouchStart={onDaySwipeStart}
+                onTouchEnd={onDaySwipeEnd}
+                onTouchCancel={onDaySwipeCancel}
+              >
+                <div className="topline nutrition-summary-head">
+                  <h2>Daily nutrition</h2>
+                  <div className="nutrition-date-nav">
+                    <button
+                      type="button"
+                      className="btn small secondary nutrition-date-arrow"
+                      onClick={() => shiftDate(-1)}
+                      aria-label="Previous day"
+                      disabled={dayRefreshing}
+                    >
+                      ‹
+                    </button>
+                    <button
+                      type="button"
+                      className="btn small secondary nutrition-date-arrow"
+                      onClick={() => shiftDate(1)}
+                      aria-label="Next day"
+                      disabled={dayRefreshing}
+                    >
+                      ›
+                    </button>
+                    <span className="badge">{formatDisplayDate(logDate)}</span>
+                  </div>
                 </div>
+                <NutritionMacroDashboard totals={totals} goals={goals} />
               </div>
-              <NutritionMacroDashboard totals={totals} goals={goals} />
               <div className="actions nutrition-summary-actions">
                 <button type="button" className="btn green" onClick={() => openAddFood()} disabled={saving}>
                   Add food
@@ -1960,7 +1980,6 @@ export default function NutritionTracker({
               onSelectDate={setDate}
             />
           </div>
-        </div>
       )}
     </section>
   );
