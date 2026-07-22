@@ -281,6 +281,8 @@ function SetLogCard({
   onDuplicateSet,
   registerInputRef,
   onInputKeyDown,
+  scheduleSave,
+  flushSaves,
   showPreviousSets = true,
 }: {
   set: SetRow;
