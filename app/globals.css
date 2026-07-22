@@ -242,8 +242,15 @@
 .set-log-list{display:flex;flex-direction:column;gap:8px}
 .set-log-card{background:linear-gradient(180deg,#121a28,#0e141f);border:1px solid #334155;border-radius:14px;padding:10px;box-shadow:0 1px 4px rgba(0,0,0,.2);transition:border-color .2s ease,box-shadow .2s ease}
 .set-log-card.set-log-done{border-color:rgba(34,197,94,.45);box-shadow:0 0 0 1px rgba(34,197,94,.12)}
-.set-log-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
-.set-log-head-left{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
+.set-log-grid{display:grid;grid-template-columns:1fr auto;column-gap:10px;row-gap:8px;align-items:stretch}
+.set-log-grid.has-chip-row{grid-template-rows:auto auto auto}
+.set-log-grid:not(.has-chip-row){grid-template-rows:auto auto}
+.set-log-head{grid-column:1;grid-row:1;display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
+.set-log-metrics{grid-column:1;grid-row:2}
+.set-log-grid.has-chip-row .set-log-chips{grid-column:1;grid-row:3;min-width:0}
+.set-log-chips .log-field-card-wide{width:100%;max-width:none}
+.set-log-rail{grid-column:2;grid-row:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:8px;min-width:44px;padding:2px 0}
+.set-log-rail-spacer{display:block;min-height:32px;min-width:32px}
 .set-log-num{font-size:12px;font-weight:900;color:#e2e8f0;flex-shrink:0}
 .set-type-badge{font-size:10px;padding:3px 7px;min-width:42px;justify-content:center;text-align:center}
 .set-type-picker{position:relative;flex-shrink:0}
@@ -253,16 +260,14 @@
 .set-type-option:hover,.set-type-option.active{background:#1b1634}
 .set-type-option-acronym{font-size:11px;font-weight:900;color:#c4b5fd;min-width:44px;flex-shrink:0}
 .set-type-option-label{font-size:12px;font-weight:700;color:#cbd5e1}
-.set-remove-btn{min-width:32px;min-height:32px;padding:4px 8px;line-height:1;font-size:16px;flex-shrink:0}
-.set-done-check{display:flex!important;align-items:center;gap:5px;margin:0!important;font-size:11px;font-weight:800;color:#cbd5e1;min-height:36px;padding:0 4px;flex-shrink:0}
+.set-remove-btn{min-width:32px;min-height:32px;padding:4px 8px;line-height:1;font-size:16px;flex-shrink:0;margin:0}
+.set-done-check{display:flex!important;align-items:center;gap:5px;margin:0!important;font-size:11px;font-weight:800;color:#cbd5e1;min-height:36px;padding:0 4px;flex-shrink:0;white-space:nowrap}
 .set-done-check input{width:18px;height:18px;margin:0;accent-color:var(--green)}
-.set-log-fields{display:flex;flex-direction:column;gap:8px}
-.set-log-chip-done-row{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;flex-wrap:wrap}
-.set-log-chip-done-row .log-field-card{flex:1 1 auto;min-width:0;margin:0}
-.set-log-chip-done-row .set-done-check{margin-left:auto!important;align-self:flex-end}
+.log-field-row-compact{display:flex;flex-wrap:wrap;align-items:flex-end;min-width:0}
+.log-field-row-metrics{gap:5ch}
+.log-field-optional-row{margin-top:8px}
 .log-field-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.log-field-row-compact{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;flex:1;min-width:0}
-.log-field-optional-row{margin-top:0}
+.log-field-row-compact:not(.log-field-row-metrics){gap:8px}
 .log-field-card{display:flex;flex-direction:column;gap:4px;min-width:0}
 .log-field-card-compact{flex:0 0 auto;width:80px}
 .log-field-card-normal{flex:1 1 100px;min-width:88px;max-width:140px}

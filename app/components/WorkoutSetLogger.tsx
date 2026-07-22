@@ -294,10 +294,22 @@ function SetLogCard({
 
   const hasChipRow = !!(layout.showRpeChips || layout.showIntensityChips || layout.showSideChips);
 
+  const chipField = layout.showRpeChips
+    ? { key: 'actual_rpe', label: 'RPE', chipOptions: RPE_CHIPS, size: 'wide' as const }
+    : layout.showIntensityChips
+      ? { key: 'actual_rpe', label: 'Intensity', chipOptions: INTENSITY_CHIPS, size: 'wide' as const }
+      : layout.showSideChips
+        ? { key: '_side', label: 'Side', chipOptions: SIDE_CHIPS, size: 'wide' as const }
+        : null;
+
+  const onDoneChange = (checked: boolean) => {
+    onSaveField(set.id, 'completed', checked ? 'true' : '', { completed: checked });
+  };
+
   return (
     <div className={`set-log-card${completed ? ' set-log-done' : ''}`}>
-      <div className="set-log-head">
-        <div className="set-log-head-left">
+      <div className={`set-log-grid${hasChipRow ? ' has-chip-row' : ''}`}>
+        <div className="set-log-head">
           <span className="set-log-num">Set {set.set_number}</span>
           <SetTypePicker
             value={set.set_type}
@@ -314,79 +326,42 @@ function SetLogCard({
               Copy last
             </button>
           )}
-          {canEdit && (
+        </div>
+
+        <div className="log-field-row log-field-row-compact log-field-row-metrics">
+          {layout.primary.map(renderField)}
+        </div>
+
+        {chipField && (
+          <div className="set-log-chips">
+            <FieldCard
+              field={chipField}
+              value={chipField.key === '_side' ? side : String(log.actual_rpe || '')}
+              disabled={!canLog}
+              onChipPick={(v) => {
+                if (chipField.key === '_side') onSaveField(set.id, 'log_notes', mergeSideIntoNotes(notes, v));
+                else onSaveField(set.id, 'actual_rpe', v);
+              }}
+              onBlur={() => {}}
+            />
+          </div>
+        )}
+
+        <div className="set-log-rail">
+          {canEdit ? (
             <button type="button" className="btn small red set-remove-btn" onClick={() => onRemoveSet(set)} aria-label="Remove set">
               ×
             </button>
+          ) : (
+            <span className="set-log-rail-spacer" aria-hidden="true" />
           )}
+          <DoneCheck completed={completed} disabled={!canLog} onChange={onDoneChange} />
         </div>
-        {!hasChipRow && (
-          <DoneCheck
-            completed={completed}
-            disabled={!canLog}
-            onChange={(checked) => onSaveField(set.id, 'completed', checked ? 'true' : '', { completed: checked })}
-          />
-        )}
       </div>
 
-      <div className="set-log-fields">
-        <div className="log-field-row log-field-row-compact">{layout.primary.map(renderField)}</div>
-
-        {layout.showRpeChips && (
-          <div className="set-log-chip-done-row">
-            <FieldCard
-              field={{ key: 'actual_rpe', label: 'RPE', chipOptions: RPE_CHIPS, size: 'wide' }}
-              value={String(log.actual_rpe || '')}
-              disabled={!canLog}
-              onChipPick={(v) => onSaveField(set.id, 'actual_rpe', v)}
-              onBlur={() => {}}
-            />
-            <DoneCheck
-              completed={completed}
-              disabled={!canLog}
-              onChange={(checked) => onSaveField(set.id, 'completed', checked ? 'true' : '', { completed: checked })}
-            />
-          </div>
-        )}
-
-        {layout.showIntensityChips && (
-          <div className="set-log-chip-done-row">
-            <FieldCard
-              field={{ key: 'actual_rpe', label: 'Intensity', chipOptions: INTENSITY_CHIPS, size: 'wide' }}
-              value={String(log.actual_rpe || '')}
-              disabled={!canLog}
-              onChipPick={(v) => onSaveField(set.id, 'actual_rpe', v)}
-              onBlur={() => {}}
-            />
-            <DoneCheck
-              completed={completed}
-              disabled={!canLog}
-              onChange={(checked) => onSaveField(set.id, 'completed', checked ? 'true' : '', { completed: checked })}
-            />
-          </div>
-        )}
-
-        {layout.showSideChips && (
-          <div className="set-log-chip-done-row">
-            <FieldCard
-              field={{ key: '_side', label: 'Side', chipOptions: SIDE_CHIPS, size: 'wide' }}
-              value={side}
-              disabled={!canLog}
-              onChipPick={(v) => onSaveField(set.id, 'log_notes', mergeSideIntoNotes(notes, v))}
-              onBlur={() => {}}
-            />
-            <DoneCheck
-              completed={completed}
-              disabled={!canLog}
-              onChange={(checked) => onSaveField(set.id, 'completed', checked ? 'true' : '', { completed: checked })}
-            />
-          </div>
-        )}
-
-        {layout.optional && layout.optional.length > 0 && (
-          <div className="log-field-row log-field-row-compact log-field-optional-row">{layout.optional.map(renderField)}</div>
-        )}
-      </div>
+      {layout.optional && layout.optional.length > 0 && (
+        <div className="log-field-row log-field-row-compact log-field-optional-row">{layout.optional.map(renderField)}</div>
+      )}
     </div>
   );
 }
