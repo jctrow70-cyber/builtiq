@@ -20,11 +20,14 @@ type SetRow = {
   id: string;
   set_type: string;
   set_number: number;
+  target_reps?: string;
+  target_weight?: string;
 };
 
 type LogRow = Record<string, any>;
 
 type Props = {
+  section?: string;
   exType: ExerciseType;
   sets: SetRow[];
   logs: Record<string, LogRow>;
@@ -145,7 +148,6 @@ function FieldCard({
   onChipPick,
   registerRef,
   onKeyDown,
-  inputKey,
 }: {
   field: LogFieldUI;
   value: string;
@@ -157,9 +159,17 @@ function FieldCard({
   onChipPick?: (v: string) => void;
   registerRef?: (el: HTMLInputElement | null) => void;
   onKeyDown?: (e: React.KeyboardEvent) => void;
-  inputKey?: string;
 }) {
   const compact = field.size === 'compact';
+  const [draft, setDraft] = useState(value);
+  const focusedRef = useRef(false);
+
+  useEffect(() => {
+    if (!focusedRef.current) setDraft(value);
+  }, [value]);
+
+  const placeholder = !draft && prevHint ? prevHint : (field.placeholder || '');
+
   return (
     <div className={`log-field-card ${fieldSizeClass(field)}`}>
       <label className="log-field-label">
@@ -183,20 +193,73 @@ function FieldCard({
       ) : (
         <div className="log-input-wrap">
           <input
-            key={inputKey || `${field.key}-${value}`}
             ref={registerRef}
-            className={`log-input-card${compact ? ' log-input-compact' : ''}`}
+            className={`log-input-card${compact ? ' log-input-compact' : ''}${prevHint && !draft ? ' log-input-has-prev' : ''}`}
             type="text"
             inputMode={(field.inputMode as 'decimal' | 'numeric' | 'text') || 'text'}
             disabled={disabled}
-            defaultValue={value}
-            placeholder={prevHint ? `Last ${prevHint}` : field.placeholder || ''}
-            onChange={(e) => onChangeValue?.(e.target.value)}
-            onBlur={(e) => onBlur(e.target.value)}
+            value={draft}
+            placeholder={placeholder}
+            onFocus={() => { focusedRef.current = true; }}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              onChangeValue?.(e.target.value);
+            }}
+            onBlur={(e) => {
+              focusedRef.current = false;
+              onBlur(e.target.value);
+            }}
             onKeyDown={onKeyDown}
           />
           {unitLabel && <span className="log-input-unit">{unitLabel}</span>}
         </div>
+      )}
+    </div>
+  );
+}
+
+function formatWarmupTarget(set: SetRow) {
+  const parts = [set.target_reps, set.target_weight].map((v) => String(v || '').trim()).filter(Boolean);
+  if (parts.length) return parts.join(' · ');
+  return `Set ${set.set_number}`;
+}
+
+function WarmupExerciseLogger({
+  sets,
+  logs,
+  canLog,
+  onSaveField,
+  registerInputRef,
+  onInputKeyDown,
+}: {
+  sets: SetRow[];
+  logs: Record<string, LogRow>;
+  canLog: boolean;
+  onSaveField: Props['onSaveField'];
+  registerInputRef?: Props['registerInputRef'];
+  onInputKeyDown?: Props['onInputKeyDown'];
+}) {
+  const firstSet = sets[0];
+  const notes = firstSet ? stripEmbeddedNotes(String(logs[firstSet.id]?.log_notes || '')) : '';
+
+  return (
+    <div className="warmup-exercise-log">
+      <ul className="warmup-target-list">
+        {sets.map((s) => (
+          <li key={s.id} className="warmup-target-item">
+            <span className="warmup-target-text">{formatWarmupTarget(s)}</span>
+          </li>
+        ))}
+      </ul>
+      {canLog && firstSet && (
+        <FieldCard
+          field={{ key: 'log_notes', label: 'Notes', placeholder: 'Optional — how it felt, sides, etc.', size: 'wide' }}
+          value={notes}
+          disabled={!canLog}
+          onBlur={(v) => onSaveField(firstSet.id, 'log_notes', v)}
+          registerRef={registerInputRef}
+          onKeyDown={onInputKeyDown}
+        />
       )}
     </div>
   );
@@ -288,7 +351,6 @@ function SetLogCard({
       onChangeValue={(v) => scheduleSave(`${set.id}:${f.key}`, v, () => saveVirtual(f.key, v))}
       registerRef={registerInputRef}
       onKeyDown={onInputKeyDown}
-      inputKey={`${set.id}-${f.key}-${resolveValue(f.key)}`}
     />
   );
 
@@ -367,6 +429,7 @@ function SetLogCard({
 }
 
 export default function WorkoutSetLogger({
+  section,
   exType,
   sets,
   logs,
@@ -383,6 +446,7 @@ export default function WorkoutSetLogger({
   registerInputRef,
   onInputKeyDown,
 }: Props) {
+  const isWarmup = section === 'warmup';
   const layout = useMemo(() => logLayoutForType(exType), [exType]);
   const showDistToggle = allLogFieldsFlat(exType).some((f) => f.unitGroup === 'distance');
   const saveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -404,7 +468,7 @@ export default function WorkoutSetLogger({
       const run = pendingSavesRef.current[key];
       delete pendingSavesRef.current[key];
       run?.();
-    }, 450);
+    }, 700);
   };
 
   const flushSaves = () => {
@@ -426,6 +490,21 @@ export default function WorkoutSetLogger({
     if (assist) merged = mergeAssistIntoNotes(merged, assist);
     onSaveField(firstSet.id, 'log_notes', merged);
   };
+
+  if (isWarmup) {
+    return (
+      <div className="workout-set-logger workout-set-logger-warmup">
+        <WarmupExerciseLogger
+          sets={sets}
+          logs={logs}
+          canLog={canLog}
+          onSaveField={onSaveField}
+          registerInputRef={registerInputRef}
+          onInputKeyDown={onInputKeyDown}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="workout-set-logger">
@@ -458,7 +537,6 @@ export default function WorkoutSetLogger({
             onChangeValue={(v) => scheduleSave(`notes:${firstSet.id}`, v, () => saveExerciseNotes(v))}
             registerRef={registerInputRef}
             onKeyDown={onInputKeyDown}
-            inputKey={`notes-${firstSet.id}-${exerciseNotesDisplay}`}
           />
         </div>
       )}

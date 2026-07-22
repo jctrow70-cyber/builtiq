@@ -4286,3 +4286,80 @@ None.
 BIQ-0048 Set row layout tweaks and set type acronyms for logging
 ```
 
+---
+
+## BIQ-0049 - Set Row Actions Rail Alignment
+
+Date: 2026-07-21  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Aligned remove (×) and Done in a shared right rail; placed Done beside RPE chips; added 5ch gap between weight and reps.
+
+### Files changed
+
+- `app/components/WorkoutSetLogger.tsx`
+- `app/globals.css`
+
+### Database changes
+
+None.
+
+### Recommended commit message
+
+```text
+BIQ-0049 Align set row actions rail with RPE and widen weight-reps gap
+```
+
+---
+
+## BIQ-0050 - Stabilize Workout Logging UX
+
+Date: 2026-07-22  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Fixed jumpy set inputs, manual-only Done completion, smoother exercise advance scroll, clearer exercise context, and a streamlined warmup list view.
+
+### Purpose
+
+Make active workout logging feel stable on mobile: keep focus while typing, only collapse after explicit Done, and reduce friction for warmup/stretch work.
+
+### Changes
+
+- **Input stability:** Local draft state so auto-save no longer kicks users out of fields
+- **Previous values:** Last weight/reps show as dim placeholders (no "Last" prefix)
+- **Manual Done only:** Typing no longer auto-completes sets or collapses exercises
+- **Auto-advance:** Only when Done is checked on the final set; scroll uses `block: center`
+- **Exercise context:** Readable Last session / Suggested next / Logged today panel
+- **Warmup section:** Target list + optional notes, no per-set Done checkboxes
+
+### Files changed
+
+- `app/components/WorkoutSetLogger.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Database changes
+
+None.
+
+### Testing steps
+
+1. Type in weight/reps without losing focus
+2. Previous values show as faint placeholders only
+3. Sets do not auto-complete until Done is checked
+4. Last set Done collapses exercise and scrolls next name into view
+5. Warm Up section shows list view without Done checkboxes
+
+### Recommended commit message
+
+```text
+BIQ-0050 Stabilize workout logging inputs and streamline warmup view
+```
+
