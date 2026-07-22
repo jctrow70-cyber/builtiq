@@ -4469,3 +4469,59 @@ None.
 BIQ-0052 Hide mobility last-session hints and celebrate set PRs with toast
 ```
 
+---
+
+## BIQ-0053 - Program Draft and Publish Workflow
+
+Date: 2026-07-22  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Programs can be created and saved as **drafts** in Program Setup before they appear in Personal Training or as a group active program. Owners and managers edit draft workouts, then **publish** when ready.
+
+### Purpose
+
+Let coaches and athletes build an exercise plan privately, refine it, and only make it available to themselves or their group when finalized.
+
+### Changes
+
+- **`st_programs.status`:** New column (`draft`, `published`, `archived`); existing programs backfilled to `published`
+- **RLS:** Team members cannot read draft group programs; owners/managers can
+- **Program Setup:** AI and template creation save as draft; wizard step renamed to Create; draft card with Edit workouts / Publish actions
+- **Training:** Published programs only, except when explicitly editing a draft
+- **Group active program:** Dropdown lists published programs only
+
+### Files Changed
+
+- `supabase/migrations/20250722_027_program_draft_status.sql`
+- `lib/training/programStatus.ts`
+- `lib/training/aiProgramPlan.ts`
+- `app/page.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Database Changes
+
+Apply migration `20250722_027_program_draft_status.sql` in Supabase.
+
+### Testing Steps
+
+1. Program Setup → create draft with AI or template — stays in Setup with Draft badge
+2. Edit workouts on draft — exercises editable; not visible in normal Personal Training until published
+3. Publish program — appears in Personal Training (or group active dropdown)
+4. Group: publish & set group active — members on group plan see the program
+5. Member cannot see manager's draft group program
+
+### Known Issues
+
+- Archived status exists in schema but has no UI yet
+- Migration required before draft insert works in production
+
+### Recommended Commit Message
+
+```text
+BIQ-0053 Add program draft and publish workflow in Program Setup
+```
+

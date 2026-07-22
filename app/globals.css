@@ -210,6 +210,8 @@
 .member-assignment-panel{margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
 .setup-mode-tabs{margin-bottom:10px}
 .setup-wizard-steps{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:12px 0 14px;padding:10px 12px;border-radius:12px;background:#0f1422;border:1px solid var(--line);font-size:12px;font-weight:800;color:#64748b}
+.program-draft-card{border-color:#4c3f78;background:linear-gradient(180deg,#171628,#121827)}
+.program-draft-banner{border-color:#4c3f78;background:linear-gradient(180deg,#171628,#121827)}
 .setup-wizard-steps span.active{color:#c4b5fd}
 .setup-wizard-dot{color:#334155;font-weight:400}
 .schedule-coach-msg{padding:10px 12px;border-radius:12px;background:#121827;border:1px solid #3b335f;margin:8px 0 12px;line-height:1.45}

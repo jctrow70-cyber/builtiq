@@ -865,6 +865,7 @@ export async function persistAiProgramPlan(
     program_summary: plan.program_summary,
     coaching_notes: plan.coaching_notes || null,
     program_style: plan.program_style || null,
+    status: 'draft',
   };
 
   const { data: program, error: pErr } = await supabase.from('st_programs').insert(programPayload).select().single();
