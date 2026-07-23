@@ -13,7 +13,7 @@ function isBugStatus(value: string): value is BugStatus {
 }
 
 async function reporterEmailsByUserId(admin: ReturnType<typeof createServiceRoleSupabase>, userIds: string[]) {
-  const uniqueIds = [...new Set(userIds.filter(Boolean))];
+  const uniqueIds = Array.from(new Set(userIds.filter(Boolean)));
   const emailByUserId: Record<string, string | null> = {};
 
   await Promise.all(
