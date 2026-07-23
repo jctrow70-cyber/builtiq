@@ -4,7 +4,7 @@ import { inferExerciseType } from './exerciseTypes';
 import { hasExerciseGuide } from './exerciseMedia';
 import { filterCatalogByEquipment, hasEquipmentFilter, normalizeEquipmentList } from './equipmentFilter';
 import { mondayOfWeek, todayYmd } from './programCalendar';
-import { isMissingProgramStatusColumn } from './programStatus';
+import { insertProgramRecord } from './programStatus';
 
 export type AiExercise = {
   name: string;
@@ -907,17 +907,10 @@ export async function persistAiProgramPlan(
     status: 'draft',
   };
 
-  const { data: program, error: pErr } = await supabase.from('st_programs').insert(programPayload).select().single();
-  if ((pErr || !program) && isMissingProgramStatusColumn(pErr)) {
-    const { status: _s, ...fallbackPayload } = programPayload;
-    const retry = await supabase.from('st_programs').insert(fallbackPayload).select().single();
-    if (retry.data && !retry.error) {
-      return persistWorkoutsForProgram(supabase, retry.data.id, plan, config, catalog, catMap);
-    }
-  }
-  if (pErr || !program) return { programId: null, error: pErr?.message || 'Failed to create program' };
+  const { data: program, error: pErr } = await insertProgramRecord(supabase, programPayload);
+  if (pErr || !program) return { programId: null, error: pErr || 'Failed to create program' };
 
-  return persistWorkoutsForProgram(supabase, program.id, plan, config, catalog, catMap);
+  return persistWorkoutsForProgram(supabase, String(program.id), plan, config, catalog, catMap);
 }
 
 async function persistWorkoutsForProgram(

@@ -26,31 +26,68 @@ export function programOptionLabel(program: { name?: string; status?: string | n
 }
 
 export function isMissingProgramStatusColumn(error: { message?: string } | null | undefined): boolean {
-  const msg = (error?.message || '').toLowerCase();
-  return msg.includes('status') && (msg.includes('column') || msg.includes('schema') || msg.includes('could not find'));
+  return missingProgramColumnFromError(error) === 'status';
 }
 
-/** Insert program as draft; retries without status if migration 027 is not applied yet. */
+/** Parse Supabase/PostgREST errors like "Could not find the 'start_date' column ..." */
+export function missingProgramColumnFromError(error: { message?: string } | null | undefined): string | null {
+  const msg = error?.message || '';
+  const quoted = msg.match(/could not find the ['"](\w+)['"] column/i);
+  if (quoted) return quoted[1].toLowerCase();
+  const relation = msg.match(/column ["'](\w+)["'] of relation/i);
+  if (relation) return relation[1].toLowerCase();
+  return null;
+}
+
+/** Insert program as draft; strips optional columns when migrations are not applied yet. */
 export async function insertProgramRecord(
   supabase: { from: (table: string) => any },
   payload: Record<string, unknown>
-): Promise<{ data: Record<string, unknown> | null; error: string | null; draftSupported: boolean }> {
-  const withDraft = { ...payload, status: 'draft' };
-  let result = await supabase.from('st_programs').insert(withDraft).select().single();
-  if (!result.error && result.data) {
-    return { data: result.data, error: null, draftSupported: true };
-  }
-  if (result.error && isMissingProgramStatusColumn(result.error)) {
-    const { status: _status, ...withoutDraft } = withDraft;
-    result = await supabase.from('st_programs').insert(withoutDraft).select().single();
+): Promise<{
+  data: Record<string, unknown> | null;
+  error: string | null;
+  draftSupported: boolean;
+  startDateSupported: boolean;
+}> {
+  const working: Record<string, unknown> = { ...payload, status: payload.status ?? 'draft' };
+  const stripped = new Set<string>();
+
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const result = await supabase.from('st_programs').insert(working).select().single();
     if (!result.error && result.data) {
-      return { data: result.data, error: null, draftSupported: false };
+      return {
+        data: result.data,
+        error: null,
+        draftSupported: !stripped.has('status'),
+        startDateSupported: !stripped.has('start_date'),
+      };
     }
+
+    const missingCol = missingProgramColumnFromError(result.error);
+    if (missingCol && Object.prototype.hasOwnProperty.call(working, missingCol)) {
+      delete working[missingCol];
+      stripped.add(missingCol);
+      continue;
+    }
+    if (result.error && isMissingProgramStatusColumn(result.error) && 'status' in working) {
+      delete working.status;
+      stripped.add('status');
+      continue;
+    }
+
+    return {
+      data: null,
+      error: result.error?.message || 'Failed to create program',
+      draftSupported: false,
+      startDateSupported: false,
+    };
   }
+
   return {
     data: null,
-    error: result.error?.message || 'Failed to create program',
+    error: 'Failed to create program after column fallbacks',
     draftSupported: false,
+    startDateSupported: false,
   };
 }
 

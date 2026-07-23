@@ -4748,3 +4748,46 @@ None
 BIQ-0057 Relax AI program exercise count validation
 ```
 
+---
+
+## BIQ-0058 - Fallback When start_date Column Missing
+
+Date: 2026-07-23  
+Branch: main  
+Status: Completed
+
+### Summary
+
+AI program generation no longer fails when Supabase is missing the `st_programs.start_date` column (migration 016 not applied). Inserts retry without optional columns automatically.
+
+### Purpose
+
+Bug report at 2026-07-23 3:04 PM EDT: `Could not find the 'start_date' column of 'st_programs' in the schema cache` during AI plan generation.
+
+### Changes
+
+- **`missingProgramColumnFromError()`** — parse PostgREST missing-column errors
+- **`insertProgramRecord()`** — strip missing optional columns (`status`, `start_date`, etc.) and retry
+- **`persistAiProgramPlan()`** — uses shared insert helper instead of raw insert
+
+### Files Changed
+
+- `lib/training/programStatus.ts`
+- `lib/training/aiProgramPlan.ts`
+
+### Database Changes
+
+None (apply `20250713_016_program_start_date.sql` in Supabase for full week/date sync).
+
+### Testing Steps
+
+1. AI generate a program on a project without migration 016 — should succeed
+2. With migration applied — `start_date` should be set to Monday of current week
+3. Settings → Bug reports — mark report `3bb00883…` resolved after deploy
+
+### Recommended Commit Message
+
+```text
+BIQ-0058 Fallback when st_programs.start_date column missing
+```
+
