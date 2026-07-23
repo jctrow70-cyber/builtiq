@@ -4,6 +4,7 @@ import { inferExerciseType } from './exerciseTypes';
 import { hasExerciseGuide } from './exerciseMedia';
 import { filterCatalogByEquipment, hasEquipmentFilter, normalizeEquipmentList } from './equipmentFilter';
 import { mondayOfWeek, todayYmd } from './programCalendar';
+import { isMissingProgramStatusColumn } from './programStatus';
 
 export type AiExercise = {
   name: string;
@@ -753,15 +754,22 @@ function makeSupersetGroupId() {
     : `ss-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-async function insertSectionItems(
-  supabase: any,
+type PendingExerciseInsert = {
+  payload: Record<string, unknown>;
+  planned: { sets: number; reps: string; rpe: string; target_weight: string };
+};
+
+const PLANNED_SET_INSERT_CHUNK = 500;
+
+function collectSectionItems(
   workoutId: string,
   section: string,
   list: AiWorkoutItem[],
   startSort: number,
   catalog: any[],
   catMap: Record<string, any>
-): Promise<{ error: string | null }> {
+): { exercises: PendingExerciseInsert[]; error: string | null } {
+  const exercises: PendingExerciseInsert[] = [];
   let sort = startSort;
   let groupNum = 0;
 
@@ -776,9 +784,8 @@ async function insertSectionItems(
         slot++;
         const hit = matchExerciseToCatalog(exItem.name, catalog, catMap);
         const exType = inferExerciseType(exItem.name, hit?.muscle_group || exItem.muscle_group, section, hit?.exercise_type);
-        const { data: e, error } = await supabase
-          .from('st_exercises')
-          .insert({
+        exercises.push({
+          payload: {
             workout_id: workoutId,
             section,
             sort_order: sort,
@@ -789,30 +796,21 @@ async function insertSectionItems(
             superset_group_id: groupId,
             superset_label: label,
             superset_order: slot,
-          })
-          .select()
-          .single();
-        if (error) return { error: error.message };
-        const rows = buildPlannedSetRows(exItem.sets || 3).map((r, i) => ({
-          ...r,
-          exercise_id: e.id,
-          target_reps: exItem.reps || '',
-          target_rpe: exItem.rpe || '',
-          target_weight: exItem.target_weight || '',
-          set_number: i + 1,
-        }));
-        if (rows.length) {
-          const { error: pe } = await supabase.from('st_planned_sets').insert(rows);
-          if (pe) return { error: pe.message };
-        }
+          },
+          planned: {
+            sets: exItem.sets || 3,
+            reps: exItem.reps || '',
+            rpe: exItem.rpe || '',
+            target_weight: exItem.target_weight || '',
+          },
+        });
       }
       sort++;
     } else if (isExerciseItem(item)) {
       const hit = matchExerciseToCatalog(item.name, catalog, catMap);
       const exType = inferExerciseType(item.name, hit?.muscle_group || item.muscle_group, section, hit?.exercise_type);
-      const { data: e, error } = await supabase
-        .from('st_exercises')
-        .insert({
+      exercises.push({
+        payload: {
           workout_id: workoutId,
           section,
           sort_order: sort,
@@ -821,26 +819,27 @@ async function insertSectionItems(
           catalog_exercise_id: hit?.id || null,
           exercise_type: exType,
           superset_group_id: null,
-        })
-        .select()
-        .single();
-      if (error) return { error: error.message };
-      const rows = buildPlannedSetRows(item.sets || 3).map((r, i) => ({
-        ...r,
-        exercise_id: e.id,
-        target_reps: item.reps || '',
-        target_rpe: item.rpe || '',
-        target_weight: item.target_weight || '',
-        set_number: i + 1,
-      }));
-      if (rows.length) {
-        const { error: pe } = await supabase.from('st_planned_sets').insert(rows);
-        if (pe) return { error: pe.message };
-      }
+        },
+        planned: {
+          sets: item.sets || 3,
+          reps: item.reps || '',
+          rpe: item.rpe || '',
+          target_weight: item.target_weight || '',
+        },
+      });
       sort++;
     }
   }
 
+  return { exercises, error: null };
+}
+
+async function insertPlannedSetRows(supabase: any, rows: any[]): Promise<{ error: string | null }> {
+  for (let i = 0; i < rows.length; i += PLANNED_SET_INSERT_CHUNK) {
+    const chunk = rows.slice(i, i + PLANNED_SET_INSERT_CHUNK);
+    const { error } = await supabase.from('st_planned_sets').insert(chunk);
+    if (error) return { error: error.message };
+  }
   return { error: null };
 }
 
@@ -869,10 +868,28 @@ export async function persistAiProgramPlan(
   };
 
   const { data: program, error: pErr } = await supabase.from('st_programs').insert(programPayload).select().single();
+  if ((pErr || !program) && isMissingProgramStatusColumn(pErr)) {
+    const { status: _s, ...fallbackPayload } = programPayload;
+    const retry = await supabase.from('st_programs').insert(fallbackPayload).select().single();
+    if (retry.data && !retry.error) {
+      return persistWorkoutsForProgram(supabase, retry.data.id, plan, config, catalog, catMap);
+    }
+  }
   if (pErr || !program) return { programId: null, error: pErr?.message || 'Failed to create program' };
 
+  return persistWorkoutsForProgram(supabase, program.id, plan, config, catalog, catMap);
+}
+
+async function persistWorkoutsForProgram(
+  supabase: any,
+  programId: string,
+  plan: AiProgramPlan,
+  config: GenerationConfig,
+  catalog: any[],
+  catMap: Record<string, any>
+): Promise<{ programId: string | null; error: string | null }> {
   const workoutRows = plan.workouts.map((w) => ({
-    program_id: program.id,
+    program_id: programId,
     week: w.week,
     day_order: DAY_ORDER.indexOf(w.day_label),
     day_label: w.day_label,
@@ -885,6 +902,7 @@ export async function persistAiProgramPlan(
   }
 
   const planByKey = new Map(plan.workouts.map((w) => [`${w.week}|${w.day_label}`, w]));
+  const pendingExercises: PendingExerciseInsert[] = [];
 
   for (const w of insertedWorkouts) {
     const tpl = planByKey.get(`${w.week}|${w.day_label}`);
@@ -893,11 +911,41 @@ export async function persistAiProgramPlan(
     for (const sec of ['warmup', 'strength', 'cooldown'] as const) {
       const list = tpl[sec] || [];
       if (!list.length) continue;
-      const startSort = SECTION_SORT_BASE[sec] ?? 0;
-      const { error: ie } = await insertSectionItems(supabase, w.id, sec, list, startSort, catalog, catMap);
-      if (ie) return { programId: null, error: ie };
+      const { exercises } = collectSectionItems(w.id, sec, list, SECTION_SORT_BASE[sec] ?? 0, catalog, catMap);
+      pendingExercises.push(...exercises);
     }
   }
 
-  return { programId: program.id, error: null };
+  if (!pendingExercises.length) return { programId, error: null };
+
+  const { data: insertedExercises, error: exErr } = await supabase
+    .from('st_exercises')
+    .insert(pendingExercises.map((entry) => entry.payload))
+    .select('id');
+
+  if (exErr || !insertedExercises?.length) {
+    return { programId: null, error: exErr?.message || 'Failed to create exercises' };
+  }
+  if (insertedExercises.length !== pendingExercises.length) {
+    return { programId: null, error: 'Failed to create all exercises for the AI program' };
+  }
+
+  const plannedSetRows = insertedExercises.flatMap((row: { id: string }, index: number) => {
+    const meta = pendingExercises[index].planned;
+    return buildPlannedSetRows(meta.sets).map((r, i) => ({
+      ...r,
+      exercise_id: row.id,
+      target_reps: meta.reps || '',
+      target_rpe: meta.rpe || '',
+      target_weight: meta.target_weight || '',
+      set_number: i + 1,
+    }));
+  });
+
+  if (plannedSetRows.length) {
+    const { error: setErr } = await insertPlannedSetRows(supabase, plannedSetRows);
+    if (setErr) return { programId: null, error: setErr };
+  }
+
+  return { programId, error: null };
 }

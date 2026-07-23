@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { notifyBugReport } from '../../../lib/email/bugReportNotification';
 import { createSupabaseFromRequest, requireAuthUser } from '../../../lib/supabaseServer';
 
 export const runtime = 'nodejs';
@@ -54,6 +55,19 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
+
+  notifyBugReport({
+    reportId: data.id,
+    title: title || null,
+    description,
+    pageContext: pageContext || null,
+    appNav: appNav || null,
+    userAgent: userAgent || null,
+    reporterEmail: user.email || null,
+    createdAt: data.created_at,
+  }).catch((e) => {
+    console.error('[bug-reports] email notification failed:', e?.message || e);
+  });
 
   return NextResponse.json({ ok: true, id: data.id, created_at: data.created_at });
 }

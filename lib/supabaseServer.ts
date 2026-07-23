@@ -17,3 +17,10 @@ export async function requireAuthUser(supabase: SupabaseClient, token: string) {
   if (error || !data?.user) return { user: null, error: error?.message || 'Unauthorized' };
   return { user: data.user, error: null };
 }
+
+export function createServiceRoleSupabase(): SupabaseClient {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  if (!url || !key) throw new Error('Server missing SUPABASE_SERVICE_ROLE_KEY');
+  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
+}

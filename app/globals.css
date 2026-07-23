@@ -192,6 +192,19 @@
  .bug-fab{position:fixed;right:16px;bottom:16px;z-index:60;width:48px;height:48px;border-radius:14px;border:1px solid #4c3f78;background:#1b1634;color:#e9d5ff;font-weight:800;font-size:12px;box-shadow:0 8px 24px rgba(0,0,0,.35);cursor:pointer}
  .bug-fab:hover{background:#241c44}
  .bug-report-panel{width:100%;max-width:480px;max-height:88vh;overflow:auto;margin:0}
+ .bug-admin-list{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+ .bug-admin-row{border:1px solid #2a2440;border-radius:12px;padding:12px;background:#120f22}
+ .bug-admin-meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px}
+ .bug-admin-title{margin:0 0 6px;font-size:16px}
+ .bug-admin-desc{margin:8px 0 0;white-space:pre-wrap;font-size:14px;line-height:1.45}
+ .bug-admin-details{margin-top:8px}
+ .bug-admin-context{margin:6px 0 0;white-space:pre-wrap;font-size:12px;line-height:1.4;color:#b8b0d6;overflow:auto}
+ .bug-admin-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
+ .bug-admin-actions label{margin:0}
+ .bug-status-open{color:#f5d08a}
+ .bug-status-triaged{color:#9ecbff}
+ .bug-status-resolved{color:#9ef0b8}
+ .bug-status-closed{color:#c4bdd8}
  .progression-hints{margin-top:4px;padding:6px 8px;border-radius:10px;background:#0f1422;border:1px solid var(--line)}
  .progression-next{font-size:12px;font-weight:800;color:#c4b5fd;margin-top:2px}
  .progression-note{font-size:10px;margin-top:2px}

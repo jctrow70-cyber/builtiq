@@ -141,9 +141,4 @@ export function hasGuidedImportServerConfig(): boolean {
   return !!(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
-export function createServiceRoleSupabase(): SupabaseClient {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-  if (!url || !key) throw new Error('Server missing SUPABASE_SERVICE_ROLE_KEY');
-  return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
-}
+export { createServiceRoleSupabase } from '../supabaseServer';

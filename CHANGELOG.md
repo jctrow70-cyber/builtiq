@@ -4517,11 +4517,137 @@ Apply migration `20250722_027_program_draft_status.sql` in Supabase.
 ### Known Issues
 
 - Archived status exists in schema but has no UI yet
-- Migration required before draft insert works in production
+- Migration required for full draft/publish workflow; without `20250722_027`, programs save as published with a one-time notice
+
+### Follow-up fix (2026-07-22)
+
+- Template/AI create retries without `status` when migration 027 is not applied yet (fixes insert error on Create draft from template)
+- Clearer validation if schedule days are missing
 
 ### Recommended Commit Message
 
 ```text
 BIQ-0053 Add program draft and publish workflow in Program Setup
+```
+
+---
+
+## BIQ-0054 - Bug Report Admin Inbox and Email Alerts
+
+Date: 2026-07-22  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Platform admins can review all in-app bug reports from **Settings → Bug reports**, update status, and receive email alerts when users submit new reports.
+
+### Purpose
+
+Make bug reports actionable without opening Supabase manually, and notify admins immediately when something breaks in production.
+
+### Changes
+
+- **`BUILDIQ_ADMIN_EMAILS`:** Shared platform admin allowlist (falls back to legacy `BUILDIQ_CATALOG_ADMIN_EMAILS`)
+- **Admin API:** `GET/PATCH /api/bug-reports/admin` lists all reports and updates status via service role
+- **Email alerts:** New reports trigger Resend email to `BUILDIQ_BUG_REPORT_NOTIFY_EMAILS` (or admin emails)
+- **Settings UI:** Admin-only bug report inbox with status workflow (`open`, `triaged`, `resolved`, `closed`)
+
+### Files Changed
+
+- `lib/appAdmin.ts` — new
+- `lib/email/sendEmail.ts` — new (Resend HTTP API)
+- `lib/email/bugReportNotification.ts` — new
+- `lib/supabaseServer.ts` — shared `createServiceRoleSupabase`
+- `lib/training/catalogAdmin.ts` — delegates to `appAdmin`
+- `lib/training/guidedCatalogImport.ts` — re-export service role helper
+- `app/api/bug-reports/route.ts` — send email after insert
+- `app/api/bug-reports/admin/route.ts` — new
+- `app/components/BugReportsAdmin.tsx` — new
+- `app/page.tsx` — Settings admin inbox
+- `app/globals.css` — bug admin styles
+- `.env.example`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None (uses existing `st_bug_reports` table).
+
+### Testing Steps
+
+1. Add your email to `BUILDIQ_ADMIN_EMAILS` in `.env.local`
+2. Add `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, and `BUILDIQ_EMAIL_FROM`
+3. Restart the app and sign in as an admin
+4. Open **Settings** — confirm **Bug reports** card appears
+5. Submit a bug from the floating **Bug** button as a test user
+6. Confirm the report appears in the admin inbox with reporter email and context
+7. Change status to **triaged** and save
+8. Confirm admin notification email arrives (check spam if using Resend sandbox)
+9. Sign in as a non-admin — confirm the Bug reports card is hidden
+10. `npm run build` passes
+
+### Known Issues
+
+- Admin access is still env-based (same as catalog import); database-backed roles remain on the roadmap (BIQ-0032)
+- Email requires a Resend account and verified sender domain for production
+- Bug report submission still succeeds if email delivery fails (logged server-side)
+
+### Recommended Commit Message
+
+```text
+BIQ-0054 Add bug report admin inbox and email alerts
+```
+
+---
+
+## BIQ-0055 - Fix AI Program Generation 504 Timeouts
+
+Date: 2026-07-22  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Fixed AI program generation timing out with **504** on multi-week plans by batching database writes and tightening OpenAI/retry time budgets.
+
+### Purpose
+
+Users reported `Generation failed (504)` during Program Setup. The route was exceeding hosting timeouts because OpenAI generated large multi-week JSON payloads and persistence issued hundreds of sequential Supabase inserts.
+
+### Changes
+
+- **Batch persist:** AI program save now bulk-inserts all exercises and planned sets (2–3 DB round trips instead of hundreds)
+- **OpenAI timeout:** 45s client timeout with clearer 502 message when the model is slow
+- **Retry guard:** Skip validation retry when less than ~18s remains in the route budget
+- **UI:** 504 errors suggest trying fewer weeks (e.g. 4) before retrying
+
+### Files Changed
+
+- `lib/training/aiProgramPlan.ts`
+- `app/api/programs/generate/route.ts`
+- `app/page.tsx`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Program Setup → Generate with AI using default **6 weeks** and 3 training days
+2. Confirm generation completes without 504
+3. Open the saved draft — verify workouts, exercises, and planned sets exist
+4. Retry with 8–12 weeks on a deployed preview and confirm success or a JSON error (not 504)
+5. `npm run build` passes
+
+### Known Issues
+
+- Very large plans (12 weeks × many days) may still hit the 60s hosting limit on some platforms; reduce weeks if needed
+- OpenAI latency spikes can still cause timeouts during peak load
+
+### Recommended Commit Message
+
+```text
+BIQ-0055 Batch AI program persistence to fix 504 timeouts
 ```
 

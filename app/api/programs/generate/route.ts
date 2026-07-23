@@ -15,6 +15,9 @@ import { normalizeEquipmentList } from '../../../../lib/training/equipmentFilter
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
+const OPENAI_TIMEOUT_MS = 45_000;
+const ROUTE_BUDGET_MS = 55_000;
+
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 function normalizeDays(days: unknown, dayTypes: Record<string, string>): string[] {
@@ -104,8 +107,10 @@ export async function POST(request: Request) {
   const { system, user: userContent } = buildProgramGenerationPrompt(prompt, profile, catalog || [], config);
   const builtinCatalog = builtinCatalogItems(catalog || []);
 
-  const openai = new OpenAI({ apiKey });
+  const openai = new OpenAI({ apiKey, timeout: OPENAI_TIMEOUT_MS });
   let rawContent = '';
+  const startedAt = Date.now();
+  const routeTimeLeftMs = () => Math.max(0, ROUTE_BUDGET_MS - (Date.now() - startedAt));
 
   const callAi = async (extraSystem?: string) => {
     const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
@@ -143,7 +148,7 @@ export async function POST(request: Request) {
 
   let { plan, error: validateError } = parseAndValidateAiPlan(rawContent, config, catalog || []);
 
-  if ((validateError || !plan) && isRetryablePlanError(validateError)) {
+  if ((validateError || !plan) && isRetryablePlanError(validateError) && routeTimeLeftMs() > 18_000) {
     try {
       const retryContent = await callAi(
         'Previous plan failed validation. Ensure strength days have warmup with at least 3 items including 2 mobility stretches, cooldown with at least 2 stretches when enabled, at least 6-8 strength exercises per session, and Mobility days have 6+ mobility exercises in strength section. Also provide a detailed program_summary (3-5 sentences) and coaching_notes (4-8 sentences).'
