@@ -4651,3 +4651,50 @@ None.
 BIQ-0055 Batch AI program persistence to fix 504 timeouts
 ```
 
+---
+
+## BIQ-0056 - Expand Long AI Programs From Week 1 Template
+
+Date: 2026-07-23  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Plans **longer than 4 weeks** no longer ask OpenAI for every week at once. The API generates **week 1 only**, then BuildIQ expands it into the full program — avoiding 504 timeouts on 6-week plans.
+
+### Purpose
+
+Users still hit **504** at 6 weeks even after BIQ-0055 batching, because the model was outputting 18 full workouts in one JSON payload.
+
+### Changes
+
+- **`aiGenerationWeeks()`:** 1–4 weeks = full AI generation; 5+ weeks = week 1 template only
+- **`expandPlanToFullWeeks()`:** Clones week 1 into remaining weeks via existing `repairAiPlan`
+- **Route:** Lower max_tokens for template mode; skip validation retry when expanding; `maxDuration` 120s
+- **UI:** Review step explains 5+ week behavior; clearer timeout message (no “use 4 weeks” dead-end)
+
+### Files Changed
+
+- `lib/training/aiProgramPlan.ts`
+- `app/api/programs/generate/route.ts`
+- `app/page.tsx`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Program Setup → **6 weeks**, 3 days → Create draft with AI — completes without 504
+2. Open draft — verify **6 weeks** of workouts exist
+3. **4 weeks** — still generates all weeks from AI (more variety week-to-week)
+4. Retry after deploy if a stale 504 message still mentions “4 weeks or fewer”
+
+### Recommended Commit Message
+
+```text
+BIQ-0056 Expand 5+ week AI programs from week 1 template to fix 504s
+```
+

@@ -37,6 +37,8 @@ export type AiProgramPlan = {
 export type GenerationConfig = {
   prompt: string;
   weeks: number;
+  /** Full program length when AI only generates a template week (weeks=1). */
+  fullWeeks?: number;
   days: string[];
   dayTypes: Record<string, string>;
   focusMuscles?: string[];
@@ -46,6 +48,25 @@ export type GenerationConfig = {
   includeCooldown?: boolean;
   availableEquipment?: string[];
 };
+
+/** OpenAI generates all weeks for short plans; longer plans use week 1 as template. */
+export function aiGenerationWeeks(totalWeeks: number): number {
+  return totalWeeks > 4 ? 1 : totalWeeks;
+}
+
+export function expandPlanToFullWeeks(plan: AiProgramPlan, config: GenerationConfig, catalog: any[]): AiProgramPlan {
+  const templateWeeks = aiGenerationWeeks(config.weeks);
+  if (templateWeeks >= config.weeks) return plan;
+
+  const missing: string[] = [];
+  for (let w = templateWeeks + 1; w <= config.weeks; w++) {
+    for (const day of config.days) {
+      missing.push(`${w}|${day}`);
+    }
+  }
+  if (!missing.length) return plan;
+  return repairAiPlan(plan, config, catalog, missing);
+}
 
 const DAY_ORDER = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const VALID_WORKOUT_TYPES = ['Lower Body', 'Upper Body', 'Full Body', 'Cardio', 'Mobility'];
@@ -259,7 +280,11 @@ JSON schema:
   ]
 }
 
-Generate exactly one workout entry per (week × training day) for all ${config.weeks} weeks and days: ${config.days.join(', ')}. Always fill program_summary and coaching_notes with helpful, specific text for this athlete.`;
+Generate exactly one workout entry per (week × training day) for all ${config.weeks} weeks and days: ${config.days.join(', ')}. Always fill program_summary and coaching_notes with helpful, specific text for this athlete.${
+    config.fullWeeks && config.fullWeeks > config.weeks
+      ? ` This athlete's full program is ${config.fullWeeks} weeks — you are designing week 1 only as the template; weeks 2–${config.fullWeeks} will be auto-built with progressive structure from your week 1 plan. Mention the full ${config.fullWeeks}-week arc in program_summary and coaching_notes.`
+      : ''
+  }`;
 
   const user = JSON.stringify(
     {

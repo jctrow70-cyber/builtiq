@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createSupabaseFromRequest, requireAuthUser } from '../../../../lib/supabaseServer';
 import {
+  aiGenerationWeeks,
   buildProgramGenerationPrompt,
+  expandPlanToFullWeeks,
   isRetryablePlanError,
   parseAndValidateAiPlan,
   persistAiProgramPlan,
@@ -13,10 +15,10 @@ import { builtinCatalogItems } from '../../../../lib/training/catalogSearch';
 import { normalizeEquipmentList } from '../../../../lib/training/equipmentFilter';
 
 export const runtime = 'nodejs';
-export const maxDuration = 60;
+export const maxDuration = 120;
 
-const OPENAI_TIMEOUT_MS = 45_000;
-const ROUTE_BUDGET_MS = 55_000;
+const OPENAI_TIMEOUT_MS = 50_000;
+const ROUTE_BUDGET_MS = 110_000;
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -104,7 +106,10 @@ export async function POST(request: Request) {
       : normalizeEquipmentList(profile?.available_equipment),
   };
 
-  const { system, user: userContent } = buildProgramGenerationPrompt(prompt, profile, catalog || [], config);
+  const aiWeeks = aiGenerationWeeks(weeks);
+  const aiConfig: GenerationConfig = aiWeeks < weeks ? { ...config, weeks: aiWeeks, fullWeeks: weeks } : config;
+
+  const { system, user: userContent } = buildProgramGenerationPrompt(prompt, profile, catalog || [], aiConfig);
   const builtinCatalog = builtinCatalogItems(catalog || []);
 
   const openai = new OpenAI({ apiKey, timeout: OPENAI_TIMEOUT_MS });
@@ -121,7 +126,7 @@ export async function POST(request: Request) {
     const completion = await openai.chat.completions.create({
       model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
       temperature: 0.45,
-      max_tokens: 12000,
+      max_tokens: aiWeeks < weeks ? 6000 : 12000,
       response_format: { type: 'json_object' },
       messages,
     });
@@ -146,18 +151,22 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Empty response from AI' }, { status: 502 });
   }
 
-  let { plan, error: validateError } = parseAndValidateAiPlan(rawContent, config, catalog || []);
+  let { plan, error: validateError } = parseAndValidateAiPlan(rawContent, aiConfig, catalog || []);
 
-  if ((validateError || !plan) && isRetryablePlanError(validateError) && routeTimeLeftMs() > 18_000) {
+  if (plan && aiWeeks < weeks) {
+    plan = expandPlanToFullWeeks(plan, config, catalog || []);
+  }
+
+  if ((validateError || !plan) && isRetryablePlanError(validateError) && routeTimeLeftMs() > 18_000 && aiWeeks >= weeks) {
     try {
       const retryContent = await callAi(
         'Previous plan failed validation. Ensure strength days have warmup with at least 3 items including 2 mobility stretches, cooldown with at least 2 stretches when enabled, at least 6-8 strength exercises per session, and Mobility days have 6+ mobility exercises in strength section. Also provide a detailed program_summary (3-5 sentences) and coaching_notes (4-8 sentences).'
       );
       if (retryContent) {
         rawContent = retryContent;
-        const retryResult = parseAndValidateAiPlan(rawContent, config, catalog || []);
+        const retryResult = parseAndValidateAiPlan(rawContent, aiConfig, catalog || []);
         if (retryResult.plan) {
-          plan = retryResult.plan;
+          plan = aiWeeks < weeks ? expandPlanToFullWeeks(retryResult.plan, config, catalog || []) : retryResult.plan;
           validateError = null;
         } else {
           validateError = retryResult.error;
