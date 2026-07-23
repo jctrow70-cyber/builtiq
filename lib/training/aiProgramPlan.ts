@@ -253,7 +253,7 @@ Rules:
 3. Prefer exercise names EXACTLY from the provided catalog when possible. For warmup/cooldown/mobility picks, strongly prefer mobility_catalog names.
 4. Balance push/pull on strength days; avoid stacking the same movement pattern on consecutive training days.
 5. Use realistic set/rep/RPE targets for the user's experience level.
-6. Strength days: warmup 3–4 prep items (see rule 14); strength section 6–10 exercises; prefer compound lifts plus accessories; 3–4 working sets on main lifts. Optional supersets (2 exercises max per superset).
+6. Strength days: warmup 2–4 prep items; strength section 4–8 exercises; prefer compound lifts plus accessories; 2–4 working sets on main lifts. Optional supersets (2 exercises max per superset). Quality over hitting an exact exercise count.
 7. Strongly prefer exercises from the catalog that have form guides (has_form_guide: true — image, video, or instructions).
 8. Frame guidance as general fitness/wellness — not medical advice.
 9. Output ONLY valid JSON matching the schema below.
@@ -376,9 +376,9 @@ function countMobilityInItems(items: AiWorkoutItem[], catalog: any[], catMap: Re
   return count;
 }
 
-const MIN_STRENGTH_EXERCISES = 6;
-const MIN_CARDIO_EXERCISES = 4;
-const MIN_MOBILITY_EXERCISES = 6;
+const MIN_STRENGTH_EXERCISES = 3;
+const MIN_CARDIO_EXERCISES = 2;
+const MIN_MOBILITY_EXERCISES = 4;
 
 export function isRetryablePlanError(error: string | null): boolean {
   if (!error) return false;
@@ -435,7 +435,6 @@ export function parseAndValidateAiPlan(
   const seen = new Set<string>();
   const catMap = catalogByName(catalog);
   const includeCooldown = config.includeCooldown !== false;
-  const softIssues: string[] = [];
 
   for (const row of workoutsIn) {
     const week = Number(row?.week);
@@ -459,49 +458,6 @@ export function parseAndValidateAiPlan(
       .filter(Boolean) as AiWorkoutItem[];
 
     if (!strength.length) continue;
-
-    const strengthCount = countStrengthExercises(strength);
-    const isCardioSession = workoutType === 'Cardio' || config.dayTypes[dayLabel] === 'Cardio';
-    const isMobilitySession = workoutType === 'Mobility' || config.dayTypes[dayLabel] === 'Mobility';
-    const isStrengthSession = !isCardioSession && !isMobilitySession;
-
-    if (isMobilitySession) {
-      if (strengthCount < MIN_MOBILITY_EXERCISES) {
-        softIssues.push(
-          `Too few mobility exercises in week ${week} ${dayLabel} (${strengthCount}; minimum ${MIN_MOBILITY_EXERCISES})`
-        );
-      } else {
-        const mobilityCount = countMobilityInItems(strength, catalog, catMap);
-        if (mobilityCount < MIN_MOBILITY_EXERCISES) {
-          softIssues.push(
-            `Too few mobility-classified exercises in week ${week} ${dayLabel} Mobility day (${mobilityCount}; minimum ${MIN_MOBILITY_EXERCISES})`
-          );
-        }
-      }
-    } else {
-      const minExercises = isCardioSession ? MIN_CARDIO_EXERCISES : MIN_STRENGTH_EXERCISES;
-      if (strengthCount < minExercises) {
-        const label = isCardioSession ? 'conditioning' : 'strength';
-        softIssues.push(
-          `Too few ${label} exercises in week ${week} ${dayLabel} (${strengthCount}; minimum ${minExercises})`
-        );
-      }
-    }
-
-    if (isStrengthSession) {
-      const warmupCount = countWorkoutItems(warmup);
-      const mobilityInWarmup = countMobilityInItems(warmup, catalog, catMap);
-      if (warmupCount < 3 || mobilityInWarmup < 2) {
-        softIssues.push(
-          `Warmup mobility insufficient in week ${week} ${dayLabel} (warmup ${warmupCount}, mobility items ${mobilityInWarmup}; need warmup >= 3 with >= 2 mobility)`
-        );
-      }
-      if (includeCooldown && cooldown.length < 2) {
-        softIssues.push(
-          `Cooldown too short in week ${week} ${dayLabel} (${cooldown.length}; minimum 2 on strength days)`
-        );
-      }
-    }
 
     const workout: AiWorkout = { week, day_label: dayLabel, workout_type: workoutType, warmup, strength };
     if (includeCooldown && cooldown.length) workout.cooldown = cooldown;
@@ -527,25 +483,80 @@ export function parseAndValidateAiPlan(
     workouts: workouts.sort((a, b) => a.week - b.week || DAY_ORDER.indexOf(a.day_label) - DAY_ORDER.indexOf(b.day_label)),
   };
 
-  if (missing.length || softIssues.length) {
+  if (missing.length) {
     plan = repairAiPlan(plan, config, catalog, missing);
+  } else if (plan.workouts.length) {
+    plan = repairAiPlan(plan, config, catalog, []);
   }
 
-  // Hard-fail only if repair still left critical gaps (no strength work)
-  const stillBroken = plan.workouts.some((w) => {
-    const isCardio = w.workout_type === 'Cardio' || config.dayTypes[w.day_label] === 'Cardio';
-    const isMob = w.workout_type === 'Mobility' || config.dayTypes[w.day_label] === 'Mobility';
-    const min = isMob ? MIN_MOBILITY_EXERCISES : isCardio ? MIN_CARDIO_EXERCISES : MIN_STRENGTH_EXERCISES;
-    return countStrengthExercises(w.strength || []) < min;
-  });
+  const stillBroken = plan.workouts.some((w) => countStrengthExercises(w.strength || []) < 1);
   if (stillBroken) {
     return {
       plan: null,
-      error: softIssues[0] || 'AI plan still missing required exercises after repair — please retry',
+      error: 'AI plan missing exercises for one or more workouts — please retry',
     };
   }
 
   return { plan, error: null };
+}
+
+function collectExerciseNames(items: AiWorkoutItem[]): Set<string> {
+  const names = new Set<string>();
+  for (const item of items) {
+    if (isSupersetItem(item)) {
+      for (const ex of item.superset) {
+        if (ex?.name) names.add(ex.name.toLowerCase());
+      }
+    } else if (isExerciseItem(item) && item.name) {
+      names.add(item.name.toLowerCase());
+    }
+  }
+  return names;
+}
+
+function strengthFallbackExercises(
+  catalog: any[],
+  workoutType: string,
+  seed: string,
+  existing: Set<string>,
+  count: number,
+  availableEquipment?: string[] | null
+): AiExercise[] {
+  if (count <= 0) return [];
+  const ranked = selectCatalogForAi(catalog, `${seed} ${workoutType} strength`, 80, availableEquipment);
+  const out: AiExercise[] = [];
+  for (const item of ranked) {
+    if (out.length >= count) break;
+    const lower = String(item.name || '').toLowerCase();
+    if (!lower || existing.has(lower)) continue;
+    const hay = `${String(item.muscle_group || '').toLowerCase()} ${lower}`;
+    if (workoutType === 'Lower Body' && !/leg|glute|quad|ham|hip|calf|lower|squat|deadlift|lunge/.test(hay)) continue;
+    if (workoutType === 'Upper Body' && !/chest|back|should|arm|bicep|tricep|lat|press|row|pull/.test(hay)) continue;
+    existing.add(lower);
+    out.push({
+      name: item.name,
+      muscle_group: item.muscle_group || 'Muscle',
+      sets: 3,
+      reps: '8-12',
+      rpe: '7-8',
+    });
+  }
+  const generics: AiExercise[] = [
+    { name: 'Bodyweight Squat', muscle_group: 'Legs', sets: 3, reps: '10-15', rpe: '6-7' },
+    { name: 'Push-Up', muscle_group: 'Chest', sets: 3, reps: '8-12', rpe: '7' },
+    { name: 'Dumbbell Row', muscle_group: 'Back', sets: 3, reps: '8-12', rpe: '7-8' },
+    { name: 'Romanian Deadlift', muscle_group: 'Hamstrings', sets: 3, reps: '8-10', rpe: '7-8' },
+    { name: 'Overhead Press', muscle_group: 'Shoulders', sets: 3, reps: '8-10', rpe: '7-8' },
+    { name: 'Plank', muscle_group: 'Core', sets: 3, reps: '30-45 sec', rpe: '6-7' },
+  ];
+  for (const g of generics) {
+    if (out.length >= count) break;
+    const lower = g.name.toLowerCase();
+    if (existing.has(lower)) continue;
+    existing.add(lower);
+    out.push(g);
+  }
+  return out;
 }
 
 function mobilityFallbackExercises(catalog: any[], count: number, seed: string): AiExercise[] {
@@ -668,7 +679,11 @@ export function repairAiPlan(
     }
 
     if (!isCardioSession && !isMobilitySession && countStrengthExercises(strength) < MIN_STRENGTH_EXERCISES) {
-      // Cannot invent safe heavy lifts without context — leave for hard-fail / AI retry
+      const existing = collectExerciseNames(strength);
+      const need = MIN_STRENGTH_EXERCISES - countStrengthExercises(strength);
+      strength.push(
+        ...strengthFallbackExercises(catalog, w.workout_type, seed, existing, need, config.availableEquipment)
+      );
     }
 
     const next: AiWorkout = {

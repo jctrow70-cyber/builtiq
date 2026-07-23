@@ -160,7 +160,7 @@ export async function POST(request: Request) {
   if ((validateError || !plan) && isRetryablePlanError(validateError) && routeTimeLeftMs() > 18_000 && aiWeeks >= weeks) {
     try {
       const retryContent = await callAi(
-        'Previous plan failed validation. Ensure strength days have warmup with at least 3 items including 2 mobility stretches, cooldown with at least 2 stretches when enabled, at least 6-8 strength exercises per session, and Mobility days have 6+ mobility exercises in strength section. Also provide a detailed program_summary (3-5 sentences) and coaching_notes (4-8 sentences).'
+        'Previous plan failed validation. Include at least one exercise per workout, warmup prep on strength days, and a detailed program_summary (3-5 sentences) plus coaching_notes (4-8 sentences).'
       );
       if (retryContent) {
         rawContent = retryContent;
@@ -181,7 +181,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error: validateError || 'Invalid AI plan',
-        hint: 'Try again, shorten the week count, or add more detail in your goals box.',
+        hint: 'Please try again in a moment.',
       },
       { status: 422 }
     );

@@ -4698,3 +4698,53 @@ None.
 BIQ-0056 Expand 5+ week AI programs from week 1 template to fix 504s
 ```
 
+---
+
+## BIQ-0057 - Relax AI Program Exercise Count Validation
+
+Date: 2026-07-23  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Removed the strict **6-exercise minimum** that blocked AI program generation. Plans with 4–5 solid exercises now save successfully; BuildIQ auto-fills only when a workout is nearly empty.
+
+### Purpose
+
+Users hit validation errors like “Too few strength exercises in week 1 Mon (5; minimum 6)” even when OpenAI returned a usable plan. Generation should accept reasonable AI output, not fail on arbitrary counts.
+
+### Changes
+
+- Dropped hard-fail validation for exercise counts (strength, cardio, mobility, warmup, cooldown)
+- Only fail when a workout has **zero** exercises after repair
+- Auto-pad sparse strength sessions from the exercise catalog (minimum target 3, not 6)
+- Softened AI prompt from “6–10 exercises” to “4–8 exercises”
+- Friendlier API error hint: “Please try again in a moment.”
+
+### Files Changed
+
+- `lib/training/aiProgramPlan.ts`
+- `app/api/programs/generate/route.ts`
+
+### Database Changes
+
+None
+
+### Testing Steps
+
+1. Program Setup → AI generate with 6 weeks and a normal goals prompt
+2. Confirm generation completes even when AI returns ~5 exercises per strength day
+3. Verify week 1 expands to full program length
+4. Open generated draft — each workout should have exercises; warmups/cooldowns present on strength days
+
+### Known Issues
+
+None
+
+### Recommended Commit Message
+
+```text
+BIQ-0057 Relax AI program exercise count validation
+```
+
