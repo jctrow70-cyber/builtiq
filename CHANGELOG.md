@@ -4791,3 +4791,47 @@ None (apply `20250713_016_program_start_date.sql` in Supabase for full week/date
 BIQ-0058 Fallback when st_programs.start_date column missing
 ```
 
+---
+
+## BIQ-0059 - Keep Draft Programs on Program Setup Tab
+
+Date: 2026-07-23  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Draft programs no longer appear on **Personal Training** for logging. Drafts stay on **Program Setup**; **Edit workouts** opens the editor there instead of switching tabs.
+
+### Purpose
+
+Users expected drafts to live in Program Setup until published. Drafts were leaking onto Personal Training (including AI notes) because `Edit workouts` switched tabs and training loaded unpublished programs when no published plan existed.
+
+### Changes
+
+- Personal Training loads **published programs only**
+- **Edit workouts** stays on Program Setup and shows the workout editor below setup
+- AI program notes on Personal Training only for published plans
+- Clearer empty state when only a draft exists
+
+### Files Changed
+
+- `app/page.tsx`
+
+### Database Changes
+
+None
+
+### Testing Steps
+
+1. Generate AI draft → stays on Program Setup with draft card and AI write-up
+2. Click **Edit workouts** → editor appears on Setup tab (not Personal Training)
+3. Personal Training → shows last published plan or “No published program”
+4. **Publish** → plan appears on Personal Training for logging
+
+### Recommended Commit Message
+
+```text
+BIQ-0059 Keep draft programs on Program Setup until publish
+```
+
