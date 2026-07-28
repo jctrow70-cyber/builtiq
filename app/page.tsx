@@ -1438,7 +1438,7 @@ const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sor
       weekDisabled={!!activeAssignedRecipient}
       helperDetail={canEditGroupProgram(activeTeam?.my_role)?'Managers can edit this program from Manage program.':undefined}
       onManageProgram={()=>{setTrainingSubNav('setup');setShowProgramSetup(true);if(teams.length)setMode('team');}}
-      canManageProgram={trainingSubNav!=='setup'}
+      canManageProgram
       hasGroups={teams.length>0}
     />}
     {(activeTeam?.training_source||'team')!=='personal'&&teams.length>0&&!program&&trainingSubNav==='personal'&&!viewingMember&&!activeAssignedRecipient&&<div className="card"><p className="muted">No group program loaded yet.</p><button type="button" className="btn small secondary" onClick={()=>{setTrainingSubNav('setup');setShowProgramSetup(true);setMode('team');}}>Manage group program</button></div>}
