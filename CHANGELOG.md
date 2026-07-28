@@ -4835,3 +4835,77 @@ None
 BIQ-0059 Keep draft programs on Program Setup until publish
 ```
 
+---
+
+## BIQ-0060 - Training Screen UI Redesign & Theme System (Phase 1)
+
+Date: 2026-07-28  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Introduced a semantic theme system with five appearance options (Calm default), redesigned the app header and primary navigation, and rebuilt the Training screen as the design-system prototype with a consolidated Active Plan card, compact stats, and secondary placement for Program Setup and bug reporting.
+
+### Purpose
+
+Make BuildIQ Health feel premium, welcoming, and performance-capable without intimidating beginners — using one shared layout with theme-driven visual personality.
+
+### Changes
+
+- **Theme system:** Semantic CSS tokens (`background`, `surface`, `accent`, etc.) with `ThemeProvider`, localStorage persistence, and optional `st_profiles.ui_theme` sync
+- **Themes:** Calm (default), Performance, Energy, Nature, Minimal — preview picker in Settings → Appearance
+- **Header:** Compact brand row, notification placeholder, avatar menu (Settings, Progress, AI Coach, Report issue, Sign out)
+- **Navigation:** Icon + label primary nav for Dashboard, Training, Groups, Nutrition
+- **Training screen:** Section header, Personal/Group segmented control, Manage program secondary action, `ActivePlanCard` with stats row and date/week controls, edit-scope only while editing structure
+- **Experience preference:** Friendlier fitness experience labels in profile (beginner through athlete)
+- **Bug report:** Smaller scroll-revealed floating button + account menu entry
+
+### Files Changed
+
+- `app/page.tsx`
+- `app/layout.tsx`
+- `app/providers.tsx`
+- `app/globals.css`
+- `app/components/theme/ThemeProvider.tsx`
+- `app/components/theme/ProfileThemeSync.tsx`
+- `app/components/layout/AppHeader.tsx`
+- `app/components/layout/PrimaryNav.tsx`
+- `app/components/training/ActivePlanCard.tsx`
+- `app/components/settings/AppearanceSettings.tsx`
+- `app/components/ui/Card.tsx`
+- `app/components/ui/SegmentedControl.tsx`
+- `app/components/ui/StatItem.tsx`
+- `app/components/ui/IconButton.tsx`
+- `app/components/ui/SectionHeader.tsx`
+- `lib/theme/themes.ts`
+- `supabase/migrations/20250728_020_profile_ui_theme.sql`
+
+### Database Changes
+
+Optional migration adds `st_profiles.ui_theme` for cross-device theme sync. App works with localStorage until migration is applied.
+
+### Testing Steps
+
+1. Open Training — verify compact header, 4-item primary nav, Training title, Personal/Group control
+2. Confirm Active Plan card shows badge, optional group row, workout type toggle, compact stats, date/week controls
+3. Tap Manage program — Program Setup opens; Back to training returns to logging view
+4. Settings → Appearance — switch Calm and Performance; confirm smooth color transition
+5. Refresh page — theme persists (localStorage; profile if migration applied)
+6. Edit workout structure (Manage program / add exercise) — edit-scope selector appears; hidden during normal logging
+7. Scroll down — small ? bug button appears; account menu → Report an issue also works
+8. Sign out — only available from avatar menu, not main header
+9. Mobile width (~390px) — no horizontal overflow on week selector or stats row
+10. Profile — update fitness experience level; beginners see simplified stats on Active Plan card
+
+### Known Issues
+
+- Dashboard, Groups, Nutrition, Progress, and Program Setup still use legacy card styles (Phase 2 rollout)
+- Notification icon is a placeholder
+- Energy, Nature, and Minimal themes are selectable but Calm/Performance received the most polish pass
+
+### Recommended Commit Message
+
+```text
+BIQ-0060 Training UI redesign with theme system phase 1
+```

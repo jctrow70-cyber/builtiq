@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import InstallAppPrompt from './components/InstallAppPrompt';
+import { Providers } from './providers';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -34,8 +35,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <InstallAppPrompt />
-        {children}
+        <Providers>
+          <InstallAppPrompt />
+          {children}
+        </Providers>
       </body>
     </html>
   );
