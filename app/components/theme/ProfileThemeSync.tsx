@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useTheme } from './theme/ThemeProvider';
-import { resolveThemeId, type ThemeId } from '../../lib/theme/themes';
+import { useTheme } from './ThemeProvider';
+import { resolveThemeId, type ThemeId } from '../../../lib/theme/themes';
 
 /** Syncs profile ui_theme into ThemeProvider when available */
 export default function ProfileThemeSync({
