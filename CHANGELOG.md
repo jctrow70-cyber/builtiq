@@ -5152,3 +5152,71 @@ None
 ```text
 BIQ-0065 Update theme descriptions to remove third-party brand references
 ```
+
+---
+
+## BIQ-0066 - Option D Single Theme (Dark Navy + Electric Blue)
+
+Date: 2026-07-28  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Locked BuildIQ Health to Option D — a single dark navy/charcoal theme with vibrant electric blue accents and glow on active elements — and removed the Appearance theme picker from Settings.
+
+### Purpose
+
+User requested one fixed visual style (Option D mockup) and removal of alternate theme choices that were not working well in practice.
+
+### Option D palette
+
+- Background: `#0a0f18` / `#12141D` (dark navy, not pure black)
+- Accent: `#0066FF` / `#22d3ee` with glow on active nav, cards, and segmented controls
+- Cards: dark blue gradients, subtle borders, soft glow when active
+- Inputs: deep charcoal/navy fields integrated with surfaces
+- Typography: white headings, light gray secondary text
+- Border radius: 12–16px
+
+### Changes
+
+- Single theme id `performance` in `lib/theme/themes.ts`; all legacy ids map to it
+- Rewrote `:root` CSS tokens to Option D palette; legacy theme blocks alias same tokens
+- Removed Settings → Appearance section and theme picker entirely
+- `ThemeProvider` always applies dark color-scheme and fixed theme
+- `resolveThemeId()` always returns `performance`
+- Preserved streamlined Training layout from BIQ-0061
+
+### Files Changed
+
+- `lib/theme/themes.ts`
+- `app/components/theme/ThemeProvider.tsx`
+- `app/components/settings/AppearanceSettings.tsx`
+- `app/components/theme/ProfileThemeSync.tsx`
+- `app/layout.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None (existing `ui_theme` column still accepts values; app always uses `performance`)
+
+### Testing Steps
+
+1. Settings → Appearance shows static note only — no theme picker
+2. Entire app uses dark navy background with electric blue accents
+3. Active primary nav shows blue glow and underline
+4. Segmented controls use solid blue active fill with white text
+5. Users with old `calm`/`energy`/etc. in profile or localStorage see Option D
+6. Training screen layout unchanged from BIQ-0061
+7. `npm run build` succeeds
+
+### Known Issues
+
+None
+
+### Recommended Commit Message
+
+```text
+BIQ-0066 Lock app to Option D dark theme and remove theme picker
+```

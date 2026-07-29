@@ -1,4 +1,5 @@
-export type ThemeId = 'calm' | 'performance' | 'energy' | 'nature' | 'minimal';
+/** Single app theme (Option D — dark navy + electric blue). Legacy profile/storage ids map here. */
+export type ThemeId = 'performance';
 
 export const THEME_STORAGE_KEY = 'buildiq_theme';
 
@@ -10,50 +11,35 @@ export type ThemeDefinition = {
   previewBackground: string;
 };
 
-export const THEMES: ThemeDefinition[] = [
-  {
-    id: 'calm',
-    label: 'Calm',
-    description: 'Light, clean surfaces with soft purple accents — welcoming and easy on the eyes.',
-    previewAccent: '#7c5cff',
-    previewBackground: '#f5f5f7',
-  },
-  {
-    id: 'performance',
-    label: 'Performance',
-    description: 'Deep black with electric blue glow — bold contrast for focused, high-intensity training.',
-    previewAccent: '#22d3ee',
-    previewBackground: '#000000',
-  },
-  {
-    id: 'energy',
-    label: 'Energy',
-    description: 'Orange accents — motivating and active without feeling aggressive.',
-    previewAccent: '#fb923c',
-    previewBackground: '#0c0a08',
-  },
-  {
-    id: 'nature',
-    label: 'Nature',
-    description: 'Green accents — wellness, recovery, and longevity focused.',
-    previewAccent: '#4ade80',
-    previewBackground: '#080c0a',
-  },
-  {
-    id: 'minimal',
-    label: 'Minimal',
-    description: 'Neutral grays — clean and understated with limited accent color.',
-    previewAccent: '#94a3b8',
-    previewBackground: '#0a0a0a',
-  },
-];
+export const THEME: ThemeDefinition = {
+  id: 'performance',
+  label: 'Performance',
+  description:
+    'Deep navy with electric blue glow — bold contrast for focused, high-intensity training.',
+  previewAccent: '#0066FF',
+  previewBackground: '#0a0f18',
+};
 
-export const DEFAULT_THEME_ID: ThemeId = 'calm';
+/** @deprecated Use THEME — kept for imports that expect an array */
+export const THEMES: ThemeDefinition[] = [THEME];
+
+export const DEFAULT_THEME_ID: ThemeId = 'performance';
+
+const LEGACY_THEME_IDS = new Set([
+  'calm',
+  'performance',
+  'energy',
+  'nature',
+  'minimal',
+  'default',
+]);
 
 export function isThemeId(value: string | null | undefined): value is ThemeId {
-  return THEMES.some((t) => t.id === value);
+  return value === 'performance';
 }
 
-export function resolveThemeId(value: string | null | undefined): ThemeId {
-  return isThemeId(value) ? value : DEFAULT_THEME_ID;
+/** Always returns the single app theme; legacy stored/profile ids are ignored. */
+export function resolveThemeId(_value: string | null | undefined): ThemeId {
+  if (_value && LEGACY_THEME_IDS.has(_value)) return DEFAULT_THEME_ID;
+  return DEFAULT_THEME_ID;
 }
