@@ -7,7 +7,7 @@
 --accent:#7c5cff;--accentSoft:rgba(124,92,255,.12);--accentGradient:linear-gradient(135deg,#8b6cff,#6d4cff);
 --accentText:#ffffff;--accentOnSoft:#5b4df5;
 --success:#22c55e;--warning:#f59e0b;--danger:#ef4444;
---inputBackground:#f2f2f7;--inputBorder:#e5e5ea;
+--inputBackground:#ffffff;--inputBorder:#d1d1d6;
 --btnSecondaryBg:#f2f2f7;--btnSecondaryText:#1d1d1f;--btnSecondaryBorder:#e5e5ea;
 --segmentedTrack:#f2f2f7;--segmentedActiveBg:var(--accent);--segmentedActiveText:#ffffff;
 --shadowSoft:0 2px 14px rgba(0,0,0,.06);--shadowElevated:0 8px 28px rgba(124,92,255,.10);
@@ -645,3 +645,67 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .applybox{background:var(--surface);border:1px solid var(--borderSubtle)}
 .dash-placeholder span{background:var(--surfaceInset);border:1px dashed var(--borderSubtle)}
 .dash-insight{background:var(--surfaceInset);border:1px solid var(--borderSubtle);color:var(--textPrimary)}
+
+/* BIQ-0063 — Calm light fields: override legacy dark hardcoded inputs */
+[data-theme="calm"] input:not([type="checkbox"]):not([type="radio"]):not([type="color"]),
+[data-theme="calm"] select,
+[data-theme="calm"] textarea,
+[data-theme="calm"] .log-field-input,
+[data-theme="calm"] .log-input-card,
+[data-theme="calm"] .ai-prompt-input,
+[data-theme="calm"] .superset-label-input,
+[data-theme="calm"] .exercise-name,
+[data-theme="calm"] .exercise-muscle,
+[data-theme="calm"] .catalog-result,
+[data-theme="calm"] .focus-chip,
+[data-theme="calm"] .log-chip,
+[data-theme="calm"] .schedule-option-card,
+[data-theme="calm"] .cardio-pref-chips button,
+[data-theme="calm"] .group-card-btn,
+[data-theme="calm"] .set-type-picker-btn,
+[data-theme="calm"] .typeahead-menu,
+[data-theme="calm"] .panel-picked,
+[data-theme="calm"] .applybox,
+[data-theme="calm"] .nutrition-total-tile,
+[data-theme="calm"] .nutrition-food-chip,
+[data-theme="calm"] .nutrition-template-chip,
+[data-theme="calm"] .tabs button,
+[data-theme="calm"] .appnav button,
+[data-theme="calm"] .topnav button{
+  background:var(--inputBackground)!important;
+  border-color:var(--inputBorder)!important;
+  color:var(--textPrimary)!important;
+  box-shadow:none!important;
+}
+[data-theme="calm"] .log-field-input:focus,
+[data-theme="calm"] .log-input-card:focus,
+[data-theme="calm"] input:focus,
+[data-theme="calm"] select:focus,
+[data-theme="calm"] textarea:focus{
+  border-color:var(--accent)!important;
+  outline:none;
+}
+[data-theme="calm"] .tabs button.active,
+[data-theme="calm"] .appnav button.active,
+[data-theme="calm"] .topnav button.active,
+[data-theme="calm"] .focus-chip.active,
+[data-theme="calm"] .log-chip.active,
+[data-theme="calm"] .cardio-pref-chips button.active{
+  background:var(--accentSoft)!important;
+  color:var(--accentOnSoft)!important;
+  border-color:var(--accent)!important;
+}
+[data-theme="calm"] .exercise-log-context,
+[data-theme="calm"] .warmup-target-item,
+[data-theme="calm"] .program-ai-summary,
+[data-theme="calm"] .program-ai-coaching,
+[data-theme="calm"] .setup-wizard-steps,
+[data-theme="calm"] .schedule-review-summary,
+[data-theme="calm"] .log-pref-bar,
+[data-theme="calm"] .progression-hints{
+  background:var(--surfaceInset)!important;
+  border-color:var(--borderSubtle)!important;
+  color:var(--textSecondary)!important;
+}
+[data-theme="calm"] .muted{color:var(--textSecondary)}
+[data-theme="calm"] label{color:var(--textSecondary)}

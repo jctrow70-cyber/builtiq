@@ -205,7 +205,9 @@ export default function Page(){
 
  useEffect(()=>{
   if(!session?.user?.id)return;
-  persistThemeToProfile(supabase,session.user.id,themeId);
+  persistThemeToProfile(supabase,session.user.id,themeId).then(()=>{
+   setProfile((p:any)=>p?{...p,ui_theme:themeId}:p);
+  });
  },[themeId,session?.user?.id]);
 
  useEffect(()=>{

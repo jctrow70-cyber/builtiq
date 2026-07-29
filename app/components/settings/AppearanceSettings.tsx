@@ -47,8 +47,7 @@ export default function AppearanceSettings() {
         })}
       </div>
       <p className="muted appearance-settings-note">
-        Theme preference is saved on this device. Account sync can be enabled when{' '}
-        <code>ui_theme</code> is added to your profile in Supabase.
+        Theme preference is saved on this device and synced to your profile.
       </p>
     </Card>
   );

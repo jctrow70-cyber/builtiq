@@ -5020,3 +5020,50 @@ None
 ```text
 BIQ-0062 Align Calm and Performance themes with Apple Fitness and Whoop visual styles
 ```
+
+---
+
+## BIQ-0063 - Fix Theme Switching & Soften Calm Input Fields
+
+Date: 2026-07-28  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Fixed Appearance theme picker not applying changes, and softened Calm theme form fields from harsh dark backgrounds to white inputs with light borders.
+
+### Purpose
+
+Users could not switch themes because profile sync immediately reset the selection; Calm also inherited legacy dark input styles that clashed with the light theme.
+
+### Changes
+
+- `ProfileThemeSync` only reacts to profile loads/updates, not local theme picks
+- Profile `ui_theme` updates in app state when theme is persisted
+- Calm inputs use white backgrounds and soft gray borders
+- Calm-specific CSS overrides for legacy hardcoded dark field styles
+
+### Files Changed
+
+- `app/components/theme/ProfileThemeSync.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `app/components/settings/AppearanceSettings.tsx`
+
+### Database Changes
+
+None
+
+### Testing Steps
+
+1. Settings → Appearance → tap Performance — UI switches to dark blue theme immediately
+2. Tap Calm — UI returns to light theme; profile/settings fields are white, not black
+3. Refresh page — selected theme persists
+4. Training log fields on Calm — inputs are light, readable
+
+### Recommended Commit Message
+
+```text
+BIQ-0063 Fix theme picker and soften Calm input field styling
+```

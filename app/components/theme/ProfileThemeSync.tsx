@@ -4,19 +4,18 @@ import { useEffect } from 'react';
 import { useTheme } from './ThemeProvider';
 import { resolveThemeId, type ThemeId } from '../../../lib/theme/themes';
 
-/** Syncs profile ui_theme into ThemeProvider when available */
+/** Syncs profile ui_theme into ThemeProvider when the profile loads or updates from the server — not when the user picks a theme locally. */
 export default function ProfileThemeSync({
   profileTheme,
 }: {
   profileTheme?: string | null;
 }) {
-  const { themeId, setThemeId } = useTheme();
+  const { setThemeId } = useTheme();
 
   useEffect(() => {
     if (!profileTheme) return;
-    const resolved = resolveThemeId(profileTheme);
-    if (resolved !== themeId) setThemeId(resolved);
-  }, [profileTheme, themeId, setThemeId]);
+    setThemeId(resolveThemeId(profileTheme));
+  }, [profileTheme, setThemeId]);
 
   return null;
 }
