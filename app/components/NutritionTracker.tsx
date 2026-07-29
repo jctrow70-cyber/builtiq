@@ -931,6 +931,13 @@ export default function NutritionTracker({
     setBarcodeError('');
   }
 
+  function scrollToManualEntry() {
+    window.setTimeout(() => {
+      document.getElementById('nutrition-manual-entry')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById('add-name')?.focus({ preventScroll: true });
+    }, 50);
+  }
+
   function openBarcodeScanner() {
     clearBarcodeResults();
     setScannerError('');
@@ -1031,6 +1038,8 @@ export default function NutritionTracker({
       ...addDraft,
       ...barcodeResultToDraft(product, addDraft.meal_type, parseMacroInput(qty) || 1),
     });
+    clearBarcodeResults();
+    scrollToManualEntry();
   }
 
   async function logBarcodeProduct(saveToLibrary: boolean) {
@@ -1521,7 +1530,7 @@ export default function NutritionTracker({
                 onLabelPhoto={focusLabelPhotoInput}
                 onManualEntry={() => {
                   clearBarcodeResults();
-                  document.getElementById('add-name')?.focus();
+                  scrollToManualEntry();
                 }}
                 onSaveCustom={() => {
                   setAddDraft({
@@ -1693,6 +1702,7 @@ export default function NutritionTracker({
             )}
           </div>
 
+          <div id="nutrition-manual-entry" className="nutrition-manual-entry">
           <h4 className="nutrition-add-section-title">Manual entry</h4>
           <FoodFormFields
             draft={addDraft}
@@ -1710,6 +1720,7 @@ export default function NutritionTracker({
             idPrefix="add"
             showSaveToLibrary
           />
+          </div>
           <div className="actions" style={{ marginTop: 10 }}>
             <button type="button" className="btn green" onClick={() => addFoodEntry()} disabled={saving}>
               {saving ? 'Saving...' : `Log to ${MEAL_TYPE_LABELS[addDraft.meal_type]}`}

@@ -5254,3 +5254,47 @@ None
 ```text
 BIQ-0067 Fix WarmupExerciseCard Set spread for Vercel TypeScript build
 ```
+
+---
+
+## BIQ-0068 - Barcode Review Scroll to Manual Entry
+
+Date: 2026-07-28  
+Branch: main  
+Status: Completed
+
+### Summary
+
+After scanning a barcode and tapping **Review & edit**, the Add food panel now scrolls directly to the manual entry form with fields pre-filled, instead of leaving the user at the product card.
+
+### Purpose
+
+Users had to hunt and scroll to edit scanned product values on mobile. Review & edit should feel like one step into the form.
+
+### Changes
+
+- **Review & edit** clears the product preview, fills manual entry from barcode data, scrolls to **Manual entry**, and focuses the food name field
+- **Enter manually** on not-found card uses the same scroll behavior
+
+### Files Changed
+
+- `app/components/NutritionTracker.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Nutrition → Add food → Scan Barcode → scan a known product
+2. Tap **Review & edit** — panel scrolls to Manual entry with name and macros filled
+3. Food name field receives focus without extra scrolling
+4. From not-found card, tap **Enter manually** — same scroll to Manual entry
+
+### Recommended Commit Message
+
+```text
+BIQ-0068 Scroll to manual entry after barcode Review and edit
+```
