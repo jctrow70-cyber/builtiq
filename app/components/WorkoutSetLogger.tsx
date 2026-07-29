@@ -219,53 +219,6 @@ function FieldCard({
   );
 }
 
-function formatWarmupTarget(set: SetRow) {
-  const parts = [set.target_reps, set.target_weight].map((v) => String(v || '').trim()).filter(Boolean);
-  if (parts.length) return parts.join(' · ');
-  return `Set ${set.set_number}`;
-}
-
-function WarmupExerciseLogger({
-  sets,
-  logs,
-  canLog,
-  onSaveField,
-  registerInputRef,
-  onInputKeyDown,
-}: {
-  sets: SetRow[];
-  logs: Record<string, LogRow>;
-  canLog: boolean;
-  onSaveField: Props['onSaveField'];
-  registerInputRef?: Props['registerInputRef'];
-  onInputKeyDown?: Props['onInputKeyDown'];
-}) {
-  const firstSet = sets[0];
-  const notes = firstSet ? stripEmbeddedNotes(String(logs[firstSet.id]?.log_notes || '')) : '';
-
-  return (
-    <div className="warmup-exercise-log">
-      <ul className="warmup-target-list">
-        {sets.map((s) => (
-          <li key={s.id} className="warmup-target-item">
-            <span className="warmup-target-text">{formatWarmupTarget(s)}</span>
-          </li>
-        ))}
-      </ul>
-      {canLog && firstSet && (
-        <FieldCard
-          field={{ key: 'log_notes', label: 'Notes', placeholder: 'Optional — how it felt, sides, etc.', size: 'wide' }}
-          value={notes}
-          disabled={!canLog}
-          onBlur={(v) => onSaveField(firstSet.id, 'log_notes', v)}
-          registerRef={registerInputRef}
-          onKeyDown={onInputKeyDown}
-        />
-      )}
-    </div>
-  );
-}
-
 function SetLogCard({
   set,
   log,
@@ -450,7 +403,6 @@ export default function WorkoutSetLogger({
   onInputKeyDown,
   showPreviousSets = true,
 }: Props) {
-  const isWarmup = section === 'warmup';
   const layout = useMemo(() => logLayoutForType(exType), [exType]);
   const showDistToggle = allLogFieldsFlat(exType).some((f) => f.unitGroup === 'distance');
   const saveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
@@ -494,21 +446,6 @@ export default function WorkoutSetLogger({
     if (assist) merged = mergeAssistIntoNotes(merged, assist);
     onSaveField(firstSet.id, 'log_notes', merged);
   };
-
-  if (isWarmup) {
-    return (
-      <div className="workout-set-logger workout-set-logger-warmup">
-        <WarmupExerciseLogger
-          sets={sets}
-          logs={logs}
-          canLog={canLog}
-          onSaveField={onSaveField}
-          registerInputRef={registerInputRef}
-          onInputKeyDown={onInputKeyDown}
-        />
-      </div>
-    );
-  }
 
   return (
     <div className="workout-set-logger">

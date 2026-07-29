@@ -14,14 +14,14 @@ export const THEMES: ThemeDefinition[] = [
   {
     id: 'calm',
     label: 'Calm',
-    description: 'Apple Fitness-inspired — clean light surfaces, soft purple accents.',
+    description: 'Light, clean surfaces with soft purple accents — welcoming and easy on the eyes.',
     previewAccent: '#7c5cff',
     previewBackground: '#f5f5f7',
   },
   {
     id: 'performance',
     label: 'Performance',
-    description: 'Whoop-inspired — true black, electric blue glow, bold contrast.',
+    description: 'Deep black with electric blue glow — bold contrast for focused, high-intensity training.',
     previewAccent: '#22d3ee',
     previewBackground: '#000000',
   },

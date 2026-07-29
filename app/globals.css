@@ -1,4 +1,4 @@
-/* BIQ-0062 — Theme visual polish (Calm = Apple Fitness light, Performance = Whoop dark) */
+/* BIQ-0062 — Theme visual polish (Calm light, Performance dark) */
 :root,[data-theme="calm"]{
 --background:#f5f5f7;--backgroundGradient:linear-gradient(180deg,#ffffff 0%,#f5f5f7 100%);
 --surface:#ffffff;--surfaceElevated:#ffffff;--surfaceGradient:linear-gradient(180deg,#ffffff,#fafafa);
@@ -627,7 +627,20 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .training-workout-panel{margin-top:0}
 @media(max-width:600px){.training-plan-title{font-size:18px}}
 
-/* BIQ-0062 — Apple Fitness (Calm) & Whoop (Performance) visual polish */
+/* BIQ-0064 — Simplified warmup exercise cards */
+.warmup-exercise-card{padding:12px 14px;margin-bottom:8px}
+.warmup-exercise-main{display:flex;align-items:flex-start;gap:12px}
+.warmup-exercise-thumb-btn{display:block;padding:0;border:0;background:transparent;cursor:pointer;border-radius:12px;flex-shrink:0}
+.warmup-exercise-thumb-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.warmup-exercise-thumb,.warmup-exercise-thumb--static{display:block;width:72px;height:72px;border-radius:12px;object-fit:cover;border:1px solid var(--borderSubtle);background:var(--surfaceInset);flex-shrink:0}
+.warmup-exercise-body{flex:1;min-width:0;padding-top:2px}
+.warmup-exercise-name{margin:0 0 4px;font-size:17px;font-weight:900;line-height:1.25}
+.warmup-exercise-prescription{margin:0;font-size:14px;font-weight:700;color:var(--textSecondary);line-height:1.35}
+.warmup-exercise-guide-btn{flex-shrink:0;align-self:flex-start;margin-top:2px}
+.warmup-exercise-actions{margin-top:10px;padding-top:10px;border-top:1px solid var(--borderSubtle)}
+@media(max-width:600px){.warmup-exercise-main{flex-wrap:wrap}.warmup-exercise-guide-btn{width:100%}}
+
+/* BIQ-0062 — Calm & Performance theme visual polish */
 .ui-segmented{background:var(--segmentedTrack)}
 [data-theme="performance"] .ui-segmented-item--active{box-shadow:0 0 18px rgba(34,211,238,.35)}
 [data-theme="calm"] .ui-card,[data-theme="calm"] .training-plan-card{box-shadow:var(--shadowElevated)}

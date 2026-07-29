@@ -5067,3 +5067,88 @@ None
 ```text
 BIQ-0063 Fix theme picker and soften Calm input field styling
 ```
+
+---
+
+## BIQ-0064 - Simplify Warmup Exercise Display
+
+Date: 2026-07-28  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Warmup exercises now show a compact card with exercise name, sets/reps prescription, GIF thumbnail, and form guide — without muscle badges, progression stats, notes fields, or full set logging UI.
+
+### Purpose
+
+Warmup is instructional prep, not heavy logging. Reduce clutter so athletes can quickly see what to do and watch form demos.
+
+### Changes
+
+- New `WarmupExerciseCard` component for Warm Up / Prep section
+- Prescription line (e.g. `2 sets · 12` or `1 set · 3 min`)
+- GIF thumbnail opens form guide when available
+- Program editors retain Change / + Set / Remove actions when editing
+- Removed warmup-specific logger UI from `WorkoutSetLogger`
+
+### Files Changed
+
+- `app/components/training/WarmupExerciseCard.tsx` (new)
+- `app/page.tsx`
+- `app/components/WorkoutSetLogger.tsx`
+- `app/globals.css`
+
+### Database Changes
+
+None
+
+### Testing Steps
+
+1. Open Training → select a workout with warmup exercises
+2. Warm Up section shows name, sets/reps, GIF, and Form guide button only
+3. Tap GIF or Form guide — modal opens with demo/instructions
+4. Strength section unchanged (full logging UI)
+5. Program Setup edit mode — warmup cards still show Change / + Set / Remove
+
+### Recommended Commit Message
+
+```text
+BIQ-0064 Simplify warmup exercise cards to name, sets/reps, GIF, and form guide
+```
+
+---
+
+## BIQ-0065 - Theme Description Copy Update
+
+Date: 2026-07-28  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Removed third-party brand references from Calm and Performance theme descriptions in Appearance settings.
+
+### Purpose
+
+Theme picker copy should describe BuildIQ Health’s own visual styles, not reference external products.
+
+### Files Changed
+
+- `lib/theme/themes.ts`
+- `app/globals.css` (comment only)
+
+### Database Changes
+
+None
+
+### Testing Steps
+
+1. Settings → Appearance — Calm and Performance descriptions no longer mention external brands
+2. Theme switching still works as before
+
+### Recommended Commit Message
+
+```text
+BIQ-0065 Update theme descriptions to remove third-party brand references
+```
