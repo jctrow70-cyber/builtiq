@@ -24,8 +24,8 @@ export function formatWarmupPrescription(sets: PlannedSet[]): string {
   const count = sets.length;
   const repsList = sets.map((s) => String(s.target_reps || '').trim()).filter(Boolean);
   const weightList = sets.map((s) => String(s.target_weight || '').trim()).filter(Boolean);
-  const uniqueReps = [...new Set(repsList)];
-  const uniqueWeight = [...new Set(weightList)];
+  const uniqueReps = Array.from(new Set(repsList));
+  const uniqueWeight = Array.from(new Set(weightList));
 
   if (uniqueReps.length === 1 && !uniqueWeight.length) {
     return `${count} set${count === 1 ? '' : 's'} · ${uniqueReps[0]}`;

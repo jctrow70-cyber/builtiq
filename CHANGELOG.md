@@ -5220,3 +5220,37 @@ None
 ```text
 BIQ-0066 Lock app to Option D dark theme and remove theme picker
 ```
+
+---
+
+## BIQ-0067 - Vercel Build Fix (WarmupExerciseCard Set iteration)
+
+Date: 2026-07-28  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Fixed TypeScript build failure on Vercel caused by spreading `Set` in `formatWarmupPrescription`.
+
+### Purpose
+
+Vercel's TypeScript target does not allow `[...new Set()]` without `downlevelIteration`.
+
+### Files Changed
+
+- `app/components/training/WarmupExerciseCard.tsx`
+
+### Database Changes
+
+None
+
+### Testing Steps
+
+1. `npm run build` completes without type errors
+
+### Recommended Commit Message
+
+```text
+BIQ-0067 Fix WarmupExerciseCard Set spread for Vercel TypeScript build
+```
