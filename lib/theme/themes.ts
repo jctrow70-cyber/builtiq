@@ -14,16 +14,16 @@ export const THEMES: ThemeDefinition[] = [
   {
     id: 'calm',
     label: 'Calm',
-    description: 'Soft purple accents — welcoming and reassuring for beginners.',
-    previewAccent: '#9b87f5',
-    previewBackground: '#0a0c14',
+    description: 'Apple Fitness-inspired — clean light surfaces, soft purple accents.',
+    previewAccent: '#7c5cff',
+    previewBackground: '#f5f5f7',
   },
   {
     id: 'performance',
     label: 'Performance',
-    description: 'Electric blue — athletic, high contrast, data-driven.',
-    previewAccent: '#38bdf8',
-    previewBackground: '#05080f',
+    description: 'Whoop-inspired — true black, electric blue glow, bold contrast.',
+    previewAccent: '#22d3ee',
+    previewBackground: '#000000',
   },
   {
     id: 'energy',

@@ -4965,3 +4965,58 @@ None
 ```text
 BIQ-0061 Streamline Training screen and remove duplicated context controls
 ```
+
+---
+
+## BIQ-0062 - Theme Visual Polish (Apple Fitness & Whoop Styles)
+
+Date: 2026-07-28  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Aligned Calm and Performance themes with the provided visual mockups: Calm is now a light Apple Fitness-style theme (white surfaces, purple accent, soft shadows); Performance is a Whoop-style dark theme (true black, electric blue glow, gradient controls).
+
+### Purpose
+
+Match the intended visual personalities from design references while preserving the streamlined Training layout from BIQ-0061.
+
+### Changes
+
+- Calm theme: light background, dark text, purple accent, elevated card shadows
+- Performance theme: black background, cyan accent, bordered/glowing cards, uppercase section labels
+- Segmented control active state: solid purple (Calm) / gradient blue with glow (Performance)
+- Legacy `.card`, `.panel`, inputs, and buttons wired to semantic theme tokens
+- Training plan block wrapped in elevated card container
+- ThemeProvider sets `color-scheme: light` for Calm, `dark` for others
+- Appearance picker preview swatches updated
+
+### Files Changed
+
+- `app/globals.css`
+- `app/components/theme/ThemeProvider.tsx`
+- `lib/theme/themes.ts`
+- `app/page.tsx`
+
+### Database Changes
+
+None
+
+### Testing Steps
+
+1. Settings → Appearance → Calm — app shows light background, purple accents, soft card shadows
+2. Switch to Performance — black background, blue accent glow on active segmented item and cards
+3. Training screen — plan card elevated; Personal | Group toggle matches theme active style
+4. Verify streamlined layout unchanged (no stats row, no nested toggle)
+5. Mobile — header, nav, and training card readable in both themes
+
+### Known Issues
+
+- Dashboard, Groups, Nutrition, and Program Setup still use legacy layouts; full light/dark token rollout is phase 2
+
+### Recommended Commit Message
+
+```text
+BIQ-0062 Align Calm and Performance themes with Apple Fitness and Whoop visual styles
+```

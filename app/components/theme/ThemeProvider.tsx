@@ -64,8 +64,10 @@ export default function ThemeProvider({
   useEffect(() => {
     if (!hydrated) return;
     document.documentElement.setAttribute('data-theme', themeId);
-    document.documentElement.style.colorScheme = 'dark';
+    document.documentElement.style.colorScheme = themeId === 'calm' ? 'light' : 'dark';
     localStorage.setItem(THEME_STORAGE_KEY, themeId);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', themeId === 'calm' ? '#ffffff' : '#000000');
     onThemePersist?.(themeId);
   }, [themeId, hydrated, onThemePersist]);
 

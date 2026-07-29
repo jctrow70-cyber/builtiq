@@ -1403,6 +1403,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
     {(trainingSubNav==='personal'||viewingMember||(trainingSubNav==='setup'&&draftEditProgramId&&program&&isDraftProgram(program)))&&<>
     {(trainingSubNav==='personal'||viewingMember)&&!viewingMember&&<AssignedWorkoutsPanel assignments={assignedWorkouts} activeRecipientId={activeAssignedRecipient?.id||null} onOpen={openAssignedWorkout} onCloseActive={activeAssignedRecipient?closeAssignedWorkout:undefined} onCopyToPersonal={copyAssignedWorkoutToPersonal} copyingRecipientId={assignmentCopyBusy} getWorkoutStatus={assignmentPanelStatus} statusLabel={statusLabel}/>}
     {trainingSubNav==='personal'&&!viewingMember&&!activeAssignedRecipient&&<>
+      <div className="training-plan-card ui-card ui-card--elevated">
       {mode==='team'&&teams.length>0&&<TrainingGroupRow groups={teams.map((t:any)=>({id:t.id,name:t.name}))} selectedGroupId={activeTeam?.id||selectedTeamId} onSelectGroup={setSelectedTeamId}/>}
       <TrainingPlanSummary
         programName={program?.name||null}
@@ -1411,6 +1412,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
         infoDetail={mode==='team'&&canEditGroupProgram(activeTeam?.my_role)?'Managers can edit this program from Manage.':undefined}
       />
       {program&&<TrainingWeekSelector week={week} program={program} weeksFallback={weeks} onWeekChange={onWeekChange} logDate={logDate} onLogDateChange={onLogDateChange} disabled={!!activeAssignedRecipient}/>}
+      </div>
       {program&&weekWorkouts.length>0&&<TrainingWorkoutDays program={program} week={week} workouts={weekWorkouts} activeWorkoutId={workout?.id||''} logDate={logDate} onSelectWorkout={onSelectWorkoutDay}/>}
     </>}
     {trainingSubNav==='personal'&&activeAssignedRecipient&&<div className="card viewing-banner assigned-workout-banner"><div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}><div><h2>Assigned workout</h2><p className="muted">{activeAssignedRecipient.st_workout_assignments?.st_teams?.name||'Group'} · {formatDisplayDate(activeAssignedRecipient.st_workout_assignments?.scheduled_date||logDate)}{activeAssignedRecipient.st_workout_assignments?.notes?` · ${activeAssignedRecipient.st_workout_assignments.notes}`:''}</p>{!assignedHasPersonalCopy(activeAssignedRecipient)?<p className="muted assigned-copy-hint">Group template is read-only. Copy to your personal plan to adjust exercises and sets.</p>:<p className="muted assigned-copy-hint">You are logging your personal copy. Edits stay on your account; completion still counts for the group assignment.</p>}</div><div className="assigned-banner-actions"><button className="btn small secondary" onClick={closeAssignedWorkout}>Back to personal program</button>{assignedHasPersonalCopy(activeAssignedRecipient)?<span className="badge personal-copy-badge">Personal copy</span>:<button type="button" className="btn small green" onClick={()=>copyAssignedWorkoutToPersonal()} disabled={!!assignmentCopyBusy}>{assignmentCopyBusy===activeAssignedRecipient.id?'Copying…':'Copy to personal plan'}</button>}</div></div></div>}
