@@ -4909,3 +4909,59 @@ Optional migration adds `st_profiles.ui_theme` for cross-device theme sync. App 
 ```text
 BIQ-0060 Training UI redesign with theme system phase 1
 ```
+
+---
+
+## BIQ-0061 - Streamline Training Screen Context & Layout
+
+Date: 2026-07-28  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Removed duplicated Personal/Group controls and statistics from the Training screen. The top-level Personal | Group selector now drives the entire page; plan summary, week selector, and workout days follow in a compact vertical flow.
+
+### Purpose
+
+Reduce confusion from nested mode toggles, duplicate Manage actions, and redundant Plan/Week/Sets/Logged stats that pushed workout content too far down the page.
+
+### Changes
+
+- Top `mode` (`personal` | `team`) is the single source of truth for Training context
+- Removed nested Group Workout / Personal Plan toggle from Active Plan card
+- Removed four-box stats row, date/start fields, badges, and helper logging text from main view
+- One Manage action on plan summary (permission-gated)
+- Group row only in Group mode; native select when multiple groups
+- Compact week selector with optional “Log a different day” date picker
+- Workout day list with prominent active-day styling
+
+### Files Changed
+
+- `app/page.tsx`
+- `app/globals.css`
+- `app/components/training/TrainingGroupRow.tsx` (new)
+- `app/components/training/TrainingPlanSummary.tsx` (new)
+- `app/components/training/TrainingWeekSelector.tsx` (new)
+- `app/components/training/TrainingWorkoutDays.tsx` (new)
+- `app/components/training/ActivePlanCard.tsx` (removed)
+
+### Database Changes
+
+None
+
+### Testing Steps
+
+1. Training → Personal — no group row, no nested toggles, personal program loads
+2. Training → Group — group name row appears; program refreshes for selected group
+3. Multiple groups — tap row / select switches group and reloads group program
+4. Only one Manage button visible (on plan summary when permitted)
+5. Week selector changes week; “Log a different day” reveals date picker only when needed
+6. Workout days appear immediately below week; tapping selects day and shows exercises sooner
+7. Switch Personal ↔ Group — plan and workouts refresh correctly
+
+### Recommended Commit Message
+
+```text
+BIQ-0061 Streamline Training screen and remove duplicated context controls
+```

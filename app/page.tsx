@@ -3,7 +3,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { BugReportsAdmin } from './components/BugReportsAdmin';
 import AppHeader from './components/layout/AppHeader';
 import PrimaryNav from './components/layout/PrimaryNav';
-import ActivePlanCard, { activePlanWeekOptions, trainingLogContextLine } from './components/training/ActivePlanCard';
+import TrainingGroupRow from './components/training/TrainingGroupRow';
+import TrainingPlanSummary from './components/training/TrainingPlanSummary';
+import TrainingWeekSelector from './components/training/TrainingWeekSelector';
+import TrainingWorkoutDays from './components/training/TrainingWorkoutDays';
 import AppearanceSettings from './components/settings/AppearanceSettings';
 import ProfileThemeSync, { persistThemeToProfile } from './components/theme/ProfileThemeSync';
 import SectionHeader from './components/ui/SectionHeader';
@@ -112,8 +115,6 @@ const today=todayYmd;
 const makeInviteCode=()=>(typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID().replace(/-/g,'').slice(0,8):Math.random().toString(36).slice(2,10)).toUpperCase();
 const REMEMBER_EMAIL_KEY='buildiq_remembered_email';
 const emptyProfileDraft=(source?:any)=>({display_name:source?.display_name||'',height_inches:source?.height_inches??'',weight_lbs:source?.weight_lbs??'',birth_year:source?.birth_year??'',sex:source?.sex||'',experience_level:source?.experience_level||'beginner',primary_goal:source?.primary_goal||'general_health',units_preference:source?.units_preference||'imperial',available_equipment:normalizeEquipmentList(source?.available_equipment),ui_theme:source?.ui_theme||''});
-const isBeginnerExperience=(level?:string)=>!level||level==='beginner';
-const isAthleteExperience=(level?:string)=>level==='advanced'||level==='athlete';
 const toggleEquipmentList=(list:string[],id:string)=>{if(id==='full_gym')return list.includes('full_gym')?[]:['full_gym']; let next=list.filter((x)=>x!=='full_gym'); if(next.includes(id))next=next.filter((x)=>x!==id); else next=[...next,id]; return next;};
 const profileNeedsSetup=(p:any)=>{if(!p)return true; if(p.profile_completed===true)return false; if(p.profile_completed===false)return true; return !String(p.display_name||'').trim();};
 const emptyAddPanelConfig=()=>({mode:'normal' as 'normal'|'superset',supersetGroupId:null as string|null,setCount:3,targetReps:'8-12',targetWeight:''});
@@ -260,15 +261,6 @@ export default function Page(){
  useEffect(()=>{if(memberDashboard)loadMemberDashboardData(memberDashboard);},[logDate,week,memberDashboard?.user_id,selectedTeamId]);
 
  const activeTeam=teams.find((t:any)=>t.id===selectedTeamId)||teams[0]||null;
- useEffect(()=>{
-  if(appNav!=='Training'||trainingSubNav!=='personal'||activeAssignedRecipient||viewingMember)return;
-  if(teams.length&&activeTeam){
-    const nextMode=(activeTeam.training_source||'team')==='personal'?'personal':'team';
-    setMode((prev)=>prev===nextMode?prev:nextMode);
-  }else{
-    setMode((prev)=>prev==='personal'?prev:'personal');
-  }
- },[appNav,trainingSubNav,activeAssignedRecipient?.id,activeTeam?.id,activeTeam?.training_source,teams.length,viewingMember?.user_id]);
  useEffect(()=>{if(activeTeam&&canManageGroup(activeTeam.my_role)) loadGroupProgramForAssign(); else setGroupProgramForAssign(null);},[activeTeam?.id,activeTeam?.default_program_id,activeTeam?.my_role,appNav]);
 
  async function boot(){await loadProfile(); await loadTeams(); await loadCatalog();}
@@ -418,7 +410,7 @@ export default function Page(){
   if(activeAssignedRecipient)return;
   if(viewingMember&&viewingMember.user_id!==session.user.id)return;
   let q=supabase.from('st_programs').select('*, st_workouts(*, st_exercises(*, st_planned_sets(*)))').order('created_at',{ascending:false});
-  const usePersonal=mode==='personal'||(mode==='team'&&activeTeam?.training_source==='personal');
+  const usePersonal=mode==='personal';
   q=usePersonal?q.eq('visibility','personal').eq('owner_user_id',session.user.id):q.eq('visibility','team').eq('team_id',activeTeam?.id||'00000000-0000-0000-0000-000000000000');
   const{data,error}=await q; if(error)return alert(error.message);
   let list=data||[];
@@ -1092,7 +1084,7 @@ export default function Page(){
   const uid=logUserId();
   if(!session?.user||!uid)return;
   const coachLogging=uid!==session.user.id;
-  const logTeamId=activeAssignedRecipient?.st_workout_assignments?.team_id||(mode==='team'&&activeTeam&&activeTeam.training_source!=='personal'?activeTeam.id:null);
+  const logTeamId=activeAssignedRecipient?.st_workout_assignments?.team_id||(mode==='team'&&activeTeam?activeTeam.id:null);
   const updatingCompleted=Object.prototype.hasOwnProperty.call(fieldUpdates,'completed')||opts?.completed!==undefined;
   const markComplete=updatingCompleted
     ?(opts?.completed!==undefined?!!opts.completed:!!fieldUpdates.completed)
@@ -1220,6 +1212,8 @@ export default function Page(){
   await loadPrograms();
   if(keep) setActiveWorkout(keep);
 }
+ function openManageProgram(){setTrainingSubNav('setup');setShowProgramSetup(true);setMemberDashboard(null);setViewingMember(null);}
+ function switchTrainingContext(next:'personal'|'group'){setMode(next==='group'?'team':'personal');if(next==='group'&&teams.length&&!selectedTeamId)setSelectedTeamId(teams[0].id);}
  function goNav(n:string){
   setAppNav(n);
   if(n==='Progress'||n==='Dashboard'){loadProgressLogs();if(n==='Dashboard'){loadDashboardTodayLogs();loadDashboardTodayNutrition();}}
@@ -1325,10 +1319,9 @@ const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sor
  const panelSupersetGroups=addExercisePanel&&workout?getSupersetGroupsForSection(workout,addExercisePanel.section).filter((g:any)=>g.count<3):[];
  const pendingGroupId=addExercisePanel?pendingSupersetGroup[addExercisePanel.section]:null;
  const pendingGroupInfo=pendingGroupId?panelSupersetGroups.find((g:any)=>g.id===pendingGroupId):null;
- const planStatLabel=activeAssignedRecipient?(assignedHasPersonalCopy(activeAssignedRecipient)?'Assigned · personal':'Assigned'):viewingMember?'Member':mode==='team'?(activeTeam?.training_source==='personal'?'Personal':'Group'):'Personal';
- const showDetailedTrainingStats=isAthleteExperience(profileDraft.experience_level);
  const showEditScope=canEdit()&&(trainingSubNav==='setup'||!!draftEditProgramId||!!addExercisePanel);
- const trainingWeekOptions=activePlanWeekOptions(program,weeks);
+ const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week);
+ const canManageTrainingProgram=mode==='personal'?canEdit():!!activeTeam&&canEditGroupProgram(activeTeam.my_role);
  const memberAssignment=memberDashboard?memberAssignments[memberDashboard.user_id]:null;
  const renderExerciseCard=(ex:any,inSuperset=false)=>{const catItem=catalog.find((c:any)=>c.id===ex.catalog_exercise_id);const exType=exerciseTypeOf(ex,catItem);const aliases=exerciseHistoryAliases(ex.catalog_exercise_id||'',ex.name||'');const histRows=aliases.flatMap((ek)=>history[ek]||[]);const lastPerf=buildLastPerformance(histRows);const plannedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).length;const progression=recommendNextTarget(lastPerf,plannedSets,ex.name,ex.muscle_group||'');const exThumb=getExerciseThumb(catItem);const showGuide=hasExerciseGuide(catItem);const guidePayload=getExerciseGuidePayload(catItem,ex.name);const cardKey=`${ex.id}:${ex.catalog_exercise_id||'n'}:${ex.name}`;const isEditingName=exerciseNameSearch?.exerciseId===ex.id;const nameQuery=isEditingName?exerciseNameSearch!.query:(ex.name||'');const nameSearchResults=isEditingName&&nameQuery.trim()?searchCatalog(builtinCatalog,{query:nameQuery,filters:{availableEquipment:hasEquipmentFilter(equipmentForSearch)?equipmentForSearch:undefined},limit:8}):[];const sortedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));const prevBySetId:Record<string,any>={};sortedSets.forEach((s:any)=>{prevBySetId[s.id]=previousFor(ex,s);});const showPreviousSets=!isMobilityStretchExercise(ex,catItem,exType);const weightUnit=profileDraft?.units_preference==='metric'?'kg':'lb';const isCollapsed=!!collapsedExercises[ex.id];const doneSets=sortedSets.filter((s:any)=>logs[s.id]?.completed).length;const allDone=plannedSets>0&&doneSets===plannedSets;return <div className={`card exercise-card${inSuperset?' in-superset':''}${isCollapsed?' exercise-collapsed':''}${allDone?' exercise-all-done':''}`} data-exercise-id={ex.id} key={cardKey}>
         <div className="exercise-head" data-exercise-head={ex.id}><div className="exercise-head-main">{exThumb&&(showGuide&&guidePayload?<button type="button" className="exercise-card-thumb-btn" title={guidePayload.hasVideo?"Watch form":"Form guide"} onClick={()=>setExerciseGuide(guidePayload)}><img className="exercise-card-thumb" src={exThumb} alt="" loading="lazy" referrerPolicy="no-referrer"/></button>:<img className="exercise-card-thumb" src={exThumb} alt="" loading="lazy" referrerPolicy="no-referrer"/>)}<div className="exercise-meta">{canEdit()?<>
@@ -1390,68 +1383,43 @@ const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sor
     <div className="training-screen-head">
       <SectionHeader
         title={trainingSubNav==='setup'?'Manage program':'Training'}
-        subtitle={trainingSubNav==='setup'?'Create, edit, and publish your training plan.':isBeginnerExperience(profileDraft.experience_level)?'Today\u2019s goal: log your sets at a comfortable pace.':undefined}
+        subtitle={trainingSubNav==='setup'?'Create, edit, and publish your training plan.':undefined}
         actions={trainingSubNav==='setup'?(
           <button type="button" className="btn small secondary" onClick={()=>{setTrainingSubNav('personal');setDraftEditProgramId(null);if(program&&isDraftProgram(program))setProgram(null);}}>Back to training</button>
-        ):(
-          <div className="training-screen-actions">
-            <SegmentedControl
-              ariaLabel="Training context"
-              value={mode==='team'?'group':'personal'}
-              onChange={(v)=>{setMode(v==='group'?'team':'personal');if(v==='group'&&teams.length&&!selectedTeamId)setSelectedTeamId(teams[0].id);}}
-              options={[
-                {value:'personal',label:'Personal'},
-                {value:'group',label:'Group',disabled:teams.length===0},
-              ]}
-              size="sm"
-            />
-            <button type="button" className="btn small secondary" onClick={()=>{setTrainingSubNav('setup');setShowProgramSetup(true);setMemberDashboard(null);setViewingMember(null);}}>Manage program</button>
-          </div>
-        )}
+        ):undefined}
       />
+      {trainingSubNav!=='setup'&&<SegmentedControl
+        ariaLabel="Training context"
+        value={mode==='team'?'group':'personal'}
+        onChange={(v)=>switchTrainingContext(v as 'personal'|'group')}
+        options={[
+          {value:'personal',label:'Personal'},
+          {value:'group',label:'Group',disabled:teams.length===0},
+        ]}
+        size="sm"
+        className="training-context-segmented"
+      />}
     </div>
     {trainingSubNav==='setup'&&programSetupPanel}
     {(trainingSubNav==='personal'||viewingMember||(trainingSubNav==='setup'&&draftEditProgramId&&program&&isDraftProgram(program)))&&<>
     {(trainingSubNav==='personal'||viewingMember)&&!viewingMember&&<AssignedWorkoutsPanel assignments={assignedWorkouts} activeRecipientId={activeAssignedRecipient?.id||null} onOpen={openAssignedWorkout} onCloseActive={activeAssignedRecipient?closeAssignedWorkout:undefined} onCopyToPersonal={copyAssignedWorkoutToPersonal} copyingRecipientId={assignmentCopyBusy} getWorkoutStatus={assignmentPanelStatus} statusLabel={statusLabel}/>}
-    {trainingSubNav==='personal'&&!viewingMember&&!activeAssignedRecipient&&<ActivePlanCard
-      programName={program?.name||null}
-      programBadge={teams.length>0&&(activeTeam?.training_source||'team')==='team'?'Group program':'Personal program'}
-      groupName={teams.length>0?activeTeam?.name||null:null}
-      groups={teams.map((t:any)=>({id:t.id,name:t.name}))}
-      selectedGroupId={activeTeam?.id||selectedTeamId}
-      onSelectGroup={(id)=>{setSelectedTeamId(id);const t=teams.find((x:any)=>x.id===id);setMode((t?.training_source||'team')==='personal'?'personal':'team');}}
-      trainingSource={(activeTeam?.training_source||'team')==='personal'?'personal':'team'}
-      onTrainingSourceChange={(src)=>setMyTrainingSource(src==='personal'?'personal':'team')}
-      planStatLabel={planStatLabel}
-      week={week}
-      plannedSets={planned}
-      loggedSets={logged}
-      showDetailedStats={showDetailedTrainingStats}
-      logDate={logDate}
-      onLogDateChange={onLogDateChange}
-      onWeekChange={onWeekChange}
-      weekOptions={trainingWeekOptions}
-      programStartDate={program?resolveProgramStartDate(program):undefined}
-      onProgramStartDateChange={program?updateProgramStartDate:undefined}
-      canEditProgramStart={canEdit()}
-      dateDisabled={!!activeAssignedRecipient}
-      weekDisabled={!!activeAssignedRecipient}
-      helperDetail={canEditGroupProgram(activeTeam?.my_role)?'Managers can edit this program from Manage program.':undefined}
-      onManageProgram={()=>{setTrainingSubNav('setup');setShowProgramSetup(true);if(teams.length)setMode('team');}}
-      canManageProgram
-      hasGroups={teams.length>0}
-    />}
-    {(activeTeam?.training_source||'team')!=='personal'&&teams.length>0&&!program&&trainingSubNav==='personal'&&!viewingMember&&!activeAssignedRecipient&&<div className="card"><p className="muted">No group program loaded yet.</p><button type="button" className="btn small secondary" onClick={()=>{setTrainingSubNav('setup');setShowProgramSetup(true);setMode('team');}}>Manage group program</button></div>}
+    {trainingSubNav==='personal'&&!viewingMember&&!activeAssignedRecipient&&<>
+      {mode==='team'&&teams.length>0&&<TrainingGroupRow groups={teams.map((t:any)=>({id:t.id,name:t.name}))} selectedGroupId={activeTeam?.id||selectedTeamId} onSelectGroup={setSelectedTeamId}/>}
+      <TrainingPlanSummary
+        programName={program?.name||null}
+        canManage={canManageTrainingProgram}
+        onManageProgram={openManageProgram}
+        infoDetail={mode==='team'&&canEditGroupProgram(activeTeam?.my_role)?'Managers can edit this program from Manage.':undefined}
+      />
+      {program&&<TrainingWeekSelector week={week} program={program} weeksFallback={weeks} onWeekChange={onWeekChange} logDate={logDate} onLogDateChange={onLogDateChange} disabled={!!activeAssignedRecipient}/>}
+      {program&&weekWorkouts.length>0&&<TrainingWorkoutDays program={program} week={week} workouts={weekWorkouts} activeWorkoutId={workout?.id||''} logDate={logDate} onSelectWorkout={onSelectWorkoutDay}/>}
+    </>}
     {trainingSubNav==='personal'&&activeAssignedRecipient&&<div className="card viewing-banner assigned-workout-banner"><div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}><div><h2>Assigned workout</h2><p className="muted">{activeAssignedRecipient.st_workout_assignments?.st_teams?.name||'Group'} · {formatDisplayDate(activeAssignedRecipient.st_workout_assignments?.scheduled_date||logDate)}{activeAssignedRecipient.st_workout_assignments?.notes?` · ${activeAssignedRecipient.st_workout_assignments.notes}`:''}</p>{!assignedHasPersonalCopy(activeAssignedRecipient)?<p className="muted assigned-copy-hint">Group template is read-only. Copy to your personal plan to adjust exercises and sets.</p>:<p className="muted assigned-copy-hint">You are logging your personal copy. Edits stay on your account; completion still counts for the group assignment.</p>}</div><div className="assigned-banner-actions"><button className="btn small secondary" onClick={closeAssignedWorkout}>Back to personal program</button>{assignedHasPersonalCopy(activeAssignedRecipient)?<span className="badge personal-copy-badge">Personal copy</span>:<button type="button" className="btn small green" onClick={()=>copyAssignedWorkoutToPersonal()} disabled={!!assignmentCopyBusy}>{assignmentCopyBusy===activeAssignedRecipient.id?'Copying…':'Copy to personal plan'}</button>}</div></div></div>}
     {viewingMember&&viewingMember.user_id!==session.user.id&&<div className="card viewing-banner"><div className="topline" style={{justifyContent:'space-between'}}><div><h2>{viewingMember.display_name||'Member'}&apos;s workout</h2><p className="muted">{assignmentTypeLabel(memberAssignments[viewingMember.user_id]?.assignment_type||(viewingMember.training_source||'team')==='personal'?'personal':'team')} · {program?.name||'No program'}{canManageGroupView()?' · manager can log':''}</p></div><button className="btn small secondary" onClick={closeMemberView}>Back</button></div></div>}
     {trainingSubNav==='setup'&&draftEditProgramId&&program&&isDraftProgram(program)&&canEdit()&&<div className="card program-draft-banner"><div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}><div><h2>Editing draft</h2><p className="muted"><b>{program.name}</b> — adjust workouts below, then publish when ready. This plan is not on Personal Training until published.</p>{(program.program_summary||program.coaching_notes)&&<div className="program-ai-summary-box" style={{marginTop:10}}><label>AI program notes</label>{program.program_summary&&<p className="program-ai-summary">{program.program_summary}</p>}{program.coaching_notes&&<><label style={{marginTop:10}}>Coaching notes</label><p className="program-ai-coaching">{program.coaching_notes}</p></>}</div>}</div><div className="assigned-banner-actions"><button type="button" className="btn small secondary" onClick={()=>{setDraftEditProgramId(null);loadPrograms('setup');}}>Back to setup summary</button><button type="button" className="btn small green" onClick={()=>publishProgram(program.id,false)}>Publish program</button></div></div></div>}
     {trainingSubNav==='personal'&&!viewingMember&&!activeAssignedRecipient&&program&&isDraftProgram(program)&&canEdit()&&<div className="card program-draft-banner"><div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}><div><h2>Draft in Program Setup</h2><p className="muted"><b>{program.name}</b> is a draft — it will not appear here for logging until you publish it.</p></div><button type="button" className="btn small green" onClick={()=>{setTrainingSubNav('setup');setShowProgramSetup(true);openDraftForEditing(program.id);}}>Open draft in Program Setup</button></div></div>}
     {showEditScope&&<div className="applybox-compact"><label htmlFor="apply-scope">Apply changes to</label><select id="apply-scope" value={applyScope} onChange={e=>setApplyScope(e.target.value as any)}><option value="future">This week and future weeks</option><option value="current">This week only</option></select></div>}
-    {program?.focus_muscles?.length>0&&<p className="muted">Program focus: <b>{program.focus_muscles.join(', ')}</b></p>}{!isDraftProgram(program)&&(program?.program_summary||program?.coaching_notes)&&<div className="program-ai-summary-box training-program-notes"><label>AI program notes</label>{program?.program_summary&&<p className="program-ai-summary">{program.program_summary}</p>}{program?.coaching_notes&&<><label style={{marginTop:10}}>Coaching notes</label><p className="program-ai-coaching">{program.coaching_notes}</p></>}</div>}
-    {program&&trainingSubNav==='personal'&&<p className="muted" style={{marginTop:4}}>{trainingLogContextLine(program,week,logDate)}</p>}
-    {!activeAssignedRecipient&&<div className="tabs">{(program?.st_workouts||[]).filter((w:any)=>w.week===week).sort((a:any,b:any)=>a.day_order-b.day_order).map((w:any)=><button key={w.id} className={workout?.id===w.id?'active':''} onClick={()=>onSelectWorkoutDay(w)}>{w.day_label} · {w.workout_type}<span className="muted" style={{marginLeft:6}}>{formatDisplayDate(dateForWeekAndDay(resolveProgramStartDate(program),week,w.day_label))}</span></button>)}</div>}
-    {!program&&!activeAssignedRecipient&&trainingSubNav==='personal'&&<div className="card"><h2>Ready when you are</h2><p className="muted">Publish a program to start logging workouts here.</p><button className="btn secondary" onClick={()=>{setTrainingSubNav('setup');setShowProgramSetup(true);}}>Manage program</button></div>}
-    {workout&&<div className="card"><div className="topline" style={{justifyContent:'space-between'}}><h2>{workout.day_label} · {workout.workout_type}</h2><div className="actions"><button type="button" className="btn small secondary" onClick={()=>{const ids=(workout.st_exercises||[]).map((e:any)=>e.id);setCollapsedExercises((prev:any)=>{const next={...prev};ids.forEach((id:string)=>next[id]=false);return next;});}}>Expand all</button><button type="button" className="btn small secondary" onClick={()=>{const ids=(workout.st_exercises||[]).map((e:any)=>e.id);setCollapsedExercises((prev:any)=>{const next={...prev};ids.forEach((id:string)=>next[id]=true);return next;});}}>Collapse all</button><span className="muted">{workoutExerciseCount(workout)} exercises · Week {week}</span></div></div></div>}
+    {workout&&<div className="card training-workout-panel"><div className="topline" style={{justifyContent:'space-between'}}><h2>{workout.day_label} · {workout.workout_type}</h2><div className="actions"><button type="button" className="btn small secondary" onClick={()=>{const ids=(workout.st_exercises||[]).map((e:any)=>e.id);setCollapsedExercises((prev:any)=>{const next={...prev};ids.forEach((id:string)=>next[id]=false);return next;});}}>Expand all</button><button type="button" className="btn small secondary" onClick={()=>{const ids=(workout.st_exercises||[]).map((e:any)=>e.id);setCollapsedExercises((prev:any)=>{const next={...prev};ids.forEach((id:string)=>next[id]=true);return next;});}}>Collapse all</button><span className="muted">{workoutExerciseCount(workout)} exercises</span></div></div></div>}
     {workout&&SECTIONS.map((sec:any)=>{
       const exercises=sectionExercises(workout,sec.id);
       const blocks=groupSectionBlocks(exercises);
