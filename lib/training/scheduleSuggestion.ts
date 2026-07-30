@@ -32,17 +32,106 @@ function stripJsonFences(raw: string): string {
   return s.trim();
 }
 
+function normalizeDayLabel(value: unknown): DayLabel | null {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+  if ((DAY_LABELS as readonly string[]).includes(raw)) return raw as DayLabel;
+  const key = raw.toLowerCase().replace(/\./g, '').replace(/\s+/g, ' ');
+  const aliases: Record<string, DayLabel> = {
+    mon: 'Mon',
+    monday: 'Mon',
+    tue: 'Tue',
+    tues: 'Tue',
+    tuesday: 'Tue',
+    wed: 'Wed',
+    weds: 'Wed',
+    wednesday: 'Wed',
+    thu: 'Thu',
+    thur: 'Thu',
+    thurs: 'Thu',
+    thursday: 'Thu',
+    fri: 'Fri',
+    friday: 'Fri',
+    sat: 'Sat',
+    saturday: 'Sat',
+    sun: 'Sun',
+    sunday: 'Sun',
+  };
+  return aliases[key] || null;
+}
+
 function normalizeDays(days: unknown): DayLabel[] {
   if (!Array.isArray(days)) return [];
-  return days
-    .map((d) => String(d))
-    .filter((d): d is DayLabel => (DAY_LABELS as readonly string[]).includes(d))
-    .sort((a, b) => DAY_LABELS.indexOf(a) - DAY_LABELS.indexOf(b));
+  const seen = new Set<DayLabel>();
+  const out: DayLabel[] = [];
+  for (const entry of days) {
+    const label = normalizeDayLabel(entry);
+    if (!label || seen.has(label)) continue;
+    seen.add(label);
+    out.push(label);
+  }
+  return out.sort((a, b) => DAY_LABELS.indexOf(a) - DAY_LABELS.indexOf(b));
 }
+
+const DAY_TYPE_ALIASES: Record<string, DayType> = {
+  'lower body': 'Lower Body',
+  lower: 'Lower Body',
+  legs: 'Lower Body',
+  'leg day': 'Lower Body',
+  'upper body': 'Upper Body',
+  upper: 'Upper Body',
+  push: 'Upper Body',
+  pull: 'Upper Body',
+  'full body': 'Full Body',
+  full: 'Full Body',
+  'total body': 'Full Body',
+  cardio: 'Cardio',
+  conditioning: 'Cardio',
+  endurance: 'Cardio',
+  run: 'Cardio',
+  mobility: 'Mobility',
+  recovery: 'Mobility',
+  stretch: 'Mobility',
+  stretching: 'Mobility',
+};
 
 function normalizeDayType(value: unknown): DayType | null {
   const s = String(value || '').trim();
-  return (VALID_DAY_TYPES as readonly string[]).includes(s) ? (s as DayType) : null;
+  if (!s) return null;
+  if ((VALID_DAY_TYPES as readonly string[]).includes(s)) return s as DayType;
+  const key = s.toLowerCase().replace(/\s+/g, ' ');
+  if (DAY_TYPE_ALIASES[key]) return DAY_TYPE_ALIASES[key];
+  for (const valid of VALID_DAY_TYPES) {
+    if (valid.toLowerCase() === key) return valid;
+  }
+  if (/lower|leg|squat|deadlift|glute|hamstring|quad/.test(key)) return 'Lower Body';
+  if (/upper|push|pull|chest|back|shoulder|arm/.test(key)) return 'Upper Body';
+  if (/full|total/.test(key)) return 'Full Body';
+  if (/cardio|condition|run|bike|walk|endurance/.test(key)) return 'Cardio';
+  if (/mobil|stretch|recover|yoga|flex/.test(key)) return 'Mobility';
+  return null;
+}
+
+function normalizeDayTypesMap(
+  days: DayLabel[],
+  dayTypesIn: Record<string, unknown>,
+): Record<string, DayType> | null {
+  const byCanonical: Record<string, DayType> = {};
+  for (const [rawKey, rawType] of Object.entries(dayTypesIn || {})) {
+    const day = normalizeDayLabel(rawKey);
+    const type = normalizeDayType(rawType);
+    if (day && type) byCanonical[day] = type;
+  }
+
+  const dayTypes: Record<string, DayType> = {};
+  for (const day of days) {
+    if (byCanonical[day]) {
+      dayTypes[day] = byCanonical[day];
+      continue;
+    }
+    return null;
+  }
+  return dayTypes;
 }
 
 export function buildScheduleSuggestionPrompt(
@@ -138,8 +227,8 @@ export function parseScheduleSuggestion(raw: string): { suggestion: ScheduleSugg
   const asksCardio = Boolean(parsed.asks_cardio);
   const asksMobility = Boolean(parsed.asks_mobility);
   const optionsIn = Array.isArray(parsed.options) ? parsed.options : [];
-  if (optionsIn.length < 2 || optionsIn.length > 4) {
-    return { suggestion: null, error: `Expected 2–4 schedule options, got ${optionsIn.length}` };
+  if (optionsIn.length < 1 || optionsIn.length > 4) {
+    return { suggestion: null, error: `Expected 1–4 schedule options, got ${optionsIn.length}` };
   }
 
   const options: ScheduleOption[] = [];
@@ -159,11 +248,9 @@ export function parseScheduleSuggestion(raw: string): { suggestion: ScheduleSugg
     }
 
     const dayTypesIn = row?.day_types && typeof row.day_types === 'object' ? row.day_types : {};
-    const dayTypes: Record<string, DayType> = {};
-    for (const d of days) {
-      const dt = normalizeDayType(dayTypesIn[d]);
-      if (!dt) return { suggestion: null, error: `Option ${id}: invalid day_type for ${d}` };
-      dayTypes[d] = dt;
+    const dayTypes = normalizeDayTypesMap(days, dayTypesIn as Record<string, unknown>);
+    if (!dayTypes) {
+      return { suggestion: null, error: `Option ${id}: could not map day_types for ${days.join(', ')}` };
     }
 
     const includesCardio = Object.values(dayTypes).some((t) => t === 'Cardio');
@@ -180,9 +267,12 @@ export function parseScheduleSuggestion(raw: string): { suggestion: ScheduleSugg
     });
   }
 
-  const recommendedId = String(parsed.recommended_option_id || '').trim();
+  let recommendedId = String(parsed.recommended_option_id || '').trim();
   if (!recommendedId || !optionIds.has(recommendedId)) {
-    return { suggestion: null, error: 'recommended_option_id must match an option id' };
+    recommendedId = options[0]?.id || '';
+  }
+  if (!recommendedId) {
+    return { suggestion: null, error: 'No valid schedule options returned' };
   }
 
   return {

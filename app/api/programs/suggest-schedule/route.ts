@@ -64,29 +64,43 @@ export async function POST(request: Request) {
   const openai = new OpenAI({ apiKey });
 
   let rawContent = '';
-  try {
-    const completion = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-      temperature: 0.6,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: userContent },
-      ],
-    });
-    rawContent = completion.choices[0]?.message?.content || '';
-  } catch (err: any) {
-    return NextResponse.json({ error: err?.message || 'OpenAI request failed' }, { status: 502 });
+  let lastValidateError: string | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const completion = await openai.chat.completions.create({
+        model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+        temperature: attempt === 0 ? 0.6 : 0.35,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: system },
+          {
+            role: 'user',
+            content:
+              attempt === 0
+                ? userContent
+                : `${userContent}\n\nYour previous JSON failed validation (${lastValidateError}). Return corrected JSON only. Use exact day labels Mon–Sun and day_types Lower Body, Upper Body, Full Body, Cardio, or Mobility.`,
+          },
+        ],
+      });
+      rawContent = completion.choices[0]?.message?.content || '';
+    } catch (err: any) {
+      return NextResponse.json({ error: err?.message || 'OpenAI request failed' }, { status: 502 });
+    }
+
+    if (!rawContent) {
+      lastValidateError = 'Empty response from AI';
+      continue;
+    }
+
+    const { suggestion, error: validateError } = parseScheduleSuggestion(rawContent);
+    if (!validateError && suggestion) {
+      return NextResponse.json(suggestion);
+    }
+    lastValidateError = validateError || 'Invalid schedule suggestion';
   }
 
-  if (!rawContent) {
-    return NextResponse.json({ error: 'Empty response from AI' }, { status: 502 });
-  }
-
-  const { suggestion, error: validateError } = parseScheduleSuggestion(rawContent);
-  if (validateError || !suggestion) {
-    return NextResponse.json({ error: validateError || 'Invalid schedule suggestion' }, { status: 422 });
-  }
-
-  return NextResponse.json(suggestion);
+  return NextResponse.json(
+    { error: lastValidateError || 'Invalid schedule suggestion' },
+    { status: 422 },
+  );
 }

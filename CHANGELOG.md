@@ -5298,3 +5298,51 @@ None.
 ```text
 BIQ-0068 Scroll to manual entry after barcode Review and edit
 ```
+
+---
+
+## BIQ-0069 - Fix Program Setup Split Selection Errors
+
+Date: 2026-07-30  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Fixed AI schedule split selection failing during Program Setup. Hardened schedule JSON parsing, added server-side retries, and simplified draft edit mode so users are not stuck in the create wizard while editing a draft.
+
+### Purpose
+
+Users editing a draft or picking a weekly split saw errors when AI returned day labels/types in non-exact formats (e.g. `monday`, `lower body`, `Push`). Validation rejected the whole response, blocking split selection and plan generation.
+
+### Changes
+
+- **`scheduleSuggestion.ts`:** Case-insensitive day labels, day-type aliases, fuzzy mapping, auto-fix recommended option id
+- **`suggest-schedule` API:** Retry up to 3 times when AI JSON fails validation
+- **`page.tsx`:** Inline schedule error message, safer split selection, hide create wizard while editing draft workouts, guard against double-fetch while loading
+
+### Files Changed
+
+- `lib/training/scheduleSuggestion.ts`
+- `app/api/programs/suggest-schedule/route.ts`
+- `app/page.tsx`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Program Setup → enter goals → **Next: Plan my schedule** — options load
+2. Click different split cards — selection highlights without error
+3. Toggle cardio/mobility chips — options refresh or keep selection
+4. **Next: Review & generate** → create draft with AI or template
+5. **Edit workouts** on draft — wizard hides; draft editor shows below
+6. **Start new program wizard** — returns to goals/schedule flow
+
+### Recommended Commit Message
+
+```text
+BIQ-0069 Fix program setup split selection and draft wizard flow
+```
