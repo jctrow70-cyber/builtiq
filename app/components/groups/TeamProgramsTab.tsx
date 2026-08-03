@@ -16,6 +16,8 @@ type TeamProgramsTabProps = {
   onEdit: (programId: string) => void;
   onPublish: (programId: string) => void;
   onAssign: (programId: string) => void;
+  onDelete: (programId: string) => void;
+  defaultProgramId?: string | null;
 };
 
 export default function TeamProgramsTab({
@@ -31,6 +33,8 @@ export default function TeamProgramsTab({
   onEdit,
   onPublish,
   onAssign,
+  onDelete,
+  defaultProgramId = null,
 }: TeamProgramsTabProps) {
   if (wizardOpen && teamProgramSetupPanel) {
     return (
@@ -104,6 +108,15 @@ export default function TeamProgramsTab({
                   Assign
                 </button>
               )}
+              <button
+                type="button"
+                className="btn small red"
+                disabled={row.isDefault || defaultProgramId === row.id}
+                title={row.isDefault || defaultProgramId === row.id ? 'Change the team active program before deleting' : undefined}
+                onClick={() => onDelete(row.id)}
+              >
+                Delete
+              </button>
             </div>
           )}
         </div>

@@ -88,6 +88,7 @@ export type GroupsHubProps = {
   onDuplicateProgram: (programId: string) => Promise<void>;
   onEditTeamProgram: (programId: string) => void;
   onPublishTeamProgram: (programId: string) => void;
+  onDeleteProgram: (programId: string) => void;
   onAssignTeamProgram: (
     programId: string,
     payload: { target: AssignProgramTarget; memberUserIds: string[]; setAsTeamDefault: boolean }
@@ -159,6 +160,7 @@ export default function GroupsHub(props: GroupsHubProps) {
     onDuplicateProgram,
     onEditTeamProgram,
     onPublishTeamProgram,
+    onDeleteProgram,
     onAssignTeamProgram,
     onCustomizeProgramForMember,
     onGenerateProgramForMember,
@@ -327,6 +329,8 @@ export default function GroupsHub(props: GroupsHubProps) {
           onEdit={onEditTeamProgram}
           onPublish={onPublishTeamProgram}
           onAssign={(id) => setAssignProgramId(id)}
+          onDelete={onDeleteProgram}
+          defaultProgramId={activeTeam?.default_program_id}
         />
       );
     }

@@ -102,3 +102,11 @@ export async function publishProgramRecord(
   }
   return { error: error.message || 'Could not publish program', draftSupported: true };
 }
+
+export async function deleteProgramRecord(
+  supabase: { from: (table: string) => any },
+  programId: string
+): Promise<{ error: string | null }> {
+  const { error } = await supabase.from('st_programs').delete().eq('id', programId);
+  return { error: error?.message || null };
+}

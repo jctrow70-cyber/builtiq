@@ -5638,3 +5638,62 @@ None.
 ```text
 BIQ-0075 Honor explicit workout splits in AI schedule generation
 ```
+
+---
+
+## BIQ-0076 - Delete Draft and Old Programs
+
+Date: 2026-08-03  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Users can delete draft programs and old published programs from Program Setup and the Groups Programs tab. Completed workout history is preserved; the program template and planned workouts are removed.
+
+### Purpose
+
+Drafts and outdated programs accumulated with no way to remove them from the library.
+
+### Changes
+
+- **Migration `20250803_031`:** `programs_delete` RLS policy for personal owners and team editors
+- **`deleteProgramRecord`:** Supabase delete helper in `programStatus.ts`
+- **`deleteProgramHandler`:** Confirm dialog, blocks deleting team active program, clears draft edit state
+- **`ProgramLibraryPanel`:** Manage programs list in Training → Program Setup
+- **`TeamProgramsTab`:** Delete button on each program row (disabled for team active program)
+- Draft card and editing banner include **Delete draft**
+
+### Files Changed
+
+- `supabase/migrations/20250803_031_program_delete_policy.sql` (new)
+- `lib/training/programStatus.ts`
+- `app/components/training/ProgramLibraryPanel.tsx` (new)
+- `app/components/groups/TeamProgramsTab.tsx`
+- `app/components/groups/GroupsHub.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Database Changes
+
+- Apply migration `20250803_031_program_delete_policy.sql` in Supabase (adds `programs_delete` RLS on `st_programs`)
+
+### Testing Steps
+
+1. Training → Manage program → create or open a draft → **Delete draft** on draft card or editing banner
+2. Confirm draft removed from program list; wizard state clears if open
+3. Groups → Programs → **Delete** on an old program (not team active)
+4. Try deleting team active program → blocked with message
+5. Delete a published program with logged sets → Progress history still shows completed sets
+6. Personal program delete works for program owner
+
+### Known Issues
+
+None.
+
+### Recommended Commit Message
+
+```text
+BIQ-0076 Add delete for draft and old programs
+```
