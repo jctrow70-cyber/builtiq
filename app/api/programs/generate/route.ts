@@ -69,7 +69,8 @@ export async function POST(request: Request) {
           Object.entries(body.dayEmphasis).map(([day, emph]) => [String(day), String(emph)])
         )
       : {};
-  const programName = body?.programName ? String(body.programName) : 'AI Strength Program';
+  const programName = body?.programName ? String(body.programName).trim() : '';
+  const defaultProgramName = 'AI Strength Program';
   const includeCooldown = body?.includeCooldown !== false;
 
   if (mode === 'team') {
@@ -104,7 +105,7 @@ export async function POST(request: Request) {
     dayTypes,
     dayEmphasis,
     focusMuscles,
-    programName,
+    programName: programName || defaultProgramName,
     mode,
     teamId,
     includeCooldown,
@@ -208,7 +209,7 @@ export async function POST(request: Request) {
           programId: retry.programId,
           program_summary: plan.program_summary,
           coaching_notes: plan.coaching_notes || '',
-          program_name: plan.program_name || programName,
+          program_name: programName || plan.program_name || defaultProgramName,
           workout_count: plan.workouts.length,
           generation_method: 'ai',
         });
@@ -221,7 +222,7 @@ export async function POST(request: Request) {
     programId,
     program_summary: plan.program_summary,
     coaching_notes: plan.coaching_notes || '',
-    program_name: plan.program_name || programName,
+    program_name: programName || plan.program_name || defaultProgramName,
     workout_count: plan.workouts.length,
     generation_method: 'ai',
   });

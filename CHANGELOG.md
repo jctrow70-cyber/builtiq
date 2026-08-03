@@ -5939,3 +5939,101 @@ None.
 ```text
 BIQ-0081 Enforce push/pull focus for full-body programs from goals
 ```
+
+---
+
+## BIQ-0082 - Fix Program Name on Generate and Publish Assignment UX
+
+Date: 2026-08-03  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Custom program names entered in the setup wizard are now saved on AI generation and before publish. Member publish-and-assign no longer shows a success message when assignment fails.
+
+### Purpose
+
+- "New program name" was ignored because AI `program_name` took priority over the user-entered name
+- Publish for a member could show an error alert even when the program published, or show success when assignment failed
+
+### Changes
+
+- **`persistAiProgramPlan`:** Prefer `config.programName` over AI `program_name`
+- **`generate` API:** Return user-provided name in response when set
+- **`saveDraftProgramName`:** Persist name from wizard state before publish
+- **`publishProgram`:** Save name first; resolve draft from `program` state fallback; capture member assign target before state clears; separate publish vs assign error messages
+- **`assignMemberProgram`:** Returns error string; optional `quiet` flag to avoid duplicate alerts
+- **Draft editing UI:** Editable program name field while reviewing a draft
+
+### Files Changed
+
+- `lib/training/aiProgramPlan.ts`
+- `app/api/programs/generate/route.ts`
+- `app/page.tsx`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Groups → member → Generate program → on review step enter a custom name → Create draft with AI → confirm draft uses your name
+2. Edit name in draft banner → Publish → confirm published program keeps the updated name
+3. Publish for member → if assignment fails, confirm you see a clear partial-success message (not a false success)
+4. Successful member publish → single success alert and assignment on member
+
+### Recommended Commit Message
+
+```text
+BIQ-0082 Fix program name on AI generate and publish assignment alerts
+```
+
+---
+
+## BIQ-0083 - Isolate Member Workout View from Manager Training State
+
+Date: 2026-08-03  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Viewing a member&apos;s workout in Groups no longer hijacks your own program, week, or day selection. Clicking Thursday on Ethan&apos;s plan stays on Ethan&apos;s exercises.
+
+### Purpose
+
+Member workout logging reused the manager&apos;s global `program`, `week`, `logDate`, and `activeWorkout`. Selecting a different day could reload the manager&apos;s group program (including async `loadPrograms` races) and show the wrong workout.
+
+### Changes
+
+- **Isolated member workout state:** `memberWorkoutProgram`, `memberWorkoutWeek`, `memberWorkoutLogDate`, `memberWorkoutActiveId`
+- **`openMemberView`:** Loads member program into isolated state; does not overwrite manager training context
+- **Member day/week handlers:** `onSelectMemberWorkoutDay`, `onMemberWeekChange`, `onMemberLogDateChange`
+- **`loadPrograms`:** Re-checks member view after async fetch before updating program state
+- **Calendar sync effects:** Skipped while viewing a member workout
+- **Logging:** Uses member program and log date when coaching a member
+
+### Files Changed
+
+- `app/page.tsx`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Training → start your group workout on one day
+2. Groups → Ethan → Open workout → click Thursday
+3. Confirm Ethan&apos;s Thursday exercises show (not your in-progress group workout)
+4. Close workout → Training tab still shows your original program/day
+5. Log a set on Ethan&apos;s workout → saves to Ethan on the selected date
+
+### Recommended Commit Message
+
+```text
+BIQ-0083 Keep member workout view isolated from manager training state
+```

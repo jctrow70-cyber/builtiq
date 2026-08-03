@@ -178,6 +178,10 @@ export default function Page(){
  const [dayEmphasis,setDayEmphasis]=useState<Record<string,string>>({});
  const [draftEditProgramId,setDraftEditProgramId]=useState<string|null>(null);
  const [viewingMember,setViewingMember]=useState<any>(null);
+ const [memberWorkoutProgram,setMemberWorkoutProgram]=useState<any>(null);
+ const [memberWorkoutWeek,setMemberWorkoutWeek]=useState(1);
+ const [memberWorkoutLogDate,setMemberWorkoutLogDate]=useState(today());
+ const [memberWorkoutActiveId,setMemberWorkoutActiveId]=useState('');
  const [memberDashboard,setMemberDashboard]=useState<any>(null);
  const [memberDashProgram,setMemberDashProgram]=useState<any>(null);
  const [memberDashLogs,setMemberDashLogs]=useState<any>({});
@@ -229,23 +233,32 @@ export default function Page(){
  },[session?.user?.id]);
  useEffect(()=>{if(profile&&!activeAssignedRecipient) loadPrograms(trainingSubNav==='setup'||showProgramSetup?'setup':'training')},[mode,selectedTeamId,teams,profile,viewingMember?.user_id,activeAssignedRecipient?.id,trainingSubNav,showProgramSetup,draftEditProgramId]);
  useEffect(()=>{if(session?.user?.id) loadAssignedWorkouts()},[session?.user?.id]);
- useEffect(()=>{if(program&&session?.user) loadLogs(program,viewingMember?.user_id||session.user.id)},[program,logDate,viewingMember?.user_id,session?.user?.id]);
- useEffect(()=>{if(program&&session?.user) loadLiftHistory()},[program,logDate,viewingMember?.user_id,session?.user?.id]);
+ useEffect(()=>{
+  if(viewingMember&&viewingMember.user_id!==session?.user?.id&&memberWorkoutProgram&&session?.user){
+   loadLogs(memberWorkoutProgram,viewingMember.user_id,memberWorkoutLogDate);
+   return;
+  }
+  if(program&&session?.user&&!viewingMember) loadLogs(program,session.user.id,logDate);
+ },[memberWorkoutProgram,memberWorkoutLogDate,program,logDate,viewingMember?.user_id,session?.user?.id]);
+ useEffect(()=>{
+  if(viewingMember&&viewingMember.user_id!==session?.user?.id)return;
+  if(program&&session?.user) loadLiftHistory();
+ },[program,logDate,viewingMember?.user_id,session?.user?.id]);
  useEffect(()=>{logsRef.current=logs;},[logs]);
  useEffect(()=>()=>{if(prCelebrationTimerRef.current)clearTimeout(prCelebrationTimerRef.current);},[]);
  useEffect(()=>{
-  if(!program||syncingCalendarRef.current||activeAssignedRecipient)return;
+  if(!program||syncingCalendarRef.current||activeAssignedRecipient||viewingMember)return;
   const start=resolveProgramStartDate(program);
   const total=program.weeks||weeks||6;
   const nextWeek=weekForDate(start,logDate,total);
   if(nextWeek!==week)setWeek(nextWeek);
- },[program?.id,program?.start_date,program?.created_at,program?.weeks,logDate,activeAssignedRecipient?.id]);
+ },[program?.id,program?.start_date,program?.created_at,program?.weeks,logDate,activeAssignedRecipient?.id,viewingMember?.user_id]);
  useEffect(()=>{if(profile&&appNav==='Dashboard'){loadProgressLogs();loadDashboardTodayLogs();loadDashboardTodayNutrition();}},[profile,appNav,program?.id,session?.user?.id]);
  useEffect(()=>{
-  if(!program||syncingCalendarRef.current||activeAssignedRecipient)return;
+  if(!program||syncingCalendarRef.current||activeAssignedRecipient||viewingMember)return;
   const match=workoutForDate(program,logDate,week);
   if(match&&match.id!==activeWorkout)setActiveWorkout(match.id);
- },[program?.id,program?.start_date,program?.created_at,program?.weeks,logDate,activeAssignedRecipient?.id]);
+ },[program?.id,program?.start_date,program?.created_at,program?.weeks,logDate,activeAssignedRecipient?.id,viewingMember?.user_id]);
  useEffect(()=>{if(appNav==='Training'&&!program&&trainingSubNav!=='setup')setShowProgramSetup(false);},[appNav,program,trainingSubNav]);
  useEffect(()=>{
   if(trainingSubNav==='personal'){
@@ -263,7 +276,7 @@ export default function Page(){
   window.addEventListener('scroll',onScroll,{passive:true});
   return()=>window.removeEventListener('scroll',onScroll);
  },[]);
- useEffect(()=>{setViewingMember(null);setMemberDashboard(null);},[selectedTeamId]);
+ useEffect(()=>{setViewingMember(null);setMemberDashboard(null);setMemberWorkoutProgram(null);setMemberWorkoutActiveId('');},[selectedTeamId]);
  useEffect(()=>{if(selectedTeamId&&teams.length){loadMembers();loadMemberAssignments();loadClassifications();}},[selectedTeamId,teams.length]);
  useEffect(()=>{if(members.length&&selectedTeamId)loadMemberStats(); loadMemberClassificationLinks();},[members,selectedTeamId]);
  useEffect(()=>{if(memberDashboard)loadMemberDashboardData(memberDashboard);},[logDate,week,memberDashboard?.user_id,selectedTeamId]);
@@ -358,6 +371,8 @@ export default function Page(){
    setLogs({});
    setMemberDashboard(null);
    setViewingMember(null);
+   setMemberWorkoutProgram(null);
+   setMemberWorkoutActiveId('');
    setAddExercisePanel(null);
    setSession(null);
    const{error}=await supabase.auth.signOut();
@@ -393,13 +408,22 @@ export default function Page(){
   (data||[]).forEach((a:any)=>{by[a.user_id]=a;});
   setMemberAssignments(by);
  }
- async function assignMemberProgram(member:any,assignmentType:string,programId?:string|null,notes?:string){
-  if(!activeTeam||!canManageGroupView())return alert('Only owners and managers can assign programs.');
+ async function assignMemberProgram(member:any,assignmentType:string,programId?:string|null,notes?:string,options?:{quiet?:boolean}):Promise<string|null>{
+  if(!activeTeam||!canManageGroupView()){
+   const msg='Only owners and managers can assign programs.';
+   if(!options?.quiet)alert(msg);
+   return msg;
+  }
   const{error}=await supabase.rpc('st_assign_member_program',{p_team_id:activeTeam.id,p_member_user_id:member.user_id,p_assignment_type:assignmentType,p_program_id:programId||null,p_notes:notes||null,p_coaching_metadata:{}});
-  if(error)return alert(error.message);
+  if(error){
+   const msg=error.message||'Could not assign program.';
+   if(!options?.quiet)alert(msg);
+   return msg;
+  }
   await loadMembers(); await loadMemberAssignments();
   if(memberDashboard?.user_id===member.user_id)await loadMemberDashboardData(member);
   if(viewingMember?.user_id===member.user_id){await openMemberView(member);}
+  return null;
  }
  function pickProgramForMember(list:any[],member:any,defaultId?:string|null){
   const assignment=memberAssignments[member?.user_id];
@@ -412,6 +436,14 @@ export default function Page(){
  function canEdit(){if(!session?.user)return false; if(activeAssignedRecipient)return assignedHasPersonalCopy(activeAssignedRecipient); if(viewingMember&&viewingMember.user_id!==session.user.id)return false; return mode==='personal'||canEditGroupProgram(activeTeam?.my_role);}
  function isOwner(){return isGroupOwner(activeTeam?.my_role);}
  function logUserId(){return viewingMember?.user_id||session?.user?.id;}
+ function activeProgramForLogging(){
+  if(viewingMember&&viewingMember.user_id!==session?.user?.id&&memberWorkoutProgram)return memberWorkoutProgram;
+  return program;
+ }
+ function activeLogDateForLogging(){
+  if(viewingMember&&viewingMember.user_id!==session?.user?.id&&memberWorkoutProgram)return memberWorkoutLogDate;
+  return logDate;
+ }
  function pickProgram(list:any[],defaultId?:string|null){const published=list.filter((p:any)=>isPublishedProgram(p)); if(!published.length)return null; if(defaultId){const match=published.find((p:any)=>p.id===defaultId); if(match)return match;} return published[0]||null;}
  function programLoadContext():'training'|'setup'{return trainingSubNav==='setup'||showProgramSetup||draftEditProgramId?'setup':'training';}
  async function loadPrograms(context:'training'|'setup'='training'){
@@ -422,7 +454,10 @@ export default function Page(){
   let q=supabase.from('st_programs').select('*, st_workouts(*, st_exercises(*, st_planned_sets(*)))').order('created_at',{ascending:false});
   const usePersonal=mode==='personal';
   q=usePersonal?q.eq('visibility','personal').eq('owner_user_id',session.user.id):q.eq('visibility','team').eq('team_id',activeTeam?.id||'00000000-0000-0000-0000-000000000000');
-  const{data,error}=await q; if(error)return alert(error.message);
+  const{data,error}=await q;
+  if(error)return alert(error.message);
+  if(activeAssignedRecipient)return;
+  if(viewingMember&&viewingMember.user_id!==session.user.id)return;
   let list=data||[];
   if(context==='training'){
    list=list.filter((p:any)=>isPublishedProgram(p));
@@ -437,6 +472,9 @@ export default function Page(){
      ||null)
    :pickProgram(list,!usePersonal?activeTeam?.default_program_id:null);
   setProgram(picked||null);
+  if(picked&&context==='setup'&&draftEditProgramId&&picked.id===draftEditProgramId){
+   setProgramName(picked.name||'Strength Program');
+  }
   if(picked){
     const start=resolveProgramStartDate(picked);
     const alignedWeek=weekForDate(start,logDate,picked.weeks||weeks||6);
@@ -506,12 +544,34 @@ export default function Page(){
   const{data,error}=await q; if(error)return alert(error.message);
   const list=(data||[]).filter((p:any)=>isPublishedProgram(p));
   const picked=pickProgramForMember(list,member,!usePersonal?activeTeam?.default_program_id:null);
-  setPrograms(list);
-  setProgram(picked);
-  const first=picked?.st_workouts?.sort((a:any,b:any)=>a.week-b.week||a.day_order-b.day_order)?.[0];
-  if(first){setActiveWorkout(first.id);setWeek(first.week||1);}
+  setMemberWorkoutProgram(picked||null);
+  if(picked){
+   const start=resolveProgramStartDate(picked);
+   const initialDate=today();
+   const initialWeek=weekForDate(start,initialDate,picked.weeks||weeks||6);
+   const dayLabel=dayLabelFromYmd(initialDate);
+   const match=(picked.st_workouts||[]).find((w:any)=>w.week===initialWeek&&w.day_label===dayLabel)
+    ||(picked.st_workouts||[]).filter((w:any)=>w.week===initialWeek).sort((a:any,b:any)=>a.day_order-b.day_order)[0]
+    ||picked.st_workouts?.sort((a:any,b:any)=>a.week-b.week||a.day_order-b.day_order)?.[0];
+   setMemberWorkoutWeek(initialWeek);
+   setMemberWorkoutLogDate(initialDate);
+   setMemberWorkoutActiveId(match?.id||'');
+  } else {
+   setMemberWorkoutWeek(1);
+   setMemberWorkoutLogDate(today());
+   setMemberWorkoutActiveId('');
+  }
  }
- async function closeMemberView(){setViewingMember(null); setMemberDashboard(null); setMemberPerformance(null); await loadPrograms();}
+ function clearMemberWorkoutView(){
+  setViewingMember(null);
+  setMemberDashboard(null);
+  setMemberPerformance(null);
+  setMemberWorkoutProgram(null);
+  setMemberWorkoutActiveId('');
+  setLogs({});
+  logsRef.current={};
+ }
+ async function closeMemberView(){clearMemberWorkoutView();}
  async function loadAssignedWorkouts(){
   if(!session?.user){setAssignedWorkouts([]);return;}
   const{data,error}=await supabase.from('st_assignment_recipients').select('*, st_workout_assignments(*, st_teams(id, name), st_workouts(id, week, day_label, workout_type, day_order), st_programs(id, name))').eq('user_id',session.user.id).in('status',['pending','started','completed']).order('created_at',{ascending:false}).limit(30);
@@ -693,14 +753,41 @@ export default function Page(){
   await loadTeams();
   await loadPrograms(trainingSubNav==='setup'?'setup':'training');
  }
+ async function saveDraftProgramName(programId:string):Promise<string|null>{
+  const name=programName.trim();
+  if(!name)return 'Enter a program name.';
+  const target=programs.find((p:any)=>p.id===programId)||(program?.id===programId?program:null);
+  if(target?.name===name)return null;
+  const{error}=await supabase.from('st_programs').update({name}).eq('id',programId);
+  if(error)return error.message||'Could not save program name.';
+  setPrograms((prev:any[])=>prev.map((p:any)=>p.id===programId?{...p,name}:p));
+  if(program?.id===programId)setProgram({...program,name});
+  return null;
+ }
  async function publishProgram(programId:string,makeActive=false){
   if(!programId||!canEdit())return;
-  const target=programs.find((p:any)=>p.id===programId);
+  const target=programs.find((p:any)=>p.id===programId)||(program?.id===programId?program:null);
   if(!target)return alert('Program not found.');
   if(!isDraftProgram(target)&&target.status==='published')return alert('This program is already published.');
+  const nameErr=await saveDraftProgramName(programId);
+  if(nameErr)return alert(nameErr);
+  const assignMemberId=groupsAssignMemberUserId;
   const{error,draftSupported}=await publishProgramRecord(supabase,programId);
   if(error)return alert(error);
-  if(!draftSupported)return alert('Draft/publish requires Supabase migration 20250722_027. Your program is already live.');
+  if(!draftSupported){
+   if(assignMemberId&&activeTeam){
+    const member=members.find((m:any)=>m.user_id===assignMemberId);
+    if(member){
+     const assignErr=await assignMemberProgram(member,'individual_team',programId,undefined,{quiet:true});
+     if(assignErr)return alert(`Program is live, but could not assign to ${member.display_name||'member'}: ${assignErr}`);
+     setGroupsProgramWizardOpen(false);
+     setGroupsAssignMemberUserId(null);
+     alert(`Program assigned to ${member.display_name||'member'}. Apply migration 20250722_027 for draft/publish workflow.`);
+     return;
+    }
+   }
+   return alert('Draft/publish requires Supabase migration 20250722_027. Your program is already live.');
+  }
   if(makeActive&&mode==='team'&&activeTeam){
    const{error:teamErr}=await supabase.from('st_teams').update({default_program_id:programId}).eq('id',activeTeam.id);
    if(teamErr)return alert(teamErr.message);
@@ -708,13 +795,17 @@ export default function Page(){
   }
   setDraftEditProgramId(null);
   await loadPrograms(trainingSubNav==='setup'?'setup':'training');
-  if(groupsAssignMemberUserId&&activeTeam){
-   const member=members.find((m:any)=>m.user_id===groupsAssignMemberUserId);
+  if(assignMemberId&&activeTeam){
+   const member=members.find((m:any)=>m.user_id===assignMemberId);
    if(member){
-    await assignMemberProgram(member,'individual_team',programId);
+    const assignErr=await assignMemberProgram(member,'individual_team',programId,undefined,{quiet:true});
     setGroupsProgramWizardOpen(false);
     setGroupsAssignMemberUserId(null);
     if(trainingSubNav!=='setup')setShowProgramSetup(false);
+    if(assignErr){
+     alert(`Program published, but could not assign to ${member.display_name||'member'}: ${assignErr}`);
+     return;
+    }
     alert(`Program published and assigned to ${member.display_name||'member'}.`);
     return;
    }
@@ -840,7 +931,7 @@ export default function Page(){
   await loadTeams();
   setMemberDashboard(null);
  }
- async function loadLogs(p:any,userId?:string){const uid=userId||session?.user?.id; if(!uid){setLogs({});logsRef.current={};return;} const ids:any[]=[];(p.st_workouts||[]).forEach((w:any)=>(w.st_exercises||[]).forEach((e:any)=>(e.st_planned_sets||[]).forEach((s:any)=>ids.push(s.id)))); if(!ids.length){setLogs({});logsRef.current={};return} const{data}=await supabase.from('st_set_logs').select('*').in('planned_set_id',ids).eq('user_id',uid).eq('log_date',logDate); const by:any={};(data||[]).forEach((l:any)=>by[l.planned_set_id]=l);logsRef.current=by;setLogs(by);}
+ async function loadLogs(p:any,userId?:string,dateOverride?:string){const uid=userId||session?.user?.id; const day=dateOverride||logDate; if(!uid){setLogs({});logsRef.current={};return;} const ids:any[]=[];(p.st_workouts||[]).forEach((w:any)=>(w.st_exercises||[]).forEach((e:any)=>(e.st_planned_sets||[]).forEach((s:any)=>ids.push(s.id)))); if(!ids.length){setLogs({});logsRef.current={};return} const{data}=await supabase.from('st_set_logs').select('*').in('planned_set_id',ids).eq('user_id',uid).eq('log_date',day); const by:any={};(data||[]).forEach((l:any)=>by[l.planned_set_id]=l);logsRef.current=by;setLogs(by);}
 
  async function loadLiftHistory(){
   const uid=logUserId();
@@ -1035,7 +1126,7 @@ export default function Page(){
   setSetupStep('schedule');
  }
  function goToReviewStep(){if(!days.length)return alert('Select at least one training day.'); setSetupStep('review');}
- async function generateWithAi(){if(!session?.access_token)return alert('Sign in to generate programs.'); if(mode==='team'&&!activeTeam)return alert('Create or join a group first.'); if(mode==='team'&&!canEdit())return alert('Only owners and managers can create group programs.'); const prompt=aiPrompt.trim(); if(prompt.length<8)return alert('Describe your program in a few words (e.g. baseball throw/hit power).'); await persistEquipmentPreference(); const equipment=normalizeEquipmentList(profileDraft.available_equipment); const memberWizardUserId=groupsAssignMemberUserId; const mergedDayEmphasis=mergeDayEmphasisFromGoals(prompt,days,dayTypes,dayEmphasis); setAiGenerating(true); setAiSummary(''); setAiCoachingNotes(''); setAiGenError(''); try{const res=await fetch('/api/programs/generate',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`},body:JSON.stringify({prompt,weeks,days,dayTypes,dayEmphasis:mergedDayEmphasis,focusMuscles,programName,mode,teamId:mode==='team'?activeTeam?.id:null,includeCooldown,availableEquipment:equipment})}); const data=await res.json().catch(()=>({})); if(!res.ok){const hint=data?.hint?` ${data.hint}`:''; const timeoutMsg=res.status===504?' The server timed out — please retry. For 5+ week plans, week 1 is generated first then expanded automatically.':''; throw new Error((data?.error||`Generation failed (${res.status})`)+timeoutMsg+hint);} setAiSummary(data.program_summary||''); setAiCoachingNotes(data.coaching_notes||''); if(data.program_name)setProgramName(data.program_name); if(data.programId){await openDraftForEditing(data.programId,{keepMemberWizard:!!memberWizardUserId}); if(memberWizardUserId){setGroupsProgramWizardOpen(true); setShowProgramSetup(true);}} else {await loadPrograms('setup');} if(!memberWizardUserId&&!groupsProgramWizardOpen){setTrainingSubNav('setup'); setAppNav('Training');} else if(!data.programId){setSetupStep('review');}}catch(e:any){const msg=e?.message||'AI program generation failed.'; setAiGenError(msg); alert(msg);}finally{setAiGenerating(false);}}
+ async function generateWithAi(){if(!session?.access_token)return alert('Sign in to generate programs.'); if(mode==='team'&&!activeTeam)return alert('Create or join a group first.'); if(mode==='team'&&!canEdit())return alert('Only owners and managers can create group programs.'); const prompt=aiPrompt.trim(); if(prompt.length<8)return alert('Describe your program in a few words (e.g. baseball throw/hit power).'); await persistEquipmentPreference(); const equipment=normalizeEquipmentList(profileDraft.available_equipment); const memberWizardUserId=groupsAssignMemberUserId; const mergedDayEmphasis=mergeDayEmphasisFromGoals(prompt,days,dayTypes,dayEmphasis); const trimmedProgramName=programName.trim(); setAiGenerating(true); setAiSummary(''); setAiCoachingNotes(''); setAiGenError(''); try{const res=await fetch('/api/programs/generate',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`},body:JSON.stringify({prompt,weeks,days,dayTypes,dayEmphasis:mergedDayEmphasis,focusMuscles,programName:trimmedProgramName,mode,teamId:mode==='team'?activeTeam?.id:null,includeCooldown,availableEquipment:equipment})}); const data=await res.json().catch(()=>({})); if(!res.ok){const hint=data?.hint?` ${data.hint}`:''; const timeoutMsg=res.status===504?' The server timed out — please retry. For 5+ week plans, week 1 is generated first then expanded automatically.':''; throw new Error((data?.error||`Generation failed (${res.status})`)+timeoutMsg+hint);} setAiSummary(data.program_summary||''); setAiCoachingNotes(data.coaching_notes||''); if(data.program_name)setProgramName(data.program_name); if(data.programId){await openDraftForEditing(data.programId,{keepMemberWizard:!!memberWizardUserId}); if(memberWizardUserId){setGroupsProgramWizardOpen(true); setShowProgramSetup(true);}} else {await loadPrograms('setup');} if(!memberWizardUserId&&!groupsProgramWizardOpen){setTrainingSubNav('setup'); setAppNav('Training');} else if(!data.programId){setSetupStep('review');}}catch(e:any){const msg=e?.message||'AI program generation failed.'; setAiGenError(msg); alert(msg);}finally{setAiGenerating(false);}}
  async function submitBugReport(){if(!session?.access_token)return alert('Sign in to report a bug.'); const description=bugDescription.trim(); if(description.length<8)return alert('Please describe what went wrong (at least 8 characters).'); setBugSending(true); try{const res=await fetch('/api/bug-reports',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`},body:JSON.stringify({title:bugTitle.trim(),description,pageContext:`nav=${appNav}; training=${trainingSubNav}; mode=${mode}; program=${program?.id||'none'}; week=${week}; error=${aiGenError||'none'}`,appNav,userAgent:typeof navigator!=='undefined'?navigator.userAgent:''})}); const data=await res.json().catch(()=>({})); if(!res.ok)throw new Error(data?.error||`Could not send report (${res.status})`); setBugSentId(data.id||'ok'); setBugTitle(''); setBugDescription('');}catch(e:any){alert(e?.message||'Could not send bug report.');}finally{setBugSending(false);}}
  async function generate(){if(!session?.user)return alert('Sign in to create programs.'); if(mode==='team'&&!activeTeam)return alert('Create or join a group first.'); if(mode==='team'&&!canEdit())return alert('Only owners and managers can create group programs.'); if(!days.length)return alert('Select at least one training day in the schedule step.'); const catMap=catalogByName(catalog); const payload:any={owner_user_id:session.user.id,team_id:mode==='team'?activeTeam.id:null,visibility:mode,name:programName||'Strength Program',weeks,generation_method:'template',start_date:mondayOfWeek(today())}; if(focusMuscles.length)payload.focus_muscles=focusMuscles; const{data:p,error,draftSupported}=await insertProgramRecord(supabase,payload); if(error||!p)return alert(error||'Could not create program.'); if(!draftSupported)alert('Program saved. Apply Supabase migration 20250722_027 in your project to enable draft/publish (until then it is live immediately).'); const wr:any=[]; for(let w=1;w<=weeks;w++)days.forEach(d=>wr.push({program_id:p.id,week:w,day_order:DAYS.indexOf(d),day_label:d,workout_type:dayTypes[d]||'Full Body'})); const{data:ws,error:we}=await supabase.from('st_workouts').insert(wr).select(); if(we)return alert(we.message); for(const w of ws||[]){const baseTpl=WORKOUT_TEMPLATES[w.workout_type]||WORKOUT_TEMPLATES['Full Body']; const tpl=applyFocusToWorkoutTemplate(baseTpl,focusMuscles,catalog); for(const sec of SECTIONS){const list=tpl[sec.id]||[]; if(!list.length)continue; const startSort=SECTION_SORT_BASE[sec.id]??0; const{error:ie}=await insertTemplateSectionItems(supabase,w.id,sec.id,list,startSort,catMap); if(ie)return alert(ie?.message||'Could not add exercises to the workout.');}} setDraftEditProgramId(String(p.id)); setProgram(p); await loadPrograms('setup'); setTrainingSubNav('setup'); setAppNav('Training'); setSetupStep('review');}
  function catalogPayloadFromItem(catalogItem:any,section:string){return{name:catalogItem.name,muscle_group:catalogItem.muscle_group||'',catalog_exercise_id:catalogItem.id,exercise_type:inferExerciseType(catalogItem.name,catalogItem.muscle_group,section,catalogItem.exercise_type)};}
@@ -1259,7 +1350,7 @@ export default function Page(){
  async function upsertSetLog(sid:string,fieldUpdates:Record<string,any>,opts?:{completed?:boolean}){
   if(!canLog())return;
   const old=logsRef.current[sid]||{};
-  const located=findSetInProgram(program,sid);
+  const located=findSetInProgram(activeProgramForLogging(),sid);
   if(!located) return alert('Could not save log for this set.');
   const {workout:workoutRef,exercise:ex,plannedSet:ps}=located;
   const catItem=catalog.find((c:any)=>c.id===ex.catalog_exercise_id);
@@ -1273,12 +1364,13 @@ export default function Page(){
   const markComplete=updatingCompleted
     ?(opts?.completed!==undefined?!!opts.completed:!!fieldUpdates.completed)
     :!!old.completed;
+  const logDay=activeLogDateForLogging();
   const payload:any={
     planned_set_id:sid,
     user_id:uid,
     logged_by_user_id:coachLogging?session.user.id:null,
     team_id:logTeamId,
-    log_date:logDate,
+    log_date:logDay,
     completed:markComplete,
     ...snapshotForLog(ex,ps,workoutRef,catItem)
   };
@@ -1294,7 +1386,7 @@ export default function Page(){
     logsRef.current=next;
     return next;
   });
-  if(String(logDate)===today())setDashboardTodayLogs((prev:any)=>({...prev,[sid]:data}));
+  if(String(logDay)===today())setDashboardTodayLogs((prev:any)=>({...prev,[sid]:data}));
   if(activeAssignedRecipient&&located?.workout){
     const nextLogs={...logsRef.current,[sid]:data};
     await maybeCompleteAssignedWorkout(located.workout,nextLogs);
@@ -1304,7 +1396,7 @@ export default function Page(){
    maybeAutoAdvanceExercise(ex,nextLogs,located.workout);
    if(!old.completed){
     const weightUnit=profileDraft?.units_preference==='metric'?'kg':'lb';
-    const celebration=detectSetPersonalRecord(data,priorCompletedLogsForPr(sid,logDate),weightUnit);
+    const celebration=detectSetPersonalRecord(data,priorCompletedLogsForPr(sid,logDay),weightUnit);
     if(celebration)showPrCelebration(celebration);
    }
   }
@@ -1382,6 +1474,29 @@ export default function Page(){
   setLogDate(dateForWeekAndDay(start,week,w.day_label));
   queueMicrotask(()=>{syncingCalendarRef.current=false;});
  }
+ function onMemberLogDateChange(ymd:string){setMemberWorkoutLogDate(ymd);}
+ function onMemberWeekChange(nextWeek:number){
+  const w=Number(nextWeek)||1;
+  if(!memberWorkoutProgram){setMemberWorkoutWeek(w);return;}
+  syncingCalendarRef.current=true;
+  setMemberWorkoutWeek(w);
+  const start=resolveProgramStartDate(memberWorkoutProgram);
+  const nextDate=dateForWeekKeepingWeekday(start,w,memberWorkoutLogDate);
+  setMemberWorkoutLogDate(nextDate);
+  const dayLabel=dayLabelFromYmd(nextDate);
+  const match=(memberWorkoutProgram.st_workouts||[]).find((x:any)=>x.week===w&&x.day_label===dayLabel)
+    ||(memberWorkoutProgram.st_workouts||[]).filter((x:any)=>x.week===w).sort((a:any,b:any)=>a.day_order-b.day_order)[0];
+  if(match)setMemberWorkoutActiveId(match.id);
+  queueMicrotask(()=>{syncingCalendarRef.current=false;});
+ }
+ function onSelectMemberWorkoutDay(w:any){
+  setMemberWorkoutActiveId(w.id);
+  if(!memberWorkoutProgram)return;
+  syncingCalendarRef.current=true;
+  const start=resolveProgramStartDate(memberWorkoutProgram);
+  setMemberWorkoutLogDate(dateForWeekAndDay(start,memberWorkoutWeek,w.day_label));
+  queueMicrotask(()=>{syncingCalendarRef.current=false;});
+ }
  async function updateProgramStartDate(ymd:string){
   if(!program||!canEdit()||!ymd)return;
   const anchor=mondayOfWeek(ymd);
@@ -1406,9 +1521,7 @@ export default function Page(){
  }
  function goNav(n:string){
   if(n!=='Groups'&&viewingMember&&viewingMember.user_id!==session?.user?.id){
-   setViewingMember(null);
-   setMemberDashboard(null);
-   setMemberPerformance(null);
+   clearMemberWorkoutView();
   }
   setAppNav(n);
   if(n==='Progress'||n==='Dashboard'){loadProgressLogs();if(n==='Dashboard'){loadDashboardTodayLogs();loadDashboardTodayNutrition();}}
@@ -1516,6 +1629,9 @@ function matchingSet(targetExercise:any, sourceSet:any){
  const pendingGroupInfo=pendingGroupId?panelSupersetGroups.find((g:any)=>g.id===pendingGroupId):null;
  const showEditScope=canEdit()&&(trainingSubNav==='setup'||!!draftEditProgramId||!!addExercisePanel);
  const showGroupsMemberWorkout=appNav==='Groups'&&!!viewingMember&&viewingMember.user_id!==session?.user?.id;
+ const memberWeekWorkouts=(memberWorkoutProgram?.st_workouts||[]).filter((w:any)=>w.week===memberWorkoutWeek).sort((a:any,b:any)=>a.day_order-b.day_order);
+ const memberWorkout=memberWeekWorkouts.find((w:any)=>w.id===memberWorkoutActiveId)||memberWeekWorkouts[0];
+ const displayWorkout=showGroupsMemberWorkout&&memberWorkoutProgram?memberWorkout:workout;
  const canManageTrainingProgram=mode==='personal'?canEdit():!!activeTeam&&canEditGroupProgram(activeTeam.my_role);
  const memberAssignment=memberDashboard?memberAssignments[memberDashboard.user_id]:null;
  const renderWarmupExerciseCard=(ex:any)=>{const catItem=catalog.find((c:any)=>c.id===ex.catalog_exercise_id);const exThumb=getExerciseThumb(catItem);const showGuide=hasExerciseGuide(catItem);const guidePayload=getExerciseGuidePayload(catItem,ex.name);const sortedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));return <WarmupExerciseCard key={ex.id} name={ex.name||'Exercise'} sets={sortedSets} thumbUrl={exThumb} showGuide={showGuide&&!!guidePayload} guideLabel={guidePayload?.hasVideo?'Watch form':'Form guide'} onOpenGuide={guidePayload?()=>setExerciseGuide(guidePayload):undefined} canEdit={canEdit()} onChange={canEdit()?()=>openReplaceExercisePanel(ex):undefined} onAddSet={canEdit()?()=>addSet(ex):undefined} onRemove={canEdit()?()=>removeExercise(ex):undefined}/>;};
@@ -1536,9 +1652,9 @@ function matchingSet(targetExercise:any, sourceSet:any){
         {!isCollapsed&&<WorkoutSetLogger section={exerciseSection(ex)} exType={exType} sets={sortedSets} logs={logs} prevBySetId={prevBySetId} showPreviousSets={showPreviousSets} weightUnit={weightUnit} distanceUnit={logDistanceUnit} onDistanceUnitChange={setLogDistanceUnit} canEdit={canEdit()} canLog={canLog()} onEditSet={editSet} onRemoveSet={removeSet} onSaveField={(sid,field,value,opts)=>saveLog(sid,field,value,opts)} onDuplicateSet={duplicateSetLog} registerInputRef={el=>{if(el&&!refs.current.includes(el))refs.current.push(el)}} onInputKeyDown={next}/>}
       </div>;};
  const workoutExerciseSections=<>
-  {workout&&<div className="card training-workout-panel"><div className="topline" style={{justifyContent:'space-between'}}><h2>{workout.day_label} · {workout.workout_type}</h2><div className="actions"><button type="button" className="btn small secondary" onClick={()=>{const ids=(workout.st_exercises||[]).map((e:any)=>e.id);setCollapsedExercises((prev:any)=>{const next={...prev};ids.forEach((id:string)=>next[id]=false);return next;});}}>Expand all</button><button type="button" className="btn small secondary" onClick={()=>{const ids=(workout.st_exercises||[]).map((e:any)=>e.id);setCollapsedExercises((prev:any)=>{const next={...prev};ids.forEach((id:string)=>next[id]=true);return next;});}}>Collapse all</button><span className="muted">{workoutExerciseCount(workout)} exercises</span></div></div></div>}
-  {workout&&SECTIONS.map((sec:any)=>{
-   const exercises=sectionExercises(workout,sec.id);
+  {displayWorkout&&<div className="card training-workout-panel"><div className="topline" style={{justifyContent:'space-between'}}><h2>{displayWorkout.day_label} · {displayWorkout.workout_type}</h2><div className="actions"><button type="button" className="btn small secondary" onClick={()=>{const ids=(displayWorkout.st_exercises||[]).map((e:any)=>e.id);setCollapsedExercises((prev:any)=>{const next={...prev};ids.forEach((id:string)=>next[id]=false);return next;});}}>Expand all</button><button type="button" className="btn small secondary" onClick={()=>{const ids=(displayWorkout.st_exercises||[]).map((e:any)=>e.id);setCollapsedExercises((prev:any)=>{const next={...prev};ids.forEach((id:string)=>next[id]=true);return next;});}}>Collapse all</button><span className="muted">{workoutExerciseCount(displayWorkout)} exercises</span></div></div></div>}
+  {displayWorkout&&SECTIONS.map((sec:any)=>{
+   const exercises=sectionExercises(displayWorkout,sec.id);
    const blocks=groupSectionBlocks(exercises);
    return <div className={`section-block${sec.id==='cooldown'?' section-cooldown':''}`} key={sec.id}><div className="section-head"><h2>{sec.label}</h2><div className="section-head-actions"><span className="badge">{exercises.length}</span>{exercises.length>0&&<><button type="button" className="btn small secondary" onClick={()=>{const ids=exercises.map((e:any)=>e.id);setCollapsedExercises((prev:any)=>{const next={...prev};ids.forEach((id:string)=>next[id]=false);return next;});}}>Expand</button><button type="button" className="btn small secondary" onClick={()=>{const ids=exercises.map((e:any)=>e.id);setCollapsedExercises((prev:any)=>{const next={...prev};ids.forEach((id:string)=>next[id]=true);return next;});}}>Collapse</button></>}</div></div>
    {blocks.map((block:any)=>sec.id==='warmup'
@@ -1552,16 +1668,16 @@ function matchingSet(targetExercise:any, sourceSet:any){
   })}
  </>;
  const memberWorkoutLoggingPanel=<>
-  <div className="card viewing-banner groups-member-workout-banner"><div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}><div><h2>{viewingMember?.display_name||'Member'}&apos;s workout</h2><p className="muted">{assignmentTypeLabel(memberAssignments[viewingMember?.user_id]?.assignment_type||(viewingMember?.training_source||'team')==='personal'?'personal':'team')} · {program?.name||'No program'}{canManageGroupView()?' · manager can log':''}</p></div><button type="button" className="btn small secondary" onClick={closeMemberView}>Close workout</button></div></div>
-  {!program&&<div className="card"><p className="muted">No published program assigned for this member yet.</p></div>}
-  {program&&<div className="training-plan-card ui-card ui-card--elevated"><TrainingWeekSelector week={week} program={program} weeksFallback={weeks} onWeekChange={onWeekChange} logDate={logDate} onLogDateChange={onLogDateChange}/></div>}
-  {program&&weekWorkouts.length>0&&<TrainingWorkoutDays program={program} week={week} workouts={weekWorkouts} activeWorkoutId={workout?.id||''} logDate={logDate} onSelectWorkout={onSelectWorkoutDay}/>}
+  <div className="card viewing-banner groups-member-workout-banner"><div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}><div><h2>{viewingMember?.display_name||'Member'}&apos;s workout</h2><p className="muted">{assignmentTypeLabel(memberAssignments[viewingMember?.user_id]?.assignment_type||(viewingMember?.training_source||'team')==='personal'?'personal':'team')} · {memberWorkoutProgram?.name||'No program'}{canManageGroupView()?' · manager can log':''}</p></div><button type="button" className="btn small secondary" onClick={closeMemberView}>Close workout</button></div></div>
+  {!memberWorkoutProgram&&<div className="card"><p className="muted">No published program assigned for this member yet.</p></div>}
+  {memberWorkoutProgram&&<div className="training-plan-card ui-card ui-card--elevated"><TrainingWeekSelector week={memberWorkoutWeek} program={memberWorkoutProgram} weeksFallback={weeks} onWeekChange={onMemberWeekChange} logDate={memberWorkoutLogDate} onLogDateChange={onMemberLogDateChange}/></div>}
+  {memberWorkoutProgram&&memberWeekWorkouts.length>0&&<TrainingWorkoutDays program={memberWorkoutProgram} week={memberWorkoutWeek} workouts={memberWeekWorkouts} activeWorkoutId={memberWorkout?.id||''} logDate={memberWorkoutLogDate} onSelectWorkout={onSelectMemberWorkoutDay}/>}
   <div className="groups-member-workout">{workoutExerciseSections}</div>
  </>;
  const equipmentChips=(list:string[],onToggle:(id:string)=>void,muted?:string)=><><label>Available equipment</label><p className="muted">{muted||'AI plans and exercise search only use gear you select here (bodyweight stretches always allowed).'}</p><div className="focus-muscle-grid equipment-grid">{EQUIPMENT_OPTIONS.map((o:any)=><button type="button" key={o.id} className={`focus-chip${list.includes(o.id)?' active':''}`} onClick={()=>onToggle(o.id)}>{o.label}</button>)}</div>{hasEquipmentFilter(list)&&<p className="muted">Active filter: {equipmentFilterLabel(list)}</p>}</>;
  const editingDraftWorkouts=!!(draftEditProgramId&&program&&isDraftProgram(program));
  const teamPrograms=(programs||[]).filter((p:any)=>p.visibility==='team'&&p.team_id===activeTeam?.id);
- const programSetupPanel=<div className="card program-setup"><div className="topline" style={{justifyContent:'space-between'}}><h2>Program setup</h2>{trainingSubNav!=='setup'&&<button className="btn small secondary" onClick={()=>setShowProgramSetup(v=>!v)}>{showProgramSetup?'Hide':'Show'}</button>}</div>{(showProgramSetup||trainingSubNav==='setup')&&<><div className="tabs setup-mode-tabs"><button type="button" className={mode==='personal'?'active':''} onClick={()=>setMode('personal')}>Personal program</button><button type="button" className={mode==='team'?'active':''} onClick={()=>{setMode('team');if(teams.length&&!selectedTeamId)setSelectedTeamId(teams[0].id);}}>Group program</button></div>{mode==='team'&&<div className="card" style={{marginTop:8}}>{teams.length===0?<><p className="muted">Create or join a group in the Groups tab to set up a shared program.</p><button type="button" className="btn secondary" style={{marginTop:8}} onClick={()=>goNav('Groups')}>Go to Groups</button></>:<><label>Group</label><select value={activeTeam?.id||''} onChange={e=>setSelectedTeamId(e.target.value||null)}><option value="">Select</option>{teams.map((t:any)=><option key={t.id} value={t.id}>{t.name} · {roleLabel(t.my_role)}</option>)}</select>{activeTeam?<p className="muted" style={{marginTop:8}}>Invite: <b>{activeTeam.invite_code}</b> · Role: {roleLabel(activeTeam.my_role)} · Manage roster in Groups.</p>:<p className="muted" style={{marginTop:8}}>Select a group above.</p>}</>}</div>}<label>Program</label><select value={program?.id||''} onChange={e=>setProgram(programs.find((p:any)=>p.id===e.target.value))}>{programs.length===0&&<option>No programs</option>}{programs.map((p:any)=><option key={p.id} value={p.id}>{programOptionLabel(p)}</option>)}</select>{program&&isDraftProgram(program)&&canEdit()&&<div className="card program-draft-card" style={{marginTop:10}}><div className="topline" style={{justifyContent:'space-between'}}><h2>Draft program</h2><span className="badge">Draft</span></div><p className="muted">Only you can see this plan until you publish. Edit exercises, then publish for personal training{mode==='team'?' or as the group active program':''}.</p><div className="actions" style={{marginTop:10}}><button type="button" className="btn green" onClick={()=>openDraftForEditing(program.id)}>Edit workouts</button><button type="button" className="btn secondary" onClick={()=>publishProgram(program.id,false)}>Publish program</button>{mode==='team'&&<button type="button" className="btn secondary" onClick={()=>publishProgram(program.id,true)}>Publish &amp; set group active</button>}{canEdit()&&<button type="button" className="btn small red" onClick={()=>deleteProgramHandler(program.id)}>Delete draft</button>}</div></div>}{mode==='team'&&canEdit()&&programs.filter((p:any)=>isPublishedProgram(p)).length>0&&<><label>Group active program</label><select value={activeTeam?.default_program_id||program?.id||''} onChange={e=>setTeamDefaultProgram(e.target.value)}>{programs.filter((p:any)=>isPublishedProgram(p)).map((p:any)=><option key={p.id} value={p.id}>{p.name}</option>)}</select><p className="muted">Members following the group plan use this published program.</p></>}{!editingDraftWorkouts&&<><div className="setup-wizard-steps"><span className={setupStep==='goals'?'active':''}>1 Goals</span><span className="setup-wizard-dot">·</span><span className={setupStep==='schedule'?'active':''}>2 Schedule</span><span className="setup-wizard-dot">·</span><span className={setupStep==='review'?'active':''}>3 Create</span></div>{setupStep==='goals'&&<><label>Your goals</label><p className="muted">The more detail you give (sport, schedule, equipment, injuries to avoid, priorities), the better the AI plan. Aim for a few sentences.</p><textarea className="ai-prompt-input ai-prompt-input-lg" rows={8} value={aiPrompt} onChange={e=>setAiPrompt(e.target.value)} placeholder="Sport, goals, days available, equipment, and anything to avoid…" disabled={scheduleLoading||aiGenerating}/><p className="muted ai-prompt-count">{aiPrompt.trim().length} characters · richer prompts usually produce better plans</p>{equipmentChips(normalizeEquipmentList(profileDraft.available_equipment),(id)=>setProfileDraft({...profileDraft,available_equipment:toggleEquipmentList(normalizeEquipmentList(profileDraft.available_equipment),id)}),'Only exercises matching your equipment appear in search and AI plans.')}<button className="btn green full" style={{marginTop:10}} onClick={()=>fetchScheduleSuggestions()} disabled={scheduleLoading||aiGenerating}>{scheduleLoading?'Planning schedule…':'Next: Plan my schedule'}</button></>}{setupStep==='schedule'&&<>{scheduleCoachMessage&&<p className="schedule-coach-msg">{scheduleCoachMessage}</p>}<label>Include cardio days?</label><div className="cardio-pref-chips"><button type="button" className={wantsCardio===true?'active':''} onClick={()=>{setWantsCardio(true);fetchScheduleSuggestions(true,wantsMobility);}}>Yes</button><button type="button" className={wantsCardio===false?'active':''} onClick={()=>{setWantsCardio(false);fetchScheduleSuggestions(false,wantsMobility);}}>No</button><button type="button" className={wantsCardio===null?'active':''} onClick={()=>{setWantsCardio(null);fetchScheduleSuggestions(null,wantsMobility);}}>Let AI decide</button></div><label>Include a mobility day?</label><div className="cardio-pref-chips mobility-pref-chips"><button type="button" className={wantsMobility===true?'active':''} onClick={()=>{setWantsMobility(true);fetchScheduleSuggestions(wantsCardio,true);}}>Yes</button><button type="button" className={wantsMobility===false?'active':''} onClick={()=>{setWantsMobility(false);fetchScheduleSuggestions(wantsCardio,false);}}>No</button><button type="button" className={wantsMobility===null?'active':''} onClick={()=>{setWantsMobility(null);fetchScheduleSuggestions(wantsCardio,null);}}>Let AI decide</button></div>{scheduleError&&<div className="program-ai-error" style={{marginTop:8}}><b>Schedule issue:</b> {scheduleError}</div>}{scheduleLoading&&<p className="muted">Updating schedule options…</p>}<div className="schedule-options">{scheduleOptions.map((opt:any)=><button key={opt.id} type="button" className={`schedule-option-card${selectedScheduleId===opt.id?' selected':''}${scheduleRecommendedId===opt.id?' recommended':''}`} onClick={(e)=>{e.stopPropagation();applyScheduleOption(opt);}} disabled={scheduleLoading||aiGenerating}><div className="schedule-option-head"><b>{opt.label}</b>{scheduleRecommendedId===opt.id&&<span className="badge">Recommended</span>}</div><p className="muted">{opt.description}</p><div className="schedule-day-chips">{opt.days.map((d:string)=><span key={d} className="schedule-day-chip">{d} {opt.day_types[d]}</span>)}</div></button>)}</div>{selectedScheduleId&&days.length>0&&<p className="muted schedule-selected-summary" style={{marginTop:8}}><b>Selected split:</b> {days.map((d:string)=>`${d} ${dayTypes[d]||'Full Body'}`).join(' · ')}</p>}{selectedScheduleId&&<><button type="button" className="btn small secondary" style={{marginTop:8}} onClick={()=>setScheduleManualOverride(v=>!v)}>{scheduleManualOverride?'Hide manual edit':'Customize days'}</button>{scheduleManualOverride&&<><label style={{marginTop:10}}>Workout days</label><div className="tabs">{DAYS.map(d=><button key={d} type="button" className={days.includes(d)?'active':''} onClick={()=>{const next=days.includes(d)?days.filter((x:string)=>x!==d):[...days,d].sort((a,b)=>DAYS.indexOf(a)-DAYS.indexOf(b)); setDays(next); const dt={...dayTypes}; if(!next.includes(d))delete dt[d]; else if(!dt[d])dt[d]='Full Body'; setDayTypes(dt);}}>{d}</button>)}</div>{days.map((d:string)=><div key={d}><label>{d} type</label><select value={dayTypes[d]||'Full Body'} onChange={e=>setDayTypes({...dayTypes,[d]:e.target.value})}>{DAY_TYPE_OPTIONS.map((t:string)=><option key={t}>{t}</option>)}</select></div>)}</>}</>}<div className="wizard-nav"><button type="button" className="btn secondary" onClick={()=>setSetupStep('goals')}>Back</button><button type="button" className="btn" onClick={goToReviewStep} disabled={scheduleLoading||!days.length}>Next: Review &amp; generate</button></div></>}{setupStep==='review'&&<><div className="schedule-review-summary"><label>Goals (edit anytime)</label><textarea className="ai-prompt-input ai-prompt-input-lg" rows={6} value={aiPrompt} onChange={e=>setAiPrompt(e.target.value)} disabled={aiGenerating}/><label>Weekly schedule</label><div className="schedule-day-chips">{days.map((d:string)=><span key={d} className="schedule-day-chip">{d} {dayTypes[d]||'Full Body'}</span>)}</div></div><label>New program name</label><input value={programName} onChange={e=>setProgramName(e.target.value)}/><label>Weeks</label><input type="number" value={weeks} onChange={e=>setWeeks(Number(e.target.value))}/>{weeks>4&&<p className="muted">For 5+ weeks, AI designs <b>week 1</b> in detail; BuildIQ expands it into your full {weeks}-week plan.</p>}<label>Muscle focus (optional)</label><p className="muted">Adds ~10–15 working sets per week for each selected muscle group.</p><div className="focus-muscle-grid">{FOCUS_MUSCLES.map((m:string)=><button type="button" key={m} className={`focus-chip${focusMuscles.includes(m)?' active':''}`} onClick={()=>setFocusMuscles(focusMuscles.includes(m)?focusMuscles.filter((x:string)=>x!==m):[...focusMuscles,m])}>{m}</button>)}</div>{focusMuscles.length>0&&<p className="muted">{focusVolumeSummary(focusMuscles,weeks,days.length)}{Object.keys(focusVolumeEst).length?` · Est. weekly sets: ${Object.entries(focusVolumeEst).map(([k,v])=>`${k} ${v}`).join(', ')}`:''}</p>}{aiGenError&&<div className="program-ai-error"><b>Generation issue:</b> {aiGenError}<div className="actions" style={{marginTop:8}}><button type="button" className="btn small secondary" onClick={()=>{setBugOpen(true);setBugTitle('AI plan generation failed');setBugDescription(aiGenError);}}>Report this bug</button></div></div>}{(aiSummary||aiCoachingNotes)&&<div className="program-ai-summary-box"><label>AI plan write-up</label>{aiSummary&&<p className="program-ai-summary">{aiSummary}</p>}{aiCoachingNotes&&<><label style={{marginTop:10}}>Coaching notes</label><p className="program-ai-coaching">{aiCoachingNotes}</p></>}</div>}<label className="remember-row"><input type="checkbox" checked={includeCooldown} onChange={e=>setIncludeCooldown(e.target.checked)}/> Include cooldown stretches</label><button className="btn green full" style={{marginTop:10}} onClick={generateWithAi} disabled={aiGenerating}>{aiGenerating?(weeks>4?'Designing week 1 and building full plan…':'Creating draft with AI…'):weeks>4?'Create draft with AI (week 1 → full plan)':'Create draft with AI'}</button><button className="btn secondary full" style={{marginTop:10}} onClick={generate} disabled={aiGenerating}>Create draft from template</button><p className="muted" style={{marginTop:8}}>New programs save as <b>drafts</b> first. Edit workouts, then publish when ready. AI plans vary exercises week to week; template fallback uses built-in supersets.</p><div className="wizard-nav"><button type="button" className="btn secondary" onClick={()=>setSetupStep('schedule')}>Back</button></div></>}</>}{editingDraftWorkouts&&<div className="card" style={{marginTop:10}}><p className="muted">You&apos;re editing a draft below. Publish when ready, or start a new program wizard if you want a different plan.</p><button type="button" className="btn secondary" onClick={()=>{setDraftEditProgramId(null);setSetupStep('goals');setScheduleError('');setScheduleOptions([]);setSelectedScheduleId('');setScheduleCoachMessage('');}}>Start new program wizard</button></div>}{editingDraftWorkouts&&canEdit()&&<div className="card program-draft-banner" style={{marginTop:10}}><div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}><div><h2>Editing draft</h2><p className="muted"><b>{program?.name}</b> — pick a workout day below, adjust exercises, then publish when ready.</p>{(program?.program_summary||program?.coaching_notes)&&<div className="program-ai-summary-box" style={{marginTop:10}}><label>AI program notes</label>{program?.program_summary&&<p className="program-ai-summary">{program.program_summary}</p>}{program?.coaching_notes&&<><label style={{marginTop:10}}>Coaching notes</label><p className="program-ai-coaching">{program.coaching_notes}</p></>}</div>}</div><div className="assigned-banner-actions"><button type="button" className="btn small secondary" onClick={()=>{setDraftEditProgramId(null);loadPrograms('setup');}}>Back to setup summary</button><button type="button" className="btn small green" onClick={()=>publishProgram(program!.id,false)}>Publish program</button><button type="button" className="btn small red" onClick={()=>deleteProgramHandler(program!.id)}>Delete draft</button></div></div></div>}{editingDraftWorkouts&&program&&<><div className="training-plan-card ui-card ui-card--elevated" style={{marginTop:10}}><TrainingWeekSelector week={week} program={program} weeksFallback={weeks} onWeekChange={onWeekChange} logDate={logDate} onLogDateChange={onLogDateChange}/></div>{weekWorkouts.length>0&&<TrainingWorkoutDays program={program} week={week} workouts={weekWorkouts} activeWorkoutId={workout?.id||''} logDate={logDate} onSelectWorkout={onSelectWorkoutDay}/>}{showEditScope&&<div className="applybox-compact"><label htmlFor="apply-scope-draft">Apply changes to</label><select id="apply-scope-draft" value={applyScope} onChange={e=>setApplyScope(e.target.value as any)}><option value="future">This week and future weeks</option><option value="current">This week only</option></select></div>}{workoutExerciseSections}</>}{canEdit()&&programs.length>0&&(!groupsProgramWizardOpen||editingDraftWorkouts)&&<ProgramLibraryPanel programs={programs} defaultProgramId={mode==='team'?activeTeam?.default_program_id:null} canDelete={canEdit()} onDelete={deleteProgramHandler}/>}</>}{trainingSubNav!=='setup'&&!showProgramSetup&&program&&<p className="muted">Active program: <b>{program.name}</b></p>}{trainingSubNav!=='setup'&&!showProgramSetup&&!program&&<p className="muted">No program yet. Open Program Setup tab to generate one.</p>}</div>;
+ const programSetupPanel=<div className="card program-setup"><div className="topline" style={{justifyContent:'space-between'}}><h2>Program setup</h2>{trainingSubNav!=='setup'&&<button className="btn small secondary" onClick={()=>setShowProgramSetup(v=>!v)}>{showProgramSetup?'Hide':'Show'}</button>}</div>{(showProgramSetup||trainingSubNav==='setup')&&<><div className="tabs setup-mode-tabs"><button type="button" className={mode==='personal'?'active':''} onClick={()=>setMode('personal')}>Personal program</button><button type="button" className={mode==='team'?'active':''} onClick={()=>{setMode('team');if(teams.length&&!selectedTeamId)setSelectedTeamId(teams[0].id);}}>Group program</button></div>{mode==='team'&&<div className="card" style={{marginTop:8}}>{teams.length===0?<><p className="muted">Create or join a group in the Groups tab to set up a shared program.</p><button type="button" className="btn secondary" style={{marginTop:8}} onClick={()=>goNav('Groups')}>Go to Groups</button></>:<><label>Group</label><select value={activeTeam?.id||''} onChange={e=>setSelectedTeamId(e.target.value||null)}><option value="">Select</option>{teams.map((t:any)=><option key={t.id} value={t.id}>{t.name} · {roleLabel(t.my_role)}</option>)}</select>{activeTeam?<p className="muted" style={{marginTop:8}}>Invite: <b>{activeTeam.invite_code}</b> · Role: {roleLabel(activeTeam.my_role)} · Manage roster in Groups.</p>:<p className="muted" style={{marginTop:8}}>Select a group above.</p>}</>}</div>}<label>Program</label><select value={program?.id||''} onChange={e=>setProgram(programs.find((p:any)=>p.id===e.target.value))}>{programs.length===0&&<option>No programs</option>}{programs.map((p:any)=><option key={p.id} value={p.id}>{programOptionLabel(p)}</option>)}</select>{program&&isDraftProgram(program)&&canEdit()&&<div className="card program-draft-card" style={{marginTop:10}}><div className="topline" style={{justifyContent:'space-between'}}><h2>Draft program</h2><span className="badge">Draft</span></div><p className="muted">Only you can see this plan until you publish. Edit exercises, then publish for personal training{mode==='team'?' or as the group active program':''}.</p><div className="actions" style={{marginTop:10}}><button type="button" className="btn green" onClick={()=>openDraftForEditing(program.id)}>Edit workouts</button><button type="button" className="btn secondary" onClick={()=>publishProgram(program.id,false)}>Publish program</button>{mode==='team'&&<button type="button" className="btn secondary" onClick={()=>publishProgram(program.id,true)}>Publish &amp; set group active</button>}{canEdit()&&<button type="button" className="btn small red" onClick={()=>deleteProgramHandler(program.id)}>Delete draft</button>}</div></div>}{mode==='team'&&canEdit()&&programs.filter((p:any)=>isPublishedProgram(p)).length>0&&<><label>Group active program</label><select value={activeTeam?.default_program_id||program?.id||''} onChange={e=>setTeamDefaultProgram(e.target.value)}>{programs.filter((p:any)=>isPublishedProgram(p)).map((p:any)=><option key={p.id} value={p.id}>{p.name}</option>)}</select><p className="muted">Members following the group plan use this published program.</p></>}{!editingDraftWorkouts&&<><div className="setup-wizard-steps"><span className={setupStep==='goals'?'active':''}>1 Goals</span><span className="setup-wizard-dot">·</span><span className={setupStep==='schedule'?'active':''}>2 Schedule</span><span className="setup-wizard-dot">·</span><span className={setupStep==='review'?'active':''}>3 Create</span></div>{setupStep==='goals'&&<><label>Your goals</label><p className="muted">The more detail you give (sport, schedule, equipment, injuries to avoid, priorities), the better the AI plan. Aim for a few sentences.</p><textarea className="ai-prompt-input ai-prompt-input-lg" rows={8} value={aiPrompt} onChange={e=>setAiPrompt(e.target.value)} placeholder="Sport, goals, days available, equipment, and anything to avoid…" disabled={scheduleLoading||aiGenerating}/><p className="muted ai-prompt-count">{aiPrompt.trim().length} characters · richer prompts usually produce better plans</p>{equipmentChips(normalizeEquipmentList(profileDraft.available_equipment),(id)=>setProfileDraft({...profileDraft,available_equipment:toggleEquipmentList(normalizeEquipmentList(profileDraft.available_equipment),id)}),'Only exercises matching your equipment appear in search and AI plans.')}<button className="btn green full" style={{marginTop:10}} onClick={()=>fetchScheduleSuggestions()} disabled={scheduleLoading||aiGenerating}>{scheduleLoading?'Planning schedule…':'Next: Plan my schedule'}</button></>}{setupStep==='schedule'&&<>{scheduleCoachMessage&&<p className="schedule-coach-msg">{scheduleCoachMessage}</p>}<label>Include cardio days?</label><div className="cardio-pref-chips"><button type="button" className={wantsCardio===true?'active':''} onClick={()=>{setWantsCardio(true);fetchScheduleSuggestions(true,wantsMobility);}}>Yes</button><button type="button" className={wantsCardio===false?'active':''} onClick={()=>{setWantsCardio(false);fetchScheduleSuggestions(false,wantsMobility);}}>No</button><button type="button" className={wantsCardio===null?'active':''} onClick={()=>{setWantsCardio(null);fetchScheduleSuggestions(null,wantsMobility);}}>Let AI decide</button></div><label>Include a mobility day?</label><div className="cardio-pref-chips mobility-pref-chips"><button type="button" className={wantsMobility===true?'active':''} onClick={()=>{setWantsMobility(true);fetchScheduleSuggestions(wantsCardio,true);}}>Yes</button><button type="button" className={wantsMobility===false?'active':''} onClick={()=>{setWantsMobility(false);fetchScheduleSuggestions(wantsCardio,false);}}>No</button><button type="button" className={wantsMobility===null?'active':''} onClick={()=>{setWantsMobility(null);fetchScheduleSuggestions(wantsCardio,null);}}>Let AI decide</button></div>{scheduleError&&<div className="program-ai-error" style={{marginTop:8}}><b>Schedule issue:</b> {scheduleError}</div>}{scheduleLoading&&<p className="muted">Updating schedule options…</p>}<div className="schedule-options">{scheduleOptions.map((opt:any)=><button key={opt.id} type="button" className={`schedule-option-card${selectedScheduleId===opt.id?' selected':''}${scheduleRecommendedId===opt.id?' recommended':''}`} onClick={(e)=>{e.stopPropagation();applyScheduleOption(opt);}} disabled={scheduleLoading||aiGenerating}><div className="schedule-option-head"><b>{opt.label}</b>{scheduleRecommendedId===opt.id&&<span className="badge">Recommended</span>}</div><p className="muted">{opt.description}</p><div className="schedule-day-chips">{opt.days.map((d:string)=><span key={d} className="schedule-day-chip">{d} {opt.day_types[d]}</span>)}</div></button>)}</div>{selectedScheduleId&&days.length>0&&<p className="muted schedule-selected-summary" style={{marginTop:8}}><b>Selected split:</b> {days.map((d:string)=>`${d} ${dayTypes[d]||'Full Body'}`).join(' · ')}</p>}{selectedScheduleId&&<><button type="button" className="btn small secondary" style={{marginTop:8}} onClick={()=>setScheduleManualOverride(v=>!v)}>{scheduleManualOverride?'Hide manual edit':'Customize days'}</button>{scheduleManualOverride&&<><label style={{marginTop:10}}>Workout days</label><div className="tabs">{DAYS.map(d=><button key={d} type="button" className={days.includes(d)?'active':''} onClick={()=>{const next=days.includes(d)?days.filter((x:string)=>x!==d):[...days,d].sort((a,b)=>DAYS.indexOf(a)-DAYS.indexOf(b)); setDays(next); const dt={...dayTypes}; if(!next.includes(d))delete dt[d]; else if(!dt[d])dt[d]='Full Body'; setDayTypes(dt);}}>{d}</button>)}</div>{days.map((d:string)=><div key={d}><label>{d} type</label><select value={dayTypes[d]||'Full Body'} onChange={e=>setDayTypes({...dayTypes,[d]:e.target.value})}>{DAY_TYPE_OPTIONS.map((t:string)=><option key={t}>{t}</option>)}</select></div>)}</>}</>}<div className="wizard-nav"><button type="button" className="btn secondary" onClick={()=>setSetupStep('goals')}>Back</button><button type="button" className="btn" onClick={goToReviewStep} disabled={scheduleLoading||!days.length}>Next: Review &amp; generate</button></div></>}{setupStep==='review'&&<><div className="schedule-review-summary"><label>Goals (edit anytime)</label><textarea className="ai-prompt-input ai-prompt-input-lg" rows={6} value={aiPrompt} onChange={e=>setAiPrompt(e.target.value)} disabled={aiGenerating}/><label>Weekly schedule</label><div className="schedule-day-chips">{days.map((d:string)=><span key={d} className="schedule-day-chip">{d} {dayTypes[d]||'Full Body'}</span>)}</div></div><label>New program name</label><input value={programName} onChange={e=>setProgramName(e.target.value)}/><label>Weeks</label><input type="number" value={weeks} onChange={e=>setWeeks(Number(e.target.value))}/>{weeks>4&&<p className="muted">For 5+ weeks, AI designs <b>week 1</b> in detail; BuildIQ expands it into your full {weeks}-week plan.</p>}<label>Muscle focus (optional)</label><p className="muted">Adds ~10–15 working sets per week for each selected muscle group.</p><div className="focus-muscle-grid">{FOCUS_MUSCLES.map((m:string)=><button type="button" key={m} className={`focus-chip${focusMuscles.includes(m)?' active':''}`} onClick={()=>setFocusMuscles(focusMuscles.includes(m)?focusMuscles.filter((x:string)=>x!==m):[...focusMuscles,m])}>{m}</button>)}</div>{focusMuscles.length>0&&<p className="muted">{focusVolumeSummary(focusMuscles,weeks,days.length)}{Object.keys(focusVolumeEst).length?` · Est. weekly sets: ${Object.entries(focusVolumeEst).map(([k,v])=>`${k} ${v}`).join(', ')}`:''}</p>}{aiGenError&&<div className="program-ai-error"><b>Generation issue:</b> {aiGenError}<div className="actions" style={{marginTop:8}}><button type="button" className="btn small secondary" onClick={()=>{setBugOpen(true);setBugTitle('AI plan generation failed');setBugDescription(aiGenError);}}>Report this bug</button></div></div>}{(aiSummary||aiCoachingNotes)&&<div className="program-ai-summary-box"><label>AI plan write-up</label>{aiSummary&&<p className="program-ai-summary">{aiSummary}</p>}{aiCoachingNotes&&<><label style={{marginTop:10}}>Coaching notes</label><p className="program-ai-coaching">{aiCoachingNotes}</p></>}</div>}<label className="remember-row"><input type="checkbox" checked={includeCooldown} onChange={e=>setIncludeCooldown(e.target.checked)}/> Include cooldown stretches</label><button className="btn green full" style={{marginTop:10}} onClick={generateWithAi} disabled={aiGenerating}>{aiGenerating?(weeks>4?'Designing week 1 and building full plan…':'Creating draft with AI…'):weeks>4?'Create draft with AI (week 1 → full plan)':'Create draft with AI'}</button><button className="btn secondary full" style={{marginTop:10}} onClick={generate} disabled={aiGenerating}>Create draft from template</button><p className="muted" style={{marginTop:8}}>New programs save as <b>drafts</b> first. Edit workouts, then publish when ready. AI plans vary exercises week to week; template fallback uses built-in supersets.</p><div className="wizard-nav"><button type="button" className="btn secondary" onClick={()=>setSetupStep('schedule')}>Back</button></div></>}</>}{editingDraftWorkouts&&<div className="card" style={{marginTop:10}}><p className="muted">You&apos;re editing a draft below. Publish when ready, or start a new program wizard if you want a different plan.</p><button type="button" className="btn secondary" onClick={()=>{setDraftEditProgramId(null);setSetupStep('goals');setScheduleError('');setScheduleOptions([]);setSelectedScheduleId('');setScheduleCoachMessage('');}}>Start new program wizard</button></div>}{editingDraftWorkouts&&canEdit()&&<div className="card program-draft-banner" style={{marginTop:10}}><div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}><div><h2>Editing draft</h2><label>Program name</label><input value={programName} onChange={e=>setProgramName(e.target.value)}/><p className="muted" style={{marginTop:8}}>Pick a workout day below, adjust exercises, then publish when ready.</p>{(program?.program_summary||program?.coaching_notes)&&<div className="program-ai-summary-box" style={{marginTop:10}}><label>AI program notes</label>{program?.program_summary&&<p className="program-ai-summary">{program.program_summary}</p>}{program?.coaching_notes&&<><label style={{marginTop:10}}>Coaching notes</label><p className="program-ai-coaching">{program.coaching_notes}</p></>}</div>}</div><div className="assigned-banner-actions"><button type="button" className="btn small secondary" onClick={()=>{setDraftEditProgramId(null);loadPrograms('setup');}}>Back to setup summary</button><button type="button" className="btn small green" onClick={()=>publishProgram(program!.id,false)}>Publish program</button><button type="button" className="btn small red" onClick={()=>deleteProgramHandler(program!.id)}>Delete draft</button></div></div></div>}{editingDraftWorkouts&&program&&<><div className="training-plan-card ui-card ui-card--elevated" style={{marginTop:10}}><TrainingWeekSelector week={week} program={program} weeksFallback={weeks} onWeekChange={onWeekChange} logDate={logDate} onLogDateChange={onLogDateChange}/></div>{weekWorkouts.length>0&&<TrainingWorkoutDays program={program} week={week} workouts={weekWorkouts} activeWorkoutId={workout?.id||''} logDate={logDate} onSelectWorkout={onSelectWorkoutDay}/>}{showEditScope&&<div className="applybox-compact"><label htmlFor="apply-scope-draft">Apply changes to</label><select id="apply-scope-draft" value={applyScope} onChange={e=>setApplyScope(e.target.value as any)}><option value="future">This week and future weeks</option><option value="current">This week only</option></select></div>}{workoutExerciseSections}</>}{canEdit()&&programs.length>0&&(!groupsProgramWizardOpen||editingDraftWorkouts)&&<ProgramLibraryPanel programs={programs} defaultProgramId={mode==='team'?activeTeam?.default_program_id:null} canDelete={canEdit()} onDelete={deleteProgramHandler}/>}</>}{trainingSubNav!=='setup'&&!showProgramSetup&&program&&<p className="muted">Active program: <b>{program.name}</b></p>}{trainingSubNav!=='setup'&&!showProgramSetup&&!program&&<p className="muted">No program yet. Open Program Setup tab to generate one.</p>}</div>;
 
  const profileFields=(compact=false)=><>
   <label>Display name</label>

@@ -991,7 +991,7 @@ export async function persistAiProgramPlan(
     owner_user_id: userId,
     team_id: config.mode === 'team' ? config.teamId || null : null,
     visibility: config.mode,
-    name: plan.program_name || config.programName || 'AI Strength Program',
+    name: config.programName?.trim() || plan.program_name || 'AI Strength Program',
     weeks: config.weeks,
     start_date: mondayOfWeek(todayYmd()),
     focus_muscles: config.focusMuscles?.length ? config.focusMuscles : null,
