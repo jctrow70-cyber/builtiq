@@ -399,7 +399,9 @@ export default function Page(){
  function isOwner(){return isGroupOwner(activeTeam?.my_role);}
  function logUserId(){return viewingMember?.user_id||session?.user?.id;}
  function pickProgram(list:any[],defaultId?:string|null){const published=list.filter((p:any)=>isPublishedProgram(p)); if(!published.length)return null; if(defaultId){const match=published.find((p:any)=>p.id===defaultId); if(match)return match;} return published[0]||null;}
+ function programLoadContext():'training'|'setup'{return trainingSubNav==='setup'||showProgramSetup||draftEditProgramId?'setup':'training';}
  async function loadPrograms(context:'training'|'setup'='training'){
+  if(draftEditProgramId&&(trainingSubNav==='setup'||showProgramSetup))context='setup';
   if(!session?.user)return;
   if(activeAssignedRecipient)return;
   if(viewingMember&&viewingMember.user_id!==session.user.id)return;
@@ -1246,7 +1248,7 @@ export default function Page(){
  }
  async function reloadKeepDay(){
   const keep = activeWorkout;
-  await loadPrograms();
+  await loadPrograms(programLoadContext());
   if(keep) setActiveWorkout(keep);
 }
  function openManageProgram(){setTrainingSubNav('setup');setShowProgramSetup(true);setMemberDashboard(null);setViewingMember(null);}

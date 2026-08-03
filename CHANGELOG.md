@@ -5346,3 +5346,45 @@ None.
 ```text
 BIQ-0069 Fix program setup split selection and draft wizard flow
 ```
+
+---
+
+## BIQ-0070 - Fix Draft Exercise Replace Reloading Setup Wizard
+
+Date: 2026-07-21  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Fixed replacing an exercise on a draft program jumping back to the Program Setup “Create draft with AI” review step (blank / looks like regenerate).
+
+### Purpose
+
+After AI generated a draft, using **Change** on an exercise reloaded programs in **training** mode, which filters out drafts. The UI lost the draft context and showed the setup wizard review step again.
+
+### Changes
+
+- **`page.tsx`:** `programLoadContext()` helper; `reloadKeepDay()` uses setup context when editing drafts; `loadPrograms()` forces setup context when `draftEditProgramId` is active on Program Setup
+
+### Files Changed
+
+- `app/page.tsx`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Program Setup → generate AI draft → **Edit workouts**
+2. On any exercise, click **Change** → pick a catalog exercise
+3. Confirm you stay on the draft editor (workout list below), not the create/review wizard
+4. Repeat for add set, remove exercise, rename — draft view should stay stable
+
+### Recommended Commit Message
+
+```text
+BIQ-0070 Keep draft editor stable when replacing exercises
+```
