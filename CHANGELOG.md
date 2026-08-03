@@ -5588,3 +5588,53 @@ None.
 ```text
 BIQ-0074 Fix Generate program from member detail in Groups
 ```
+
+---
+
+## BIQ-0075 - Honor Explicit Workout Split in AI Schedule
+
+Date: 2026-08-03  
+Branch: main  
+Status: Completed
+
+### Summary
+
+When goals text specifies a concrete weekly split (e.g. pull upper, pull lower, 2 full-body days, 4 weeks), BuildIQ now builds that split as the recommended schedule option and passes pull/push emphasis through to exercise generation.
+
+### Purpose
+
+Users were describing exact splits in the goals field but the AI schedule coach returned generic 3–4 day templates (e.g. upper/lower) that ignored pull emphasis and full-body day counts.
+
+### Changes
+
+- **`parseExplicitScheduleFromGoals`:** Detects pull upper/lower, push upper/lower, full-body counts, and weeks from goals text
+- **Schedule API:** Injects **Your requested split** as `opt_requested` (recommended); falls back to parser if AI fails
+- **Program generation:** `dayEmphasis` passed to AI so pull-focused days use appropriate exercises
+- **Wizard:** Auto-sets weeks when goals mention duration (e.g. "4 weeks")
+
+### Files Changed
+
+- `lib/training/scheduleSuggestion.ts`
+- `lib/training/aiProgramPlan.ts`
+- `app/api/programs/suggest-schedule/route.ts`
+- `app/api/programs/generate/route.ts`
+- `app/page.tsx`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Goals: `I need a pull lower body and a pull upper body. Need 2 full body workouts in the week for 4 weeks`
+2. Next: Plan my schedule → confirm **Your requested split (4-day)** is recommended
+3. Days should be Mon/Tue/Thu/Fri with pull upper, full body, pull lower, full body
+4. Weeks field should show 4
+5. Generate program → pull days should emphasize rows/RDLs/hamstrings not generic push splits
+
+### Recommended Commit Message
+
+```text
+BIQ-0075 Honor explicit workout splits in AI schedule generation
+```

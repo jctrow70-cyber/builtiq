@@ -41,6 +41,7 @@ export type GenerationConfig = {
   fullWeeks?: number;
   days: string[];
   dayTypes: Record<string, string>;
+  dayEmphasis?: Record<string, string>;
   focusMuscles?: string[];
   programName?: string;
   mode: 'personal' | 'team';
@@ -196,8 +197,13 @@ export function buildProgramGenerationPrompt(
     ? `15. EQUIPMENT: User only has access to: ${equipment.join(', ')}. Use ONLY exercises from exercise_catalog/mobility_catalog that match this equipment (bodyweight/mobility stretches are always OK). Do not prescribe barbell/dumbbell/cable exercises requiring unavailable equipment.`
     : '';
   const daySchedule = config.days
-    .map((d) => `${d}: ${config.dayTypes[d] || 'Full Body'}`)
+    .map((d) => {
+      const base = `${d}: ${config.dayTypes[d] || 'Full Body'}`;
+      const emph = config.dayEmphasis?.[d];
+      return emph ? `${base} — ${emph}` : base;
+    })
     .join(', ');
+  const hasDayEmphasis = Boolean(config.dayEmphasis && Object.keys(config.dayEmphasis).length);
   const hasCardioDays = config.days.some((d) => config.dayTypes[d] === 'Cardio');
   const hasMobilityDays = config.days.some((d) => config.dayTypes[d] === 'Mobility');
   const includeCooldown = config.includeCooldown !== false;
@@ -257,7 +263,11 @@ Rules:
 7. Strongly prefer exercises from the catalog that have form guides (has_form_guide: true — image, video, or instructions).
 8. Frame guidance as general fitness/wellness — not medical advice.
 9. Output ONLY valid JSON matching the schema below.
-10. Match each workout's workout_type to the scheduled day_type for that day_label (${daySchedule}).${equipmentNote}${cardioRules}${mobilityDayRules}${cooldownRules}${warmupMobilityRules}
+10. Match each workout's workout_type to the scheduled day_type for that day_label (${daySchedule}).${
+    hasDayEmphasis
+      ? ' When a day includes pull/push emphasis after the dash, exercise selection MUST follow that emphasis (e.g. pull upper = rows, pulldowns, rear delts; pull lower = RDL, hamstrings, glutes — not generic push patterns).'
+      : ''
+  }${equipmentNote}${cardioRules}${mobilityDayRules}${cooldownRules}${warmupMobilityRules}
 ${sportPresets}
 
 JSON schema:
@@ -299,6 +309,7 @@ Generate exactly one workout entry per (week × training day) for all ${config.w
       program_config: {
         weeks: config.weeks,
         training_days: daySchedule,
+        day_emphasis: config.dayEmphasis && Object.keys(config.dayEmphasis).length ? config.dayEmphasis : null,
         focus_muscles: config.focusMuscles || [],
         visibility: config.mode,
         include_cooldown: includeCooldown,

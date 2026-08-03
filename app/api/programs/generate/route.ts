@@ -63,6 +63,12 @@ export async function POST(request: Request) {
   const mode = body?.mode === 'team' ? 'team' : 'personal';
   const teamId = body?.teamId ? String(body.teamId) : null;
   const focusMuscles = Array.isArray(body?.focusMuscles) ? body.focusMuscles.map(String) : [];
+  const dayEmphasis =
+    body?.dayEmphasis && typeof body.dayEmphasis === 'object'
+      ? Object.fromEntries(
+          Object.entries(body.dayEmphasis).map(([day, emph]) => [String(day), String(emph)])
+        )
+      : {};
   const programName = body?.programName ? String(body.programName) : 'AI Strength Program';
   const includeCooldown = body?.includeCooldown !== false;
 
@@ -96,6 +102,7 @@ export async function POST(request: Request) {
     weeks,
     days,
     dayTypes,
+    dayEmphasis,
     focusMuscles,
     programName,
     mode,

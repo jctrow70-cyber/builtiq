@@ -3,6 +3,8 @@ import OpenAI from 'openai';
 import { createSupabaseFromRequest, requireAuthUser } from '../../../../lib/supabaseServer';
 import {
   buildScheduleSuggestionPrompt,
+  mergeExplicitScheduleOption,
+  parseExplicitScheduleFromGoals,
   parseScheduleSuggestion,
 } from '../../../../lib/training/scheduleSuggestion';
 import { normalizeEquipmentList } from '../../../../lib/training/equipmentFilter';
@@ -54,6 +56,8 @@ export async function POST(request: Request) {
     ? body.availableEquipment.map(String)
     : normalizeEquipmentList(profile?.available_equipment);
 
+  const explicitSchedule = parseExplicitScheduleFromGoals(goalsPrompt);
+
   const { system, user: userContent } = buildScheduleSuggestionPrompt(
     goalsPrompt,
     profile,
@@ -94,9 +98,24 @@ export async function POST(request: Request) {
 
     const { suggestion, error: validateError } = parseScheduleSuggestion(rawContent);
     if (!validateError && suggestion) {
-      return NextResponse.json(suggestion);
+      return NextResponse.json(mergeExplicitScheduleOption(suggestion, explicitSchedule));
     }
     lastValidateError = validateError || 'Invalid schedule suggestion';
+  }
+
+  if (explicitSchedule) {
+    return NextResponse.json(
+      mergeExplicitScheduleOption(
+        {
+          coach_message: `Built your split from your goals: ${explicitSchedule.option.description}`,
+          asks_cardio: false,
+          asks_mobility: false,
+          options: [],
+          recommended_option_id: explicitSchedule.option.id,
+        },
+        explicitSchedule
+      )
+    );
   }
 
   return NextResponse.json(

@@ -22,7 +22,139 @@ export type ScheduleSuggestion = {
   asks_mobility: boolean;
   options: ScheduleOption[];
   recommended_option_id: string;
+  day_emphasis?: Record<string, string>;
+  weeks_hint?: number | null;
 };
+
+export type ParsedExplicitSchedule = {
+  option: ScheduleOption;
+  dayEmphasis: Record<string, string>;
+  weeksHint: number | null;
+};
+
+const SPACED_DAY_LAYOUTS: Record<number, DayLabel[]> = {
+  2: ['Tue', 'Fri'],
+  3: ['Mon', 'Wed', 'Fri'],
+  4: ['Mon', 'Tue', 'Thu', 'Fri'],
+  5: ['Mon', 'Tue', 'Wed', 'Fri', 'Sat'],
+  6: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+};
+
+function pickSpacedDays(count: number): DayLabel[] {
+  if (SPACED_DAY_LAYOUTS[count]) return [...SPACED_DAY_LAYOUTS[count]];
+  if (count <= DAY_LABELS.length) return DAY_LABELS.slice(0, count);
+  return [...SPACED_DAY_LAYOUTS[6]];
+}
+
+function parseCountWord(raw: string): number {
+  const wordMap: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6 };
+  const key = raw.toLowerCase().trim();
+  if (wordMap[key]) return wordMap[key];
+  const n = parseInt(key, 10);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/** When the user describes a specific weekly split in goals text, build it directly. */
+export function parseExplicitScheduleFromGoals(goals: string): ParsedExplicitSchedule | null {
+  const text = goals.toLowerCase();
+
+  const wantsPullLower =
+    /pull[\s-]*(lower|legs?)|lower[\s-]*body[\s-]*pull|pull[\s-]*lower[\s-]*body/.test(text);
+  const wantsPullUpper =
+    /pull[\s-]*(upper|body)|upper[\s-]*body[\s-]*pull|pull[\s-]*upper[\s-]*body/.test(text);
+  const wantsPushLower = /push[\s-]*(lower|legs?)|lower[\s-]*body[\s-]*push/.test(text);
+  const wantsPushUpper = /push[\s-]*(upper|body)|upper[\s-]*body[\s-]*push/.test(text);
+
+  let fullBodyCount = 0;
+  const fullBodyMatch = text.match(/(\d+|one|two|three|four|five|six)\s+full[\s-]?body/);
+  if (fullBodyMatch) fullBodyCount = parseCountWord(fullBodyMatch[1]);
+
+  const sessions: { type: DayType; emphasis?: string; label: string }[] = [];
+
+  if (wantsPullUpper) {
+    sessions.push({
+      type: 'Upper Body',
+      label: 'Pull upper body',
+      emphasis:
+        'Pull-focused upper body — prioritize back, lats, rear delts, and biceps; minimize chest pressing',
+    });
+  } else if (wantsPushUpper) {
+    sessions.push({
+      type: 'Upper Body',
+      label: 'Push upper body',
+      emphasis:
+        'Push-focused upper body — prioritize chest, shoulders, and triceps; minimize heavy rowing volume',
+    });
+  }
+
+  if (wantsPullLower) {
+    sessions.push({
+      type: 'Lower Body',
+      label: 'Pull lower body',
+      emphasis:
+        'Pull-focused lower body — prioritize hamstrings, glutes, and posterior chain (RDL, hip hinge, ham curl)',
+    });
+  } else if (wantsPushLower) {
+    sessions.push({
+      type: 'Lower Body',
+      label: 'Push lower body',
+      emphasis: 'Push-focused lower body — prioritize quads, glutes, and squat/lunge patterns',
+    });
+  }
+
+  for (let i = 0; i < fullBodyCount; i++) {
+    sessions.push({ type: 'Full Body', label: 'Full body' });
+  }
+
+  if (sessions.length < 2) return null;
+  if (!wantsPullLower && !wantsPullUpper && !wantsPushLower && !wantsPushUpper && fullBodyCount === 0) {
+    return null;
+  }
+
+  const days = pickSpacedDays(sessions.length);
+  const day_types: Record<string, DayType> = {};
+  const dayEmphasis: Record<string, string> = {};
+  sessions.forEach((session, index) => {
+    const day = days[index];
+    day_types[day] = session.type;
+    if (session.emphasis) dayEmphasis[day] = session.emphasis;
+  });
+
+  const weeksMatch = text.match(/(\d+)\s+weeks?/);
+  const weeksHint = weeksMatch ? Math.max(1, Math.min(12, parseInt(weeksMatch[1], 10))) : null;
+
+  const summary = sessions.map((s) => s.label).join(' · ');
+
+  return {
+    option: {
+      id: 'opt_requested',
+      label: `Your requested split (${sessions.length}-day)`,
+      description: `From your goals: ${summary}.`,
+      days,
+      day_types,
+      includes_cardio: false,
+      includes_mobility: false,
+    },
+    dayEmphasis,
+    weeksHint,
+  };
+}
+
+export function mergeExplicitScheduleOption(
+  suggestion: ScheduleSuggestion,
+  explicit: ParsedExplicitSchedule | null
+): ScheduleSuggestion {
+  if (!explicit) return suggestion;
+  const options = suggestion.options.filter((o) => o.id !== explicit.option.id);
+  return {
+    ...suggestion,
+    options: [explicit.option, ...options].slice(0, 4),
+    recommended_option_id: explicit.option.id,
+    coach_message: `We matched your description with "${explicit.option.label}" (${explicit.option.description}). Pick it below or choose another split.`,
+    day_emphasis: explicit.dayEmphasis,
+    weeks_hint: explicit.weeksHint,
+  };
+}
 
 function stripJsonFences(raw: string): string {
   let s = raw.trim();
@@ -158,6 +290,7 @@ export function buildScheduleSuggestionPrompt(
   const system = `You are BuildIQ Health's training schedule coach. Recommend weekly workout splits tailored to the user's goals. Output ONLY valid JSON — no markdown.
 
 Rules:
+0. If goals explicitly describe workout types (e.g. pull upper, pull lower, push upper, N full-body days, or days per week), you MUST include an option with id "opt_requested" that matches their description exactly (correct count of each day type). Set recommended_option_id to "opt_requested" unless their request is unsafe or impossible.
 1. Provide 2–4 schedule options with distinct training frequencies (e.g. 3-day, 4-day, 5-day).
 2. Tailor splits to goals: baseball/throwing → rotation + power upper/lower; hypertrophy → push/pull/legs; strength → heavy compound focus; fat loss/endurance → consider cardio days; high-frequency training → consider Mobility recovery day.
 3. Valid day_labels: Mon, Tue, Wed, Thu, Fri, Sat, Sun — use 3–5 training days per option, realistic weekly spacing (avoid back-to-back same muscle group when possible).
