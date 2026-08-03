@@ -4,4 +4,5 @@ export * from './schema';
 export * from './assignments';
 export * from './classifications';
 export * from './memberPerformance';
-export * from './aiMetadata';
+export * from './teamProgramTools';
+export * from './programRoster';

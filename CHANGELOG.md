@@ -5388,3 +5388,55 @@ None.
 ```text
 BIQ-0070 Keep draft editor stable when replacing exercises
 ```
+
+---
+
+## BIQ-0071 - Team Workspace Redesign (Groups Tab)
+
+Date: 2026-07-21  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Redesigned the Groups tab into a compact **Team workspace**: team selector dropdown, tabbed workspace (Members, Programs, Progress, Settings), inline team program wizard, program assign/duplicate/customize flows, and leave/delete team support.
+
+### Purpose
+
+Make team management easier on mobile: switch teams quickly, manage members and programs in one place, assign shared or individual plans, and view progress without losing navigation context after saves.
+
+### Changes
+
+- **UI:** `TeamSelector`, workspace tabs, member detail sub-tabs, Programs tab with inline wizard, Settings with classifications + assign workout + leave/delete
+- **Copy:** User-facing **Team/Teams** and **Editor** role label (DB still `manager`); nav stays **Groups**
+- **API/helpers:** `duplicateTeamProgram`, `customizeProgramForMember`, `leaveTeam`, `deleteTeam`, `buildTeamProgramRows`
+- **Migration `20250803_030`:** `source_program_id`, `is_archived`, RPCs `st_duplicate_program`, `st_leave_team`, `st_delete_team`, `st_customize_program_for_member`
+
+### Files Changed
+
+- `app/components/groups/` — new team workspace components; `GroupsHub.tsx` rewrite
+- `app/page.tsx` — handlers, inline wizard state, GroupsHub wiring
+- `lib/groups/` — permissions, programRoster, teamProgramTools
+- `app/globals.css` — team workspace styles
+- `supabase/migrations/20250803_030_team_workspace_program_tools.sql`
+- `CHANGELOG.md`
+
+### Database Changes
+
+Apply migration `20250803_030_team_workspace_program_tools.sql` in Supabase.
+
+### Testing Steps
+
+1. Groups tab → team selector shows all teams with role; Create/Join in dropdown
+2. Members tab → compact roster; tap member → detail tabs (Overview, Assigned, History, Progress)
+3. Programs tab → Generate/Create opens inline wizard; Duplicate, Publish, Assign (entire/selected/one)
+4. Progress tab → team compliance + member status rows
+5. Settings → invite code, classifications, leave team (member) / delete team (owner)
+6. Apply migration; duplicate program and customize-for-member RPCs succeed
+7. Mobile 375px: selector, tabs, sheets usable
+
+### Recommended Commit Message
+
+```text
+BIQ-0071 Redesign Groups tab into tabbed Team workspace
+```

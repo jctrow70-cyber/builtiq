@@ -13,7 +13,7 @@ export function normalizeRole(role: string | null | undefined): GroupRole {
 export function roleLabel(role: string | null | undefined): string {
   const n = normalizeRole(role);
   if (n === 'owner') return 'Owner';
-  if (n === 'manager') return 'Manager';
+  if (n === 'manager') return 'Editor';
   return 'Member';
 }
 

@@ -36,6 +36,8 @@ type GroupMemberDashboardProps = {
   performanceLogs?: any[];
   workoutHistory?: MemberWorkoutHistoryDay[];
   weightUnit?: string;
+  showAssignmentPanel?: boolean;
+  hideHeader?: boolean;
 };
 
 export default function GroupMemberDashboard({
@@ -62,6 +64,8 @@ export default function GroupMemberDashboard({
   performanceLogs = [],
   workoutHistory = [],
   weightUnit = 'lb',
+  showAssignmentPanel = true,
+  hideHeader = false,
 }: GroupMemberDashboardProps) {
   const stats = memberStats[member.user_id] || { sets: 0, days: 0 };
   const assignmentType =
@@ -69,6 +73,7 @@ export default function GroupMemberDashboard({
 
   return (
     <div className="card member-dashboard">
+      {!hideHeader && (
       <div className="topline" style={{ justifyContent: 'space-between' }}>
         <div>
           <h2>{member.display_name || 'Member'}</h2>
@@ -85,6 +90,14 @@ export default function GroupMemberDashboard({
           </button>
         </div>
       </div>
+      )}
+      {hideHeader && (
+        <div className="actions" style={{ justifyContent: 'flex-end', marginBottom: 8 }}>
+          <button type="button" className="btn small green" onClick={onOpenWorkout}>
+            Open workout
+          </button>
+        </div>
+      )}
       <div className="dash-metrics member-dash-metrics">
         <div>
           <b>{statusLabel(memberWorkoutStatus)}</b>
@@ -107,16 +120,16 @@ export default function GroupMemberDashboard({
           <span className="muted">Sets this week</span>
         </div>
       </div>
-      {canManage && (
+      {canManage && showAssignmentPanel && (
         <div className="member-assignment-panel">
           <label>Program assignment</label>
           <select
             value={assignDraft.type}
             onChange={(e) => onAssignDraftChange({ ...assignDraft, type: e.target.value })}
           >
-            <option value="team">Follow Group Plan</option>
+            <option value="team">Follow Team Plan</option>
             <option value="personal">Use Personal Plan</option>
-            <option value="individual_team">Individual Group Plan</option>
+            <option value="individual_team">Individual Team Plan</option>
             <option value="manual">Manual Assignment</option>
           </select>
           {(assignDraft.type === 'individual_team' || assignDraft.type === 'manual') && (
@@ -135,7 +148,7 @@ export default function GroupMemberDashboard({
               </select>
             </>
           )}
-          <label>Manager notes</label>
+          <label>Editor notes</label>
           <input
             value={assignDraft.notes}
             onChange={(e) => onAssignDraftChange({ ...assignDraft, notes: e.target.value })}

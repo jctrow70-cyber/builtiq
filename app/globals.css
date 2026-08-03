@@ -118,6 +118,45 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .catalog-result.picked{border-color:var(--purple);background:#171628}
 .team-plan-card,.team-roster-card{margin-bottom:10px}
 .groups-hub{display:flex;flex-direction:column;gap:10px}
+.teams-workspace{gap:12px}
+.team-workspace-head{padding:12px 14px}
+.team-selector-wrap{position:relative}
+.team-selector-trigger{display:flex;flex-direction:column;align-items:flex-start;width:100%;text-align:left;border:1px solid var(--line);background:#0f172a;border-radius:12px;padding:10px 12px;color:inherit;cursor:pointer}
+.team-selector-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.team-selector-value{font-size:16px;font-weight:800;margin-top:2px;width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.team-selector-chevron{font-size:10px;color:var(--muted)}
+.team-selector-meta{margin-top:6px;font-size:12px}
+.team-selector-menu{position:absolute;z-index:40;top:calc(100% + 6px);left:0;right:0;background:#0b1119;border:1px solid var(--line);border-radius:12px;padding:6px;box-shadow:0 12px 32px rgba(0,0,0,.45)}
+.team-selector-item{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;border:0;background:transparent;color:inherit;padding:10px 12px;border-radius:8px;cursor:pointer}
+.team-selector-item:hover,.team-selector-item.selected{background:#121827}
+.team-selector-item-name{font-weight:700;font-size:14px}
+.team-selector-divider{height:1px;background:var(--line);margin:6px 0}
+.team-selector-action{display:block;width:100%;text-align:left;border:0;background:transparent;color:#c4b5fd;padding:10px 12px;border-radius:8px;cursor:pointer;font-weight:700}
+.team-selector-action:hover{background:#121827}
+.team-workspace-tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.team-workspace-tabs button{flex:1;min-width:0;border:1px solid var(--line);background:#0f172a;color:var(--muted);border-radius:999px;padding:8px 10px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+.team-workspace-tabs button.active{border-color:var(--purple);background:#1b1634;color:#fff}
+.team-sheet-backdrop{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;padding:12px}
+.team-sheet-panel{width:100%;max-width:520px;max-height:85vh;overflow:auto;margin:0;border-radius:16px 16px 0 0}
+.team-sheet-error{color:#f87171;font-size:12px;margin-top:8px}
+.team-assign-target-chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.team-assign-target-chips button{border:1px solid var(--line);background:#0f172a;color:inherit;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer}
+.team-assign-target-chips button.active{border-color:var(--purple);background:#1b1634}
+.team-assign-member-picks{display:grid;gap:6px;margin-top:8px;max-height:180px;overflow:auto}
+.team-program-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;padding:12px 0;border-top:1px solid var(--line)}
+.team-program-row-actions{flex-wrap:wrap;justify-content:flex-end}
+.team-programs-actions{flex-shrink:0}
+.team-member-detail-tabs{display:flex;gap:6px;overflow-x:auto;margin-top:10px}
+.team-member-detail-tabs button{border:1px solid var(--line);background:#0f172a;color:var(--muted);border-radius:999px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
+.team-member-detail-tabs button.active{border-color:var(--purple);background:#1b1634;color:#fff}
+.team-progress-member-row{display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left;border:0;background:transparent;color:inherit;padding:10px 0;border-top:1px solid var(--line);cursor:pointer}
+.team-progress-member-row:disabled{cursor:default;opacity:.85}
+.team-progress-member-row b{display:block;font-size:14px}
+.team-progress-member-row .muted{display:block;font-size:11px;margin-top:2px}
+@media (min-width:640px){
+ .team-sheet-backdrop{align-items:center}
+ .team-sheet-panel{border-radius:16px;max-height:80vh}
+}
 .groups-hub-back{align-self:flex-start;margin-bottom:2px}
 .groups-hub-list{display:flex;flex-direction:column;gap:8px}
 .group-card-btn{display:block;width:100%;text-align:left;border:1px solid var(--line);background:#0f172a;color:inherit;border-radius:14px;padding:12px 14px;cursor:pointer}

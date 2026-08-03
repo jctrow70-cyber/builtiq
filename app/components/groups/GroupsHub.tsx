@@ -1,11 +1,23 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { roleForUi, roleLabel, classificationNamesForMember, type GroupClassification, type MemberPerformanceBundle, type MemberRosterMeta } from '../../../lib/groups';
-import GroupCreateJoinPanel from './GroupCreateJoinPanel';
-import GroupMemberDashboard from './GroupMemberDashboard';
-import GroupAssignWorkoutPanel from './GroupAssignWorkoutPanel';
-import GroupClassificationsPanel from './GroupClassificationsPanel';
+import { useEffect, useMemo, useState } from 'react';
+import {
+  buildTeamProgramRows,
+  type GroupClassification,
+  type MemberPerformanceBundle,
+  type MemberRosterMeta,
+} from '../../../lib/groups';
+import type { AssignProgramTarget } from './TeamAssignProgramModal';
+import TeamAssignProgramModal from './TeamAssignProgramModal';
+import TeamCreateJoinSheet from './TeamCreateJoinSheet';
+import TeamMemberDetail from './TeamMemberDetail';
+import TeamMembersTab from './TeamMembersTab';
+import TeamProgressTab from './TeamProgressTab';
+import TeamProgramsTab from './TeamProgramsTab';
+import TeamSelector from './TeamSelector';
+import TeamSettingsTab from './TeamSettingsTab';
+import TeamWorkspaceTabs, { type TeamWorkspaceTab } from './TeamWorkspaceTabs';
+import type { ReactNode } from 'react';
 
 export type GroupsHubProps = {
   sessionUserId: string;
@@ -27,6 +39,7 @@ export type GroupsHubProps = {
   memberAssignments: Record<string, any>;
   assignDraft: { type: string; programId: string; notes: string };
   programs: any[];
+  teamPrograms: any[];
   groupProgramForAssign: any | null;
   classifications: GroupClassification[];
   memberClassificationIds: Record<string, string[]>;
@@ -38,6 +51,8 @@ export type GroupsHubProps = {
   isOwner: boolean;
   logDate: string;
   week: number;
+  groupsProgramWizardOpen: boolean;
+  teamProgramSetupPanel: ReactNode | null;
   onSelectTeam: (teamId: string) => void;
   onCreateGroup: (name: string) => Promise<void>;
   onJoinGroup: (code: string) => Promise<void>;
@@ -65,38 +80,27 @@ export type GroupsHubProps = {
   onDeleteClassification: (classification: GroupClassification) => Promise<void>;
   onToggleMemberClassification: (member: any, classificationId: string, active: boolean) => void;
   onSetModeTeam: () => void;
+  onOpenGroupsProgramWizard: (mode: 'create' | 'generate') => void;
+  onCloseGroupsProgramWizard: () => void;
+  onDuplicateProgram: (programId: string) => Promise<void>;
+  onEditTeamProgram: (programId: string) => void;
+  onPublishTeamProgram: (programId: string) => void;
+  onAssignTeamProgram: (
+    programId: string,
+    payload: { target: AssignProgramTarget; memberUserIds: string[]; setAsTeamDefault: boolean }
+  ) => Promise<void>;
+  onCustomizeProgramForMember: (memberUserId: string, sourceProgramId: string) => Promise<void>;
+  onGenerateProgramForMember: (memberUserId: string) => void;
+  onLeaveTeam: () => Promise<void>;
+  onDeleteTeam: () => Promise<void>;
   sectionExercises: (workout: any, section: string) => any[];
   statusLabel: (s: string) => string;
 };
-
-function GroupCard({
-  team,
-  memberCount,
-  onSelect,
-}: {
-  team: any;
-  memberCount?: number;
-  onSelect: () => void;
-}) {
-  return (
-    <button type="button" className="group-card-btn" onClick={onSelect}>
-      <div className="group-card-head">
-        <b>{team.name}</b>
-        <span className="badge">{roleLabel(team.my_role)}</span>
-      </div>
-      <p className="muted">
-        {memberCount != null ? `${memberCount} member${memberCount === 1 ? '' : 's'}` : 'Tap to open'}
-        {(team.training_source || 'team') === 'personal' ? ' · Personal plan' : ' · Group plan'}
-      </p>
-    </button>
-  );
-}
 
 export default function GroupsHub(props: GroupsHubProps) {
   const {
     sessionUserId,
     teams,
-    selectedTeamId,
     activeTeam,
     members,
     memberStats,
@@ -112,17 +116,20 @@ export default function GroupsHub(props: GroupsHubProps) {
     memberAssignment,
     assignDraft,
     programs,
+    teamPrograms,
     groupProgramForAssign,
     classifications,
     memberClassificationIds,
+    memberAssignments,
     compliancePct,
     teamActiveCount,
     teamTotalSets,
-    teamPlanCount,
     canManage,
     isOwner,
     logDate,
     week,
+    groupsProgramWizardOpen,
+    teamProgramSetupPanel,
     onSelectTeam,
     onCreateGroup,
     onJoinGroup,
@@ -141,57 +148,67 @@ export default function GroupsHub(props: GroupsHubProps) {
     onDeleteClassification,
     onToggleMemberClassification,
     onSetModeTeam,
+    onOpenGroupsProgramWizard,
+    onCloseGroupsProgramWizard,
+    onDuplicateProgram,
+    onEditTeamProgram,
+    onPublishTeamProgram,
+    onAssignTeamProgram,
+    onCustomizeProgramForMember,
+    onGenerateProgramForMember,
+    onLeaveTeam,
+    onDeleteTeam,
     sectionExercises,
     statusLabel,
   } = props;
 
-  const multiGroup = teams.length > 1;
-  const [view, setView] = useState<'list' | 'detail'>(multiGroup ? 'list' : 'detail');
+  const [workspaceTab, setWorkspaceTab] = useState<TeamWorkspaceTab>('members');
+  const [sheetMode, setSheetMode] = useState<'create' | 'join' | null>(null);
+  const [assignProgramId, setAssignProgramId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (teams.length <= 1) setView('detail');
-  }, [teams.length]);
+    setWorkspaceTab('members');
+  }, [activeTeam?.id]);
+
+  const programRows = useMemo(
+    () =>
+      buildTeamProgramRows(
+        teamPrograms,
+        activeTeam?.default_program_id,
+        memberAssignments,
+        members
+      ),
+    [teamPrograms, activeTeam?.default_program_id, memberAssignments, members]
+  );
+
+  const assignProgram = assignProgramId
+    ? programRows.find((p) => p.id === assignProgramId) || teamPrograms.find((p: any) => p.id === assignProgramId)
+    : null;
 
   if (teams.length === 0) {
     return (
-      <section className="groups-hub">
+      <section className="groups-hub teams-workspace">
         <div className="card">
-          <h2>My Groups</h2>
+          <h2>Teams</h2>
           <p className="muted">
-            Create a group for your team, family, or clients — or join one with an invite code. Group workouts and
-            assignments show up in Training when your manager assigns them.
+            Create a team for your family, athletes, or clients — or join one with an invite code. Team workouts and
+            assignments show up in Training when your editor assigns them.
           </p>
-        </div>
-        <GroupCreateJoinPanel onCreate={onCreateGroup} onJoin={onJoinGroup} />
-      </section>
-    );
-  }
-
-  if (view === 'list' && multiGroup) {
-    return (
-      <section className="groups-hub">
-        <div className="card">
-          <div className="topline" style={{ justifyContent: 'space-between' }}>
-            <h2>My Groups</h2>
-            <span className="badge">{teams.length} groups</span>
+          <div className="actions" style={{ marginTop: 12 }}>
+            <button type="button" className="btn green" onClick={() => setSheetMode('create')}>
+              Create Team
+            </button>
+            <button type="button" className="btn secondary" onClick={() => setSheetMode('join')}>
+              Join Team
+            </button>
           </div>
-          <p className="muted">Select a group to manage or view your plan.</p>
         </div>
-        <div className="groups-hub-list">
-          {teams.map((t: any) => (
-            <GroupCard
-              key={t.id}
-              team={t}
-              memberCount={t.id === activeTeam?.id ? members.length : undefined}
-              onSelect={() => {
-                onSelectTeam(t.id);
-                onSetModeTeam();
-                setView('detail');
-              }}
-            />
-          ))}
-        </div>
-        <GroupCreateJoinPanel onCreate={onCreateGroup} onJoin={onJoinGroup} compact />
+        <TeamCreateJoinSheet
+          mode={sheetMode}
+          onClose={() => setSheetMode(null)}
+          onCreate={onCreateGroup}
+          onJoin={onJoinGroup}
+        />
       </section>
     );
   }
@@ -200,266 +217,160 @@ export default function GroupsHub(props: GroupsHubProps) {
   const selfStats = selfMember ? memberStats[selfMember.user_id] || { sets: 0, days: 0 } : { sets: 0, days: 0 };
 
   return (
-    <section className="groups-hub">
-      {multiGroup && (
-        <button type="button" className="btn small secondary groups-hub-back" onClick={() => setView('list')}>
-          ← All groups
-        </button>
-      )}
-
-      <div className="card">
-        <div className="topline" style={{ justifyContent: 'space-between' }}>
-          <h2>{activeTeam?.name || 'Group'}</h2>
-          {canManage && <span className="badge">Manage</span>}
-        </div>
-        <div className="stat stat-mode" style={{ marginTop: 8 }}>
-          <span className="muted">Group</span>
-          <select
-            className="mode-team-select"
-            value={activeTeam?.id || ''}
-            onChange={(e) => {
-              onSelectTeam(e.target.value);
-              onSetModeTeam();
-            }}
-            aria-label="Select group"
-          >
-            {teams.map((t: any) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-          {activeTeam && (
-            <span className="muted mode-team-meta">{roleLabel(activeTeam.my_role)}</span>
-          )}
-        </div>
-        {activeTeam && (
-          <p className="muted" style={{ marginTop: 8 }}>
-            Invite code: <b>{activeTeam.invite_code}</b>
-            {canManage && ' · Share this code so others can join'}
-          </p>
-        )}
+    <section className="groups-hub teams-workspace">
+      <div className="card team-workspace-head">
+        <TeamSelector
+          teams={teams}
+          activeTeam={activeTeam}
+          memberCount={members.length}
+          onSelectTeam={(id) => {
+            onSelectTeam(id);
+            onSetModeTeam();
+          }}
+          onCreateTeam={() => setSheetMode('create')}
+          onJoinTeam={() => setSheetMode('join')}
+        />
       </div>
 
-      {!canManage && selfMember && (
-        <div className="card">
-          <h2>Your activity</h2>
-          <div className="dash-metrics">
-            <div>
-              <b>{selfStats.sets}</b>
-              <span className="muted">Sets this week</span>
-            </div>
-            <div>
-              <b>{selfStats.days}</b>
-              <span className="muted">Active days</span>
-            </div>
-          </div>
-          <p className="muted" style={{ marginTop: 8 }}>
-            Log workouts in Training. Your manager can see group compliance from their dashboard.
-          </p>
-        </div>
-      )}
+      <TeamWorkspaceTabs active={workspaceTab} onChange={setWorkspaceTab} />
 
-      {canManage && (
-        <div className="card team-compliance-card">
-          <div className="topline" style={{ justifyContent: 'space-between' }}>
-            <h2>Compliance (this week)</h2>
-            <span className="badge">{compliancePct}%</span>
-          </div>
-          <div className="dash-metrics">
-            <div>
-              <b>
-                {teamActiveCount}/{members.length || 0}
-              </b>
-              <span className="muted">Members active</span>
-            </div>
-            <div>
-              <b>{teamTotalSets}</b>
-              <span className="muted">Total sets</span>
-            </div>
-            <div>
-              <b>{teamPlanCount}</b>
-              <span className="muted">On group plan</span>
-            </div>
-            <div>
-              <b>{members.length - teamPlanCount}</b>
-              <span className="muted">Personal plan</span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {canManage &&
-        memberDashboard &&
-        memberDashboard.user_id !== sessionUserId && (
-          <GroupMemberDashboard
-            member={memberDashboard}
-            memberAssignment={memberAssignment}
-            memberDashProgram={memberDashProgram}
-            memberTodayWorkout={memberTodayWorkout}
-            memberWorkoutStatus={memberWorkoutStatus}
-            memberDashLastDate={memberDashLastDate}
-            memberDashLogs={memberDashLogs}
-            memberStats={memberStats}
-            logDate={logDate}
-            week={week}
-            canManage={canManage}
-            assignDraft={assignDraft}
-            programs={programs}
-            onAssignDraftChange={onAssignDraftChange}
-            onBack={onCloseMemberDashboard}
-            onOpenWorkout={() => onOpenMemberWorkout(memberDashboard)}
-            onApplyAssignment={onApplyAssignment}
-            sectionExercises={sectionExercises}
-            statusLabel={statusLabel}
-            assignmentCompliance={memberPerformance?.assignmentCompliance}
-            performanceLogs={memberPerformance?.logs || []}
-            workoutHistory={memberPerformance?.history || []}
-            weightUnit={weightUnit}
-          />
-        )}
-
-      {canManage && (
-        <GroupClassificationsPanel
-          classifications={classifications}
-          members={members}
-          memberClassificationIds={memberClassificationIds}
-          onCreate={onCreateClassification}
-          onDelete={onDeleteClassification}
+      {memberDashboard && memberDashboard.user_id !== sessionUserId && canManage ? (
+        <TeamMemberDetail
+          member={memberDashboard}
+          memberAssignment={memberAssignment}
+          memberDashProgram={memberDashProgram}
+          memberTodayWorkout={memberTodayWorkout}
+          memberWorkoutStatus={memberWorkoutStatus}
+          memberDashLastDate={memberDashLastDate}
+          memberDashLogs={memberDashLogs}
+          memberStats={memberStats}
+          logDate={logDate}
+          week={week}
+          canManage={canManage}
+          assignDraft={assignDraft}
+          programs={programs}
+          onAssignDraftChange={onAssignDraftChange}
+          onBack={onCloseMemberDashboard}
+          onOpenWorkout={() => onOpenMemberWorkout(memberDashboard)}
+          onApplyAssignment={onApplyAssignment}
+          onCustomizeProgram={(sourceId) => onCustomizeProgramForMember(memberDashboard.user_id, sourceId)}
+          onGenerateForMember={() => onGenerateProgramForMember(memberDashboard.user_id)}
+          sectionExercises={sectionExercises}
+          statusLabel={statusLabel}
+          assignmentCompliance={memberPerformance?.assignmentCompliance}
+          performanceLogs={memberPerformance?.logs || []}
+          workoutHistory={memberPerformance?.history || []}
+          weightUnit={weightUnit}
         />
-      )}
-
-      <div className="card team-roster-card">
-        <div className="topline" style={{ justifyContent: 'space-between' }}>
-          <h2>Members</h2>
-          <button type="button" className="btn small secondary" onClick={onRefreshMembers}>
-            Refresh
-          </button>
-        </div>
-        <p className="muted">
-          {canManage
-            ? 'Click a member for their training dashboard.'
-            : 'Tap your name to open Training.'}
-        </p>
-        {members.length === 0 && <p className="muted">No members yet. Share your invite code.</p>}
-        {members.map((m: any) => {
-          const stats = memberStats[m.user_id] || { sets: 0, days: 0 };
-          const rosterMeta = memberRosterMeta[m.user_id] || {
-            recentPr: false,
-            assignmentPending: 0,
-            assignmentOverdue: 0,
-          };
-          const isSelf = m.user_id === sessionUserId;
-          const participating = m.is_active_participant !== false;
-          const memberTags = classificationNamesForMember(m.id, classifications, memberClassificationIds);
-          const memberTagIds = memberClassificationIds[m.id] || [];
-          return (
-            <div key={m.id} className="team-member-row">
-              <button type="button" className="team-member-main" onClick={() => onOpenMember(m)}>
-                <div>
-                  <b>
-                    {m.display_name || 'Member'}
-                    {isSelf ? ' (you)' : ''}
-                  </b>
-                  <span className="muted">
-                    {roleLabel(m.role)} · {(m.training_source || 'team') === 'team' ? 'Group' : 'Personal'} ·{' '}
-                    {stats.sets} sets
-                    {!participating ? ' · observer' : ''}
-                    {memberTags.length ? ` · ${memberTags.join(', ')}` : ''}
-                  </span>
-                  {canManage && classifications.length > 0 && (
-                    <div className="member-classification-picks">
-                      {classifications.map((c) => (
-                        <label key={c.id} className="classification-chip-toggle remember-row">
-                          <input
-                            type="checkbox"
-                            checked={memberTagIds.includes(c.id)}
-                            onChange={(e) => onToggleMemberClassification(m, c.id, e.target.checked)}
-                            onClick={(e) => e.stopPropagation()}
-                          />
-                          {c.name}
-                        </label>
-                      ))}
+      ) : (
+        <>
+          {workspaceTab === 'members' && (
+            <>
+              {!canManage && selfMember && (
+                <div className="card">
+                  <h2>Your activity</h2>
+                  <div className="dash-metrics">
+                    <div>
+                      <b>{selfStats.sets}</b>
+                      <span className="muted">Sets this week</span>
                     </div>
-                  )}
+                    <div>
+                      <b>{selfStats.days}</b>
+                      <span className="muted">Active days</span>
+                    </div>
+                  </div>
+                  <p className="muted" style={{ marginTop: 8 }}>
+                    Log workouts in Training.
+                  </p>
                 </div>
-                <span className="muted">{stats.days}d</span>
-                <div className="member-roster-badges">
-                  {rosterMeta.recentPr && <span className="badge progress-pr-badge">New PR</span>}
-                  {rosterMeta.assignmentPending > 0 && (
-                    <span className="badge assigned-status-badge">{rosterMeta.assignmentPending} assigned</span>
-                  )}
-                  {rosterMeta.assignmentOverdue > 0 && (
-                    <span className="badge member-overdue-badge">{rosterMeta.assignmentOverdue} overdue</span>
-                  )}
-                </div>
-              </button>
-              <div className="team-member-actions">
-                {canManage && !isSelf && (
-                  <select
-                    className="team-member-plan"
-                    value={m.training_source || 'team'}
-                    onChange={(e) => onSetMemberTrainingSource(m, e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
-                    aria-label={`Plan for ${m.display_name || 'member'}`}
-                  >
-                    <option value="team">Group</option>
-                    <option value="personal">Personal</option>
-                  </select>
-                )}
-                {isOwner && !isSelf && (
-                  <select
-                    className="team-member-plan"
-                    value={roleForUi(m.role)}
-                    onChange={(e) => onSetMemberRole(m, e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
-                    aria-label={`Role for ${m.display_name || 'member'}`}
-                  >
-                    <option value="owner">Owner</option>
-                    <option value="manager">Manager</option>
-                    <option value="member">Member</option>
-                  </select>
-                )}
-                {canManage && !isSelf && (
-                  <>
-                    <label className="team-member-participation remember-row">
-                      <input
-                        type="checkbox"
-                        checked={participating}
-                        onChange={(e) => onSetParticipation(m, e.target.checked)}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      Active
-                    </label>
-                    <button
-                      type="button"
-                      className="btn small red"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onRemoveMember(m);
-                      }}
-                    >
-                      Remove
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+              )}
+              <TeamMembersTab
+                sessionUserId={sessionUserId}
+                members={members}
+                memberStats={memberStats}
+                memberRosterMeta={memberRosterMeta}
+                memberAssignments={memberAssignments}
+                defaultProgram={groupProgramForAssign}
+                classifications={classifications}
+                memberClassificationIds={memberClassificationIds}
+                canManage={canManage}
+                isOwner={isOwner}
+                statusLabel={statusLabel}
+                onRefresh={onRefreshMembers}
+                onOpenMember={onOpenMember}
+                onSetMemberTrainingSource={onSetMemberTrainingSource}
+                onSetMemberRole={onSetMemberRole}
+                onRemoveMember={onRemoveMember}
+                onSetParticipation={onSetParticipation}
+                onToggleMemberClassification={onToggleMemberClassification}
+              />
+            </>
+          )}
 
-      {canManage && (
-        <GroupAssignWorkoutPanel
-          groupProgram={groupProgramForAssign}
-          members={members}
-          classifications={classifications}
-          memberClassificationIds={memberClassificationIds}
-          onAssign={onAssignWorkout}
-        />
+          {workspaceTab === 'programs' && (
+            <TeamProgramsTab
+              canManage={canManage}
+              programRows={programRows}
+              wizardOpen={groupsProgramWizardOpen}
+              teamProgramSetupPanel={teamProgramSetupPanel}
+              onOpenCreateWizard={() => onOpenGroupsProgramWizard('create')}
+              onOpenGenerateWizard={() => onOpenGroupsProgramWizard('generate')}
+              onCloseWizard={onCloseGroupsProgramWizard}
+              onDuplicate={(id) => onDuplicateProgram(id)}
+              onEdit={onEditTeamProgram}
+              onPublish={onPublishTeamProgram}
+              onAssign={(id) => setAssignProgramId(id)}
+            />
+          )}
+
+          {workspaceTab === 'progress' && (
+            <TeamProgressTab
+              canManage={canManage}
+              members={members}
+              memberStats={memberStats}
+              memberRosterMeta={memberRosterMeta}
+              compliancePct={compliancePct}
+              teamActiveCount={teamActiveCount}
+              teamTotalSets={teamTotalSets}
+              onOpenMember={onOpenMember}
+            />
+          )}
+
+          {workspaceTab === 'settings' && activeTeam && (
+            <TeamSettingsTab
+              activeTeam={activeTeam}
+              members={members}
+              canManage={canManage}
+              isOwner={isOwner}
+              isSelfOwner={activeTeam.my_role === 'owner'}
+              classifications={classifications}
+              groupProgramForAssign={groupProgramForAssign}
+              memberClassificationIds={memberClassificationIds}
+              onCreateClassification={onCreateClassification}
+              onDeleteClassification={onDeleteClassification}
+              onAssignWorkout={onAssignWorkout}
+              onLeaveTeam={onLeaveTeam}
+              onDeleteTeam={onDeleteTeam}
+            />
+          )}
+        </>
       )}
 
-      {canManage && <GroupCreateJoinPanel onCreate={onCreateGroup} onJoin={onJoinGroup} compact />}
+      <TeamCreateJoinSheet
+        mode={sheetMode}
+        onClose={() => setSheetMode(null)}
+        onCreate={onCreateGroup}
+        onJoin={onJoinGroup}
+      />
+
+      {assignProgram && (
+        <TeamAssignProgramModal
+          program={{ id: assignProgram.id, name: assignProgram.name }}
+          members={members}
+          onClose={() => setAssignProgramId(null)}
+          onAssign={(payload) => onAssignTeamProgram(assignProgram.id, payload)}
+        />
+      )}
     </section>
   );
 }
