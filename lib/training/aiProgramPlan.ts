@@ -5,6 +5,7 @@ import { hasExerciseGuide } from './exerciseMedia';
 import { filterCatalogByEquipment, hasEquipmentFilter, normalizeEquipmentList } from './equipmentFilter';
 import { mondayOfWeek, todayYmd } from './programCalendar';
 import { insertProgramRecord } from './programStatus';
+import { PUSH_FULL_BODY_EMPHASIS, PULL_FULL_BODY_EMPHASIS } from './scheduleSuggestion';
 
 export type AiExercise = {
   name: string;
@@ -80,6 +81,56 @@ function isUserCustomExercise(item: any): boolean {
   if (item.user_id) return true;
   if (item.is_system === false && !item.external_source) return true;
   return false;
+}
+
+function emphasisKindFromText(emphasis?: string): 'push' | 'pull' | null {
+  if (!emphasis) return null;
+  const e = emphasis.toLowerCase();
+  if (e.includes(PUSH_FULL_BODY_EMPHASIS.slice(0, 24).toLowerCase()) || /push-focused/.test(e)) return 'push';
+  if (e.includes(PULL_FULL_BODY_EMPHASIS.slice(0, 24).toLowerCase()) || /pull-focused/.test(e)) return 'pull';
+  if (/prioritize chest, shoulders, and triceps/.test(e) || /minimize heavy rowing/.test(e)) return 'push';
+  if (/prioritize back, lats/.test(e) || /minimize chest pressing/.test(e)) return 'pull';
+  return null;
+}
+
+function movementPatternOfExercise(name: string, catMap: Record<string, any>): string {
+  const item = catMap[String(name || '').toLowerCase()];
+  if (item?.movement_pattern) return String(item.movement_pattern).toLowerCase();
+  const n = String(name || '').toLowerCase();
+  if (/pull-up|chin-up|pulldown|lat pulldown/.test(n)) return 'pull_vertical';
+  if (/overhead|shoulder press|military press|push press|jerk/.test(n)) return 'push_vertical';
+  if (/squat|lunge|leg press|step-up|split squat/.test(n)) return 'squat';
+  if (/deadlift|rdl|hip thrust|good morning|swing|ham curl|leg curl/.test(n)) return 'hinge';
+  if (/row|pull/.test(n)) return 'pull_horizontal';
+  if (/press|push-up|bench|dip/.test(n)) return 'push_horizontal';
+  return '';
+}
+
+function exerciseViolatesEmphasis(name: string, kind: 'push' | 'pull', catMap: Record<string, any>): boolean {
+  const pattern = movementPatternOfExercise(name, catMap);
+  if (kind === 'push') return pattern.startsWith('pull') || pattern === 'hinge';
+  if (kind === 'pull') return pattern.startsWith('push');
+  return false;
+}
+
+function filterStrengthByEmphasis(
+  items: AiWorkoutItem[],
+  kind: 'push' | 'pull',
+  catMap: Record<string, any>
+): AiWorkoutItem[] {
+  const out: AiWorkoutItem[] = [];
+  for (const item of items) {
+    if (item && typeof item === 'object' && !Array.isArray(item) && Array.isArray((item as any).superset)) {
+      const kept = (item as { superset: AiExercise[] }).superset.filter(
+        (ex) => ex?.name && !exerciseViolatesEmphasis(ex.name, kind, catMap)
+      );
+      if (kept.length) out.push({ superset: kept });
+    } else if (item && typeof item === 'object' && (item as AiExercise).name) {
+      const ex = item as AiExercise;
+      if (!exerciseViolatesEmphasis(ex.name, kind, catMap)) out.push(ex);
+    }
+  }
+  return out;
 }
 
 function promptTokens(prompt: string): string[] {
@@ -257,7 +308,11 @@ Rules:
 1. Interpret the user's natural-language goal (sport, position, throw/hit power, hypertrophy, etc.) and design accordingly.
 2. Each week must differ: vary exercises, rep schemes, and/or intensity across weeks (accumulation → intensification → deload/peak). Never photocopy identical workouts every week.
 3. Prefer exercise names EXACTLY from the provided catalog when possible. For warmup/cooldown/mobility picks, strongly prefer mobility_catalog names.
-4. Balance push/pull on strength days; avoid stacking the same movement pattern on consecutive training days.
+4. ${
+    hasDayEmphasis
+      ? 'When day_emphasis is set, follow it strictly on those days — do NOT add opposing push/pull patterns (e.g. push-focused full body must have zero rows, pulldowns, pull-ups, or hip hinges; pull-focused days must minimize bench press and heavy pressing).'
+      : 'Balance push/pull on strength days; avoid stacking the same movement pattern on consecutive training days.'
+  }
 5. Use realistic set/rep/RPE targets for the user's experience level.
 6. Strength days: warmup 2–4 prep items; strength section 4–8 exercises; prefer compound lifts plus accessories; 2–4 working sets on main lifts. Optional supersets (2 exercises max per superset). Quality over hitting an exact exercise count.
 7. Strongly prefer exercises from the catalog that have form guides (has_form_guide: true — image, video, or instructions).
@@ -265,7 +320,7 @@ Rules:
 9. Output ONLY valid JSON matching the schema below.
 10. Match each workout's workout_type to the scheduled day_type for that day_label (${daySchedule}).${
     hasDayEmphasis
-      ? ' When a day includes pull/push emphasis after the dash, exercise selection MUST follow that emphasis (e.g. pull upper = rows, pulldowns, rear delts; pull lower = RDL, hamstrings, glutes — not generic push patterns).'
+      ? ' When a day includes pull/push emphasis after the dash, exercise selection MUST follow that emphasis (e.g. pull upper = rows, pulldowns, rear delts; pull lower = RDL, hamstrings, glutes; push-focused full body = bench/press/squat only — no rows or hinges).'
       : ''
   }${equipmentNote}${cardioRules}${mobilityDayRules}${cooldownRules}${warmupMobilityRules}
 ${sportPresets}
@@ -531,15 +586,18 @@ function strengthFallbackExercises(
   seed: string,
   existing: Set<string>,
   count: number,
-  availableEquipment?: string[] | null
+  availableEquipment?: string[] | null,
+  emphasisKind: 'push' | 'pull' | null = null
 ): AiExercise[] {
   if (count <= 0) return [];
+  const catMap = catalogByName(catalog);
   const ranked = selectCatalogForAi(catalog, `${seed} ${workoutType} strength`, 80, availableEquipment);
   const out: AiExercise[] = [];
   for (const item of ranked) {
     if (out.length >= count) break;
     const lower = String(item.name || '').toLowerCase();
     if (!lower || existing.has(lower)) continue;
+    if (emphasisKind && exerciseViolatesEmphasis(item.name, emphasisKind, catMap)) continue;
     const hay = `${String(item.muscle_group || '').toLowerCase()} ${lower}`;
     if (workoutType === 'Lower Body' && !/leg|glute|quad|ham|hip|calf|lower|squat|deadlift|lunge/.test(hay)) continue;
     if (workoutType === 'Upper Body' && !/chest|back|should|arm|bicep|tricep|lat|press|row|pull/.test(hay)) continue;
@@ -552,7 +610,18 @@ function strengthFallbackExercises(
       rpe: '7-8',
     });
   }
-  const generics: AiExercise[] = [
+  const pushGenerics: AiExercise[] = [
+    { name: 'Bodyweight Squat', muscle_group: 'Legs', sets: 3, reps: '10-15', rpe: '6-7' },
+    { name: 'Push-Up', muscle_group: 'Chest', sets: 3, reps: '8-12', rpe: '7' },
+    { name: 'Overhead Press', muscle_group: 'Shoulders', sets: 3, reps: '8-10', rpe: '7-8' },
+    { name: 'Barbell Bench Press', muscle_group: 'Chest', sets: 3, reps: '8-10', rpe: '7-8' },
+  ];
+  const pullGenerics: AiExercise[] = [
+    { name: 'Dumbbell Row', muscle_group: 'Back', sets: 3, reps: '8-12', rpe: '7-8' },
+    { name: 'Romanian Deadlift', muscle_group: 'Hamstrings', sets: 3, reps: '8-10', rpe: '7-8' },
+    { name: 'Lat Pulldown', muscle_group: 'Back', sets: 3, reps: '8-12', rpe: '7-8' },
+  ];
+  const neutralGenerics: AiExercise[] = [
     { name: 'Bodyweight Squat', muscle_group: 'Legs', sets: 3, reps: '10-15', rpe: '6-7' },
     { name: 'Push-Up', muscle_group: 'Chest', sets: 3, reps: '8-12', rpe: '7' },
     { name: 'Dumbbell Row', muscle_group: 'Back', sets: 3, reps: '8-12', rpe: '7-8' },
@@ -560,10 +629,13 @@ function strengthFallbackExercises(
     { name: 'Overhead Press', muscle_group: 'Shoulders', sets: 3, reps: '8-10', rpe: '7-8' },
     { name: 'Plank', muscle_group: 'Core', sets: 3, reps: '30-45 sec', rpe: '6-7' },
   ];
+  const generics =
+    emphasisKind === 'push' ? pushGenerics : emphasisKind === 'pull' ? pullGenerics : neutralGenerics;
   for (const g of generics) {
     if (out.length >= count) break;
     const lower = g.name.toLowerCase();
     if (existing.has(lower)) continue;
+    if (emphasisKind && exerciseViolatesEmphasis(g.name, emphasisKind, catMap)) continue;
     existing.add(lower);
     out.push(g);
   }
@@ -689,11 +761,24 @@ export function repairAiPlan(
       }
     }
 
+    const dayKind = emphasisKindFromText(config.dayEmphasis?.[w.day_label]);
+    if (dayKind && isStrengthSession) {
+      strength = filterStrengthByEmphasis(strength, dayKind, catMap);
+    }
+
     if (!isCardioSession && !isMobilitySession && countStrengthExercises(strength) < MIN_STRENGTH_EXERCISES) {
       const existing = collectExerciseNames(strength);
       const need = MIN_STRENGTH_EXERCISES - countStrengthExercises(strength);
       strength.push(
-        ...strengthFallbackExercises(catalog, w.workout_type, seed, existing, need, config.availableEquipment)
+        ...strengthFallbackExercises(
+          catalog,
+          w.workout_type,
+          seed,
+          existing,
+          need,
+          config.availableEquipment,
+          dayKind
+        )
       );
     }
 

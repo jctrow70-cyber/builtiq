@@ -54,6 +54,66 @@ function parseCountWord(raw: string): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+export const PUSH_FULL_BODY_EMPHASIS =
+  'Push-focused full body — prioritize chest, shoulders, triceps, and squat/lunge patterns; use push_horizontal and push_vertical movements only (no rows, pulldowns, pull-ups, or hip hinges)';
+
+export const PULL_FULL_BODY_EMPHASIS =
+  'Pull-focused full body — prioritize back, lats, biceps, and posterior chain (rows, pulldowns, pull-ups, RDL/hip hinge); minimize chest pressing and triceps-dominant push work';
+
+/** Detect push- or pull-focused full-body intent in goals (not upper/lower split). */
+export function detectPushPullFocusFromGoals(goals: string): 'push' | 'pull' | null {
+  const text = goals.toLowerCase();
+  if (/pull[\s-]*(upper|lower)|push[\s-]*(upper|lower)|lower[\s-]*body[\s-]*(push|pull)/.test(text)) {
+    return null;
+  }
+  const push =
+    /(?:full[\s-]?body[\s\S]{0,40}push|push[\s\S]{0,40}full[\s-]?body|push[\s-]?(?:focused|focus|emphasis|dominant|heavy)|focus(?:ed)?\s+on\s+push|push\s+exercises?|push[\s-]?only)/.test(
+      text
+    );
+  const pull =
+    /(?:full[\s-]?body[\s\S]{0,40}pull|pull[\s\S]{0,40}full[\s-]?body|pull[\s-]?(?:focused|focus|emphasis|dominant|heavy)|focus(?:ed)?\s+on\s+pull|pull\s+exercises?|pull[\s-]?only)/.test(
+      text
+    );
+  if (push && !pull) return 'push';
+  if (pull && !push) return 'pull';
+  return null;
+}
+
+/** Apply push/pull emphasis to Full Body days from goals text. */
+export function buildDayEmphasisFromGoals(
+  goals: string,
+  days: string[],
+  dayTypes: Record<string, string>
+): Record<string, string> {
+  const focus = detectPushPullFocusFromGoals(goals);
+  if (!focus) return {};
+  const emphasis = focus === 'push' ? PUSH_FULL_BODY_EMPHASIS : PULL_FULL_BODY_EMPHASIS;
+  const out: Record<string, string> = {};
+  for (const day of days) {
+    if (dayTypes[day] === 'Full Body') out[day] = emphasis;
+  }
+  return out;
+}
+
+/** Merge schedule option emphasis with goal-derived emphasis (option wins when both set). */
+export function mergeDayEmphasisFromGoals(
+  goals: string,
+  days: string[],
+  dayTypes: Record<string, string>,
+  existing: Record<string, string> = {}
+): Record<string, string> {
+  const merged = { ...buildDayEmphasisFromGoals(goals, days, dayTypes), ...existing };
+  return merged;
+}
+
+function detectPushFullBodyFocus(text: string): boolean {
+  return detectPushPullFocusFromGoals(text) === 'push';
+}
+
+function detectPullFullBodyFocus(text: string): boolean {
+  return detectPushPullFocusFromGoals(text) === 'pull';
+}
+
 /** When the user describes a specific weekly split in goals text, build it directly. */
 export function parseExplicitScheduleFromGoals(goals: string): ParsedExplicitSchedule | null {
   const text = goals.toLowerCase();
@@ -64,10 +124,17 @@ export function parseExplicitScheduleFromGoals(goals: string): ParsedExplicitSch
     /pull[\s-]*(upper|body)|upper[\s-]*body[\s-]*pull|pull[\s-]*upper[\s-]*body/.test(text);
   const wantsPushLower = /push[\s-]*(lower|legs?)|lower[\s-]*body[\s-]*push/.test(text);
   const wantsPushUpper = /push[\s-]*(upper|body)|upper[\s-]*body[\s-]*push/.test(text);
+  const wantsPushFullBody = detectPushFullBodyFocus(text);
+  const wantsPullFullBody = detectPullFullBodyFocus(text);
 
   let fullBodyCount = 0;
   const fullBodyMatch = text.match(/(\d+|one|two|three|four|five|six)\s+full[\s-]?body/);
   if (fullBodyMatch) fullBodyCount = parseCountWord(fullBodyMatch[1]);
+
+  if (fullBodyCount === 0 && (wantsPushFullBody || wantsPullFullBody)) {
+    const countMatch = text.match(/(\d+|one|two|three|four|five|six)\s+(?:full[\s-]?body|workout|training|day)/);
+    fullBodyCount = countMatch ? parseCountWord(countMatch[1]) : 3;
+  }
 
   const sessions: { type: DayType; emphasis?: string; label: string }[] = [];
 
@@ -103,11 +170,33 @@ export function parseExplicitScheduleFromGoals(goals: string): ParsedExplicitSch
   }
 
   for (let i = 0; i < fullBodyCount; i++) {
-    sessions.push({ type: 'Full Body', label: 'Full body' });
+    if (wantsPushFullBody && !wantsPullFullBody) {
+      sessions.push({
+        type: 'Full Body',
+        label: 'Push-focused full body',
+        emphasis: PUSH_FULL_BODY_EMPHASIS,
+      });
+    } else if (wantsPullFullBody && !wantsPushFullBody) {
+      sessions.push({
+        type: 'Full Body',
+        label: 'Pull-focused full body',
+        emphasis: PULL_FULL_BODY_EMPHASIS,
+      });
+    } else {
+      sessions.push({ type: 'Full Body', label: 'Full body' });
+    }
   }
 
   if (sessions.length < 2) return null;
-  if (!wantsPullLower && !wantsPullUpper && !wantsPushLower && !wantsPushUpper && fullBodyCount === 0) {
+  if (
+    !wantsPullLower &&
+    !wantsPullUpper &&
+    !wantsPushLower &&
+    !wantsPushUpper &&
+    !wantsPushFullBody &&
+    !wantsPullFullBody &&
+    fullBodyCount === 0
+  ) {
     return null;
   }
 
@@ -290,7 +379,7 @@ export function buildScheduleSuggestionPrompt(
   const system = `You are BuildIQ Health's training schedule coach. Recommend weekly workout splits tailored to the user's goals. Output ONLY valid JSON — no markdown.
 
 Rules:
-0. If goals explicitly describe workout types (e.g. pull upper, pull lower, push upper, N full-body days, or days per week), you MUST include an option with id "opt_requested" that matches their description exactly (correct count of each day type). Set recommended_option_id to "opt_requested" unless their request is unsafe or impossible.
+0. If goals explicitly describe workout types (e.g. pull upper, pull lower, push upper, push-focused full body, N full-body days, or days per week), you MUST include an option with id "opt_requested" that matches their description exactly (correct count of each day type). Set recommended_option_id to "opt_requested" unless their request is unsafe or impossible.
 1. Provide 2–4 schedule options with distinct training frequencies (e.g. 3-day, 4-day, 5-day).
 2. Tailor splits to goals: baseball/throwing → rotation + power upper/lower; hypertrophy → push/pull/legs; strength → heavy compound focus; fat loss/endurance → consider cardio days; high-frequency training → consider Mobility recovery day.
 3. Valid day_labels: Mon, Tue, Wed, Thu, Fri, Sat, Sun — use 3–5 training days per option, realistic weekly spacing (avoid back-to-back same muscle group when possible).

@@ -5782,3 +5782,160 @@ None.
 ```text
 BIQ-0078 Add workout day picker to draft editing after AI generation
 ```
+
+---
+
+## BIQ-0079 - Fix Program Delete from Manage Programs List
+
+Date: 2026-08-03  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Delete in **Manage programs** (Program Setup / Groups generate wizard) now reliably removes programs and updates the list immediately. Previously, deletes could silently fail when the RLS delete policy was missing — Supabase returned success with zero rows deleted.
+
+### Purpose
+
+Clicking **Delete** on draft programs in the wizard&apos;s manage list appeared to do nothing: no error, program stayed in the list.
+
+### Changes
+
+- **`st_delete_program` RPC:** Security-definer delete with owner/team-editor checks and team-active-program guard
+- **`deleteProgramRecord`:** Uses RPC first; falls back to direct delete with `.select('id')` verification and a clear error when no row is removed
+- **`deleteProgramHandler`:** Optimistically removes program from local state after successful delete
+- **`ProgramLibraryPanel`:** Stop click propagation on Delete button
+
+### Files Changed
+
+- `supabase/migrations/20250803_032_program_delete_rpc.sql` (new)
+- `lib/training/programStatus.ts`
+- `app/page.tsx`
+- `app/components/training/ProgramLibraryPanel.tsx`
+- `CHANGELOG.md`
+
+### Database Changes
+
+- Apply `20250803_031_program_delete_policy.sql` (RLS) and `20250803_032_program_delete_rpc.sql` (RPC) in Supabase
+
+### Testing Steps
+
+1. Groups → Programs → Generate → scroll to **Manage programs**
+2. Delete a draft → confirm → row disappears immediately
+3. Refresh page → deleted program stays gone
+4. Try deleting team active program → blocked with message
+5. If RPC not applied yet, user sees clear error instead of silent no-op
+
+### Recommended Commit Message
+
+```text
+BIQ-0079 Fix silent failure when deleting programs from manage list
+```
+
+---
+
+## BIQ-0080 - Fix Member Generate Wizard Schedule and Post-Generation View
+
+Date: 2026-08-03  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Generating a program for a member (e.g. Ethan) now keeps you on the inline wizard after generation so you can review the draft plan. Schedule split cards respond to clicks with visible selection feedback. Manage programs list is hidden during the generate wizard until a draft exists.
+
+### Purpose
+
+- Clicking a suggested workout split during schedule step appeared to do nothing (no visible selection change)
+- After AI generation completed, the app cleared the member context and returned to Ethan&apos;s member tabs instead of showing the generated draft
+
+### Root cause
+
+`openDraftForEditing` set `trainingSubNav` to `setup`, which triggered a `useEffect` that cleared `memberDashboard` — closing the inline member wizard.
+
+### Changes
+
+- **`useEffect` (trainingSubNav):** Preserve `memberDashboard` when generating for a member (`groupsAssignMemberUserId`)
+- **`openDraftForEditing`:** Optional `keepMemberWizard` skips training sub-nav switch for member inline wizard
+- **`generateWithAi`:** Captures member context before async work; keeps Groups wizard open and shows draft after generation
+- **`applyScheduleOption`:** Ensures schedule step stays active; adds selected-split summary below cards
+- **Schedule cards:** Disabled during loading; stop propagation on click
+- **`GroupsHub` / `TeamMemberDetail`:** Wizard stays open while member draft is being edited; updated subtitle after generation
+- **Manage programs:** Hidden during active generate wizard (shown after draft is created)
+
+### Files Changed
+
+- `app/page.tsx`
+- `app/components/groups/GroupsHub.tsx`
+- `app/components/groups/TeamMemberDetail.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Groups → Members → Ethan → Generate program
+2. Goals → Plan schedule → click different split cards → confirm **Selected split** updates and card highlights
+3. Create draft with AI → confirm you stay on Ethan&apos;s wizard with workout day pills and exercises (not Ethan tabs)
+4. Publish → assigns to Ethan and closes wizard
+5. Cancel during wizard → returns to Ethan member detail
+
+### Recommended Commit Message
+
+```text
+BIQ-0080 Fix member generate wizard schedule picks and post-generation draft view
+```
+
+---
+
+## BIQ-0081 - Enforce Push/Pull Focus for Full-Body Programs from Goals
+
+Date: 2026-08-03  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Goals like "full body with focus on push" now drive schedule emphasis and AI exercise selection so pull patterns (rows, pulldowns, hip hinges) are excluded on push-focused full-body days.
+
+### Purpose
+
+Users describing push- or pull-focused full-body training were still getting balanced push/pull workouts (e.g. Barbell Bent Over Row on a push-focused full body day) because day emphasis was not merged from goals into generation.
+
+### Changes
+
+- **`scheduleSuggestion.ts`:** `detectPushPullFocusFromGoals`, `buildDayEmphasisFromGoals`, `mergeDayEmphasisFromGoals`; push/pull full-body parsing in `parseExplicitScheduleFromGoals`
+- **`aiProgramPlan.ts`:** Strict push/pull prompt rules when `dayEmphasis` is set; filter and refill strength exercises by movement pattern in `repairAiPlan`; emphasis-aware `strengthFallbackExercises`
+- **`app/page.tsx`:** Merge goal-derived emphasis in `applyScheduleOption`, `fetchScheduleSuggestions`, and `generateWithAi`
+
+### Files Changed
+
+- `lib/training/scheduleSuggestion.ts`
+- `lib/training/aiProgramPlan.ts`
+- `app/page.tsx`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Program setup → goals: "full body push focus 3 days" → Plan schedule
+2. Confirm recommended split shows push-focused full body days with emphasis labels
+3. Generate program → confirm strength days use press/squat patterns only (no bent-over rows, pulldowns, or RDLs on push-focused days)
+4. Repeat with "full body pull focus 3 days" → confirm rows/hinges appear and heavy pressing is minimized
+5. Upper/lower push/pull splits still work as before (not treated as full-body focus)
+
+### Known Issues
+
+None.
+
+### Recommended Commit Message
+
+```text
+BIQ-0081 Enforce push/pull focus for full-body programs from goals
+```

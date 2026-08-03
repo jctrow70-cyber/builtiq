@@ -53,7 +53,10 @@ export default function ProgramLibraryPanel({
                 className="btn small red"
                 disabled={isDefault}
                 title={isDefault ? 'Assign a different team active program before deleting' : undefined}
-                onClick={() => onDelete(p.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(p.id);
+                }}
               >
                 Delete
               </button>

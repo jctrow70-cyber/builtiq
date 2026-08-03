@@ -104,9 +104,25 @@ export async function publishProgramRecord(
 }
 
 export async function deleteProgramRecord(
-  supabase: { from: (table: string) => any },
+  supabase: { from: (table: string) => any; rpc?: (fn: string, args: Record<string, unknown>) => Promise<{ error: { message?: string } | null }> },
   programId: string
 ): Promise<{ error: string | null }> {
-  const { error } = await supabase.from('st_programs').delete().eq('id', programId);
-  return { error: error?.message || null };
+  if (supabase.rpc) {
+    const { error: rpcError } = await supabase.rpc('st_delete_program', { p_program_id: programId });
+    if (!rpcError) return { error: null };
+    const rpcMsg = rpcError.message || '';
+    if (!/function.*does not exist|could not find the function/i.test(rpcMsg)) {
+      return { error: rpcMsg || 'Could not delete program' };
+    }
+  }
+
+  const { data, error } = await supabase.from('st_programs').delete().eq('id', programId).select('id');
+  if (error) return { error: error.message || 'Could not delete program' };
+  if (!data?.length) {
+    return {
+      error:
+        'Could not delete program. Apply Supabase migrations 20250803_031 and 20250803_032, or confirm you have permission.',
+    };
+  }
+  return { error: null };
 }

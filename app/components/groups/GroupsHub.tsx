@@ -55,6 +55,7 @@ export type GroupsHubProps = {
   teamProgramSetupPanel: ReactNode | null;
   memberWorkoutPanel?: ReactNode | null;
   memberProgramWizardUserId?: string | null;
+  memberProgramDraftEditId?: string | null;
   onWorkspaceTabChange?: (tab: TeamWorkspaceTab) => void;
   onSelectTeam: (teamId: string) => void;
   onCreateGroup: (name: string) => Promise<void>;
@@ -136,6 +137,7 @@ export default function GroupsHub(props: GroupsHubProps) {
     teamProgramSetupPanel,
     memberWorkoutPanel = null,
     memberProgramWizardUserId = null,
+    memberProgramDraftEditId = null,
     onWorkspaceTabChange,
     onSelectTeam,
     onCreateGroup,
@@ -230,9 +232,9 @@ export default function GroupsHub(props: GroupsHubProps) {
   };
 
   const memberInlineWizardOpen =
-    groupsProgramWizardOpen &&
     !!memberProgramWizardUserId &&
-    memberDashboard?.user_id === memberProgramWizardUserId;
+    memberDashboard?.user_id === memberProgramWizardUserId &&
+    (groupsProgramWizardOpen || (!!memberProgramDraftEditId && memberProgramDraftEditId.length > 0));
 
   const renderWorkspaceContent = () => {
     if (workspaceTab === 'members') {
@@ -261,6 +263,7 @@ export default function GroupsHub(props: GroupsHubProps) {
             onGenerateForMember={() => onGenerateProgramForMember(memberDashboard.user_id)}
             programWizardOpen={memberInlineWizardOpen}
             programWizardPanel={memberInlineWizardOpen ? teamProgramSetupPanel : null}
+            memberDraftEditing={!!memberProgramDraftEditId && memberProgramDraftEditId.length > 0}
             onCloseProgramWizard={onCloseGroupsProgramWizard}
             sectionExercises={sectionExercises}
             statusLabel={statusLabel}

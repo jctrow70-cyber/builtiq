@@ -328,6 +328,8 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .schedule-option-card{display:block;width:100%;text-align:left;padding:12px;border-radius:14px;border:1px solid var(--line);background:#0b1119;color:var(--text);cursor:pointer}
 .schedule-option-card.selected{border-color:var(--purple);background:#141028;box-shadow:0 0 0 1px #4c3f78}
 .schedule-option-card.recommended:not(.selected){border-color:#3b335f}
+.schedule-option-card:disabled{opacity:.55;cursor:not-allowed}
+.schedule-selected-summary{padding:8px 10px;border-radius:10px;background:#0f1520;border:1px solid #3b335f}
 .schedule-option-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}
 .schedule-option-head b{font-size:14px}
 .schedule-day-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}

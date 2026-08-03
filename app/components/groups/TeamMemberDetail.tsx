@@ -28,6 +28,7 @@ type TeamMemberDetailProps = {
   onGenerateForMember?: () => void;
   programWizardOpen?: boolean;
   programWizardPanel?: ReactNode | null;
+  memberDraftEditing?: boolean;
   onCloseProgramWizard?: () => void;
   sectionExercises: (workout: any, section: string) => any[];
   statusLabel: (s: string) => string;
@@ -48,6 +49,7 @@ export default function TeamMemberDetail(props: TeamMemberDetailProps) {
     programs,
     programWizardOpen = false,
     programWizardPanel = null,
+    memberDraftEditing = false,
     onCloseProgramWizard,
   } = props;
   const teamPrograms = programs.filter((p: any) => p.visibility === 'team');
@@ -60,7 +62,9 @@ export default function TeamMemberDetail(props: TeamMemberDetailProps) {
           <div>
             <h2>{memberName}</h2>
             <p className="muted" style={{ marginTop: 4 }}>
-              Generate a program for this member. Publish when ready to assign.
+              {memberDraftEditing
+                ? 'Review the generated plan below. Publish when ready to assign.'
+                : 'Generate a program for this member. Publish when ready to assign.'}
             </p>
           </div>
           <button type="button" className="btn small secondary" onClick={onCloseProgramWizard}>
