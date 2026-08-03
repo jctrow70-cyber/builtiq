@@ -5697,3 +5697,88 @@ None.
 ```text
 BIQ-0076 Add delete for draft and old programs
 ```
+
+---
+
+## BIQ-0077 - Keep Generate Wizard Open After Draft Delete
+
+Date: 2026-08-03  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Deleting a draft from Program Setup or the Groups generate wizard no longer closes the wizard and returns you to the Programs list.
+
+### Purpose
+
+Removing an old draft while generating a new program incorrectly called `closeGroupsProgramWizard()`, kicking the user out of the generate flow.
+
+### Changes
+
+- **`deleteProgramHandler`:** Removed wizard close on delete; reload programs in setup context when wizard or Program Setup is active
+
+### Files Changed
+
+- `app/page.tsx`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Groups → Programs → **Generate** → scroll to Manage programs → delete an old draft
+2. Confirm you stay on the generate wizard (Goals step), not bumped to Programs list
+3. Member detail → Generate program → delete a draft from manage list → confirm inline wizard stays open
+4. Training → Manage program (no wizard) → delete draft still works normally
+
+### Recommended Commit Message
+
+```text
+BIQ-0077 Keep generate wizard open when deleting a draft
+```
+
+---
+
+## BIQ-0078 - Workout Day Picker After AI Draft Generation
+
+Date: 2026-08-03  
+Branch: main  
+Status: Completed
+
+### Summary
+
+After generating a draft program with AI, clickable workout day pills now appear so you can switch between Mon/Tue/etc. and review each day&apos;s exercises. Draft editing UI lives inside Program Setup (including Groups generate wizard).
+
+### Purpose
+
+Post-generation draft editing showed one workout&apos;s exercises but no day picker — clicking workout days appeared to do nothing because `TrainingWorkoutDays` was only rendered on Personal Training, not Program Setup.
+
+### Changes
+
+- **`programSetupPanel`:** When editing a draft, renders week selector, workout day pills, apply scope, and exercise sections
+- **`generateWithAi`:** Opens draft for editing via `openDraftForEditing`; stays in Groups wizard when generating from Groups
+
+### Files Changed
+
+- `app/page.tsx`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Generate a draft with AI (Training → Manage program or Groups → Generate)
+2. Confirm workout day pills appear (e.g. Mon · Pull Upper, Tue · Full Body)
+3. Click each day — exercises update for that workout
+4. Groups generate wizard: same day picker works inline without leaving Groups
+
+### Recommended Commit Message
+
+```text
+BIQ-0078 Add workout day picker to draft editing after AI generation
+```
