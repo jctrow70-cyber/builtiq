@@ -776,7 +776,7 @@ export default function Page(){
   if(!activeTeam)return;
   if(!confirm(`Leave ${activeTeam.name}?`))return;
   const{error}=await leaveTeam(supabase,activeTeam.id);
-  if(error)return alert(error.message);
+  if(error)return alert(error);
   await loadTeams();
   setMemberDashboard(null);
  }
@@ -784,7 +784,7 @@ export default function Page(){
   if(!activeTeam||!isOwner())return;
   if(!confirm(`Delete ${activeTeam.name}? This archives the team. Workout history is preserved.`))return;
   const{error}=await deleteTeam(supabase,activeTeam.id);
-  if(error)return alert(error.message);
+  if(error)return alert(error);
   await loadTeams();
   setMemberDashboard(null);
  }
