@@ -1,3 +1,5 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 export type ProgramStatus = 'draft' | 'published' | 'archived';
 
 export function programStatusOf(program: { status?: string | null } | null | undefined): ProgramStatus {
@@ -104,7 +106,7 @@ export async function publishProgramRecord(
 }
 
 export async function deleteProgramRecord(
-  supabase: { from: (table: string) => any; rpc?: (fn: string, args: Record<string, unknown>) => Promise<{ error: { message?: string } | null }> },
+  supabase: SupabaseClient,
   programId: string
 ): Promise<{ error: string | null }> {
   if (supabase.rpc) {
