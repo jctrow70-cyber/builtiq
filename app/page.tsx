@@ -35,6 +35,7 @@ import {
   weekForDate,
   weekRangeLabel,
 } from '../lib/training/programCalendar';
+import { insertProgramRecord, isDraftProgram, isPublishedProgram, programOptionLabel, publishProgramRecord, deleteProgramRecord } from '../lib/training/programStatus';
 import { mergeDayEmphasisFromGoals } from '../lib/training/scheduleSuggestion';
 import DateInput from './components/DateInput';
 import NutritionTracker, { fetchNutritionDaySummary } from './components/NutritionTracker';
