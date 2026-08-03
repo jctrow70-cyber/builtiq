@@ -7,6 +7,7 @@ type TeamProgramsTabProps = {
   canManage: boolean;
   programRows: TeamProgramRow[];
   wizardOpen: boolean;
+  wizardMemberName?: string | null;
   teamProgramSetupPanel: ReactNode | null;
   onOpenCreateWizard: () => void;
   onOpenGenerateWizard: () => void;
@@ -21,6 +22,7 @@ export default function TeamProgramsTab({
   canManage,
   programRows,
   wizardOpen,
+  wizardMemberName = null,
   teamProgramSetupPanel,
   onOpenCreateWizard,
   onOpenGenerateWizard,
@@ -34,7 +36,14 @@ export default function TeamProgramsTab({
     return (
       <div className="card team-programs-wizard">
         <div className="topline" style={{ justifyContent: 'space-between' }}>
-          <h2>Team program</h2>
+          <div>
+            <h2>Team program</h2>
+            {wizardMemberName && (
+              <p className="muted" style={{ marginTop: 4 }}>
+                Generating for <b>{wizardMemberName}</b> — publish when ready to assign.
+              </p>
+            )}
+          </div>
           <button type="button" className="btn small secondary" onClick={onCloseWizard}>
             Back to programs
           </button>

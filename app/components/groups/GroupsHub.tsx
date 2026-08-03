@@ -54,6 +54,7 @@ export type GroupsHubProps = {
   groupsProgramWizardOpen: boolean;
   teamProgramSetupPanel: ReactNode | null;
   memberWorkoutPanel?: ReactNode | null;
+  memberProgramWizardUserId?: string | null;
   onWorkspaceTabChange?: (tab: TeamWorkspaceTab) => void;
   onSelectTeam: (teamId: string) => void;
   onCreateGroup: (name: string) => Promise<void>;
@@ -133,6 +134,7 @@ export default function GroupsHub(props: GroupsHubProps) {
     groupsProgramWizardOpen,
     teamProgramSetupPanel,
     memberWorkoutPanel = null,
+    memberProgramWizardUserId = null,
     onWorkspaceTabChange,
     onSelectTeam,
     onCreateGroup,
@@ -225,6 +227,11 @@ export default function GroupsHub(props: GroupsHubProps) {
     onWorkspaceTabChange?.(tab);
   };
 
+  const memberInlineWizardOpen =
+    groupsProgramWizardOpen &&
+    !!memberProgramWizardUserId &&
+    memberDashboard?.user_id === memberProgramWizardUserId;
+
   const renderWorkspaceContent = () => {
     if (workspaceTab === 'members') {
       if (memberWorkoutPanel) return memberWorkoutPanel;
@@ -250,6 +257,9 @@ export default function GroupsHub(props: GroupsHubProps) {
             onApplyAssignment={onApplyAssignment}
             onCustomizeProgram={(sourceId) => onCustomizeProgramForMember(memberDashboard.user_id, sourceId)}
             onGenerateForMember={() => onGenerateProgramForMember(memberDashboard.user_id)}
+            programWizardOpen={memberInlineWizardOpen}
+            programWizardPanel={memberInlineWizardOpen ? teamProgramSetupPanel : null}
+            onCloseProgramWizard={onCloseGroupsProgramWizard}
             sectionExercises={sectionExercises}
             statusLabel={statusLabel}
             assignmentCompliance={memberPerformance?.assignmentCompliance}
@@ -308,7 +318,7 @@ export default function GroupsHub(props: GroupsHubProps) {
         <TeamProgramsTab
           canManage={canManage}
           programRows={programRows}
-          wizardOpen={groupsProgramWizardOpen}
+          wizardOpen={groupsProgramWizardOpen && !memberProgramWizardUserId}
           teamProgramSetupPanel={teamProgramSetupPanel}
           onOpenCreateWizard={() => onOpenGroupsProgramWizard('create')}
           onOpenGenerateWizard={() => onOpenGroupsProgramWizard('generate')}

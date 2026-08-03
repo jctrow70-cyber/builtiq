@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import GroupMemberDashboard from './GroupMemberDashboard';
 import type { AssignmentComplianceSummary, MemberWorkoutHistoryDay } from '../../../lib/groups/memberPerformance';
 
@@ -26,6 +26,9 @@ type TeamMemberDetailProps = {
   onApplyAssignment: () => void;
   onCustomizeProgram?: (sourceProgramId: string) => void;
   onGenerateForMember?: () => void;
+  programWizardOpen?: boolean;
+  programWizardPanel?: ReactNode | null;
+  onCloseProgramWizard?: () => void;
   sectionExercises: (workout: any, section: string) => any[];
   statusLabel: (s: string) => string;
   assignmentCompliance?: AssignmentComplianceSummary;
@@ -35,14 +38,44 @@ type TeamMemberDetailProps = {
 };
 
 export default function TeamMemberDetail(props: TeamMemberDetailProps) {
-  const [tab, setTab] = useState<MemberDetailTab>('overview');
-  const { member, canManage, onBack, onCustomizeProgram, onGenerateForMember, programs } = props;
+  const [tab, setTab] = useState<MemberDetailTab>('assigned');
+  const {
+    member,
+    canManage,
+    onBack,
+    onCustomizeProgram,
+    onGenerateForMember,
+    programs,
+    programWizardOpen = false,
+    programWizardPanel = null,
+    onCloseProgramWizard,
+  } = props;
   const teamPrograms = programs.filter((p: any) => p.visibility === 'team');
+  const memberName = member.display_name || 'Member';
+
+  if (programWizardOpen && programWizardPanel) {
+    return (
+      <div className="team-member-detail card">
+        <div className="topline" style={{ justifyContent: 'space-between' }}>
+          <div>
+            <h2>{memberName}</h2>
+            <p className="muted" style={{ marginTop: 4 }}>
+              Generate a program for this member. Publish when ready to assign.
+            </p>
+          </div>
+          <button type="button" className="btn small secondary" onClick={onCloseProgramWizard}>
+            Cancel
+          </button>
+        </div>
+        <div className="team-member-program-wizard">{programWizardPanel}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="team-member-detail card">
       <div className="topline" style={{ justifyContent: 'space-between' }}>
-        <h2>{member.display_name || 'Member'}</h2>
+        <h2>{memberName}</h2>
         <button type="button" className="btn small secondary" onClick={onBack}>
           Back
         </button>

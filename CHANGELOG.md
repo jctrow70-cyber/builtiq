@@ -5539,3 +5539,52 @@ None identified.
 ```text
 BIQ-0073 Fix Groups workspace tab switching with member views
 ```
+
+---
+
+## BIQ-0074 - Fix Generate Program from Member Detail
+
+Date: 2026-08-03  
+Branch: main  
+Status: Completed
+
+### Summary
+
+**Generate program** on a member&apos;s Assigned Program tab opens the AI wizard **inline on the member detail view** (Members tab). No tab switching. Publishing auto-assigns the program to that member.
+
+### Purpose
+
+Managers should generate a member plan without leaving the member context. Switching to the Programs tab was confusing.
+
+### Changes
+
+- **`TeamMemberDetail`:** Inline program wizard with Cancel; stays on member view
+- **`GroupsHub`:** Member-scoped wizard on Members tab; Programs tab wizard only for team-level generate/create
+- **`openGroupsProgramWizard`:** Optional `memberUserId` for member-scoped generation
+- **`publishProgram`:** When generating for a member, publishes then assigns via `individual_team` and closes wizard
+
+### Files Changed
+
+- `app/page.tsx`
+- `app/components/groups/GroupsHub.tsx`
+- `app/components/groups/TeamMemberDetail.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Groups → Members → open a member → **Assigned Program** → **Generate program**
+2. Confirm you stay on the member view (Members tab active) and the wizard appears inline
+3. **Cancel** returns to member detail without changing tabs
+4. Generate → publish → confirm assignment to member and return to member detail
+5. Programs tab **Generate** still opens wizard on Programs (not member-scoped)
+
+### Recommended Commit Message
+
+```text
+BIQ-0074 Fix Generate program from member detail in Groups
+```

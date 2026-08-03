@@ -213,6 +213,8 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .groups-member-workout{display:flex;flex-direction:column;gap:10px}
 .groups-member-workout-banner{margin-bottom:0}
 .groups-member-workout .training-plan-card{margin-bottom:0}
+.team-member-program-wizard{margin-top:10px;display:flex;flex-direction:column;gap:10px}
+.team-member-program-wizard .program-setup{border:0;padding:0;background:transparent}
 .setgrid-edit{grid-template-columns:72px 45px 1fr 1fr 42px}
 .exercise-add-row{display:grid;grid-template-columns:1fr auto auto auto;gap:6px;align-items:center;margin:8px 0 4px}
 .typeahead-wrap{position:relative}
