@@ -5440,3 +5440,102 @@ Apply migration `20250803_030_team_workspace_program_tools.sql` in Supabase.
 ```text
 BIQ-0071 Redesign Groups tab into tabbed Team workspace
 ```
+
+---
+
+## BIQ-0072 - Inline Member Workout in Groups Tab
+
+Date: 2026-07-21  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Opening a member&apos;s workout from Groups now stays on the **Groups** tab with the full workout logger inline, plus a **Close workout** button at the top.
+
+### Purpose
+
+Managers and editors should log or review member workouts without being sent to the Training tab, keeping group context while coaching.
+
+### Changes
+
+- **`openMemberView`:** Keeps `appNav` on Groups; sets team mode and member program/week
+- **Groups render:** When viewing a member workout, replaces `GroupsHub` with inline week selector, day picker, and exercise logger
+- **`goNav`:** Clears member workout view when leaving Groups
+- **Training:** Member workout view removed from Training (Groups-only flow)
+
+### Files Changed
+
+- `app/page.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Groups → Members → open a member → **Open workout**
+2. Confirm you stay on Groups (nav highlight unchanged)
+3. Week selector, workout days, and exercises render inline
+4. Log a set for the member — saves under member user id
+5. **Close workout** returns to the Groups hub
+6. Switch to Training tab while viewing member workout — member view clears; Training shows your program
+
+### Recommended Commit Message
+
+```text
+BIQ-0072 Open member workouts inline in Groups tab
+```
+
+---
+
+## BIQ-0073 - Fix Groups Workspace Tab Switching
+
+Date: 2026-08-03  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Programs, Progress, and Settings tabs in the Groups workspace now switch content correctly. Team selector and workspace tabs stay visible while viewing a member workout inline.
+
+### Purpose
+
+After BIQ-0072, opening a member workout replaced the entire Groups hub (hiding tabs), and an open member detail view blocked all non-Members tab content even when tabs appeared selected.
+
+### Changes
+
+- **`GroupsHub`:** Tab content is driven by `workspaceTab`; member detail and inline workout render only on the Members tab
+- **`page.tsx`:** Always render `GroupsHub`; pass `memberWorkoutPanel` instead of replacing the hub; clear member detail/workout when switching to Programs, Progress, or Settings (restores team program context)
+
+### Files Changed
+
+- `app/components/groups/GroupsHub.tsx`
+- `app/page.tsx`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Groups → tap **Programs** — team programs list appears
+2. Tap **Progress** — compliance metrics appear
+3. Tap **Settings** — invite code, classifications, leave/delete team appear
+4. Members → tap a member → member detail opens; tap **Programs** — detail closes and programs list shows
+5. Member detail → **Open workout** — workout logger appears under tabs; team selector and all tabs remain visible
+6. While viewing member workout, tap **Programs** — workout closes and team programs load
+7. **Close workout** returns to Members roster
+
+### Known Issues
+
+None identified.
+
+### Recommended Commit Message
+
+```text
+BIQ-0073 Fix Groups workspace tab switching with member views
+```

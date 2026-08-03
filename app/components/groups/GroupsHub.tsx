@@ -53,6 +53,8 @@ export type GroupsHubProps = {
   week: number;
   groupsProgramWizardOpen: boolean;
   teamProgramSetupPanel: ReactNode | null;
+  memberWorkoutPanel?: ReactNode | null;
+  onWorkspaceTabChange?: (tab: TeamWorkspaceTab) => void;
   onSelectTeam: (teamId: string) => void;
   onCreateGroup: (name: string) => Promise<void>;
   onJoinGroup: (code: string) => Promise<void>;
@@ -130,6 +132,8 @@ export default function GroupsHub(props: GroupsHubProps) {
     week,
     groupsProgramWizardOpen,
     teamProgramSetupPanel,
+    memberWorkoutPanel = null,
+    onWorkspaceTabChange,
     onSelectTeam,
     onCreateGroup,
     onJoinGroup,
@@ -216,6 +220,145 @@ export default function GroupsHub(props: GroupsHubProps) {
   const selfMember = members.find((m: any) => m.user_id === sessionUserId);
   const selfStats = selfMember ? memberStats[selfMember.user_id] || { sets: 0, days: 0 } : { sets: 0, days: 0 };
 
+  const handleWorkspaceTabChange = (tab: TeamWorkspaceTab) => {
+    setWorkspaceTab(tab);
+    onWorkspaceTabChange?.(tab);
+  };
+
+  const renderWorkspaceContent = () => {
+    if (workspaceTab === 'members') {
+      if (memberWorkoutPanel) return memberWorkoutPanel;
+      if (memberDashboard && memberDashboard.user_id !== sessionUserId && canManage) {
+        return (
+          <TeamMemberDetail
+            member={memberDashboard}
+            memberAssignment={memberAssignment}
+            memberDashProgram={memberDashProgram}
+            memberTodayWorkout={memberTodayWorkout}
+            memberWorkoutStatus={memberWorkoutStatus}
+            memberDashLastDate={memberDashLastDate}
+            memberDashLogs={memberDashLogs}
+            memberStats={memberStats}
+            logDate={logDate}
+            week={week}
+            canManage={canManage}
+            assignDraft={assignDraft}
+            programs={programs}
+            onAssignDraftChange={onAssignDraftChange}
+            onBack={onCloseMemberDashboard}
+            onOpenWorkout={() => onOpenMemberWorkout(memberDashboard)}
+            onApplyAssignment={onApplyAssignment}
+            onCustomizeProgram={(sourceId) => onCustomizeProgramForMember(memberDashboard.user_id, sourceId)}
+            onGenerateForMember={() => onGenerateProgramForMember(memberDashboard.user_id)}
+            sectionExercises={sectionExercises}
+            statusLabel={statusLabel}
+            assignmentCompliance={memberPerformance?.assignmentCompliance}
+            performanceLogs={memberPerformance?.logs || []}
+            workoutHistory={memberPerformance?.history || []}
+            weightUnit={weightUnit}
+          />
+        );
+      }
+      return (
+        <>
+          {!canManage && selfMember && (
+            <div className="card">
+              <h2>Your activity</h2>
+              <div className="dash-metrics">
+                <div>
+                  <b>{selfStats.sets}</b>
+                  <span className="muted">Sets this week</span>
+                </div>
+                <div>
+                  <b>{selfStats.days}</b>
+                  <span className="muted">Active days</span>
+                </div>
+              </div>
+              <p className="muted" style={{ marginTop: 8 }}>
+                Log workouts in Training.
+              </p>
+            </div>
+          )}
+          <TeamMembersTab
+            sessionUserId={sessionUserId}
+            members={members}
+            memberStats={memberStats}
+            memberRosterMeta={memberRosterMeta}
+            memberAssignments={memberAssignments}
+            defaultProgram={groupProgramForAssign}
+            classifications={classifications}
+            memberClassificationIds={memberClassificationIds}
+            canManage={canManage}
+            isOwner={isOwner}
+            statusLabel={statusLabel}
+            onRefresh={onRefreshMembers}
+            onOpenMember={onOpenMember}
+            onSetMemberTrainingSource={onSetMemberTrainingSource}
+            onSetMemberRole={onSetMemberRole}
+            onRemoveMember={onRemoveMember}
+            onSetParticipation={onSetParticipation}
+            onToggleMemberClassification={onToggleMemberClassification}
+          />
+        </>
+      );
+    }
+
+    if (workspaceTab === 'programs') {
+      return (
+        <TeamProgramsTab
+          canManage={canManage}
+          programRows={programRows}
+          wizardOpen={groupsProgramWizardOpen}
+          teamProgramSetupPanel={teamProgramSetupPanel}
+          onOpenCreateWizard={() => onOpenGroupsProgramWizard('create')}
+          onOpenGenerateWizard={() => onOpenGroupsProgramWizard('generate')}
+          onCloseWizard={onCloseGroupsProgramWizard}
+          onDuplicate={(id) => onDuplicateProgram(id)}
+          onEdit={onEditTeamProgram}
+          onPublish={onPublishTeamProgram}
+          onAssign={(id) => setAssignProgramId(id)}
+        />
+      );
+    }
+
+    if (workspaceTab === 'progress') {
+      return (
+        <TeamProgressTab
+          canManage={canManage}
+          members={members}
+          memberStats={memberStats}
+          memberRosterMeta={memberRosterMeta}
+          compliancePct={compliancePct}
+          teamActiveCount={teamActiveCount}
+          teamTotalSets={teamTotalSets}
+          onOpenMember={onOpenMember}
+        />
+      );
+    }
+
+    if (workspaceTab === 'settings' && activeTeam) {
+      return (
+        <TeamSettingsTab
+          activeTeam={activeTeam}
+          members={members}
+          canManage={canManage}
+          isOwner={isOwner}
+          isSelfOwner={activeTeam.my_role === 'owner'}
+          classifications={classifications}
+          groupProgramForAssign={groupProgramForAssign}
+          memberClassificationIds={memberClassificationIds}
+          onCreateClassification={onCreateClassification}
+          onDeleteClassification={onDeleteClassification}
+          onAssignWorkout={onAssignWorkout}
+          onLeaveTeam={onLeaveTeam}
+          onDeleteTeam={onDeleteTeam}
+        />
+      );
+    }
+
+    return null;
+  };
+
   return (
     <section className="groups-hub teams-workspace">
       <div className="card team-workspace-head">
@@ -232,129 +375,9 @@ export default function GroupsHub(props: GroupsHubProps) {
         />
       </div>
 
-      <TeamWorkspaceTabs active={workspaceTab} onChange={setWorkspaceTab} />
+      <TeamWorkspaceTabs active={workspaceTab} onChange={handleWorkspaceTabChange} />
 
-      {memberDashboard && memberDashboard.user_id !== sessionUserId && canManage ? (
-        <TeamMemberDetail
-          member={memberDashboard}
-          memberAssignment={memberAssignment}
-          memberDashProgram={memberDashProgram}
-          memberTodayWorkout={memberTodayWorkout}
-          memberWorkoutStatus={memberWorkoutStatus}
-          memberDashLastDate={memberDashLastDate}
-          memberDashLogs={memberDashLogs}
-          memberStats={memberStats}
-          logDate={logDate}
-          week={week}
-          canManage={canManage}
-          assignDraft={assignDraft}
-          programs={programs}
-          onAssignDraftChange={onAssignDraftChange}
-          onBack={onCloseMemberDashboard}
-          onOpenWorkout={() => onOpenMemberWorkout(memberDashboard)}
-          onApplyAssignment={onApplyAssignment}
-          onCustomizeProgram={(sourceId) => onCustomizeProgramForMember(memberDashboard.user_id, sourceId)}
-          onGenerateForMember={() => onGenerateProgramForMember(memberDashboard.user_id)}
-          sectionExercises={sectionExercises}
-          statusLabel={statusLabel}
-          assignmentCompliance={memberPerformance?.assignmentCompliance}
-          performanceLogs={memberPerformance?.logs || []}
-          workoutHistory={memberPerformance?.history || []}
-          weightUnit={weightUnit}
-        />
-      ) : (
-        <>
-          {workspaceTab === 'members' && (
-            <>
-              {!canManage && selfMember && (
-                <div className="card">
-                  <h2>Your activity</h2>
-                  <div className="dash-metrics">
-                    <div>
-                      <b>{selfStats.sets}</b>
-                      <span className="muted">Sets this week</span>
-                    </div>
-                    <div>
-                      <b>{selfStats.days}</b>
-                      <span className="muted">Active days</span>
-                    </div>
-                  </div>
-                  <p className="muted" style={{ marginTop: 8 }}>
-                    Log workouts in Training.
-                  </p>
-                </div>
-              )}
-              <TeamMembersTab
-                sessionUserId={sessionUserId}
-                members={members}
-                memberStats={memberStats}
-                memberRosterMeta={memberRosterMeta}
-                memberAssignments={memberAssignments}
-                defaultProgram={groupProgramForAssign}
-                classifications={classifications}
-                memberClassificationIds={memberClassificationIds}
-                canManage={canManage}
-                isOwner={isOwner}
-                statusLabel={statusLabel}
-                onRefresh={onRefreshMembers}
-                onOpenMember={onOpenMember}
-                onSetMemberTrainingSource={onSetMemberTrainingSource}
-                onSetMemberRole={onSetMemberRole}
-                onRemoveMember={onRemoveMember}
-                onSetParticipation={onSetParticipation}
-                onToggleMemberClassification={onToggleMemberClassification}
-              />
-            </>
-          )}
-
-          {workspaceTab === 'programs' && (
-            <TeamProgramsTab
-              canManage={canManage}
-              programRows={programRows}
-              wizardOpen={groupsProgramWizardOpen}
-              teamProgramSetupPanel={teamProgramSetupPanel}
-              onOpenCreateWizard={() => onOpenGroupsProgramWizard('create')}
-              onOpenGenerateWizard={() => onOpenGroupsProgramWizard('generate')}
-              onCloseWizard={onCloseGroupsProgramWizard}
-              onDuplicate={(id) => onDuplicateProgram(id)}
-              onEdit={onEditTeamProgram}
-              onPublish={onPublishTeamProgram}
-              onAssign={(id) => setAssignProgramId(id)}
-            />
-          )}
-
-          {workspaceTab === 'progress' && (
-            <TeamProgressTab
-              canManage={canManage}
-              members={members}
-              memberStats={memberStats}
-              memberRosterMeta={memberRosterMeta}
-              compliancePct={compliancePct}
-              teamActiveCount={teamActiveCount}
-              teamTotalSets={teamTotalSets}
-              onOpenMember={onOpenMember}
-            />
-          )}
-
-          {workspaceTab === 'settings' && activeTeam && (
-            <TeamSettingsTab
-              activeTeam={activeTeam}
-              members={members}
-              canManage={canManage}
-              isOwner={isOwner}
-              isSelfOwner={activeTeam.my_role === 'owner'}
-              classifications={classifications}
-              groupProgramForAssign={groupProgramForAssign}
-              memberClassificationIds={memberClassificationIds}
-              onCreateClassification={onCreateClassification}
-              onDeleteClassification={onDeleteClassification}
-              onAssignWorkout={onAssignWorkout}
-              onLeaveTeam={onLeaveTeam}
-              onDeleteTeam={onDeleteTeam}
-            />
-          )}
-        </>
-      )}
+      {renderWorkspaceContent()}
 
       <TeamCreateJoinSheet
         mode={sheetMode}
