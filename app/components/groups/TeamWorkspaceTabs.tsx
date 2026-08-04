@@ -5,7 +5,7 @@ export type TeamWorkspaceTab = 'members' | 'programs' | 'progress' | 'settings';
 const TABS: { id: TeamWorkspaceTab; label: string }[] = [
   { id: 'members', label: 'Members' },
   { id: 'programs', label: 'Programs' },
-  { id: 'progress', label: 'Progress' },
+  { id: 'progress', label: 'Team status' },
   { id: 'settings', label: 'Settings' },
 ];
 

@@ -49,8 +49,8 @@ export default function TeamProgressTab({
             </div>
           </div>
           <p className="muted" style={{ marginTop: 6 }}>
-            This week&apos;s team activity. After replacing a group program, tap <b>Restore history</b> to
-            reconnect your logged workouts, or open a member for their Progress.
+            This week&apos;s team activity — not your full personal lift history. Use the bottom-nav{' '}
+            <b>Progress</b> tab for your logged sets. Coaches can open a member for their detail history.
           </p>
           <div className="dash-metrics">
             <div>
@@ -70,7 +70,7 @@ export default function TeamProgressTab({
         <h2>Member status</h2>
         <p className="muted">
           This week&apos;s completion and activity.
-          {canManage ? ' Tap a member → Progress for full history / Restore.' : ''}
+          {canManage ? ' Tap a member for their Progress detail.' : ' Your sets live under bottom-nav Progress.'}
         </p>
         {members.map((m: any) => {
           const stats = memberStats[m.user_id] || { sets: 0, days: 0 };
