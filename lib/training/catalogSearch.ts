@@ -41,6 +41,36 @@ export function builtinCatalogItems(items: any[], sources?: CatalogSourceId[] | 
   return dedupeCatalogByName(filterCatalogBySources(pool, enabled));
 }
 
+/** Active custom exercises owned by the signed-in user. */
+export function userCustomCatalogItems(items: any[], userId?: string | null) {
+  if (!userId) return [];
+  return (items || []).filter(
+    (c) => !c?.is_archived && c?.is_system === false && c?.user_id === userId
+  );
+}
+
+/** Built-in library plus the user's custom exercises for Training add/search UI. User rows win same-name collisions. */
+export function workoutSearchCatalogItems(
+  items: any[],
+  userId?: string | null,
+  sources?: CatalogSourceId[] | null
+) {
+  const builtin = builtinCatalogItems(items, sources);
+  const custom = userCustomCatalogItems(items, userId);
+  if (!custom.length) return builtin;
+
+  const byName = new Map<string, any>();
+  for (const item of builtin) {
+    const key = normalizeCatalogNameKey(item?.name);
+    if (key) byName.set(key, item);
+  }
+  for (const item of custom) {
+    const key = normalizeCatalogNameKey(item?.name);
+    if (key) byName.set(key, item);
+  }
+  return Array.from(byName.values()).sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+}
+
 export type CatalogSearchFilters = {
   muscle?: string;
   equipment?: string;

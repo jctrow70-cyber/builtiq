@@ -6481,3 +6481,52 @@ None.
 ```text
 BIQ-0091 Fix custom exercise movement_pattern check constraint error
 ```
+
+---
+
+## BIQ-0092 - Show Custom Exercises in Training Search
+
+Date: 2026-08-04  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Custom exercises saved in Settings now appear when searching to add exercises to a program.
+
+### Purpose
+
+Training add-exercise search only queried the built-in library (`builtinCatalogItems`), so user-created catalog entries were invisible despite showing under Settings → My Exercise Catalog.
+
+### Changes
+
+- Added `userCustomCatalogItems()` and `workoutSearchCatalogItems()` in catalog search helpers
+- Add Exercise panel and inline exercise rename search use built-in + own custom exercises
+- AI program generation still uses built-in catalog only
+
+### Files Changed
+
+- `lib/training/catalogSearch.ts`
+- `app/page.tsx`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+- Settings → Create Custom Exercise → save with a unique name
+- Training → Add exercise → search for that name → custom exercise appears
+- Pick it and add to workout — saves with `catalog_exercise_id` linked
+- Built-in exercises still appear in search
+- AI program generation unchanged (no custom exercises injected)
+
+### Known Issues
+
+None.
+
+### Recommended Commit Message
+
+```text
+BIQ-0092 Show custom exercises in Training add-exercise search
+```
