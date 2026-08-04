@@ -10,7 +10,7 @@ import {
 import type { AssignProgramTarget } from './TeamAssignProgramModal';
 import TeamAssignProgramModal from './TeamAssignProgramModal';
 import TeamCreateJoinSheet from './TeamCreateJoinSheet';
-import TeamMemberDetail from './TeamMemberDetail';
+import TeamMemberDetail, { type MemberDetailTab } from './TeamMemberDetail';
 import TeamMembersTab from './TeamMembersTab';
 import TeamProgressTab from './TeamProgressTab';
 import TeamProgramsTab from './TeamProgramsTab';
@@ -62,7 +62,7 @@ export type GroupsHubProps = {
   onCreateGroup: (name: string) => Promise<void>;
   onJoinGroup: (code: string) => Promise<void>;
   onRefreshMembers: () => void;
-  onOpenMember: (member: any) => void;
+  onOpenMember: (member: any, opts?: { preferProgress?: boolean }) => void;
   onCloseMemberDashboard: () => void;
   onOpenMemberWorkout: (member: any) => void;
   onSetMemberTrainingSource: (member: any, source: string) => void;
@@ -177,10 +177,16 @@ export default function GroupsHub(props: GroupsHubProps) {
   const [workspaceTab, setWorkspaceTab] = useState<TeamWorkspaceTab>('members');
   const [sheetMode, setSheetMode] = useState<'create' | 'join' | null>(null);
   const [assignProgramId, setAssignProgramId] = useState<string | null>(null);
+  const [memberDetailTab, setMemberDetailTab] = useState<MemberDetailTab>('assigned');
 
   useEffect(() => {
     setWorkspaceTab('members');
+    setMemberDetailTab('assigned');
   }, [activeTeam?.id]);
+
+  useEffect(() => {
+    if (!memberDashboard) setMemberDetailTab('assigned');
+  }, [memberDashboard]);
 
   const programRows = useMemo(
     () =>
@@ -274,6 +280,7 @@ export default function GroupsHub(props: GroupsHubProps) {
             performanceLogs={memberPerformance?.logs || []}
             workoutHistory={memberPerformance?.history || []}
             weightUnit={weightUnit}
+            initialTab={memberDetailTab}
           />
         );
       }
@@ -310,7 +317,10 @@ export default function GroupsHub(props: GroupsHubProps) {
             isOwner={isOwner}
             statusLabel={statusLabel}
             onRefresh={onRefreshMembers}
-            onOpenMember={onOpenMember}
+            onOpenMember={(m) => {
+              setMemberDetailTab('assigned');
+              onOpenMember(m);
+            }}
             onSetMemberTrainingSource={onSetMemberTrainingSource}
             onSetMemberRole={onSetMemberRole}
             onRemoveMember={onRemoveMember}
@@ -351,7 +361,15 @@ export default function GroupsHub(props: GroupsHubProps) {
           compliancePct={compliancePct}
           teamActiveCount={teamActiveCount}
           teamTotalSets={teamTotalSets}
-          onOpenMember={onOpenMember}
+          onOpenMember={(m) => {
+            // Progress tab previously set memberDashboard but never left this view,
+            // so taps looked broken (or self redirected to Training). Open the
+            // member detail on the Progress sub-tab instead.
+            setMemberDetailTab('progress');
+            setWorkspaceTab('members');
+            onWorkspaceTabChange?.('members');
+            onOpenMember(m, { preferProgress: true });
+          }}
         />
       );
     }

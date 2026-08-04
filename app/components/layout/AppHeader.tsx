@@ -95,7 +95,18 @@ export default function AppHeader({
                 <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onOpenSettings(); }}>
                   Settings
                 </button>
-                <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onOpenProgress(); }}>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onPointerDown={(e) => e.preventDefault()}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setMenuOpen(false);
+                    // Defer so a mobile ghost-click cannot hit Training under the closing menu.
+                    window.setTimeout(() => onOpenProgress(), 0);
+                  }}
+                >
                   Progress
                 </button>
                 <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onOpenAiCoach(); }}>
