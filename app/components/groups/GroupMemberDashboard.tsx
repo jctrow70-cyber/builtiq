@@ -26,6 +26,7 @@ type GroupMemberDashboardProps = {
   canManage: boolean;
   assignDraft: { type: string; programId: string; notes: string };
   programs: any[];
+  assignableTeamPrograms?: any[];
   onAssignDraftChange: (draft: { type: string; programId: string; notes: string }) => void;
   onBack: () => void;
   onOpenWorkout: () => void;
@@ -54,6 +55,7 @@ export default function GroupMemberDashboard({
   canManage,
   assignDraft,
   programs,
+  assignableTeamPrograms,
   onAssignDraftChange,
   onBack,
   onOpenWorkout,
@@ -68,6 +70,7 @@ export default function GroupMemberDashboard({
   hideHeader = false,
 }: GroupMemberDashboardProps) {
   const stats = memberStats[member.user_id] || { sets: 0, days: 0 };
+  const assignmentPrograms = assignableTeamPrograms?.length ? assignableTeamPrograms : programs;
   const assignmentType =
     memberAssignment?.assignment_type || (member.training_source || 'team') === 'personal' ? 'personal' : 'team';
 
@@ -140,7 +143,7 @@ export default function GroupMemberDashboard({
                 onChange={(e) => onAssignDraftChange({ ...assignDraft, programId: e.target.value })}
               >
                 <option value="">Select program</option>
-                {programs.map((p: any) => (
+                {assignmentPrograms.map((p: any) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
                   </option>

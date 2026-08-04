@@ -20,6 +20,7 @@ type TeamMemberDetailProps = {
   canManage: boolean;
   assignDraft: { type: string; programId: string; notes: string };
   programs: any[];
+  assignableTeamPrograms?: any[];
   onAssignDraftChange: (draft: { type: string; programId: string; notes: string }) => void;
   onBack: () => void;
   onOpenWorkout: () => void;

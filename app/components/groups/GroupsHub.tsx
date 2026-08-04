@@ -39,6 +39,7 @@ export type GroupsHubProps = {
   memberAssignments: Record<string, any>;
   assignDraft: { type: string; programId: string; notes: string };
   programs: any[];
+  assignableTeamPrograms?: any[];
   teamPrograms: any[];
   groupProgramForAssign: any | null;
   classifications: GroupClassification[];
@@ -121,6 +122,7 @@ export default function GroupsHub(props: GroupsHubProps) {
     memberAssignment,
     assignDraft,
     programs,
+    assignableTeamPrograms,
     teamPrograms,
     groupProgramForAssign,
     classifications,
@@ -255,6 +257,7 @@ export default function GroupsHub(props: GroupsHubProps) {
             canManage={canManage}
             assignDraft={assignDraft}
             programs={programs}
+            assignableTeamPrograms={assignableTeamPrograms}
             onAssignDraftChange={onAssignDraftChange}
             onBack={onCloseMemberDashboard}
             onOpenWorkout={() => onOpenMemberWorkout(memberDashboard)}

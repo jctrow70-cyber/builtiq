@@ -6037,3 +6037,53 @@ None.
 ```text
 BIQ-0083 Keep member workout view isolated from manager training state
 ```
+
+---
+
+## BIQ-0084 - Fix Apply Assignment on Member Detail
+
+Date: 2026-08-03  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Apply assignment on a member&apos;s Assigned Program tab no longer errors. Individual/manual assignments validate that a published program is selected, and the Supabase RPC is compatible with projects that have not applied all prior migrations.
+
+### Purpose
+
+Clicking **Apply assignment** could fail when the client sent `p_coaching_metadata` to an RPC/database that did not match, when an empty program id was sent for individual assignments, or when the program dropdown listed invalid options.
+
+### Changes
+
+- **`assignMemberProgram`:** Validates assignment type; requires a program for individual/manual types; omits optional RPC args that caused schema mismatches; shows success confirmation
+- **`reloadMemberWorkoutProgram`:** Refreshes inline member workout after assignment without resetting manager training state
+- **Assignment dropdown:** Uses published team programs only (`assignableTeamPrograms`)
+- **Migration `20250803_033`:** Hardens `st_assign_member_program` with `st_user_can_edit_team`, validation, and `coaching_metadata` column guard
+
+### Files Changed
+
+- `app/page.tsx`
+- `app/components/groups/GroupMemberDashboard.tsx`
+- `app/components/groups/GroupsHub.tsx`
+- `app/components/groups/TeamMemberDetail.tsx`
+- `supabase/migrations/20250803_033_fix_member_program_assign.sql`
+- `CHANGELOG.md`
+
+### Database Changes
+
+Apply migration `20250803_033_fix_member_program_assign.sql` in Supabase.
+
+### Testing Steps
+
+1. Groups → member → Assigned tab
+2. Set **Individual Team Plan** → pick a published program → **Apply assignment** → confirm success (no error)
+3. Set **Follow Team Plan** → Apply → member follows team default
+4. Individual/manual without a program selected → friendly validation message (no RPC error)
+5. If inline member workout is open, assignment refresh keeps member context
+
+### Recommended Commit Message
+
+```text
+BIQ-0084 Fix member Apply assignment RPC and validation
+```
