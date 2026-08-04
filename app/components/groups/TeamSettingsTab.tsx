@@ -13,11 +13,13 @@ type TeamSettingsTabProps = {
   isSelfOwner: boolean;
   classifications: GroupClassification[];
   groupProgramForAssign: any | null;
+  publishedTeamPrograms?: any[];
   memberClassificationIds: Record<string, string[]>;
   onCreateClassification: (name: string) => Promise<void>;
   onDeleteClassification: (c: GroupClassification) => Promise<void>;
   onAssignWorkout: (payload: {
     workoutId: string;
+    programId?: string | null;
     targetType: 'group' | 'members' | 'classification';
     memberUserIds: string[];
     classificationId: string;
@@ -38,6 +40,7 @@ export default function TeamSettingsTab({
   isSelfOwner,
   classifications,
   groupProgramForAssign,
+  publishedTeamPrograms = [],
   memberClassificationIds,
   onCreateClassification,
   onDeleteClassification,
@@ -84,6 +87,7 @@ export default function TeamSettingsTab({
           />
           <GroupAssignWorkoutPanel
             groupProgram={groupProgramForAssign}
+            publishedTeamPrograms={publishedTeamPrograms}
             members={members}
             classifications={classifications}
             memberClassificationIds={memberClassificationIds}
