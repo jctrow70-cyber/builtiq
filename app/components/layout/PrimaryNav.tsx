@@ -30,12 +30,20 @@ function NavIcon({ name }: { name: string }) {
           <path d="M12 3c3 4 5 6.5 5 10a5 5 0 1 1-10 0c0-3.5 2-6 5-10Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
         </svg>
       );
+    case 'Progress':
+      return (
+        <svg {...common}>
+          <path d="M4 19V5M4 19h16" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          <path d="M8 15v-4M12 15V8M16 15v-7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+        </svg>
+      );
     default:
       return null;
   }
 }
 
-const PRIMARY_NAV = ['Dashboard', 'Training', 'Groups', 'Nutrition'] as const;
+/** Bottom primary nav — Progress must be here so it is not only under Groups. */
+const PRIMARY_NAV = ['Dashboard', 'Training', 'Groups', 'Nutrition', 'Progress'] as const;
 
 type PrimaryNavProps = {
   active: string;

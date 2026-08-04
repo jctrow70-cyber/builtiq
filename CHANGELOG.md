@@ -6313,3 +6313,123 @@ None new beyond BIQ-0087 (`20250804_036`). If Assign workout still says Not auth
 ```text
 BIQ-0088 Groups Progress restore and assign workout from any program
 ```
+
+---
+
+## BIQ-0089 - Progress Bottom Nav + Own Lift History Visibility
+
+Date: 2026-08-04  
+Branch: cursor/progress-nav-and-history-964e  
+Status: Completed
+
+### Summary
+
+Put **Progress** on the primary bottom nav (it was easy to miss — only Groups had a Progress-like tab). Made personal Progress load logged sets with performance even when `completed` was never toggled, and fixed RLS so users always see their own `st_set_logs`. Renamed Groups → Progress to **Team status** so it is not confused with personal lift history.
+
+### Purpose
+
+Users only saw a Progress control under Groups (team weekly status) and could not find personal logged sets. Progress also filtered too strictly / RLS could hide orphaned own rows after a program replace.
+
+### Changes
+
+- Bottom nav: Dashboard / Training / Groups / Nutrition / **Progress**
+- Progress query: include rows with weight/reps/etc., not only `completed = true`
+- Clearer Progress empty-state copy vs Groups team status
+- Groups workspace tab label: Progress → **Team status**
+- Migration: own set logs always selectable by `user_id = auth.uid()`
+
+### Files Changed
+
+- `app/components/layout/PrimaryNav.tsx`
+- `app/globals.css`
+- `app/page.tsx`
+- `app/components/groups/TeamWorkspaceTabs.tsx`
+- `app/components/groups/TeamProgressTab.tsx`
+- `supabase/migrations/20250804_037_own_set_logs_always_visible.sql`
+- `CHANGELOG.md`
+
+### Database Changes
+
+Run in Supabase SQL Editor:
+
+- `supabase/migrations/20250804_037_own_set_logs_always_visible.sql`
+
+Also ensure earlier survival migrations are applied if not already:
+
+- `20250804_034_preserve_set_logs_on_program_delete.sql`
+- `20250804_035_member_progress_coach_log_access.sql`
+
+If rows were hard-deleted by an old CASCADE FK, this cannot recreate them — only new logs (and any surviving rows) will show.
+
+### Testing Steps
+
+1. Bottom nav shows five items including **Progress**
+2. Open Progress → workout history lists recent logged sets (or empty state explaining Training)
+3. Log weight/reps in Training (even before marking complete) → Refresh Progress → day appears
+4. Groups → **Team status** (not Progress) shows weekly member activity
+5. After applying migration 037, orphaned own logs (null planned_set_id) still appear on Progress
+
+### Known Issues
+
+- Rematching exercises to a new program template is out of scope here (manual redo)
+- Permanently deleted set-log rows cannot be restored from the app
+
+### Recommended Commit Message
+
+```text
+BIQ-0089 Add Progress to bottom nav and fix own lift history visibility
+```
+
+---
+
+## BIQ-0090 - Fix Individual Assign Not Moving Whole Group
+
+Date: 2026-08-04  
+Branch: cursor/fix-individual-assign-team-default-964e  
+Status: Completed
+
+### Summary
+
+Publishing a program and assigning it to one member (e.g. Ehan) no longer makes the rest of the group train on that plan. Training stopped falling back to “newest published” when the team default was empty or stale, Assign defaults to **One Member**, and Entire Team requires an explicit confirm that it sets the group active program.
+
+### Purpose
+
+Users assigned a new program to one athlete and the whole Follow Team Plan roster appeared to move because Training auto-picked the newest published program whenever `default_program_id` was missing.
+
+### Changes
+
+- `pickProgram` / `pickProgramForMember`: team resolution uses only the explicit team default or an individual/manual assignment — never newest-published fallback
+- Training load uses the signed-in user’s individual assignment when present
+- Group active program dropdown no longer pretends the open program is the default
+- Assign modal defaults to One Member; clearer copy + confirmations
+- Program list summary shows `Only: Name` for individual assigns
+
+### Files Changed
+
+- `app/page.tsx`
+- `app/components/groups/TeamAssignProgramModal.tsx`
+- `lib/groups/programRoster.ts`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Keep an existing published program as group active (or leave No team default)
+2. Publish a new draft without Publish & set group active
+3. Programs → Assign → One Member → Ehan → confirm → only Ehan listed as `Only: Ehan`
+4. Other members on Follow Team Plan still see the previous team default (or no program if none set)
+5. Assign → Entire Team → confirm → group active updates; list shows Entire team (default)
+
+### Known Issues
+
+- If the team default was already switched earlier, reset it under Program Setup → Group active program
+- Members who already received an individual override stay on that plan until reassigned
+
+### Recommended Commit Message
+
+```text
+BIQ-0090 Fix individual program assign so it does not move the whole group
+```
