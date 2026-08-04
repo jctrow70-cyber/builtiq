@@ -6678,3 +6678,55 @@ None.
 ```text
 BIQ-0095 Fix Groups program edit, assign refresh, and draft visibility
 ```
+
+---
+
+## BIQ-0096 - Fix Incomplete Workout Days After Program Assign
+
+Date: 2026-08-04  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Assigned programs now load all workout days immediately (e.g. Wednesday and Friday together) instead of showing one day first and filling in the rest after a long delay.
+
+### Purpose
+
+Bulk Supabase nested queries across every team program can hit PostgREST row limits, returning truncated `st_workouts` arrays. Member workout views also reused stale assignment state and could flash partial program data while a second fetch completed.
+
+### Changes
+
+- Added `lib/training/programFetch.ts` with lightweight program index + per-program full fetch
+- `loadPrograms`, `reloadMemberWorkoutProgram`, and `loadMemberDashboardData` fetch one program at a time with full workout tree
+- `openMemberView` clears stale workout state and uses fresh assignments from `loadMemberAssignments`
+- Effect refreshes member workout when assignments change while a member view is open
+- `openAssignedWorkout` uses shared full-program fetch helper
+
+### Files Changed
+
+- `lib/training/programFetch.ts` (new)
+- `app/page.tsx`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Create or pick a published program with multiple workout days (e.g. Wednesday + Friday)
+2. Assign that program to a group member
+3. Open the member workout from Groups — both days should appear immediately
+4. Switch weeks and days — all scheduled workouts for that week should be listed
+5. Assignee Training tab should show the same full program without delayed day appearance
+6. Open an assigned single-workout assignment — workout loads completely
+
+### Known Issues
+
+None identified.
+
+### Recommended Commit Message
+
+```text
+BIQ-0096 Fix incomplete workout days after program assign
+```

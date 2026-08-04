@@ -37,6 +37,7 @@ import {
   addDaysYmd,
 } from '../lib/training/programCalendar';
 import { insertProgramRecord, isDraftProgram, isPublishedProgram, programOptionLabel, publishProgramRecord, deleteProgramRecord } from '../lib/training/programStatus';
+import { fetchFullProgram, fetchProgramIndex, mergeFullProgramIntoList } from '../lib/training/programFetch';
 import { countUnlinkedLogs, mapDateLogsToProgram, reattachUserLogsToProgram } from '../lib/training/reattachLogs';
 import { mergeDayEmphasisFromGoals } from '../lib/training/scheduleSuggestion';
 import { MOVEMENT_PATTERNS, normalizeMovementPattern } from '../lib/training/exerciseIntelligence';
@@ -293,6 +294,10 @@ export default function Page(){
  useEffect(()=>{if(memberDashboard)loadMemberDashboardData(memberDashboard);},[logDate,week,memberDashboard?.user_id,selectedTeamId,memberAssignments]);
 
  const activeTeam=teams.find((t:any)=>t.id===selectedTeamId)||teams[0]||null;
+ useEffect(()=>{
+  if(!viewingMember||viewingMember.user_id===session?.user?.id)return;
+  void reloadMemberWorkoutProgram(viewingMember,memberAssignments);
+ },[memberAssignments,viewingMember?.user_id,activeTeam?.default_program_id]);
  useEffect(()=>{if(activeTeam&&canManageGroup(activeTeam.my_role)) loadGroupProgramForAssign(); else {setGroupProgramForAssign(null);setAssignWorkoutPrograms([]);}},[activeTeam?.id,activeTeam?.default_program_id,activeTeam?.my_role,appNav]);
  // Re-resolve Training after assignments load so individual assigns don't get overwritten by “newest published”
  useEffect(()=>{
@@ -475,25 +480,39 @@ export default function Page(){
  async function reloadMemberWorkoutProgram(member:any,assignmentsOverride?:Record<string,any>){
   if(!member||!activeTeam)return;
   const usePersonal=(member.training_source||'team')==='personal';
-  let q=supabase.from('st_programs').select('*, st_workouts(*, st_exercises(*, st_planned_sets(*)))').order('created_at',{ascending:false});
-  q=usePersonal?q.eq('visibility','personal').eq('owner_user_id',member.user_id):q.eq('visibility','team').eq('team_id',activeTeam.id);
-  const{data,error}=await q;
-  if(error)return;
-  const list=(data||[]).filter((p:any)=>isPublishedProgram(p));
-  const picked=pickProgramForMember(list,member,!usePersonal?activeTeam?.default_program_id:null,assignmentsOverride);
-  setMemberWorkoutProgram(picked||null);
-  if(picked&&memberWorkoutActiveId){
-   const stillExists=(picked.st_workouts||[]).some((w:any)=>w.id===memberWorkoutActiveId);
-   if(!stillExists){
-    const first=picked.st_workouts?.sort((a:any,b:any)=>a.week-b.week||a.day_order-b.day_order)?.[0];
-    if(first){
-     setMemberWorkoutActiveId(first.id);
-     setMemberWorkoutWeek(first.week||1);
-    }
-   }
+  const{data:index,error:indexErr}=await fetchProgramIndex(supabase,{personal:usePersonal,teamId:activeTeam.id,ownerUserId:member.user_id,publishedOnly:true});
+  if(indexErr)console.warn(indexErr);
+  const pickedMeta=pickProgramForMember(index||[],member,!usePersonal?activeTeam?.default_program_id:null,assignmentsOverride);
+  if(!pickedMeta?.id){
+   setMemberWorkoutProgram(null);
+   setMemberWorkoutWeek(1);
+   setMemberWorkoutLogDate(today());
+   setMemberWorkoutActiveId('');
+   return;
   }
-  if(picked&&viewingMember?.user_id===member.user_id){
-   await loadLogs(picked,member.user_id,memberWorkoutLogDate);
+  const{data:full,error:fullErr}=await fetchFullProgram(supabase,pickedMeta.id);
+  if(fullErr||!full){
+   if(fullErr)console.warn(fullErr);
+   setMemberWorkoutProgram(null);
+   return;
+  }
+  setMemberWorkoutProgram(full);
+  const start=resolveProgramStartDate(full);
+  const initialDate=memberWorkoutLogDate||today();
+  const initialWeek=weekForDate(start,initialDate,full.weeks||weeks||6);
+  const dayLabel=dayLabelFromYmd(initialDate);
+  const match=(full.st_workouts||[]).find((w:any)=>w.week===initialWeek&&w.day_label===dayLabel)
+   ||(full.st_workouts||[]).filter((w:any)=>w.week===initialWeek).sort((a:any,b:any)=>a.day_order-b.day_order)[0]
+   ||full.st_workouts?.sort((a:any,b:any)=>a.week-b.week||a.day_order-b.day_order)?.[0];
+  if(memberWorkoutActiveId&&!(full.st_workouts||[]).some((w:any)=>w.id===memberWorkoutActiveId)){
+   setMemberWorkoutActiveId(match?.id||'');
+   setMemberWorkoutWeek(initialWeek);
+  } else if(!memberWorkoutActiveId&&match){
+   setMemberWorkoutActiveId(match.id);
+   setMemberWorkoutWeek(initialWeek);
+  }
+  if(viewingMember?.user_id===member.user_id){
+   await loadLogs(full,member.user_id,memberWorkoutLogDate||initialDate);
   }
  }
  function pickProgramForMember(list:any[],member:any,defaultId?:string|null,assignmentsOverride?:Record<string,any>){
@@ -543,19 +562,19 @@ export default function Page(){
   if(!session?.user)return;
   if(activeAssignedRecipient)return;
   if(viewingMember&&viewingMember.user_id!==session.user.id)return;
-  let q=supabase.from('st_programs').select('*, st_workouts(*, st_exercises(*, st_planned_sets(*)))').order('created_at',{ascending:false});
   const usePersonal=mode==='personal';
-  q=usePersonal?q.eq('visibility','personal').eq('owner_user_id',session.user.id):q.eq('visibility','team').eq('team_id',activeTeam?.id||'00000000-0000-0000-0000-000000000000');
-  const{data,error}=await q;
-  if(error)return alert(error.message);
+  const{data:index,error:indexErr}=await fetchProgramIndex(supabase,{
+   personal:usePersonal,
+   teamId:activeTeam?.id,
+   ownerUserId:session.user.id,
+   publishedOnly:context==='training',
+  });
+  if(indexErr)return alert(indexErr);
   if(activeAssignedRecipient)return;
   if(viewingMember&&viewingMember.user_id!==session.user.id)return;
-  let list=data||[];
-  if(context==='training'){
-   list=list.filter((p:any)=>isPublishedProgram(p));
-  }
+  let list=index||[];
   setPrograms(list);
-  const picked=context==='setup'
+  const pickedMeta=context==='setup'
    ?((draftEditProgramId&&list.find((p:any)=>p.id===draftEditProgramId))
      ||list.find((p:any)=>isDraftProgram(p))
      ||(program&&list.some((p:any)=>p.id===program.id)?list.find((p:any)=>p.id===program.id):null)
@@ -565,27 +584,34 @@ export default function Page(){
    :usePersonal
      ?pickProgram(list,null)
      :pickProgramForMember(list,{user_id:session.user.id},activeTeam?.default_program_id,options?.assignmentsOverride);
-  setProgram(picked||null);
-  if(picked&&context==='setup'&&draftEditProgramId&&picked.id===draftEditProgramId){
-   if(draftNameSourceRef.current!==picked.id){
-    setProgramName(picked.name||'Strength Program');
-    draftNameSourceRef.current=picked.id;
+  let pickedFull:any=null;
+  if(pickedMeta?.id){
+   const{data:full,error:fullErr}=await fetchFullProgram(supabase,pickedMeta.id);
+   if(fullErr)return alert(fullErr);
+   pickedFull=full;
+   setPrograms(mergeFullProgramIntoList(list,pickedFull));
+  }
+  setProgram(pickedFull||null);
+  if(pickedFull&&context==='setup'&&draftEditProgramId&&pickedFull.id===draftEditProgramId){
+   if(draftNameSourceRef.current!==pickedFull.id){
+    setProgramName(pickedFull.name||'Strength Program');
+    draftNameSourceRef.current=pickedFull.id;
    }
   } else if(!draftEditProgramId){
    draftNameSourceRef.current=null;
   }
-  if(picked){
-    const start=resolveProgramStartDate(picked);
-    const alignedWeek=weekForDate(start,logDate,picked.weeks||weeks||6);
+  if(pickedFull){
+    const start=resolveProgramStartDate(pickedFull);
+    const alignedWeek=weekForDate(start,logDate,pickedFull.weeks||weeks||6);
     setWeek(alignedWeek);
     const dayLabel=dayLabelFromYmd(logDate);
-    const match=(picked.st_workouts||[]).find((w:any)=>w.week===alignedWeek&&w.day_label===dayLabel)
-      ||(picked.st_workouts||[]).filter((w:any)=>w.week===alignedWeek).sort((a:any,b:any)=>a.day_order-b.day_order)[0]
-      ||picked.st_workouts?.sort((a:any,b:any)=>a.week-b.week||a.day_order-b.day_order)?.[0];
+    const match=(pickedFull.st_workouts||[]).find((w:any)=>w.week===alignedWeek&&w.day_label===dayLabel)
+      ||(pickedFull.st_workouts||[]).filter((w:any)=>w.week===alignedWeek).sort((a:any,b:any)=>a.day_order-b.day_order)[0]
+      ||pickedFull.st_workouts?.sort((a:any,b:any)=>a.week-b.week||a.day_order-b.day_order)?.[0];
     if(match)setActiveWorkout(match.id);
     if(context==='training'){
       setHistoryRestoreDismissed(false);
-      checkHistoryRestoreOffer(picked);
+      checkHistoryRestoreOffer(pickedFull);
     }
   } else {
     setActiveWorkout('');
@@ -651,20 +677,24 @@ export default function Page(){
   setMemberPerformanceLoading(true);
   try{
   const usePersonal=(member.training_source||'team')==='personal';
-  let q=supabase.from('st_programs').select('*, st_workouts(*, st_exercises(*, st_planned_sets(*)))').order('created_at',{ascending:false});
-  q=usePersonal?q.eq('visibility','personal').eq('owner_user_id',member.user_id):q.eq('visibility','team').eq('team_id',activeTeam.id);
-  const{data,error}=await q;
-  if(error)console.warn(error.message);
-  const list=((error?[]:data)||[]).filter((p:any)=>isPublishedProgram(p));
+  const{data:index,error:indexErr}=await fetchProgramIndex(supabase,{personal:usePersonal,teamId:activeTeam.id,ownerUserId:member.user_id,publishedOnly:true});
+  if(indexErr)console.warn(indexErr);
+  const list=index||[];
   const assignMap=assignmentsOverride??memberAssignments;
-  const picked=pickProgramForMember(list,member,!usePersonal?activeTeam?.default_program_id:null,assignMap);
-  setMemberDashProgram(picked);
+  const pickedMeta=pickProgramForMember(list,member,!usePersonal?activeTeam?.default_program_id:null,assignMap);
+  let pickedFull:any=null;
+  if(pickedMeta?.id){
+   const{data:full,error:fullErr}=await fetchFullProgram(supabase,pickedMeta.id);
+   if(!fullErr)pickedFull=full;
+   else console.warn(fullErr);
+  }
+  setMemberDashProgram(pickedFull);
   const assignment=assignMap[member.user_id];
   if(assignment)setAssignDraft({type:assignment.assignment_type||'team',programId:assignment.program_id||'',notes:assignment.notes||''});
   else setAssignDraft({type:(member.training_source||'team')==='personal'?'personal':'team',programId:'',notes:''});
   const dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const todayLabel=dayNames[new Date().getDay()];
-  const todayW=(picked?.st_workouts||[]).find((w:any)=>w.week===week&&w.day_label===todayLabel)||(picked?.st_workouts||[]).find((w:any)=>w.week===1&&w.day_label===todayLabel);
+  const todayW=(pickedFull?.st_workouts||[]).find((w:any)=>w.week===week&&w.day_label===todayLabel)||(pickedFull?.st_workouts||[]).find((w:any)=>w.week===1&&w.day_label===todayLabel);
   if(!todayW){setMemberDashLogs({});} else {
   const ids:any[]=[];
   (todayW.st_exercises||[]).forEach((e:any)=>(e.st_planned_sets||[]).forEach((s:any)=>{if(!s.is_deleted)ids.push(s.id);}));
@@ -673,7 +703,7 @@ export default function Page(){
   const by:any={};(logs||[]).forEach((l:any)=>by[l.planned_set_id]=l);
   // Overlay same-date snapshot matches (manual program redo left old planned_set ids)
   const{data:dateLogs}=await supabase.from('st_set_logs').select('*').eq('user_id',member.user_id).eq('log_date',logDate).limit(400);
-  const overlaid=mapDateLogsToProgram(dateLogs||[],picked,todayW);
+  const overlaid=mapDateLogsToProgram(dateLogs||[],pickedFull,todayW);
   Object.keys(overlaid).forEach((sid)=>{if(!by[sid])by[sid]=overlaid[sid];});
   setMemberDashLogs(by);
   }}
@@ -696,31 +726,11 @@ export default function Page(){
   setAppNav('Groups');
   setMode('team');
   setMemberDashboard(null);
+  setMemberWorkoutProgram(null);
+  setMemberWorkoutActiveId('');
   setViewingMember(member);
-  await loadMemberAssignments();
-  const usePersonal=(member.training_source||'team')==='personal';
-  let q=supabase.from('st_programs').select('*, st_workouts(*, st_exercises(*, st_planned_sets(*)))').order('created_at',{ascending:false});
-  q=usePersonal?q.eq('visibility','personal').eq('owner_user_id',member.user_id):q.eq('visibility','team').eq('team_id',activeTeam.id);
-  const{data,error}=await q; if(error)return alert(error.message);
-  const list=(data||[]).filter((p:any)=>isPublishedProgram(p));
-  const picked=pickProgramForMember(list,member,!usePersonal?activeTeam?.default_program_id:null);
-  setMemberWorkoutProgram(picked||null);
-  if(picked){
-   const start=resolveProgramStartDate(picked);
-   const initialDate=today();
-   const initialWeek=weekForDate(start,initialDate,picked.weeks||weeks||6);
-   const dayLabel=dayLabelFromYmd(initialDate);
-   const match=(picked.st_workouts||[]).find((w:any)=>w.week===initialWeek&&w.day_label===dayLabel)
-    ||(picked.st_workouts||[]).filter((w:any)=>w.week===initialWeek).sort((a:any,b:any)=>a.day_order-b.day_order)[0]
-    ||picked.st_workouts?.sort((a:any,b:any)=>a.week-b.week||a.day_order-b.day_order)?.[0];
-   setMemberWorkoutWeek(initialWeek);
-   setMemberWorkoutLogDate(initialDate);
-   setMemberWorkoutActiveId(match?.id||'');
-  } else {
-   setMemberWorkoutWeek(1);
-   setMemberWorkoutLogDate(today());
-   setMemberWorkoutActiveId('');
-  }
+  const freshAssignments=await loadMemberAssignments();
+  await reloadMemberWorkoutProgram(member,freshAssignments);
  }
  function clearMemberWorkoutView(){
   setViewingMember(null);
@@ -841,8 +851,8 @@ export default function Page(){
     programId=workoutRow?.program_id||null;
   }
   if(!programId)return alert('This assignment is missing program data.');
-  const{data:fullProgram,error}=await supabase.from('st_programs').select('*, st_workouts(*, st_exercises(*, st_planned_sets(*)))').eq('id',programId).single();
-  if(error||!fullProgram)return alert(error?.message||'Program not found.');
+  const{data:fullProgram,error}=await fetchFullProgram(supabase,programId);
+  if(error||!fullProgram)return alert(error||'Program not found.');
   const targetWorkout=usesPersonalCopy
     ?((fullProgram.st_workouts||[]).slice().sort((a:any,b:any)=>a.week-b.week||a.day_order-b.day_order)[0]||null)
     :resolveAssignmentWorkout(fullProgram,wa);
