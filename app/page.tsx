@@ -184,6 +184,7 @@ export default function Page(){
  const [scheduleManualOverride,setScheduleManualOverride]=useState(false);
  const [dayEmphasis,setDayEmphasis]=useState<Record<string,string>>({});
  const [draftEditProgramId,setDraftEditProgramId]=useState<string|null>(null);
+ const draftNameSourceRef=useRef<string|null>(null);
  const [viewingMember,setViewingMember]=useState<any>(null);
  const [memberWorkoutProgram,setMemberWorkoutProgram]=useState<any>(null);
  const [memberWorkoutWeek,setMemberWorkoutWeek]=useState(1);
@@ -289,7 +290,7 @@ export default function Page(){
  useEffect(()=>{setViewingMember(null);setMemberDashboard(null);setMemberWorkoutProgram(null);setMemberWorkoutActiveId('');},[selectedTeamId]);
  useEffect(()=>{if(selectedTeamId&&teams.length){loadMembers();loadMemberAssignments();loadClassifications();}},[selectedTeamId,teams.length]);
  useEffect(()=>{if(members.length&&selectedTeamId)loadMemberStats(); loadMemberClassificationLinks();},[members,selectedTeamId]);
- useEffect(()=>{if(memberDashboard)loadMemberDashboardData(memberDashboard);},[logDate,week,memberDashboard?.user_id,selectedTeamId]);
+ useEffect(()=>{if(memberDashboard)loadMemberDashboardData(memberDashboard);},[logDate,week,memberDashboard?.user_id,selectedTeamId,memberAssignments]);
 
  const activeTeam=teams.find((t:any)=>t.id===selectedTeamId)||teams[0]||null;
  useEffect(()=>{if(activeTeam&&canManageGroup(activeTeam.my_role)) loadGroupProgramForAssign(); else {setGroupProgramForAssign(null);setAssignWorkoutPrograms([]);}},[activeTeam?.id,activeTeam?.default_program_id,activeTeam?.my_role,appNav]);
@@ -418,12 +419,13 @@ export default function Page(){
     setMemberRosterMeta({});
   }
  }
- async function loadMemberAssignments(){
-  if(!activeTeam){setMemberAssignments({});return;}
+ async function loadMemberAssignments():Promise<Record<string,any>>{
+  if(!activeTeam){setMemberAssignments({});return {};}
   const{data}=await supabase.from('st_program_assignments').select('*, st_programs(name)').eq('team_id',activeTeam.id).eq('is_active',true);
   const by:any={};
   (data||[]).forEach((a:any)=>{by[a.user_id]=a;});
   setMemberAssignments(by);
+  return by;
  }
  async function assignMemberProgram(member:any,assignmentType:string,programId?:string|null,notes?:string,options?:{quiet?:boolean}):Promise<string|null>{
   if(!activeTeam||!canManageGroupView()){
@@ -463,13 +465,14 @@ export default function Page(){
    return msg;
   }
   await loadMembers();
-  await loadMemberAssignments();
-  if(memberDashboard?.user_id===member.user_id)await loadMemberDashboardData(member);
-  if(viewingMember?.user_id===member.user_id)await reloadMemberWorkoutProgram(member);
+  const freshAssignments=await loadMemberAssignments();
+  if(memberDashboard?.user_id===member.user_id)await loadMemberDashboardData(member,freshAssignments);
+  if(viewingMember?.user_id===member.user_id)await reloadMemberWorkoutProgram(member,freshAssignments);
+  if(mode==='team')await loadPrograms('training',{assignmentsOverride:freshAssignments});
   if(!options?.quiet)alert(`Program assignment updated for ${member.display_name||'member'}.`);
   return null;
  }
- async function reloadMemberWorkoutProgram(member:any){
+ async function reloadMemberWorkoutProgram(member:any,assignmentsOverride?:Record<string,any>){
   if(!member||!activeTeam)return;
   const usePersonal=(member.training_source||'team')==='personal';
   let q=supabase.from('st_programs').select('*, st_workouts(*, st_exercises(*, st_planned_sets(*)))').order('created_at',{ascending:false});
@@ -477,7 +480,7 @@ export default function Page(){
   const{data,error}=await q;
   if(error)return;
   const list=(data||[]).filter((p:any)=>isPublishedProgram(p));
-  const picked=pickProgramForMember(list,member,!usePersonal?activeTeam?.default_program_id:null);
+  const picked=pickProgramForMember(list,member,!usePersonal?activeTeam?.default_program_id:null,assignmentsOverride);
   setMemberWorkoutProgram(picked||null);
   if(picked&&memberWorkoutActiveId){
    const stillExists=(picked.st_workouts||[]).some((w:any)=>w.id===memberWorkoutActiveId);
@@ -493,8 +496,9 @@ export default function Page(){
    await loadLogs(picked,member.user_id,memberWorkoutLogDate);
   }
  }
- function pickProgramForMember(list:any[],member:any,defaultId?:string|null){
-  const assignment=memberAssignments[member?.user_id];
+ function pickProgramForMember(list:any[],member:any,defaultId?:string|null,assignmentsOverride?:Record<string,any>){
+  const assignments=assignmentsOverride??memberAssignments;
+  const assignment=assignments[member?.user_id];
   // Individual / manual override — only this member
   if(assignment?.program_id&&(assignment.assignment_type==='individual_team'||assignment.assignment_type==='manual')){
    const hit=list.find((p:any)=>p.id===assignment.program_id);
@@ -534,8 +538,8 @@ export default function Page(){
   return published[0]||null;
  }
  function programLoadContext():'training'|'setup'{return trainingSubNav==='setup'||showProgramSetup||draftEditProgramId?'setup':'training';}
- async function loadPrograms(context:'training'|'setup'='training'){
-  if(draftEditProgramId&&(trainingSubNav==='setup'||showProgramSetup))context='setup';
+ async function loadPrograms(context:'training'|'setup'='training',options?:{assignmentsOverride?:Record<string,any>}){
+  if(draftEditProgramId&&(trainingSubNav==='setup'||showProgramSetup||groupsProgramWizardOpen))context='setup';
   if(!session?.user)return;
   if(activeAssignedRecipient)return;
   if(viewingMember&&viewingMember.user_id!==session.user.id)return;
@@ -560,10 +564,15 @@ export default function Page(){
      ||null)
    :usePersonal
      ?pickProgram(list,null)
-     :pickProgramForMember(list,{user_id:session.user.id},activeTeam?.default_program_id);
+     :pickProgramForMember(list,{user_id:session.user.id},activeTeam?.default_program_id,options?.assignmentsOverride);
   setProgram(picked||null);
   if(picked&&context==='setup'&&draftEditProgramId&&picked.id===draftEditProgramId){
-   setProgramName(picked.name||'Strength Program');
+   if(draftNameSourceRef.current!==picked.id){
+    setProgramName(picked.name||'Strength Program');
+    draftNameSourceRef.current=picked.id;
+   }
+  } else if(!draftEditProgramId){
+   draftNameSourceRef.current=null;
   }
   if(picked){
     const start=resolveProgramStartDate(picked);
@@ -638,7 +647,7 @@ export default function Page(){
    setMemberHistoryRestoreBusy(false);
   }
  }
- async function loadMemberDashboardData(member:any){
+ async function loadMemberDashboardData(member:any,assignmentsOverride?:Record<string,any>){
   setMemberPerformanceLoading(true);
   try{
   const usePersonal=(member.training_source||'team')==='personal';
@@ -647,9 +656,10 @@ export default function Page(){
   const{data,error}=await q;
   if(error)console.warn(error.message);
   const list=((error?[]:data)||[]).filter((p:any)=>isPublishedProgram(p));
-  const picked=pickProgramForMember(list,member,!usePersonal?activeTeam?.default_program_id:null);
+  const assignMap=assignmentsOverride??memberAssignments;
+  const picked=pickProgramForMember(list,member,!usePersonal?activeTeam?.default_program_id:null,assignMap);
   setMemberDashProgram(picked);
-  const assignment=memberAssignments[member.user_id];
+  const assignment=assignMap[member.user_id];
   if(assignment)setAssignDraft({type:assignment.assignment_type||'team',programId:assignment.program_id||'',notes:assignment.notes||''});
   else setAssignDraft({type:(member.training_source||'team')==='personal'?'personal':'team',programId:'',notes:''});
   const dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
@@ -925,13 +935,20 @@ export default function Page(){
   await loadTeams();
   await loadPrograms(trainingSubNav==='setup'?'setup':'training');
  }
- async function saveDraftProgramName(programId:string):Promise<string|null>{
+ async function saveDraftProgramName(programId:string,options?:{quiet?:boolean}):Promise<string|null>{
   const name=programName.trim();
-  if(!name)return 'Enter a program name.';
+  if(!name){
+   if(!options?.quiet)alert('Enter a program name.');
+   return options?.quiet?null:'Enter a program name.';
+  }
   const target=programs.find((p:any)=>p.id===programId)||(program?.id===programId?program:null);
   if(target?.name===name)return null;
   const{error}=await supabase.from('st_programs').update({name}).eq('id',programId);
-  if(error)return error.message||'Could not save program name.';
+  if(error){
+   const msg=error.message||'Could not save program name.';
+   if(!options?.quiet)alert(msg);
+   return msg;
+  }
   setPrograms((prev:any[])=>prev.map((p:any)=>p.id===programId?{...p,name}:p));
   if(program?.id===programId)setProgram({...program,name});
   return null;
@@ -986,16 +1003,18 @@ export default function Page(){
  }
  async function editTeamProgramFromGroups(programId:string){
   if(!programId||!canEdit())return;
+  setMode('team');
+  setAppNav('Groups');
+  setGroupsProgramWizardOpen(true);
+  draftNameSourceRef.current=null;
   setDraftEditProgramId(programId);
-  setGroupsProgramWizardOpen(false);
-  setAppNav('Training');
   setTrainingSubNav('setup');
   setShowProgramSetup(true);
-  setMode('team');
   await loadPrograms('setup');
  }
  async function openDraftForEditing(programId:string,options?:{keepMemberWizard?:boolean}){
   if(!programId||!canEdit())return;
+  draftNameSourceRef.current=null;
   setDraftEditProgramId(programId);
   if(!options?.keepMemberWizard){
    setTrainingSubNav('setup');
@@ -1020,7 +1039,7 @@ export default function Page(){
   setGroupsAssignMemberUserId(null);
   setDraftEditProgramId(null);
   if(trainingSubNav!=='setup')setShowProgramSetup(false);
-  loadPrograms('training');
+  loadPrograms(appNav==='Groups'&&canManageGroupView()?'setup':'training');
  }
  async function duplicateTeamProgramHandler(programId:string){
   if(!canEdit()||!activeTeam)return;
@@ -1077,9 +1096,18 @@ export default function Page(){
    }
    alert(`Assigned to ${names.join(', ')} only. Group active program unchanged.`);
   }
-  await loadMemberAssignments();
+  const freshAssignments=await loadMemberAssignments();
   await loadGroupProgramForAssign();
-  if(mode==='team')await loadPrograms(programLoadContext());
+  const assignedIds=payload.target==='team'?[]:payload.memberUserIds;
+  if(mode==='team')await loadPrograms(programLoadContext(),{assignmentsOverride:freshAssignments});
+  if(memberDashboard&&assignedIds.includes(memberDashboard.user_id)){
+   const member=members.find((m:any)=>m.user_id===memberDashboard.user_id);
+   if(member)await loadMemberDashboardData(member,freshAssignments);
+  }
+  if(session?.user&&assignedIds.includes(session.user.id)){
+   setMode('team');
+   await loadPrograms('training',{assignmentsOverride:freshAssignments});
+  }
  }
  async function customizeProgramForMemberHandler(memberUserId:string,sourceProgramId:string){
   if(!activeTeam||!canManageGroupView())return;
@@ -1087,8 +1115,9 @@ export default function Page(){
   if(!member)return;
   const{programId,error}=await customizeProgramForMember(supabase,activeTeam.id,memberUserId,sourceProgramId);
   if(error||!programId)return alert(error||'Could not customize program.');
-  await loadMemberAssignments();
-  if(memberDashboard?.user_id===memberUserId)await loadMemberDashboardData(member);
+  const freshAssignments=await loadMemberAssignments();
+  if(memberDashboard?.user_id===memberUserId)await loadMemberDashboardData(member,freshAssignments);
+  if(session?.user?.id===memberUserId&&mode==='team')await loadPrograms('training',{assignmentsOverride:freshAssignments});
   alert('Custom program created and assigned.');
  }
  function generateProgramForMemberHandler(memberUserId:string){
@@ -1795,6 +1824,7 @@ export default function Page(){
  }
  async function reloadKeepDay(){
   const keep = activeWorkout;
+  if(draftEditProgramId)await saveDraftProgramName(draftEditProgramId,{quiet:true});
   await loadPrograms(programLoadContext());
   if(keep) setActiveWorkout(keep);
 }
@@ -1802,6 +1832,7 @@ export default function Page(){
  function switchTrainingContext(next:'personal'|'group'){setMode(next==='group'?'team':'personal');if(next==='group'&&teams.length&&!selectedTeamId)setSelectedTeamId(teams[0].id);}
  function handleGroupsWorkspaceTabChange(tab:string){
   if(tab==='members')return;
+  if(tab==='programs'&&canManageGroupView())loadPrograms('setup');
   if(groupsProgramWizardOpen&&groupsAssignMemberUserId)closeGroupsProgramWizard();
   if(viewingMember&&viewingMember.user_id!==session?.user?.id)closeMemberView();
   else if(memberDashboard){setMemberDashboard(null);setMemberPerformance(null);}
@@ -1814,9 +1845,9 @@ export default function Page(){
   if(n==='Progress'||n==='Dashboard'){loadProgressLogs();if(n==='Dashboard'){loadDashboardTodayLogs();loadDashboardTodayNutrition();}}
   if(n==='Nutrition')loadDashboardTodayNutrition();
   if(n==='Settings'){loadCatalog(); loadGuidedImportStatus(); if(activeTeam)loadMembers();}
-  if(n==='Groups'){if(teams.length){if(!selectedTeamId)setSelectedTeamId(teams[0].id);setMode('team');} loadMembers(); loadMemberStats(); loadMemberAssignments(); loadGroupProgramForAssign(); loadClassifications(); if(groupsProgramWizardOpen)loadPrograms('setup'); else loadPrograms('training');}
+  if(n==='Groups'){if(teams.length){if(!selectedTeamId)setSelectedTeamId(teams[0].id);setMode('team');} loadMembers(); loadMemberStats(); loadMemberAssignments(); loadGroupProgramForAssign(); loadClassifications(); loadPrograms(canManageGroupView()||groupsProgramWizardOpen?'setup':'training');}
   if(n==='Dashboard'&&teams.length){loadMembers(); loadMemberStats();}
-  if(n==='Training'){if(teams.length&&!selectedTeamId)setSelectedTeamId(teams[0].id);}
+  if(n==='Training'){if(teams.length&&!selectedTeamId)setSelectedTeamId(teams[0].id); if(trainingSubNav!=='setup'&&!draftEditProgramId&&!showProgramSetup&&!groupsProgramWizardOpen)loadPrograms('training');}
  }
 
 function targetWorkoutsFrom(current:any){
@@ -1962,10 +1993,11 @@ function matchingSet(targetExercise:any, sourceSet:any){
   <div className="groups-member-workout">{workoutExerciseSections}</div>
  </>;
  const equipmentChips=(list:string[],onToggle:(id:string)=>void,muted?:string)=><><label>Available equipment</label><p className="muted">{muted||'AI plans and exercise search only use gear you select here (bodyweight stretches always allowed).'}</p><div className="focus-muscle-grid equipment-grid">{EQUIPMENT_OPTIONS.map((o:any)=><button type="button" key={o.id} className={`focus-chip${list.includes(o.id)?' active':''}`} onClick={()=>onToggle(o.id)}>{o.label}</button>)}</div>{hasEquipmentFilter(list)&&<p className="muted">Active filter: {equipmentFilterLabel(list)}</p>}</>;
- const editingDraftWorkouts=!!(draftEditProgramId&&program&&isDraftProgram(program));
+ const editingProgramWorkouts=!!(draftEditProgramId&&program);
+ const editingDraftWorkouts=!!(editingProgramWorkouts&&isDraftProgram(program));
  const teamPrograms=(programs||[]).filter((p:any)=>p.visibility==='team'&&p.team_id===activeTeam?.id);
  const assignableTeamPrograms=teamPrograms.filter((p:any)=>isPublishedProgram(p));
- const programSetupPanel=<div className="card program-setup"><div className="topline" style={{justifyContent:'space-between'}}><h2>Program setup</h2>{trainingSubNav!=='setup'&&<button className="btn small secondary" onClick={()=>setShowProgramSetup(v=>!v)}>{showProgramSetup?'Hide':'Show'}</button>}</div>{(showProgramSetup||trainingSubNav==='setup')&&<><div className="tabs setup-mode-tabs"><button type="button" className={mode==='personal'?'active':''} onClick={()=>setMode('personal')}>Personal program</button><button type="button" className={mode==='team'?'active':''} onClick={()=>{setMode('team');if(teams.length&&!selectedTeamId)setSelectedTeamId(teams[0].id);}}>Group program</button></div>{mode==='team'&&<div className="card" style={{marginTop:8}}>{teams.length===0?<><p className="muted">Create or join a group in the Groups tab to set up a shared program.</p><button type="button" className="btn secondary" style={{marginTop:8}} onClick={()=>goNav('Groups')}>Go to Groups</button></>:<><label>Group</label><select value={activeTeam?.id||''} onChange={e=>setSelectedTeamId(e.target.value||null)}><option value="">Select</option>{teams.map((t:any)=><option key={t.id} value={t.id}>{t.name} · {roleLabel(t.my_role)}</option>)}</select>{activeTeam?<p className="muted" style={{marginTop:8}}>Invite: <b>{activeTeam.invite_code}</b> · Role: {roleLabel(activeTeam.my_role)} · Manage roster in Groups.</p>:<p className="muted" style={{marginTop:8}}>Select a group above.</p>}</>}</div>}<label>Program</label><select value={program?.id||''} onChange={e=>setProgram(programs.find((p:any)=>p.id===e.target.value))}>{programs.length===0&&<option>No programs</option>}{programs.map((p:any)=><option key={p.id} value={p.id}>{programOptionLabel(p)}</option>)}</select>{program&&isDraftProgram(program)&&canEdit()&&<div className="card program-draft-card" style={{marginTop:10}}><div className="topline" style={{justifyContent:'space-between'}}><h2>Draft program</h2><span className="badge">Draft</span></div><p className="muted">Only you can see this plan until you publish. Edit exercises, then publish for personal training{mode==='team'?' or as the group active program':''}.</p><div className="actions" style={{marginTop:10}}><button type="button" className="btn green" onClick={()=>openDraftForEditing(program.id)}>Edit workouts</button><button type="button" className="btn secondary" onClick={()=>publishProgram(program.id,false)}>Publish program</button>{mode==='team'&&<button type="button" className="btn secondary" onClick={()=>publishProgram(program.id,true)}>Publish &amp; set group active</button>}{canEdit()&&<button type="button" className="btn small red" onClick={()=>deleteProgramHandler(program.id)}>Delete draft</button>}</div></div>}{mode==='team'&&canEdit()&&programs.filter((p:any)=>isPublishedProgram(p)).length>0&&<><label>Group active program</label><select value={activeTeam?.default_program_id||''} onChange={e=>setTeamDefaultProgram(e.target.value)}><option value="">No team default — assign members individually</option>{programs.filter((p:any)=>isPublishedProgram(p)).map((p:any)=><option key={p.id} value={p.id}>{p.name}</option>)}</select><p className="muted">Only members on Follow Team Plan use this. Publishing or assigning to one person does not change it.</p></>}{!editingDraftWorkouts&&<><div className="setup-wizard-steps"><span className={setupStep==='goals'?'active':''}>1 Goals</span><span className="setup-wizard-dot">·</span><span className={setupStep==='schedule'?'active':''}>2 Schedule</span><span className="setup-wizard-dot">·</span><span className={setupStep==='review'?'active':''}>3 Create</span></div>{setupStep==='goals'&&<><label>Your goals</label><p className="muted">The more detail you give (sport, schedule, equipment, injuries to avoid, priorities), the better the AI plan. Aim for a few sentences.</p><textarea className="ai-prompt-input ai-prompt-input-lg" rows={8} value={aiPrompt} onChange={e=>setAiPrompt(e.target.value)} placeholder="Sport, goals, days available, equipment, and anything to avoid…" disabled={scheduleLoading||aiGenerating}/><p className="muted ai-prompt-count">{aiPrompt.trim().length} characters · richer prompts usually produce better plans</p>{equipmentChips(normalizeEquipmentList(profileDraft.available_equipment),(id)=>setProfileDraft({...profileDraft,available_equipment:toggleEquipmentList(normalizeEquipmentList(profileDraft.available_equipment),id)}),'Only exercises matching your equipment appear in search and AI plans.')}<button className="btn green full" style={{marginTop:10}} onClick={()=>fetchScheduleSuggestions()} disabled={scheduleLoading||aiGenerating}>{scheduleLoading?'Planning schedule…':'Next: Plan my schedule'}</button></>}{setupStep==='schedule'&&<>{scheduleCoachMessage&&<p className="schedule-coach-msg">{scheduleCoachMessage}</p>}<label>Include cardio days?</label><div className="cardio-pref-chips"><button type="button" className={wantsCardio===true?'active':''} onClick={()=>{setWantsCardio(true);fetchScheduleSuggestions(true,wantsMobility);}}>Yes</button><button type="button" className={wantsCardio===false?'active':''} onClick={()=>{setWantsCardio(false);fetchScheduleSuggestions(false,wantsMobility);}}>No</button><button type="button" className={wantsCardio===null?'active':''} onClick={()=>{setWantsCardio(null);fetchScheduleSuggestions(null,wantsMobility);}}>Let AI decide</button></div><label>Include a mobility day?</label><div className="cardio-pref-chips mobility-pref-chips"><button type="button" className={wantsMobility===true?'active':''} onClick={()=>{setWantsMobility(true);fetchScheduleSuggestions(wantsCardio,true);}}>Yes</button><button type="button" className={wantsMobility===false?'active':''} onClick={()=>{setWantsMobility(false);fetchScheduleSuggestions(wantsCardio,false);}}>No</button><button type="button" className={wantsMobility===null?'active':''} onClick={()=>{setWantsMobility(null);fetchScheduleSuggestions(wantsCardio,null);}}>Let AI decide</button></div>{scheduleError&&<div className="program-ai-error" style={{marginTop:8}}><b>Schedule issue:</b> {scheduleError}</div>}{scheduleLoading&&<p className="muted">Updating schedule options…</p>}<div className="schedule-options">{scheduleOptions.map((opt:any)=><button key={opt.id} type="button" className={`schedule-option-card${selectedScheduleId===opt.id?' selected':''}${scheduleRecommendedId===opt.id?' recommended':''}`} onClick={(e)=>{e.stopPropagation();applyScheduleOption(opt);}} disabled={scheduleLoading||aiGenerating}><div className="schedule-option-head"><b>{opt.label}</b>{scheduleRecommendedId===opt.id&&<span className="badge">Recommended</span>}</div><p className="muted">{opt.description}</p><div className="schedule-day-chips">{opt.days.map((d:string)=><span key={d} className="schedule-day-chip">{d} {opt.day_types[d]}</span>)}</div></button>)}</div>{selectedScheduleId&&days.length>0&&<p className="muted schedule-selected-summary" style={{marginTop:8}}><b>Selected split:</b> {days.map((d:string)=>`${d} ${dayTypes[d]||'Full Body'}`).join(' · ')}</p>}{selectedScheduleId&&<><button type="button" className="btn small secondary" style={{marginTop:8}} onClick={()=>setScheduleManualOverride(v=>!v)}>{scheduleManualOverride?'Hide manual edit':'Customize days'}</button>{scheduleManualOverride&&<><label style={{marginTop:10}}>Workout days</label><div className="tabs">{DAYS.map(d=><button key={d} type="button" className={days.includes(d)?'active':''} onClick={()=>{const next=days.includes(d)?days.filter((x:string)=>x!==d):[...days,d].sort((a,b)=>DAYS.indexOf(a)-DAYS.indexOf(b)); setDays(next); const dt={...dayTypes}; if(!next.includes(d))delete dt[d]; else if(!dt[d])dt[d]='Full Body'; setDayTypes(dt);}}>{d}</button>)}</div>{days.map((d:string)=><div key={d}><label>{d} type</label><select value={dayTypes[d]||'Full Body'} onChange={e=>setDayTypes({...dayTypes,[d]:e.target.value})}>{DAY_TYPE_OPTIONS.map((t:string)=><option key={t}>{t}</option>)}</select></div>)}</>}</>}<div className="wizard-nav"><button type="button" className="btn secondary" onClick={()=>setSetupStep('goals')}>Back</button><button type="button" className="btn" onClick={goToReviewStep} disabled={scheduleLoading||!days.length}>Next: Review &amp; generate</button></div></>}{setupStep==='review'&&<><div className="schedule-review-summary"><label>Goals (edit anytime)</label><textarea className="ai-prompt-input ai-prompt-input-lg" rows={6} value={aiPrompt} onChange={e=>setAiPrompt(e.target.value)} disabled={aiGenerating}/><label>Weekly schedule</label><div className="schedule-day-chips">{days.map((d:string)=><span key={d} className="schedule-day-chip">{d} {dayTypes[d]||'Full Body'}</span>)}</div></div><label>New program name</label><input value={programName} onChange={e=>setProgramName(e.target.value)}/><label>Weeks</label><input type="number" value={weeks} onChange={e=>setWeeks(Number(e.target.value))}/>{weeks>4&&<p className="muted">For 5+ weeks, AI designs <b>week 1</b> in detail; BuildIQ expands it into your full {weeks}-week plan.</p>}<label>Muscle focus (optional)</label><p className="muted">Adds ~10–15 working sets per week for each selected muscle group.</p><div className="focus-muscle-grid">{FOCUS_MUSCLES.map((m:string)=><button type="button" key={m} className={`focus-chip${focusMuscles.includes(m)?' active':''}`} onClick={()=>setFocusMuscles(focusMuscles.includes(m)?focusMuscles.filter((x:string)=>x!==m):[...focusMuscles,m])}>{m}</button>)}</div>{focusMuscles.length>0&&<p className="muted">{focusVolumeSummary(focusMuscles,weeks,days.length)}{Object.keys(focusVolumeEst).length?` · Est. weekly sets: ${Object.entries(focusVolumeEst).map(([k,v])=>`${k} ${v}`).join(', ')}`:''}</p>}{aiGenError&&<div className="program-ai-error"><b>Generation issue:</b> {aiGenError}<div className="actions" style={{marginTop:8}}><button type="button" className="btn small secondary" onClick={()=>{setBugOpen(true);setBugTitle('AI plan generation failed');setBugDescription(aiGenError);}}>Report this bug</button></div></div>}{(aiSummary||aiCoachingNotes)&&<div className="program-ai-summary-box"><label>AI plan write-up</label>{aiSummary&&<p className="program-ai-summary">{aiSummary}</p>}{aiCoachingNotes&&<><label style={{marginTop:10}}>Coaching notes</label><p className="program-ai-coaching">{aiCoachingNotes}</p></>}</div>}<label className="remember-row"><input type="checkbox" checked={includeCooldown} onChange={e=>setIncludeCooldown(e.target.checked)}/> Include cooldown stretches</label><button className="btn green full" style={{marginTop:10}} onClick={generateWithAi} disabled={aiGenerating}>{aiGenerating?(weeks>4?'Designing week 1 and building full plan…':'Creating draft with AI…'):weeks>4?'Create draft with AI (week 1 → full plan)':'Create draft with AI'}</button><button className="btn secondary full" style={{marginTop:10}} onClick={generate} disabled={aiGenerating}>Create draft from template</button><p className="muted" style={{marginTop:8}}>New programs save as <b>drafts</b> first. Edit workouts, then publish when ready. AI plans vary exercises week to week; template fallback uses built-in supersets.</p><div className="wizard-nav"><button type="button" className="btn secondary" onClick={()=>setSetupStep('schedule')}>Back</button></div></>}</>}{editingDraftWorkouts&&<div className="card" style={{marginTop:10}}><p className="muted">You&apos;re editing a draft below. Publish when ready, or start a new program wizard if you want a different plan.</p><button type="button" className="btn secondary" onClick={()=>{setDraftEditProgramId(null);setSetupStep('goals');setScheduleError('');setScheduleOptions([]);setSelectedScheduleId('');setScheduleCoachMessage('');}}>Start new program wizard</button></div>}{editingDraftWorkouts&&canEdit()&&<div className="card program-draft-banner" style={{marginTop:10}}><div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}><div><h2>Editing draft</h2><label>Program name</label><input value={programName} onChange={e=>setProgramName(e.target.value)}/><p className="muted" style={{marginTop:8}}>Pick a workout day below, adjust exercises, then publish when ready.</p>{(program?.program_summary||program?.coaching_notes)&&<div className="program-ai-summary-box" style={{marginTop:10}}><label>AI program notes</label>{program?.program_summary&&<p className="program-ai-summary">{program.program_summary}</p>}{program?.coaching_notes&&<><label style={{marginTop:10}}>Coaching notes</label><p className="program-ai-coaching">{program.coaching_notes}</p></>}</div>}</div><div className="assigned-banner-actions"><button type="button" className="btn small secondary" onClick={()=>{setDraftEditProgramId(null);loadPrograms('setup');}}>Back to setup summary</button><button type="button" className="btn small green" onClick={()=>publishProgram(program!.id,false)}>Publish program</button><button type="button" className="btn small red" onClick={()=>deleteProgramHandler(program!.id)}>Delete draft</button></div></div></div>}{editingDraftWorkouts&&program&&<><div className="training-plan-card ui-card ui-card--elevated" style={{marginTop:10}}><TrainingWeekSelector week={week} program={program} weeksFallback={weeks} onWeekChange={onWeekChange} logDate={logDate} onLogDateChange={onLogDateChange}/></div>{weekWorkouts.length>0&&<TrainingWorkoutDays program={program} week={week} workouts={weekWorkouts} activeWorkoutId={workout?.id||''} logDate={logDate} onSelectWorkout={onSelectWorkoutDay}/>}{showEditScope&&<div className="applybox-compact"><label htmlFor="apply-scope-draft">Apply changes to</label><select id="apply-scope-draft" value={applyScope} onChange={e=>setApplyScope(e.target.value as any)}><option value="future">This week and future weeks</option><option value="current">This week only</option></select></div>}{workoutExerciseSections}</>}{canEdit()&&programs.length>0&&(!groupsProgramWizardOpen||editingDraftWorkouts)&&<ProgramLibraryPanel programs={programs} defaultProgramId={mode==='team'?activeTeam?.default_program_id:null} canDelete={canEdit()} onDelete={deleteProgramHandler}/>}</>}{trainingSubNav!=='setup'&&!showProgramSetup&&program&&<p className="muted">Active program: <b>{program.name}</b></p>}{trainingSubNav!=='setup'&&!showProgramSetup&&!program&&<p className="muted">No program yet. Open Program Setup tab to generate one.</p>}</div>;
+ const programSetupPanel=<div className="card program-setup"><div className="topline" style={{justifyContent:'space-between'}}><h2>Program setup</h2>{trainingSubNav!=='setup'&&<button className="btn small secondary" onClick={()=>setShowProgramSetup(v=>!v)}>{showProgramSetup?'Hide':'Show'}</button>}</div>{(showProgramSetup||trainingSubNav==='setup')&&<><div className="tabs setup-mode-tabs"><button type="button" className={mode==='personal'?'active':''} onClick={()=>setMode('personal')}>Personal program</button><button type="button" className={mode==='team'?'active':''} onClick={()=>{setMode('team');if(teams.length&&!selectedTeamId)setSelectedTeamId(teams[0].id);}}>Group program</button></div>{mode==='team'&&<div className="card" style={{marginTop:8}}>{teams.length===0?<><p className="muted">Create or join a group in the Groups tab to set up a shared program.</p><button type="button" className="btn secondary" style={{marginTop:8}} onClick={()=>goNav('Groups')}>Go to Groups</button></>:<><label>Group</label><select value={activeTeam?.id||''} onChange={e=>setSelectedTeamId(e.target.value||null)}><option value="">Select</option>{teams.map((t:any)=><option key={t.id} value={t.id}>{t.name} · {roleLabel(t.my_role)}</option>)}</select>{activeTeam?<p className="muted" style={{marginTop:8}}>Invite: <b>{activeTeam.invite_code}</b> · Role: {roleLabel(activeTeam.my_role)} · Manage roster in Groups.</p>:<p className="muted" style={{marginTop:8}}>Select a group above.</p>}</>}</div>}<label>Program</label><select value={program?.id||''} onChange={e=>{const picked=programs.find((p:any)=>p.id===e.target.value)||null; setProgram(picked); if(picked)setProgramName(picked.name||'Strength Program');}}>{programs.length===0&&<option>No programs</option>}{programs.map((p:any)=><option key={p.id} value={p.id}>{programOptionLabel(p)}</option>)}</select>{program&&isDraftProgram(program)&&canEdit()&&<div className="card program-draft-card" style={{marginTop:10}}><div className="topline" style={{justifyContent:'space-between'}}><h2>Draft program</h2><span className="badge">Draft</span></div><p className="muted">Only you can see this plan until you publish. Edit exercises, then publish for personal training{mode==='team'?' or as the group active program':''}.</p><div className="actions" style={{marginTop:10}}><button type="button" className="btn green" onClick={()=>openDraftForEditing(program.id)}>Edit workouts</button><button type="button" className="btn secondary" onClick={()=>publishProgram(program.id,false)}>Publish program</button>{mode==='team'&&<button type="button" className="btn secondary" onClick={()=>publishProgram(program.id,true)}>Publish &amp; set group active</button>}{canEdit()&&<button type="button" className="btn small red" onClick={()=>deleteProgramHandler(program.id)}>Delete draft</button>}</div></div>}{mode==='team'&&canEdit()&&programs.filter((p:any)=>isPublishedProgram(p)).length>0&&<><label>Group active program</label><select value={activeTeam?.default_program_id||''} onChange={e=>setTeamDefaultProgram(e.target.value)}><option value="">No team default — assign members individually</option>{programs.filter((p:any)=>isPublishedProgram(p)).map((p:any)=><option key={p.id} value={p.id}>{p.name}</option>)}</select><p className="muted">Only members on Follow Team Plan use this. Publishing or assigning to one person does not change it.</p></>}{!editingProgramWorkouts&&<><div className="setup-wizard-steps"><span className={setupStep==='goals'?'active':''}>1 Goals</span><span className="setup-wizard-dot">·</span><span className={setupStep==='schedule'?'active':''}>2 Schedule</span><span className="setup-wizard-dot">·</span><span className={setupStep==='review'?'active':''}>3 Create</span></div>{setupStep==='goals'&&<><label>Your goals</label><p className="muted">The more detail you give (sport, schedule, equipment, injuries to avoid, priorities), the better the AI plan. Aim for a few sentences.</p><textarea className="ai-prompt-input ai-prompt-input-lg" rows={8} value={aiPrompt} onChange={e=>setAiPrompt(e.target.value)} placeholder="Sport, goals, days available, equipment, and anything to avoid…" disabled={scheduleLoading||aiGenerating}/><p className="muted ai-prompt-count">{aiPrompt.trim().length} characters · richer prompts usually produce better plans</p>{equipmentChips(normalizeEquipmentList(profileDraft.available_equipment),(id)=>setProfileDraft({...profileDraft,available_equipment:toggleEquipmentList(normalizeEquipmentList(profileDraft.available_equipment),id)}),'Only exercises matching your equipment appear in search and AI plans.')}<button className="btn green full" style={{marginTop:10}} onClick={()=>fetchScheduleSuggestions()} disabled={scheduleLoading||aiGenerating}>{scheduleLoading?'Planning schedule…':'Next: Plan my schedule'}</button></>}{setupStep==='schedule'&&<>{scheduleCoachMessage&&<p className="schedule-coach-msg">{scheduleCoachMessage}</p>}<label>Include cardio days?</label><div className="cardio-pref-chips"><button type="button" className={wantsCardio===true?'active':''} onClick={()=>{setWantsCardio(true);fetchScheduleSuggestions(true,wantsMobility);}}>Yes</button><button type="button" className={wantsCardio===false?'active':''} onClick={()=>{setWantsCardio(false);fetchScheduleSuggestions(false,wantsMobility);}}>No</button><button type="button" className={wantsCardio===null?'active':''} onClick={()=>{setWantsCardio(null);fetchScheduleSuggestions(null,wantsMobility);}}>Let AI decide</button></div><label>Include a mobility day?</label><div className="cardio-pref-chips mobility-pref-chips"><button type="button" className={wantsMobility===true?'active':''} onClick={()=>{setWantsMobility(true);fetchScheduleSuggestions(wantsCardio,true);}}>Yes</button><button type="button" className={wantsMobility===false?'active':''} onClick={()=>{setWantsMobility(false);fetchScheduleSuggestions(wantsCardio,false);}}>No</button><button type="button" className={wantsMobility===null?'active':''} onClick={()=>{setWantsMobility(null);fetchScheduleSuggestions(wantsCardio,null);}}>Let AI decide</button></div>{scheduleError&&<div className="program-ai-error" style={{marginTop:8}}><b>Schedule issue:</b> {scheduleError}</div>}{scheduleLoading&&<p className="muted">Updating schedule options…</p>}<div className="schedule-options">{scheduleOptions.map((opt:any)=><button key={opt.id} type="button" className={`schedule-option-card${selectedScheduleId===opt.id?' selected':''}${scheduleRecommendedId===opt.id?' recommended':''}`} onClick={(e)=>{e.stopPropagation();applyScheduleOption(opt);}} disabled={scheduleLoading||aiGenerating}><div className="schedule-option-head"><b>{opt.label}</b>{scheduleRecommendedId===opt.id&&<span className="badge">Recommended</span>}</div><p className="muted">{opt.description}</p><div className="schedule-day-chips">{opt.days.map((d:string)=><span key={d} className="schedule-day-chip">{d} {opt.day_types[d]}</span>)}</div></button>)}</div>{selectedScheduleId&&days.length>0&&<p className="muted schedule-selected-summary" style={{marginTop:8}}><b>Selected split:</b> {days.map((d:string)=>`${d} ${dayTypes[d]||'Full Body'}`).join(' · ')}</p>}{selectedScheduleId&&<><button type="button" className="btn small secondary" style={{marginTop:8}} onClick={()=>setScheduleManualOverride(v=>!v)}>{scheduleManualOverride?'Hide manual edit':'Customize days'}</button>{scheduleManualOverride&&<><label style={{marginTop:10}}>Workout days</label><div className="tabs">{DAYS.map(d=><button key={d} type="button" className={days.includes(d)?'active':''} onClick={()=>{const next=days.includes(d)?days.filter((x:string)=>x!==d):[...days,d].sort((a,b)=>DAYS.indexOf(a)-DAYS.indexOf(b)); setDays(next); const dt={...dayTypes}; if(!next.includes(d))delete dt[d]; else if(!dt[d])dt[d]='Full Body'; setDayTypes(dt);}}>{d}</button>)}</div>{days.map((d:string)=><div key={d}><label>{d} type</label><select value={dayTypes[d]||'Full Body'} onChange={e=>setDayTypes({...dayTypes,[d]:e.target.value})}>{DAY_TYPE_OPTIONS.map((t:string)=><option key={t}>{t}</option>)}</select></div>)}</>}</>}<div className="wizard-nav"><button type="button" className="btn secondary" onClick={()=>setSetupStep('goals')}>Back</button><button type="button" className="btn" onClick={goToReviewStep} disabled={scheduleLoading||!days.length}>Next: Review &amp; generate</button></div></>}{setupStep==='review'&&<><div className="schedule-review-summary"><label>Goals (edit anytime)</label><textarea className="ai-prompt-input ai-prompt-input-lg" rows={6} value={aiPrompt} onChange={e=>setAiPrompt(e.target.value)} disabled={aiGenerating}/><label>Weekly schedule</label><div className="schedule-day-chips">{days.map((d:string)=><span key={d} className="schedule-day-chip">{d} {dayTypes[d]||'Full Body'}</span>)}</div></div><label>New program name</label><input value={programName} onChange={e=>setProgramName(e.target.value)}/><label>Weeks</label><input type="number" value={weeks} onChange={e=>setWeeks(Number(e.target.value))}/>{weeks>4&&<p className="muted">For 5+ weeks, AI designs <b>week 1</b> in detail; BuildIQ expands it into your full {weeks}-week plan.</p>}<label>Muscle focus (optional)</label><p className="muted">Adds ~10–15 working sets per week for each selected muscle group.</p><div className="focus-muscle-grid">{FOCUS_MUSCLES.map((m:string)=><button type="button" key={m} className={`focus-chip${focusMuscles.includes(m)?' active':''}`} onClick={()=>setFocusMuscles(focusMuscles.includes(m)?focusMuscles.filter((x:string)=>x!==m):[...focusMuscles,m])}>{m}</button>)}</div>{focusMuscles.length>0&&<p className="muted">{focusVolumeSummary(focusMuscles,weeks,days.length)}{Object.keys(focusVolumeEst).length?` · Est. weekly sets: ${Object.entries(focusVolumeEst).map(([k,v])=>`${k} ${v}`).join(', ')}`:''}</p>}{aiGenError&&<div className="program-ai-error"><b>Generation issue:</b> {aiGenError}<div className="actions" style={{marginTop:8}}><button type="button" className="btn small secondary" onClick={()=>{setBugOpen(true);setBugTitle('AI plan generation failed');setBugDescription(aiGenError);}}>Report this bug</button></div></div>}{(aiSummary||aiCoachingNotes)&&<div className="program-ai-summary-box"><label>AI plan write-up</label>{aiSummary&&<p className="program-ai-summary">{aiSummary}</p>}{aiCoachingNotes&&<><label style={{marginTop:10}}>Coaching notes</label><p className="program-ai-coaching">{aiCoachingNotes}</p></>}</div>}<label className="remember-row"><input type="checkbox" checked={includeCooldown} onChange={e=>setIncludeCooldown(e.target.checked)}/> Include cooldown stretches</label><button className="btn green full" style={{marginTop:10}} onClick={generateWithAi} disabled={aiGenerating}>{aiGenerating?(weeks>4?'Designing week 1 and building full plan…':'Creating draft with AI…'):weeks>4?'Create draft with AI (week 1 → full plan)':'Create draft with AI'}</button><button className="btn secondary full" style={{marginTop:10}} onClick={generate} disabled={aiGenerating}>Create draft from template</button><p className="muted" style={{marginTop:8}}>New programs save as <b>drafts</b> first. Edit workouts, then publish when ready. AI plans vary exercises week to week; template fallback uses built-in supersets.</p><div className="wizard-nav"><button type="button" className="btn secondary" onClick={()=>setSetupStep('schedule')}>Back</button></div></>}</>}{editingProgramWorkouts&&<div className="card" style={{marginTop:10}}><p className="muted">You&apos;re editing this program below. Publish when ready{editingDraftWorkouts?'':' — changes apply for assigned members immediately.'}</p><button type="button" className="btn secondary" onClick={()=>{setDraftEditProgramId(null);setGroupsProgramWizardOpen(false);setSetupStep('goals');setScheduleError('');setScheduleOptions([]);setSelectedScheduleId('');setScheduleCoachMessage('');loadPrograms(appNav==='Groups'&&canManageGroupView()?'setup':'training');}}>Back to programs list</button></div>}{editingProgramWorkouts&&canEdit()&&<div className="card program-draft-banner" style={{marginTop:10}}><div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}><div><h2>{editingDraftWorkouts?'Editing draft':'Editing program'}</h2><label>Program name</label><input value={programName} onChange={e=>setProgramName(e.target.value)} onBlur={()=>{if(program?.id)void saveDraftProgramName(program.id);}}/><p className="muted" style={{marginTop:4}}>Name saves when you leave this field.</p><p className="muted" style={{marginTop:8}}>Pick a workout day below, adjust exercises, then publish when ready.</p>{(program?.program_summary||program?.coaching_notes)&&<div className="program-ai-summary-box" style={{marginTop:10}}><label>AI program notes</label>{program?.program_summary&&<p className="program-ai-summary">{program.program_summary}</p>}{program?.coaching_notes&&<><label style={{marginTop:10}}>Coaching notes</label><p className="program-ai-coaching">{program.coaching_notes}</p></>}</div>}</div><div className="assigned-banner-actions"><button type="button" className="btn small secondary" onClick={async ()=>{if(program?.id){const err=await saveDraftProgramName(program.id); if(err)return;} setDraftEditProgramId(null); setGroupsProgramWizardOpen(false); loadPrograms(appNav==='Groups'&&canManageGroupView()?'setup':'training');}}>Back to programs list</button>{editingDraftWorkouts&&<button type="button" className="btn small green" onClick={()=>publishProgram(program!.id,false)}>Publish program</button>}{editingDraftWorkouts&&<button type="button" className="btn small red" onClick={()=>deleteProgramHandler(program!.id)}>Delete draft</button>}</div></div></div>}{editingProgramWorkouts&&<><div className="training-plan-card ui-card ui-card--elevated" style={{marginTop:10}}><TrainingWeekSelector week={week} program={program} weeksFallback={weeks} onWeekChange={onWeekChange} logDate={logDate} onLogDateChange={onLogDateChange}/></div>{weekWorkouts.length>0&&<TrainingWorkoutDays program={program} week={week} workouts={weekWorkouts} activeWorkoutId={workout?.id||''} logDate={logDate} onSelectWorkout={onSelectWorkoutDay}/>}{showEditScope&&<div className="applybox-compact"><label htmlFor="apply-scope-draft">Apply changes to</label><select id="apply-scope-draft" value={applyScope} onChange={e=>setApplyScope(e.target.value as any)}><option value="future">This week and future weeks</option><option value="current">This week only</option></select></div>}{workoutExerciseSections}</>}{canEdit()&&programs.length>0&&(!groupsProgramWizardOpen||editingProgramWorkouts)&&<ProgramLibraryPanel programs={programs} defaultProgramId={mode==='team'?activeTeam?.default_program_id:null} canDelete={canEdit()} onDelete={deleteProgramHandler}/>}</>}{trainingSubNav!=='setup'&&!showProgramSetup&&program&&<p className="muted">Active program: <b>{program.name}</b></p>}{trainingSubNav!=='setup'&&!showProgramSetup&&!program&&<p className="muted">No program yet. Open Program Setup tab to generate one.</p>}</div>;
 
  const profileFields=(compact=false)=><>
   <label>Display name</label>

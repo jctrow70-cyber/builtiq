@@ -98,7 +98,7 @@ export default function TeamProgramsTab({
                 </button>
               )}
               <button type="button" className="btn small secondary" onClick={() => onEdit(row.id)}>
-                Edit
+                {row.status === 'draft' ? 'Edit' : 'Edit workouts'}
               </button>
               <button type="button" className="btn small secondary" onClick={() => onDuplicate(row.id)}>
                 Duplicate

@@ -6580,3 +6580,101 @@ None.
 ```text
 BIQ-0093 Fix st_assign_member_program RPC overload ambiguity
 ```
+
+---
+
+## BIQ-0094 - Save Draft Program Name While Editing Workouts
+
+Date: 2026-08-04  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Renaming a draft program while editing workouts now persists to the database instead of reverting on the next exercise change.
+
+### Purpose
+
+The draft name field updated local React state only. The name was written to Supabase on publish, but `loadPrograms` / `reloadKeepDay` after workout edits reset the field from the old database value.
+
+### Changes
+
+- Save draft program name on blur and before leaving draft edit / reloading workouts
+- Do not overwrite in-progress name edits when reloading the same draft
+- Sync program dropdown selection with the name field
+
+### Files Changed
+
+- `app/page.tsx`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+- Create or open a draft program → Edit workouts
+- Change program name → click outside the field (blur) or edit an exercise
+- Confirm name stays updated in the draft banner and program dropdown
+- Publish — published program uses the new name
+
+### Known Issues
+
+None.
+
+### Recommended Commit Message
+
+```text
+BIQ-0094 Save draft program name while editing workouts
+```
+
+---
+
+## BIQ-0095 - Fix Groups Program Edit, Assign, and Draft Visibility
+
+Date: 2026-08-04  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Groups program editing, individual assignment, and draft listing are reliable again — workouts show when editing, assigned programs appear immediately in Training, and drafts no longer vanish from the Programs list after refresh.
+
+### Purpose
+
+Three related state bugs: published program Edit opened the create wizard without workouts; assignment used stale React state so Training kept the old team default; Groups navigations loaded training-only program lists that excluded drafts.
+
+### Changes
+
+- Groups Edit opens inline program editor with workout days (draft and published)
+- `loadMemberAssignments` returns fresh map; program pickers accept override to avoid stale closure after assign
+- Groups navigation loads setup context (includes drafts) for managers
+- After individual assign, refresh member dashboard and assignee Training view immediately
+- Published program Edit button labeled “Edit workouts”
+
+### Files Changed
+
+- `app/page.tsx`
+- `app/components/groups/TeamProgramsTab.tsx`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+- Groups → Programs → Edit draft → see workout days and exercises inline
+- Groups → Programs → Edit workouts on published program → see workout editor
+- Assign program to one member (including yourself) → Training → Group shows new program
+- Groups → Programs list shows drafts after page refresh
+- Member dashboard shows updated assigned program name after assign
+
+### Known Issues
+
+None.
+
+### Recommended Commit Message
+
+```text
+BIQ-0095 Fix Groups program edit, assign refresh, and draft visibility
+```
