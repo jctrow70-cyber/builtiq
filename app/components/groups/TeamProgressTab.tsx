@@ -48,7 +48,7 @@ export default function TeamProgressTab({
       )}
       <div className="card">
         <h2>Member status</h2>
-        <p className="muted">This week&apos;s completion and activity.{canManage ? ' Tap a member for details.' : ''}</p>
+        <p className="muted">This week&apos;s completion and activity.{canManage ? ' Tap a member to open their Progress.' : ''}</p>
         {members.map((m: any) => {
           const stats = memberStats[m.user_id] || { sets: 0, days: 0 };
           const meta = memberRosterMeta[m.user_id] || { recentPr: false, assignmentPending: 0, assignmentOverdue: 0 };

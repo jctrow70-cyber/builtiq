@@ -6087,3 +6087,61 @@ Apply migration `20250803_033_fix_member_program_assign.sql` in Supabase.
 ```text
 BIQ-0084 Fix member Apply assignment RPC and validation
 ```
+
+---
+
+## BIQ-0086 - Fix Groups Progress Navigation to Member Progress
+
+Date: 2026-08-04  
+Branch: cursor/fix-progress-nav-e1bd  
+Status: Completed
+
+### Summary
+
+Opening **Groups → Progress** and tapping a member now opens that member’s Progress view instead of silently failing or sending you to Training. Personal Progress is also back in the primary nav for one-tap access.
+
+### Purpose
+
+Managers tapping a member row on the Groups Progress tab never saw member progress: the detail panel only rendered under the Members workspace tab, and tapping yourself redirected to Training. The Progress detail sub-tab also reused the workout dashboard chrome (Open workout / “no workout today”), which hid PRs and history.
+
+### Changes
+
+- **Groups → Progress row tap:** Switches to Members workspace and opens member detail on the **Progress** sub-tab
+- **Self tap from Progress:** Opens personal **Progress** (not Training); Members tab still uses Training for “tap your name”
+- **Member Progress / History tabs:** Render `MemberPerformancePanel` only (PRs, volume, history) — no workout logging chrome
+- **Primary nav:** Restored **Progress** as a fifth destination (Dashboard, Training, Groups, Nutrition, Progress)
+- **Avatar menu Progress:** Defers navigation and blocks ghost-clicks from landing on Training under the closing menu
+
+### Files Changed
+
+- `app/page.tsx`
+- `app/components/groups/GroupsHub.tsx`
+- `app/components/groups/TeamMemberDetail.tsx`
+- `app/components/groups/TeamProgressTab.tsx`
+- `app/components/layout/PrimaryNav.tsx`
+- `app/components/layout/AppHeader.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Groups → **Progress** → tap another member → member detail opens on **Progress** with PRs / volume / history (not Training, not Assigned-only)
+2. Groups → **Progress** → tap yourself → personal **Progress** screen (not Training)
+3. Groups → **Members** → tap yourself → still opens **Training** (existing shortcut)
+4. Member detail → **Progress** / **History** tabs → no “Open workout” / “No workout scheduled” chrome; progress panel visible
+5. Primary nav → **Progress** → personal history / insights show; nav item stays highlighted
+6. Avatar menu → **Progress** → stays on Progress (does not jump to Training)
+
+### Known Issues
+
+- If a member’s completed sets were orphaned after a group program rebuild, Progress may still look empty until history rematch (see BIQ-0085) is applied.
+
+### Recommended Commit Message
+
+```text
+BIQ-0086 Fix Groups Progress navigation to show member progress
+```

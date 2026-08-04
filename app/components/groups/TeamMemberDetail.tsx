@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import GroupMemberDashboard from './GroupMemberDashboard';
+import MemberPerformancePanel from './MemberPerformancePanel';
 import type { AssignmentComplianceSummary, MemberWorkoutHistoryDay } from '../../../lib/groups/memberPerformance';
 
-type MemberDetailTab = 'overview' | 'assigned' | 'history' | 'progress';
+export type MemberDetailTab = 'overview' | 'assigned' | 'history' | 'progress';
 
 type TeamMemberDetailProps = {
   member: any;
@@ -37,10 +38,11 @@ type TeamMemberDetailProps = {
   performanceLogs?: any[];
   workoutHistory?: MemberWorkoutHistoryDay[];
   weightUnit?: string;
+  /** Which detail tab to open (e.g. Progress when opened from Groups → Progress). */
+  initialTab?: MemberDetailTab;
 };
 
 export default function TeamMemberDetail(props: TeamMemberDetailProps) {
-  const [tab, setTab] = useState<MemberDetailTab>('assigned');
   const {
     member,
     canManage,
@@ -52,9 +54,19 @@ export default function TeamMemberDetail(props: TeamMemberDetailProps) {
     programWizardPanel = null,
     memberDraftEditing = false,
     onCloseProgramWizard,
+    initialTab = 'assigned',
+    assignmentCompliance,
+    performanceLogs = [],
+    workoutHistory = [],
+    weightUnit = 'lb',
   } = props;
+  const [tab, setTab] = useState<MemberDetailTab>(initialTab);
   const teamPrograms = programs.filter((p: any) => p.visibility === 'team');
   const memberName = member.display_name || 'Member';
+
+  useEffect(() => {
+    setTab(initialTab);
+  }, [member?.user_id, initialTab]);
 
   if (programWizardOpen && programWizardPanel) {
     return (
@@ -76,6 +88,8 @@ export default function TeamMemberDetail(props: TeamMemberDetailProps) {
       </div>
     );
   }
+
+  const showProgressPanel = tab === 'progress' || tab === 'history';
 
   return (
     <div className="team-member-detail card">
@@ -125,15 +139,40 @@ export default function TeamMemberDetail(props: TeamMemberDetailProps) {
           )}
         </div>
       )}
-      <GroupMemberDashboard
-        {...props}
-        onBack={onBack}
-        memberTodayWorkout={tab === 'history' || tab === 'progress' ? null : props.memberTodayWorkout}
-        performanceLogs={tab === 'overview' ? [] : props.performanceLogs || []}
-        workoutHistory={tab === 'overview' || tab === 'assigned' ? [] : props.workoutHistory || []}
-        showAssignmentPanel={tab === 'assigned' || tab === 'overview'}
-        hideHeader
-      />
+      {showProgressPanel ? (
+        <div className="team-member-progress-panel" style={{ marginTop: 10 }}>
+          <p className="muted" style={{ marginBottom: 8 }}>
+            {tab === 'progress'
+              ? 'Strength PRs, volume trends, and recent completed workouts for this member.'
+              : 'Completed sets from this member’s saved lift history.'}
+          </p>
+          <MemberPerformancePanel
+            assignmentCompliance={
+              assignmentCompliance || {
+                total: 0,
+                completed: 0,
+                pending: 0,
+                started: 0,
+                skipped: 0,
+                overdue: 0,
+                completionPct: 0,
+              }
+            }
+            history={workoutHistory}
+            performanceLogs={performanceLogs}
+            weightUnit={weightUnit}
+          />
+        </div>
+      ) : (
+        <GroupMemberDashboard
+          {...props}
+          onBack={onBack}
+          performanceLogs={tab === 'overview' ? [] : performanceLogs}
+          workoutHistory={[]}
+          showAssignmentPanel={tab === 'assigned' || tab === 'overview'}
+          hideHeader
+        />
+      )}
     </div>
   );
 }

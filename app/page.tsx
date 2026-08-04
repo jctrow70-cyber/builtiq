@@ -528,9 +528,15 @@ export default function Page(){
     setActiveWorkout('');
   }
  }
- async function openMemberDashboard(member:any){
+ async function openMemberDashboard(member:any, opts?:{preferProgress?:boolean}){
   if(!member)return;
-  if(member.user_id===session.user.id){setAppNav('Training');setTrainingSubNav('personal');setMemberDashboard(null);setViewingMember(null);setMemberPerformance(null);return;}
+  if(member.user_id===session.user.id){
+   setMemberDashboard(null);setViewingMember(null);setMemberPerformance(null);
+   // From Groups → Progress, open personal Progress. From Members, keep Training shortcut.
+   if(opts?.preferProgress){goNav('Progress');return;}
+   setAppNav('Training');setTrainingSubNav('personal');
+   return;
+  }
   if(!canManageGroupView())return alert('Only owners and managers can view member dashboards.');
   setMemberDashboard(member);
   setViewingMember(null);
