@@ -39,6 +39,7 @@ type GroupMemberDashboardProps = {
   weightUnit?: string;
   showAssignmentPanel?: boolean;
   hideHeader?: boolean;
+  hidePerformance?: boolean;
 };
 
 export default function GroupMemberDashboard({
@@ -68,6 +69,7 @@ export default function GroupMemberDashboard({
   weightUnit = 'lb',
   showAssignmentPanel = true,
   hideHeader = false,
+  hidePerformance = false,
 }: GroupMemberDashboardProps) {
   const stats = memberStats[member.user_id] || { sets: 0, days: 0 };
   const assignmentPrograms = assignableTeamPrograms?.length ? assignableTeamPrograms : programs;
@@ -198,22 +200,24 @@ export default function GroupMemberDashboard({
         </p>
       )}
 
-      <MemberPerformancePanel
-        assignmentCompliance={
-          assignmentCompliance || {
-            total: 0,
-            completed: 0,
-            pending: 0,
-            started: 0,
-            skipped: 0,
-            overdue: 0,
-            completionPct: 0,
+      {!hidePerformance && (
+        <MemberPerformancePanel
+          assignmentCompliance={
+            assignmentCompliance || {
+              total: 0,
+              completed: 0,
+              pending: 0,
+              started: 0,
+              skipped: 0,
+              overdue: 0,
+              completionPct: 0,
+            }
           }
-        }
-        history={workoutHistory}
-        performanceLogs={performanceLogs}
-        weightUnit={weightUnit}
-      />
+          history={workoutHistory}
+          performanceLogs={performanceLogs}
+          weightUnit={weightUnit}
+        />
+      )}
     </div>
   );
 }

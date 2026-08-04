@@ -28,6 +28,8 @@ export type GroupsHubProps = {
   memberStats: Record<string, { sets: number; days: number }>;
   memberRosterMeta?: Record<string, MemberRosterMeta>;
   memberPerformance?: MemberPerformanceBundle | null;
+  performanceLoading?: boolean;
+  restoreMemberHistoryBusy?: boolean;
   weightUnit?: string;
   memberDashboard: any | null;
   memberDashProgram: any | null;
@@ -97,6 +99,8 @@ export type GroupsHubProps = {
   ) => Promise<void>;
   onCustomizeProgramForMember: (memberUserId: string, sourceProgramId: string) => Promise<void>;
   onGenerateProgramForMember: (memberUserId: string) => void;
+  onRefreshMemberPerformance?: () => void;
+  onRestoreMemberHistory?: () => void;
   onLeaveTeam: () => Promise<void>;
   onDeleteTeam: () => Promise<void>;
   sectionExercises: (workout: any, section: string) => any[];
@@ -112,6 +116,8 @@ export default function GroupsHub(props: GroupsHubProps) {
     memberStats,
     memberRosterMeta = {},
     memberPerformance = null,
+    performanceLoading = false,
+    restoreMemberHistoryBusy = false,
     weightUnit = 'lb',
     memberDashboard,
     memberDashProgram,
@@ -168,6 +174,8 @@ export default function GroupsHub(props: GroupsHubProps) {
     onAssignTeamProgram,
     onCustomizeProgramForMember,
     onGenerateProgramForMember,
+    onRefreshMemberPerformance,
+    onRestoreMemberHistory,
     onLeaveTeam,
     onDeleteTeam,
     sectionExercises,
@@ -241,7 +249,7 @@ export default function GroupsHub(props: GroupsHubProps) {
   const renderWorkspaceContent = () => {
     if (workspaceTab === 'members') {
       if (memberWorkoutPanel) return memberWorkoutPanel;
-      if (memberDashboard && memberDashboard.user_id !== sessionUserId && canManage) {
+      if (memberDashboard && canManage) {
         return (
           <TeamMemberDetail
             member={memberDashboard}
@@ -274,6 +282,10 @@ export default function GroupsHub(props: GroupsHubProps) {
             performanceLogs={memberPerformance?.logs || []}
             workoutHistory={memberPerformance?.history || []}
             weightUnit={weightUnit}
+            performanceLoading={performanceLoading}
+            onRefreshPerformance={onRefreshMemberPerformance}
+            onRestoreMemberHistory={onRestoreMemberHistory}
+            restoreBusy={restoreMemberHistoryBusy}
           />
         );
       }

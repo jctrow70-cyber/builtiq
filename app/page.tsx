@@ -34,8 +34,10 @@ import {
   todayYmd,
   weekForDate,
   weekRangeLabel,
+  addDaysYmd,
 } from '../lib/training/programCalendar';
 import { insertProgramRecord, isDraftProgram, isPublishedProgram, programOptionLabel, publishProgramRecord, deleteProgramRecord } from '../lib/training/programStatus';
+import { countUnlinkedLogs, mapDateLogsToProgram, reattachUserLogsToProgram } from '../lib/training/reattachLogs';
 import { mergeDayEmphasisFromGoals } from '../lib/training/scheduleSuggestion';
 import DateInput from './components/DateInput';
 import NutritionTracker, { fetchNutritionDaySummary } from './components/NutritionTracker';
@@ -146,6 +148,9 @@ export default function Page(){
  const [catalogEditId,setCatalogEditId]=useState<string|null>(null);
  const [catalogEditDraft,setCatalogEditDraft]=useState<any>({name:'',category:'',muscle_group:'',equipment:'',movement_pattern:''});
  const [progressLogs,setProgressLogs]=useState<any[]>([]);
+ const [historyRestore,setHistoryRestore]=useState<{unlinked:number;total:number}|null>(null);
+ const [historyRestoreBusy,setHistoryRestoreBusy]=useState(false);
+ const [historyRestoreDismissed,setHistoryRestoreDismissed]=useState(false);
  const [showProgramSetup,setShowProgramSetup]=useState(false);
  const [trainingSubNav,setTrainingSubNav]=useState<'personal'|'setup'>('personal');
  const [addExercisePanel,setAddExercisePanel]=useState<any>(null);
@@ -191,6 +196,8 @@ export default function Page(){
  const [memberStats,setMemberStats]=useState<any>({});
  const [memberRosterMeta,setMemberRosterMeta]=useState<Record<string, MemberRosterMeta>>({});
  const [memberPerformance,setMemberPerformance]=useState<MemberPerformanceBundle|null>(null);
+ const [memberPerformanceLoading,setMemberPerformanceLoading]=useState(false);
+ const [memberHistoryRestoreBusy,setMemberHistoryRestoreBusy]=useState(false);
  const [memberAssignments,setMemberAssignments]=useState<any>({});
  const [assignDraft,setAssignDraft]=useState<any>({type:'team',programId:'',notes:''});
  const [assignedWorkouts,setAssignedWorkouts]=useState<AssignedWorkoutRow[]>([]);
@@ -524,26 +531,79 @@ export default function Page(){
       ||(picked.st_workouts||[]).filter((w:any)=>w.week===alignedWeek).sort((a:any,b:any)=>a.day_order-b.day_order)[0]
       ||picked.st_workouts?.sort((a:any,b:any)=>a.week-b.week||a.day_order-b.day_order)?.[0];
     if(match)setActiveWorkout(match.id);
+    if(context==='training'){
+      setHistoryRestoreDismissed(false);
+      checkHistoryRestoreOffer(picked);
+    }
   } else {
     setActiveWorkout('');
+    setHistoryRestore(null);
   }
  }
  async function openMemberDashboard(member:any){
   if(!member)return;
-  if(member.user_id===session.user.id){setAppNav('Training');setTrainingSubNav('personal');setMemberDashboard(null);setViewingMember(null);setMemberPerformance(null);return;}
-  if(!canManageGroupView())return alert('Only owners and managers can view member dashboards.');
+  if(!canManageGroupView()){
+   if(member.user_id===session.user.id){setAppNav('Training');setTrainingSubNav('personal');return;}
+   return alert('Only owners and managers can view member dashboards.');
+  }
+  // Owners/editors can open their own member detail (Progress/History) after a
+  // group program redo — previously self-clicks jumped away to Training.
   setMemberDashboard(member);
   setViewingMember(null);
   setMemberPerformance(null);
   await loadMemberAssignments();
   await loadMemberDashboardData(member);
  }
+ async function refreshMemberPerformance(member?:any){
+  const target=member||memberDashboard;
+  if(!target||!activeTeam||!canManageGroupView())return;
+  setMemberPerformanceLoading(true);
+  try{
+   const performance=await loadMemberPerformanceBundle(supabase,target.user_id,activeTeam.id);
+   setMemberPerformance(performance);
+  } finally {
+   setMemberPerformanceLoading(false);
+  }
+ }
+ async function restoreMemberLoggedHistory(){
+  if(!memberDashboard||!activeTeam||!canManageGroupView()||memberHistoryRestoreBusy)return;
+  const programForMember=memberDashProgram||program;
+  if(!programForMember){
+   return alert('Assign or open a published program for this member first, then restore history onto it.');
+  }
+  const ok=window.confirm(
+   `Reconnect completed sets for ${memberDashboard.display_name||'this member'} onto "${programForMember.name||'the current program'}"?\n\nWorks for manually built and AI programs. Does not invent data.`
+  );
+  if(!ok)return;
+  setMemberHistoryRestoreBusy(true);
+  try{
+   const since=addDaysYmd(today(),-56);
+   const result=await reattachUserLogsToProgram(supabase,memberDashboard.user_id,programForMember,{
+    sinceYmd:since,
+    teamId:activeTeam.id,
+   });
+   await refreshMemberPerformance(memberDashboard);
+   await loadMemberDashboardData(memberDashboard);
+   alert(
+    result.rematched
+     ?`Restored ${result.rematched} logged set${result.rematched===1?'':'s'} for this member.${result.unmatched?` ${result.unmatched} could not be matched to current exercises — they still count in Progress if snapshots exist.`:''}`
+     : result.unlinked
+      ? 'Found unlinked logs but could not match them onto this program’s exercises. If Progress is still empty, the logs may have been deleted with the old program — check Supabase backups.'
+      : 'No unlinked completed logs found for this member on the current program.'
+   );
+  } finally {
+   setMemberHistoryRestoreBusy(false);
+  }
+ }
  async function loadMemberDashboardData(member:any){
+  setMemberPerformanceLoading(true);
+  try{
   const usePersonal=(member.training_source||'team')==='personal';
   let q=supabase.from('st_programs').select('*, st_workouts(*, st_exercises(*, st_planned_sets(*)))').order('created_at',{ascending:false});
   q=usePersonal?q.eq('visibility','personal').eq('owner_user_id',member.user_id):q.eq('visibility','team').eq('team_id',activeTeam.id);
-  const{data,error}=await q; if(error)return console.warn(error.message);
-  const list=(data||[]).filter((p:any)=>isPublishedProgram(p));
+  const{data,error}=await q;
+  if(error)console.warn(error.message);
+  const list=((error?[]:data)||[]).filter((p:any)=>isPublishedProgram(p));
   const picked=pickProgramForMember(list,member,!usePersonal?activeTeam?.default_program_id:null);
   setMemberDashProgram(picked);
   const assignment=memberAssignments[member.user_id];
@@ -558,6 +618,10 @@ export default function Page(){
   if(!ids.length){setMemberDashLogs({});} else {
   const{data:logs}=await supabase.from('st_set_logs').select('*').in('planned_set_id',ids).eq('user_id',member.user_id).eq('log_date',logDate);
   const by:any={};(logs||[]).forEach((l:any)=>by[l.planned_set_id]=l);
+  // Overlay same-date snapshot matches (manual program redo left old planned_set ids)
+  const{data:dateLogs}=await supabase.from('st_set_logs').select('*').eq('user_id',member.user_id).eq('log_date',logDate).limit(400);
+  const overlaid=mapDateLogsToProgram(dateLogs||[],picked,todayW);
+  Object.keys(overlaid).forEach((sid)=>{if(!by[sid])by[sid]=overlaid[sid];});
   setMemberDashLogs(by);
   }}
   const{data:lastRow}=await supabase.from('st_set_logs').select('log_date').eq('user_id',member.user_id).eq('completed',true).order('log_date',{ascending:false}).limit(1).maybeSingle();
@@ -567,6 +631,9 @@ export default function Page(){
     setMemberPerformance(performance);
   } else {
     setMemberPerformance(null);
+  }
+  } finally {
+   setMemberPerformanceLoading(false);
   }
  }
  async function openMemberView(member:any){
@@ -971,7 +1038,83 @@ export default function Page(){
   await loadTeams();
   setMemberDashboard(null);
  }
- async function loadLogs(p:any,userId?:string,dateOverride?:string){const uid=userId||session?.user?.id; const day=dateOverride||logDate; if(!uid){setLogs({});logsRef.current={};return;} const ids:any[]=[];(p.st_workouts||[]).forEach((w:any)=>(w.st_exercises||[]).forEach((e:any)=>(e.st_planned_sets||[]).forEach((s:any)=>ids.push(s.id)))); if(!ids.length){setLogs({});logsRef.current={};return} const{data}=await supabase.from('st_set_logs').select('*').in('planned_set_id',ids).eq('user_id',uid).eq('log_date',day); const by:any={};(data||[]).forEach((l:any)=>by[l.planned_set_id]=l);logsRef.current=by;setLogs(by);}
+ async function loadLogs(p:any,userId?:string,dateOverride?:string){
+  const uid=userId||session?.user?.id;
+  const day=dateOverride||logDate;
+  if(!uid||!p){setLogs({});logsRef.current={};return;}
+  const ids:any[]=[];
+  (p.st_workouts||[]).forEach((w:any)=>(w.st_exercises||[]).forEach((e:any)=>(e.st_planned_sets||[]).forEach((s:any)=>{if(!s.is_deleted)ids.push(s.id);})));
+  // Prefer exact planned_set links, then overlay same-date snapshot matches so a
+  // regenerated group program still shows the last weeks of logging.
+  const [{data:linked},{data:dateLogs}]=await Promise.all([
+   ids.length
+    ? supabase.from('st_set_logs').select('*').in('planned_set_id',ids).eq('user_id',uid).eq('log_date',day)
+    : Promise.resolve({data:[] as any[]}),
+   supabase.from('st_set_logs').select('*').eq('user_id',uid).eq('log_date',day).limit(400),
+  ]);
+  const by:any={};
+  (linked||[]).forEach((l:any)=>{if(l?.planned_set_id)by[l.planned_set_id]=l;});
+  const workoutOnDay=workoutForDate(p,day);
+  const overlaid=mapDateLogsToProgram(dateLogs||[],p,workoutOnDay);
+  Object.keys(overlaid).forEach((sid)=>{if(!by[sid])by[sid]=overlaid[sid];});
+  logsRef.current=by;
+  setLogs(by);
+ }
+
+ async function checkHistoryRestoreOffer(p:any){
+  if(!session?.user||!p||historyRestoreDismissed){setHistoryRestore(null);return;}
+  const since=addDaysYmd(today(),-56);
+  const counts=await countUnlinkedLogs(supabase,session.user.id,p,{sinceYmd:since});
+  if(counts.unlinked<5){setHistoryRestore(null);return;}
+  setHistoryRestore(counts);
+  // Auto-reconnect once per program in this browser session so regenerating
+  // group programming does not leave Training looking empty.
+  const autoKey=`biq_history_restore_auto:${session.user.id}:${p.id}`;
+  if(typeof window!=='undefined'&&sessionStorage.getItem(autoKey))return;
+  setHistoryRestoreBusy(true);
+  try{
+   const result=await reattachUserLogsToProgram(supabase,session.user.id,p,{
+    sinceYmd:since,
+    teamId:mode==='team'?activeTeam?.id||null:p.team_id||null,
+   });
+   if(typeof window!=='undefined')sessionStorage.setItem(autoKey,'1');
+   if(result.rematched>0){
+    await Promise.all([loadLogs(p,session.user.id,logDate),loadLiftHistory(),loadProgressLogs()]);
+    setHistoryRestore(result.unmatched>0?{unlinked:result.unmatched,total:counts.total}:null);
+   }
+  } finally {
+   setHistoryRestoreBusy(false);
+  }
+ }
+
+ async function restoreLoggedHistoryToProgram(){
+  if(!session?.user||!program||historyRestoreBusy)return;
+  const ok=window.confirm(
+   `Reconnect ${historyRestore?.unlinked||'your'} completed sets from the past ~8 weeks onto this program?\n\nThis does not invent data — it only relinks existing logs so Training shows what you already logged.`
+  );
+  if(!ok)return;
+  setHistoryRestoreBusy(true);
+  try{
+   const since=addDaysYmd(today(),-56);
+   const result=await reattachUserLogsToProgram(supabase,session.user.id,program,{
+    sinceYmd:since,
+    teamId:mode==='team'?activeTeam?.id||null:null,
+   });
+   if(result.errors.length)console.warn(result.errors.join('; '));
+   await Promise.all([loadLogs(program,session.user.id,logDate),loadLiftHistory(),loadProgressLogs()]);
+   setHistoryRestore(null);
+   setHistoryRestoreDismissed(true);
+   alert(
+    result.rematched
+     ?`Restored ${result.rematched} logged set${result.rematched===1?'':'s'} onto this program.${result.unmatched?` ${result.unmatched} could not be matched (different exercises) — they still appear under Progress.`:''}`
+     : result.unlinked
+      ? 'Could not match those logs onto this program’s exercises. Open Progress to confirm history is still there, or re-assign your previous group program from Groups → Programs.'
+      : 'No unlinked workout history found for this account.'
+   );
+  } finally {
+   setHistoryRestoreBusy(false);
+  }
+ }
 
  async function loadLiftHistory(){
   const uid=logUserId();
@@ -1754,7 +1897,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
   {appNav==='Nutrition'&&session?.user&&<NutritionTracker userId={session.user.id} onDateChange={()=>loadDashboardTodayNutrition()} onDataChange={()=>loadDashboardTodayNutrition()}/>}
   {appNav==='AI Coach'&&<section><div className="card dash-accent"><h2>AI Coach</h2><p className="muted">Your BuildIQ Health wellness coach will analyze workouts, nutrition, and recovery to give safe, practical guidance.</p><p className="dash-insight">Coming soon: readiness check-ins, workout adjustments, and weekly coaching summaries.</p></div></section>}
   {appNav==='Progress'&&<section><div className="card"><div className="topline" style={{justifyContent:'space-between'}}><h2>Progress</h2><button className="btn small secondary" onClick={loadProgressLogs}>Refresh</button></div><p className="muted">Saved lift history uses snapshots, so past workouts stay accurate even if the program template changes later.</p></div><ProgressInsights logs={progressLogs} weightUnit={progressWeightUnit}/><div className="card"><h2>Workout history</h2><p className="muted">Completed sets grouped by training day.</p></div>{progressDays.length===0&&<div className="card"><p className="muted">No completed sets yet. Log a workout in Training to build history.</p></div>}{progressDays.map((day:any)=><div className="card" key={day.date}><h3>{formatDisplayDate(day.date)}{day.label?` · ${day.label}`:''}{day.type?` · ${day.type}`:''}</h3>{Object.values(day.rows.reduce((acc:any,row:any)=>{const name=logExerciseName(row);if(!acc[name]) acc[name]=[]; acc[name].push(row);return acc;},{})).map((rows:any)=>{const label=logExerciseName(rows[0]);const exType=(rows[0].snapshot_exercise_type||'strength') as any;return <div key={label} className="history-row"><b>{label}</b><span className="muted">{rows.sort((a:any,b:any)=>(logSetNumber(a)-logSetNumber(b))).map((r:any)=>formatLogSummary(r,exType)).join(' · ')}</span></div>})}</div>)}</section>}
-  {appNav==='Groups'&&session?.user&&<GroupsHub sessionUserId={session.user.id} teams={teams} selectedTeamId={selectedTeamId} activeTeam={activeTeam} members={members} memberStats={memberStats} memberRosterMeta={memberRosterMeta} memberPerformance={memberPerformance} weightUnit={profileDraft?.units_preference==='metric'?'kg':'lb'} memberDashboard={memberDashboard} memberDashProgram={memberDashProgram} memberDashLogs={memberDashLogs} memberDashLastDate={memberDashLastDate} memberTodayWorkout={memberTodayWorkout} memberWorkoutStatus={memberWorkoutStatus} memberAssignment={memberAssignment} memberAssignments={memberAssignments} assignDraft={assignDraft} programs={programs} assignableTeamPrograms={assignableTeamPrograms} teamPrograms={teamPrograms} groupProgramForAssign={groupProgramForAssign} classifications={classifications} memberClassificationIds={memberClassificationIds} compliancePct={teamCompliancePct} teamActiveCount={teamActiveCount} teamTotalSets={teamTotalSets} teamPlanCount={teamPlanCount} canManage={canManageGroupView()} isOwner={isOwner()} logDate={logDate} week={week} groupsProgramWizardOpen={groupsProgramWizardOpen} teamProgramSetupPanel={groupsProgramWizardOpen?programSetupPanel:null} memberWorkoutPanel={showGroupsMemberWorkout?memberWorkoutLoggingPanel:null} memberProgramWizardUserId={groupsAssignMemberUserId} memberProgramDraftEditId={draftEditProgramId} onWorkspaceTabChange={handleGroupsWorkspaceTabChange} onSelectTeam={(id)=>setSelectedTeamId(id||null)} onCreateGroup={createTeam} onJoinGroup={joinTeam} onRefreshMembers={()=>{loadMembers();loadMemberStats();loadMemberClassificationLinks();}} onOpenMember={openMemberDashboard} onCloseMemberDashboard={()=>{setMemberDashboard(null);setMemberPerformance(null);}} onOpenMemberWorkout={openMemberView} onSetMemberTrainingSource={setMemberTrainingSource} onSetMemberRole={setRole} onRemoveMember={removeMember} onSetParticipation={setMemberParticipation} onAssignDraftChange={setAssignDraft} onApplyAssignment={()=>memberDashboard&&assignMemberProgram(memberDashboard,assignDraft.type,assignDraft.programId||null,assignDraft.notes)} onAssignWorkout={assignWorkoutToTargets} onCreateClassification={createClassification} onDeleteClassification={deleteClassification} onToggleMemberClassification={toggleMemberClassification} onSetModeTeam={()=>setMode('team')} onOpenGroupsProgramWizard={openGroupsProgramWizard} onCloseGroupsProgramWizard={closeGroupsProgramWizard} onDuplicateProgram={duplicateTeamProgramHandler} onEditTeamProgram={editTeamProgramFromGroups} onPublishTeamProgram={(id)=>publishProgram(id,false)} onAssignTeamProgram={assignTeamProgramHandler} onDeleteProgram={deleteProgramHandler} onCustomizeProgramForMember={customizeProgramForMemberHandler} onGenerateProgramForMember={generateProgramForMemberHandler} onLeaveTeam={leaveTeamHandler} onDeleteTeam={deleteTeamHandler} sectionExercises={sectionExercises} statusLabel={statusLabel}/>}
+  {appNav==='Groups'&&session?.user&&<GroupsHub sessionUserId={session.user.id} teams={teams} selectedTeamId={selectedTeamId} activeTeam={activeTeam} members={members} memberStats={memberStats} memberRosterMeta={memberRosterMeta} memberPerformance={memberPerformance} performanceLoading={memberPerformanceLoading} restoreMemberHistoryBusy={memberHistoryRestoreBusy} weightUnit={profileDraft?.units_preference==='metric'?'kg':'lb'} memberDashboard={memberDashboard} memberDashProgram={memberDashProgram} memberDashLogs={memberDashLogs} memberDashLastDate={memberDashLastDate} memberTodayWorkout={memberTodayWorkout} memberWorkoutStatus={memberWorkoutStatus} memberAssignment={memberAssignment} memberAssignments={memberAssignments} assignDraft={assignDraft} programs={programs} assignableTeamPrograms={assignableTeamPrograms} teamPrograms={teamPrograms} groupProgramForAssign={groupProgramForAssign} classifications={classifications} memberClassificationIds={memberClassificationIds} compliancePct={teamCompliancePct} teamActiveCount={teamActiveCount} teamTotalSets={teamTotalSets} teamPlanCount={teamPlanCount} canManage={canManageGroupView()} isOwner={isOwner()} logDate={logDate} week={week} groupsProgramWizardOpen={groupsProgramWizardOpen} teamProgramSetupPanel={groupsProgramWizardOpen?programSetupPanel:null} memberWorkoutPanel={showGroupsMemberWorkout?memberWorkoutLoggingPanel:null} memberProgramWizardUserId={groupsAssignMemberUserId} memberProgramDraftEditId={draftEditProgramId} onWorkspaceTabChange={handleGroupsWorkspaceTabChange} onSelectTeam={(id)=>setSelectedTeamId(id||null)} onCreateGroup={createTeam} onJoinGroup={joinTeam} onRefreshMembers={()=>{loadMembers();loadMemberStats();loadMemberClassificationLinks();}} onOpenMember={openMemberDashboard} onCloseMemberDashboard={()=>{setMemberDashboard(null);setMemberPerformance(null);}} onOpenMemberWorkout={openMemberView} onSetMemberTrainingSource={setMemberTrainingSource} onSetMemberRole={setRole} onRemoveMember={removeMember} onSetParticipation={setMemberParticipation} onAssignDraftChange={setAssignDraft} onApplyAssignment={()=>memberDashboard&&assignMemberProgram(memberDashboard,assignDraft.type,assignDraft.programId||null,assignDraft.notes)} onAssignWorkout={assignWorkoutToTargets} onCreateClassification={createClassification} onDeleteClassification={deleteClassification} onToggleMemberClassification={toggleMemberClassification} onSetModeTeam={()=>setMode('team')} onOpenGroupsProgramWizard={openGroupsProgramWizard} onCloseGroupsProgramWizard={closeGroupsProgramWizard} onDuplicateProgram={duplicateTeamProgramHandler} onEditTeamProgram={editTeamProgramFromGroups} onPublishTeamProgram={(id)=>publishProgram(id,false)} onAssignTeamProgram={assignTeamProgramHandler} onDeleteProgram={deleteProgramHandler} onCustomizeProgramForMember={customizeProgramForMemberHandler} onGenerateProgramForMember={generateProgramForMemberHandler} onRefreshMemberPerformance={()=>refreshMemberPerformance()} onRestoreMemberHistory={restoreMemberLoggedHistory} onLeaveTeam={leaveTeamHandler} onDeleteTeam={deleteTeamHandler} sectionExercises={sectionExercises} statusLabel={statusLabel}/>}
   {appNav==='Settings'&&<section><div className="card"><div className="topline" style={{justifyContent:'space-between'}}><h2>Profile</h2><button className="btn small green" onClick={()=>saveProfile(true)} disabled={profileSaving}>{profileSaving?'Saving...':'Save Profile'}</button></div><p className="muted">Update your account details used across BuildIQ Health.</p>{profileFields(true)}</div><BugReportsAdmin accessToken={session?.access_token||null}/>{guidedImportStatus?.isCatalogAdmin&&<div className="card guided-import-card"><div className="topline" style={{justifyContent:'space-between'}}><h2>Guided Exercise Library</h2><button className="btn small secondary" onClick={loadGuidedImportStatus} disabled={guidedImportRunning}>Refresh status</button></div><p className="muted">Import ~1,324 exercises with <b>animated GIF demos</b>, thumbnails, and step-by-step form instructions. <b>No npm required</b> — one click from here.</p><div className="dash-metrics" style={{marginTop:8}}><div><b>{guidedImportStatus?.guidedCount??'—'}</b><span className="muted">Guided exercises in database</span></div><div><b>{guidedImportStatus?.canImport?'Ready':'Setup needed'}</b><span className="muted">Server import</span></div></div><p className="muted" style={{marginTop:8}}>{guidedImportStatus?.message||'Open Settings to check import status.'}</p>{guidedImportStatus?.canImport?<button className="btn green" style={{marginTop:10}} onClick={importGuidedCatalog} disabled={guidedImportRunning}>{guidedImportRunning?'Importing… (1–2 min)':'Import Guided Library'}</button>:<><p className="muted dash-insight" style={{marginTop:10}}>One-time setup: in your BuildIQ Health project folder, open <b>.env.local</b> and add your Supabase <b>service role</b> key as <code>SUPABASE_SERVICE_ROLE_KEY=...</code> (Supabase Dashboard → Project Settings → API). Restart the app, then return here and click Import.</p><p className="muted" style={{marginTop:8}}>You do not need admin rights or npm for this — only the running app needs that key on the server.</p></>}</div>}<div className="card"><div className="topline" style={{justifyContent:'space-between'}}><h2>My Exercise Catalog</h2><div className="actions">{activeUserCatalog.length>0&&<button className="btn small red" onClick={archiveAllCustomExercises}>Remove all custom exercises</button>}<button className="btn small secondary" onClick={loadCatalog}>Refresh</button></div></div><p className="muted">Custom exercises are private to your account. Built-in exercises with form guides are used in workout search and AI program generation.</p>{activeUserCatalog.length===0&&archivedUserCatalog.length===0&&<p className="muted">No custom exercises yet. Create one from Training or below.</p>}{activeUserCatalog.map((item:any)=><div key={item.id} className="catalog-row">{catalogEditId===item.id?<div className="catalog-edit-grid"><input value={catalogEditDraft.name} onChange={e=>setCatalogEditDraft({...catalogEditDraft,name:e.target.value})} placeholder="Name"/><select value={catalogEditDraft.category} onChange={e=>setCatalogEditDraft({...catalogEditDraft,category:e.target.value})}><option value="warmup">Warmup</option><option value="strength">Strength</option><option value="mobility">Mobility</option><option value="plyometric">Plyometric</option><option value="other">Other</option></select><input value={catalogEditDraft.muscle_group} onChange={e=>setCatalogEditDraft({...catalogEditDraft,muscle_group:e.target.value})} placeholder="Muscle group"/><input value={catalogEditDraft.equipment} onChange={e=>setCatalogEditDraft({...catalogEditDraft,equipment:e.target.value})} placeholder="Equipment"/><input value={catalogEditDraft.movement_pattern} onChange={e=>setCatalogEditDraft({...catalogEditDraft,movement_pattern:e.target.value})} placeholder="Movement pattern"/><div className="actions"><button className="btn small green" onClick={saveCustomExerciseEdit}>Save</button><button className="btn small secondary" onClick={()=>setCatalogEditId(null)}>Cancel</button></div></div>:<><div><b>{item.name}</b><div className="muted">{item.muscle_group||'Muscle'}{item.equipment?` · ${item.equipment}`:''}{item.movement_pattern?` · ${item.movement_pattern}`:''}</div></div><div className="actions"><button className="btn small secondary" onClick={()=>{setCatalogEditId(item.id); setCatalogEditDraft({name:item.name,category:item.category||'strength',muscle_group:item.muscle_group||'',equipment:item.equipment||'',movement_pattern:item.movement_pattern||''});}}>Edit</button><button className="btn small red" onClick={()=>archiveCustomExercise(item,true)}>Archive</button></div></>}</div>)}{archivedUserCatalog.length>0&&<><h3 style={{marginTop:12}}>Archived</h3>{archivedUserCatalog.map((item:any)=><div key={item.id} className="catalog-row archived"><div><b>{item.name}</b><div className="muted">Archived · not shown in workout search</div></div><button className="btn small secondary" onClick={()=>archiveCustomExercise(item,false)}>Restore</button></div>)}</>}</div><div className="card"><h2>Create Custom Exercise</h2><div className="catalog-edit-grid"><input value={customDraft.name} onChange={e=>setCustomDraft({...customDraft,name:e.target.value})} placeholder="Exercise name"/><select value={customDraft.category} onChange={e=>setCustomDraft({...customDraft,category:e.target.value})}><option value="warmup">Warmup</option><option value="strength">Strength</option><option value="mobility">Mobility</option><option value="plyometric">Plyometric</option><option value="other">Other</option></select><input value={customDraft.muscle_group} onChange={e=>setCustomDraft({...customDraft,muscle_group:e.target.value})} placeholder="Muscle group"/><input value={customDraft.equipment} onChange={e=>setCustomDraft({...customDraft,equipment:e.target.value})} placeholder="Equipment"/><input value={customDraft.movement_pattern} onChange={e=>setCustomDraft({...customDraft,movement_pattern:e.target.value})} placeholder="Movement pattern"/></div><button className="btn green" style={{marginTop:8}} onClick={()=>createCustomExercise(customDraft.category||'strength', false)}>Save to My Catalog</button></div></section>}
   {appNav==='Training'&&<section>
     <div className="training-screen-head">
@@ -1793,6 +1936,27 @@ function matchingSet(targetExercise:any, sourceSet:any){
       </div>
       {program&&weekWorkouts.length>0&&<TrainingWorkoutDays program={program} week={week} workouts={weekWorkouts} activeWorkoutId={workout?.id||''} logDate={logDate} onSelectWorkout={onSelectWorkoutDay}/>}
     </>}
+    {trainingSubNav==='personal'&&!viewingMember&&!activeAssignedRecipient&&historyRestore&&historyRestore.unlinked>0&&(
+      <div className="card viewing-banner history-restore-banner">
+        <div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}>
+          <div>
+            <h2>Restore logged workouts</h2>
+            <p className="muted">
+              Found <b>{historyRestore.unlinked}</b> completed sets from the past ~8 weeks that are not linked to this program
+              (common after regenerating group programming). Your Progress history should still have them — restore reconnects them here for logging.
+            </p>
+          </div>
+          <div className="assigned-banner-actions">
+            <button type="button" className="btn small green" onClick={restoreLoggedHistoryToProgram} disabled={historyRestoreBusy}>
+              {historyRestoreBusy?'Restoring…':'Restore history'}
+            </button>
+            <button type="button" className="btn small secondary" onClick={()=>{setHistoryRestoreDismissed(true);setHistoryRestore(null);}} disabled={historyRestoreBusy}>
+              Dismiss
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     {trainingSubNav==='personal'&&activeAssignedRecipient&&<div className="card viewing-banner assigned-workout-banner"><div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}><div><h2>Assigned workout</h2><p className="muted">{activeAssignedRecipient.st_workout_assignments?.st_teams?.name||'Group'} · {formatDisplayDate(activeAssignedRecipient.st_workout_assignments?.scheduled_date||logDate)}{activeAssignedRecipient.st_workout_assignments?.notes?` · ${activeAssignedRecipient.st_workout_assignments.notes}`:''}</p>{!assignedHasPersonalCopy(activeAssignedRecipient)?<p className="muted assigned-copy-hint">Group template is read-only. Copy to your personal plan to adjust exercises and sets.</p>:<p className="muted assigned-copy-hint">You are logging your personal copy. Edits stay on your account; completion still counts for the group assignment.</p>}</div><div className="assigned-banner-actions"><button className="btn small secondary" onClick={closeAssignedWorkout}>Back to personal program</button>{assignedHasPersonalCopy(activeAssignedRecipient)?<span className="badge personal-copy-badge">Personal copy</span>:<button type="button" className="btn small green" onClick={()=>copyAssignedWorkoutToPersonal()} disabled={!!assignmentCopyBusy}>{assignmentCopyBusy===activeAssignedRecipient.id?'Copying…':'Copy to personal plan'}</button>}</div></div></div>}
     {trainingSubNav==='personal'&&!viewingMember&&!activeAssignedRecipient&&program&&isDraftProgram(program)&&canEdit()&&<div className="card program-draft-banner"><div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}><div><h2>Draft in Program Setup</h2><p className="muted"><b>{program.name}</b> is a draft — it will not appear here for logging until you publish it.</p></div><button type="button" className="btn small green" onClick={()=>{setTrainingSubNav('setup');setShowProgramSetup(true);openDraftForEditing(program.id);}}>Open draft in Program Setup</button></div></div>}
     {showEditScope&&<div className="applybox-compact"><label htmlFor="apply-scope">Apply changes to</label><select id="apply-scope" value={applyScope} onChange={e=>setApplyScope(e.target.value as any)}><option value="future">This week and future weeks</option><option value="current">This week only</option></select></div>}
