@@ -6264,3 +6264,52 @@ Apply in Supabase SQL Editor:
 ```text
 BIQ-0087 Add Progress Restore history button and fix Apply assignment
 ```
+
+---
+
+## BIQ-0088 - Groups Progress Restore + Assign Workout From Any Program
+
+Date: 2026-08-04  
+Branch: cursor/groups-progress-restore-assign-workout-964e  
+Status: Completed
+
+### Summary
+
+Added **Restore history** to Groups → Progress, and fixed Assign workout so you can pick workouts from any published team program (not only the new active one). Clarified that Assign workout is for templates, not restoring logged history.
+
+### Purpose
+
+Users looked for Restore on Groups → Progress (not the bottom-nav Progress tab). After replacing group programming, Assign workout only listed the new program’s days, so the workout they had been doing was missing — and RPC errors were unclear.
+
+### Changes
+
+- Groups → Progress: Restore history button
+- Assign workout: program picker across all published team programs
+- Assign workout RPC: fallback without `p_coaching_metadata`; clearer auth/migration errors
+- Copy clarifying Restore vs Assign workout
+
+### Files Changed
+
+- `app/components/groups/TeamProgressTab.tsx`
+- `app/components/groups/GroupAssignWorkoutPanel.tsx`
+- `app/components/groups/TeamSettingsTab.tsx`
+- `app/components/groups/GroupsHub.tsx`
+- `app/page.tsx`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None new beyond BIQ-0087 (`20250804_036`). If Assign workout still says Not authorized, run that migration in Supabase.
+
+### Testing Steps
+
+1. Groups → Progress → see **Restore history** → tap it
+2. Groups → Settings → Assign workout → Program dropdown lists older published programs + team active
+3. Select older program → workout days appear → Assign to whole group succeeds
+4. If old program was deleted, workouts won’t list — use Restore history for logs instead
+
+### Recommended Commit Message
+
+```text
+BIQ-0088 Groups Progress restore and assign workout from any program
+```

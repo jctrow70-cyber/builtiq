@@ -12,6 +12,8 @@ type TeamProgressTabProps = {
   teamActiveCount: number;
   teamTotalSets: number;
   onOpenMember: (member: any) => void;
+  onRestoreHistory?: () => void;
+  restoreBusy?: boolean;
 };
 
 export default function TeamProgressTab({
@@ -23,15 +25,33 @@ export default function TeamProgressTab({
   teamActiveCount,
   teamTotalSets,
   onOpenMember,
+  onRestoreHistory,
+  restoreBusy = false,
 }: TeamProgressTabProps) {
   return (
     <>
       {canManage && (
         <div className="card team-compliance-card">
-          <div className="topline" style={{ justifyContent: 'space-between' }}>
+          <div className="topline" style={{ justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
             <h2>Team progress</h2>
-            <span className="badge">{compliancePct}%</span>
+            <div className="actions" style={{ flexWrap: 'wrap' }}>
+              {onRestoreHistory && (
+                <button
+                  type="button"
+                  className="btn small green"
+                  onClick={onRestoreHistory}
+                  disabled={restoreBusy}
+                >
+                  {restoreBusy ? 'Restoring…' : 'Restore history'}
+                </button>
+              )}
+              <span className="badge">{compliancePct}%</span>
+            </div>
           </div>
+          <p className="muted" style={{ marginTop: 6 }}>
+            This week&apos;s team activity. After replacing a group program, tap <b>Restore history</b> to
+            reconnect your logged workouts, or open a member for their Progress.
+          </p>
           <div className="dash-metrics">
             <div>
               <b>
@@ -48,16 +68,19 @@ export default function TeamProgressTab({
       )}
       <div className="card">
         <h2>Member status</h2>
-        <p className="muted">This week&apos;s completion and activity.{canManage ? ' Tap a member for details.' : ''}</p>
+        <p className="muted">
+          This week&apos;s completion and activity.
+          {canManage ? ' Tap a member → Progress for full history / Restore.' : ''}
+        </p>
         {members.map((m: any) => {
           const stats = memberStats[m.user_id] || { sets: 0, days: 0 };
-          const meta = memberRosterMeta[m.user_id] || { recentPr: false, assignmentPending: 0, assignmentOverdue: 0 };
+          const meta = memberRosterMeta[m.user_id] || {
+            recentPr: false,
+            assignmentPending: 0,
+            assignmentOverdue: 0,
+          };
           const status =
-            stats.days > 0
-              ? stats.sets > 0
-                ? 'In progress'
-                : 'Started'
-              : 'Not started';
+            stats.days > 0 ? (stats.sets > 0 ? 'In progress' : 'Started') : 'Not started';
           return (
             <button
               key={m.id}

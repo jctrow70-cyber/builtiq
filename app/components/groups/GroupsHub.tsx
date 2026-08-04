@@ -44,6 +44,7 @@ export type GroupsHubProps = {
   assignableTeamPrograms?: any[];
   teamPrograms: any[];
   groupProgramForAssign: any | null;
+  assignWorkoutPrograms?: any[];
   classifications: GroupClassification[];
   memberClassificationIds: Record<string, string[]>;
   compliancePct: number;
@@ -75,6 +76,7 @@ export type GroupsHubProps = {
   onApplyAssignment: () => void;
   onAssignWorkout: (payload: {
     workoutId: string;
+    programId?: string | null;
     targetType: 'group' | 'members' | 'classification';
     memberUserIds: string[];
     classificationId: string;
@@ -101,6 +103,8 @@ export type GroupsHubProps = {
   onGenerateProgramForMember: (memberUserId: string) => void;
   onRefreshMemberPerformance?: () => void;
   onRestoreMemberHistory?: () => void;
+  onRestoreTeamHistory?: () => void;
+  restoreTeamHistoryBusy?: boolean;
   onLeaveTeam: () => Promise<void>;
   onDeleteTeam: () => Promise<void>;
   sectionExercises: (workout: any, section: string) => any[];
@@ -131,6 +135,7 @@ export default function GroupsHub(props: GroupsHubProps) {
     assignableTeamPrograms,
     teamPrograms,
     groupProgramForAssign,
+    assignWorkoutPrograms = [],
     classifications,
     memberClassificationIds,
     memberAssignments,
@@ -176,6 +181,8 @@ export default function GroupsHub(props: GroupsHubProps) {
     onGenerateProgramForMember,
     onRefreshMemberPerformance,
     onRestoreMemberHistory,
+    onRestoreTeamHistory,
+    restoreTeamHistoryBusy = false,
     onLeaveTeam,
     onDeleteTeam,
     sectionExercises,
@@ -364,6 +371,8 @@ export default function GroupsHub(props: GroupsHubProps) {
           teamActiveCount={teamActiveCount}
           teamTotalSets={teamTotalSets}
           onOpenMember={onOpenMember}
+          onRestoreHistory={onRestoreTeamHistory}
+          restoreBusy={restoreTeamHistoryBusy}
         />
       );
     }
@@ -378,6 +387,7 @@ export default function GroupsHub(props: GroupsHubProps) {
           isSelfOwner={activeTeam.my_role === 'owner'}
           classifications={classifications}
           groupProgramForAssign={groupProgramForAssign}
+          publishedTeamPrograms={assignWorkoutPrograms}
           memberClassificationIds={memberClassificationIds}
           onCreateClassification={onCreateClassification}
           onDeleteClassification={onDeleteClassification}
