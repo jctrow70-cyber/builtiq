@@ -6215,3 +6215,52 @@ Apply in Supabase SQL Editor (in addition to BIQ-0085 migration 034):
 ```text
 BIQ-0086 Fix member Progress after manual group program redo
 ```
+
+---
+
+## BIQ-0087 - Progress Restore Button + Fix Apply Assignment
+
+Date: 2026-08-04  
+Branch: cursor/progress-restore-and-assign-fix-964e  
+Status: Completed
+
+### Summary
+
+Added a always-visible **Restore history** button on the main Progress tab, and fixed Apply assignment failures caused by legacy `editor` roles / missing assign RPC.
+
+### Purpose
+
+Users looking at the bottom-nav Progress tab could not find Restore history (it was only on Groups → member Progress / Training). Apply assignment could return Not authorized when `st_user_can_edit_team` did not accept legacy editor roles.
+
+### Changes
+
+- Progress tab header: **Restore history** + clearer empty-state copy
+- Restore works even when Training program is not loaded (loads team/personal published program)
+- Friendlier Apply assignment error messages with migration guidance
+- Migration `20250804_036`: `st_user_can_edit_team` accepts owner/manager/editor; re-asserts `st_assign_member_program`
+
+### Files Changed
+
+- `app/page.tsx`
+- `supabase/migrations/20250804_036_fix_assign_and_edit_team_roles.sql` (new)
+- `CHANGELOG.md`
+
+### Database Changes
+
+Apply in Supabase SQL Editor:
+
+1. `supabase/migrations/20250804_036_fix_assign_and_edit_team_roles.sql`
+
+(Also keep 034 + 035 from BIQ-0085/0086 if not applied yet.)
+
+### Testing Steps
+
+1. Progress tab → see **Restore history** next to Refresh → tap it
+2. Groups → member → Assigned → Apply assignment succeeds for Follow Team Plan / Individual with program selected
+3. Individual/manual without program still shows validation message
+
+### Recommended Commit Message
+
+```text
+BIQ-0087 Add Progress Restore history button and fix Apply assignment
+```
