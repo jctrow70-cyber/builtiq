@@ -12,6 +12,7 @@ import { formatDisplayDate } from '../../lib/training/programCalendar';
 type ProgressInsightsProps = {
   logs: any[];
   weightUnit?: string;
+  emptyMessage?: string;
 };
 
 function PrRow({ pr, weightUnit }: { pr: PersonalRecord; weightUnit: string }) {
@@ -34,7 +35,7 @@ function PrRow({ pr, weightUnit }: { pr: PersonalRecord; weightUnit: string }) {
   );
 }
 
-export default function ProgressInsights({ logs, weightUnit = 'lb' }: ProgressInsightsProps) {
+export default function ProgressInsights({ logs, weightUnit = 'lb', emptyMessage }: ProgressInsightsProps) {
   const prs = computePersonalRecords(logs);
   const weeks = computeWeeklyTrends(logs, 8);
   const summary = computeProgressSummary(logs, prs);
@@ -44,7 +45,9 @@ export default function ProgressInsights({ logs, weightUnit = 'lb' }: ProgressIn
   if (!hasStrength) {
     return (
       <div className="card">
-        <p className="muted">Log completed strength sets in Training to see personal records and volume trends.</p>
+        <p className="muted">
+          {emptyMessage || 'Log completed strength sets in Training to see personal records and volume trends.'}
+        </p>
       </div>
     );
   }

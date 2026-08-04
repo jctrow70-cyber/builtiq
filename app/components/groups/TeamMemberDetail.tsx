@@ -2,7 +2,9 @@
 
 import { useState, type ReactNode } from 'react';
 import GroupMemberDashboard from './GroupMemberDashboard';
+import MemberPerformancePanel from './MemberPerformancePanel';
 import type { AssignmentComplianceSummary, MemberWorkoutHistoryDay } from '../../../lib/groups/memberPerformance';
+import { emptyAssignmentCompliance } from '../../../lib/groups/memberPerformance';
 
 type MemberDetailTab = 'overview' | 'assigned' | 'history' | 'progress';
 
@@ -37,6 +39,10 @@ type TeamMemberDetailProps = {
   performanceLogs?: any[];
   workoutHistory?: MemberWorkoutHistoryDay[];
   weightUnit?: string;
+  performanceLoading?: boolean;
+  onRefreshPerformance?: () => void;
+  onRestoreMemberHistory?: () => void;
+  restoreBusy?: boolean;
 };
 
 export default function TeamMemberDetail(props: TeamMemberDetailProps) {
@@ -52,9 +58,18 @@ export default function TeamMemberDetail(props: TeamMemberDetailProps) {
     programWizardPanel = null,
     memberDraftEditing = false,
     onCloseProgramWizard,
+    assignmentCompliance,
+    performanceLogs = [],
+    workoutHistory = [],
+    weightUnit = 'lb',
+    performanceLoading = false,
+    onRefreshPerformance,
+    onRestoreMemberHistory,
+    restoreBusy = false,
   } = props;
   const teamPrograms = programs.filter((p: any) => p.visibility === 'team');
   const memberName = member.display_name || 'Member';
+  const compliance = assignmentCompliance || emptyAssignmentCompliance();
 
   if (programWizardOpen && programWizardPanel) {
     return (
@@ -125,15 +140,86 @@ export default function TeamMemberDetail(props: TeamMemberDetailProps) {
           )}
         </div>
       )}
-      <GroupMemberDashboard
-        {...props}
-        onBack={onBack}
-        memberTodayWorkout={tab === 'history' || tab === 'progress' ? null : props.memberTodayWorkout}
-        performanceLogs={tab === 'overview' ? [] : props.performanceLogs || []}
-        workoutHistory={tab === 'overview' || tab === 'assigned' ? [] : props.workoutHistory || []}
-        showAssignmentPanel={tab === 'assigned' || tab === 'overview'}
-        hideHeader
-      />
+
+      {(tab === 'overview' || tab === 'assigned') && (
+        <GroupMemberDashboard
+          {...props}
+          onBack={onBack}
+          performanceLogs={[]}
+          workoutHistory={[]}
+          showAssignmentPanel={tab === 'assigned' || tab === 'overview'}
+          hideHeader
+          hidePerformance
+        />
+      )}
+
+      {tab === 'history' && (
+        <div className="team-member-tab-panel">
+          <div className="topline" style={{ justifyContent: 'space-between', marginTop: 8 }}>
+            <p className="muted">Completed training days from saved set logs (survives program changes).</p>
+            {onRefreshPerformance && (
+              <button type="button" className="btn small secondary" onClick={onRefreshPerformance} disabled={performanceLoading}>
+                {performanceLoading ? 'Loading…' : 'Refresh'}
+              </button>
+            )}
+          </div>
+          {performanceLoading && workoutHistory.length === 0 ? (
+            <p className="muted">Loading workout history…</p>
+          ) : workoutHistory.length === 0 ? (
+            <div className="card">
+              <p className="muted">
+                No completed sets found for this member yet. If they logged under a previous group program, open Progress and
+                use Restore history, or confirm Progress still shows the sets on their own account.
+              </p>
+            </div>
+          ) : (
+            <div className="card member-workout-history">
+              {workoutHistory.map((day) => (
+                <div key={day.date} className="member-history-row">
+                  <div>
+                    <b>{day.label}</b>
+                    <span className="muted">
+                      {day.sets} set{day.sets === 1 ? '' : 's'}
+                      {day.exercises.length ? ` · ${day.exercises.join(', ')}` : ''}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'progress' && (
+        <div className="team-member-tab-panel">
+          <div className="topline" style={{ justifyContent: 'space-between', marginTop: 8, gap: 8 }}>
+            <p className="muted">Strength trends and PRs from completed logs — including older group programs.</p>
+            <div className="actions" style={{ flexWrap: 'wrap' }}>
+              {onRefreshPerformance && (
+                <button type="button" className="btn small secondary" onClick={onRefreshPerformance} disabled={performanceLoading || restoreBusy}>
+                  {performanceLoading ? 'Loading…' : 'Refresh'}
+                </button>
+              )}
+              {onRestoreMemberHistory && (
+                <button type="button" className="btn small green" onClick={onRestoreMemberHistory} disabled={performanceLoading || restoreBusy}>
+                  {restoreBusy ? 'Restoring…' : 'Restore history'}
+                </button>
+              )}
+            </div>
+          </div>
+          {performanceLoading && performanceLogs.length === 0 ? (
+            <p className="muted">Loading progress…</p>
+          ) : (
+            <MemberPerformancePanel
+              assignmentCompliance={compliance}
+              history={workoutHistory}
+              performanceLogs={performanceLogs}
+              weightUnit={weightUnit}
+              emptyHint="No completed strength sets found for this member. After replacing a manually built group program, tap Restore history to reconnect older logs, or check that this member’s Progress tab still has snapshots."
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -6154,3 +6154,64 @@ Optional diagnostic:
 ```text
 BIQ-0085 Restore group workout history after program redo
 ```
+
+---
+
+## BIQ-0086 - Fix Member Progress After Manual Group Program Redo
+
+Date: 2026-08-04  
+Branch: cursor/restore-group-workout-history-964e  
+Status: Completed
+
+### Summary
+
+Fixed Groups → member → Progress showing no history after replacing a manually built group program. Owners can open their own member detail, Progress/History tabs load completed set logs reliably, and managers can Restore history onto the current program.
+
+### Purpose
+
+Member Progress was empty for two reasons: (1) clicking yourself jumped away from member detail, and (2) performance loading could abort if the program query failed. Manual program redos leave logs on old planned-set IDs the same way AI regenerations do.
+
+### Changes
+
+- Allow owners/editors to open their own member detail (Progress / History)
+- Dedicated History and Progress tab panels with Refresh + Restore history
+- Always load member performance even when program fetch fails
+- Overlay same-date logs on member today workout after program replace
+- Migration `20250804_035` hardens coach read/update of teammate set logs (including orphaned snapshot rows; accepts `editor` + `manager`)
+
+### Files Changed
+
+- `app/components/groups/TeamMemberDetail.tsx`
+- `app/components/groups/GroupMemberDashboard.tsx`
+- `app/components/groups/MemberPerformancePanel.tsx`
+- `app/components/groups/GroupsHub.tsx`
+- `app/components/ProgressInsights.tsx`
+- `app/page.tsx`
+- `supabase/migrations/20250804_035_member_progress_coach_log_access.sql` (new)
+- `supabase/scripts/20250804_diagnose_missing_group_logs.sql`
+- `CHANGELOG.md`
+
+### Database Changes
+
+Apply in Supabase SQL Editor (in addition to BIQ-0085 migration 034):
+
+1. `supabase/migrations/20250804_035_member_progress_coach_log_access.sql`
+
+### Testing Steps
+
+1. Groups → Members → tap yourself (owner) → Progress tab shows your lift history
+2. Tap another member → Progress / History show their completed sets
+3. After replacing a manually built group program, Progress still lists prior sets; tap **Restore history** to reconnect them to the new program
+4. Refresh on Progress reloads logs
+5. Mobile member detail tabs usable
+
+### Known Issues
+
+- Restore only rematches when exercise names/catalog IDs align with the new program
+- Hard-deleted logs (CASCADE before SET NULL) still need Supabase PITR
+
+### Recommended Commit Message
+
+```text
+BIQ-0086 Fix member Progress after manual group program redo
+```

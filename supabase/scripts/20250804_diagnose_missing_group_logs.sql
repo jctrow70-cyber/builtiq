@@ -55,6 +55,10 @@ order by p.created_at desc;
 -- If query (1) returns 0 rows, logs were hard-deleted (likely CASCADE before
 -- BIQ-0003). Restore from Supabase Dashboard → Database → Backups (PITR).
 --
--- If query (1) has rows but Training is empty, open the app → Training (Group)
--- and use "Restore logged history" (BIQ-0085), or re-assign the old program
--- from Groups → Programs as the team default.
+-- If query (1) has rows but Training / member Progress is empty, open the app
+-- Groups → member → Progress → Restore history (BIQ-0085/0086), or re-assign
+-- the previous manually built program from Groups → Programs as the team default.
+--
+-- Also apply migrations:
+--   20250804_034_preserve_set_logs_on_program_delete.sql
+--   20250804_035_member_progress_coach_log_access.sql

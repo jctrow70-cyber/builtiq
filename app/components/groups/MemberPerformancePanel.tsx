@@ -8,6 +8,7 @@ type MemberPerformancePanelProps = {
   history: MemberWorkoutHistoryDay[];
   performanceLogs: any[];
   weightUnit?: string;
+  emptyHint?: string;
 };
 
 export default function MemberPerformancePanel({
@@ -15,6 +16,7 @@ export default function MemberPerformancePanel({
   history,
   performanceLogs,
   weightUnit = 'lb',
+  emptyHint,
 }: MemberPerformancePanelProps) {
   const hasAssignments = assignmentCompliance.total > 0;
 
@@ -54,7 +56,11 @@ export default function MemberPerformancePanel({
         )}
       </div>
 
-      <ProgressInsights logs={performanceLogs} weightUnit={weightUnit} />
+      <ProgressInsights
+        logs={performanceLogs}
+        weightUnit={weightUnit}
+        emptyMessage={emptyHint}
+      />
 
       <div className="card member-workout-history">
         <div className="topline" style={{ justifyContent: 'space-between' }}>
@@ -62,7 +68,7 @@ export default function MemberPerformancePanel({
           <span className="muted">Last {history.length || 0} days</span>
         </div>
         {history.length === 0 ? (
-          <p className="muted">No completed sets logged yet.</p>
+          <p className="muted">{emptyHint || 'No completed sets logged yet.'}</p>
         ) : (
           history.map((day) => (
             <div key={day.date} className="member-history-row">
