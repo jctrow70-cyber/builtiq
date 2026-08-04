@@ -21,7 +21,8 @@ export default function TeamAssignProgramModal({
   onClose,
   onAssign,
 }: TeamAssignProgramModalProps) {
-  const [target, setTarget] = useState<AssignProgramTarget>('team');
+  // Default to one member so “Assign” does not accidentally set the whole-group default.
+  const [target, setTarget] = useState<AssignProgramTarget>('individual');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -70,23 +71,39 @@ export default function TeamAssignProgramModal({
         <p className="muted" style={{ marginTop: 8 }}>
           <b>{program.name}</b>
         </p>
+        <p className="muted" style={{ marginTop: 6 }}>
+          <b>One Member</b> / <b>Selected Members</b> only updates those people. <b>Entire Team</b> sets the
+          group active program for everyone on Follow Team Plan.
+        </p>
         <form onSubmit={submit} style={{ marginTop: 12 }}>
           <label>Assign to</label>
           <div className="team-assign-target-chips">
-            <button type="button" className={target === 'team' ? 'active' : ''} onClick={() => setTarget('team')}>
-              Entire Team
-            </button>
-            <button type="button" className={target === 'members' ? 'active' : ''} onClick={() => setTarget('members')}>
-              Selected Members
-            </button>
             <button
               type="button"
               className={target === 'individual' ? 'active' : ''}
-              onClick={() => setTarget('individual')}
+              onClick={() => {
+                setTarget('individual');
+                setSelectedIds((ids) => (ids.length ? [ids[0]] : []));
+              }}
             >
               One Member
             </button>
+            <button
+              type="button"
+              className={target === 'members' ? 'active' : ''}
+              onClick={() => setTarget('members')}
+            >
+              Selected Members
+            </button>
+            <button type="button" className={target === 'team' ? 'active' : ''} onClick={() => setTarget('team')}>
+              Entire Team
+            </button>
           </div>
+          {target === 'team' && (
+            <p className="muted" style={{ marginTop: 8 }}>
+              This updates the <b>group active program</b>. It does not create per-member overrides.
+            </p>
+          )}
           {target !== 'team' && (
             <div className="team-assign-member-picks">
               {members.map((m: any) => (
@@ -106,7 +123,11 @@ export default function TeamAssignProgramModal({
           )}
           {error && <p className="team-sheet-error">{error}</p>}
           <button type="submit" className="btn green full" style={{ marginTop: 12 }} disabled={busy}>
-            {busy ? 'Assigning…' : 'Assign program'}
+            {busy
+              ? 'Assigning…'
+              : target === 'team'
+                ? 'Set as group active'
+                : 'Assign to selected only'}
           </button>
         </form>
       </div>

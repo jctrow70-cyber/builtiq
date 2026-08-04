@@ -6379,3 +6379,57 @@ If rows were hard-deleted by an old CASCADE FK, this cannot recreate them — on
 ```text
 BIQ-0089 Add Progress to bottom nav and fix own lift history visibility
 ```
+
+---
+
+## BIQ-0090 - Fix Individual Assign Not Moving Whole Group
+
+Date: 2026-08-04  
+Branch: cursor/fix-individual-assign-team-default-964e  
+Status: Completed
+
+### Summary
+
+Publishing a program and assigning it to one member (e.g. Ehan) no longer makes the rest of the group train on that plan. Training stopped falling back to “newest published” when the team default was empty or stale, Assign defaults to **One Member**, and Entire Team requires an explicit confirm that it sets the group active program.
+
+### Purpose
+
+Users assigned a new program to one athlete and the whole Follow Team Plan roster appeared to move because Training auto-picked the newest published program whenever `default_program_id` was missing.
+
+### Changes
+
+- `pickProgram` / `pickProgramForMember`: team resolution uses only the explicit team default or an individual/manual assignment — never newest-published fallback
+- Training load uses the signed-in user’s individual assignment when present
+- Group active program dropdown no longer pretends the open program is the default
+- Assign modal defaults to One Member; clearer copy + confirmations
+- Program list summary shows `Only: Name` for individual assigns
+
+### Files Changed
+
+- `app/page.tsx`
+- `app/components/groups/TeamAssignProgramModal.tsx`
+- `lib/groups/programRoster.ts`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Keep an existing published program as group active (or leave No team default)
+2. Publish a new draft without Publish & set group active
+3. Programs → Assign → One Member → Ehan → confirm → only Ehan listed as `Only: Ehan`
+4. Other members on Follow Team Plan still see the previous team default (or no program if none set)
+5. Assign → Entire Team → confirm → group active updates; list shows Entire team (default)
+
+### Known Issues
+
+- If the team default was already switched earlier, reset it under Program Setup → Group active program
+- Members who already received an individual override stay on that plan until reassigned
+
+### Recommended Commit Message
+
+```text
+BIQ-0090 Fix individual program assign so it does not move the whole group
+```

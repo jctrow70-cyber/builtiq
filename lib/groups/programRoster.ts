@@ -38,11 +38,13 @@ export function buildTeamProgramRows(
     let assignmentSummary = 'Unassigned';
     if (isDefault && isPublishedProgram(p)) {
       assignmentSummary = assigned.length
-        ? `Team default · ${assigned.length} individual`
+        ? `Team default · also: ${assigned.join(', ')}`
         : 'Entire team (default)';
     } else if (assigned.length) {
       assignmentSummary =
-        assigned.length <= 2 ? assigned.join(', ') : `${assigned.length} members`;
+        assigned.length <= 2
+          ? `Only: ${assigned.join(', ')}`
+          : `Only: ${assigned.length} members`;
     } else if (isDraftProgram(p)) {
       assignmentSummary = 'Draft — not assigned';
     }
