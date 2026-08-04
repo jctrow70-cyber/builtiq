@@ -6530,3 +6530,53 @@ None.
 ```text
 BIQ-0092 Show custom exercises in Training add-exercise search
 ```
+
+---
+
+## BIQ-0093 - Fix Assign Program RPC Overload Ambiguity
+
+Date: 2026-08-04  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Assigning a program to a group member no longer fails with PostgreSQL "Could not choose the best candidate function" for `st_assign_member_program`.
+
+### Purpose
+
+Two overloaded RPC signatures existed (5-arg from BIQ-0010 and 6-arg with `p_coaching_metadata` from BIQ-0027). Calls with five named parameters matched both, so Apply assignment failed.
+
+### Changes
+
+- Migration drops the legacy 5-arg overload and keeps the 6-arg function
+- App RPC call passes `p_coaching_metadata: {}` explicitly
+- Friendlier alert when overload ambiguity is detected
+
+### Files Changed
+
+- `supabase/migrations/20250804_038_drop_assign_member_program_overload.sql`
+- `supabase/scripts/20250804_fix_apply_assignment.sql`
+- `app/page.tsx`
+
+### Database Changes
+
+- `drop function st_assign_member_program(uuid, uuid, text, uuid, text)`
+- Re-assert single 6-arg `st_assign_member_program` RPC
+
+### Testing Steps
+
+- Run migration `20250804_038` in Supabase SQL Editor (or apply via CLI)
+- Groups → open member → Assign → pick Individual Team Plan + published program → Apply
+- Confirm success alert and member assignment updates
+- No "Could not choose the best candidate function" error
+
+### Known Issues
+
+None.
+
+### Recommended Commit Message
+
+```text
+BIQ-0093 Fix st_assign_member_program RPC overload ambiguity
+```

@@ -1,36 +1,9 @@
--- BIQ-0087 quick fix — paste into Supabase SQL Editor and Run
--- Fixes Apply assignment "Not authorized" and ensures assign RPC exists.
--- Safe. Does not delete data.
+-- BIQ-0093: Remove duplicate st_assign_member_program overload
+-- Migration 010 created a 5-arg version; 026/036 added a 6-arg version with
+-- p_coaching_metadata. Both remained, so RPC calls with 5 named args fail with
+-- "Could not choose the best candidate function".
 
 drop function if exists public.st_assign_member_program(uuid, uuid, text, uuid, text);
-
-create or replace function public.st_user_can_edit_team(p_team_id uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public
-as $$
-  select exists (
-    select 1
-    from public.st_team_members m
-    where m.team_id = p_team_id
-      and m.user_id = auth.uid()
-      and m.role in ('owner', 'manager', 'editor')
-      and m.status = 'active'
-  );
-$$;
-
-update public.st_team_members
-set role = 'manager'
-where role = 'editor';
-
-alter table public.st_program_assignments
-  add column if not exists coaching_metadata jsonb not null default '{}'::jsonb;
-
-alter table public.st_program_assignments
-  add column if not exists target_type text
-    check (target_type is null or target_type in ('group', 'classification', 'members', 'individual'));
 
 create or replace function public.st_assign_member_program(
   p_team_id uuid,

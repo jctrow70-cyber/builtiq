@@ -445,12 +445,15 @@ export default function Page(){
    p_assignment_type:trimmedType,
    p_program_id:resolvedProgramId,
    p_notes:notes?.trim()||null,
+   p_coaching_metadata:{},
   });
   if(error){
    const raw=error.message||'Could not assign program.';
    let msg=raw;
    if(/could not find the function|schema cache/i.test(raw)){
-    msg='Apply assignment needs a Supabase update. In Supabase → SQL Editor, run migration 20250804_036_fix_assign_and_edit_team_roles.sql (or 20250803_033), then try again.';
+    msg='Apply assignment needs a Supabase update. In Supabase → SQL Editor, run migration 20250804_038_drop_assign_member_program_overload.sql (or 20250804_036), then try again.';
+   } else if(/could not choose the best candidate function/i.test(raw)){
+    msg='Apply assignment needs a Supabase update. In Supabase → SQL Editor, run migration 20250804_038_drop_assign_member_program_overload.sql, then try again.';
    } else if(/not authorized/i.test(raw)){
     msg='Not authorized to assign programs. Confirm you are Owner/Editor on this team, then run Supabase migration 20250804_036 if this keeps failing.';
    } else if(/select a program/i.test(raw)){
