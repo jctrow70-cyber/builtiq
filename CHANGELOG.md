@@ -6433,3 +6433,51 @@ None.
 ```text
 BIQ-0090 Fix individual program assign so it does not move the whole group
 ```
+
+---
+
+## BIQ-0091 - Fix Custom Exercise Movement Pattern Constraint Error
+
+Date: 2026-08-04  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Creating a custom exercise no longer fails with `st_exercise_catalog_movement_pattern_check` when movement pattern is left blank.
+
+### Purpose
+
+The add-exercise flow sent an empty string for `movement_pattern`, but the database only allows `null` or specific enum values — not `""`.
+
+### Changes
+
+- Normalize blank movement patterns to `null` before catalog insert/update
+- Validate non-empty movement patterns against allowed BIQ-0013 values
+- Settings custom exercise forms use a dropdown for movement pattern instead of free text
+
+### Files Changed
+
+- `app/page.tsx`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+- Training → Add exercise → Create custom → enter name only → Save & continue (should succeed)
+- Settings → Create Custom Exercise with no movement pattern → Save (should succeed)
+- Settings → Create with a movement pattern selected → Save (should persist pattern)
+- Settings → Edit custom exercise → clear movement pattern → Save (should succeed)
+- Settings → Edit with invalid legacy text if present → should normalize or show friendly error
+
+### Known Issues
+
+None.
+
+### Recommended Commit Message
+
+```text
+BIQ-0091 Fix custom exercise movement_pattern check constraint error
+```
