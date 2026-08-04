@@ -210,6 +210,7 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .team-member-stats .muted{display:block;font-size:10px}
 .team-member-plan{max-width:120px;padding:6px 8px;font-size:11px}
 .viewing-banner{border-color:#4c3f78;background:linear-gradient(180deg,#171628,#121827);margin-bottom:10px}
+.history-restore-banner{border-color:#2f6f4e;background:linear-gradient(180deg,#14261c,#121827)}
 .groups-member-workout{display:flex;flex-direction:column;gap:10px}
 .groups-member-workout-banner{margin-bottom:0}
 .groups-member-workout .training-plan-card{margin-bottom:0}

@@ -34,8 +34,10 @@ import {
   todayYmd,
   weekForDate,
   weekRangeLabel,
+  addDaysYmd,
 } from '../lib/training/programCalendar';
 import { insertProgramRecord, isDraftProgram, isPublishedProgram, programOptionLabel, publishProgramRecord, deleteProgramRecord } from '../lib/training/programStatus';
+import { countUnlinkedLogs, mapDateLogsToProgram, reattachUserLogsToProgram } from '../lib/training/reattachLogs';
 import { mergeDayEmphasisFromGoals } from '../lib/training/scheduleSuggestion';
 import DateInput from './components/DateInput';
 import NutritionTracker, { fetchNutritionDaySummary } from './components/NutritionTracker';
@@ -146,6 +148,9 @@ export default function Page(){
  const [catalogEditId,setCatalogEditId]=useState<string|null>(null);
  const [catalogEditDraft,setCatalogEditDraft]=useState<any>({name:'',category:'',muscle_group:'',equipment:'',movement_pattern:''});
  const [progressLogs,setProgressLogs]=useState<any[]>([]);
+ const [historyRestore,setHistoryRestore]=useState<{unlinked:number;total:number}|null>(null);
+ const [historyRestoreBusy,setHistoryRestoreBusy]=useState(false);
+ const [historyRestoreDismissed,setHistoryRestoreDismissed]=useState(false);
  const [showProgramSetup,setShowProgramSetup]=useState(false);
  const [trainingSubNav,setTrainingSubNav]=useState<'personal'|'setup'>('personal');
  const [addExercisePanel,setAddExercisePanel]=useState<any>(null);
@@ -524,8 +529,13 @@ export default function Page(){
       ||(picked.st_workouts||[]).filter((w:any)=>w.week===alignedWeek).sort((a:any,b:any)=>a.day_order-b.day_order)[0]
       ||picked.st_workouts?.sort((a:any,b:any)=>a.week-b.week||a.day_order-b.day_order)?.[0];
     if(match)setActiveWorkout(match.id);
+    if(context==='training'){
+      setHistoryRestoreDismissed(false);
+      checkHistoryRestoreOffer(picked);
+    }
   } else {
     setActiveWorkout('');
+    setHistoryRestore(null);
   }
  }
  async function openMemberDashboard(member:any){
@@ -971,7 +981,83 @@ export default function Page(){
   await loadTeams();
   setMemberDashboard(null);
  }
- async function loadLogs(p:any,userId?:string,dateOverride?:string){const uid=userId||session?.user?.id; const day=dateOverride||logDate; if(!uid){setLogs({});logsRef.current={};return;} const ids:any[]=[];(p.st_workouts||[]).forEach((w:any)=>(w.st_exercises||[]).forEach((e:any)=>(e.st_planned_sets||[]).forEach((s:any)=>ids.push(s.id)))); if(!ids.length){setLogs({});logsRef.current={};return} const{data}=await supabase.from('st_set_logs').select('*').in('planned_set_id',ids).eq('user_id',uid).eq('log_date',day); const by:any={};(data||[]).forEach((l:any)=>by[l.planned_set_id]=l);logsRef.current=by;setLogs(by);}
+ async function loadLogs(p:any,userId?:string,dateOverride?:string){
+  const uid=userId||session?.user?.id;
+  const day=dateOverride||logDate;
+  if(!uid||!p){setLogs({});logsRef.current={};return;}
+  const ids:any[]=[];
+  (p.st_workouts||[]).forEach((w:any)=>(w.st_exercises||[]).forEach((e:any)=>(e.st_planned_sets||[]).forEach((s:any)=>{if(!s.is_deleted)ids.push(s.id);})));
+  // Prefer exact planned_set links, then overlay same-date snapshot matches so a
+  // regenerated group program still shows the last weeks of logging.
+  const [{data:linked},{data:dateLogs}]=await Promise.all([
+   ids.length
+    ? supabase.from('st_set_logs').select('*').in('planned_set_id',ids).eq('user_id',uid).eq('log_date',day)
+    : Promise.resolve({data:[] as any[]}),
+   supabase.from('st_set_logs').select('*').eq('user_id',uid).eq('log_date',day).limit(400),
+  ]);
+  const by:any={};
+  (linked||[]).forEach((l:any)=>{if(l?.planned_set_id)by[l.planned_set_id]=l;});
+  const workoutOnDay=workoutForDate(p,day);
+  const overlaid=mapDateLogsToProgram(dateLogs||[],p,workoutOnDay);
+  Object.keys(overlaid).forEach((sid)=>{if(!by[sid])by[sid]=overlaid[sid];});
+  logsRef.current=by;
+  setLogs(by);
+ }
+
+ async function checkHistoryRestoreOffer(p:any){
+  if(!session?.user||!p||historyRestoreDismissed){setHistoryRestore(null);return;}
+  const since=addDaysYmd(today(),-56);
+  const counts=await countUnlinkedLogs(supabase,session.user.id,p,{sinceYmd:since});
+  if(counts.unlinked<5){setHistoryRestore(null);return;}
+  setHistoryRestore(counts);
+  // Auto-reconnect once per program in this browser session so regenerating
+  // group programming does not leave Training looking empty.
+  const autoKey=`biq_history_restore_auto:${session.user.id}:${p.id}`;
+  if(typeof window!=='undefined'&&sessionStorage.getItem(autoKey))return;
+  setHistoryRestoreBusy(true);
+  try{
+   const result=await reattachUserLogsToProgram(supabase,session.user.id,p,{
+    sinceYmd:since,
+    teamId:mode==='team'?activeTeam?.id||null:p.team_id||null,
+   });
+   if(typeof window!=='undefined')sessionStorage.setItem(autoKey,'1');
+   if(result.rematched>0){
+    await Promise.all([loadLogs(p,session.user.id,logDate),loadLiftHistory(),loadProgressLogs()]);
+    setHistoryRestore(result.unmatched>0?{unlinked:result.unmatched,total:counts.total}:null);
+   }
+  } finally {
+   setHistoryRestoreBusy(false);
+  }
+ }
+
+ async function restoreLoggedHistoryToProgram(){
+  if(!session?.user||!program||historyRestoreBusy)return;
+  const ok=window.confirm(
+   `Reconnect ${historyRestore?.unlinked||'your'} completed sets from the past ~8 weeks onto this program?\n\nThis does not invent data — it only relinks existing logs so Training shows what you already logged.`
+  );
+  if(!ok)return;
+  setHistoryRestoreBusy(true);
+  try{
+   const since=addDaysYmd(today(),-56);
+   const result=await reattachUserLogsToProgram(supabase,session.user.id,program,{
+    sinceYmd:since,
+    teamId:mode==='team'?activeTeam?.id||null:null,
+   });
+   if(result.errors.length)console.warn(result.errors.join('; '));
+   await Promise.all([loadLogs(program,session.user.id,logDate),loadLiftHistory(),loadProgressLogs()]);
+   setHistoryRestore(null);
+   setHistoryRestoreDismissed(true);
+   alert(
+    result.rematched
+     ?`Restored ${result.rematched} logged set${result.rematched===1?'':'s'} onto this program.${result.unmatched?` ${result.unmatched} could not be matched (different exercises) — they still appear under Progress.`:''}`
+     : result.unlinked
+      ? 'Could not match those logs onto this program’s exercises. Open Progress to confirm history is still there, or re-assign your previous group program from Groups → Programs.'
+      : 'No unlinked workout history found for this account.'
+   );
+  } finally {
+   setHistoryRestoreBusy(false);
+  }
+ }
 
  async function loadLiftHistory(){
   const uid=logUserId();
@@ -1793,6 +1879,27 @@ function matchingSet(targetExercise:any, sourceSet:any){
       </div>
       {program&&weekWorkouts.length>0&&<TrainingWorkoutDays program={program} week={week} workouts={weekWorkouts} activeWorkoutId={workout?.id||''} logDate={logDate} onSelectWorkout={onSelectWorkoutDay}/>}
     </>}
+    {trainingSubNav==='personal'&&!viewingMember&&!activeAssignedRecipient&&historyRestore&&historyRestore.unlinked>0&&(
+      <div className="card viewing-banner history-restore-banner">
+        <div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}>
+          <div>
+            <h2>Restore logged workouts</h2>
+            <p className="muted">
+              Found <b>{historyRestore.unlinked}</b> completed sets from the past ~8 weeks that are not linked to this program
+              (common after regenerating group programming). Your Progress history should still have them — restore reconnects them here for logging.
+            </p>
+          </div>
+          <div className="assigned-banner-actions">
+            <button type="button" className="btn small green" onClick={restoreLoggedHistoryToProgram} disabled={historyRestoreBusy}>
+              {historyRestoreBusy?'Restoring…':'Restore history'}
+            </button>
+            <button type="button" className="btn small secondary" onClick={()=>{setHistoryRestoreDismissed(true);setHistoryRestore(null);}} disabled={historyRestoreBusy}>
+              Dismiss
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     {trainingSubNav==='personal'&&activeAssignedRecipient&&<div className="card viewing-banner assigned-workout-banner"><div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}><div><h2>Assigned workout</h2><p className="muted">{activeAssignedRecipient.st_workout_assignments?.st_teams?.name||'Group'} · {formatDisplayDate(activeAssignedRecipient.st_workout_assignments?.scheduled_date||logDate)}{activeAssignedRecipient.st_workout_assignments?.notes?` · ${activeAssignedRecipient.st_workout_assignments.notes}`:''}</p>{!assignedHasPersonalCopy(activeAssignedRecipient)?<p className="muted assigned-copy-hint">Group template is read-only. Copy to your personal plan to adjust exercises and sets.</p>:<p className="muted assigned-copy-hint">You are logging your personal copy. Edits stay on your account; completion still counts for the group assignment.</p>}</div><div className="assigned-banner-actions"><button className="btn small secondary" onClick={closeAssignedWorkout}>Back to personal program</button>{assignedHasPersonalCopy(activeAssignedRecipient)?<span className="badge personal-copy-badge">Personal copy</span>:<button type="button" className="btn small green" onClick={()=>copyAssignedWorkoutToPersonal()} disabled={!!assignmentCopyBusy}>{assignmentCopyBusy===activeAssignedRecipient.id?'Copying…':'Copy to personal plan'}</button>}</div></div></div>}
     {trainingSubNav==='personal'&&!viewingMember&&!activeAssignedRecipient&&program&&isDraftProgram(program)&&canEdit()&&<div className="card program-draft-banner"><div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}><div><h2>Draft in Program Setup</h2><p className="muted"><b>{program.name}</b> is a draft — it will not appear here for logging until you publish it.</p></div><button type="button" className="btn small green" onClick={()=>{setTrainingSubNav('setup');setShowProgramSetup(true);openDraftForEditing(program.id);}}>Open draft in Program Setup</button></div></div>}
     {showEditScope&&<div className="applybox-compact"><label htmlFor="apply-scope">Apply changes to</label><select id="apply-scope" value={applyScope} onChange={e=>setApplyScope(e.target.value as any)}><option value="future">This week and future weeks</option><option value="current">This week only</option></select></div>}

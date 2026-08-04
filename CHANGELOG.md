@@ -6087,3 +6087,70 @@ Apply migration `20250803_033_fix_member_program_assign.sql` in Supabase.
 ```text
 BIQ-0084 Fix member Apply assignment RPC and validation
 ```
+
+---
+
+## BIQ-0085 - Restore Group Workout History After Program Redo
+
+Date: 2026-08-04  
+Branch: cursor/restore-group-workout-history-964e  
+Status: Completed
+
+### Summary
+
+Recovered the ability to see and use completed group workout logs after regenerating / replacing group programming. Training no longer looks empty when logs still exist under old planned-set IDs; history can be rematched onto the current program.
+
+### Purpose
+
+Regenerating a group program creates new `st_planned_sets` rows. Completed `st_set_logs` still belong to the user (snapshots + `user_id`), but Training loaded logs only by current planned-set IDs — so weeks of logging appeared wiped even when Progress still had the data (or when logs were orphaned after template delete).
+
+### Changes
+
+- Added `lib/training/reattachLogs.ts` to match historical logs onto a program by calendar date, exercise (catalog/name), and set number
+- Training `loadLogs` overlays same-date snapshot matches so past days show immediately
+- Auto-rematch once per program/session when ≥5 unlinked completed sets are found in the past ~8 weeks; manual **Restore history** banner as backup
+- Migration re-asserts `planned_set_id ON DELETE SET NULL` so deleting templates cannot cascade-wipe history
+- Diagnostic SQL for Supabase SQL Editor to confirm whether logs still exist
+
+### Files Changed
+
+- `lib/training/reattachLogs.ts` (new)
+- `app/page.tsx`
+- `app/globals.css`
+- `supabase/migrations/20250804_034_preserve_set_logs_on_program_delete.sql` (new)
+- `supabase/scripts/20250804_diagnose_missing_group_logs.sql` (new)
+- `scripts/test-reattach-logs.mjs` (new)
+- `CHANGELOG.md`
+
+### Database Changes
+
+Apply in Supabase SQL Editor:
+
+1. `supabase/migrations/20250804_034_preserve_set_logs_on_program_delete.sql`  
+   (safe; re-asserts SET NULL + index — no data deleted)
+
+Optional diagnostic:
+
+2. `supabase/scripts/20250804_diagnose_missing_group_logs.sql`  
+   (read-only checks for the affected account)
+
+### Testing Steps
+
+1. Open **Progress** — confirm past completed sets still appear (snapshots)
+2. Open **Training → Group** on the new program — past log dates should show matched sets (overlay)
+3. If a **Restore logged workouts** banner appears, tap **Restore history** (or wait for auto-restore) and confirm sets stick after refresh
+4. **Groups → Programs** — if the previous program still exists, re-assign it as team default to restore the original linkage immediately
+5. Mobile: Training group context + Progress history remain usable
+6. If Progress is also empty, run the diagnostic SQL; if count is 0, restore from Supabase PITR/backups
+
+### Known Issues
+
+- Logs only rematch when exercise names/catalog IDs align with the new program; unmatched sets remain visible under Progress
+- If production still had `ON DELETE CASCADE` and the old program was deleted, rows may already be gone — rematch cannot recreate deleted rows (use Supabase backup/PITR)
+- Auto-rematch runs once per program id per browser session
+
+### Recommended Commit Message
+
+```text
+BIQ-0085 Restore group workout history after program redo
+```
