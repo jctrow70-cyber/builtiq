@@ -1,0 +1,20 @@
+[
+  {
+    "id": "3bb00883-2048-4d7d-8347-a2383b1a5360",
+    "title": "AI plan generation failed",
+    "description": "Could not find the 'start_date' column of 'st_programs' in the schema cache",
+    "page_context": "nav=Training; training=setup; mode=personal; program=48f65469-b1f3-4744-b3e0-7226b2fc1345; week=3; error=Could not find the 'start_date' column of 'st_programs' in the schema cache",
+    "app_nav": "Training",
+    "status": "open",
+    "created_at": "2026-07-23T19:04:35.442458+00:00"
+  },
+  {
+    "id": "69b19e97-01e5-4a81-a8ae-4a3f3d6ea234",
+    "title": "AI plan generation failed",
+    "description": "Generation failed (504)",
+    "page_context": "nav=Training; training=setup; mode=personal; program=870c40e7-6767-4a1b-9664-1e6877418313; week=3; error=Generation failed (504)",
+    "app_nav": "Training",
+    "status": "open",
+    "created_at": "2026-07-22T22:03:52.379981+00:00"
+  }
+]

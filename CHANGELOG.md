@@ -6730,3 +6730,57 @@ None identified.
 ```text
 BIQ-0096 Fix incomplete workout days after program assign
 ```
+
+---
+
+## BIQ-0097 - Exercise Session History From Last Session
+
+Date: 2026-08-04  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Tap **Last session** on a strength exercise to open a popup with prior weeks of that exercise from the same workout day (e.g. all Wednesday bench sessions across the program).
+
+### Purpose
+
+Athletes need a quick way to compare prior weeks for the same exercise without leaving Training or digging through Progress.
+
+### Changes
+
+- **Last session** is clickable when history exists; shows “View all weeks” hint
+- Modal lists sessions by program week and date with per-set weight/reps
+- History scoped to the current workout day (Wednesday → prior Wednesdays)
+- Includes today’s in-progress logs when viewing the current session
+
+### Files Changed
+
+- `lib/training/exerciseSessionHistory.ts` (new)
+- `app/components/training/ExerciseSessionHistoryModal.tsx` (new)
+- `app/page.tsx`
+- `app/globals.css`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Log an exercise across multiple program weeks on the same day (e.g. Week 1 Wed and Week 2 Wed)
+2. Open Week 3 of that day in Training
+3. Expand the exercise — **Last session** should show the most recent prior week
+4. Tap **Last session** — modal lists all prior weeks with set details
+5. Close modal with Close or backdrop tap
+6. Exercise with no prior logs — **Last session** is plain text (not clickable)
+7. Mobile — modal slides up as bottom sheet
+
+### Known Issues
+
+- Older logs without `snapshot_day_label` may appear when day metadata was not saved at log time
+
+### Recommended Commit Message
+
+```text
+BIQ-0097 Add exercise session history popup from Last session
+```

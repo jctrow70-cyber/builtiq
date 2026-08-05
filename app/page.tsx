@@ -8,6 +8,7 @@ import TrainingPlanSummary from './components/training/TrainingPlanSummary';
 import TrainingWeekSelector from './components/training/TrainingWeekSelector';
 import TrainingWorkoutDays from './components/training/TrainingWorkoutDays';
 import WarmupExerciseCard from './components/training/WarmupExerciseCard';
+import ExerciseSessionHistoryModal from './components/training/ExerciseSessionHistoryModal';
 import SectionHeader from './components/ui/SectionHeader';
 import SegmentedControl from './components/ui/SegmentedControl';
 import { DEFAULT_THEME_ID } from '../lib/theme/themes';
@@ -15,6 +16,7 @@ import { supabase, friendlyAuthError, getSupabaseConfigError } from '../lib/supa
 import { FOCUS_MUSCLES, focusVolumeSummary } from '../lib/training/focusMuscles';
 import { applyFocusToWorkoutTemplate, estimateWeeklyFocusSets } from '../lib/training/programGenerator';
 import { recommendNextTarget, buildLastPerformance } from '../lib/training/progression';
+import { buildExerciseSessionHistory } from '../lib/training/exerciseSessionHistory';
 import { EXERCISE_TYPES, exerciseTypeOf, inferExerciseType, assignmentTypeLabel, isCardioType, isStrengthLike, isMobilityStretchExercise } from '../lib/training/exerciseTypes';
 import { detectSetPersonalRecord } from '../lib/training/progressAnalytics';
 import { logFieldsForType, formatLogSummary } from '../lib/training/logFields';
@@ -159,6 +161,7 @@ export default function Page(){
  const [addExercisePanel,setAddExercisePanel]=useState<any>(null);
  const [exerciseNameSearch,setExerciseNameSearch]=useState<{exerciseId:string,query:string}|null>(null);
  const [exerciseGuide,setExerciseGuide]=useState<any>(null);
+ const [exerciseHistoryModal,setExerciseHistoryModal]=useState<any>(null);
  const [pendingSupersetGroup,setPendingSupersetGroup]=useState<any>({warmup:null,strength:null,cooldown:null});
  const [focusMuscles,setFocusMuscles]=useState<string[]>([]);
  const [aiPrompt,setAiPrompt]=useState("I'm a baseball player trying to throw harder and hit harder. I train 3–4 days a week, want more rotational power and arm durability, and prefer dumbbells plus a bench when I am not in a full gym.");
@@ -1381,14 +1384,33 @@ export default function Page(){
   prCelebrationTimerRef.current=setTimeout(()=>setPrCelebration(null),4500);
  }
 
- function renderExerciseLogContext(ex:any,exType:any,progression:any,catItem?:any){
+ function collectCurrentExerciseLogRows(ex:any,workoutRef:any,logsMap:any,logDateYmd:string){
+  if(!workoutRef||!logDateYmd)return [];
+  return (ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).map((set:any)=>{
+   const log=logsMap[set.id];
+   if(!log||!logHasPerformance(log))return null;
+   return {...log,log_date:log.log_date||logDateYmd,snapshot_exercise_name:ex.name||'',snapshot_catalog_exercise_id:ex.catalog_exercise_id||null,snapshot_set_type:set.set_type||'working',snapshot_set_number:set.set_number||1,snapshot_day_label:workoutRef.day_label||'',snapshot_week:workoutRef.week??null,snapshot_workout_type:workoutRef.workout_type||''};
+  }).filter(Boolean);
+ }
+ function mergeExerciseHistoryRows(histRows:any[],currentRows:any[]){
+  const seen=new Set(histRows.map((r:any)=>`${r.planned_set_id}|${r.log_date}`));
+  const merged=[...histRows];
+  currentRows.forEach((r:any)=>{const key=`${r.planned_set_id}|${r.log_date}`;if(!seen.has(key)){merged.push(r);seen.add(key);}});
+  return merged;
+ }
+
+ function renderExerciseLogContext(ex:any,exType:any,progression:any,histRows:any[],workoutRef:any,catItem?:any){
   if(isMobilityStretchExercise(ex,catItem,exType))return null;
   const todaySummary=exerciseLastSummary(ex);
   const showStrength=isStrengthLike(exType);
   if(!showStrength&&!todaySummary)return null;
+  const currentRows=collectCurrentExerciseLogRows(ex,workoutRef,logs,activeLogDateForLogging());
+  const allRows=mergeExerciseHistoryRows(histRows,currentRows);
+  const sessions=buildExerciseSessionHistory(allRows,exType,{dayLabel:workoutRef?.day_label,matchDayLabel:true});
+  const canOpenHistory=sessions.length>0;
   return <div className="exercise-log-context">
     {showStrength&&<>
-      <div className="exercise-log-stat"><span className="exercise-log-label">Last session</span><span className="exercise-log-value">{progression.lastSummary||'—'}</span></div>
+      <div className="exercise-log-stat"><span className="exercise-log-label">Last session</span>{canOpenHistory?<button type="button" className="exercise-log-value exercise-log-history-btn" onClick={()=>setExerciseHistoryModal({exerciseName:ex.name||'Exercise',dayLabel:workoutRef?.day_label,sessions})}><span>{progression.lastSummary||'—'}</span><span className="exercise-log-history-hint">View all weeks</span></button>:<span className="exercise-log-value">{progression.lastSummary||'—'}</span>}</div>
       <div className="exercise-log-stat exercise-log-stat-next"><span className="exercise-log-label">Suggested next</span><span className="exercise-log-value">{progression.nextTarget||'—'}</span></div>
       {progression.note&&<p className="exercise-log-note">{progression.note}</p>}
     </>}
@@ -1976,7 +1998,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
             <span className="badge exercise-muscle-badge">{ex.muscle_group||'Muscle'}</span>
             <span className="badge exercise-type-badge">{exType}</span>
           </div>
-        </>}{canEdit()&&!ex.catalog_exercise_id&&<p className="muted exercise-link-hint">No catalog link — edit name or use Change to get form guide</p>}{isCollapsed&&<p className="muted exercise-collapse-summary">{allDone&&<span className="exercise-done-badge" aria-hidden="true">✓</span>}{plannedSets} set{plannedSets===1?'':'s'} · {doneSets} logged{allDone?' · complete':''}{inSuperset?' · superset':''}</p>}{!isCollapsed&&renderExerciseLogContext(ex,exType,progression,catItem)}</div></div><div className="exercise-head-actions"><button type="button" className="btn small secondary exercise-collapse-btn" onClick={()=>setCollapsedExercises((prev:any)=>({...prev,[ex.id]:!prev[ex.id]}))} aria-expanded={!isCollapsed}>{isCollapsed?'Expand':'Collapse'}</button>{!isCollapsed&&showGuide&&guidePayload&&<button type="button" className="btn small secondary" onClick={()=>setExerciseGuide(guidePayload)}>{guidePayload.hasVideo?'Watch form':'Form guide'}</button>}{!isCollapsed&&canEdit()&&<div className="actions"><button className="btn small secondary" title="Search catalog and replace this exercise" onClick={()=>openReplaceExercisePanel(ex)}>Change</button>{inSuperset&&<><button className="btn small secondary" title="Move up in superset" onClick={()=>moveExercise(ex,-1)}>↑</button><button className="btn small secondary" title="Move down in superset" onClick={()=>moveExercise(ex,1)}>↓</button><button className="btn small secondary" title="Remove from superset" onClick={()=>removeFromSuperset(ex)}>Out</button></>}{!inSuperset&&<><button className="btn small secondary" title="Move up" onClick={()=>moveExercise(ex,-1)}>↑</button><button className="btn small secondary" title="Move down" onClick={()=>moveExercise(ex,1)}>↓</button></>}<button className="btn small secondary" onClick={()=>addSet(ex)}>+ Set</button><button className="btn small red" onClick={()=>removeExercise(ex)}>Remove</button></div>}</div></div>
+        </>}{canEdit()&&!ex.catalog_exercise_id&&<p className="muted exercise-link-hint">No catalog link — edit name or use Change to get form guide</p>}{isCollapsed&&<p className="muted exercise-collapse-summary">{allDone&&<span className="exercise-done-badge" aria-hidden="true">✓</span>}{plannedSets} set{plannedSets===1?'':'s'} · {doneSets} logged{allDone?' · complete':''}{inSuperset?' · superset':''}</p>}{!isCollapsed&&renderExerciseLogContext(ex,exType,progression,histRows,displayWorkout,catItem)}</div></div><div className="exercise-head-actions"><button type="button" className="btn small secondary exercise-collapse-btn" onClick={()=>setCollapsedExercises((prev:any)=>({...prev,[ex.id]:!prev[ex.id]}))} aria-expanded={!isCollapsed}>{isCollapsed?'Expand':'Collapse'}</button>{!isCollapsed&&showGuide&&guidePayload&&<button type="button" className="btn small secondary" onClick={()=>setExerciseGuide(guidePayload)}>{guidePayload.hasVideo?'Watch form':'Form guide'}</button>}{!isCollapsed&&canEdit()&&<div className="actions"><button className="btn small secondary" title="Search catalog and replace this exercise" onClick={()=>openReplaceExercisePanel(ex)}>Change</button>{inSuperset&&<><button className="btn small secondary" title="Move up in superset" onClick={()=>moveExercise(ex,-1)}>↑</button><button className="btn small secondary" title="Move down in superset" onClick={()=>moveExercise(ex,1)}>↓</button><button className="btn small secondary" title="Remove from superset" onClick={()=>removeFromSuperset(ex)}>Out</button></>}{!inSuperset&&<><button className="btn small secondary" title="Move up" onClick={()=>moveExercise(ex,-1)}>↑</button><button className="btn small secondary" title="Move down" onClick={()=>moveExercise(ex,1)}>↓</button></>}<button className="btn small secondary" onClick={()=>addSet(ex)}>+ Set</button><button className="btn small red" onClick={()=>removeExercise(ex)}>Remove</button></div>}</div></div>
         {!isCollapsed&&<WorkoutSetLogger section={exerciseSection(ex)} exType={exType} sets={sortedSets} logs={logs} prevBySetId={prevBySetId} showPreviousSets={showPreviousSets} weightUnit={weightUnit} distanceUnit={logDistanceUnit} onDistanceUnitChange={setLogDistanceUnit} canEdit={canEdit()} canLog={canLog()} onEditSet={editSet} onRemoveSet={removeSet} onSaveField={(sid,field,value,opts)=>saveLog(sid,field,value,opts)} onDuplicateSet={duplicateSetLog} registerInputRef={el=>{if(el&&!refs.current.includes(el))refs.current.push(el)}} onInputKeyDown={next}/>}
       </div>;};
  const workoutExerciseSections=<>
@@ -2117,6 +2139,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
     <div className="row"><div><label>Sets</label><input type="number" min="1" max="10" value={addExercisePanel.config.setCount} onChange={e=>setAddExercisePanel({...addExercisePanel,config:{...addExercisePanel.config,setCount:Number(e.target.value)}})}/></div><div><label>Target reps</label><input value={addExercisePanel.config.targetReps} onChange={e=>setAddExercisePanel({...addExercisePanel,config:{...addExercisePanel.config,targetReps:e.target.value}})} placeholder="8-12"/></div></div><label>Starting weight (optional)</label><input value={addExercisePanel.config.targetWeight} onChange={e=>setAddExercisePanel({...addExercisePanel,config:{...addExercisePanel.config,targetWeight:e.target.value}})} placeholder="lb"/>
     <div className="actions" style={{marginTop:12}}><button type="button" className="btn green" onClick={confirmAddExercise}>Add Exercise</button><button type="button" className="btn secondary" onClick={()=>setAddExercisePanel({...addExercisePanel,step:'search',picked:null})}>Back</button></div></>}
   </div></div>}
+  {exerciseHistoryModal&&<ExerciseSessionHistoryModal exerciseName={exerciseHistoryModal.exerciseName} dayLabel={exerciseHistoryModal.dayLabel} sessions={exerciseHistoryModal.sessions} onClose={()=>setExerciseHistoryModal(null)}/>}
   {exerciseGuide&&<div className="panel-overlay" onClick={()=>setExerciseGuide(null)}><div className="exercise-guide-panel card" onClick={e=>e.stopPropagation()}><div className="topline" style={{justifyContent:'space-between'}}><h2>{exerciseGuide.title}</h2><button type="button" className="btn small secondary" onClick={()=>setExerciseGuide(null)}>Close</button></div>{exerciseGuide.embedUrl&&<div className="guide-embed-wrap"><iframe className="guide-embed" src={exerciseGuide.embedUrl} title={`${exerciseGuide.title} demo`} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen/></div>}{!exerciseGuide.embedUrl&&exerciseGuide.videoUrl&&<video className="guide-video" src={exerciseGuide.videoUrl} controls playsInline/>}{exerciseGuide.images?.length>0&&<div className="guide-images">{exerciseGuide.images.map((src:string)=><img key={src} className="guide-image" src={src} alt={exerciseGuide.title} loading="eager" referrerPolicy="no-referrer"/>)}</div>}{exerciseGuide.images?.length>0&&<p className="muted guide-caption">Form photos from the exercise library{exerciseGuide.images.length>1?' (multiple angles)':''}.</p>}{exerciseGuide.instructions&&<><h3 className="guide-section-title">How to perform</h3><div className="panel-instructions guide-instructions">{exerciseGuide.instructions}</div></>}</div></div>}
  {bugOpen&&<div className="panel-overlay" onClick={()=>{if(!bugSending)setBugOpen(false);}}><div className="bug-report-panel card" onClick={e=>e.stopPropagation()}><div className="topline" style={{justifyContent:'space-between'}}><h2>Report a bug</h2><button type="button" className="btn small secondary" onClick={()=>setBugOpen(false)} disabled={bugSending}>Close</button></div><p className="muted">Tell us what broke — screen, steps, and what you expected. BuildIQ Health keeps this tied to your account so we can investigate.</p>{bugSentId?<p className="program-ai-summary">Thanks — report saved{bugSentId!=='ok'?` (${String(bugSentId).slice(0,8)}…)`:''}. You can send another anytime.</p>:<><label>Short title (optional)</label><input value={bugTitle} onChange={e=>setBugTitle(e.target.value)} placeholder="e.g. Generate with AI failed on Program Setup"/><label>What happened?</label><textarea className="ai-prompt-input ai-prompt-input-lg" rows={6} value={bugDescription} onChange={e=>setBugDescription(e.target.value)} placeholder="Steps, error message, and what you expected…"/><p className="muted">Context included: {appNav}{trainingSubNav?` / ${trainingSubNav}`:''}{aiGenError?' · last AI error attached':''}</p><button type="button" className="btn green full" style={{marginTop:10}} onClick={submitBugReport} disabled={bugSending}>{bugSending?'Sending…':'Send bug report'}</button></>}</div></div>}
  {(bugFabVisible||bugOpen)&&<button type="button" className="bug-fab-mini" onClick={()=>{setBugOpen(true);setBugSentId('');}} aria-label="Report an issue">?</button>}
