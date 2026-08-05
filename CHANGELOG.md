@@ -6784,3 +6784,53 @@ None.
 ```text
 BIQ-0097 Add exercise session history popup from Last session
 ```
+
+---
+
+## BIQ-0098 - Fix Login When start_date Column Missing
+
+Date: 2026-08-05  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Training loads again on production when Supabase has not yet applied the `st_programs.start_date` migration. Program list queries retry without optional columns instead of blocking login with an alert.
+
+### Purpose
+
+Recent program index queries selected `start_date` explicitly. Production DB without migration `20250713_016` returned `column st_programs.start_date does not exist`, which triggered an alert on login and left Training with no workouts.
+
+### Changes
+
+- `fetchProgramIndex` retries without missing optional columns (same pattern as `insertProgramRecord`)
+- `missingProgramColumnFromError` parses PostgreSQL `column … does not exist` messages
+- `updateProgramStartDate` no-ops quietly when column is absent
+
+### Files Changed
+
+- `lib/training/programFetch.ts`
+- `lib/training/programStatus.ts`
+- `app/page.tsx`
+
+### Database Changes
+
+Apply in Supabase SQL Editor for full week/date sync:
+
+`supabase/migrations/20250713_016_program_start_date.sql`
+
+### Testing Steps
+
+1. Without migration — sign in, open Training; no error alert, workouts load
+2. With migration — week selector and date tabs stay aligned to program start
+3. Change program start date — saves when column exists
+
+### Known Issues
+
+Without migration, week/date sync falls back to `created_at` (existing behavior)
+
+### Recommended Commit Message
+
+```text
+BIQ-0098 Fix Training load when start_date column missing
+```

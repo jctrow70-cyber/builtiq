@@ -38,6 +38,8 @@ export function missingProgramColumnFromError(error: { message?: string } | null
   if (quoted) return quoted[1].toLowerCase();
   const relation = msg.match(/column ["'](\w+)["'] of relation/i);
   if (relation) return relation[1].toLowerCase();
+  const pgMissing = msg.match(/column (?:[\w.]+\.)?(\w+) does not exist/i);
+  if (pgMissing) return pgMissing[1].toLowerCase();
   return null;
 }
 

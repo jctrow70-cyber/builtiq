@@ -38,7 +38,7 @@ import {
   weekRangeLabel,
   addDaysYmd,
 } from '../lib/training/programCalendar';
-import { insertProgramRecord, isDraftProgram, isPublishedProgram, programOptionLabel, publishProgramRecord, deleteProgramRecord } from '../lib/training/programStatus';
+import { insertProgramRecord, isDraftProgram, isPublishedProgram, missingProgramColumnFromError, programOptionLabel, publishProgramRecord, deleteProgramRecord } from '../lib/training/programStatus';
 import { fetchFullProgram, fetchProgramIndex, mergeFullProgramIntoList } from '../lib/training/programFetch';
 import { countUnlinkedLogs, mapDateLogsToProgram, reattachUserLogsToProgram } from '../lib/training/reattachLogs';
 import { mergeDayEmphasisFromGoals } from '../lib/training/scheduleSuggestion';
@@ -1849,7 +1849,10 @@ export default function Page(){
   if(!program||!canEdit()||!ymd)return;
   const anchor=mondayOfWeek(ymd);
   const{error}=await supabase.from('st_programs').update({start_date:anchor}).eq('id',program.id);
-  if(error)return alert(error.message);
+  if(error){
+   if(missingProgramColumnFromError(error))return;
+   return alert(error.message);
+  }
   setProgram({...program,start_date:anchor});
   const aligned=weekForDate(anchor,logDate,program.weeks||weeks||6);
   setWeek(aligned);
