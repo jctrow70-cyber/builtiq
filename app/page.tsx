@@ -270,7 +270,6 @@ export default function Page(){
   const nextWeek=weekForDate(start,logDate,total);
   if(nextWeek!==week)setWeek(nextWeek);
  },[program?.id,program?.start_date,program?.created_at,program?.weeks,logDate,activeAssignedRecipient?.id,viewingMember?.user_id]);
- useEffect(()=>{if(profile&&appNav==='Dashboard'){loadProgressLogs();void loadDashboardProgram();loadDashboardTodayNutrition();}},[profile,appNav,session?.user?.id,memberAssignments,activeTeam?.id,activeTeam?.default_program_id,members.length,teams.length]);
  useEffect(()=>{
   if(!program||syncingCalendarRef.current||activeAssignedRecipient||viewingMember)return;
   const match=workoutForDate(program,logDate,week);
@@ -299,6 +298,7 @@ export default function Page(){
  useEffect(()=>{if(memberDashboard)loadMemberDashboardData(memberDashboard);},[logDate,week,memberDashboard?.user_id,selectedTeamId,memberAssignments]);
 
  const activeTeam=teams.find((t:any)=>t.id===selectedTeamId)||teams[0]||null;
+ useEffect(()=>{if(profile&&appNav==='Dashboard'){loadProgressLogs();void loadDashboardProgram();loadDashboardTodayNutrition();}},[profile,appNav,session?.user?.id,memberAssignments,activeTeam?.id,activeTeam?.default_program_id,members.length,teams.length]);
  useEffect(()=>{
   if(!viewingMember||viewingMember.user_id===session?.user?.id)return;
   void reloadMemberWorkoutProgram(viewingMember,memberAssignments);
