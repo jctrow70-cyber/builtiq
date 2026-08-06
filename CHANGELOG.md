@@ -6834,3 +6834,52 @@ Without migration, week/date sync falls back to `created_at` (existing behavior)
 ```text
 BIQ-0098 Fix Training load when start_date column missing
 ```
+
+---
+
+## BIQ-0099 - Fix Groups Edit Workouts Program Load
+
+Date: 2026-08-06  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Groups → Programs → **Edit workouts** now opens the correct program with its name and exercises visible.
+
+### Purpose
+
+A React state timing bug: `loadPrograms()` ran before `draftEditProgramId` updated, so the editor loaded the wrong program (or the create wizard) without workout data. The program dropdown also set index-only rows without fetching exercises.
+
+### Changes
+
+- Pass `editProgramId` directly into `loadPrograms` from Groups edit flow
+- Pre-fill program name from roster while full program loads
+- Hide create wizard when editing; show loading state until workouts fetch
+- Program dropdown fetches full program tree via `selectSetupProgram`
+
+### Files Changed
+
+- `app/page.tsx`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Groups → Programs → **Edit workouts** on a published program with exercises
+2. Program name field and dropdown match the selected program
+3. Week selector, day tabs, and exercises appear below
+4. Change program in dropdown — exercises reload for that program
+5. **Back to programs list** returns to roster
+
+### Known Issues
+
+None identified.
+
+### Recommended Commit Message
+
+```text
+BIQ-0099 Fix Groups edit workouts program name and exercises
+```
