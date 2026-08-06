@@ -6883,3 +6883,52 @@ None identified.
 ```text
 BIQ-0099 Fix Groups edit workouts program name and exercises
 ```
+
+---
+
+## BIQ-0100 - Hide Personal Mode in Groups Programs Editor
+
+Date: 2026-08-06  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Groups → Programs no longer shows the confusing **Personal program** tab or personal programs in the picker. The editor is group-only with a **Group program** title and group name in the header.
+
+### Purpose
+
+The Groups program wizard reused Training’s Program Setup panel, which includes Personal/Group tabs meant for the Training → Manage program flow — not for group managers editing team plans.
+
+### Changes
+
+- Hide Personal/Group tabs when editing from Groups → Programs
+- Title reads **Group program** instead of Program setup
+- Program dropdown and library list only team programs for the active group
+- Header context on Groups tab shows group name (not “Personal”)
+
+### Files Changed
+
+- `app/page.tsx`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Groups → Programs → Edit workouts or Generate/Create
+2. Confirm no **Personal program** tab
+3. Program picker lists only this group’s programs
+4. Header shows your name · group name
+5. Training → Manage program still shows Personal/Group tabs
+
+### Known Issues
+
+None identified.
+
+### Recommended Commit Message
+
+```text
+BIQ-0100 Hide personal program UI in Groups programs editor
+```
