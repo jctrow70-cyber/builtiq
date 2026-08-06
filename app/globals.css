@@ -162,7 +162,8 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .team-assign-member-picks{display:grid;gap:6px;margin-top:8px;max-height:180px;overflow:auto}
 .team-program-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:start;padding:12px 0;border-top:1px solid var(--line)}
 .team-program-row-actions{flex-wrap:wrap;justify-content:flex-end}
-.team-programs-actions{flex-shrink:0}
+.team-programs-actions{flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
+.team-programs-drafts-btn{white-space:nowrap}
 .team-member-detail-tabs{display:flex;gap:6px;overflow-x:auto;margin-top:10px}
 .team-member-detail-tabs button{border:1px solid var(--line);background:#0f172a;color:var(--muted);border-radius:999px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
 .team-member-detail-tabs button.active{border-color:var(--purple);background:#1b1634;color:#fff}

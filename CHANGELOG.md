@@ -6932,3 +6932,53 @@ None identified.
 ```text
 BIQ-0100 Hide personal program UI in Groups programs editor
 ```
+
+---
+
+## BIQ-0101 - Drafts Button on Groups Programs Screen
+
+Date: 2026-08-06  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Groups → Programs has a **Drafts** button beside **Generate**. The main list shows published programs; drafts open in a dedicated view where you can edit, publish, or delete them.
+
+### Purpose
+
+Draft team programs were mixed into the main programs list. Coaches need a clear place to find unfinished plans without cluttering published/assignable programs.
+
+### Changes
+
+- **Drafts** button next to Generate (shows count when drafts exist)
+- Main Programs view lists published team programs only
+- Drafts view lists draft programs with Edit, Publish, Duplicate, Delete
+- **Back to programs** returns to the published list
+
+### Files Changed
+
+- `app/components/groups/TeamProgramsTab.tsx`
+- `app/globals.css`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Groups → Programs — published programs show on main list; drafts hidden
+2. Tap **Drafts** — see draft programs (or empty state)
+3. Tap **Edit** on a draft — workout editor opens
+4. Tap **Back to programs** — return to published list
+5. Publish a draft — it appears on main list, removed from Drafts
+
+### Known Issues
+
+None identified.
+
+### Recommended Commit Message
+
+```text
+BIQ-0101 Add Drafts view on Groups programs screen
+```
