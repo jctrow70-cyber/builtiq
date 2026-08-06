@@ -15,6 +15,11 @@ import {
   type LogFieldUI,
 } from '../../lib/training/logFieldUI';
 import { SET_TYPES, setTypeAcronym, setTypeLabel, type SetTypeValue } from '../../lib/training/setTypes';
+import {
+  fieldUsesQuickPick,
+  repQuickPickOptions,
+  weightQuickPickOptions,
+} from '../../lib/training/logQuickPick';
 
 type SetRow = {
   id: string;
@@ -40,10 +45,11 @@ type Props = {
   canLog: boolean;
   onEditSet: (set: SetRow, field: string, value: any) => void;
   onRemoveSet: (set: SetRow) => void;
-  onSaveField: (setId: string, field: string, value: string, opts?: { completed?: boolean }) => void;
+  onSaveField: (setId: string, field: string, value: string, opts?: { completed?: boolean }) => void | Promise<void>;
   onDuplicateSet: (setId: string, source: LogRow) => void;
   registerInputRef?: (el: HTMLInputElement | null) => void;
   onInputKeyDown?: (e: React.KeyboardEvent) => void;
+  onFocusNextInput?: (el: HTMLInputElement | null) => void;
 };
 
 function fieldSizeClass(field: LogFieldUI) {
@@ -147,6 +153,10 @@ function FieldCard({
   onBlur,
   onChangeValue,
   onChipPick,
+  onQuickPick,
+  quickPickOptions,
+  enterKeyHint,
+  onEnterAdvance,
   registerRef,
   onKeyDown,
 }: {
@@ -158,18 +168,44 @@ function FieldCard({
   onBlur: (v: string) => void;
   onChangeValue?: (v: string) => void;
   onChipPick?: (v: string) => void;
+  onQuickPick?: (v: string) => void;
+  quickPickOptions?: string[];
+  enterKeyHint?: 'next' | 'done' | 'go' | 'search' | 'send';
+  onEnterAdvance?: () => void;
   registerRef?: (el: HTMLInputElement | null) => void;
   onKeyDown?: (e: React.KeyboardEvent) => void;
 }) {
   const compact = field.size === 'compact';
   const [draft, setDraft] = useState(value);
   const focusedRef = useRef(false);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!focusedRef.current) setDraft(value);
   }, [value]);
 
   const placeholder = !draft && prevHint ? prevHint : (field.placeholder || '');
+  const showQuickPicks = !disabled && !field.chipOptions && (quickPickOptions?.length ?? 0) > 0;
+
+  const handleQuickPick = (pick: string) => {
+    setDraft(pick);
+    onChangeValue?.(pick);
+    onQuickPick?.(pick);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      onEnterAdvance?.();
+      return;
+    }
+    onKeyDown?.(e);
+  };
+
+  const setInputRef = (el: HTMLInputElement | null) => {
+    inputRef.current = el;
+    registerRef?.(el);
+  };
 
   return (
     <div className={`log-field-card ${fieldSizeClass(field)}`}>
@@ -192,28 +228,48 @@ function FieldCard({
           ))}
         </div>
       ) : (
-        <div className="log-input-wrap">
-          <input
-            ref={registerRef}
-            className={`log-input-card${compact ? ' log-input-compact' : ''}${prevHint && !draft ? ' log-input-has-prev' : ''}`}
-            type="text"
-            inputMode={(field.inputMode as 'decimal' | 'numeric' | 'text') || 'text'}
-            disabled={disabled}
-            value={draft}
-            placeholder={placeholder}
-            onFocus={() => { focusedRef.current = true; }}
-            onChange={(e) => {
-              setDraft(e.target.value);
-              onChangeValue?.(e.target.value);
-            }}
-            onBlur={(e) => {
-              focusedRef.current = false;
-              onBlur(e.target.value);
-            }}
-            onKeyDown={onKeyDown}
-          />
-          {unitLabel && <span className="log-input-unit">{unitLabel}</span>}
-        </div>
+        <>
+          <div className="log-input-wrap">
+            <input
+              ref={setInputRef}
+              className={`log-input-card${compact ? ' log-input-compact' : ''}${prevHint && !draft ? ' log-input-has-prev' : ''}`}
+              type="text"
+              inputMode={(field.inputMode as 'decimal' | 'numeric' | 'text') || 'text'}
+              enterKeyHint={enterKeyHint || (field.inputMode === 'numeric' ? 'next' : 'done')}
+              autoComplete="off"
+              disabled={disabled}
+              value={draft}
+              placeholder={placeholder}
+              onFocus={() => { focusedRef.current = true; }}
+              onChange={(e) => {
+                setDraft(e.target.value);
+                onChangeValue?.(e.target.value);
+              }}
+              onBlur={(e) => {
+                focusedRef.current = false;
+                onBlur(e.target.value);
+              }}
+              onKeyDown={handleKeyDown}
+            />
+            {unitLabel && <span className="log-input-unit">{unitLabel}</span>}
+          </div>
+          {showQuickPicks && (
+            <div className="log-quick-pick-row" role="group" aria-label={`Quick ${field.label}`}>
+              {quickPickOptions!.map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  className={`log-quick-pick-chip${draft === opt ? ' active' : ''}`}
+                  disabled={disabled}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => handleQuickPick(opt)}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </div>
   );
@@ -234,6 +290,7 @@ function SetLogCard({
   onDuplicateSet,
   registerInputRef,
   onInputKeyDown,
+  onFocusNextInput,
   scheduleSave,
   flushSaves,
   showPreviousSets = true,
@@ -252,14 +309,16 @@ function SetLogCard({
   onDuplicateSet: Props['onDuplicateSet'];
   registerInputRef?: Props['registerInputRef'];
   onInputKeyDown?: Props['onInputKeyDown'];
-  scheduleSave: (key: string, value: string, save: () => void) => void;
-  flushSaves: () => void;
+  onFocusNextInput?: Props['onFocusNextInput'];
+  scheduleSave: (key: string, value: string, save: () => void | Promise<void>) => void;
+  flushSaves: () => void | Promise<void>;
   showPreviousSets?: boolean;
 }) {
   const notes = String(log.log_notes || '');
   const assist = parseAssistFromNotes(notes);
   const side = parseSideFromNotes(notes);
   const completed = !!log.completed;
+  const fieldInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const unitFor = (f: { unitGroup?: string; unit?: string }) => {
     if (f.unitGroup === 'weight') return weightUnit;
@@ -295,6 +354,30 @@ function SetLogCard({
     return undefined;
   };
 
+  const quickPickFor = (f: LogFieldUI): string[] | undefined => {
+    const kind = fieldUsesQuickPick(f.key);
+    if (!kind) return undefined;
+    const prevHint = resolvePrevHint(f.key);
+    const current = resolveValue(f.key);
+    if (kind === 'reps') {
+      return repQuickPickOptions(prevHint, set.target_reps);
+    }
+    return weightQuickPickOptions(prevHint, current, weightUnit);
+  };
+
+  const primaryFieldKeys = layout.primary.map((f) => f.key);
+  const focusField = (key: string) => {
+    fieldInputRefs.current[key]?.focus();
+  };
+  const advanceFromField = (key: string) => {
+    const idx = primaryFieldKeys.indexOf(key);
+    if (idx >= 0 && idx < primaryFieldKeys.length - 1) {
+      focusField(primaryFieldKeys[idx + 1]);
+      return;
+    }
+    onFocusNextInput?.(fieldInputRefs.current[key] ?? null);
+  };
+
   const renderField = (f: LogFieldUI) => (
     <FieldCard
       key={f.key}
@@ -303,9 +386,26 @@ function SetLogCard({
       prevHint={resolvePrevHint(f.key)}
       unitLabel={unitFor(f)}
       disabled={!canLog && f.key !== 'log_notes'}
+      quickPickOptions={quickPickFor(f)}
+      enterKeyHint={
+        primaryFieldKeys.includes(f.key)
+          ? primaryFieldKeys.indexOf(f.key) < primaryFieldKeys.length - 1
+            ? 'next'
+            : 'done'
+          : 'done'
+      }
       onBlur={(v) => { flushSaves(); saveVirtual(f.key, v); }}
       onChangeValue={(v) => scheduleSave(`${set.id}:${f.key}`, v, () => saveVirtual(f.key, v))}
-      registerRef={registerInputRef}
+      onQuickPick={(v) => {
+        flushSaves();
+        saveVirtual(f.key, v);
+        if (f.key === 'actual_weight') focusField('actual_reps');
+      }}
+      onEnterAdvance={() => advanceFromField(f.key)}
+      registerRef={(el) => {
+        fieldInputRefs.current[f.key] = el;
+        registerInputRef?.(el);
+      }}
       onKeyDown={onInputKeyDown}
     />
   );
@@ -320,8 +420,9 @@ function SetLogCard({
         ? { key: '_side', label: 'Side', chipOptions: SIDE_CHIPS, size: 'wide' as const }
         : null;
 
-  const onDoneChange = (checked: boolean) => {
-    onSaveField(set.id, 'completed', checked ? 'true' : '', { completed: checked });
+  const onDoneChange = async (checked: boolean) => {
+    await flushSaves();
+    await onSaveField(set.id, 'completed', checked ? 'true' : '', { completed: checked });
   };
 
   return (
@@ -401,12 +502,13 @@ export default function WorkoutSetLogger({
   onDuplicateSet,
   registerInputRef,
   onInputKeyDown,
+  onFocusNextInput,
   showPreviousSets = true,
 }: Props) {
   const layout = useMemo(() => logLayoutForType(exType), [exType]);
   const showDistToggle = allLogFieldsFlat(exType).some((f) => f.unitGroup === 'distance');
   const saveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-  const pendingSavesRef = useRef<Record<string, () => void>>({});
+  const pendingSavesRef = useRef<Record<string, () => void | Promise<void>>>({});
 
   const firstSet = sets[0];
   const firstSetLog = firstSet ? logs[firstSet.id] || {} : {};
@@ -416,26 +518,38 @@ export default function WorkoutSetLogger({
     ? stripEmbeddedNotes(String(prevBySetId[firstSet.id]!.log_notes))
     : undefined;
 
-  const scheduleSave = (key: string, _value: string, save: () => void) => {
+  const runPendingSave = (save: () => void | Promise<void>) => {
+    try {
+      const result = save();
+      if (result && typeof (result as Promise<void>).then === 'function') {
+        return (result as Promise<void>).catch(() => {});
+      }
+    } catch {
+      /* ignore */
+    }
+    return Promise.resolve();
+  };
+
+  const scheduleSave = (key: string, _value: string, save: () => void | Promise<void>) => {
     pendingSavesRef.current[key] = save;
     if (saveTimersRef.current[key]) clearTimeout(saveTimersRef.current[key]);
     saveTimersRef.current[key] = setTimeout(() => {
       delete saveTimersRef.current[key];
       const run = pendingSavesRef.current[key];
       delete pendingSavesRef.current[key];
-      run?.();
+      if (run) void runPendingSave(run);
     }, 700);
   };
 
-  const flushSaves = () => {
+  const flushSaves = async () => {
     Object.values(saveTimersRef.current).forEach((t) => clearTimeout(t));
     saveTimersRef.current = {};
     const pending = { ...pendingSavesRef.current };
     pendingSavesRef.current = {};
-    Object.values(pending).forEach((run) => run());
+    await Promise.all(Object.values(pending).map((run) => (run ? runPendingSave(run) : Promise.resolve())));
   };
 
-  useEffect(() => () => flushSaves(), []);
+  useEffect(() => () => { void flushSaves(); }, []);
 
   const saveExerciseNotes = (value: string) => {
     if (!firstSet) return;
@@ -500,6 +614,7 @@ export default function WorkoutSetLogger({
             onDuplicateSet={onDuplicateSet}
             registerInputRef={registerInputRef}
             onInputKeyDown={onInputKeyDown}
+            onFocusNextInput={onFocusNextInput}
             scheduleSave={scheduleSave}
             flushSaves={flushSaves}
             showPreviousSets={showPreviousSets}

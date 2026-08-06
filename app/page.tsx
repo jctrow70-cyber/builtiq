@@ -198,6 +198,7 @@ export default function Page(){
  const [memberDashProgram,setMemberDashProgram]=useState<any>(null);
  const [memberDashLogs,setMemberDashLogs]=useState<any>({});
  const [dashboardTodayLogs,setDashboardTodayLogs]=useState<any>({});
+ const [dashboardProgram,setDashboardProgram]=useState<any>(null);
  const [nutritionTodaySummary,setNutritionTodaySummary]=useState<any>(null);
  const [memberDashLastDate,setMemberDashLastDate]=useState('');
  const [memberStats,setMemberStats]=useState<any>({});
@@ -223,6 +224,7 @@ export default function Page(){
  const refs=useRef<any[]>([]);
  const namePickRef=useRef(false);
  const logsRef=useRef<any>({});
+ const upsertQueueRef=useRef<Record<string,Promise<any>>>({});
  const prCelebrationTimerRef=useRef<ReturnType<typeof setTimeout>|null>(null);
  const [prCelebration,setPrCelebration]=useState<{exerciseName:string;message:string;subtext:string}|null>(null);
  const syncingCalendarRef=useRef(false);
@@ -268,7 +270,7 @@ export default function Page(){
   const nextWeek=weekForDate(start,logDate,total);
   if(nextWeek!==week)setWeek(nextWeek);
  },[program?.id,program?.start_date,program?.created_at,program?.weeks,logDate,activeAssignedRecipient?.id,viewingMember?.user_id]);
- useEffect(()=>{if(profile&&appNav==='Dashboard'){loadProgressLogs();loadDashboardTodayLogs();loadDashboardTodayNutrition();}},[profile,appNav,program?.id,session?.user?.id]);
+ useEffect(()=>{if(profile&&appNav==='Dashboard'){loadProgressLogs();void loadDashboardProgram();loadDashboardTodayNutrition();}},[profile,appNav,session?.user?.id,memberAssignments,activeTeam?.id,activeTeam?.default_program_id,members.length,teams.length]);
  useEffect(()=>{
   if(!program||syncingCalendarRef.current||activeAssignedRecipient||viewingMember)return;
   const match=workoutForDate(program,logDate,week);
@@ -1340,9 +1342,42 @@ export default function Page(){
   setProgressLogs(rows);
  }
 
- async function loadDashboardTodayLogs(){
-  if(!session?.user||!program){setDashboardTodayLogs({});return;}
-  const todayW=workoutForDate(program,today());
+ async function loadDashboardProgram(){
+  if(!session?.user){setDashboardProgram(null);setDashboardTodayLogs({});return;}
+  const team=activeTeam||teams[0]||null;
+  const selfMember=members.find((m:any)=>m.user_id===session.user.id);
+  const preferTeam=!!team&&(selfMember?(selfMember.training_source||'team')==='team':true);
+  if(preferTeam&&team){
+   const{data:index}=await fetchProgramIndex(supabase,{personal:false,teamId:team.id,ownerUserId:session.user.id,publishedOnly:true});
+   const pickedMeta=pickProgramForMember(index||[],{user_id:session.user.id},team.default_program_id,memberAssignments);
+   if(pickedMeta?.id){
+    const{data:full}=await fetchFullProgram(supabase,pickedMeta.id);
+    if(full){
+     setDashboardProgram(full);
+     await loadDashboardTodayLogs(full);
+     return;
+    }
+   }
+  }
+  const{data:pIndex}=await fetchProgramIndex(supabase,{personal:true,ownerUserId:session.user.id,publishedOnly:true});
+  const pickedPersonal=pickProgram(pIndex||[],null);
+  if(pickedPersonal?.id){
+   const{data:full}=await fetchFullProgram(supabase,pickedPersonal.id);
+   if(full){
+    setDashboardProgram(full);
+    await loadDashboardTodayLogs(full);
+    return;
+   }
+  }
+  setDashboardProgram(program);
+  await loadDashboardTodayLogs(program);
+ }
+
+ async function loadDashboardTodayLogs(programOverride?:any){
+  if(!session?.user){setDashboardTodayLogs({});return;}
+  const dashProgram=programOverride??dashboardProgram??program;
+  if(!dashProgram){setDashboardTodayLogs({});return;}
+  const todayW=workoutForDate(dashProgram,today());
   if(!todayW){setDashboardTodayLogs({});return;}
   const ids=plannedSetIdsForWorkout(todayW);
   if(!ids.length){setDashboardTodayLogs({});return;}
@@ -1727,9 +1762,10 @@ export default function Page(){
  }
  async function upsertSetLog(sid:string,fieldUpdates:Record<string,any>,opts?:{completed?:boolean}){
   if(!canLog())return;
+  const run=async()=>{
   const old=logsRef.current[sid]||{};
   const located=findSetInProgram(activeProgramForLogging(),sid);
-  if(!located) return alert('Could not save log for this set.');
+  if(!located) {alert('Could not save log for this set.');return;}
   const {workout:workoutRef,exercise:ex,plannedSet:ps}=located;
   const catItem=catalog.find((c:any)=>c.id===ex.catalog_exercise_id);
   const exType=exerciseTypeOf(ex,catItem);
@@ -1758,7 +1794,7 @@ export default function Page(){
     else payload[k]=old[k]??'';
   });
   const{data,error}=await supabase.from('st_set_logs').upsert(payload,{onConflict:'planned_set_id,user_id,log_date'}).select().single();
-  if(error)return alert(error.message);
+  if(error){alert(error.message);return;}
   setLogs((prev:any)=>{
     const next={...prev,[sid]:data};
     logsRef.current=next;
@@ -1779,6 +1815,11 @@ export default function Page(){
    }
   }
   return data;
+  };
+  const prev=upsertQueueRef.current[sid];
+  const next=(prev?prev.catch(()=>{}).then(run):run());
+  upsertQueueRef.current[sid]=next.finally(()=>{if(upsertQueueRef.current[sid]===next)delete upsertQueueRef.current[sid];});
+  return next;
  }
  function maybeAutoAdvanceExercise(exercise:any,logMap:any,workoutRef:any){
   if(!exercise||!workoutRef||exerciseSection(exercise)==='warmup')return;
@@ -1828,7 +1869,18 @@ export default function Page(){
   if(error)return alert(error.message);
   await loadMembers();
  }
- function next(e:any){if(e.key==='Enter'||e.key==='ArrowRight'){e.preventDefault(); const i=refs.current.indexOf(e.currentTarget); if(refs.current[i+1])refs.current[i+1].focus();}}
+ function focusNextInput(el: HTMLInputElement | null) {
+  if (!el) return;
+  const i = refs.current.indexOf(el);
+  const nextEl = refs.current[i + 1];
+  if (nextEl) nextEl.focus();
+ }
+ function next(e: React.KeyboardEvent) {
+  if (e.key === 'Enter' || e.key === 'ArrowRight') {
+    e.preventDefault();
+    focusNextInput(e.currentTarget as HTMLInputElement);
+  }
+ }
  function onLogDateChange(ymd:string){setLogDate(ymd);}
  function onWeekChange(nextWeek:number){
   const w=Number(nextWeek)||1;
@@ -1907,7 +1959,7 @@ export default function Page(){
    clearMemberWorkoutView();
   }
   setAppNav(n);
-  if(n==='Progress'||n==='Dashboard'){loadProgressLogs();if(n==='Dashboard'){loadDashboardTodayLogs();loadDashboardTodayNutrition();}}
+  if(n==='Progress'||n==='Dashboard'){loadProgressLogs();if(n==='Dashboard'){void loadDashboardProgram();loadDashboardTodayNutrition();}}
   if(n==='Nutrition')loadDashboardTodayNutrition();
   if(n==='Settings'){loadCatalog(); loadGuidedImportStatus(); if(activeTeam)loadMembers();}
   if(n==='Groups'){if(teams.length){if(!selectedTeamId)setSelectedTeamId(teams[0].id);setMode('team');} loadMembers(); loadMemberStats(); loadMemberAssignments(); loadGroupProgramForAssign(); loadClassifications(); loadPrograms(canManageGroupView()||groupsProgramWizardOpen?'setup':'training');}
@@ -1980,10 +2032,25 @@ function matchingSet(targetExercise:any, sourceSet:any){
  const todayDayLabel=dayNames[new Date().getDay()];
  const greetingHour=new Date().getHours();
  const greeting=greetingHour<12?'Good morning':greetingHour<18?'Good afternoon':'Good evening';
- const calendarWeek=program?weekForDate(resolveProgramStartDate(program),today(),program.weeks||weeks||6):week;
- const todayWorkout=program?(program.st_workouts||[]).find((w:any)=>w.week===calendarWeek&&w.day_label===todayDayLabel):null;
+ const calendarWeek=dashboardProgram?weekForDate(resolveProgramStartDate(dashboardProgram),today(),dashboardProgram.weeks||weeks||6):program?weekForDate(resolveProgramStartDate(program),today(),program.weeks||weeks||6):week;
+ const dashProgramForToday=dashboardProgram||program;
+ const todayWorkout=dashProgramForToday?(dashProgramForToday.st_workouts||[]).find((w:any)=>w.week===calendarWeek&&w.day_label===todayDayLabel):null;
  const todayWorkoutStatus=workoutStatusFor(todayWorkout,dashboardTodayLogs);
  const todayWorkoutBtnLabel=todayWorkoutStatus==='completed'?'View Workout':todayWorkoutStatus==='in_progress'?'Continue Workout':'Start Training';
+ const dashboardUsesTeamProgram=dashboardProgram?.visibility==='team';
+ function openDashboardWorkout(){
+  if(!todayWorkout)return;
+  if(dashboardUsesTeamProgram){
+   setMode('team');
+   if(dashboardProgram?.team_id)setSelectedTeamId(dashboardProgram.team_id);
+  }
+  setActiveWorkout(todayWorkout.id);
+  setWeek(calendarWeek);
+  setLogDate(today());
+  setTrainingSubNav('personal');
+  setAppNav('Training');
+  if(dashboardProgram&&dashboardProgram.id!==program?.id)setProgram(dashboardProgram);
+ }
  const{monday:weekStartStr,sunday:weekEndStr}=currentCalendarWeekBounds();
  const weeklyLogs=progressLogs.filter((r:any)=>{const d=String(r.log_date);return d>=weekStartStr&&d<=weekEndStr;});
  const weeklySetCount=weeklyLogs.length;
@@ -2032,7 +2099,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
             <span className="badge exercise-type-badge">{exType}</span>
           </div>
         </>}{canEdit()&&!ex.catalog_exercise_id&&<p className="muted exercise-link-hint">No catalog link — edit name or use Change to get form guide</p>}{isCollapsed&&<p className="muted exercise-collapse-summary">{allDone&&<span className="exercise-done-badge" aria-hidden="true">✓</span>}{plannedSets} set{plannedSets===1?'':'s'} · {doneSets} logged{allDone?' · complete':''}{inSuperset?' · superset':''}</p>}{!isCollapsed&&renderExerciseLogContext(ex,exType,progression,histRows,displayWorkout,catItem)}</div></div><div className="exercise-head-actions"><button type="button" className="btn small secondary exercise-collapse-btn" onClick={()=>setCollapsedExercises((prev:any)=>({...prev,[ex.id]:!prev[ex.id]}))} aria-expanded={!isCollapsed}>{isCollapsed?'Expand':'Collapse'}</button>{!isCollapsed&&showGuide&&guidePayload&&<button type="button" className="btn small secondary" onClick={()=>setExerciseGuide(guidePayload)}>{guidePayload.hasVideo?'Watch form':'Form guide'}</button>}{!isCollapsed&&canEdit()&&<div className="actions"><button className="btn small secondary" title="Search catalog and replace this exercise" onClick={()=>openReplaceExercisePanel(ex)}>Change</button>{inSuperset&&<><button className="btn small secondary" title="Move up in superset" onClick={()=>moveExercise(ex,-1)}>↑</button><button className="btn small secondary" title="Move down in superset" onClick={()=>moveExercise(ex,1)}>↓</button><button className="btn small secondary" title="Remove from superset" onClick={()=>removeFromSuperset(ex)}>Out</button></>}{!inSuperset&&<><button className="btn small secondary" title="Move up" onClick={()=>moveExercise(ex,-1)}>↑</button><button className="btn small secondary" title="Move down" onClick={()=>moveExercise(ex,1)}>↓</button></>}<button className="btn small secondary" onClick={()=>addSet(ex)}>+ Set</button><button className="btn small red" onClick={()=>removeExercise(ex)}>Remove</button></div>}</div></div>
-        {!isCollapsed&&<WorkoutSetLogger section={exerciseSection(ex)} exType={exType} sets={sortedSets} logs={logs} prevBySetId={prevBySetId} showPreviousSets={showPreviousSets} weightUnit={weightUnit} distanceUnit={logDistanceUnit} onDistanceUnitChange={setLogDistanceUnit} canEdit={canEdit()} canLog={canLog()} onEditSet={editSet} onRemoveSet={removeSet} onSaveField={(sid,field,value,opts)=>saveLog(sid,field,value,opts)} onDuplicateSet={duplicateSetLog} registerInputRef={el=>{if(el&&!refs.current.includes(el))refs.current.push(el)}} onInputKeyDown={next}/>}
+        {!isCollapsed&&<WorkoutSetLogger section={exerciseSection(ex)} exType={exType} sets={sortedSets} logs={logs} prevBySetId={prevBySetId} showPreviousSets={showPreviousSets} weightUnit={weightUnit} distanceUnit={logDistanceUnit} onDistanceUnitChange={setLogDistanceUnit} canEdit={canEdit()} canLog={canLog()} onEditSet={editSet} onRemoveSet={removeSet} onSaveField={(sid,field,value,opts)=>saveLog(sid,field,value,opts)} onDuplicateSet={duplicateSetLog} registerInputRef={el=>{if(el&&!refs.current.includes(el))refs.current.push(el)}} onInputKeyDown={next} onFocusNextInput={focusNextInput}/>}
       </div>;};
  const workoutExerciseSections=<>
   {displayWorkout&&<div className="card training-workout-panel"><div className="topline" style={{justifyContent:'space-between'}}><h2>{displayWorkout.day_label} · {displayWorkout.workout_type}</h2><div className="actions"><button type="button" className="btn small secondary" onClick={()=>{const ids=(displayWorkout.st_exercises||[]).map((e:any)=>e.id);setCollapsedExercises((prev:any)=>{const next={...prev};ids.forEach((id:string)=>next[id]=false);return next;});}}>Expand all</button><button type="button" className="btn small secondary" onClick={()=>{const ids=(displayWorkout.st_exercises||[]).map((e:any)=>e.id);setCollapsedExercises((prev:any)=>{const next={...prev};ids.forEach((id:string)=>next[id]=true);return next;});}}>Collapse all</button><span className="muted">{workoutExerciseCount(displayWorkout)} exercises</span></div></div></div>}
@@ -2096,7 +2163,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
  </AppHeader>
  <div className="app-shell" key={session?.user?.id||'signed-out'}>
  <main className="main page-main">
-  {appNav==='Dashboard'&&<section className="dashboard"><div className="dash-hero"><h1>{greeting}, {displayName||'there'}</h1><p className="muted">Your wellness dashboard for {formatDisplayDate(today())}.</p></div><div className="dash-grid"><div className="dash-card dash-featured"><div className="dash-card-head"><h2>Today&apos;s Workout</h2><span className="badge">{todayDayLabel}{todayWorkout&&todayWorkoutStatus!=='none'?` · ${statusLabel(todayWorkoutStatus)}`:''}</span></div>{todayWorkout?<><p className="dash-title">{todayWorkout.day_label} · {todayWorkout.workout_type}</p><p className="muted">Week {calendarWeek} · {workoutExerciseCount(todayWorkout)} exercises planned{todayWorkoutStatus==='in_progress'?' · workout in progress':todayWorkoutStatus==='completed'?' · completed today':''}</p><div className="actions" style={{marginTop:10}}><button className={`btn ${todayWorkoutStatus==='completed'?'secondary':'green'}`} onClick={()=>{setActiveWorkout(todayWorkout.id);setWeek(calendarWeek);setLogDate(today());setTrainingSubNav('personal');setAppNav('Training');}}>{todayWorkoutBtnLabel}</button></div></>:program?<><p className="muted">No workout scheduled for {todayDayLabel} this week.</p><button className="btn secondary" onClick={()=>goNav('Training')}>View program</button></>:<><p className="muted">Create a program to see today&apos;s workout.</p><button className="btn green" onClick={()=>{setTrainingSubNav('setup');setShowProgramSetup(true);setAppNav('Training');}}>Set up program</button></>}</div>{teams.length>0&&activeTeam&&<div className="dash-card dash-accent"><div className="dash-card-head"><h2>Group Compliance</h2><span className="badge">{teamCompliancePct}%</span></div><p className="dash-title">{activeTeam.name}</p><div className="dash-metrics"><div><b>{teamActiveCount}/{members.length||0}</b><span className="muted">Active this week</span></div><div><b>{teamTotalSets}</b><span className="muted">Group sets</span></div></div><button className="btn secondary" style={{marginTop:10}} onClick={()=>goNav('Groups')}>View group</button></div>}<div className="dash-card"><div className="dash-card-head"><h2>Weekly Progress</h2><span className="badge">{weeklyWorkoutDays} days</span></div><div className="dash-metrics"><div><b>{weeklySetCount}</b><span className="muted">Sets this week</span></div><div><b>{todaySetCount}</b><span className="muted">Sets today</span></div></div><button className="btn secondary" style={{marginTop:10}} onClick={()=>goNav('Progress')}>View history</button></div><div className="dash-card"><div className="dash-card-head"><h2>Nutrition</h2><span className="badge">{nutritionEntryCount?`${nutritionCalPct}% cal`:'Today'}</span></div>{nutritionEntryCount>0?<><p className="dash-title">{formatMacro(nutritionTotals.calories)} / {formatMacro(nutritionGoals.calories)} cal</p><div className="dash-metrics"><div><b>{formatMacro(nutritionTotals.protein_g)}g</b><span className="muted">Protein</span></div><div><b>{formatMacro(nutritionTotals.carbs_g)}g</b><span className="muted">Carbs</span></div><div><b>{formatMacro(nutritionTotals.fat_g)}g</b><span className="muted">Fat</span></div><div><b>{nutritionEntryCount}</b><span className="muted">Items logged</span></div></div></>:<><p className="muted">Log meals to track daily macros.</p><div className="dash-placeholder"><span>Calories —</span><span>Protein —</span><span>Carbs —</span><span>Fats —</span></div></>}<button className="btn secondary" style={{marginTop:10}} onClick={()=>goNav('Nutrition')}>{nutritionEntryCount?'View log':'Log food'}</button></div><div className="dash-card dash-accent"><div className="dash-card-head"><h2>AI Coach Insight</h2><span className="badge">Preview</span></div><p className="muted">Personalized coaching based on your training, nutrition, and recovery is coming soon.</p><p className="dash-insight">&ldquo;Stay consistent this week. Log today&apos;s sets to build your progress baseline.&rdquo;</p></div></div></section>}
+  {appNav==='Dashboard'&&<section className="dashboard"><div className="dash-hero"><h1>{greeting}, {displayName||'there'}</h1><p className="muted">Your wellness dashboard for {formatDisplayDate(today())}.</p></div><div className="dash-grid"><div className="dash-card dash-featured"><div className="dash-card-head"><h2>Today&apos;s Workout</h2><span className="badge">{todayDayLabel}{todayWorkout&&todayWorkoutStatus!=='none'?` · ${statusLabel(todayWorkoutStatus)}`:''}</span></div>{todayWorkout?<><p className="dash-title">{todayWorkout.day_label} · {todayWorkout.workout_type}</p><p className="muted">Week {calendarWeek} · {workoutExerciseCount(todayWorkout)} exercises planned{todayWorkoutStatus==='in_progress'?' · workout in progress':todayWorkoutStatus==='completed'?' · completed today':''}</p><div className="actions" style={{marginTop:10}}><button className={`btn ${todayWorkoutStatus==='completed'?'secondary':'green'}`} onClick={openDashboardWorkout}>{todayWorkoutBtnLabel}</button></div></>:dashProgramForToday?<><p className="muted">No workout scheduled for {todayDayLabel} this week.</p><button className="btn secondary" onClick={()=>goNav('Training')}>View program</button></>:<><p className="muted">Create a program to see today&apos;s workout.</p><button className="btn green" onClick={()=>{setTrainingSubNav('setup');setShowProgramSetup(true);setAppNav('Training');}}>Set up program</button></>}</div>{teams.length>0&&activeTeam&&<div className="dash-card dash-accent"><div className="dash-card-head"><h2>Group Compliance</h2><span className="badge">{teamCompliancePct}%</span></div><p className="dash-title">{activeTeam.name}</p><div className="dash-metrics"><div><b>{teamActiveCount}/{members.length||0}</b><span className="muted">Active this week</span></div><div><b>{teamTotalSets}</b><span className="muted">Group sets</span></div></div><button className="btn secondary" style={{marginTop:10}} onClick={()=>goNav('Groups')}>View group</button></div>}<div className="dash-card"><div className="dash-card-head"><h2>Weekly Progress</h2><span className="badge">{weeklyWorkoutDays} days</span></div><div className="dash-metrics"><div><b>{weeklySetCount}</b><span className="muted">Sets this week</span></div><div><b>{todaySetCount}</b><span className="muted">Sets today</span></div></div><button className="btn secondary" style={{marginTop:10}} onClick={()=>goNav('Progress')}>View history</button></div><div className="dash-card"><div className="dash-card-head"><h2>Nutrition</h2><span className="badge">{nutritionEntryCount?`${nutritionCalPct}% cal`:'Today'}</span></div>{nutritionEntryCount>0?<><p className="dash-title">{formatMacro(nutritionTotals.calories)} / {formatMacro(nutritionGoals.calories)} cal</p><div className="dash-metrics"><div><b>{formatMacro(nutritionTotals.protein_g)}g</b><span className="muted">Protein</span></div><div><b>{formatMacro(nutritionTotals.carbs_g)}g</b><span className="muted">Carbs</span></div><div><b>{formatMacro(nutritionTotals.fat_g)}g</b><span className="muted">Fat</span></div><div><b>{nutritionEntryCount}</b><span className="muted">Items logged</span></div></div></>:<><p className="muted">Log meals to track daily macros.</p><div className="dash-placeholder"><span>Calories —</span><span>Protein —</span><span>Carbs —</span><span>Fats —</span></div></>}<button className="btn secondary" style={{marginTop:10}} onClick={()=>goNav('Nutrition')}>{nutritionEntryCount?'View log':'Log food'}</button></div><div className="dash-card dash-accent"><div className="dash-card-head"><h2>AI Coach Insight</h2><span className="badge">Preview</span></div><p className="muted">Personalized coaching based on your training, nutrition, and recovery is coming soon.</p><p className="dash-insight">&ldquo;Stay consistent this week. Log today&apos;s sets to build your progress baseline.&rdquo;</p></div></div></section>}
   {appNav==='Nutrition'&&session?.user&&<NutritionTracker userId={session.user.id} onDateChange={()=>loadDashboardTodayNutrition()} onDataChange={()=>loadDashboardTodayNutrition()}/>}
   {appNav==='AI Coach'&&<section><div className="card dash-accent"><h2>AI Coach</h2><p className="muted">Your BuildIQ Health wellness coach will analyze workouts, nutrition, and recovery to give safe, practical guidance.</p><p className="dash-insight">Coming soon: readiness check-ins, workout adjustments, and weekly coaching summaries.</p></div></section>}
   {appNav==='Progress'&&<section><div className="card"><div className="topline" style={{justifyContent:'space-between',gap:8,flexWrap:'wrap'}}><h2>Progress</h2><div className="actions" style={{flexWrap:'wrap'}}><button className="btn small green" onClick={restoreLoggedHistoryToProgram} disabled={historyRestoreBusy}>{historyRestoreBusy?'Restoring…':'Restore history'}</button><button className="btn small secondary" onClick={loadProgressLogs}>Refresh</button></div></div><p className="muted">Your personal lift history — weight, reps, and RPE from Training. This is different from Groups → Team status (weekly group activity). New logs appear here as you complete sets.</p></div><ProgressInsights logs={progressLogs} weightUnit={progressWeightUnit}/><div className="card"><h2>Workout history</h2><p className="muted">Logged sets grouped by training day (completed or with weight/reps saved).</p></div>{progressDays.length===0&&<div className="card"><p className="muted">No logged sets yet. Open Training, enter weight/reps, and mark sets complete — then refresh here. Groups → Team status only shows weekly group activity, not this history.</p></div>}{progressDays.map((day:any)=><div className="card" key={day.date}><h3>{formatDisplayDate(day.date)}{day.label?` · ${day.label}`:''}{day.type?` · ${day.type}`:''}</h3>{Object.values(day.rows.reduce((acc:any,row:any)=>{const name=logExerciseName(row);if(!acc[name]) acc[name]=[]; acc[name].push(row);return acc;},{})).map((rows:any)=>{const label=logExerciseName(rows[0]);const exType=(rows[0].snapshot_exercise_type||'strength') as any;return <div key={label} className="history-row"><b>{label}</b><span className="muted">{rows.sort((a:any,b:any)=>(logSetNumber(a)-logSetNumber(b))).map((r:any)=>formatLogSummary(r,exType)).join(' · ')}</span></div>})}</div>)}</section>}

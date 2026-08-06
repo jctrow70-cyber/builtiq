@@ -433,6 +433,11 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .log-chip{min-height:36px;padding:6px 12px;border-radius:10px;border:1px solid #334155;background:#0b1119;color:#cbd5e1;font-size:12px;font-weight:800}
 .log-chip.active{border-color:#7c5cff;background:#1b1634;color:#fff}
 .log-chip:disabled{opacity:.5}
+.log-quick-pick-row{display:flex;flex-wrap:wrap;gap:3px;margin-top:4px;max-width:100%}
+.log-quick-pick-chip{min-height:30px;min-width:28px;padding:3px 7px;border-radius:8px;border:1px solid #334155;background:#0b1119;color:#94a3b8;font-size:10px;font-weight:800;line-height:1.2;touch-action:manipulation}
+.log-quick-pick-chip.active{border-color:#7c5cff;background:#1b1634;color:#fff}
+.log-quick-pick-chip:disabled{opacity:.5}
+.log-field-row-metrics .log-field-card-compact{flex:1 1 96px;width:auto;max-width:148px}
 .log-save-hint{margin:8px 0 0;font-size:11px;text-align:center}
 .nutrition-tracker{display:grid;gap:8px}
 .nutrition-summary-card{padding:10px 12px}

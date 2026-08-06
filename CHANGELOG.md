@@ -6982,3 +6982,107 @@ None identified.
 ```text
 BIQ-0101 Add Drafts view on Groups programs screen
 ```
+
+---
+
+## BIQ-0102 - Fix Final Set Log Failures and Group Dashboard Status
+
+Date: 2026-08-06  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Marking the last set complete no longer races with auto-save. Dashboard **Today's Workout** reflects group-assigned programs (not started / in progress / completed).
+
+### Purpose
+
+Logging the final exercise could fail when Done was tapped before debounced weight/reps saves finished — two upserts collided and one overwrote the other. Dashboard only looked at the personal `program` state, so group trainees saw no workout or wrong status.
+
+### Changes
+
+- Serialize set-log upserts per planned set (queue waits for prior save)
+- **Done** checkbox flushes pending field saves before marking complete
+- Dashboard resolves the user's effective program (group assignment or personal plan)
+- Start/Continue opens Training in **Group** mode when on a team program
+
+### Files Changed
+
+- `app/page.tsx`
+- `app/components/WorkoutSetLogger.tsx`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Log weight/reps on the last set and tap **Done** quickly — should save without error
+2. Complete all sets on a group program workout — dashboard shows **Completed**
+3. Start a group workout, log partial sets — dashboard shows **In progress**
+4. Group member with team plan — dashboard shows today's workout and **Start Training**
+5. Personal-only user — dashboard unchanged
+
+### Known Issues
+
+None identified.
+
+### Recommended Commit Message
+
+```text
+BIQ-0102 Fix final set log races and group dashboard workout status
+```
+
+---
+
+## BIQ-0103 - Quick-Pick Weight and Reps for Faster Logging
+
+Date: 2026-08-06  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Weight and reps fields now show tap-to-fill number chips (based on last session / target values). Enter or **Next** on the mobile keyboard advances to the next field without dismissing the keypad first. Free-text entry still works in every field.
+
+### Purpose
+
+Logging sets on mobile required too many taps: typing every value, and closing the number pad before moving weight → reps or to the next set. Quick picks and keyboard **Next** reduce friction while keeping full manual entry.
+
+### Changes
+
+- Tap chips under **Weight** (near last logged weight ± plate increments) and **Reps** (near last/target reps)
+- Tapping a weight chip saves immediately and focuses **Reps**
+- `enterKeyHint="next"` / **Enter** advances weight → reps → next set
+- `onMouseDown` preventDefault on chips so taps do not blur the active field
+
+### Files Changed
+
+- `app/components/WorkoutSetLogger.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `lib/training/logQuickPick.ts` (new)
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Open a strength exercise with prior session data — weight chips should cluster near last weight
+2. Tap a weight chip — value saves and reps field focuses
+3. Tap a reps chip — value saves without opening keyboard
+4. Type a custom weight/reps value — still saves on blur / debounce
+5. On mobile: enter weight, tap keyboard **Next** — reps field focuses without closing keypad
+6. On mobile: enter reps, tap **Next** / Enter — first field of next set focuses
+7. Bodyweight **Added** and **Assist** fields show weight quick picks
+
+### Known Issues
+
+None identified.
+
+### Recommended Commit Message
+
+```text
+BIQ-0103 Add quick-pick weight and reps for faster mobile logging
+```
