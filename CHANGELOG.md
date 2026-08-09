@@ -7141,3 +7141,56 @@ Changing `weeks` on an existing draft updates the program length field but does 
 ```text
 BIQ-0104 Fix program edit workout jump and add generation date/structure options
 ```
+
+---
+
+## BIQ-0105 - Superset Linking and Catalog Duplicate Merge
+
+Date: 2026-08-09  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Standalone exercises can be joined to supersets, paired with another exercise, or turned into a new superset. Duplicate catalog names (e.g. Pull Up vs Pull-ups) merge in search and history; unused duplicates can be archived without deleting rows that have logged history.
+
+### Purpose
+
+Coaches need to reorganize generated workouts into supersets without re-adding exercises. Duplicate catalog entries split lift history and search results — history should unify by exercise name while preserving any catalog row tied to logged sets.
+
+### Changes
+
+- **Superset controls** on each standalone exercise: Join superset, Pair with…, New superset (+ add from catalog)
+- **History merge** via normalized catalog name keys (Pull Up / Pull-ups / Pull Ups share history)
+- **Search dedupe** uses stronger name normalization
+- **Settings → Merge duplicate exercises** (catalog admin): archives unused duplicates, remaps program references; skips any catalog id with logged history
+
+### Files Changed
+
+- `app/page.tsx`
+- `app/globals.css`
+- `app/api/catalog/dedupe/route.ts` (new)
+- `lib/training/catalogDedupe.ts` (new)
+- `lib/training/catalogSources.ts`
+- `lib/training/aiProgramPlan.ts`
+
+### Database Changes
+
+None (uses existing `is_archived` on `st_exercise_catalog`).
+
+### Testing Steps
+
+1. Edit a workout — use **Join superset**, **Pair with…**, or **New superset** on a standalone exercise
+2. Log sets under “Pull Ups” and “Pull-up” variants — **Last session** should show combined history
+3. Exercise search should show one Pull Up entry (guided library preferred)
+4. Catalog admin: Settings → **Merge duplicate exercises** — confirm unused dupes archived; dupes with logs remain
+
+### Known Issues
+
+None identified.
+
+### Recommended Commit Message
+
+```text
+BIQ-0105 Add superset linking and safe catalog duplicate merge
+```

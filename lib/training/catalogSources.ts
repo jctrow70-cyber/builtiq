@@ -58,11 +58,25 @@ export const CATALOG_SOURCE_PREFERENCE: Record<CatalogSourceId, number> = {
   free_exercise_db: 3,
 };
 
-export function normalizeCatalogNameKey(name: string): string {
-  return String(name || '')
+export function normalizeCatalogMatchKey(name: string): string {
+  let s = String(name || '')
     .trim()
     .toLowerCase()
-    .replace(/\s+/g, ' ');
+    .replace(/[''´`]/g, '')
+    .replace(/[-_/.,]/g, ' ')
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  s = s
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => (w.length > 2 && w.endsWith('s') ? w.slice(0, -1) : w))
+    .join(' ');
+  return s;
+}
+
+export function normalizeCatalogNameKey(name: string): string {
+  return normalizeCatalogMatchKey(name) || String(name || '').trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
 export function catalogItemPreferenceScore(item: any): number {

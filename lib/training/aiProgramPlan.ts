@@ -6,6 +6,7 @@ import { filterCatalogByEquipment, hasEquipmentFilter, normalizeEquipmentList } 
 import { mondayOfWeek, todayYmd } from './programCalendar';
 import { insertProgramRecord } from './programStatus';
 import { PUSH_FULL_BODY_EMPHASIS, PULL_FULL_BODY_EMPHASIS } from './scheduleSuggestion';
+import { normalizeCatalogNameKey, catalogItemPreferenceScore } from './catalogSources';
 
 export type AiExercise = {
   name: string;
@@ -869,6 +870,22 @@ export function matchExerciseToCatalog(name: string, catalog: any[], catMap: Rec
   const lower = String(name || '').toLowerCase().trim();
   if (!lower) return null;
   if (catMap[lower]) return catMap[lower];
+
+  const matchKey = normalizeCatalogNameKey(name);
+  if (matchKey) {
+    let best: any = null;
+    let bestScore = 0;
+    for (const item of catalog || []) {
+      if (item?.is_archived || isUserCustomExercise(item)) continue;
+      if (normalizeCatalogNameKey(item.name) !== matchKey) continue;
+      const score = catalogItemPreferenceScore(item);
+      if (!best || score > bestScore) {
+        best = item;
+        bestScore = score;
+      }
+    }
+    if (best) return best;
+  }
 
   const tokens = tokenize(lower);
   let best: any = null;
