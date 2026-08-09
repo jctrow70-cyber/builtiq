@@ -177,27 +177,45 @@ function FieldCard({
 }) {
   const compact = field.size === 'compact';
   const [draft, setDraft] = useState(value);
+  const [overlayOpen, setOverlayOpen] = useState(false);
   const focusedRef = useRef(false);
+  const pickingRef = useRef(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!overlayOpen) return;
+    const close = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOverlayOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [overlayOpen]);
 
   useEffect(() => {
     if (!focusedRef.current) setDraft(value);
   }, [value]);
 
   const placeholder = !draft && prevHint ? prevHint : (field.placeholder || '');
-  const showQuickPicks = !disabled && !field.chipOptions && (quickPickOptions?.length ?? 0) > 0;
+  const overlayOptions = !disabled && !field.chipOptions ? quickPickOptions : undefined;
+  const showOverlay = !!overlayOptions?.length && overlayOpen;
 
   const handleQuickPick = (pick: string) => {
     setDraft(pick);
     onChangeValue?.(pick);
     onQuickPick?.(pick);
+    setOverlayOpen(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
+      setOverlayOpen(false);
       onEnterAdvance?.();
       return;
+    }
+    if (e.key === 'Escape') {
+      setOverlayOpen(false);
     }
     onKeyDown?.(e);
   };
@@ -228,48 +246,64 @@ function FieldCard({
           ))}
         </div>
       ) : (
-        <>
-          <div className="log-input-wrap">
-            <input
-              ref={setInputRef}
-              className={`log-input-card${compact ? ' log-input-compact' : ''}${prevHint && !draft ? ' log-input-has-prev' : ''}`}
-              type="text"
-              inputMode={(field.inputMode as 'decimal' | 'numeric' | 'text') || 'text'}
-              enterKeyHint={enterKeyHint || (field.inputMode === 'numeric' ? 'next' : 'done')}
-              autoComplete="off"
-              disabled={disabled}
-              value={draft}
-              placeholder={placeholder}
-              onFocus={() => { focusedRef.current = true; }}
-              onChange={(e) => {
-                setDraft(e.target.value);
-                onChangeValue?.(e.target.value);
-              }}
-              onBlur={(e) => {
-                focusedRef.current = false;
+        <div className="log-input-wrap" ref={wrapRef}>
+          <input
+            ref={setInputRef}
+            className={`log-input-card${compact ? ' log-input-compact' : ''}${prevHint && !draft ? ' log-input-has-prev' : ''}${showOverlay ? ' log-input-overlay-open' : ''}`}
+            type="text"
+            inputMode={(field.inputMode as 'decimal' | 'numeric' | 'text') || 'text'}
+            enterKeyHint={enterKeyHint || (field.inputMode === 'numeric' ? 'next' : 'done')}
+            autoComplete="off"
+            disabled={disabled}
+            value={draft}
+            placeholder={placeholder}
+            onFocus={() => {
+              focusedRef.current = true;
+              if (overlayOptions?.length) setOverlayOpen(true);
+            }}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              onChangeValue?.(e.target.value);
+            }}
+            onBlur={(e) => {
+              focusedRef.current = false;
+              setTimeout(() => {
+                if (pickingRef.current) {
+                  pickingRef.current = false;
+                  return;
+                }
+                setOverlayOpen(false);
                 onBlur(e.target.value);
-              }}
-              onKeyDown={handleKeyDown}
-            />
-            {unitLabel && <span className="log-input-unit">{unitLabel}</span>}
-          </div>
-          {showQuickPicks && (
-            <div className="log-quick-pick-row" role="group" aria-label={`Quick ${field.label}`}>
-              {quickPickOptions!.map((opt) => (
-                <button
-                  key={opt}
-                  type="button"
-                  className={`log-quick-pick-chip${draft === opt ? ' active' : ''}`}
-                  disabled={disabled}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => handleQuickPick(opt)}
-                >
-                  {opt}
-                </button>
-              ))}
+              }, 120);
+            }}
+            onKeyDown={handleKeyDown}
+          />
+          {unitLabel && <span className="log-input-unit">{unitLabel}</span>}
+          {showOverlay && (
+            <div className="log-value-overlay" role="listbox" aria-label={`${field.label} quick values`}>
+              <span className="log-value-overlay-label">{prevHint ? 'Near last' : 'Quick pick'}</span>
+              <div className="log-value-overlay-grid">
+                {overlayOptions!.map((opt) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    role="option"
+                    aria-selected={draft === opt}
+                    className={`log-value-overlay-btn${draft === opt ? ' active' : ''}`}
+                    disabled={disabled}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      pickingRef.current = true;
+                    }}
+                    onClick={() => handleQuickPick(opt)}
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );
@@ -622,7 +656,7 @@ export default function WorkoutSetLogger({
         ))}
       </div>
 
-      {canLog && sets.length > 0 && <p className="muted log-save-hint">Values save automatically as you type.</p>}
+      {canLog && sets.length > 0 && <p className="muted log-save-hint">Tap weight or reps for quick values near your last session. Type any value manually.</p>}
     </div>
   );
 }

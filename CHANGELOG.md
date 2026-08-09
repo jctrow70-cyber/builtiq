@@ -7194,3 +7194,54 @@ None identified.
 ```text
 BIQ-0105 Add superset linking and safe catalog duplicate merge
 ```
+
+---
+
+## BIQ-0106 - Focus Overlay for Weight and Reps Logging
+
+Date: 2026-08-09  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Replaced always-visible quick-pick chips with a small overlay that appears when you tap/focus weight or reps. Shows up to five values near last logged (or target reps).
+
+### Purpose
+
+Inline chips added clutter; users wanted a cleaner field that reveals nearby numbers only when logging.
+
+### Changes
+
+- Tap **Weight** or **Reps** → compact overlay with values near last session
+- Overlay dismisses on pick, outside tap, Escape, or Enter
+- Free-text entry unchanged; keyboard **Next** still advances fields
+- Weight/reps suggestions prioritize last logged value over current draft
+
+### Files Changed
+
+- `app/components/WorkoutSetLogger.tsx`
+- `app/globals.css`
+- `lib/training/logQuickPick.ts`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Open a logged exercise — set rows should not show chip rows under fields
+2. Tap **Weight** — overlay appears with values near last weight
+3. Tap a value — saves and moves to reps (weight field)
+4. Tap **Reps** — overlay with values near last reps
+5. Type a custom value — still works; overlay closes on blur
+
+### Known Issues
+
+None identified.
+
+### Recommended Commit Message
+
+```text
+BIQ-0106 Replace inline log chips with focus overlay for weight and reps
+```

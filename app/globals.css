@@ -423,11 +423,17 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .log-input-wrap{position:relative;display:flex;align-items:stretch}
 .log-input-card{width:100%;min-height:44px;padding:10px 36px 10px 12px;border-radius:12px;border:1px solid #3b4a63;background:#0a1018;color:#f8fafc;font-size:16px;font-weight:700;transition:border-color .15s,box-shadow .15s}
 .log-input-compact{min-height:40px;padding:8px 32px 8px 10px;font-size:16px;border-radius:10px}
-.log-input-card:focus{border-color:#7c5cff;outline:none;box-shadow:0 0 0 3px rgba(124,92,255,.2)}
+.log-input-card:focus,.log-input-overlay-open{border-color:#7c5cff;outline:none;box-shadow:0 0 0 3px rgba(124,92,255,.2)}
 .log-input-card:disabled{opacity:.55}
 .log-input-card::placeholder{color:#64748b;opacity:.72;font-weight:600}
 .log-input-has-prev::placeholder{color:#94a3b8;opacity:.55;font-weight:700}
-.log-input-unit{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:800;color:#64748b;pointer-events:none}
+.log-input-unit{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:800;color:#64748b;pointer-events:none;z-index:1}
+.log-value-overlay{position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:30;padding:6px;border-radius:12px;border:1px solid #475569;background:#0f172a;box-shadow:0 8px 24px rgba(0,0,0,.45)}
+.log-value-overlay-label{display:block;font-size:9px;font-weight:800;color:#64748b;text-transform:uppercase;letter-spacing:.04em;margin:0 2px 4px}
+.log-value-overlay-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+.log-value-overlay-btn{min-height:36px;padding:4px 2px;border-radius:8px;border:1px solid #334155;background:#0b1119;color:#e2e8f0;font-size:13px;font-weight:800;touch-action:manipulation}
+.log-value-overlay-btn.active{border-color:#7c5cff;background:#1b1634;color:#fff}
+.log-value-overlay-btn:disabled{opacity:.5}
 .log-dup-btn{min-height:40px;flex-shrink:0;white-space:nowrap;font-size:11px;padding:6px 10px}
 .log-chip-row{display:flex;flex-wrap:wrap;gap:5px}
 .log-chip{min-height:36px;padding:6px 12px;border-radius:10px;border:1px solid #334155;background:#0b1119;color:#cbd5e1;font-size:12px;font-weight:800}
@@ -435,9 +441,6 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .log-chip:disabled{opacity:.5}
 .superset-join-select{min-height:32px;max-width:132px;font-size:11px;padding:4px 6px;border-radius:8px;border:1px solid #334155;background:#0b1119;color:#cbd5e1}
 .superset-join-select:disabled{opacity:.45}
-.log-quick-pick-chip{min-height:30px;min-width:28px;padding:3px 7px;border-radius:8px;border:1px solid #334155;background:#0b1119;color:#94a3b8;font-size:10px;font-weight:800;line-height:1.2;touch-action:manipulation}
-.log-quick-pick-chip.active{border-color:#7c5cff;background:#1b1634;color:#fff}
-.log-quick-pick-chip:disabled{opacity:.5}
 .log-field-row-metrics .log-field-card-compact{flex:1 1 96px;width:auto;max-width:148px}
 .log-save-hint{margin:8px 0 0;font-size:11px;text-align:center}
 .nutrition-tracker{display:grid;gap:8px}
