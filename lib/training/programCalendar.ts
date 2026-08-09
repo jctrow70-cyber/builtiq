@@ -125,6 +125,12 @@ export function weekRangeLabel(startDate: string, week: number): string {
   return `${formatDisplayDate(a)} – ${formatDisplayDate(b)}`;
 }
 
+/** Last calendar day of the program (Sunday of the final week). */
+export function programEndDate(startDate: string, totalWeeks: number): string {
+  const maxWeek = Math.max(1, Number(totalWeeks) || 1);
+  return weekEndDate(startDate, maxWeek);
+}
+
 /**
  * Calendar date for a program day_label inside a week block.
  * Picks the unique day in [weekStart, weekStart+6] matching Mon/Tue/... label.

@@ -72,6 +72,16 @@ export async function POST(request: Request) {
   const programName = body?.programName ? String(body.programName).trim() : '';
   const defaultProgramName = 'AI Strength Program';
   const includeCooldown = body?.includeCooldown !== false;
+  const startDateRaw = body?.startDate ? String(body.startDate).slice(0, 10) : null;
+  const parseOptionalCount = (v: unknown, min: number, max: number): number | null => {
+    if (v === null || v === undefined || v === '') return null;
+    const n = Number(v);
+    if (!Number.isFinite(n)) return null;
+    return Math.max(min, Math.min(max, Math.round(n)));
+  };
+  const strengthExerciseCount = parseOptionalCount(body?.strengthExerciseCount, 3, 12);
+  const supersetCount = parseOptionalCount(body?.supersetCount, 0, 6);
+  const supersetSize = parseOptionalCount(body?.supersetSize, 2, 3);
 
   if (mode === 'team') {
     if (!teamId) return NextResponse.json({ error: 'teamId required for team programs' }, { status: 400 });
@@ -112,6 +122,10 @@ export async function POST(request: Request) {
     availableEquipment: Array.isArray(body?.availableEquipment)
       ? body.availableEquipment.map(String)
       : normalizeEquipmentList(profile?.available_equipment),
+    startDate: startDateRaw || undefined,
+    strengthExerciseCount,
+    supersetCount,
+    supersetSize,
   };
 
   const aiWeeks = aiGenerationWeeks(weeks);

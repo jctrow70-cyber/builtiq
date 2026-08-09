@@ -49,6 +49,13 @@ export type GenerationConfig = {
   teamId?: string | null;
   includeCooldown?: boolean;
   availableEquipment?: string[];
+  startDate?: string;
+  /** Total strength-section exercises per strength day; null = AI decides. */
+  strengthExerciseCount?: number | null;
+  /** Superset groups per strength day; null = AI decides. */
+  supersetCount?: number | null;
+  /** Exercises per superset (2–3); null = AI decides. */
+  supersetSize?: number | null;
 };
 
 /** OpenAI generates all weeks for short plans; longer plans use week 1 as template. */
@@ -294,6 +301,29 @@ export function buildProgramGenerationPrompt(
     - At least one item targeting hips, thoracic spine/rotation, or shoulders when goals mention throwing, hitting, baseball, or rotational sport.
     - Mobility reps are duration-based ("30 sec", "45 sec each side") — not heavy working sets.`;
 
+  const hasCustomStructure =
+    config.strengthExerciseCount != null || config.supersetCount != null || config.supersetSize != null;
+  const structureRules = hasCustomStructure
+    ? `
+15. WORKOUT STRUCTURE (user-specified — follow exactly on Lower/Upper/Full Body days):
+    ${
+      config.strengthExerciseCount != null
+        ? `- Strength section: exactly ${config.strengthExerciseCount} total exercises (each exercise inside a superset counts toward this total).`
+        : '- Strength exercise count: choose 4–8 based on session length and goals.'
+    }
+    ${
+      config.supersetCount != null
+        ? `- Supersets: exactly ${config.supersetCount} superset group${config.supersetCount === 1 ? '' : 's'}.`
+        : '- Supersets: optional; use when it saves time without sacrificing quality.'
+    }
+    ${
+      config.supersetSize != null
+        ? `- Each superset must pair exactly ${config.supersetSize} exercise${config.supersetSize === 1 ? '' : 's'} (max 3).`
+        : '- Superset size: 2 exercises per group unless a larger group fits better (max 3).'
+    }
+    Standalone exercises fill the rest of the strength section. Do not add extra supersets beyond the target count.`
+    : '';
+
   const sportPresets = `
 Sport-aware mobility reference patterns (adapt to user goals — do not copy blindly):
 | Sport / goal | Warmup emphasis | Cooldown emphasis |
@@ -314,7 +344,7 @@ Rules:
       : 'Balance push/pull on strength days; avoid stacking the same movement pattern on consecutive training days.'
   }
 5. Use realistic set/rep/RPE targets for the user's experience level.
-6. Strength days: warmup 2–4 prep items; strength section 4–8 exercises; prefer compound lifts plus accessories; 2–4 working sets on main lifts. Optional supersets (2 exercises max per superset). Quality over hitting an exact exercise count.
+6. Strength days: warmup 2–4 prep items; strength section 4–8 exercises unless user structure rules override; prefer compound lifts plus accessories; 2–4 working sets on main lifts. Optional supersets (2–3 exercises per group). Quality over arbitrary exercise counts when structure is not specified.
 7. Strongly prefer exercises from the catalog that have form guides (has_form_guide: true — image, video, or instructions).
 8. Frame guidance as general fitness/wellness — not medical advice.
 9. Output ONLY valid JSON matching the schema below.
@@ -322,7 +352,7 @@ Rules:
     hasDayEmphasis
       ? ' When a day includes pull/push emphasis after the dash, exercise selection MUST follow that emphasis (e.g. pull upper = rows, pulldowns, rear delts; pull lower = RDL, hamstrings, glutes; push-focused full body = bench/press/squat only — no rows or hinges).'
       : ''
-  }${equipmentNote}${cardioRules}${mobilityDayRules}${cooldownRules}${warmupMobilityRules}
+  }${equipmentNote}${cardioRules}${mobilityDayRules}${cooldownRules}${warmupMobilityRules}${structureRules}
 ${sportPresets}
 
 JSON schema:
@@ -369,6 +399,9 @@ Generate exactly one workout entry per (week × training day) for all ${config.w
         visibility: config.mode,
         include_cooldown: includeCooldown,
         available_equipment: equipment.length ? equipment : null,
+        strength_exercise_count: config.strengthExerciseCount ?? null,
+        superset_count: config.supersetCount ?? null,
+        superset_size: config.supersetSize ?? null,
       },
       exercise_catalog: catalogRef,
       mobility_catalog: mobilityCatalog,
@@ -993,7 +1026,7 @@ export async function persistAiProgramPlan(
     visibility: config.mode,
     name: config.programName?.trim() || plan.program_name || 'AI Strength Program',
     weeks: config.weeks,
-    start_date: mondayOfWeek(todayYmd()),
+    start_date: mondayOfWeek(config.startDate || todayYmd()),
     focus_muscles: config.focusMuscles?.length ? config.focusMuscles : null,
     generation_prompt: config.prompt.trim(),
     generation_method: 'ai',

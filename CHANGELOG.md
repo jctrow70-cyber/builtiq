@@ -7086,3 +7086,58 @@ None identified.
 ```text
 BIQ-0103 Add quick-pick weight and reps for faster mobile logging
 ```
+
+---
+
+## BIQ-0104 - Program Setup Calendar Fix and Generation Options
+
+Date: 2026-08-09  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Editing an exercise in Program Setup no longer jumps to a different workout day. The generation wizard adds start date, weeks, computed end date, and optional exercise/superset counts (or let AI decide).
+
+### Purpose
+
+After AI generation, changing one exercise triggered a full reload that realigned the calendar to “today” instead of the workout being edited — the active workout ID no longer matched the displayed week, so the UI fell back to the first workout of the week. Users also needed program dates and control over workout density at generation time.
+
+### Changes
+
+- **Bug fix:** In setup/edit mode, `loadPrograms` and `reloadKeepDay` preserve the active workout and sync week + log date from that workout instead of today’s calendar
+- Skip auto calendar sync effects while `draftEditProgramId` is set
+- **Wizard:** Start date, weeks (1–12), estimated end date, workout structure mode (AI decide vs custom counts)
+- **Custom structure:** Exercises per strength day, supersets per day, exercises per superset (2–3) passed to AI prompt
+- **Editing draft:** Editable start date and weeks with computed end date display
+- `programEndDate()` helper in `programCalendar.ts`
+
+### Files Changed
+
+- `app/page.tsx`
+- `app/api/programs/generate/route.ts`
+- `lib/training/aiProgramPlan.ts`
+- `lib/training/programCalendar.ts`
+
+### Database Changes
+
+None (uses existing `st_programs.start_date` and `weeks`).
+
+### Testing Steps
+
+1. Generate a program, open **Edit workouts**, pick Week 2 / a non-today day
+2. Change or replace an exercise — same workout day should stay selected
+3. In wizard step 3, set start date and weeks — end date should update
+4. Choose **Set counts**, generate — strength days should reflect approximate exercise/superset targets
+5. Choose **Let AI decide** — generation should behave as before
+6. While editing a draft, change start date — week tabs should stay aligned to the workout you were editing
+
+### Known Issues
+
+Changing `weeks` on an existing draft updates the program length field but does not auto-add/remove workout rows — use generation for new multi-week plans.
+
+### Recommended Commit Message
+
+```text
+BIQ-0104 Fix program edit workout jump and add generation date/structure options
+```
