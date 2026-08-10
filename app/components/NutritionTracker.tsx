@@ -55,10 +55,19 @@ import {
   type BarcodeLookupResponse,
   type BarcodeLookupResult,
 } from '../../lib/nutrition/barcodeLookup';
+import {
+  buildRecentFoods,
+  QuickAddFood,
+  quickAddMeta,
+  searchQuickAddFoods,
+} from '../../lib/nutrition/recentFoods';
 import { LABEL_OCR_DISCLAIMER } from '../../lib/nutrition/labelOcr';
 import NutritionBarcodeScanner from './NutritionBarcodeScanner';
 import { NutritionBarcodeNotFoundCard, NutritionBarcodeProductCard } from './NutritionBarcodeProduct';
-import { currentCalendarWeekBounds, formatDisplayDate, parseYmd, todayYmd } from '../../lib/training/programCalendar';
+import { currentCalendarWeekBounds, formatDisplayDate, formatYmd, parseYmd, todayYmd } from '../../lib/training/programCalendar';
+
+const RECENT_FOOD_HISTORY_DAYS = 90;
+const RECENT_FOOD_FETCH_LIMIT = 200;
 
 type NutritionTrackerProps = {
   userId: string;
@@ -98,66 +107,92 @@ const emptyFoodDraft = (meal: MealType = 'breakfast'): FoodDraft => ({
   saveToLibrary: false,
 });
 
-type MyFoodsPanelProps = {
-  foodSearch: string;
-  setFoodSearch: (value: string) => void;
-  foods: FoodLibraryItem[];
+type QuickAddFoodsPanelProps = {
+  search: string;
+  setSearch: (value: string) => void;
+  items: QuickAddFood[];
   saving: boolean;
-  onEdit: (food: FoodLibraryItem) => void;
-  onAddToMeal: (food: FoodLibraryItem, meal: MealType) => void;
+  mealType?: MealType;
+  onAdd: (item: QuickAddFood, meal: MealType) => void;
+  onEditLibrary?: (foodId: string) => void;
+  showMealPicker?: boolean;
+  emptyMessage?: string;
 };
 
-function MyFoodsPanel({
-  foodSearch,
-  setFoodSearch,
-  foods,
+function QuickAddFoodsPanel({
+  search,
+  setSearch,
+  items,
   saving,
-  onEdit,
-  onAddToMeal,
-}: MyFoodsPanelProps) {
+  mealType,
+  onAdd,
+  onEditLibrary,
+  showMealPicker = true,
+  emptyMessage,
+}: QuickAddFoodsPanelProps) {
   return (
     <>
       <p className="muted nutrition-add-intro">
-        Quick-add saved foods. Macros are snapshotted when logged so history stays accurate.
+        Search saved foods and items you&apos;ve logged before. Tap to add to today — macros are snapshotted when logged
+        so history stays accurate.
       </p>
       <input
-        value={foodSearch}
-        onChange={(e) => setFoodSearch(e.target.value)}
-        placeholder="Search saved foods"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search my foods and recent logs"
       />
-      {foods.length === 0 ? (
+      {items.length === 0 ? (
         <p className="muted">
-          No saved foods yet. Log a food and check &ldquo;Save to my foods&rdquo; to build your library.
+          {emptyMessage ||
+            (search.trim()
+              ? 'No matching foods. Log something new or save a past entry to My foods.'
+              : 'No saved or recent foods yet. Log a food or check “Save to my foods” when adding.')}
         </p>
       ) : (
         <div className="nutrition-food-grid">
-          {foods.map((food) => (
-            <div key={food.id} className="nutrition-food-chip">
+          {items.map((item) => (
+            <div key={item.key} className="nutrition-food-chip">
               <div>
-                <b>{food.name}</b>
-                <span className="muted">{formatMacroLine(food)}</span>
+                <b>{item.name}</b>
+                <span className="muted">
+                  {quickAddMeta(item)}
+                  {item.source === 'library' ? ' · My foods' : ' · Recent'}
+                </span>
               </div>
               <div className="nutrition-food-chip-actions">
-                <button
-                  type="button"
-                  className="btn small secondary"
-                  onClick={() => onEdit(food)}
-                  disabled={saving}
-                >
-                  Edit
-                </button>
-                {MEAL_TYPES.map((meal) => (
+                {item.source === 'library' && item.food_library_id && onEditLibrary ? (
                   <button
-                    key={meal}
                     type="button"
                     className="btn small secondary"
-                    onClick={() => onAddToMeal(food, meal)}
+                    onClick={() => onEditLibrary(item.food_library_id!)}
                     disabled={saving}
-                    title={`Add to ${MEAL_TYPE_LABELS[meal]}`}
                   >
-                    + {MEAL_TYPE_LABELS[meal]}
+                    Edit
                   </button>
-                ))}
+                ) : null}
+                {showMealPicker ? (
+                  MEAL_TYPES.map((meal) => (
+                    <button
+                      key={meal}
+                      type="button"
+                      className="btn small secondary"
+                      onClick={() => onAdd(item, meal)}
+                      disabled={saving}
+                      title={`Add to ${MEAL_TYPE_LABELS[meal]}`}
+                    >
+                      + {MEAL_TYPE_LABELS[meal]}
+                    </button>
+                  ))
+                ) : (
+                  <button
+                    type="button"
+                    className="btn small green"
+                    onClick={() => onAdd(item, mealType || 'breakfast')}
+                    disabled={saving}
+                  >
+                    Add
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -279,6 +314,7 @@ export default function NutritionTracker({
   const [weekEntries, setWeekEntries] = useState<any[]>([]);
   const [goals, setGoals] = useState<NutritionGoals>({ ...DEFAULT_NUTRITION_GOALS });
   const [savedFoods, setSavedFoods] = useState<FoodLibraryItem[]>([]);
+  const [recentEntryHistory, setRecentEntryHistory] = useState<MealEntry[]>([]);
   const [foodCatalog, setFoodCatalog] = useState<FoodCatalogItem[]>([]);
   const [mealTemplates, setMealTemplates] = useState<MealTemplate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -298,6 +334,7 @@ export default function NutritionTracker({
   const [foodEditDraft, setFoodEditDraft] = useState<LibraryEditDraft | null>(null);
   const [goalsDraft, setGoalsDraft] = useState<NutritionGoals>({ ...DEFAULT_NUTRITION_GOALS });
   const [foodSearch, setFoodSearch] = useState('');
+  const [quickAddSearch, setQuickAddSearch] = useState('');
   const [catalogSearch, setCatalogSearch] = useState('');
   const [pickedCatalogId, setPickedCatalogId] = useState<string | null>(null);
   const [aiDescribe, setAiDescribe] = useState('');
@@ -333,13 +370,17 @@ export default function NutritionTracker({
   const showGoalSuggestionBanner =
     goalSuggestion.canSuggest && (!hasSavedGoals || goalsMatchDefaults(goals));
 
-  const filteredFoods = useMemo(() => {
-    const q = foodSearch.trim().toLowerCase();
-    return (savedFoods || [])
-      .filter((f) => !f.is_archived)
-      .filter((f) => !q || String(f.name || '').toLowerCase().includes(q))
-      .slice(0, 12);
-  }, [savedFoods, foodSearch]);
+  const recentFoods = useMemo(() => buildRecentFoods(recentEntryHistory), [recentEntryHistory]);
+
+  const myFoodsResults = useMemo(
+    () => searchQuickAddFoods(foodSearch, savedFoods, recentFoods),
+    [foodSearch, savedFoods, recentFoods]
+  );
+
+  const addPanelQuickResults = useMemo(
+    () => searchQuickAddFoods(quickAddSearch, savedFoods, recentFoods, 12),
+    [quickAddSearch, savedFoods, recentFoods]
+  );
 
   const catalogMatches = useMemo(
     () => searchFoodCatalog(foodCatalog, catalogSearch, 12),
@@ -384,8 +425,12 @@ export default function NutritionTracker({
     else setDayRefreshing(true);
     setError('');
     const { monday, sunday } = currentCalendarWeekBounds(parseYmd(logDate));
+    const recentStartDate = parseYmd(logDate);
+    recentStartDate.setDate(recentStartDate.getDate() - RECENT_FOOD_HISTORY_DAYS);
+    const recentStart = formatYmd(recentStartDate);
     try {
-      const [entriesRes, weekRes, goalsRes, profileRes, foodsRes, templatesRes, catalogRes] = await Promise.all([
+      const [entriesRes, weekRes, recentRes, goalsRes, profileRes, foodsRes, templatesRes, catalogRes] =
+        await Promise.all([
         supabase
           .from('st_meal_entries')
           .select('*')
@@ -398,6 +443,13 @@ export default function NutritionTracker({
           .eq('user_id', userId)
           .gte('log_date', monday)
           .lte('log_date', sunday),
+        supabase
+          .from('st_meal_entries')
+          .select('*')
+          .eq('user_id', userId)
+          .gte('log_date', recentStart)
+          .order('created_at', { ascending: false })
+          .limit(RECENT_FOOD_FETCH_LIMIT),
         supabase.from('st_nutrition_goals').select('*').eq('user_id', userId).maybeSingle(),
         supabase
           .from('st_profiles')
@@ -426,12 +478,14 @@ export default function NutritionTracker({
 
       if (entriesRes.error) throw entriesRes.error;
       if (weekRes.error) throw weekRes.error;
+      if (recentRes.error) throw recentRes.error;
       if (goalsRes.error) throw goalsRes.error;
       if (profileRes.error) throw profileRes.error;
       if (foodsRes.error) throw foodsRes.error;
 
       setEntries((entriesRes.data || []) as MealEntry[]);
       setWeekEntries(weekRes.data || []);
+      setRecentEntryHistory((recentRes.data || []) as MealEntry[]);
       const nextGoals = goalsFromRow(goalsRes.data);
       setGoals(nextGoals);
       setGoalsDraft(nextGoals);
@@ -527,6 +581,105 @@ export default function NutritionTracker({
     setShowGoals(false);
     notifyParent();
     await loadData();
+  }
+
+  function prependRecentEntries(rows: MealEntry[]) {
+    if (!rows.length) return;
+    setRecentEntryHistory((prev) => [...rows, ...prev].slice(0, RECENT_FOOD_FETCH_LIMIT));
+  }
+
+  async function addQuickAddFood(item: QuickAddFood, meal: MealType, qty = 1) {
+    if (!userId) return;
+    if (item.source === 'library' && item.food_library_id) {
+      const lib = savedFoods.find((food) => food.id === item.food_library_id);
+      if (lib) {
+        await addFoodEntry(lib, qty, meal);
+        return;
+      }
+    }
+
+    const servingQty = Math.max(0.25, parseMacroInput(qty) || 1);
+    const macros = scaleMacros(item, servingQty);
+    setSaving(true);
+    setError('');
+    try {
+      const inserted = await insertMealRows([
+        {
+          user_id: userId,
+          log_date: logDate,
+          meal_type: meal,
+          food_name: item.name,
+          food_library_id: item.food_library_id || null,
+          serving_qty: servingQty,
+          ...macros,
+        },
+      ]);
+      setEntries((prev) => [...prev, ...inserted]);
+      setWeekEntries((prev) => [
+        ...prev,
+        ...inserted.map((row) => ({
+          log_date: row.log_date,
+          calories: row.calories,
+          protein_g: row.protein_g,
+          carbs_g: row.carbs_g,
+          fat_g: row.fat_g,
+        })),
+      ]);
+      prependRecentEntries(inserted);
+      notifyParent();
+    } catch (e: any) {
+      setError(e?.message || 'Could not log food.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveEntryToLibrary(entry: MealEntry) {
+    if (!userId) return;
+    if (entry.food_library_id) return;
+
+    const per = entryToPerServing(entry);
+    if (!per.food_name.trim()) return alert('This entry needs a food name before saving.');
+
+    setSaving(true);
+    setError('');
+    try {
+      const { data: libRow, error: libError } = await supabase
+        .from('st_food_library')
+        .insert({
+          user_id: userId,
+          name: per.food_name,
+          serving_label: per.serving_qty === 1 ? '1 serving' : `${per.serving_qty} servings`,
+          calories: per.calories,
+          protein_g: per.protein_g,
+          carbs_g: per.carbs_g,
+          fat_g: per.fat_g,
+        })
+        .select()
+        .single();
+      if (libError) throw libError;
+
+      const { data: updatedEntry, error: linkError } = await supabase
+        .from('st_meal_entries')
+        .update({ food_library_id: libRow.id })
+        .eq('id', entry.id)
+        .select()
+        .single();
+      if (linkError) throw linkError;
+
+      setSavedFoods((prev) =>
+        [...prev, libRow as FoodLibraryItem].sort((a, b) => a.name.localeCompare(b.name))
+      );
+      if (updatedEntry) {
+        setEntries((prev) => prev.map((row) => (row.id === entry.id ? (updatedEntry as MealEntry) : row)));
+        prependRecentEntries([updatedEntry as MealEntry]);
+      }
+      notifyParent();
+    } catch (e: any) {
+      setError(e?.message || 'Could not save food to My foods.');
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function insertMealRows(rows: any[]) {
@@ -627,6 +780,7 @@ export default function NutritionTracker({
           fat_g: row.fat_g,
         })),
       ]);
+      prependRecentEntries(inserted);
       if (!fromLibrary && !fromCatalog) {
         setAddDraft(emptyFoodDraft(mealType));
         setCatalogSearch('');
@@ -719,6 +873,7 @@ export default function NutritionTracker({
         },
       ]);
       setEntries((prev) => [...prev, ...inserted]);
+      prependRecentEntries(inserted);
       notifyParent();
       await loadData();
     } catch (e: any) {
@@ -962,6 +1117,7 @@ export default function NutritionTracker({
 
   function closeAddFood() {
     setShowAdd(false);
+    setQuickAddSearch('');
     resetAddFoodExtras();
   }
 
@@ -1472,9 +1628,22 @@ export default function NutritionTracker({
               </button>
             </div>
             <p className="muted nutrition-add-intro">
-              Tap <b>Scan Barcode</b> to use your rear camera on iPhone or Android. Fallback options appear if the
-              product is not found.
+              Tap <b>Scan Barcode</b> to use your rear camera on iPhone or Android, or search recent and saved foods below.
             </p>
+
+          <div className="catalog-picker nutrition-quick-add-picker">
+            <h4 className="nutrition-add-section-title">Recent &amp; saved</h4>
+            <QuickAddFoodsPanel
+              search={quickAddSearch}
+              setSearch={setQuickAddSearch}
+              items={addPanelQuickResults}
+              saving={saving}
+              mealType={addDraft.meal_type}
+              onAdd={(item, meal) => addQuickAddFood(item, meal)}
+              showMealPicker={false}
+              emptyMessage="No recent or saved foods yet. Log something below or save a past entry to My foods."
+            />
+          </div>
 
           <div className="catalog-picker nutrition-scan-picker">
             <h4 className="nutrition-add-section-title">Packaged food</h4>
@@ -1743,21 +1912,24 @@ export default function NutritionTracker({
             aria-labelledby="nutrition-my-foods-title"
           >
             <div className="topline" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
-              <h3 id="nutrition-my-foods-title">My foods</h3>
+              <h3 id="nutrition-my-foods-title">My foods &amp; recent</h3>
               <button type="button" className="btn small secondary" onClick={closeMyFoods}>
                 Close
               </button>
             </div>
-            <MyFoodsPanel
-              foodSearch={foodSearch}
-              setFoodSearch={setFoodSearch}
-              foods={filteredFoods}
+            <QuickAddFoodsPanel
+              search={foodSearch}
+              setSearch={setFoodSearch}
+              items={myFoodsResults}
               saving={saving}
-              onEdit={(food) => {
-                closeMyFoods();
-                openEditFood(food);
+              onAdd={(item, meal) => addQuickAddFood(item, meal)}
+              onEditLibrary={(foodId) => {
+                const food = savedFoods.find((row) => row.id === foodId);
+                if (food) {
+                  closeMyFoods();
+                  openEditFood(food);
+                }
               }}
-              onAddToMeal={(food, meal) => addFoodEntry(food, 1, meal)}
             />
           </div>
         </div>
@@ -1810,6 +1982,21 @@ export default function NutritionTracker({
                       <span className="muted">{formatMacroLine(entry)}</span>
                     </div>
                     <div className="nutrition-entry-actions">
+                      {!entry.food_library_id ? (
+                        <button
+                          type="button"
+                          className="btn small secondary"
+                          onClick={() => saveEntryToLibrary(entry)}
+                          disabled={saving}
+                          title="Save to My foods for quick add later"
+                        >
+                          Save
+                        </button>
+                      ) : (
+                        <span className="nutrition-saved-badge muted" title="Saved in My foods">
+                          Saved
+                        </span>
+                      )}
                       <button
                         type="button"
                         className="btn small secondary"

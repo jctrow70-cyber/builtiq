@@ -536,7 +536,10 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .nutrition-scan-picker input[type=file]{margin-top:6px;font-size:13px;max-width:100%}
 .nutrition-add-panel{width:100%;max-width:560px;max-height:90vh;overflow:auto;margin:0}
 .nutrition-my-foods-panel{width:100%;max-width:560px;max-height:90vh;overflow:auto;margin:0}
+.nutrition-quick-add-picker{margin-bottom:10px}
 .nutrition-manual-entry{scroll-margin-top:8px}
+.nutrition-saved-badge{font-size:10px;font-weight:800;align-self:center;padding:0 4px}
+.nutrition-add-intro{margin:0 0 12px;font-size:12px;line-height:1.45}
 .nutrition-add-section-title{margin:0 0 8px;font-size:13px;font-weight:800;color:var(--text)}
 .install-app-banner{position:sticky;top:0;z-index:30;padding:calc(8px + var(--safe-top)) 12px 8px;background:linear-gradient(180deg,#121826,#0b1119);border-bottom:1px solid var(--line)}
 .install-app-banner-inner{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;max-width:980px;margin:0 auto}

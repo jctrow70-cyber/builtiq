@@ -7245,3 +7245,51 @@ None identified.
 ```text
 BIQ-0106 Replace inline log chips with focus overlay for weight and reps
 ```
+
+---
+
+## BIQ-0107 - Nutrition Recent Foods and Save Logged Items to My Foods
+
+Date: 2026-08-10  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Logged meal items can now be saved to **My foods** after the fact. Add food and the **My foods & recent** overlay search both saved foods and your last 90 days of logged items for one-tap reuse on any day.
+
+### Purpose
+
+Users wanted everything they log to be easy to find and add again later, not only items explicitly saved when first logged.
+
+### Changes
+
+- **Save** on each meal entry adds that item to My foods and links the log entry
+- **Recent & saved** search in Add food panel for quick one-tap logging
+- **My foods & recent** overlay combines saved library + deduped recent history
+- Loads last 90 days of meal history for recent food suggestions (no database migration)
+
+### Files Changed
+
+- `lib/nutrition/recentFoods.ts` (new)
+- `app/components/NutritionTracker.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Log a food without “Save to my foods” — it appears under Recent in Add food
+2. Tap **Save** on a past meal entry — item moves to My foods; entry shows **Saved**
+3. Change to another day → Add food → search and add the same item from Recent & saved
+4. Open **My foods & recent** → search and add to any meal
+5. Confirm logged macros still snapshot correctly on the new day
+
+### Recommended Commit Message
+
+```text
+BIQ-0107 Add recent foods search and save logged items to My foods
+```
