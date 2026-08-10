@@ -15,11 +15,6 @@ import {
   type LogFieldUI,
 } from '../../lib/training/logFieldUI';
 import { SET_TYPES, setTypeAcronym, setTypeLabel, type SetTypeValue } from '../../lib/training/setTypes';
-import {
-  fieldUsesQuickPick,
-  repQuickPickOptions,
-  weightQuickPickOptions,
-} from '../../lib/training/logQuickPick';
 
 type SetRow = {
   id: string;
@@ -153,8 +148,6 @@ function FieldCard({
   onBlur,
   onChangeValue,
   onChipPick,
-  onQuickPick,
-  quickPickOptions,
   enterKeyHint,
   onEnterAdvance,
   registerRef,
@@ -168,8 +161,6 @@ function FieldCard({
   onBlur: (v: string) => void;
   onChangeValue?: (v: string) => void;
   onChipPick?: (v: string) => void;
-  onQuickPick?: (v: string) => void;
-  quickPickOptions?: string[];
   enterKeyHint?: 'next' | 'done' | 'go' | 'search' | 'send';
   onEnterAdvance?: () => void;
   registerRef?: (el: HTMLInputElement | null) => void;
@@ -177,52 +168,21 @@ function FieldCard({
 }) {
   const compact = field.size === 'compact';
   const [draft, setDraft] = useState(value);
-  const [overlayOpen, setOverlayOpen] = useState(false);
   const focusedRef = useRef(false);
-  const pickingRef = useRef(false);
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  const wrapRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!overlayOpen) return;
-    const close = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOverlayOpen(false);
-    };
-    document.addEventListener('mousedown', close);
-    return () => document.removeEventListener('mousedown', close);
-  }, [overlayOpen]);
 
   useEffect(() => {
     if (!focusedRef.current) setDraft(value);
   }, [value]);
 
   const placeholder = !draft && prevHint ? prevHint : (field.placeholder || '');
-  const overlayOptions = !disabled && !field.chipOptions ? quickPickOptions : undefined;
-  const showOverlay = !!overlayOptions?.length && overlayOpen;
-
-  const handleQuickPick = (pick: string) => {
-    setDraft(pick);
-    onChangeValue?.(pick);
-    onQuickPick?.(pick);
-    setOverlayOpen(false);
-  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      setOverlayOpen(false);
       onEnterAdvance?.();
       return;
     }
-    if (e.key === 'Escape') {
-      setOverlayOpen(false);
-    }
     onKeyDown?.(e);
-  };
-
-  const setInputRef = (el: HTMLInputElement | null) => {
-    inputRef.current = el;
-    registerRef?.(el);
   };
 
   return (
@@ -246,10 +206,10 @@ function FieldCard({
           ))}
         </div>
       ) : (
-        <div className="log-input-wrap" ref={wrapRef}>
+        <div className="log-input-wrap">
           <input
-            ref={setInputRef}
-            className={`log-input-card${compact ? ' log-input-compact' : ''}${prevHint && !draft ? ' log-input-has-prev' : ''}${showOverlay ? ' log-input-overlay-open' : ''}`}
+            ref={registerRef}
+            className={`log-input-card${compact ? ' log-input-compact' : ''}${prevHint && !draft ? ' log-input-has-prev' : ''}`}
             type="text"
             inputMode={(field.inputMode as 'decimal' | 'numeric' | 'text') || 'text'}
             enterKeyHint={enterKeyHint || (field.inputMode === 'numeric' ? 'next' : 'done')}
@@ -259,7 +219,6 @@ function FieldCard({
             placeholder={placeholder}
             onFocus={() => {
               focusedRef.current = true;
-              if (overlayOptions?.length) setOverlayOpen(true);
             }}
             onChange={(e) => {
               setDraft(e.target.value);
@@ -267,42 +226,11 @@ function FieldCard({
             }}
             onBlur={(e) => {
               focusedRef.current = false;
-              setTimeout(() => {
-                if (pickingRef.current) {
-                  pickingRef.current = false;
-                  return;
-                }
-                setOverlayOpen(false);
-                onBlur(e.target.value);
-              }, 120);
+              onBlur(e.target.value);
             }}
             onKeyDown={handleKeyDown}
           />
           {unitLabel && <span className="log-input-unit">{unitLabel}</span>}
-          {showOverlay && (
-            <div className="log-value-overlay" role="listbox" aria-label={`${field.label} quick values`}>
-              <span className="log-value-overlay-label">{prevHint ? 'Near last' : 'Quick pick'}</span>
-              <div className="log-value-overlay-grid">
-                {overlayOptions!.map((opt) => (
-                  <button
-                    key={opt}
-                    type="button"
-                    role="option"
-                    aria-selected={draft === opt}
-                    className={`log-value-overlay-btn${draft === opt ? ' active' : ''}`}
-                    disabled={disabled}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      pickingRef.current = true;
-                    }}
-                    onClick={() => handleQuickPick(opt)}
-                  >
-                    {opt}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
     </div>
@@ -388,17 +316,6 @@ function SetLogCard({
     return undefined;
   };
 
-  const quickPickFor = (f: LogFieldUI): string[] | undefined => {
-    const kind = fieldUsesQuickPick(f.key);
-    if (!kind) return undefined;
-    const prevHint = resolvePrevHint(f.key);
-    const current = resolveValue(f.key);
-    if (kind === 'reps') {
-      return repQuickPickOptions(prevHint, set.target_reps);
-    }
-    return weightQuickPickOptions(prevHint, current, weightUnit);
-  };
-
   const primaryFieldKeys = layout.primary.map((f) => f.key);
   const focusField = (key: string) => {
     fieldInputRefs.current[key]?.focus();
@@ -420,7 +337,6 @@ function SetLogCard({
       prevHint={resolvePrevHint(f.key)}
       unitLabel={unitFor(f)}
       disabled={!canLog && f.key !== 'log_notes'}
-      quickPickOptions={quickPickFor(f)}
       enterKeyHint={
         primaryFieldKeys.includes(f.key)
           ? primaryFieldKeys.indexOf(f.key) < primaryFieldKeys.length - 1
@@ -430,11 +346,6 @@ function SetLogCard({
       }
       onBlur={(v) => { flushSaves(); saveVirtual(f.key, v); }}
       onChangeValue={(v) => scheduleSave(`${set.id}:${f.key}`, v, () => saveVirtual(f.key, v))}
-      onQuickPick={(v) => {
-        flushSaves();
-        saveVirtual(f.key, v);
-        if (f.key === 'actual_weight') focusField('actual_reps');
-      }}
       onEnterAdvance={() => advanceFromField(f.key)}
       registerRef={(el) => {
         fieldInputRefs.current[f.key] = el;
@@ -655,8 +566,6 @@ export default function WorkoutSetLogger({
           />
         ))}
       </div>
-
-      {canLog && sets.length > 0 && <p className="muted log-save-hint">Tap weight or reps for quick values near your last session. Type any value manually.</p>}
     </div>
   );
 }

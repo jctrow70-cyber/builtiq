@@ -7296,6 +7296,61 @@ BIQ-0107 Add recent foods search and save logged items to My foods
 
 ---
 
+## BIQ-0109 - Simplify Workout Logging Controls
+
+Date: 2026-08-10  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Streamlined Training exercise cards: weight/reps are free-text again (no quick-pick overlay), removed the last-session / suggested-next context box and Restore logged workouts banner, and tucked Join/Pair/New superset actions under an Edit button.
+
+### Purpose
+
+Reduce clutter while logging so the set inputs stay primary. Superset linking remains available when editing, without crowding every exercise head.
+
+### Changes
+
+- Removed weight/reps quick-pick overlay; inputs are plain free text (previous values still show as placeholders; Copy last remains)
+- Removed per-exercise Last session / View all weeks / Suggested next box
+- Removed Training “Restore logged workouts” banner and Progress “Restore history” button (silent auto-reattach after program reload still runs; Groups restore tools unchanged)
+- Join superset / Pair with / New superset now appear under an Edit → Done toggle on standalone exercises
+
+### Files Changed
+
+- `app/components/WorkoutSetLogger.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `lib/training/logQuickPick.ts` (deleted)
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Open Training → expand a strength exercise — no Last session / Suggested next box under the name
+2. Tap a weight or reps field — no quick-pick chips; type a value and blur/Enter to save
+3. Confirm previous session values still appear as placeholders and **Copy last** still works
+4. With program edit access, tap **Edit** on a standalone exercise — Join superset, Pair with, and New superset appear; tap **Done** to hide
+5. Confirm Restore logged workouts banner no longer shows on Training; Progress tab has Refresh only (no Restore history)
+6. Check mobile width: exercise head actions wrap cleanly with Edit / Change / arrows / + Set / Remove
+
+### Known Issues
+
+- Groups member/team “Restore history” buttons remain for coaches after program redo
+- Exercise session history modal component remains in the repo but is unused in Training UI
+
+### Recommended Commit Message
+
+```text
+BIQ-0109 Simplify workout logging: free-text weight, hide restore banner, tuck supersets under Edit
+```
+
+---
+
 ## BIQ-0108 - Inline Food Edit and Serving Amount + Unit
 
 Date: 2026-08-10  
