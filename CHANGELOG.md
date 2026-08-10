@@ -7293,3 +7293,61 @@ None.
 ```text
 BIQ-0107 Add recent foods search and save logged items to My foods
 ```
+
+---
+
+## BIQ-0108 - Inline Food Edit and Serving Amount + Unit
+
+Date: 2026-08-10  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Editing a logged food now opens inline on the meal row instead of jumping to a form at the top of the page. Logging and editing food includes **Amount** (number) and **Unit** (serving, cup, oz, g, etc.) fields.
+
+### Purpose
+
+Users wanted to edit items where they appear in the meal list, and to log foods with a clear serving size and unit of measure rather than only a generic servings count.
+
+### Changes
+
+- Inline edit form replaces the top-of-page edit card; scroll stays near the item
+- **Amount** + **Unit** fields on add and edit food forms
+- Meal entries store `serving_unit`; entry rows show amount + unit (e.g. `2 cups`)
+- New migration adds `serving_unit` to `st_meal_entries` (default `serving`)
+
+### Files Changed
+
+- `lib/nutrition/servingUnits.ts` (new)
+- `lib/nutrition/macros.ts`
+- `lib/nutrition/recentFoods.ts`
+- `lib/nutrition/aiFoodEstimate.ts`
+- `lib/nutrition/barcodeLookup.ts`
+- `app/components/NutritionTracker.tsx`
+- `app/globals.css`
+- `supabase/migrations/20250810_039_meal_entry_serving_unit.sql` (new)
+- `CHANGELOG.md`
+
+### Database Changes
+
+- `st_meal_entries.serving_unit` text not null default `'serving'`
+
+### Testing Steps
+
+1. Run migration `20250810_039_meal_entry_serving_unit.sql` in Supabase
+2. Log a food with amount `2` and unit `cup` — row shows `· 2 cups`
+3. Tap **Edit** on a meal entry — form opens inline; page does not jump to top
+4. Change amount/unit/macros and save — totals and display update correctly
+5. Copy yesterday / duplicate entry — serving unit preserved
+6. Add food panel manual entry still works with amount + unit on mobile
+
+### Known Issues
+
+- Existing entries without migration applied will fail on save until `serving_unit` column exists
+
+### Recommended Commit Message
+
+```text
+BIQ-0108 Inline food edit and serving amount with unit field
+```

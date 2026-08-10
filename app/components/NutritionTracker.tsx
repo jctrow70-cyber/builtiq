@@ -61,6 +61,12 @@ import {
   quickAddMeta,
   searchQuickAddFoods,
 } from '../../lib/nutrition/recentFoods';
+import {
+  formatServingDisplay,
+  formatServingLabel,
+  normalizeServingUnit,
+  SERVING_UNIT_OPTIONS,
+} from '../../lib/nutrition/servingUnits';
 import { LABEL_OCR_DISCLAIMER } from '../../lib/nutrition/labelOcr';
 import NutritionBarcodeScanner from './NutritionBarcodeScanner';
 import { NutritionBarcodeNotFoundCard, NutritionBarcodeProductCard } from './NutritionBarcodeProduct';
@@ -80,6 +86,7 @@ type FoodDraft = {
   meal_type: MealType;
   food_name: string;
   serving_qty: string;
+  serving_unit: string;
   calories: string;
   protein_g: string;
   carbs_g: string;
@@ -100,6 +107,7 @@ const emptyFoodDraft = (meal: MealType = 'breakfast'): FoodDraft => ({
   meal_type: meal,
   food_name: '',
   serving_qty: '1',
+  serving_unit: 'serving',
   calories: '',
   protein_g: '',
   carbs_g: '',
@@ -213,6 +221,9 @@ function FoodFormFields({
   idPrefix: string;
   showSaveToLibrary?: boolean;
 }) {
+  const unitLabel =
+    SERVING_UNIT_OPTIONS.find((option) => option.value === draft.serving_unit)?.label.toLowerCase() || 'unit';
+
   return (
     <>
       <label htmlFor={`${idPrefix}-meal`}>Meal</label>
@@ -234,9 +245,9 @@ function FoodFormFields({
         onChange={(e) => setDraft({ ...draft, food_name: e.target.value })}
         placeholder="e.g. Chicken breast and rice"
       />
-      <div className="row">
+      <div className="row nutrition-serving-row">
         <div>
-          <label htmlFor={`${idPrefix}-qty`}>Servings</label>
+          <label htmlFor={`${idPrefix}-qty`}>Amount</label>
           <input
             id={`${idPrefix}-qty`}
             type="number"
@@ -247,7 +258,23 @@ function FoodFormFields({
           />
         </div>
         <div>
-          <label htmlFor={`${idPrefix}-cal`}>Calories (per serving)</label>
+          <label htmlFor={`${idPrefix}-unit`}>Unit</label>
+          <select
+            id={`${idPrefix}-unit`}
+            value={draft.serving_unit}
+            onChange={(e) => setDraft({ ...draft, serving_unit: e.target.value })}
+          >
+            {SERVING_UNIT_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div className="row">
+        <div>
+          <label htmlFor={`${idPrefix}-cal`}>Calories (per {unitLabel})</label>
           <input
             id={`${idPrefix}-cal`}
             type="number"
@@ -611,6 +638,7 @@ export default function NutritionTracker({
           food_name: item.name,
           food_library_id: item.food_library_id || null,
           serving_qty: servingQty,
+          serving_unit: 'serving',
           ...macros,
         },
       ]);
@@ -649,7 +677,7 @@ export default function NutritionTracker({
         .insert({
           user_id: userId,
           name: per.food_name,
-          serving_label: per.serving_qty === 1 ? '1 serving' : `${per.serving_qty} servings`,
+          serving_label: formatServingLabel(1, entry.serving_unit),
           calories: per.calories,
           protein_g: per.protein_g,
           carbs_g: per.carbs_g,
@@ -705,6 +733,7 @@ export default function NutritionTracker({
       0.25,
       parseMacroInput(fromCatalog || fromLibrary ? qty : addDraft.serving_qty) || 1
     );
+    const servingUnit = fromCatalog || fromLibrary ? 'serving' : normalizeServingUnit(addDraft.serving_unit);
 
     if (fromCatalog) {
       foodName = foodCatalogLabel(fromCatalog);
@@ -740,7 +769,7 @@ export default function NutritionTracker({
           .insert({
             user_id: userId,
             name: foodName,
-            serving_label: servingQty === 1 ? '1 serving' : `${servingQty} servings`,
+            serving_label: formatServingLabel(1, addDraft.serving_unit),
             calories: parseMacroInput(addDraft.calories),
             protein_g: parseMacroInput(addDraft.protein_g),
             carbs_g: parseMacroInput(addDraft.carbs_g),
@@ -766,6 +795,7 @@ export default function NutritionTracker({
           food_library_id: libraryId,
           food_catalog_id: catalogId,
           serving_qty: servingQty,
+          serving_unit: servingUnit,
           ...macros,
         },
       ]);
@@ -802,6 +832,7 @@ export default function NutritionTracker({
       meal_type: entry.meal_type,
       food_name: per.food_name,
       serving_qty: String(per.serving_qty),
+      serving_unit: normalizeServingUnit(entry.serving_unit),
       calories: String(per.calories),
       protein_g: String(per.protein_g),
       carbs_g: String(per.carbs_g),
@@ -809,6 +840,9 @@ export default function NutritionTracker({
       saveToLibrary: false,
     });
     setShowAdd(false);
+    window.setTimeout(() => {
+      document.getElementById(`nutrition-entry-${entry.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 50);
   }
 
   async function saveEditedEntry() {
@@ -824,6 +858,7 @@ export default function NutritionTracker({
         meal_type: editDraft.meal_type,
         food_name: built.food_name,
         serving_qty: built.serving_qty,
+        serving_unit: built.serving_unit,
         calories: built.calories,
         protein_g: built.protein_g,
         carbs_g: built.carbs_g,
@@ -865,6 +900,7 @@ export default function NutritionTracker({
           food_name: entry.food_name,
           food_library_id: entry.food_library_id || null,
           serving_qty: entry.serving_qty,
+          serving_unit: normalizeServingUnit(entry.serving_unit),
           calories: entry.calories,
           protein_g: entry.protein_g,
           carbs_g: entry.carbs_g,
@@ -907,6 +943,7 @@ export default function NutritionTracker({
         food_name: row.food_name,
         food_library_id: row.food_library_id || null,
         serving_qty: row.serving_qty,
+        serving_unit: normalizeServingUnit(row.serving_unit),
         calories: row.calories,
         protein_g: row.protein_g,
         carbs_g: row.carbs_g,
@@ -1021,6 +1058,7 @@ export default function NutritionTracker({
         food_name: item.food_name,
         food_library_id: item.food_library_id || null,
         serving_qty: item.serving_qty,
+        serving_unit: 'serving',
         calories: item.calories,
         protein_g: item.protein_g,
         carbs_g: item.carbs_g,
@@ -1053,6 +1091,7 @@ export default function NutritionTracker({
       ...addDraft,
       food_name: foodCatalogLabel(item),
       serving_qty: '1',
+      serving_unit: 'serving',
       calories: String(item.calories),
       protein_g: String(item.protein_g),
       carbs_g: String(item.carbs_g),
@@ -1242,6 +1281,7 @@ export default function NutritionTracker({
           food_name: foodName,
           food_library_id: libraryId,
           serving_qty: qty,
+          serving_unit: 'serving',
           calories: scaled.calories,
           protein_g: scaled.protein_g,
           carbs_g: scaled.carbs_g,
@@ -1382,6 +1422,7 @@ export default function NutritionTracker({
         meal_type: addDraft.meal_type,
         food_name: item.food_name,
         serving_qty: 1,
+        serving_unit: 'serving',
         calories: item.calories,
         protein_g: item.protein_g,
         carbs_g: item.carbs_g,
@@ -1935,27 +1976,6 @@ export default function NutritionTracker({
         </div>
       )}
 
-      {editEntryId && editDraft && (
-        <div className="card nutrition-add-card">
-          <h3>Edit food entry</h3>
-          <FoodFormFields draft={editDraft} setDraft={setEditDraft} idPrefix="edit" />
-          <div className="actions" style={{ marginTop: 10 }}>
-            <button type="button" className="btn green" onClick={saveEditedEntry} disabled={saving}>
-              {saving ? 'Saving...' : 'Save changes'}
-            </button>
-            <button
-              type="button"
-              className="btn secondary"
-              onClick={() => {
-                setEditEntryId(null);
-                setEditDraft(null);
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
 
       {MEAL_TYPES.map((meal) => {
         const mealEntries = grouped[meal];
@@ -1972,58 +1992,98 @@ export default function NutritionTracker({
               <p className="muted">Nothing logged yet.</p>
             ) : (
               <div className="nutrition-entry-list">
-                {mealEntries.map((entry) => (
-                  <div className="nutrition-entry-row" key={entry.id}>
-                    <div className="nutrition-entry-main">
-                      <b>
-                        {entry.food_name}
-                        {entry.serving_qty !== 1 ? ` × ${entry.serving_qty}` : ''}
-                      </b>
-                      <span className="muted">{formatMacroLine(entry)}</span>
-                    </div>
-                    <div className="nutrition-entry-actions">
-                      {!entry.food_library_id ? (
-                        <button
-                          type="button"
-                          className="btn small secondary"
-                          onClick={() => saveEntryToLibrary(entry)}
-                          disabled={saving}
-                          title="Save to My foods for quick add later"
-                        >
-                          Save
-                        </button>
+                {mealEntries.map((entry) => {
+                  const isEditing = editEntryId === entry.id && editDraft;
+                  const servingNote = formatServingDisplay(entry.serving_qty, entry.serving_unit);
+                  return (
+                    <div
+                      className={`nutrition-entry-row${isEditing ? ' nutrition-entry-row--editing' : ''}`}
+                      key={entry.id}
+                      id={`nutrition-entry-${entry.id}`}
+                    >
+                      {isEditing ? (
+                        <div className="nutrition-entry-edit-form">
+                          <FoodFormFields
+                            draft={editDraft}
+                            setDraft={setEditDraft}
+                            idPrefix={`edit-${entry.id}`}
+                          />
+                          <div className="actions nutrition-entry-edit-actions">
+                            <button
+                              type="button"
+                              className="btn green"
+                              onClick={saveEditedEntry}
+                              disabled={saving}
+                            >
+                              {saving ? 'Saving...' : 'Save changes'}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn secondary"
+                              onClick={() => {
+                                setEditEntryId(null);
+                                setEditDraft(null);
+                              }}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
                       ) : (
-                        <span className="nutrition-saved-badge muted" title="Saved in My foods">
-                          Saved
-                        </span>
+                        <>
+                          <div className="nutrition-entry-main">
+                            <b>
+                              {entry.food_name}
+                              {servingNote ? ` · ${servingNote}` : ''}
+                            </b>
+                            <span className="muted">{formatMacroLine(entry)}</span>
+                          </div>
+                          <div className="nutrition-entry-actions">
+                            {!entry.food_library_id ? (
+                              <button
+                                type="button"
+                                className="btn small secondary"
+                                onClick={() => saveEntryToLibrary(entry)}
+                                disabled={saving}
+                                title="Save to My foods for quick add later"
+                              >
+                                Save
+                              </button>
+                            ) : (
+                              <span className="nutrition-saved-badge muted" title="Saved in My foods">
+                                Saved
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              className="btn small secondary"
+                              onClick={() => openEditEntry(entry)}
+                              disabled={saving}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              className="btn small secondary"
+                              onClick={() => duplicateEntry(entry)}
+                              disabled={saving}
+                            >
+                              Copy
+                            </button>
+                            <button
+                              type="button"
+                              className="btn small red"
+                              onClick={() => deleteEntry(entry.id)}
+                              disabled={saving}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </>
                       )}
-                      <button
-                        type="button"
-                        className="btn small secondary"
-                        onClick={() => openEditEntry(entry)}
-                        disabled={saving}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        className="btn small secondary"
-                        onClick={() => duplicateEntry(entry)}
-                        disabled={saving}
-                      >
-                        Copy
-                      </button>
-                      <button
-                        type="button"
-                        className="btn small red"
-                        onClick={() => deleteEntry(entry.id)}
-                        disabled={saving}
-                      >
-                        Remove
-                      </button>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
             <div className="actions" style={{ marginTop: 8 }}>

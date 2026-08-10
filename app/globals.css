@@ -489,6 +489,10 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .nutrition-entry-list{display:grid;gap:8px;margin-top:8px}
 .nutrition-entry-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
 .nutrition-entry-row:first-child{border-top:0;padding-top:0}
+.nutrition-entry-row--editing{display:block;padding:12px;background:#0b1119;border-radius:12px;margin:4px 0}
+.nutrition-entry-edit-form{width:100%}
+.nutrition-entry-edit-actions{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+.nutrition-serving-row{align-items:end}
 .nutrition-entry-main b{display:block;font-size:14px}
 .nutrition-entry-main .muted{display:block;font-size:11px;margin-top:2px}
 .nutrition-entry-actions{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}

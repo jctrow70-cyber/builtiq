@@ -1,4 +1,5 @@
 import { entryToPerServing, FoodLibraryItem, formatMacroLine, MacroTotals, MealEntry, parseMacroInput } from './macros';
+import { formatServingLabel } from './servingUnits';
 
 export type QuickAddFood = {
   key: string;
@@ -23,8 +24,8 @@ function perServingKey(name: string, macros: MacroTotals): string {
   ].join('|');
 }
 
-function servingLabel(qty: number): string {
-  return qty === 1 ? '1 serving' : `${qty} servings`;
+function servingLabel(qty: number, unit?: string | null): string {
+  return formatServingLabel(qty, unit);
 }
 
 export function libraryToQuickAdd(food: FoodLibraryItem): QuickAddFood {
@@ -47,7 +48,7 @@ export function entryToQuickAdd(entry: MealEntry): QuickAddFood {
     key: `recent:${perServingKey(per.food_name, per)}`,
     source: 'recent',
     name: per.food_name,
-    serving_label: servingLabel(per.serving_qty),
+    serving_label: servingLabel(1, entry.serving_unit),
     calories: per.calories,
     protein_g: per.protein_g,
     carbs_g: per.carbs_g,

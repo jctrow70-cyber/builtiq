@@ -20,6 +20,7 @@ export type MealEntry = {
   food_library_id?: string | null;
   food_catalog_id?: string | null;
   serving_qty: number;
+  serving_unit?: string | null;
   calories: number;
   protein_g: number;
   carbs_g: number;
@@ -162,14 +163,16 @@ export function mealEntryFromDraft(
   draft: {
     food_name: string;
     serving_qty: string | number;
+    serving_unit?: string | number | null;
     calories: string | number;
     protein_g: string | number;
     carbs_g: string | number;
     fat_g: string | number;
   },
   mealType: MealType
-): Omit<MealTemplateItem, 'food_library_id'> & { meal_type: MealType } {
+): Omit<MealTemplateItem, 'food_library_id'> & { meal_type: MealType; serving_unit: string } {
   const servingQty = Math.max(0.25, parseMacroInput(draft.serving_qty) || 1);
+  const servingUnit = String(draft.serving_unit || 'serving').trim() || 'serving';
   const macros = scaleMacros(
     {
       calories: parseMacroInput(draft.calories),
@@ -183,6 +186,7 @@ export function mealEntryFromDraft(
     meal_type: mealType,
     food_name: draft.food_name.trim(),
     serving_qty: servingQty,
+    serving_unit: servingUnit,
     ...macros,
   };
 }
