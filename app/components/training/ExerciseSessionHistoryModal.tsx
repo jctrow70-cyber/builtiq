@@ -19,8 +19,8 @@ export default function ExerciseSessionHistoryModal({
   onClose,
 }: ExerciseSessionHistoryModalProps) {
   const subtitle = dayLabel
-    ? `${dayLabel} workouts in this program`
-    : 'Previous logged sessions';
+    ? `${dayLabel} · prior weeks in this plan`
+    : 'Prior weeks in this plan';
 
   return (
     <div className="panel-overlay" onClick={onClose}>
@@ -33,7 +33,7 @@ export default function ExerciseSessionHistoryModal({
       >
         <div className="topline" style={{ justifyContent: 'space-between' }}>
           <div>
-            <h2 id="exercise-history-title">Session history</h2>
+            <h2 id="exercise-history-title">Logged by week</h2>
             <p className="muted exercise-history-subtitle">
               {exerciseName} · {subtitle}
             </p>
@@ -45,7 +45,7 @@ export default function ExerciseSessionHistoryModal({
 
         {sessions.length === 0 ? (
           <p className="muted exercise-history-empty">
-            No prior sessions logged for this exercise yet.
+            No weekly logs for this exercise on this day yet.
           </p>
         ) : (
           <div className="exercise-history-list">

@@ -7296,6 +7296,56 @@ BIQ-0107 Add recent foods search and save logged items to My foods
 
 ---
 
+## BIQ-0110 - Exercise Weekly Log History Button
+
+Date: 2026-08-11  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Added a compact **History** button on each strength exercise card that opens a week-by-week view of what was logged for that exercise in the plan (same day of week across weeks).
+
+### Purpose
+
+Users still need a quick way to review prior weekly loads while logging, without bringing back the old always-visible last-session / suggested-next box.
+
+### Changes
+
+- **History** button on expanded non-mobility exercises (next to Form guide)
+- Opens existing session history modal titled **Logged by week**, grouped by week with set details
+- Includes today’s logged sets plus prior history for the matching workout day
+
+### Files Changed
+
+- `app/page.tsx`
+- `app/components/training/ExerciseSessionHistoryModal.tsx`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Open Training → expand a strength exercise → tap **History**
+2. Confirm modal lists prior weeks (Week N · day · date) with set summaries
+3. Log sets today, reopen History — today’s session appears
+4. Mobility/stretch exercises do not show History
+5. Modal Close and overlay tap dismiss correctly on mobile
+
+### Known Issues
+
+- History is filtered to the same workout day label when available; other-day logs for the same exercise name may not appear
+
+### Recommended Commit Message
+
+```text
+BIQ-0110 Add History button to show weekly logged sets per exercise
+```
+
+---
+
 ## BIQ-0109 - Simplify Workout Logging Controls
 
 Date: 2026-08-10  
