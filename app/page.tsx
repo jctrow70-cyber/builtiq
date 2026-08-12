@@ -256,9 +256,12 @@ export default function Page(){
   if(program&&session?.user&&!viewingMember) loadLogs(program,session.user.id,logDate);
  },[memberWorkoutProgram,memberWorkoutLogDate,program,logDate,viewingMember?.user_id,session?.user?.id]);
  useEffect(()=>{
-  if(viewingMember&&viewingMember.user_id!==session?.user?.id)return;
+  if(viewingMember&&viewingMember.user_id!==session?.user?.id){
+   if(memberWorkoutProgram&&session?.user) loadLiftHistory();
+   return;
+  }
   if(program&&session?.user) loadLiftHistory();
- },[program,logDate,viewingMember?.user_id,session?.user?.id]);
+ },[program,logDate,memberWorkoutProgram,memberWorkoutLogDate,viewingMember?.user_id,session?.user?.id]);
  useEffect(()=>{logsRef.current=logs;},[logs]);
  useEffect(()=>()=>{if(prCelebrationTimerRef.current)clearTimeout(prCelebrationTimerRef.current);},[]);
  useEffect(()=>{
@@ -764,6 +767,8 @@ export default function Page(){
   setMemberDashboard(null);
   setMemberWorkoutProgram(null);
   setMemberWorkoutActiveId('');
+  setMemberWorkoutLogDate(today());
+  setHistory({});
   setViewingMember(member);
   const freshAssignments=await loadMemberAssignments();
   await reloadMemberWorkoutProgram(member,freshAssignments);
@@ -775,6 +780,7 @@ export default function Page(){
   setMemberWorkoutProgram(null);
   setMemberWorkoutActiveId('');
   setLogs({});
+  setHistory({});
   logsRef.current={};
  }
  async function closeMemberView(){clearMemberWorkoutView();}
@@ -1325,12 +1331,13 @@ export default function Page(){
  async function loadLiftHistory(){
   const uid=logUserId();
   if(!uid) return;
+  const cutoff=activeLogDateForLogging();
 
   const { data, error } = await supabase
     .from('st_set_logs')
     .select('*, st_planned_sets(set_type,set_number,st_exercises(name,muscle_group,section,catalog_exercise_id))')
     .eq('user_id', uid)
-    .lt('log_date', logDate)
+    .lt('log_date', cutoff)
     .order('log_date', { ascending:false })
     .order('updated_at', { ascending:false })
     .limit(800);
@@ -1492,7 +1499,10 @@ export default function Page(){
   const aliases=historyAliases(ex.catalog_exercise_id||'',ex.name||'');
   const histRows=aliases.flatMap((ek)=>history[ek]||[]);
   const currentRows=collectCurrentExerciseLogRows(ex,workoutRef,logs,activeLogDateForLogging());
-  const sessions=buildExerciseSessionHistory(mergeExerciseHistoryRows(histRows,currentRows),exType,{dayLabel:workoutRef?.day_label,matchDayLabel:true});
+  const merged=mergeExerciseHistoryRows(histRows,currentRows);
+  let sessions=buildExerciseSessionHistory(merged,exType,{dayLabel:workoutRef?.day_label,matchDayLabel:true});
+  // If same-day filter finds nothing (common after program redo / missing snapshots), show all weeks for this exercise.
+  if(!sessions.length)sessions=buildExerciseSessionHistory(merged,exType,{matchDayLabel:false});
   setExerciseHistoryModal({exerciseName:ex.name||'Exercise',dayLabel:workoutRef?.day_label,sessions});
  }
 
@@ -1974,24 +1984,16 @@ export default function Page(){
  function onMemberWeekChange(nextWeek:number){
   const w=Number(nextWeek)||1;
   if(!memberWorkoutProgram){setMemberWorkoutWeek(w);return;}
-  syncingCalendarRef.current=true;
   setMemberWorkoutWeek(w);
-  const start=resolveProgramStartDate(memberWorkoutProgram);
-  const nextDate=dateForWeekKeepingWeekday(start,w,memberWorkoutLogDate);
-  setMemberWorkoutLogDate(nextDate);
-  const dayLabel=dayLabelFromYmd(nextDate);
+  const current=(memberWorkoutProgram.st_workouts||[]).find((x:any)=>x.id===memberWorkoutActiveId);
+  const dayLabel=current?.day_label||dayLabelFromYmd(memberWorkoutLogDate);
   const match=(memberWorkoutProgram.st_workouts||[]).find((x:any)=>x.week===w&&x.day_label===dayLabel)
     ||(memberWorkoutProgram.st_workouts||[]).filter((x:any)=>x.week===w).sort((a:any,b:any)=>a.day_order-b.day_order)[0];
   if(match)setMemberWorkoutActiveId(match.id);
-  queueMicrotask(()=>{syncingCalendarRef.current=false;});
  }
  function onSelectMemberWorkoutDay(w:any){
+  // Keep logging date independent so coaches can log this day's plan on any calendar date.
   setMemberWorkoutActiveId(w.id);
-  if(!memberWorkoutProgram)return;
-  syncingCalendarRef.current=true;
-  const start=resolveProgramStartDate(memberWorkoutProgram);
-  setMemberWorkoutLogDate(dateForWeekAndDay(start,memberWorkoutWeek,w.day_label));
-  queueMicrotask(()=>{syncingCalendarRef.current=false;});
  }
  async function updateProgramStartDate(ymd:string){
   if(!program||!canEdit()||!ymd)return;

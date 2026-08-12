@@ -1,8 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { formatDisplayDate, parseDisplayDate } from '../../lib/training/programCalendar';
-
 type DateInputProps = {
   value: string;
   onChange: (ymd: string) => void;
@@ -10,40 +7,17 @@ type DateInputProps = {
   id?: string;
 };
 
+/** Native calendar date picker. Value is YYYY-MM-DD. */
 export default function DateInput({ value, onChange, disabled, id }: DateInputProps) {
-  const [text, setText] = useState(() => formatDisplayDate(value));
-
-  useEffect(() => {
-    setText(formatDisplayDate(value));
-  }, [value]);
-
-  function commit(nextText = text) {
-    const parsed = parseDisplayDate(nextText);
-    if (parsed) {
-      onChange(parsed);
-      setText(formatDisplayDate(parsed));
-      return;
-    }
-    setText(formatDisplayDate(value));
-  }
-
   return (
     <input
       id={id}
-      type="text"
-      inputMode="numeric"
-      placeholder="mm/dd/yy"
-      autoComplete="off"
-      value={text}
+      type="date"
+      value={value || ''}
       disabled={disabled}
-      onChange={(e) => setText(e.target.value)}
-      onBlur={() => commit()}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          commit();
-          (e.currentTarget as HTMLInputElement).blur();
-        }
+      onChange={(e) => {
+        const next = e.target.value;
+        if (next) onChange(next);
       }}
     />
   );

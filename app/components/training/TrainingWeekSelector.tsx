@@ -1,8 +1,7 @@
 'use client';
 
-import { useState } from 'react';
 import DateInput from '../DateInput';
-import { resolveProgramStartDate, weekRangeLabel } from '../../../lib/training/programCalendar';
+import { formatDisplayDate, resolveProgramStartDate, weekRangeLabel } from '../../../lib/training/programCalendar';
 
 type TrainingWeekSelectorProps = {
   week: number;
@@ -23,7 +22,6 @@ export default function TrainingWeekSelector({
   onLogDateChange,
   disabled,
 }: TrainingWeekSelectorProps) {
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const total = program?.weeks || weeksFallback || 6;
   const start = program ? resolveProgramStartDate(program) : '';
   const rangeLabel = start ? weekRangeLabel(start, week) : '';
@@ -53,22 +51,13 @@ export default function TrainingWeekSelector({
         </select>
         <span className="training-week-chevron" aria-hidden="true">▾</span>
       </label>
-      {!disabled && (
-        <button
-          type="button"
-          className="training-log-date-toggle"
-          aria-expanded={showDatePicker}
-          onClick={() => setShowDatePicker((v) => !v)}
-        >
-          {showDatePicker ? 'Hide date' : 'Log a different day'}
-        </button>
-      )}
-      {showDatePicker && !disabled && (
-        <div className="training-log-date-picker">
-          <label htmlFor="training-log-date-alt">Logging date</label>
-          <DateInput id="training-log-date-alt" value={logDate} onChange={onLogDateChange} />
+      <div className="training-log-date-picker">
+        <label htmlFor="training-log-date-alt">Logging date</label>
+        <div className="training-log-date-row">
+          <DateInput id="training-log-date-alt" value={logDate} onChange={onLogDateChange} disabled={disabled} />
+          <span className="muted training-log-date-display">{formatDisplayDate(logDate)}</span>
         </div>
-      )}
+      </div>
     </div>
   );
 }

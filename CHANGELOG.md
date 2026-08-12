@@ -7296,6 +7296,62 @@ BIQ-0107 Add recent foods search and save logged items to My foods
 
 ---
 
+## BIQ-0111 - Member Workout History, Placeholders, and Log Date Calendar
+
+Date: 2026-08-12  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Fixed Groups member workout view so prior set history loads for the member (History + dimmed previous weight/reps), and made Logging date a always-visible native calendar picker that stays independent of which workout day is selected.
+
+### Purpose
+
+Coaches reviewing a member’s workout from last week need to see what that member logged, change the logging date to today via a calendar, and keep Monday’s plan selected while logging on another date.
+
+### Changes
+
+- Load lift history for the viewed member (was skipped for non-self member views)
+- History / previous-set placeholders use the member’s logging date as the cutoff
+- Logging date uses a native calendar (`type="date"`) and is always shown under Week
+- Selecting a workout day or week in member view no longer overwrites the logging date
+- Opening a member workout resets logging date to today
+- History falls back to all weeks for the exercise if same-day filter returns empty
+
+### Files Changed
+
+- `app/page.tsx`
+- `app/components/DateInput.tsx`
+- `app/components/training/TrainingWeekSelector.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Groups → open a member workout who logged last week
+2. Expand a strength exercise — weight/reps placeholders should show prior values; **Copy last** available when prior exists
+3. Tap **History** — weekly sessions appear
+4. Under Week, use **Logging date** calendar — change from Monday to today; date updates and logs reload for that date
+5. Switch workout day chips (e.g. Mon → Wed) — logging date stays put
+6. Personal Training logging date also uses the calendar picker
+
+### Known Issues
+
+- If the program was fully regenerated and exercises renamed without catalog IDs, history may still miss some older rows until names/IDs align
+
+### Recommended Commit Message
+
+```text
+BIQ-0111 Fix member workout history/placeholders and calendar log date
+```
+
+---
+
 ## BIQ-0110 - Exercise Weekly Log History Button
 
 Date: 2026-08-11  
@@ -7455,4 +7511,63 @@ Users wanted to edit items where they appear in the meal list, and to log foods 
 
 ```text
 BIQ-0108 Inline food edit and serving amount with unit field
+```
+
+---
+
+## BIQ-0111 - Test and Live Environment Pipeline
+
+Date: 2026-08-11  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Documented and scripted a full test → live workflow: push to `Develop` for a Vercel **Preview** deploy + test Supabase, promote to `main` for **Production** + live Supabase — all on the same Vercel project (`builtiq`).
+
+### Purpose
+
+Enable safe iteration on a dedicated test site without touching live users, using GitHub + Vercel only (no local npm required).
+
+### Changes
+
+- Added `docs/ENVIRONMENTS.md` — one-time Vercel/Supabase setup and daily operator steps
+- Added `buildiq-push-test.cmd` — push `Develop` to trigger test deploy
+- Added `buildiq-promote-live.cmd` — merge `Develop` → `main` with confirmation for live deploy
+- Updated README branch/deployment section and `.env.example` comments
+- Added Decision 027 in DECISIONS.md
+
+### Files Changed
+
+- `docs/ENVIRONMENTS.md` (new)
+- `buildiq-push-test.cmd` (new)
+- `buildiq-promote-live.cmd` (new)
+- `README.md`
+- `.env.example`
+- `DECISIONS.md`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None (operator runs existing migrations on test Supabase during one-time setup).
+
+### Testing Steps
+
+1. Follow `docs/ENVIRONMENTS.md` one-time setup: set **Preview** env vars (test Supabase) and **Production** env vars (live Supabase) on Vercel project `builtiq`
+2. Commit on `Develop`, run `buildiq-push-test.cmd` — confirm a Preview deployment builds
+3. Verify preview URL loads, login works (test Supabase redirect URLs include preview domain)
+4. Run `buildiq-promote-live.cmd`, type `LIVE` — confirm `main` push triggers Production deploy
+5. Confirm live site still uses production Supabase (not test data)
+
+### Known Issues
+
+- Remote test branch is named `Develop` (capital D); scripts handle `develop` as fallback
+- Preview URL is longer than the live domain; bookmark the `Develop` branch preview URL
+- Optional second Vercel project documented for teams wanting a stable test domain
+- SQL migrations must still be applied manually per environment (test first, then live)
+
+### Recommended Commit Message
+
+```text
+BIQ-0111 Add test-to-live deployment pipeline docs and helper scripts
 ```

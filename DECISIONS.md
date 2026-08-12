@@ -710,3 +710,38 @@ Team Training mixed logging and management in one surface. Members need a single
 - `lib/groups/permissions.ts` centralizes role checks
 - BIQ-0043 phased epic; P1 nav, P2 schema (classifications, workout assignments, participation)
 - Documented in BIQ-0043-P1 and BIQ-0043-P2
+
+---
+
+## Decision 027 - Test and Live Deployment Pipeline
+
+Date: 2026-08-11  
+Status: Accepted  
+Category: Development Process
+
+### Decision
+
+Use **one GitHub repository** and **one Vercel project** (`builtiq`) with branch-based promotion:
+
+- **`Develop`** → Vercel **Preview** deployment → test Supabase (via **Preview** environment variables)
+- **`main`** → Vercel **Production** deployment → production Supabase (via **Production** environment variables)
+
+Day-to-day work pushes to `Develop` and is verified on the preview URL before merging to `main` for live users. Database migrations run on test Supabase first, then on live Supabase when code is promoted.
+
+Helper scripts: `buildiq-push-test.cmd`, `buildiq-promote-live.cmd`. Operator guide: `docs/ENVIRONMENTS.md`.
+
+### Reason
+
+The team builds and deploys through GitHub + Vercel without relying on local `npm`. Preview vs Production env scopes keep test and live databases separate on a single Vercel project.
+
+### Alternatives Considered
+
+- Second Vercel project (`builtiq-test`) — optional for a stable test domain; not required by default
+- Separate test GitHub repository — optional; rejected as default due to sync overhead
+- Local-only testing — rejected; user workflow is push-to-deploy
+
+### Impact
+
+- Vercel env vars must be set for both **Preview** (test Supabase) and **Production** (live Supabase)
+- Production branch stays `main`; `Develop` pushes create preview deployments
+- Every BIQ change with SQL must document test-then-live migration order

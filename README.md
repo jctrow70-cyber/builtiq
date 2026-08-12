@@ -59,6 +59,23 @@ Recommended branch setup:
 
 For now, if only `main` exists, create a `develop` branch before making major changes.
 
+## Test and live deployments
+
+BuildIQ uses **one GitHub repo**, **two branches**, **one Vercel project** (`builtiq`), and **two Supabase projects**:
+
+| | Test | Live |
+| --- | --- | --- |
+| Branch | `Develop` | `main` |
+| Vercel | Preview deployment | Production (`builtiq-duf7.vercel.app`) |
+| Supabase | Test / develop project (Preview env vars) | Production project (Production env vars) |
+
+**Daily workflow (no local npm required):**
+
+1. Commit on `Develop` → run `buildiq-push-test.cmd` → verify on the Vercel preview URL.
+2. When ready → run `buildiq-promote-live.cmd` (type `LIVE`) → live site updates.
+
+Full one-time setup (Vercel env vars, Supabase redirects, migrations): **[docs/ENVIRONMENTS.md](docs/ENVIRONMENTS.md)**.
+
 ## Change Management
 
 Every meaningful change should use a BuildIQ change number:
