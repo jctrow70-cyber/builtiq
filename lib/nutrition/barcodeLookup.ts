@@ -285,8 +285,9 @@ export function barcodeResultToDraft(
   return {
     meal_type: mealType,
     food_name: barcodeDisplayName(result),
-    serving_qty: String(servingQty),
+    serving_size: '1',
     serving_unit: 'serving',
+    amount: String(servingQty),
     calories: String(scaled.calories),
     protein_g: String(scaled.protein_g),
     carbs_g: String(scaled.carbs_g),

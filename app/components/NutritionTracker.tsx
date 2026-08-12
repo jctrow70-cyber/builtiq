@@ -62,8 +62,9 @@ import {
   searchQuickAddFoods,
 } from '../../lib/nutrition/recentFoods';
 import {
-  formatServingDisplay,
+  formatLoggedServingDisplay,
   formatServingLabel,
+  formatServingSizeLabel,
   normalizeServingUnit,
   SERVING_UNIT_OPTIONS,
 } from '../../lib/nutrition/servingUnits';
@@ -85,8 +86,9 @@ type NutritionTrackerProps = {
 type FoodDraft = {
   meal_type: MealType;
   food_name: string;
-  serving_qty: string;
+  serving_size: string;
   serving_unit: string;
+  amount: string;
   calories: string;
   protein_g: string;
   carbs_g: string;
@@ -106,8 +108,9 @@ type LibraryEditDraft = {
 const emptyFoodDraft = (meal: MealType = 'breakfast'): FoodDraft => ({
   meal_type: meal,
   food_name: '',
-  serving_qty: '1',
+  serving_size: '1',
   serving_unit: 'serving',
+  amount: '1',
   calories: '',
   protein_g: '',
   carbs_g: '',
@@ -221,8 +224,10 @@ function FoodFormFields({
   idPrefix: string;
   showSaveToLibrary?: boolean;
 }) {
-  const unitLabel =
-    SERVING_UNIT_OPTIONS.find((option) => option.value === draft.serving_unit)?.label.toLowerCase() || 'unit';
+  const servingLabel = formatServingSizeLabel(
+    parseMacroInput(draft.serving_size) || 1,
+    draft.serving_unit
+  );
 
   return (
     <>
@@ -247,14 +252,14 @@ function FoodFormFields({
       />
       <div className="row nutrition-serving-row">
         <div>
-          <label htmlFor={`${idPrefix}-qty`}>Amount</label>
+          <label htmlFor={`${idPrefix}-size`}>Serving size</label>
           <input
-            id={`${idPrefix}-qty`}
+            id={`${idPrefix}-size`}
             type="number"
-            min="0.25"
-            step="0.25"
-            value={draft.serving_qty}
-            onChange={(e) => setDraft({ ...draft, serving_qty: e.target.value })}
+            min="0.01"
+            step="0.01"
+            value={draft.serving_size}
+            onChange={(e) => setDraft({ ...draft, serving_size: e.target.value })}
           />
         </div>
         <div>
@@ -272,9 +277,21 @@ function FoodFormFields({
           </select>
         </div>
       </div>
+      <label htmlFor={`${idPrefix}-amount`}>Amount</label>
+      <input
+        id={`${idPrefix}-amount`}
+        type="number"
+        min="0.01"
+        step="0.01"
+        value={draft.amount}
+        onChange={(e) => setDraft({ ...draft, amount: e.target.value })}
+      />
+      <p className="muted nutrition-serving-hint">
+        How many of that serving size you had (e.g. 0.5 = half of {servingLabel}).
+      </p>
       <div className="row">
         <div>
-          <label htmlFor={`${idPrefix}-cal`}>Calories (per {unitLabel})</label>
+          <label htmlFor={`${idPrefix}-cal`}>Calories (per {servingLabel})</label>
           <input
             id={`${idPrefix}-cal`}
             type="number"
@@ -625,8 +642,8 @@ export default function NutritionTracker({
       }
     }
 
-    const servingQty = Math.max(0.25, parseMacroInput(qty) || 1);
-    const macros = scaleMacros(item, servingQty);
+    const amount = Math.max(0.01, parseMacroInput(qty) || 1);
+    const macros = scaleMacros(item, amount);
     setSaving(true);
     setError('');
     try {
@@ -637,7 +654,8 @@ export default function NutritionTracker({
           meal_type: meal,
           food_name: item.name,
           food_library_id: item.food_library_id || null,
-          serving_qty: servingQty,
+          serving_qty: amount,
+          serving_size: 1,
           serving_unit: 'serving',
           ...macros,
         },
@@ -677,7 +695,7 @@ export default function NutritionTracker({
         .insert({
           user_id: userId,
           name: per.food_name,
-          serving_label: formatServingLabel(1, entry.serving_unit),
+          serving_label: formatServingLabel(entry.serving_size ?? 1, entry.serving_unit),
           calories: per.calories,
           protein_g: per.protein_g,
           carbs_g: per.carbs_g,
@@ -729,22 +747,24 @@ export default function NutritionTracker({
     let foodName = addDraft.food_name.trim();
     let libraryId: string | null = null;
     let catalogId: string | null = pickedCatalogId;
-    const servingQty = Math.max(
-      0.25,
-      parseMacroInput(fromCatalog || fromLibrary ? qty : addDraft.serving_qty) || 1
+    const amount = Math.max(
+      0.01,
+      parseMacroInput(fromCatalog || fromLibrary ? qty : addDraft.amount) || 1
     );
+    const servingSize =
+      fromCatalog || fromLibrary ? 1 : Math.max(0.01, parseMacroInput(addDraft.serving_size) || 1);
     const servingUnit = fromCatalog || fromLibrary ? 'serving' : normalizeServingUnit(addDraft.serving_unit);
 
     if (fromCatalog) {
       foodName = foodCatalogLabel(fromCatalog);
       catalogId = fromCatalog.id;
       libraryId = null;
-      macros = scaleMacros(fromCatalog, servingQty);
+      macros = scaleMacros(fromCatalog, amount);
     } else if (fromLibrary) {
       foodName = fromLibrary.name;
       libraryId = fromLibrary.id;
       catalogId = null;
-      macros = scaleMacros(fromLibrary, servingQty);
+      macros = scaleMacros(fromLibrary, amount);
     } else {
       if (!foodName) return alert('Enter a food name.');
       catalogId = pickedCatalogId;
@@ -755,7 +775,7 @@ export default function NutritionTracker({
           carbs_g: parseMacroInput(addDraft.carbs_g),
           fat_g: parseMacroInput(addDraft.fat_g),
         },
-        servingQty
+        amount
       );
     }
 
@@ -769,7 +789,7 @@ export default function NutritionTracker({
           .insert({
             user_id: userId,
             name: foodName,
-            serving_label: formatServingLabel(1, addDraft.serving_unit),
+            serving_label: formatServingLabel(parseMacroInput(addDraft.serving_size) || 1, addDraft.serving_unit),
             calories: parseMacroInput(addDraft.calories),
             protein_g: parseMacroInput(addDraft.protein_g),
             carbs_g: parseMacroInput(addDraft.carbs_g),
@@ -794,7 +814,8 @@ export default function NutritionTracker({
           food_name: foodName,
           food_library_id: libraryId,
           food_catalog_id: catalogId,
-          serving_qty: servingQty,
+          serving_qty: amount,
+          serving_size: servingSize,
           serving_unit: servingUnit,
           ...macros,
         },
@@ -831,8 +852,9 @@ export default function NutritionTracker({
     setEditDraft({
       meal_type: entry.meal_type,
       food_name: per.food_name,
-      serving_qty: String(per.serving_qty),
+      serving_size: String(per.serving_size),
       serving_unit: normalizeServingUnit(entry.serving_unit),
+      amount: String(per.serving_qty),
       calories: String(per.calories),
       protein_g: String(per.protein_g),
       carbs_g: String(per.carbs_g),
@@ -858,6 +880,7 @@ export default function NutritionTracker({
         meal_type: editDraft.meal_type,
         food_name: built.food_name,
         serving_qty: built.serving_qty,
+        serving_size: built.serving_size,
         serving_unit: built.serving_unit,
         calories: built.calories,
         protein_g: built.protein_g,
@@ -900,6 +923,7 @@ export default function NutritionTracker({
           food_name: entry.food_name,
           food_library_id: entry.food_library_id || null,
           serving_qty: entry.serving_qty,
+          serving_size: entry.serving_size ?? 1,
           serving_unit: normalizeServingUnit(entry.serving_unit),
           calories: entry.calories,
           protein_g: entry.protein_g,
@@ -943,6 +967,7 @@ export default function NutritionTracker({
         food_name: row.food_name,
         food_library_id: row.food_library_id || null,
         serving_qty: row.serving_qty,
+        serving_size: row.serving_size ?? 1,
         serving_unit: normalizeServingUnit(row.serving_unit),
         calories: row.calories,
         protein_g: row.protein_g,
@@ -1058,6 +1083,7 @@ export default function NutritionTracker({
         food_name: item.food_name,
         food_library_id: item.food_library_id || null,
         serving_qty: item.serving_qty,
+        serving_size: 1,
         serving_unit: 'serving',
         calories: item.calories,
         protein_g: item.protein_g,
@@ -1090,8 +1116,9 @@ export default function NutritionTracker({
     setAddDraft({
       ...addDraft,
       food_name: foodCatalogLabel(item),
-      serving_qty: '1',
+      serving_size: '1',
       serving_unit: 'serving',
+      amount: '1',
       calories: String(item.calories),
       protein_g: String(item.protein_g),
       carbs_g: String(item.carbs_g),
@@ -1281,6 +1308,7 @@ export default function NutritionTracker({
           food_name: foodName,
           food_library_id: libraryId,
           serving_qty: qty,
+          serving_size: 1,
           serving_unit: 'serving',
           calories: scaled.calories,
           protein_g: scaled.protein_g,
@@ -1422,6 +1450,7 @@ export default function NutritionTracker({
         meal_type: addDraft.meal_type,
         food_name: item.food_name,
         serving_qty: 1,
+        serving_size: 1,
         serving_unit: 'serving',
         calories: item.calories,
         protein_g: item.protein_g,
@@ -1994,7 +2023,11 @@ export default function NutritionTracker({
               <div className="nutrition-entry-list">
                 {mealEntries.map((entry) => {
                   const isEditing = editEntryId === entry.id && editDraft;
-                  const servingNote = formatServingDisplay(entry.serving_qty, entry.serving_unit);
+                  const servingNote = formatLoggedServingDisplay(
+                    entry.serving_qty,
+                    entry.serving_size,
+                    entry.serving_unit
+                  );
                   return (
                     <div
                       className={`nutrition-entry-row${isEditing ? ' nutrition-entry-row--editing' : ''}`}

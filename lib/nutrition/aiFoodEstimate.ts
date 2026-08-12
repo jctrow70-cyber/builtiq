@@ -125,8 +125,9 @@ export function aiEstimateToDraft(item: AiFoodEstimateItem, mealType: MealType) 
   return {
     meal_type: mealType,
     food_name: item.food_name,
-    serving_qty: '1',
+    serving_size: '1',
     serving_unit: 'serving',
+    amount: '1',
     calories: String(item.calories),
     protein_g: String(item.protein_g),
     carbs_g: String(item.carbs_g),

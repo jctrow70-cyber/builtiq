@@ -7296,6 +7296,50 @@ BIQ-0107 Add recent foods search and save logged items to My foods
 
 ---
 
+## BIQ-0112 - Dedupe Exercise History Alias Rows
+
+Date: 2026-08-12  
+Branch: main  
+Status: Completed
+
+### Summary
+
+History modal was listing the same logged sets multiple times (e.g. 3 sets shown as 9) because lift history is indexed under several exercise alias keys and those lists were concatenated without deduping.
+
+### Purpose
+
+Each set log should appear once per session when reviewing History, especially on Groups member workouts.
+
+### Changes
+
+- Deduplicate history rows by log id (fallback: planned set + date + set number + values) before building the History modal
+
+### Files Changed
+
+- `app/page.tsx`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Groups → member workout → expand an exercise with prior logs → **History**
+2. Confirm each session shows the real set count once (3 sets → 3 rows, not 9)
+
+### Known Issues
+
+None.
+
+### Recommended Commit Message
+
+```text
+BIQ-0112 Deduplicate exercise history rows across alias keys
+```
+
+---
+
 ## BIQ-0111 - Member Workout History, Placeholders, and Log Date Calendar
 
 Date: 2026-08-12  
@@ -7453,6 +7497,59 @@ None.
 
 ```text
 BIQ-0109 Simplify workout logging: free-text weight, hide restore banner, tuck supersets under Edit
+```
+
+---
+
+## BIQ-0110 - Serving Size Number Separate from Amount
+
+Date: 2026-08-12  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Food logging now uses three serving fields: **Serving size** (number), **Unit**, and **Amount** (how many of that serving size you had). Example: serving size `1` + unit `cup` + amount `0.5` = half a cup; macros scale by amount.
+
+### Purpose
+
+Users need to define what one serving is on the label (size + unit) separately from how much they actually ate.
+
+### Changes
+
+- Form fields: Serving size, Unit, Amount (with helper text)
+- Calories/macros are entered per defined serving (size + unit); totals multiply by amount
+- Entry rows display e.g. `0.5 × 1 cup`
+- New `serving_size` column on `st_meal_entries` (default `1`); `serving_qty` stores amount eaten
+
+### Files Changed
+
+- `lib/nutrition/servingUnits.ts`
+- `lib/nutrition/macros.ts`
+- `lib/nutrition/recentFoods.ts`
+- `lib/nutrition/aiFoodEstimate.ts`
+- `lib/nutrition/barcodeLookup.ts`
+- `app/components/NutritionTracker.tsx`
+- `app/globals.css`
+- `supabase/migrations/20250812_040_meal_entry_serving_size.sql` (new)
+- `CHANGELOG.md`
+
+### Database Changes
+
+- `st_meal_entries.serving_size` numeric not null default `1`
+
+### Testing Steps
+
+1. Run migration `20250812_040_meal_entry_serving_size.sql` in Supabase
+2. Log food: serving size `1`, unit `cup`, amount `0.5`, enter calories per 1 cup — verify half the calories log
+3. Edit entry inline — all three fields load correctly
+4. Entry row shows `0.5 × 1 cup`
+5. Save to My foods — serving label reflects size + unit
+
+### Recommended Commit Message
+
+```text
+BIQ-0110 Separate serving size number from amount eaten
 ```
 
 ---

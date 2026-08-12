@@ -20,6 +20,7 @@ export type MealEntry = {
   food_library_id?: string | null;
   food_catalog_id?: string | null;
   serving_qty: number;
+  serving_size?: number | null;
   serving_unit?: string | null;
   calories: number;
   protein_g: number;
@@ -147,22 +148,28 @@ export function goalsFromRow(row: any | null | undefined): NutritionGoals {
   };
 }
 
-export function entryToPerServing(entry: Partial<MealEntry>): MacroTotals & { food_name: string; serving_qty: number } {
-  const qty = Math.max(0.25, Number(entry.serving_qty) || 1);
+export function entryToPerServing(
+  entry: Partial<MealEntry>
+): MacroTotals & { food_name: string; serving_qty: number; serving_size: number } {
+  const amount = Math.max(0.01, Number(entry.serving_qty) || 1);
+  const servingSize = Math.max(0.01, Number(entry.serving_size) || 1);
   return {
     food_name: String(entry.food_name || ''),
-    serving_qty: qty,
-    calories: parseMacroInput((Number(entry.calories) || 0) / qty),
-    protein_g: parseMacroInput((Number(entry.protein_g) || 0) / qty),
-    carbs_g: parseMacroInput((Number(entry.carbs_g) || 0) / qty),
-    fat_g: parseMacroInput((Number(entry.fat_g) || 0) / qty),
+    serving_qty: amount,
+    serving_size: servingSize,
+    calories: parseMacroInput((Number(entry.calories) || 0) / amount),
+    protein_g: parseMacroInput((Number(entry.protein_g) || 0) / amount),
+    carbs_g: parseMacroInput((Number(entry.carbs_g) || 0) / amount),
+    fat_g: parseMacroInput((Number(entry.fat_g) || 0) / amount),
   };
 }
 
 export function mealEntryFromDraft(
   draft: {
     food_name: string;
-    serving_qty: string | number;
+    amount?: string | number;
+    serving_qty?: string | number;
+    serving_size?: string | number | null;
     serving_unit?: string | number | null;
     calories: string | number;
     protein_g: string | number;
@@ -170,8 +177,9 @@ export function mealEntryFromDraft(
     fat_g: string | number;
   },
   mealType: MealType
-): Omit<MealTemplateItem, 'food_library_id'> & { meal_type: MealType; serving_unit: string } {
-  const servingQty = Math.max(0.25, parseMacroInput(draft.serving_qty) || 1);
+): Omit<MealTemplateItem, 'food_library_id'> & { meal_type: MealType; serving_unit: string; serving_size: number } {
+  const amount = Math.max(0.01, parseMacroInput(draft.amount ?? draft.serving_qty) || 1);
+  const servingSize = Math.max(0.01, parseMacroInput(draft.serving_size) || 1);
   const servingUnit = String(draft.serving_unit || 'serving').trim() || 'serving';
   const macros = scaleMacros(
     {
@@ -180,12 +188,13 @@ export function mealEntryFromDraft(
       carbs_g: parseMacroInput(draft.carbs_g),
       fat_g: parseMacroInput(draft.fat_g),
     },
-    servingQty
+    amount
   );
   return {
     meal_type: mealType,
     food_name: draft.food_name.trim(),
-    serving_qty: servingQty,
+    serving_qty: amount,
+    serving_size: servingSize,
     serving_unit: servingUnit,
     ...macros,
   };

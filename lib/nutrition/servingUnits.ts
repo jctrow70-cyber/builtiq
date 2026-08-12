@@ -18,6 +18,12 @@ export function normalizeServingUnit(unit?: string | null): string {
   return value || 'serving';
 }
 
+function formatNumber(value: number): string {
+  const n = Number(value) || 0;
+  if (n % 1 === 0) return String(Math.round(n));
+  return String(Math.round(n * 100) / 100);
+}
+
 function pluralizeUnit(unit: string, qty: number): string {
   if (qty === 1) return unit;
   if (unit === 'serving') return 'servings';
@@ -28,14 +34,45 @@ function pluralizeUnit(unit: string, qty: number): string {
   return unit;
 }
 
-export function formatServingDisplay(qty: number, unit?: string | null): string {
-  const q = Number(qty) || 1;
+/** Label for one defined serving, e.g. "1 cup" or "28 g". */
+export function formatServingSizeLabel(servingSize: number, unit?: string | null): string {
+  const size = Math.max(0.01, Number(servingSize) || 1);
   const u = normalizeServingUnit(unit);
-  if (q === 1 && u === 'serving') return '';
-  const amount = q % 1 === 0 ? String(Math.round(q)) : String(q);
-  return `${amount} ${pluralizeUnit(u, q)}`;
+  const amount = formatNumber(size);
+  if (u === 'serving') {
+    return size === 1 ? '1 serving' : `${amount} servings`;
+  }
+  return `${amount} ${pluralizeUnit(u, size)}`;
 }
 
-export function formatServingLabel(qty: number, unit?: string | null): string {
-  return formatServingDisplay(qty, unit) || '1 serving';
+/** How much was logged relative to the defined serving size. */
+export function formatLoggedServingDisplay(
+  amount: number,
+  servingSize?: number | null,
+  unit?: string | null
+): string {
+  const qty = Math.max(0.01, Number(amount) || 1);
+  const size = Math.max(0.01, Number(servingSize) || 1);
+  const u = normalizeServingUnit(unit);
+
+  if (qty === 1 && size === 1 && u === 'serving') return '';
+
+  const sizeLabel = formatServingSizeLabel(size, u);
+  if (qty === 1) return sizeLabel;
+  return `${formatNumber(qty)} × ${sizeLabel}`;
+}
+
+/** @deprecated Use formatLoggedServingDisplay */
+export function formatServingDisplay(qty: number, unit?: string | null): string {
+  return formatLoggedServingDisplay(qty, 1, unit);
+}
+
+export function formatServingLabel(servingSize: number, unit?: string | null): string {
+  return formatServingSizeLabel(servingSize, unit);
+}
+
+export function effectiveServingAmount(amount: number, servingSize?: number | null): number {
+  const qty = Math.max(0.01, Number(amount) || 1);
+  const size = Math.max(0.01, Number(servingSize) || 1);
+  return parseFloat((qty * size).toFixed(4));
 }

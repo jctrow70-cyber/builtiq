@@ -1490,14 +1490,24 @@ export default function Page(){
   }).filter(Boolean);
  }
  function mergeExerciseHistoryRows(histRows:any[],currentRows:any[]){
-  const seen=new Set(histRows.map((r:any)=>`${r.planned_set_id}|${r.log_date}`));
-  const merged=[...histRows];
-  currentRows.forEach((r:any)=>{const key=`${r.planned_set_id}|${r.log_date}`;if(!seen.has(key)){merged.push(r);seen.add(key);}});
+  const rowKey=(r:any)=>r?.id?`id:${r.id}`:`${r?.planned_set_id||''}|${r?.log_date||''}|${r?.snapshot_set_number??''}|${r?.actual_weight||''}|${r?.actual_reps||''}`;
+  const seen=new Set<string>();
+  const merged:any[]=[];
+  [...(histRows||[]),...(currentRows||[])].forEach((r:any)=>{
+   if(!r)return;
+   const key=rowKey(r);
+   if(!key||seen.has(key))return;
+   seen.add(key);
+   merged.push(r);
+  });
   return merged;
  }
- function openExerciseWeekHistory(ex:any,exType:any,workoutRef:any){
+ function collectHistoryRowsForExercise(ex:any){
   const aliases=historyAliases(ex.catalog_exercise_id||'',ex.name||'');
-  const histRows=aliases.flatMap((ek)=>history[ek]||[]);
+  return mergeExerciseHistoryRows(aliases.flatMap((ek)=>history[ek]||[]),[]);
+ }
+ function openExerciseWeekHistory(ex:any,exType:any,workoutRef:any){
+  const histRows=collectHistoryRowsForExercise(ex);
   const currentRows=collectCurrentExerciseLogRows(ex,workoutRef,logs,activeLogDateForLogging());
   const merged=mergeExerciseHistoryRows(histRows,currentRows);
   let sessions=buildExerciseSessionHistory(merged,exType,{dayLabel:workoutRef?.day_label,matchDayLabel:true});

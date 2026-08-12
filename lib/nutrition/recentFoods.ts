@@ -48,7 +48,7 @@ export function entryToQuickAdd(entry: MealEntry): QuickAddFood {
     key: `recent:${perServingKey(per.food_name, per)}`,
     source: 'recent',
     name: per.food_name,
-    serving_label: servingLabel(1, entry.serving_unit),
+    serving_label: servingLabel(entry.serving_size, entry.serving_unit),
     calories: per.calories,
     protein_g: per.protein_g,
     carbs_g: per.carbs_g,
