@@ -7716,3 +7716,48 @@ None.
 ```text
 BIQ-0112 Fix barcode calories scaled from per-100g Open Food Facts data
 ```
+
+---
+
+## BIQ-0113 - Barcode Serving Size Matches Package Label (28 g Tortillas)
+
+Date: 2026-08-12  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Barcode **Review & edit** no longer defaults to the wrong gram weight (e.g. 50 g for a 2-tortilla pack when the label is **1 tortilla / 28 g**). Serving size now prefers packaging text, infers grams from nutrient ratios, and uses **per-tortilla** weight for multi-pack tortillas.
+
+### Purpose
+
+Open Food Facts often stores total pack serving weight (`serving_quantity` = 50 g for 2 tortillas) while the nutrition label is per single tortilla (~28 g).
+
+### Changes
+
+- Prefer grams parsed from `serving_size` text over stale `serving_quantity`
+- Infer actual OFF serving weight from per-serving vs per-100 g nutrients
+- For tortillas sold as multiples (e.g. `2 tortillas (55 g)`), use per-tortilla grams (~28 g)
+- Scale calories/macros when display serving is smaller than OFF’s multi-serving basis
+
+### Files Changed
+
+- `lib/nutrition/barcodeLookup.ts`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Scan blue corn tortillas with label **1 tortilla (28 g)** — Review & edit shows serving size **28**, unit **g**
+2. Scan a product listed as `2 tortillas (50–55 g)` — serving size shows **~25–28 g** (one tortilla), not 50 g
+3. Confirm calories scale down proportionally (half of a 2-tortilla OFF serving when using 1 tortilla)
+4. Scan a product with correct matching OFF fields — values unchanged
+
+### Recommended Commit Message
+
+```text
+BIQ-0113 Fix barcode serving size to match single-tortilla label grams
+```

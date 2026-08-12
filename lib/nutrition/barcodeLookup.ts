@@ -86,24 +86,147 @@ function clampSodiumMg(value: unknown): number | undefined {
   return Math.min(MAX_SODIUM_MG, n);
 }
 
-/** Parse serving weight in grams from OFF product fields. */
-export function parseServingQuantityGrams(
-  product: Record<string, unknown>,
-  nutriments: Record<string, unknown>
-): number | null {
-  const qty = Number(nutriments.serving_quantity ?? product.serving_quantity);
-  if (Number.isFinite(qty) && qty > 0) return qty;
-
-  const servingSize = String(product.serving_size || nutriments.serving_size || '').trim();
+function parseGramsFromServingSizeText(servingSize: string): number | null {
   if (!servingSize) return null;
 
   const parenGrams = servingSize.match(/\(\s*(\d+(?:\.\d+)?)\s*g\s*\)/i);
   if (parenGrams) return Number(parenGrams[1]);
 
-  const directGrams = servingSize.match(/(\d+(?:\.\d+)?)\s*g\b/i);
+  const directGrams = servingSize.match(/^(\d+(?:\.\d+)?)\s*g\b/i);
   if (directGrams) return Number(directGrams[1]);
 
+  const anyGrams = servingSize.match(/(\d+(?:\.\d+)?)\s*g\b/i);
+  if (anyGrams) return Number(anyGrams[1]);
+
   return null;
+}
+
+function parseItemCountFromServingSize(servingSize: string): number | null {
+  const match = servingSize.trim().match(/^(\d+(?:\.\d+)?)\s+/);
+  if (!match) return null;
+  const count = Number(match[1]);
+  return Number.isFinite(count) && count > 0 ? count : null;
+}
+
+/** For "2 tortillas (55 g)" return grams per single tortilla (~27.5 g). */
+function parsePerItemGramsFromServingSize(servingSize: string): number | null {
+  const totalGrams = parseGramsFromServingSizeText(servingSize);
+  const count = parseItemCountFromServingSize(servingSize);
+  if (totalGrams == null || count == null || count <= 1) return null;
+  return Math.round((totalGrams / count) * 10) / 10;
+}
+
+function isSingleUnitServing(servingSize: string): boolean {
+  const trimmed = servingSize.trim();
+  return /^1\s+(?!0\b)/.test(trimmed);
+}
+
+function isTortillaProduct(productName: string, servingSize: string): boolean {
+  const text = `${productName} ${servingSize}`.toLowerCase();
+  return text.includes('tortilla') && !text.includes('chip');
+}
+
+/** Infer gram weight that OFF per-serving nutrients actually represent. */
+export function inferServingGramsFromNutriments(nutriments: Record<string, unknown>): number | null {
+  const per100Cal = Number(nutriments['energy-kcal_100g']);
+  const perServingCal = Number(nutriments['energy-kcal_serving']);
+  if (Number.isFinite(per100Cal) && per100Cal > 0 && Number.isFinite(perServingCal) && perServingCal > 0) {
+    return Math.round((perServingCal / per100Cal) * 100 * 10) / 10;
+  }
+
+  const per100Protein = Number(nutriments.proteins_100g);
+  const perServingProtein = Number(nutriments.proteins_serving);
+  if (
+    Number.isFinite(per100Protein) &&
+    per100Protein > 0 &&
+    Number.isFinite(perServingProtein) &&
+    perServingProtein > 0
+  ) {
+    return Math.round((perServingProtein / per100Protein) * 100 * 10) / 10;
+  }
+
+  return null;
+}
+
+type ResolvedServingGrams = {
+  /** Gram weight shown to the user / stored on the entry. */
+  displayGrams: number | null;
+  /** Gram weight OFF per-serving nutrient fields are based on. */
+  nutrientBasisGrams: number | null;
+};
+
+export function resolveBarcodeServingGrams(
+  product: Record<string, unknown>,
+  nutriments: Record<string, unknown>
+): ResolvedServingGrams {
+  const productName = String(product.product_name || product.generic_name || '');
+  const servingSize = String(product.serving_size || nutriments.serving_size || '').trim();
+  const textGrams = parseGramsFromServingSizeText(servingSize);
+  const perItemGrams = parsePerItemGramsFromServingSize(servingSize);
+  const qtyGramsRaw = Number(nutriments.serving_quantity ?? product.serving_quantity);
+  const qtyGrams = Number.isFinite(qtyGramsRaw) && qtyGramsRaw > 0 ? qtyGramsRaw : null;
+  const inferredGrams = inferServingGramsFromNutriments(nutriments);
+
+  const nutrientBasisGrams = inferredGrams ?? qtyGrams ?? textGrams;
+
+  let displayGrams: number | null = null;
+
+  if (textGrams != null && isSingleUnitServing(servingSize)) {
+    displayGrams = textGrams;
+  } else if (
+    isTortillaProduct(productName, servingSize) &&
+    perItemGrams != null &&
+    perItemGrams >= 20 &&
+    perItemGrams <= 90
+  ) {
+    displayGrams = perItemGrams;
+  } else if (textGrams != null && qtyGrams != null && Math.abs(textGrams - qtyGrams) > 0.5) {
+    displayGrams = textGrams;
+  } else if (
+    inferredGrams != null &&
+    qtyGrams != null &&
+    Math.abs(inferredGrams - qtyGrams) > 0.5
+  ) {
+    if (textGrams != null && Math.abs(textGrams - inferredGrams) <= 2) {
+      displayGrams = textGrams;
+    } else {
+      displayGrams = inferredGrams;
+    }
+  } else {
+    displayGrams = textGrams ?? inferredGrams ?? qtyGrams;
+  }
+
+  if (displayGrams != null) {
+    displayGrams = roundDisplayGrams(displayGrams);
+  }
+
+  return { displayGrams, nutrientBasisGrams };
+}
+
+function roundDisplayGrams(grams: number): number {
+  const rounded = Math.round(grams);
+  if (Math.abs(grams - rounded) <= 1.5) return rounded;
+  return Math.round(grams * 10) / 10;
+}
+
+/** @deprecated Use resolveBarcodeServingGrams().displayGrams */
+export function parseServingQuantityGrams(
+  product: Record<string, unknown>,
+  nutriments: Record<string, unknown>
+): number | null {
+  return resolveBarcodeServingGrams(product, nutriments).displayGrams;
+}
+
+function servingGramsScaleFactor(displayGrams: number | null, nutrientBasisGrams: number | null): number {
+  if (
+    displayGrams == null ||
+    nutrientBasisGrams == null ||
+    nutrientBasisGrams <= 0 ||
+    Math.abs(displayGrams - nutrientBasisGrams) <= 0.5
+  ) {
+    return 1;
+  }
+  return displayGrams / nutrientBasisGrams;
 }
 
 function looksLikePer100gCopiedToServing(per100: number, perServing: number, servingGrams: number): boolean {
@@ -193,15 +316,16 @@ function productImageUrl(product: Record<string, unknown>): string | undefined {
 
 function parseProduct(barcode: string, product: Record<string, unknown>): BarcodeLookupResult | BarcodeLookupNotFound {
   const nutriments = (product.nutriments || {}) as Record<string, unknown>;
-  const servingGrams = parseServingQuantityGrams(product, nutriments);
+  const { displayGrams, nutrientBasisGrams } = resolveBarcodeServingGrams(product, nutriments);
+  const nutrientPickGrams = nutrientBasisGrams ?? displayGrams;
 
-  const caloriePick = pickCalories(nutriments, servingGrams);
-  const proteinPick = pickNutrientForServing(nutriments, 'proteins', servingGrams);
-  const carbsPick = pickNutrientForServing(nutriments, 'carbohydrates', servingGrams);
-  const fatPick = pickNutrientForServing(nutriments, 'fat', servingGrams);
-  const fiberPick = pickNutrientForServing(nutriments, 'fiber', servingGrams);
-  const sugarPick = pickNutrientForServing(nutriments, 'sugars', servingGrams);
-  const sodiumRaw = pickSodiumMg(nutriments, servingGrams);
+  const caloriePick = pickCalories(nutriments, nutrientPickGrams);
+  const proteinPick = pickNutrientForServing(nutriments, 'proteins', nutrientPickGrams);
+  const carbsPick = pickNutrientForServing(nutriments, 'carbohydrates', nutrientPickGrams);
+  const fatPick = pickNutrientForServing(nutriments, 'fat', nutrientPickGrams);
+  const fiberPick = pickNutrientForServing(nutriments, 'fiber', nutrientPickGrams);
+  const sugarPick = pickNutrientForServing(nutriments, 'sugars', nutrientPickGrams);
+  const sodiumRaw = pickSodiumMg(nutriments, nutrientPickGrams);
 
   const scaledFrom100g =
     caloriePick.scaledFrom100g ||
@@ -209,16 +333,41 @@ function parseProduct(barcode: string, product: Record<string, unknown>): Barcod
     carbsPick.scaledFrom100g ||
     fatPick.scaledFrom100g;
 
-  const calories = caloriePick.value;
-  const protein_g = proteinPick.value;
-  const carbs_g = carbsPick.value;
-  const fat_g = fatPick.value;
-  const fiber_g = fiberPick.value;
-  const sugar_g = sugarPick.value;
+  const servingScale = servingGramsScaleFactor(displayGrams, nutrientBasisGrams);
+
+  let calories = caloriePick.value;
+  let protein_g = proteinPick.value;
+  let carbs_g = carbsPick.value;
+  let fat_g = fatPick.value;
+  let fiber_g = fiberPick.value;
+  let sugar_g = sugarPick.value;
+  let sodium_mg = sodiumRaw != null ? clampSodiumMg(sodiumRaw) : undefined;
+
+  if (servingScale !== 1) {
+    const scaled = scaleBarcodeNutrition(
+      {
+        calories: calories ?? 0,
+        protein_g: protein_g ?? 0,
+        carbs_g: carbs_g ?? 0,
+        fat_g: fat_g ?? 0,
+        fiber_g: fiber_g ?? undefined,
+        sugar_g: sugar_g ?? undefined,
+        sodium_mg,
+      },
+      servingScale
+    );
+    calories = scaled.calories;
+    protein_g = scaled.protein_g;
+    carbs_g = scaled.carbs_g;
+    fat_g = scaled.fat_g;
+    fiber_g = scaled.fiber_g;
+    sugar_g = scaled.sugar_g;
+    sodium_mg = scaled.sodium_mg;
+  }
 
   const serving_label = servingLabel(product, nutriments);
   const missingServingWeight =
-    scaledFrom100g && (servingGrams == null || servingGrams <= 0 || servingGrams === 100);
+    scaledFrom100g && (displayGrams == null || displayGrams <= 0 || displayGrams === 100);
 
   if (calories == null && protein_g == null && carbs_g == null && fat_g == null) {
     return {
@@ -237,6 +386,8 @@ function parseProduct(barcode: string, product: Record<string, unknown>): Barcod
     notes = 'Values from Open Food Facts (per 100 g). Adjust serving size if your label differs.';
   } else if (scaledFrom100g) {
     notes = `Values scaled to ${serving_label} from Open Food Facts per-100 g data. Verify against your label.`;
+  } else if (servingScale !== 1 && displayGrams != null) {
+    notes = `Nutrition adjusted to ${displayGrams} g per serving (package label style). Verify against your label.`;
   }
 
   return {
@@ -245,7 +396,7 @@ function parseProduct(barcode: string, product: Record<string, unknown>): Barcod
     product_name,
     brand,
     serving_label: serving_label.slice(0, 80),
-    serving_grams: servingGrams ?? undefined,
+    serving_grams: displayGrams ?? undefined,
     image_url: productImageUrl(product),
     per_serving: {
       calories: clampCalories(calories ?? 0),
@@ -254,7 +405,7 @@ function parseProduct(barcode: string, product: Record<string, unknown>): Barcod
       fat_g: clampMacro(fat_g ?? 0),
       fiber_g: fiber_g != null ? clampMacro(fiber_g) : undefined,
       sugar_g: sugar_g != null ? clampMacro(sugar_g) : undefined,
-      sodium_mg: sodiumRaw != null ? clampSodiumMg(sodiumRaw) : undefined,
+      sodium_mg,
     },
     source: 'open_food_facts',
     notes,
