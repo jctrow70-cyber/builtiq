@@ -7668,3 +7668,51 @@ None (operator runs existing migrations on test Supabase during one-time setup).
 ```text
 BIQ-0111 Add test-to-live deployment pipeline docs and helper scripts
 ```
+
+---
+
+## BIQ-0112 - Fix Barcode Calorie Scaling from Open Food Facts
+
+Date: 2026-08-12  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Barcode scans no longer treat **per 100 g** calories as a full serving when the package serving is smaller (e.g. blue corn tortillas showing 220 cal instead of ~170). Per-serving values are scaled using OFF serving weight, and Review & edit no longer double-counts servings.
+
+### Purpose
+
+Open Food Facts often stores nutrition per 100 g while the package serving is smaller; some products also copy the 100 g calorie value into the per-serving field. Users were logging inflated calories.
+
+### Changes
+
+- Scale per-100 g nutrients by parsed serving weight (`serving_quantity` / grams in `serving_size`)
+- Detect when OFF per-serving equals per-100 g for a sub-100 g serving and recalculate
+- `barcodeResultToDraft` passes **per-serving** macros to the manual form (amount field handles quantity)
+- Barcode log entries store parsed serving size + unit (e.g. 50 g) on the meal entry
+- My foods save from barcode stores per-serving macros, not pre-multiplied totals
+
+### Files Changed
+
+- `lib/nutrition/barcodeLookup.ts`
+- `app/components/NutritionTracker.tsx`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Scan a product where OFF has ~220 kcal/100 g and a ~77 g serving — card should show ~170 cal, not 220
+2. Log directly from barcode card — logged calories match the card
+3. Use **Review & edit** with servings = 2 — logged total = 2× per-serving (no double scale)
+4. El Milagro-style products with correct OFF per-serving data still show unchanged values
+5. Products with only per-100 g data and no serving weight still show a per-100 g warning
+
+### Recommended Commit Message
+
+```text
+BIQ-0112 Fix barcode calories scaled from per-100g Open Food Facts data
+```

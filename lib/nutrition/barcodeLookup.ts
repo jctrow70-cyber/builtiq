@@ -14,6 +14,8 @@ export type BarcodeLookupResult = {
   product_name: string;
   brand?: string;
   serving_label: string;
+  /** Parsed serving weight in grams when available from Open Food Facts. */
+  serving_grams?: number;
   image_url?: string;
   per_serving: BarcodeProductNutrition;
   source: 'open_food_facts';
@@ -84,19 +86,89 @@ function clampSodiumMg(value: unknown): number | undefined {
   return Math.min(MAX_SODIUM_MG, n);
 }
 
-function pickNutrient(nutriments: Record<string, unknown>, base: string): number | null {
-  const serving = nutriments[`${base}_serving`];
-  if (Number.isFinite(Number(serving))) return Number(serving);
-  const per100 = nutriments[`${base}_100g`];
-  if (Number.isFinite(Number(per100))) return Number(per100);
+/** Parse serving weight in grams from OFF product fields. */
+export function parseServingQuantityGrams(
+  product: Record<string, unknown>,
+  nutriments: Record<string, unknown>
+): number | null {
+  const qty = Number(nutriments.serving_quantity ?? product.serving_quantity);
+  if (Number.isFinite(qty) && qty > 0) return qty;
+
+  const servingSize = String(product.serving_size || nutriments.serving_size || '').trim();
+  if (!servingSize) return null;
+
+  const parenGrams = servingSize.match(/\(\s*(\d+(?:\.\d+)?)\s*g\s*\)/i);
+  if (parenGrams) return Number(parenGrams[1]);
+
+  const directGrams = servingSize.match(/(\d+(?:\.\d+)?)\s*g\b/i);
+  if (directGrams) return Number(directGrams[1]);
+
   return null;
 }
 
-function pickSodiumMg(nutriments: Record<string, unknown>): number | null {
-  const sodium = pickNutrient(nutriments, 'sodium');
-  if (sodium != null) return sodium * 1000;
-  const salt = pickNutrient(nutriments, 'salt');
-  if (salt != null) return salt * 1000 * 0.4;
+function looksLikePer100gCopiedToServing(per100: number, perServing: number, servingGrams: number): boolean {
+  if (servingGrams <= 0 || servingGrams >= 100) return false;
+  if (!Number.isFinite(per100) || !Number.isFinite(perServing)) return false;
+  return Math.abs(perServing - per100) < 0.51;
+}
+
+function scalePer100gToServing(per100: number, servingGrams: number): number {
+  return per100 * (servingGrams / 100);
+}
+
+type NutrientPick = { value: number | null; scaledFrom100g: boolean };
+
+/** Prefer per-serving OFF values; scale per-100g when serving weight is known. */
+export function pickNutrientForServing(
+  nutriments: Record<string, unknown>,
+  base: string,
+  servingGrams: number | null
+): NutrientPick {
+  const per100Raw = nutriments[`${base}_100g`];
+  const per100 = Number.isFinite(Number(per100Raw)) ? Number(per100Raw) : null;
+
+  const perServingRaw = nutriments[`${base}_serving`];
+  const perServing = Number.isFinite(Number(perServingRaw)) ? Number(perServingRaw) : null;
+
+  if (perServing != null) {
+    if (
+      per100 != null &&
+      servingGrams != null &&
+      looksLikePer100gCopiedToServing(per100, perServing, servingGrams)
+    ) {
+      return { value: scalePer100gToServing(per100, servingGrams), scaledFrom100g: true };
+    }
+    return { value: perServing, scaledFrom100g: false };
+  }
+
+  if (per100 != null) {
+    if (servingGrams != null && servingGrams > 0 && servingGrams !== 100) {
+      return { value: scalePer100gToServing(per100, servingGrams), scaledFrom100g: true };
+    }
+    return { value: per100, scaledFrom100g: true };
+  }
+
+  return { value: null, scaledFrom100g: false };
+}
+
+function pickCalories(nutriments: Record<string, unknown>, servingGrams: number | null): NutrientPick {
+  const kcal = pickNutrientForServing(nutriments, 'energy-kcal', servingGrams);
+  if (kcal.value != null) return kcal;
+
+  const kj = pickNutrientForServing(nutriments, 'energy-kj', servingGrams);
+  if (kj.value != null) return { value: kj.value / 4.184, scaledFrom100g: kj.scaledFrom100g };
+
+  const energy = pickNutrientForServing(nutriments, 'energy', servingGrams);
+  if (energy.value != null) return { value: energy.value / 4.184, scaledFrom100g: energy.scaledFrom100g };
+
+  return { value: null, scaledFrom100g: false };
+}
+
+function pickSodiumMg(nutriments: Record<string, unknown>, servingGrams: number | null): number | null {
+  const sodium = pickNutrientForServing(nutriments, 'sodium', servingGrams);
+  if (sodium.value != null) return sodium.value * 1000;
+  const salt = pickNutrientForServing(nutriments, 'salt', servingGrams);
+  if (salt.value != null) return salt.value * 1000 * 0.4;
   return null;
 }
 
@@ -121,25 +193,32 @@ function productImageUrl(product: Record<string, unknown>): string | undefined {
 
 function parseProduct(barcode: string, product: Record<string, unknown>): BarcodeLookupResult | BarcodeLookupNotFound {
   const nutriments = (product.nutriments || {}) as Record<string, unknown>;
+  const servingGrams = parseServingQuantityGrams(product, nutriments);
 
-  let calories = pickNutrient(nutriments, 'energy-kcal');
-  if (calories == null) {
-    const kj = pickNutrient(nutriments, 'energy');
-    if (kj != null) calories = Math.round(kj / 4.184);
-  }
+  const caloriePick = pickCalories(nutriments, servingGrams);
+  const proteinPick = pickNutrientForServing(nutriments, 'proteins', servingGrams);
+  const carbsPick = pickNutrientForServing(nutriments, 'carbohydrates', servingGrams);
+  const fatPick = pickNutrientForServing(nutriments, 'fat', servingGrams);
+  const fiberPick = pickNutrientForServing(nutriments, 'fiber', servingGrams);
+  const sugarPick = pickNutrientForServing(nutriments, 'sugars', servingGrams);
+  const sodiumRaw = pickSodiumMg(nutriments, servingGrams);
 
-  const protein_g = pickNutrient(nutriments, 'proteins');
-  const carbs_g = pickNutrient(nutriments, 'carbohydrates');
-  const fat_g = pickNutrient(nutriments, 'fat');
-  const fiber_g = pickNutrient(nutriments, 'fiber');
-  const sugar_g = pickNutrient(nutriments, 'sugars');
-  const sodiumRaw = pickSodiumMg(nutriments);
+  const scaledFrom100g =
+    caloriePick.scaledFrom100g ||
+    proteinPick.scaledFrom100g ||
+    carbsPick.scaledFrom100g ||
+    fatPick.scaledFrom100g;
+
+  const calories = caloriePick.value;
+  const protein_g = proteinPick.value;
+  const carbs_g = carbsPick.value;
+  const fat_g = fatPick.value;
+  const fiber_g = fiberPick.value;
+  const sugar_g = sugarPick.value;
 
   const serving_label = servingLabel(product, nutriments);
-  const used100g =
-    nutriments['energy-kcal_serving'] == null &&
-    nutriments.proteins_serving == null &&
-    (nutriments['energy-kcal_100g'] != null || nutriments.proteins_100g != null);
+  const missingServingWeight =
+    scaledFrom100g && (servingGrams == null || servingGrams <= 0 || servingGrams === 100);
 
   if (calories == null && protein_g == null && carbs_g == null && fat_g == null) {
     return {
@@ -153,12 +232,20 @@ function parseProduct(barcode: string, product: Record<string, unknown>): Barcod
   const product_name = String(product.product_name || product.generic_name || 'Packaged food').trim().slice(0, 120);
   const brand = String(product.brands || '').trim().slice(0, 80) || undefined;
 
+  let notes = 'Values from Open Food Facts. Verify against your package label when precision matters.';
+  if (missingServingWeight) {
+    notes = 'Values from Open Food Facts (per 100 g). Adjust serving size if your label differs.';
+  } else if (scaledFrom100g) {
+    notes = `Values scaled to ${serving_label} from Open Food Facts per-100 g data. Verify against your label.`;
+  }
+
   return {
     found: true,
     barcode,
     product_name,
     brand,
     serving_label: serving_label.slice(0, 80),
+    serving_grams: servingGrams ?? undefined,
     image_url: productImageUrl(product),
     per_serving: {
       calories: clampCalories(calories ?? 0),
@@ -170,9 +257,7 @@ function parseProduct(barcode: string, product: Record<string, unknown>): Barcod
       sodium_mg: sodiumRaw != null ? clampSodiumMg(sodiumRaw) : undefined,
     },
     source: 'open_food_facts',
-    notes: used100g
-      ? 'Values from Open Food Facts (per 100 g). Adjust servings if your label differs.'
-      : 'Values from Open Food Facts. Verify against your package label when precision matters.',
+    notes,
   };
 }
 
@@ -249,7 +334,7 @@ export async function lookupBarcode(raw: string): Promise<BarcodeLookupResponse>
 }
 
 export function scaleBarcodeNutrition(base: BarcodeProductNutrition, qty: number): BarcodeProductNutrition {
-  const factor = Math.max(0.25, Number(qty) || 1);
+  const factor = Math.max(0.01, Number(qty) || 1);
   return {
     calories: Math.round(base.calories * factor),
     protein_g: parseMacroInput(base.protein_g * factor),
@@ -276,22 +361,33 @@ export function barcodeDisplayName(result: BarcodeLookupResult): string {
   return result.product_name;
 }
 
+export function barcodeServingDraftFields(result: BarcodeLookupResult): {
+  serving_size: string;
+  serving_unit: string;
+} {
+  const grams = result.serving_grams;
+  if (grams != null && grams > 0) {
+    return { serving_size: String(grams), serving_unit: 'g' };
+  }
+  return { serving_size: '1', serving_unit: 'serving' };
+}
+
 export function barcodeResultToDraft(
   result: BarcodeLookupResult,
   mealType: import('./macros').MealType,
-  servingQty = 1
+  amount = 1
 ) {
-  const scaled = scaleBarcodeNutrition(result.per_serving, servingQty);
+  const per = result.per_serving;
+  const serving = barcodeServingDraftFields(result);
   return {
     meal_type: mealType,
     food_name: barcodeDisplayName(result),
-    serving_size: '1',
-    serving_unit: 'serving',
-    amount: String(servingQty),
-    calories: String(scaled.calories),
-    protein_g: String(scaled.protein_g),
-    carbs_g: String(scaled.carbs_g),
-    fat_g: String(scaled.fat_g),
+    ...serving,
+    amount: String(amount),
+    calories: String(per.calories),
+    protein_g: String(per.protein_g),
+    carbs_g: String(per.carbs_g),
+    fat_g: String(per.fat_g),
     saveToLibrary: false,
   };
 }

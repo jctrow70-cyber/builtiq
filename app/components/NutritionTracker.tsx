@@ -49,6 +49,7 @@ import {
   barcodeDisplayName,
   barcodeExtraNutritionNote,
   barcodeResultToDraft,
+  barcodeServingDraftFields,
   isBarcodeLookupResult,
   scaleBarcodeNutrition,
   type BarcodeLookupNotFound,
@@ -1266,8 +1267,10 @@ export default function NutritionTracker({
 
   async function logBarcodeProduct(saveToLibrary: boolean) {
     if (!barcodeProduct || !userId) return;
-    const qty = Math.max(0.25, parseMacroInput(barcodeServingQty) || 1);
-    const scaled = scaleBarcodeNutrition(barcodeProduct.per_serving, qty);
+    const amount = Math.max(0.01, parseMacroInput(barcodeServingQty) || 1);
+    const scaled = scaleBarcodeNutrition(barcodeProduct.per_serving, amount);
+    const { serving_size, serving_unit } = barcodeServingDraftFields(barcodeProduct);
+    const servingSizeNum = parseMacroInput(serving_size) || 1;
     const foodName = barcodeDisplayName(barcodeProduct);
     const extra = barcodeExtraNutritionNote(scaled);
     const notes = [barcodeProduct.notes, extra, `Barcode ${barcodeProduct.barcode}`].filter(Boolean).join(' · ');
@@ -1284,10 +1287,10 @@ export default function NutritionTracker({
             user_id: userId,
             name: foodName,
             serving_label: barcodeProduct.serving_label,
-            calories: scaled.calories,
-            protein_g: scaled.protein_g,
-            carbs_g: scaled.carbs_g,
-            fat_g: scaled.fat_g,
+            calories: barcodeProduct.per_serving.calories,
+            protein_g: barcodeProduct.per_serving.protein_g,
+            carbs_g: barcodeProduct.per_serving.carbs_g,
+            fat_g: barcodeProduct.per_serving.fat_g,
           })
           .select()
           .single();
@@ -1307,9 +1310,9 @@ export default function NutritionTracker({
           meal_type: addDraft.meal_type,
           food_name: foodName,
           food_library_id: libraryId,
-          serving_qty: qty,
-          serving_size: 1,
-          serving_unit: 'serving',
+          serving_qty: amount,
+          serving_size: servingSizeNum,
+          serving_unit,
           calories: scaled.calories,
           protein_g: scaled.protein_g,
           carbs_g: scaled.carbs_g,
