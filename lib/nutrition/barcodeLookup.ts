@@ -45,6 +45,18 @@ export function digitsOnly(raw: string): string {
   return String(raw || '').replace(/\D/g, '');
 }
 
+/** EAN-13 check digit for a 12-digit body (no check digit). */
+function ean13CheckDigit(body12: string): number {
+  const d = body12.replace(/\D/g, '').split('').map(Number);
+  if (d.length !== 12) return 0;
+  let sum = 0;
+  for (let i = 0; i < 12; i++) {
+    const posFromRight = 12 - i;
+    sum += d[i] * (posFromRight % 2 === 0 ? 1 : 3);
+  }
+  return (10 - (sum % 10)) % 10;
+}
+
 /**
  * Build lookup candidates for Open Food Facts.
  * UPC-A is often stored as 12 digits or as EAN-13 with a leading 0 — try both without stripping valid zeros.
@@ -54,6 +66,12 @@ export function barcodeLookupCandidates(raw: string): string[] {
   if (digits.length < 8 || digits.length > 14) return [];
 
   const candidates: string[] = [digits];
+
+  // 10-digit codes from packaging (e.g. 4767100030) map to EAN-13 0647671000306 in OFF.
+  if (digits.length === 10) {
+    const body12 = `06${digits}`;
+    candidates.unshift(`${body12}${ean13CheckDigit(body12)}`);
+  }
 
   if (digits.length === 13 && digits.startsWith('0')) {
     candidates.push(digits.slice(1));
@@ -126,6 +144,20 @@ function isTortillaProduct(productName: string, servingSize: string): boolean {
   return text.includes('tortilla') && !text.includes('chip');
 }
 
+/** FDA standard snack chip serving (1 oz). */
+const STANDARD_CHIP_SERVING_GRAMS = 28;
+
+function isChipProduct(productName: string, servingSize: string): boolean {
+  const text = `${productName} ${servingSize}`.toLowerCase();
+  return /\bchips?\b|\bcrisps?\b/.test(text);
+}
+
+function isMultiUnitChipServing(servingSize: string): boolean {
+  const count = parseItemCountFromServingSize(servingSize);
+  if (count != null && count > 1) return /\bchips?\b|\bcrisps?\b/i.test(servingSize);
+  return false;
+}
+
 /** Infer gram weight that OFF per-serving nutrients actually represent. */
 export function inferServingGramsFromNutriments(nutriments: Record<string, unknown>): number | null {
   const per100Cal = Number(nutriments['energy-kcal_100g']);
@@ -180,6 +212,14 @@ export function resolveBarcodeServingGrams(
 
   if (textGrams != null && isSingleUnitServing(servingSize)) {
     displayGrams = textGrams;
+  } else if (
+    isChipProduct(productName, servingSize) &&
+    isMultiUnitChipServing(servingSize) &&
+    textGrams != null &&
+    textGrams > STANDARD_CHIP_SERVING_GRAMS + 2
+  ) {
+    // OFF often lists bulk chip servings (e.g. "20 chips (50 g)") while labels use 28 g (~11 chips).
+    displayGrams = STANDARD_CHIP_SERVING_GRAMS;
   } else if (
     isTortillaProduct(productName, servingSize) &&
     perItemGrams != null &&
@@ -386,9 +426,17 @@ function parseProduct(barcode: string, product: Record<string, unknown>): Barcod
   const product_name = String(product.product_name || product.generic_name || 'Packaged food').trim().slice(0, 120);
   const brand = String(product.brands || '').trim().slice(0, 80) || undefined;
 
+  const chipServingNormalized =
+    isChipProduct(product_name, servingSize) &&
+    displayGrams === STANDARD_CHIP_SERVING_GRAMS &&
+    nutrientBasisGrams != null &&
+    nutrientBasisGrams > STANDARD_CHIP_SERVING_GRAMS + 2;
+
   let notes = 'Values from Open Food Facts. Verify against your package label when precision matters.';
   if (missingServingWeight) {
     notes = 'Values from Open Food Facts (per 100 g). Adjust serving size if your label differs.';
+  } else if (chipServingNormalized) {
+    notes = `Adjusted to ${STANDARD_CHIP_SERVING_GRAMS} g (~1 oz / about 11 chips) to match typical package labels. Verify against your label.`;
   } else if (scaledFrom100g) {
     notes = `Values scaled to ${displayGrams ?? serving_label} g from Open Food Facts per-100 g data. Verify against your label.`;
   } else if (

@@ -7804,3 +7804,43 @@ When OFF copies per-100 g calories into the per-serving field (both 220), we inf
 ```text
 BIQ-0114 Fix barcode showing per-100g calories instead of label serving
 ```
+
+---
+
+## BIQ-0115 - Garden Fresh Chips Barcode 4767100030 (28 g / ~130 cal)
+
+Date: 2026-08-13  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Fixed barcode **4767100030** (Garden Fresh Blue Corn Tortilla **Chips**) showing **220 calories** from stale Open Food Facts data (50 g / 20 chips) instead of the package label (**28 g / ~130 cal**).
+
+### Root cause
+
+- Manual 10-digit UPC did not match OFF EAN-13 (`0647671000306`)
+- OFF lists a bulk chip serving (50 g, 220 kcal) while current labels use the standard **28 g (1 oz)** serving (~130 kcal)
+
+### Changes
+
+- Expand 10-digit barcode lookup to EAN-13 (`06` + code + check digit)
+- Normalize multi-unit chip servings to **28 g** and scale nutrients from OFF per-serving basis
+
+### Files Changed
+
+- `lib/nutrition/barcodeLookup.ts`
+- `scripts/test-barcode-parse.ts`
+- `CHANGELOG.md`
+
+### Testing Steps
+
+1. Run `npx tsx scripts/test-barcode-parse.ts`
+2. Deploy to Vercel, force-quit Safari on iPhone, rescan or enter **4767100030**
+3. Expect **~123 cal** at **28 g** (OFF per-100 g rounding; label may show 130 — use Review & edit or label photo for exact match)
+
+### Recommended Commit Message
+
+```text
+BIQ-0115 Fix Garden Fresh chip barcode serving 50g→28g and 10-digit UPC lookup
+```

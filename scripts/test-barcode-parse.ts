@@ -1,6 +1,23 @@
-import { parseOffProductForTest } from '../lib/nutrition/barcodeLookup';
+import { barcodeLookupCandidates, parseOffProductForTest } from '../lib/nutrition/barcodeLookup';
 
 const cases = [
+  {
+    name: 'Garden Fresh Blue Corn Chips — OFF 50g bulk, label 28g',
+    product: {
+      product_name: 'Blue Corn Tortilla Chips',
+      brands: 'Garden Fresh Gourmet',
+      serving_quantity: 50,
+      serving_size: '20 chips (50 g)',
+      nutriments: {
+        'energy-kcal_100g': 440,
+        'energy-kcal_serving': 220,
+        proteins_100g: 6,
+        proteins_serving: 3,
+      },
+    },
+    expectCalNear: 123,
+    expectGrams: 28,
+  },
   {
     name: '1 tortilla (28 g) with trusted 130 kcal',
     product: {
@@ -81,9 +98,21 @@ for (const c of cases) {
   }
   const cal = r.per_serving.calories;
   const grams = r.serving_grams;
-  const ok = Math.abs(cal - c.expectCalNear) <= 3;
-  console.log(`${ok ? 'OK' : 'FAIL'} ${c.name}: ${cal} cal @ ${grams}g (expected ~${c.expectCalNear})`);
+  const calOk = Math.abs(cal - c.expectCalNear) <= 3;
+  const gramsOk = c.expectGrams == null || grams === c.expectGrams;
+  const ok = calOk && gramsOk;
+  console.log(
+    `${ok ? 'OK' : 'FAIL'} ${c.name}: ${cal} cal @ ${grams}g (expected ~${c.expectCalNear} cal${c.expectGrams != null ? ` @ ${c.expectGrams}g` : ''})`
+  );
   if (!ok) failed++;
+}
+
+const padded = barcodeLookupCandidates('4767100030');
+if (!padded.includes('0647671000306')) {
+  console.error('FAIL barcode padding: 4767100030 should resolve to 0647671000306', padded);
+  failed++;
+} else {
+  console.log('OK barcode padding: 4767100030 → 0647671000306');
 }
 
 if (failed) process.exit(1);
