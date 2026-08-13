@@ -745,3 +745,56 @@ The team builds and deploys through GitHub + Vercel without relying on local `np
 - Vercel env vars must be set for both **Preview** (test Supabase) and **Production** (live Supabase)
 - Production branch stays `main`; `Develop` pushes create preview deployments
 - Every BIQ change with SQL must document test-then-live migration order
+
+---
+
+## Decision 028 - Premium Barcode Database (Nutritionix)
+
+Date: 2026-08-13  
+Status: **Rejected**  
+Category: Product / Integrations
+
+### Decision
+
+~~Use Nutritionix as primary barcode API for Premium.~~ **Rejected** — ~$499/mo annual minimum is not justified at current scale.
+
+### Reason
+
+Cost vs user count; free/cheap paths can deliver trust via label verification and caching instead.
+
+### Impact
+
+Superseded by Decision 029 (trust-first verified barcode cache).
+
+---
+
+## Decision 029 - Trust-First Barcode (Verify Once, Trust Forever)
+
+Date: 2026-08-13  
+Status: Proposed  
+Category: Product / Integrations
+
+### Decision
+
+Build scan trust without a paid nutrition API:
+
+1. Barcode (Open Food Facts) identifies the **product** (name, brand, image).
+2. **Label photo OCR** (or manual confirm) sets **trusted nutrition** when the user cares about accuracy.
+3. Save verified barcode → macros in the user's library; **future scans use verified data first**.
+4. Show **confidence in UI** — never present rough OFF estimates with the same certainty as label-verified values.
+
+### Reason
+
+Users lose trust when numbers are wrong, not when the flow asks them to verify once. Repeat scans must feel instant and accurate. This costs $0 beyond existing OFF + OpenAI label OCR.
+
+### Alternatives Considered
+
+- **Nutritionix / paid APIs** — rejected on cost (~$6k/year minimum)
+- **OFF-only with more heuristics** — necessary but insufficient alone; heuristics can't fix all stale DB rows
+- **Label OCR only (no barcode)** — accurate but slow; barcode still valuable for product ID
+
+### Impact
+
+- BIQ-0116 scoped in ROADMAP
+- Requires `barcode` on food library or verified cache table
+- Shifts product promise from "database is always right" to "we remember what's right for you"

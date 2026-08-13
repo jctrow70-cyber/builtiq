@@ -174,6 +174,7 @@ Goal: Create a realistic business model.
 - Nutrition guidance
 - Advanced analytics
 - Habit and recovery tracking
+- **Verified barcode cache** (label-confirmed products — see BIQ-0116; not a paid third-party DB)
 
 ### Key Deliverables
 
@@ -181,6 +182,7 @@ Goal: Create a realistic business model.
 - Feature gating plan
 - Subscription provider decision
 - Stripe or app store billing plan
+- Verified barcode flow (label confirm + cache)
 
 ## Phase 8 — Mobile Launch Preparation
 
@@ -384,8 +386,9 @@ See `CHANGELOG.md` BIQ-0013 and BIQ-0024 for full scope.
 7. ~~Barcode / label OCR for packaged foods~~ (BIQ-0041)
 8. ~~iPhone PWA live barcode scanner~~ (BIQ-0042)
 9. AI Coach hook-up (consumes `coaching_metadata` + program + nutrition context)
-10. Progress tab nutrition trends
-11. Split `page.tsx` into focused components
+10. **Trust-first barcode + verified cache** (BIQ-0116 — label confirm, confidence UI, no paid API)
+11. Progress tab nutrition trends
+12. Split `page.tsx` into focused components
 
 ### Planned — Platform admin and catalog operations
 
@@ -402,6 +405,51 @@ See `CHANGELOG.md` BIQ-0013 and BIQ-0024 for full scope.
 | 5 | Document admin onboarding: first deploy sets `BUILDIQ_CATALOG_ADMIN_EMAILS`; later migrate to DB roles |
 
 **Out of scope for v1 admin:** End-user library picking (removed — unified catalog is default).
+
+### Planned — Trust-first barcode scanning (BIQ-0116)
+
+**Problem:** Open Food Facts is free but inconsistent — users lose trust when scans show 220 cal but the label says 130. Paid databases (e.g. Nutritionix ~$499/mo annual) are not viable at current scale.
+
+**Strategy:** Don't promise perfect third-party data. **Separate product identity (barcode) from trusted nutrition (label).** Barcode answers *what* you ate; label confirmation answers *how much* — and we remember verified products so repeat scans feel instant and accurate.
+
+**Rejected:** Nutritionix / FatSecret paid API as primary path — cost vs user count does not justify ~$6k/year minimum (see Decision 028, superseded).
+
+**Lookup order (when implemented):**
+
+1. **User's verified products** — barcode match in `st_food_library` or verified cache (label-confirmed before)
+2. **User's past logs** — same barcode logged with confirmed macros
+3. **Open Food Facts** — name, brand, image, *estimated* macros (with confidence score)
+4. **Prompt label verify** — when confidence is low or user taps "Doesn't match my label"
+
+**Scope — BIQ-0116 (not started):**
+
+| Part | Deliverable |
+|------|-------------|
+| 1 | **Confidence scoring** — flag suspicious OFF data (per-100g copied to serving, scaled/heuristic adjusted, missing serving weight, large calorie/serving mismatch) |
+| 2 | **Scan result UI** — clear states: **Verified** (from cache/library) vs **Estimated** (from OFF) with honest copy, not fake precision |
+| 3 | **"Match my label" flow** — one tap after scan → label photo OCR → confirm → save as verified product linked to barcode |
+| 4 | DB: `barcode` + `verified_at` + `verified_source` on `st_food_library` (or `st_verified_barcodes` table) |
+| 5 | Lookup prefers verified rows before OFF; second scan of same product is one-tap trusted |
+| 6 | **Review & edit** stays first-class; optional "Save as my verified product" after manual fix |
+| 7 | Optional v2: promote barcodes verified by multiple users to app-wide cache (admin review) |
+
+**UX principle:** First scan of a new product may be **scan + label snap** (15 seconds). Every rescan should be **trusted and one tap**. Users accept a short verify once; they won't accept wrong numbers repeatedly.
+
+**Cost:** $0 incremental API (OFF + existing label OCR). Label OCR uses OpenAI only when user chooses verify — predictable spend.
+
+**Out of scope v1:** Paid nutrition APIs; crowdsourced global database competing with OFF.
+
+**When to build:** Next nutrition polish sprint — directly addresses scan trust without subscription dependency.
+
+**Testing checklist (when implemented):**
+
+1. First scan Garden Fresh chips → **Estimated**, suggests label verify
+2. Label verify → saves verified product → second scan shows **Verified** ~130 cal
+3. User manual fix + save → same barcode uses saved values
+4. Low-confidence OFF never shown with same UI as verified
+5. Free tier gets full flow (not paywalled)
+
+See `DECISIONS.md` Decision 029.
 
 Run pending Supabase migrations on each environment before testing:
 
