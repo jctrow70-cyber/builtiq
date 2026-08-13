@@ -62,6 +62,8 @@ export type GroupsHubProps = {
   memberProgramDraftEditId?: string | null;
   onWorkspaceTabChange?: (tab: TeamWorkspaceTab) => void;
   onSelectTeam: (teamId: string) => void;
+  defaultTeamId?: string | null;
+  onSetDefaultTeam?: (teamId: string) => void;
   onCreateGroup: (name: string) => Promise<void>;
   onJoinGroup: (code: string) => Promise<void>;
   onRefreshMembers: () => void;
@@ -153,6 +155,8 @@ export default function GroupsHub(props: GroupsHubProps) {
     memberProgramDraftEditId = null,
     onWorkspaceTabChange,
     onSelectTeam,
+    defaultTeamId = null,
+    onSetDefaultTeam,
     onCreateGroup,
     onJoinGroup,
     onRefreshMembers,
@@ -407,11 +411,13 @@ export default function GroupsHub(props: GroupsHubProps) {
         <TeamSelector
           teams={teams}
           activeTeam={activeTeam}
+          defaultTeamId={defaultTeamId}
           memberCount={members.length}
           onSelectTeam={(id) => {
             onSelectTeam(id);
             onSetModeTeam();
           }}
+          onSetDefaultTeam={onSetDefaultTeam}
           onCreateTeam={() => setSheetMode('create')}
           onJoinTeam={() => setSheetMode('join')}
         />

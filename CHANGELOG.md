@@ -7844,3 +7844,107 @@ Fixed barcode **4767100030** (Garden Fresh Blue Corn Tortilla **Chips**) showing
 ```text
 BIQ-0115 Fix Garden Fresh chip barcode serving 50g→28g and 10-digit UPC lookup
 ```
+
+---
+
+## BIQ-0116 - Dismiss Assigned Workouts, Default Group, Log Date Hint
+
+Date: 2026-08-13  
+Branch: main  
+Status: Completed
+
+### Summary
+
+- **Remove assigned workout** — athletes can dismiss pending/started group assignments (marks recipient as skipped)
+- **Default group** — save preferred group on profile; restored on reload instead of arbitrary first team
+- **Logging date hint** — explains how calendar date relates to workout day tabs (Mon/Tue/…)
+
+### Purpose
+
+Users in multiple groups need a stable default group. Assigned workouts could only be hidden, not removed from the list. Logging date vs program day was unclear.
+
+### Files Changed
+
+- `app/page.tsx` — dismiss assignment, default team load/save, sorted teams
+- `app/components/groups/AssignedWorkoutsPanel.tsx` — Remove button
+- `app/components/groups/TeamSelector.tsx` — Set as default group
+- `app/components/groups/GroupsHub.tsx` — wire default team props
+- `app/components/training/TrainingWeekSelector.tsx` — log date hint
+- `app/globals.css` — hint styling
+- `supabase/migrations/20250813_041_profile_default_team.sql`
+- `CHANGELOG.md`
+
+### Database Changes
+
+- `st_profiles.default_team_id` (nullable FK to `st_teams`, ON DELETE SET NULL)
+
+Run migration `20250813_041_profile_default_team.sql` on test Supabase, then production.
+
+### Testing Steps
+
+1. Run migration on Supabase
+2. **Dismiss assignment:** Training → Assigned Workouts → Remove on pending assignment → confirm gone; if open, returns to personal program
+3. **Default group:** Groups → team menu → Set as default group → reload app → same group selected
+4. **Log date hint:** Training → read hint under Logging date; change date → week/day tabs sync; pick Mon tab → date moves to that weekday in current program week
+5. Mobile: Remove button and default group action usable on phone
+
+### Known Issues
+
+- Coach cannot cancel assignments for the whole group yet (athlete dismiss only)
+- Default group not shown on Training group dropdown (Groups selector only)
+
+### Recommended Commit Message
+
+```text
+BIQ-0116 Dismiss assigned workouts, default group preference, log date hint
+```
+
+---
+
+## BIQ-0117 - Garden Fresh Chip Barcode 130 cal Label Alignment
+
+Date: 2026-08-13  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Fixed barcode **4767100030** (Garden Fresh Blue Corn Tortilla Chips) showing **123 calories** at **28 g** after BIQ-0115 serving normalization; package label reports **130 cal / 28 g**.
+
+### Root cause
+
+- BIQ-0115 correctly normalized OFF bulk serving **20 chips (50 g) / 220 kcal** to the standard **28 g** chip serving
+- Linear scaling from OFF **440 kcal/100g** yields **123 kcal @ 28g** (`220 × 28/50` or `440 × 0.28`)
+- US chip labels commonly round calories up to the nearest **10 kcal** above 50 (label shows **130**, equivalent to ~**464 kcal/100g**)
+
+### Changes
+
+- After bulk→28 g chip normalization, apply label-aligned calorie rounding (`ceil` to nearest 10 kcal) so typical snack labels match scan results
+
+### Files Changed
+
+- `lib/nutrition/barcodeLookup.ts`
+- `scripts/test-barcode-parse.ts`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None
+
+### Testing Steps
+
+1. Run `npx tsx scripts/test-barcode-parse.ts` — Garden Fresh case expects **130 cal @ 28 g**
+2. Scan or enter barcode **4767100030** (OFF **0647671000306**)
+3. Confirm **130 calories** at **28 g** serving
+4. Verify other barcode cases in test script still pass
+
+### Known Issues
+
+- Macros (protein, carbs, fat) still scale linearly from OFF; only calories get label rounding for chip normalization
+- Other chip products with different OFF densities may round up by up to ~7 kcal
+
+### Recommended Commit Message
+
+```text
+BIQ-0117 Align Garden Fresh chip barcode calories to 130 cal label at 28g
+```

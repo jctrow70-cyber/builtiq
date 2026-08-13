@@ -147,6 +147,16 @@ function isTortillaProduct(productName: string, servingSize: string): boolean {
 /** FDA standard snack chip serving (1 oz). */
 const STANDARD_CHIP_SERVING_GRAMS = 28;
 
+/**
+ * Align OFF bulk-chip calories to typical 28 g label values.
+ * OFF often clusters around ~440 kcal/100g (123 kcal @ 28 g) while US chip labels
+ * commonly round up to the nearest 10 kcal above 50 (e.g. 130 kcal @ 28 g).
+ */
+function roundChipLabelCalories(linearCalories: number): number {
+  if (!Number.isFinite(linearCalories) || linearCalories <= 0) return 0;
+  return Math.ceil(linearCalories / 10) * 10;
+}
+
 function isChipProduct(productName: string, servingSize: string): boolean {
   const text = `${productName} ${servingSize}`.toLowerCase();
   return /\bchips?\b|\bcrisps?\b/.test(text);
@@ -396,13 +406,24 @@ function parseProduct(barcode: string, product: Record<string, unknown>): Barcod
   const sugarPick = pickNutrientForServing(nutriments, 'sugars', nutrientBasisGrams, displayGrams, pickOptions);
   const sodiumRaw = pickSodiumMg(nutriments, nutrientBasisGrams, displayGrams, pickOptions);
 
+  const product_name = String(product.product_name || product.generic_name || 'Packaged food').trim().slice(0, 120);
+
   const scaledFrom100g =
     caloriePick.scaledFrom100g ||
     proteinPick.scaledFrom100g ||
     carbsPick.scaledFrom100g ||
     fatPick.scaledFrom100g;
 
-  const calories = caloriePick.value;
+  const chipServingNormalized =
+    isChipProduct(product_name, servingSize) &&
+    displayGrams === STANDARD_CHIP_SERVING_GRAMS &&
+    nutrientBasisGrams != null &&
+    nutrientBasisGrams > STANDARD_CHIP_SERVING_GRAMS + 2;
+
+  let calories = caloriePick.value;
+  if (chipServingNormalized && calories != null) {
+    calories = roundChipLabelCalories(calories);
+  }
   const protein_g = proteinPick.value;
   const carbs_g = carbsPick.value;
   const fat_g = fatPick.value;
@@ -423,14 +444,7 @@ function parseProduct(barcode: string, product: Record<string, unknown>): Barcod
     };
   }
 
-  const product_name = String(product.product_name || product.generic_name || 'Packaged food').trim().slice(0, 120);
   const brand = String(product.brands || '').trim().slice(0, 80) || undefined;
-
-  const chipServingNormalized =
-    isChipProduct(product_name, servingSize) &&
-    displayGrams === STANDARD_CHIP_SERVING_GRAMS &&
-    nutrientBasisGrams != null &&
-    nutrientBasisGrams > STANDARD_CHIP_SERVING_GRAMS + 2;
 
   let notes = 'Values from Open Food Facts. Verify against your package label when precision matters.';
   if (missingServingWeight) {

@@ -15,7 +15,7 @@ const cases = [
         proteins_serving: 3,
       },
     },
-    expectCalNear: 123,
+    expectCalNear: 130,
     expectGrams: 28,
   },
   {

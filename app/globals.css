@@ -646,6 +646,7 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .training-log-date-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .training-log-date-row input[type="date"]{min-height:40px;max-width:180px;padding:8px 10px;border-radius:10px;border:1px solid var(--borderSubtle);background:var(--surfaceInset);color:var(--text);font-size:14px;font-weight:700}
 .training-log-date-display{font-size:13px;font-weight:700}
+.training-log-date-hint{margin:4px 0 0;font-size:11px;line-height:1.45;max-width:36rem}
 .training-workout-days{display:grid;gap:8px;margin:0 0 12px}
 .training-workout-day{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;padding:12px 14px;border-radius:14px;border:1px solid var(--borderSubtle);background:var(--surface);color:inherit;text-align:left;cursor:pointer;min-height:44px;transition:border-color .2s ease,background .2s ease,box-shadow .2s ease}
 .training-workout-day--active{border-color:var(--accent);background:var(--accentSoft);box-shadow:inset 0 0 0 1px var(--accent)}

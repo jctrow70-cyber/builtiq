@@ -174,7 +174,7 @@ Goal: Create a realistic business model.
 - Nutrition guidance
 - Advanced analytics
 - Habit and recovery tracking
-- **Verified barcode cache** (label-confirmed products — see BIQ-0116; not a paid third-party DB)
+- **Verified barcode cache** (label-confirmed products — see BIQ-0118; not a paid third-party DB)
 
 ### Key Deliverables
 
@@ -386,7 +386,7 @@ See `CHANGELOG.md` BIQ-0013 and BIQ-0024 for full scope.
 7. ~~Barcode / label OCR for packaged foods~~ (BIQ-0041)
 8. ~~iPhone PWA live barcode scanner~~ (BIQ-0042)
 9. AI Coach hook-up (consumes `coaching_metadata` + program + nutrition context)
-10. **Trust-first barcode + verified cache** (BIQ-0116 — label confirm, confidence UI, no paid API)
+10. **Trust-first barcode + verified cache** (BIQ-0118 — label confirm, confidence UI, no paid API)
 11. Progress tab nutrition trends
 12. Split `page.tsx` into focused components
 
@@ -406,7 +406,7 @@ See `CHANGELOG.md` BIQ-0013 and BIQ-0024 for full scope.
 
 **Out of scope for v1 admin:** End-user library picking (removed — unified catalog is default).
 
-### Planned — Trust-first barcode scanning (BIQ-0116)
+### Planned — Trust-first barcode scanning (BIQ-0118)
 
 **Problem:** Open Food Facts is free but inconsistent — users lose trust when scans show 220 cal but the label says 130. Paid databases (e.g. Nutritionix ~$499/mo annual) are not viable at current scale.
 
@@ -421,7 +421,7 @@ See `CHANGELOG.md` BIQ-0013 and BIQ-0024 for full scope.
 3. **Open Food Facts** — name, brand, image, *estimated* macros (with confidence score)
 4. **Prompt label verify** — when confidence is low or user taps "Doesn't match my label"
 
-**Scope — BIQ-0116 (not started):**
+**Scope — BIQ-0118 (not started):**
 
 | Part | Deliverable |
 |------|-------------|
@@ -449,7 +449,7 @@ See `CHANGELOG.md` BIQ-0013 and BIQ-0024 for full scope.
 4. Low-confidence OFF never shown with same UI as verified
 5. Free tier gets full flow (not paywalled)
 
-See `DECISIONS.md` Decision 029.
+See `DECISIONS.md` Decision 029 (BIQ-0118).
 
 Run pending Supabase migrations on each environment before testing:
 

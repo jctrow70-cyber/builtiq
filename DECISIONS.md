@@ -795,6 +795,6 @@ Users lose trust when numbers are wrong, not when the flow asks them to verify o
 
 ### Impact
 
-- BIQ-0116 scoped in ROADMAP
+- BIQ-0118 scoped in ROADMAP
 - Requires `barcode` on food library or verified cache table
 - Shifts product promise from "database is always right" to "we remember what's right for you"

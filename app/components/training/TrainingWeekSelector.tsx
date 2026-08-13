@@ -57,6 +57,10 @@ export default function TrainingWeekSelector({
           <DateInput id="training-log-date-alt" value={logDate} onChange={onLogDateChange} disabled={disabled} />
           <span className="muted training-log-date-display">{formatDisplayDate(logDate)}</span>
         </div>
+        <p className="muted training-log-date-hint">
+          Calendar day your sets are saved to. Workout day tabs (Mon, Tue, …) pick the program template — they usually
+          match, but you can log a different day&apos;s workout on another date.
+        </p>
       </div>
     </div>
   );

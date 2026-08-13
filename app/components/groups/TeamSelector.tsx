@@ -6,8 +6,10 @@ import { roleLabel } from '../../../lib/groups';
 type TeamSelectorProps = {
   teams: any[];
   activeTeam: any | null;
+  defaultTeamId?: string | null;
   memberCount: number;
   onSelectTeam: (teamId: string) => void;
+  onSetDefaultTeam?: (teamId: string) => void;
   onCreateTeam: () => void;
   onJoinTeam: () => void;
 };
@@ -15,8 +17,10 @@ type TeamSelectorProps = {
 export default function TeamSelector({
   teams,
   activeTeam,
+  defaultTeamId,
   memberCount,
   onSelectTeam,
+  onSetDefaultTeam,
   onCreateTeam,
   onJoinTeam,
 }: TeamSelectorProps) {
@@ -50,12 +54,14 @@ export default function TeamSelector({
       {activeTeam && (
         <p className="muted team-selector-meta">
           {roleLabel(activeTeam.my_role)} · {memberCount} member{memberCount === 1 ? '' : 's'}
+          {defaultTeamId === activeTeam.id ? ' · Default group' : ''}
         </p>
       )}
       {open && (
         <div className="team-selector-menu" role="listbox">
           {teams.map((t: any) => {
             const selected = t.id === activeTeam?.id;
+            const isDefault = t.id === defaultTeamId;
             return (
               <button
                 key={t.id}
@@ -71,11 +77,27 @@ export default function TeamSelector({
                 <span className="team-selector-item-name">
                   {selected ? '✓ ' : ''}
                   {t.name}
+                  {isDefault ? ' · Default' : ''}
                 </span>
                 <span className="muted">{roleLabel(t.my_role)}</span>
               </button>
             );
           })}
+          {activeTeam && onSetDefaultTeam && defaultTeamId !== activeTeam.id && (
+            <>
+              <div className="team-selector-divider" />
+              <button
+                type="button"
+                className="team-selector-action"
+                onClick={() => {
+                  onSetDefaultTeam(activeTeam.id);
+                  setOpen(false);
+                }}
+              >
+                Set {activeTeam.name} as default group
+              </button>
+            </>
+          )}
           <div className="team-selector-divider" />
           <button type="button" className="team-selector-action" onClick={() => { setOpen(false); onCreateTeam(); }}>
             Create Team

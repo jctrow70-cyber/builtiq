@@ -14,7 +14,9 @@ type AssignedWorkoutsPanelProps = {
   onOpen: (row: AssignedWorkoutRow) => void;
   onCloseActive?: () => void;
   onCopyToPersonal?: (row: AssignedWorkoutRow) => void;
+  onDismiss?: (row: AssignedWorkoutRow) => void;
   copyingRecipientId?: string | null;
+  dismissingRecipientId?: string | null;
   getWorkoutStatus?: (row: AssignedWorkoutRow) => string;
   statusLabel: (s: string) => string;
 };
@@ -25,7 +27,9 @@ export default function AssignedWorkoutsPanel({
   onOpen,
   onCloseActive,
   onCopyToPersonal,
+  onDismiss,
   copyingRecipientId,
+  dismissingRecipientId,
   getWorkoutStatus,
   statusLabel,
 }: AssignedWorkoutsPanelProps) {
@@ -61,6 +65,7 @@ export default function AssignedWorkoutsPanel({
         const isActive = row.id === activeRecipientId;
         const hasCopy = assignedHasPersonalCopy(row);
         const copying = copyingRecipientId === row.id;
+        const dismissing = dismissingRecipientId === row.id;
         const btnLabel =
           logStatus === 'completed'
             ? 'View'
@@ -87,15 +92,26 @@ export default function AssignedWorkoutsPanel({
                   type="button"
                   className="btn small secondary"
                   onClick={() => onCopyToPersonal(row)}
-                  disabled={!!copyingRecipientId}
+                  disabled={!!copyingRecipientId || !!dismissingRecipientId}
                 >
                   {copying ? 'Copying…' : 'Copy'}
+                </button>
+              )}
+              {onDismiss && row.status !== 'completed' && (
+                <button
+                  type="button"
+                  className="btn small secondary"
+                  onClick={() => onDismiss(row)}
+                  disabled={!!copyingRecipientId || !!dismissingRecipientId}
+                >
+                  {dismissing ? 'Removing…' : 'Remove'}
                 </button>
               )}
               <button
                 type="button"
                 className={`btn small ${logStatus === 'completed' ? 'secondary' : 'green'}`}
                 onClick={() => onOpen(row)}
+                disabled={!!dismissingRecipientId}
               >
                 {btnLabel}
               </button>
