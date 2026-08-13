@@ -7761,3 +7761,46 @@ None.
 ```text
 BIQ-0113 Fix barcode serving size to match single-tortilla label grams
 ```
+
+---
+
+## BIQ-0114 - Fix Barcode 220 cal When Label Shows 130
+
+Date: 2026-08-13  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Fixed barcode scans showing **220 calories** (Open Food Facts per-100 g value) when the package label says **130 calories** for one tortilla (~28 g).
+
+### Root cause
+
+When OFF copies per-100 g calories into the per-serving field (both 220), we inferred a 100 g serving and returned 220 kcal unchanged.
+
+### Changes
+
+- Reject per-serving values that match per-100 g (bad OFF copy)
+- Scale per-100 g calories by label serving grams (e.g. 28 g → ~62 cal, or use trusted per-serving when available)
+- For **1 tortilla (28 g)** labels, use trusted OFF per-serving calories directly (e.g. 130 kcal)
+- Disable long-lived fetch cache on OFF API calls during lookup
+
+### Files Changed
+
+- `lib/nutrition/barcodeLookup.ts`
+- `scripts/test-barcode-parse.ts`
+- `CHANGELOG.md`
+
+### Testing Steps
+
+1. Run `npx tsx scripts/test-barcode-parse.ts` — all cases pass
+2. Redeploy or restart local dev server (required — previous fixes may not be live yet)
+3. Scan tortillas — should **not** show 220 cal if OFF has 130 kcal per serving
+4. Review & edit — serving size **28 g**, calories **~130** when label matches
+5. If still wrong, use **Review & edit** to match label exactly (OFF data varies by product)
+
+### Recommended Commit Message
+
+```text
+BIQ-0114 Fix barcode showing per-100g calories instead of label serving
+```
