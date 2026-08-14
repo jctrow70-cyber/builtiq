@@ -7948,3 +7948,52 @@ None
 ```text
 BIQ-0117 Align Garden Fresh chip barcode calories to 130 cal label at 28g
 ```
+
+---
+
+## BIQ-0118 - Cloud Agent Development Environment
+
+Date: 2026-08-13  
+Branch: cursor/setup-dev-environment-1f6d  
+Status: Completed
+
+### Summary
+
+Added a committed Cursor Cloud Agent development environment definition so the repository is usable out of the box in Cloud Agents: dependencies install automatically and the Next.js dev server starts in a visible terminal.
+
+### Purpose
+
+Give future agents (and reviewers) a reproducible, one-step development setup without manual instructions. The environment configuration is versioned with the code so it follows branches and pull requests.
+
+### Changes
+
+- Added `.cursor/environment.json` with:
+  - `install`: `npm ci` (deterministic install from `package-lock.json`)
+  - `terminals`: a `dev` terminal running `npm run dev` (Next.js dev server on port 3000)
+  - `ports`: exposes port 3000 ("web")
+
+### Files Changed
+
+- `.cursor/environment.json`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. `npm ci` completes successfully and is idempotent (run twice).
+2. `npm run build` compiles, type-checks, and prerenders all pages/API routes (requires `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` to be present, e.g. in `.env.local`).
+3. `npm run dev` starts and serves `http://localhost:3000` (HTTP 200).
+4. The Sign In / Create Account UI renders in a browser and tab switching works.
+
+### Known Issues
+
+- Full backend functionality (auth, workout/nutrition data, AI coach) requires real Supabase credentials and other secrets (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `OPENAI_API_KEY`, `BUILDIQ_ADMIN_EMAILS`, `RESEND_API_KEY`) supplied via Cloud Agent secrets. Without well-formed Supabase env values the production build's static prerender of `/` fails because the Supabase client is constructed at module load.
+
+### Recommended Commit Message
+
+```text
+BIQ-0118 Add Cursor Cloud Agent development environment
+```
