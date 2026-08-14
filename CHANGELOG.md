@@ -7994,3 +7994,33 @@ None.
 ```text
 BIQ-0119 Add meal photo AI macro estimation for plated foods
 ```
+
+---
+
+## BIQ-0120 - Nutrition Photo Picker Allows Photo Library
+
+Date: 2026-08-14  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Removed `capture="environment"` from meal photo and nutrition label file inputs so iPhone and other mobile browsers show the native chooser (Camera **or** Photo Library) instead of opening the camera only.
+
+### Files Changed
+
+- `app/components/NutritionTracker.tsx`
+- `CHANGELOG.md`
+
+### Testing Steps
+
+1. Deploy or restart dev server
+2. Nutrition → Add food → **Take or choose meal photo**
+3. On iPhone: confirm options include **Photo Library** and **Take Photo**
+4. Pick an existing photo → meal estimate runs as before
+
+### Recommended Commit Message
+
+```text
+BIQ-0120 Allow photo library for meal and label nutrition uploads
+```

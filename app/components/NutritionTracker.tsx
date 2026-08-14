@@ -1865,13 +1865,12 @@ export default function NutritionTracker({
                   </button>
                 </div>
                 <label htmlFor="label-photo-input" className="nutrition-label-upload">
-                  Photograph nutrition label
+                  Photograph or choose nutrition label
                 </label>
                 <input
                   id="label-photo-input"
                   type="file"
                   accept="image/jpeg,image/png,image/webp,image/*"
-                  capture="environment"
                   disabled={saving || labelScanning}
                   onChange={(e) => {
                     const file = e.target.files?.[0] || null;
@@ -1898,7 +1897,6 @@ export default function NutritionTracker({
               id="meal-photo-input"
               type="file"
               accept="image/jpeg,image/png,image/webp,image/*"
-              capture="environment"
               disabled={saving || mealPhotoScanning || labelScanning}
               onChange={(e) => {
                 const file = e.target.files?.[0] || null;
