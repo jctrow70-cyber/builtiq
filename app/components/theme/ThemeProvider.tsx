@@ -42,26 +42,29 @@ export default function ThemeProvider({
 }: ThemeProviderProps) {
   const themeId = DEFAULT_THEME_ID;
   const [reducedMotion, setReducedMotion] = useState(false);
-  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
-    setHydrated(true);
+    const root = document.documentElement;
+    // Theme is already set in SSR HTML; keep attributes in sync without delaying first paint.
+    root.setAttribute('data-theme', themeId);
+    root.style.colorScheme = 'dark';
+    root.style.backgroundColor = '#0a0f18';
+    document.body.style.backgroundColor = '#0a0f18';
+    localStorage.setItem(THEME_STORAGE_KEY, themeId);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', '#0a0f18');
+    // Enable theme transitions only after first paint to avoid a fade-in flash on load.
+    requestAnimationFrame(() => {
+      root.classList.add('theme-hydrated');
+    });
+    onThemePersist?.(themeId);
+
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
     setReducedMotion(mq.matches);
     const onMotionChange = (e: MediaQueryListEvent) => setReducedMotion(e.matches);
     mq.addEventListener('change', onMotionChange);
     return () => mq.removeEventListener('change', onMotionChange);
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    document.documentElement.setAttribute('data-theme', themeId);
-    document.documentElement.style.colorScheme = 'dark';
-    localStorage.setItem(THEME_STORAGE_KEY, themeId);
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', '#0a0f18');
-    onThemePersist?.(themeId);
-  }, [themeId, hydrated, onThemePersist]);
+  }, [themeId, onThemePersist]);
 
   const setThemeId = useCallback((_id: ThemeId) => {
     /* Single fixed theme — no-op */

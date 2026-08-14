@@ -7948,3 +7948,58 @@ None
 ```text
 BIQ-0117 Align Garden Fresh chip barcode calories to 130 cal label at 28g
 ```
+
+---
+
+## BIQ-0118 - Fix Mobile White Flash on Load
+
+Date: 2026-08-14  
+Branch: cursor/fix-mobile-load-flash-e5c1  
+Status: Completed
+
+### Summary
+
+Eliminated the brief white/light flash that appeared on phones before BuildIQ Health finished loading by painting the dark Option D canvas in the initial HTML and delaying theme CSS transitions until after first paint.
+
+### Purpose
+
+On mobile Safari and Chrome, the browser default light canvas was visible for a moment before CSS/JS applied the dark theme. That looked like a flash every time the site opened.
+
+### Changes
+
+- Set `data-theme="performance"`, dark `color-scheme`, and navy background on `<html>`/`<body>` in the root layout (SSR)
+- Added a tiny critical inline style so the dark canvas paints before `globals.css` arrives
+- Disabled `--theme-transition` until `theme-hydrated` is applied after first paint
+- Gave `.auth-shell` an explicit dark full-viewport background during session/profile boot
+- Aligned PWA `manifest.webmanifest` `background_color` / `theme_color` with `#0a0f18`
+
+### Files Changed
+
+- `app/layout.tsx`
+- `app/globals.css`
+- `app/components/theme/ThemeProvider.tsx`
+- `public/manifest.webmanifest`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Open the site on a phone (or Chrome DevTools mobile emulation with network throttling).
+2. Hard-refresh several times — the viewport should stay dark navy from the first paint (no white flash).
+3. Confirm login/loading screen and signed-in app both use the same dark background.
+4. If installed as a home-screen app, relaunch and confirm splash/background matches the app (`#0a0f18`).
+5. Spot-check desktop: no regressions to layout, auth, or navigation.
+
+### Known Issues
+
+- A short branded “Loading your account…” state still appears while auth/session resolves — that is intentional, not the white flash.
+- Very slow networks may still show the loading panel briefly before the dashboard; background should remain dark.
+
+### Recommended Commit Message
+
+```text
+BIQ-0118 Fix mobile white flash on first paint
+```
