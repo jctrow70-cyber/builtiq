@@ -31,10 +31,29 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
+/** Inline critical paint styles so mobile browsers never flash a light canvas before CSS. */
+const BOOT_CANVAS_STYLE = {
+  colorScheme: 'dark' as const,
+  backgroundColor: '#0a0f18',
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body>
+    <html
+      lang="en"
+      data-theme="performance"
+      style={BOOT_CANVAS_STYLE}
+      suppressHydrationWarning
+    >
+      <head>
+        <style
+          dangerouslySetInnerHTML={{
+            __html:
+              'html,body{background-color:#0a0f18;color-scheme:dark}body{margin:0;color:#fff}',
+          }}
+        />
+      </head>
+      <body style={BOOT_CANVAS_STYLE} suppressHydrationWarning>
         <Providers>
           <InstallAppPrompt />
           {children}
