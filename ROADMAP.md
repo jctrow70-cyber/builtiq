@@ -123,6 +123,7 @@ Goal: Add macro and nutrition tracking that can support future AI features.
 - Copy previous meals
 - Save custom foods
 - Daily nutrition summary
+- Meal photo AI macro estimate (BIQ-0119)
 
 ### Key Deliverables
 

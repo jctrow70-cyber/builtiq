@@ -7948,3 +7948,49 @@ None
 ```text
 BIQ-0117 Align Garden Fresh chip barcode calories to 130 cal label at 28g
 ```
+
+---
+
+## BIQ-0119 - Meal Photo AI Macro Estimate
+
+Date: 2026-08-14  
+Branch: main  
+Status: Completed
+
+### Summary
+
+Added **Meal photo** in Nutrition → Add food: take or import a photo of a plate/bowl and AI estimates macros for each visible food item.
+
+### Purpose
+
+Let users log whole meals from a photo without typing descriptions or scanning barcodes — complements label OCR (packaged) and text AI estimate.
+
+### Files Changed
+
+- `lib/nutrition/mealPhotoEstimate.ts` — vision prompt, validation, response parsing
+- `app/api/nutrition/scan-meal/route.ts` — authenticated POST with OpenAI vision
+- `app/components/NutritionTracker.tsx` — meal photo upload UI, shared image encode helper, reuses AI result chips (Use / Log all)
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Sign in → Nutrition → Add food → **Meal photo** → take or choose a photo of a plate with multiple foods
+2. Confirm AI returns one or more items with calories and macros
+3. **Use** prefills manual form; **Log all** logs every item to the selected meal
+4. Test on iPhone PWA — camera capture should open from file input
+5. Blurry / empty photo → friendly error message
+6. Requires `OPENAI_API_KEY` on server (same as label OCR)
+
+### Known Issues
+
+- Estimates are approximate; hidden ingredients (oils, sauces) may be missed
+- Very dark or crowded photos reduce accuracy — user should verify or edit before logging
+
+### Recommended Commit Message
+
+```text
+BIQ-0119 Add meal photo AI macro estimation for plated foods
+```

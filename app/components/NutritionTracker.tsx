@@ -70,12 +70,21 @@ import {
   SERVING_UNIT_OPTIONS,
 } from '../../lib/nutrition/servingUnits';
 import { LABEL_OCR_DISCLAIMER } from '../../lib/nutrition/labelOcr';
+import { MEAL_PHOTO_DISCLAIMER } from '../../lib/nutrition/mealPhotoEstimate';
 import NutritionBarcodeScanner from './NutritionBarcodeScanner';
 import { NutritionBarcodeNotFoundCard, NutritionBarcodeProductCard } from './NutritionBarcodeProduct';
 import { currentCalendarWeekBounds, formatDisplayDate, formatYmd, parseYmd, todayYmd } from '../../lib/training/programCalendar';
 
 const RECENT_FOOD_HISTORY_DAYS = 90;
 const RECENT_FOOD_FETCH_LIMIT = 200;
+
+async function encodeImageFile(file: File): Promise<{ image_base64: string; mime_type: string }> {
+  const buffer = await file.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i]);
+  return { image_base64: btoa(binary), mime_type: file.type || 'image/jpeg' };
+}
 
 type NutritionTrackerProps = {
   userId: string;
@@ -399,6 +408,8 @@ export default function NutritionTracker({
   const [scannerError, setScannerError] = useState('');
   const [labelScanning, setLabelScanning] = useState(false);
   const [labelScanError, setLabelScanError] = useState('');
+  const [mealPhotoScanning, setMealPhotoScanning] = useState(false);
+  const [mealPhotoScanError, setMealPhotoScanError] = useState('');
 
   const totals = useMemo(() => sumMacros(entries), [entries]);
   const grouped = useMemo(() => groupEntriesByMeal(entries), [entries]);
@@ -1144,6 +1155,8 @@ export default function NutritionTracker({
     setScannerError('');
     setLabelScanning(false);
     setLabelScanError('');
+    setMealPhotoScanning(false);
+    setMealPhotoScanError('');
   }
 
   function clearBarcodeResults() {
@@ -1358,16 +1371,12 @@ export default function NutritionTracker({
 
     setLabelScanning(true);
     setLabelScanError('');
+    setMealPhotoScanError('');
     setAiEstimateResult(null);
     setAiEstimateError('');
     clearBarcodeResults();
     try {
-      const buffer = await file.arrayBuffer();
-      const bytes = new Uint8Array(buffer);
-      let binary = '';
-      for (let i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i]);
-      const image_base64 = btoa(binary);
-      const mime_type = file.type || 'image/jpeg';
+      const { image_base64, mime_type } = await encodeImageFile(file);
       const res = await fetch('/api/nutrition/scan-label', {
         method: 'POST',
         headers: {
@@ -1393,6 +1402,48 @@ export default function NutritionTracker({
     }
   }
 
+  async function scanMealPhoto(file: File | null) {
+    if (!file) return;
+    const token = await getAuthToken();
+    if (!token) return alert('Sign in to scan meal photos.');
+
+    setMealPhotoScanning(true);
+    setMealPhotoScanError('');
+    setLabelScanError('');
+    setAiEstimateResult(null);
+    setAiEstimateError('');
+    clearBarcodeResults();
+    try {
+      const { image_base64, mime_type } = await encodeImageFile(file);
+      const res = await fetch('/api/nutrition/scan-meal', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          image_base64,
+          mime_type,
+          meal_type: addDraft.meal_type,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || `Meal photo scan failed (${res.status})`);
+      setAiEstimateResult(data as AiFoodEstimateResult);
+      setPickedCatalogId(null);
+      if ((data as AiFoodEstimateResult)?.items?.length === 1) {
+        setAddDraft({
+          ...addDraft,
+          ...aiEstimateToDraft((data as AiFoodEstimateResult).items[0], addDraft.meal_type),
+        });
+      }
+    } catch (e: any) {
+      setMealPhotoScanError(e?.message || 'Could not estimate meal from photo.');
+    } finally {
+      setMealPhotoScanning(false);
+    }
+  }
+
   async function estimateWithAi() {
     const description = aiDescribe.trim();
     if (description.length < 4) return alert('Describe your food (e.g. 6 oz chicken breast and rice).');
@@ -1405,6 +1456,7 @@ export default function NutritionTracker({
     setAiEstimateError('');
     setAiEstimateResult(null);
     setLabelScanError('');
+    setMealPhotoScanError('');
     setBarcodeError('');
     clearBarcodeResults();
     try {
@@ -1832,6 +1884,31 @@ export default function NutritionTracker({
                 {labelScanning && <p className="muted">Reading nutrition label…</p>}
               </details>
             )}
+          </div>
+
+          <div className="catalog-picker nutrition-meal-photo-picker">
+            <h4 className="nutrition-add-section-title">Meal photo</h4>
+            <p className="muted">
+              Photograph a plate or bowl — AI estimates each visible food and its macros.
+            </p>
+            <label htmlFor="meal-photo-input" className="nutrition-label-upload">
+              Take or choose meal photo
+            </label>
+            <input
+              id="meal-photo-input"
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/*"
+              capture="environment"
+              disabled={saving || mealPhotoScanning || labelScanning}
+              onChange={(e) => {
+                const file = e.target.files?.[0] || null;
+                scanMealPhoto(file);
+                e.target.value = '';
+              }}
+            />
+            <p className="muted nutrition-ai-disclaimer">{MEAL_PHOTO_DISCLAIMER}</p>
+            {mealPhotoScanError && <p className="nutrition-error">{mealPhotoScanError}</p>}
+            {mealPhotoScanning && <p className="muted">Analyzing meal photo…</p>}
           </div>
 
           <div className="catalog-picker nutrition-catalog-picker">
