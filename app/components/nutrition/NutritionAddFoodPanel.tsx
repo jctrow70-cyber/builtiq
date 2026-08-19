@@ -17,6 +17,7 @@ import { BarcodeLookupNotFound, BarcodeLookupResult } from '../../../lib/nutriti
 import { LABEL_OCR_DISCLAIMER } from '../../../lib/nutrition/labelOcr';
 import { MEAL_PHOTO_DISCLAIMER } from '../../../lib/nutrition/mealPhotoEstimate';
 import { foodCatalogLabel, foodCatalogMeta } from '../../../lib/nutrition/foodCatalogSearch';
+import type { QuickAddFood } from '../../../lib/nutrition/recentFoods';
 import NutritionBarcodeScanner from '../NutritionBarcodeScanner';
 import { NutritionBarcodeNotFoundCard, NutritionBarcodeProductCard } from '../NutritionBarcodeProduct';
 import NutritionAiEstimateResults from './NutritionAiEstimateResults';
@@ -31,17 +32,6 @@ const VIEW_TITLES: Record<AddFoodView, string> = {
   meal_photo: 'Meal photo',
   estimate: 'Find or estimate food',
   manual: 'Manual entry',
-};
-
-type QuickAddFood = {
-  key: string;
-  name: string;
-  source: 'library' | 'recent';
-  food_library_id?: string;
-  calories: number;
-  protein_g: number;
-  carbs_g: number;
-  fat_g: number;
 };
 
 function quickAddMeta(item: QuickAddFood) {
