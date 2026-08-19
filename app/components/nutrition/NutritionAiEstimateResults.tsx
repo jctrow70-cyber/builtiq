@@ -1,6 +1,7 @@
 'use client';
 
-import { AiFoodEstimateItem, AiFoodEstimateResult, formatMacroLine } from '../../../lib/nutrition/macros';
+import { formatMacroLine } from '../../../lib/nutrition/macros';
+import { AiFoodEstimateItem, AiFoodEstimateResult } from '../../../lib/nutrition/aiFoodEstimate';
 
 type NutritionAiEstimateResultsProps = {
   result: AiFoodEstimateResult;

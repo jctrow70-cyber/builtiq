@@ -2,9 +2,6 @@
 
 import { RefObject } from 'react';
 import {
-  AiFoodEstimateItem,
-  AiFoodEstimateResult,
-  FoodCatalogItem,
   formatMacroLine,
   MEAL_TYPE_LABELS,
   MEAL_TYPES,
@@ -12,11 +9,11 @@ import {
   MealType,
   sumMacros,
 } from '../../../lib/nutrition/macros';
-import { AI_FOOD_DISCLAIMER } from '../../../lib/nutrition/aiFoodEstimate';
+import { AI_FOOD_DISCLAIMER, AiFoodEstimateItem, AiFoodEstimateResult } from '../../../lib/nutrition/aiFoodEstimate';
 import { BarcodeLookupNotFound, BarcodeLookupResult } from '../../../lib/nutrition/barcodeLookup';
 import { LABEL_OCR_DISCLAIMER } from '../../../lib/nutrition/labelOcr';
 import { MEAL_PHOTO_DISCLAIMER } from '../../../lib/nutrition/mealPhotoEstimate';
-import { foodCatalogLabel, foodCatalogMeta } from '../../../lib/nutrition/foodCatalogSearch';
+import { foodCatalogLabel, foodCatalogMeta, FoodCatalogItem } from '../../../lib/nutrition/foodCatalogSearch';
 import type { QuickAddFood } from '../../../lib/nutrition/recentFoods';
 import NutritionBarcodeScanner from '../NutritionBarcodeScanner';
 import { NutritionBarcodeNotFoundCard, NutritionBarcodeProductCard } from '../NutritionBarcodeProduct';
