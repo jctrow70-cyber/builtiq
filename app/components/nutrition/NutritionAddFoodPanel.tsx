@@ -16,7 +16,7 @@ import { AI_FOOD_DISCLAIMER } from '../../../lib/nutrition/aiFoodEstimate';
 import { BarcodeLookupNotFound, BarcodeLookupResult } from '../../../lib/nutrition/barcodeLookup';
 import { LABEL_OCR_DISCLAIMER } from '../../../lib/nutrition/labelOcr';
 import { MEAL_PHOTO_DISCLAIMER } from '../../../lib/nutrition/mealPhotoEstimate';
-import { foodCatalogLabel, foodCatalogMeta } from '../../../lib/nutrition/catalogSearch';
+import { foodCatalogLabel, foodCatalogMeta } from '../../../lib/nutrition/foodCatalogSearch';
 import NutritionBarcodeScanner from '../NutritionBarcodeScanner';
 import { NutritionBarcodeNotFoundCard, NutritionBarcodeProductCard } from '../NutritionBarcodeProduct';
 import NutritionAiEstimateResults from './NutritionAiEstimateResults';
