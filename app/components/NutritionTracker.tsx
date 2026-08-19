@@ -27,16 +27,13 @@ import {
 } from '../../lib/nutrition/macros';
 import { buildWeeklyNutritionSummary } from '../../lib/nutrition/weeklySummary';
 import {
-  countFoodCatalogMatches,
   foodCatalogLabel,
-  foodCatalogMeta,
   FoodCatalogItem,
   searchFoodCatalog,
 } from '../../lib/nutrition/foodCatalogSearch';
 import {
   AiFoodEstimateItem,
   AiFoodEstimateResult,
-  AI_FOOD_DISCLAIMER,
   aiEstimateToDraft,
 } from '../../lib/nutrition/aiFoodEstimate';
 import {
@@ -69,10 +66,8 @@ import {
   normalizeServingUnit,
   SERVING_UNIT_OPTIONS,
 } from '../../lib/nutrition/servingUnits';
-import { LABEL_OCR_DISCLAIMER } from '../../lib/nutrition/labelOcr';
-import { MEAL_PHOTO_DISCLAIMER } from '../../lib/nutrition/mealPhotoEstimate';
-import NutritionBarcodeScanner from './NutritionBarcodeScanner';
-import { NutritionBarcodeNotFoundCard, NutritionBarcodeProductCard } from './NutritionBarcodeProduct';
+import type { FoodDraft } from './nutrition/NutritionAddFoodTypes';
+import NutritionAddFoodPanel, { type AddFoodView } from './nutrition/NutritionAddFoodPanel';
 import { currentCalendarWeekBounds, formatDisplayDate, formatYmd, parseYmd, todayYmd } from '../../lib/training/programCalendar';
 
 const RECENT_FOOD_HISTORY_DAYS = 90;
@@ -91,19 +86,6 @@ type NutritionTrackerProps = {
   initialDate?: string;
   onDateChange?: (date: string) => void;
   onDataChange?: () => void;
-};
-
-type FoodDraft = {
-  meal_type: MealType;
-  food_name: string;
-  serving_size: string;
-  serving_unit: string;
-  amount: string;
-  calories: string;
-  protein_g: string;
-  carbs_g: string;
-  fat_g: string;
-  saveToLibrary: boolean;
 };
 
 type LibraryEditDraft = {
@@ -379,6 +361,8 @@ export default function NutritionTracker({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [showAdd, setShowAdd] = useState(false);
+  const [addFoodView, setAddFoodView] = useState<AddFoodView>('hub');
+  const [estimateSearch, setEstimateSearch] = useState('');
   const [showMyFoods, setShowMyFoods] = useState(false);
   const [showGoals, setShowGoals] = useState(false);
   const [addDraft, setAddDraft] = useState<FoodDraft>(emptyFoodDraft());
@@ -388,8 +372,6 @@ export default function NutritionTracker({
   const [foodEditDraft, setFoodEditDraft] = useState<LibraryEditDraft | null>(null);
   const [goalsDraft, setGoalsDraft] = useState<NutritionGoals>({ ...DEFAULT_NUTRITION_GOALS });
   const [foodSearch, setFoodSearch] = useState('');
-  const [quickAddSearch, setQuickAddSearch] = useState('');
-  const [catalogSearch, setCatalogSearch] = useState('');
   const [pickedCatalogId, setPickedCatalogId] = useState<string | null>(null);
   const [aiDescribe, setAiDescribe] = useState('');
   const [aiEstimating, setAiEstimating] = useState(false);
@@ -433,24 +415,25 @@ export default function NutritionTracker({
     [foodSearch, savedFoods, recentFoods]
   );
 
-  const addPanelQuickResults = useMemo(
-    () => searchQuickAddFoods(quickAddSearch, savedFoods, recentFoods, 12),
-    [quickAddSearch, savedFoods, recentFoods]
-  );
-
-  const catalogMatches = useMemo(
-    () => searchFoodCatalog(foodCatalog, catalogSearch, 12),
-    [foodCatalog, catalogSearch]
-  );
-
-  const catalogMatchCount = useMemo(
-    () => countFoodCatalogMatches(foodCatalog, catalogSearch),
-    [foodCatalog, catalogSearch]
+  const estimateQuickItems = useMemo(
+    () => searchQuickAddFoods(estimateSearch, savedFoods, recentFoods, 12),
+    [estimateSearch, savedFoods, recentFoods]
   );
 
   const activeTemplates = useMemo(
     () => (mealTemplates || []).filter((t) => !t.is_archived),
     [mealTemplates]
+  );
+
+  const estimateTemplatesFiltered = useMemo(() => {
+    const q = estimateSearch.trim().toLowerCase();
+    if (!q) return activeTemplates.slice(0, 8);
+    return activeTemplates.filter((t) => t.name.toLowerCase().includes(q)).slice(0, 8);
+  }, [estimateSearch, activeTemplates]);
+
+  const estimateCatalogMatches = useMemo(
+    () => searchFoodCatalog(foodCatalog, estimateSearch, 12),
+    [foodCatalog, estimateSearch]
   );
 
   const notifyParent = useCallback(() => {
@@ -1137,10 +1120,12 @@ export default function NutritionTracker({
       fat_g: String(item.fat_g),
       saveToLibrary: false,
     });
+    setAddFoodView('manual');
   }
 
   function resetAddFoodExtras() {
-    setCatalogSearch('');
+    setEstimateSearch('');
+    setAddFoodView('hub');
     setPickedCatalogId(null);
     setAiDescribe('');
     setAiEstimateError('');
@@ -1164,13 +1149,6 @@ export default function NutritionTracker({
     setBarcodeNotFound(null);
     setBarcodeServingQty('1');
     setBarcodeError('');
-  }
-
-  function scrollToManualEntry() {
-    window.setTimeout(() => {
-      document.getElementById('nutrition-manual-entry')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      document.getElementById('add-name')?.focus({ preventScroll: true });
-    }, 50);
   }
 
   function openBarcodeScanner() {
@@ -1197,7 +1175,6 @@ export default function NutritionTracker({
 
   function closeAddFood() {
     setShowAdd(false);
-    setQuickAddSearch('');
     resetAddFoodExtras();
   }
 
@@ -1275,7 +1252,7 @@ export default function NutritionTracker({
       ...barcodeResultToDraft(product, addDraft.meal_type, parseMacroInput(qty) || 1),
     });
     clearBarcodeResults();
-    scrollToManualEntry();
+    setAddFoodView('manual');
   }
 
   async function logBarcodeProduct(saveToLibrary: boolean) {
@@ -1360,8 +1337,8 @@ export default function NutritionTracker({
   }
 
   function focusLabelPhotoInput() {
-    if (fallbackDetailsRef.current) fallbackDetailsRef.current.open = true;
-    document.getElementById('label-photo-input')?.click();
+    setAddFoodView('label');
+    window.setTimeout(() => document.getElementById('label-photo-input')?.click(), 0);
   }
 
   async function scanNutritionLabel(file: File | null) {
@@ -1389,12 +1366,6 @@ export default function NutritionTracker({
       if (!res.ok) throw new Error(data?.error || `Label scan failed (${res.status})`);
       setAiEstimateResult(data as AiFoodEstimateResult);
       setPickedCatalogId(null);
-      if ((data as AiFoodEstimateResult)?.items?.length === 1) {
-        setAddDraft({
-          ...addDraft,
-          ...aiEstimateToDraft((data as AiFoodEstimateResult).items[0], addDraft.meal_type),
-        });
-      }
     } catch (e: any) {
       setLabelScanError(e?.message || 'Could not read nutrition label.');
     } finally {
@@ -1431,12 +1402,6 @@ export default function NutritionTracker({
       if (!res.ok) throw new Error(data?.error || `Meal photo scan failed (${res.status})`);
       setAiEstimateResult(data as AiFoodEstimateResult);
       setPickedCatalogId(null);
-      if ((data as AiFoodEstimateResult)?.items?.length === 1) {
-        setAddDraft({
-          ...addDraft,
-          ...aiEstimateToDraft((data as AiFoodEstimateResult).items[0], addDraft.meal_type),
-        });
-      }
     } catch (e: any) {
       setMealPhotoScanError(e?.message || 'Could not estimate meal from photo.');
     } finally {
@@ -1491,6 +1456,10 @@ export default function NutritionTracker({
       ...addDraft,
       ...aiEstimateToDraft(item, addDraft.meal_type),
     });
+  }
+
+  async function logSingleAiEstimate(item: AiFoodEstimateItem) {
+    await logAiEstimates([item]);
   }
 
   async function logAiEstimates(items: AiFoodEstimateItem[]) {
@@ -1746,306 +1715,102 @@ export default function NutritionTracker({
             aria-modal="true"
             aria-labelledby="nutrition-add-title"
           >
-            <div className="topline" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
-              <h3 id="nutrition-add-title">Add food · {MEAL_TYPE_LABELS[addDraft.meal_type]}</h3>
-              <button type="button" className="btn small secondary" onClick={closeAddFood}>
-                Close
-              </button>
-            </div>
-            <p className="muted nutrition-add-intro">
-              Tap <b>Scan Barcode</b> to use your rear camera on iPhone or Android, or search recent and saved foods below.
-            </p>
-
-          <div className="catalog-picker nutrition-quick-add-picker">
-            <h4 className="nutrition-add-section-title">Recent &amp; saved</h4>
-            <QuickAddFoodsPanel
-              search={quickAddSearch}
-              setSearch={setQuickAddSearch}
-              items={addPanelQuickResults}
-              saving={saving}
+            <NutritionAddFoodPanel
+              view={addFoodView}
+              onViewChange={setAddFoodView}
+              onClose={closeAddFood}
               mealType={addDraft.meal_type}
-              onAdd={(item, meal) => addQuickAddFood(item, meal)}
-              showMealPicker={false}
-              emptyMessage="No recent or saved foods yet. Log something below or save a past entry to My foods."
-            />
-          </div>
-
-          <div className="catalog-picker nutrition-scan-picker">
-            <h4 className="nutrition-add-section-title">Packaged food</h4>
-
-            {!showBarcodeScanner && !barcodeProduct && !barcodeNotFound && (
-              <div className="actions" style={{ marginTop: 0 }}>
-                <button
-                  type="button"
-                  className="btn green"
-                  onClick={openBarcodeScanner}
-                  disabled={saving || barcodeLoading}
-                >
-                  Scan Barcode
-                </button>
-              </div>
-            )}
-
-            {barcodeLoading && (
-              <p className="muted nutrition-barcode-loading">Looking up product in Open Food Facts…</p>
-            )}
-
-            {showBarcodeScanner && (
-              <NutritionBarcodeScanner
-                onDetected={(code) => {
-                  setBarcodeValue(code);
-                  lookupBarcodeProduct(code);
-                }}
-                onClose={closeBarcodeScanner}
-                onError={(code, message) => setScannerError(message)}
-              />
-            )}
-
-            {scannerError && !showBarcodeScanner && <p className="nutrition-error">{scannerError}</p>}
-            {barcodeError && <p className="nutrition-error">{barcodeError}</p>}
-
-            {barcodeProduct && (
-              <NutritionBarcodeProductCard
-                product={barcodeProduct}
-                mealType={addDraft.meal_type}
-                servingQty={barcodeServingQty}
-                onServingQtyChange={setBarcodeServingQty}
-                saving={saving}
-                onLog={logBarcodeProduct}
-                onReviewManual={() => applyBarcodeProductToManual(barcodeProduct)}
-              />
-            )}
-
-            {barcodeNotFound && (
-              <NutritionBarcodeNotFoundCard
-                result={barcodeNotFound}
-                onScanAgain={openBarcodeScanner}
-                onEnterManualUpc={openManualBarcodeFallback}
-                onLabelPhoto={focusLabelPhotoInput}
-                onManualEntry={() => {
+              onMealTypeChange={(meal) => setAddDraft({ ...addDraft, meal_type: meal })}
+              saving={saving}
+              aiEstimateResult={aiEstimateResult}
+              aiEstimateError={aiEstimateError}
+              aiEstimating={aiEstimating}
+              onUseAiEstimate={applyAiEstimate}
+              onLogAiEstimate={logSingleAiEstimate}
+              onLogAllAiEstimates={logAiEstimates}
+              estimateSearch={estimateSearch}
+              onEstimateSearchChange={setEstimateSearch}
+              estimateQuickItems={estimateQuickItems}
+              estimateTemplates={estimateTemplatesFiltered}
+              estimateCatalogMatches={estimateCatalogMatches}
+              foodCatalogCount={foodCatalog.length}
+              aiDescribe={aiDescribe}
+              onAiDescribeChange={setAiDescribe}
+              onEstimateWithAi={estimateWithAi}
+              onQuickAdd={(item) => addQuickAddFood(item, addDraft.meal_type)}
+              onLogTemplate={logMealTemplate}
+              onPickCatalog={pickCatalogFood}
+              showBarcodeScanner={showBarcodeScanner}
+              barcodeLoading={barcodeLoading}
+              barcodeError={barcodeError}
+              scannerError={scannerError}
+              barcodeProduct={barcodeProduct}
+              barcodeNotFound={barcodeNotFound}
+              barcodeServingQty={barcodeServingQty}
+              onBarcodeServingQtyChange={setBarcodeServingQty}
+              barcodeValue={barcodeValue}
+              onBarcodeValueChange={setBarcodeValue}
+              onOpenBarcodeScanner={openBarcodeScanner}
+              onCloseBarcodeScanner={closeBarcodeScanner}
+              onBarcodeDetected={(code) => {
+                setBarcodeValue(code);
+                lookupBarcodeProduct(code);
+              }}
+              onScannerError={(_code, message) => setScannerError(message)}
+              onLookupBarcode={() => lookupBarcodeProduct()}
+              onLogBarcode={logBarcodeProduct}
+              onReviewBarcodeManual={() => barcodeProduct && applyBarcodeProductToManual(barcodeProduct)}
+              onBarcodeNotFoundActions={{
+                onScanAgain: openBarcodeScanner,
+                onEnterManualUpc: openManualBarcodeFallback,
+                onLabelPhoto: focusLabelPhotoInput,
+                onManualEntry: () => {
                   clearBarcodeResults();
-                  scrollToManualEntry();
-                }}
-                onSaveCustom={() => {
+                  setAddFoodView('manual');
+                },
+                onSaveCustom: () => {
                   setAddDraft({
                     ...emptyFoodDraft(addDraft.meal_type),
-                    food_name: barcodeNotFound.barcode
+                    food_name: barcodeNotFound?.barcode
                       ? `Custom item (${barcodeNotFound.barcode})`
                       : 'Custom packaged food',
                     saveToLibrary: true,
                   });
                   clearBarcodeResults();
-                }}
-              />
-            )}
-
-            {!showBarcodeScanner && !barcodeProduct && !barcodeNotFound && (
-              <details className="nutrition-barcode-fallback" ref={fallbackDetailsRef}>
-                <summary>Fallback options</summary>
-                <p className="muted nutrition-scan-hint">
-                  Use these only if live scanning is unavailable or the product was not found.
-                </p>
-                <label htmlFor="barcode-input">Enter UPC / EAN manually</label>
-                <div className="nutrition-barcode-row">
-                  <input
-                    id="barcode-input"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    value={barcodeValue}
-                    onChange={(e) => setBarcodeValue(e.target.value.replace(/\D/g, ''))}
-                    placeholder="UPC / EAN barcode"
-                  />
-                  <button
-                    type="button"
-                    className="btn secondary"
-                    onClick={() => lookupBarcodeProduct()}
-                    disabled={saving || barcodeLoading}
-                  >
-                    Look up
-                  </button>
-                </div>
-                <label htmlFor="label-photo-input" className="nutrition-label-upload">
-                  Photograph or choose nutrition label
-                </label>
-                <input
-                  id="label-photo-input"
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp,image/*"
-                  disabled={saving || labelScanning}
-                  onChange={(e) => {
-                    const file = e.target.files?.[0] || null;
-                    scanNutritionLabel(file);
-                    e.target.value = '';
-                  }}
-                />
-                <p className="muted nutrition-ai-disclaimer">{LABEL_OCR_DISCLAIMER}</p>
-                {labelScanError && <p className="nutrition-error">{labelScanError}</p>}
-                {labelScanning && <p className="muted">Reading nutrition label…</p>}
-              </details>
-            )}
-          </div>
-
-          <div className="catalog-picker nutrition-meal-photo-picker">
-            <h4 className="nutrition-add-section-title">Meal photo</h4>
-            <p className="muted">
-              Photograph a plate or bowl — AI estimates each visible food and its macros.
-            </p>
-            <label htmlFor="meal-photo-input" className="nutrition-label-upload">
-              Take or choose meal photo
-            </label>
-            <input
-              id="meal-photo-input"
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/*"
-              disabled={saving || mealPhotoScanning || labelScanning}
-              onChange={(e) => {
-                const file = e.target.files?.[0] || null;
-                scanMealPhoto(file);
-                e.target.value = '';
+                  setAddFoodView('manual');
+                },
               }}
+              fallbackDetailsRef={fallbackDetailsRef}
+              labelScanning={labelScanning}
+              labelScanError={labelScanError}
+              onLabelPhoto={scanNutritionLabel}
+              mealPhotoScanning={mealPhotoScanning}
+              mealPhotoScanError={mealPhotoScanError}
+              onMealPhoto={scanMealPhoto}
+              addDraft={addDraft}
+              setAddDraft={setAddDraft}
+              pickedCatalogId={pickedCatalogId}
+              onClearCatalogPick={() => setPickedCatalogId(null)}
+              onLogManual={() => addFoodEntry()}
+              renderManualFields={() => (
+                <FoodFormFields
+                  draft={addDraft}
+                  setDraft={(next) => {
+                    const manualEdit =
+                      !!pickedCatalogId &&
+                      (next.food_name !== addDraft.food_name ||
+                        next.calories !== addDraft.calories ||
+                        next.protein_g !== addDraft.protein_g ||
+                        next.carbs_g !== addDraft.carbs_g ||
+                        next.fat_g !== addDraft.fat_g);
+                    setAddDraft(next);
+                    if (manualEdit) setPickedCatalogId(null);
+                  }}
+                  idPrefix="add"
+                  showSaveToLibrary
+                />
+              )}
             />
-            <p className="muted nutrition-ai-disclaimer">{MEAL_PHOTO_DISCLAIMER}</p>
-            {mealPhotoScanError && <p className="nutrition-error">{mealPhotoScanError}</p>}
-            {mealPhotoScanning && <p className="muted">Analyzing meal photo…</p>}
-          </div>
-
-          <div className="catalog-picker nutrition-catalog-picker">
-            <h4 className="nutrition-add-section-title">Food catalog</h4>
-            <label htmlFor="catalog-search">Search food catalog</label>
-            <input
-              id="catalog-search"
-              value={catalogSearch}
-              onChange={(e) => setCatalogSearch(e.target.value)}
-              placeholder={
-                foodCatalog.length
-                  ? `Search ${foodCatalog.length} common foods (e.g. chicken, rice, yogurt)`
-                  : 'Search common foods (run BIQ-0036 migration for catalog)'
-              }
-            />
-            {foodCatalog.length > 0 && (
-              <p className="muted nutrition-catalog-meta">
-                {catalogSearch.trim()
-                  ? `${catalogMatchCount} match${catalogMatchCount === 1 ? '' : 'es'}`
-                  : 'Type to search or enter food manually below'}
-              </p>
-            )}
-            {catalogMatches.length > 0 && (
-              <div className="catalog-results">
-                {catalogMatches.map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    className={`catalog-result${pickedCatalogId === item.id ? ' picked' : ''}`}
-                    onClick={() => pickCatalogFood(item)}
-                  >
-                    <span>
-                      <b>{foodCatalogLabel(item)}</b>
-                      <span className="muted">
-                        {foodCatalogMeta(item)} · {item.calories} cal · {item.protein_g}P · {item.carbs_g}C ·{' '}
-                        {item.fat_g}F
-                      </span>
-                    </span>
-                    <span className="badge">Use</span>
-                  </button>
-                ))}
-              </div>
-            )}
-            {catalogSearch.trim() && catalogMatches.length === 0 && foodCatalog.length > 0 && (
-              <p className="muted">No catalog matches. Enter the food manually below.</p>
-            )}
-          </div>
-
-          <div className="catalog-picker nutrition-ai-picker">
-            <h4 className="nutrition-add-section-title">AI estimate</h4>
-            <label htmlFor="ai-food-describe">Describe your food (AI estimate)</label>
-            <textarea
-              id="ai-food-describe"
-              rows={2}
-              value={aiDescribe}
-              onChange={(e) => setAiDescribe(e.target.value)}
-              placeholder="e.g. 6 oz grilled chicken breast with 1 cup rice and broccoli"
-            />
-            <p className="muted nutrition-ai-disclaimer">{AI_FOOD_DISCLAIMER}</p>
-            <div className="actions" style={{ marginTop: 8 }}>
-              <button
-                type="button"
-                className="btn secondary"
-                onClick={estimateWithAi}
-                disabled={saving || aiEstimating}
-              >
-                {aiEstimating ? 'Estimating...' : 'Estimate with AI'}
-              </button>
-            </div>
-            {aiEstimateError && <p className="nutrition-error">{aiEstimateError}</p>}
-            {aiEstimateResult && (
-              <div className="nutrition-ai-results">
-                {aiEstimateResult.notes && (
-                  <p className="dash-insight nutrition-ai-notes">{aiEstimateResult.notes}</p>
-                )}
-                <div className="nutrition-food-grid">
-                  {aiEstimateResult.items.map((item, idx) => (
-                    <div key={`${item.food_name}-${idx}`} className="nutrition-food-chip">
-                      <div>
-                        <b>{item.food_name}</b>
-                        <span className="muted">
-                          {item.serving_label} · {formatMacroLine(item)}
-                        </span>
-                      </div>
-                      <div className="nutrition-food-chip-actions">
-                        <button
-                          type="button"
-                          className="btn small secondary"
-                          onClick={() => applyAiEstimate(item)}
-                          disabled={saving}
-                        >
-                          Use
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {aiEstimateResult.items.length > 1 && (
-                  <button
-                    type="button"
-                    className="btn small green"
-                    style={{ marginTop: 8 }}
-                    onClick={() => logAiEstimates(aiEstimateResult.items)}
-                    disabled={saving}
-                  >
-                    Log all {aiEstimateResult.items.length} items
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div id="nutrition-manual-entry" className="nutrition-manual-entry">
-          <h4 className="nutrition-add-section-title">Manual entry</h4>
-          <FoodFormFields
-            draft={addDraft}
-            setDraft={(next) => {
-              const manualEdit =
-                !!pickedCatalogId &&
-                (next.food_name !== addDraft.food_name ||
-                  next.calories !== addDraft.calories ||
-                  next.protein_g !== addDraft.protein_g ||
-                  next.carbs_g !== addDraft.carbs_g ||
-                  next.fat_g !== addDraft.fat_g);
-              setAddDraft(next);
-              if (manualEdit) setPickedCatalogId(null);
-            }}
-            idPrefix="add"
-            showSaveToLibrary
-          />
-          </div>
-          <div className="actions" style={{ marginTop: 10 }}>
-            <button type="button" className="btn green" onClick={() => addFoodEntry()} disabled={saving}>
-              {saving ? 'Saving...' : `Log to ${MEAL_TYPE_LABELS[addDraft.meal_type]}`}
-            </button>
-            <button type="button" className="btn secondary" onClick={closeAddFood}>
-              Cancel
-            </button>
-          </div>
           </div>
         </div>
       )}

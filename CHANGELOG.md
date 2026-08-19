@@ -8024,3 +8024,95 @@ Removed `capture="environment"` from meal photo and nutrition label file inputs 
 ```text
 BIQ-0120 Allow photo library for meal and label nutrition uploads
 ```
+
+---
+
+## BIQ-0124 - Add Food Hub Screen (Method Picker)
+
+Date: 2026-08-19  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Replaced the long scrollable Add food overlay with a **hub-first flow**: scan barcode, nutrition label, meal photo, find/estimate, or manual entry — each in its own sub-view with back navigation and meal-type tabs.
+
+### Purpose
+
+NUTR-4 — reduce cognitive load when logging food; match mobile-first patterns (one primary action per screen).
+
+### Files Changed
+
+- `app/components/nutrition/NutritionAddFoodPanel.tsx` (new)
+- `app/components/nutrition/NutritionAddFoodTypes.ts` (new)
+- `app/components/NutritionTracker.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None
+
+### Testing Steps
+
+1. Nutrition → **Add food** → confirm hub shows four method buttons + **Enter manually**
+2. Tap each method → confirm sub-view opens with **← Back** and meal tabs (Breakfast/Lunch/Dinner/Snacks)
+3. Barcode flow: open camera, scan or manual UPC, log or review manual
+4. Label / meal photo: pick image → inline AI results appear
+5. Find or estimate: search recent/saved/templates/catalog; AI describe still works
+6. Manual entry: form logs to selected meal
+7. Mobile: touch targets on hub grid and meal tabs feel usable
+
+### Known Issues
+
+- Hub does not auto-open barcode camera (user taps **Open camera scanner** on barcode view)
+
+### Recommended Commit Message
+
+```text
+BIQ-0124 Add Food hub with dedicated logging method sub-views
+```
+
+---
+
+## BIQ-0125 - Inline AI Estimate Results (Log / Edit)
+
+Date: 2026-08-19  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+AI results from label OCR, meal photo, and text estimate now show **inline Log and Edit** actions per item (plus **Log all** for multi-item meals) without forcing users into manual entry first.
+
+### Purpose
+
+NUTR-5 — faster logging after AI scans; edit remains one tap away.
+
+### Files Changed
+
+- `app/components/nutrition/NutritionAiEstimateResults.tsx` (new)
+- `app/components/nutrition/NutritionAddFoodPanel.tsx`
+- `app/components/NutritionTracker.tsx`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None
+
+### Testing Steps
+
+1. Add food → **AI meal photo** → upload photo with multiple foods → **Log** one item; **Log all** for remainder
+2. Label scan → single item → **Log** logs directly; **Edit** opens manual form prefilled
+3. Find or estimate → AI describe → same inline actions
+4. Confirm successful log closes Add food panel and entries appear on day view
+
+### Known Issues
+
+None
+
+### Recommended Commit Message
+
+```text
+BIQ-0125 Inline Log/Edit actions for AI nutrition estimates
+```
