@@ -829,7 +829,7 @@ export default function NutritionTracker({
       prependRecentEntries(inserted);
       if (!fromLibrary && !fromCatalog) {
         setAddDraft(emptyFoodDraft(mealType));
-        setCatalogSearch('');
+        setEstimateSearch('');
         setPickedCatalogId(null);
         closeAddFood();
       }
