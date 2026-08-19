@@ -8116,3 +8116,35 @@ None
 ```text
 BIQ-0125 Inline Log/Edit actions for AI nutrition estimates
 ```
+
+---
+
+## BIQ-0126 - Add Food Hub Auto-Launch and Split Find vs AI
+
+Date: 2026-08-19  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Hub buttons now **open the scanner or photo picker immediately** (barcode camera, label photo, meal photo). Split **Find food** (saved meals, recent/saved foods, catalog search) from **AI estimate** (text-only describe flow).
+
+### Files Changed
+
+- `app/components/nutrition/NutritionAddFoodPanel.tsx`
+- `app/components/NutritionTracker.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Testing Steps
+
+1. Add food → **Scan barcode** → camera opens without extra tap
+2. **Scan nutrition label** / **AI meal photo** → native photo picker opens (Camera or Library on iPhone)
+3. **Find food** → saved meals list + recent/saved; search filters catalog
+4. **AI estimate** → text box only; estimate → inline Log/Edit results
+
+### Recommended Commit Message
+
+```text
+BIQ-0126 Auto-open scan/photo from Add Food hub; split Find food and AI estimate
+```

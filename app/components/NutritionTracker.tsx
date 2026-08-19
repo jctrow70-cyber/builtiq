@@ -427,8 +427,8 @@ export default function NutritionTracker({
 
   const estimateTemplatesFiltered = useMemo(() => {
     const q = estimateSearch.trim().toLowerCase();
-    if (!q) return activeTemplates.slice(0, 8);
-    return activeTemplates.filter((t) => t.name.toLowerCase().includes(q)).slice(0, 8);
+    if (!q) return activeTemplates;
+    return activeTemplates.filter((t) => t.name.toLowerCase().includes(q));
   }, [estimateSearch, activeTemplates]);
 
   const estimateCatalogMatches = useMemo(

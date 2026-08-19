@@ -1,6 +1,6 @@
 'use client';
 
-import { RefObject } from 'react';
+import { RefObject, useRef } from 'react';
 import {
   formatMacroLine,
   MEAL_TYPE_LABELS,
@@ -20,14 +20,15 @@ import { NutritionBarcodeNotFoundCard, NutritionBarcodeProductCard } from '../Nu
 import NutritionAiEstimateResults from './NutritionAiEstimateResults';
 import type { FoodDraft } from './NutritionAddFoodTypes';
 
-export type AddFoodView = 'hub' | 'barcode' | 'label' | 'meal_photo' | 'estimate' | 'manual';
+export type AddFoodView = 'hub' | 'barcode' | 'label' | 'meal_photo' | 'find_food' | 'ai_estimate' | 'manual';
 
 const VIEW_TITLES: Record<AddFoodView, string> = {
   hub: 'Add food',
   barcode: 'Scan barcode',
   label: 'Nutrition label',
   meal_photo: 'Meal photo',
-  estimate: 'Find or estimate food',
+  find_food: 'Find food',
+  ai_estimate: 'AI estimate',
   manual: 'Manual entry',
 };
 
@@ -159,10 +160,53 @@ export default function NutritionAddFoodPanel(props: NutritionAddFoodPanelProps)
     renderManualFields,
   } = props;
 
+  const labelInputRef = useRef<HTMLInputElement>(null);
+  const mealPhotoInputRef = useRef<HTMLInputElement>(null);
+
+  const startBarcode = () => {
+    onViewChange('barcode');
+    onOpenBarcodeScanner();
+  };
+
+  const startLabelPhoto = () => {
+    onViewChange('label');
+    labelInputRef.current?.click();
+  };
+
+  const startMealPhoto = () => {
+    onViewChange('meal_photo');
+    mealPhotoInputRef.current?.click();
+  };
+
   const showBack = view !== 'hub';
 
   return (
     <>
+      <input
+        ref={labelInputRef}
+        id="label-photo-input"
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/*"
+        className="nutrition-add-file-input"
+        disabled={saving || labelScanning}
+        onChange={(e) => {
+          onLabelPhoto(e.target.files?.[0] || null);
+          e.target.value = '';
+        }}
+      />
+      <input
+        ref={mealPhotoInputRef}
+        id="meal-photo-input"
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/*"
+        className="nutrition-add-file-input"
+        disabled={saving || mealPhotoScanning || labelScanning}
+        onChange={(e) => {
+          onMealPhoto(e.target.files?.[0] || null);
+          e.target.value = '';
+        }}
+      />
+
       <div className="topline nutrition-add-head">
         <div>
           {showBack && (
@@ -192,7 +236,7 @@ export default function NutritionAddFoodPanel(props: NutritionAddFoodPanelProps)
         ))}
       </div>
 
-      {aiEstimateResult && view !== 'hub' && view !== 'manual' && (
+      {aiEstimateResult && view !== 'hub' && view !== 'manual' && view !== 'find_food' && (
         <NutritionAiEstimateResults
           result={aiEstimateResult}
           saving={saving}
@@ -212,22 +256,26 @@ export default function NutritionAddFoodPanel(props: NutritionAddFoodPanelProps)
       {view === 'hub' && (
         <div className="nutrition-add-hub">
           <p className="muted nutrition-add-intro">How would you like to log this food?</p>
-          <div className="nutrition-add-hub-grid">
-            <button type="button" className="nutrition-add-hub-btn" onClick={() => onViewChange('barcode')}>
+          <div className="nutrition-add-hub-grid nutrition-add-hub-grid--5">
+            <button type="button" className="nutrition-add-hub-btn" onClick={startBarcode}>
               <span className="nutrition-add-hub-icon">📷</span>
               <span className="nutrition-add-hub-label">Scan barcode</span>
             </button>
-            <button type="button" className="nutrition-add-hub-btn" onClick={() => onViewChange('label')}>
+            <button type="button" className="nutrition-add-hub-btn" onClick={startLabelPhoto}>
               <span className="nutrition-add-hub-icon">🏷️</span>
               <span className="nutrition-add-hub-label">Scan nutrition label</span>
             </button>
-            <button type="button" className="nutrition-add-hub-btn" onClick={() => onViewChange('meal_photo')}>
+            <button type="button" className="nutrition-add-hub-btn" onClick={startMealPhoto}>
               <span className="nutrition-add-hub-icon">🍽️</span>
               <span className="nutrition-add-hub-label">AI meal photo</span>
             </button>
-            <button type="button" className="nutrition-add-hub-btn" onClick={() => onViewChange('estimate')}>
+            <button type="button" className="nutrition-add-hub-btn" onClick={() => onViewChange('find_food')}>
+              <span className="nutrition-add-hub-icon">🔍</span>
+              <span className="nutrition-add-hub-label">Find food</span>
+            </button>
+            <button type="button" className="nutrition-add-hub-btn" onClick={() => onViewChange('ai_estimate')}>
               <span className="nutrition-add-hub-icon">✨</span>
-              <span className="nutrition-add-hub-label">Find or estimate food</span>
+              <span className="nutrition-add-hub-label">AI estimate</span>
             </button>
           </div>
           <button type="button" className="btn secondary nutrition-add-manual-link" onClick={() => onViewChange('manual')}>
@@ -291,22 +339,12 @@ export default function NutritionAddFoodPanel(props: NutritionAddFoodPanelProps)
 
       {view === 'label' && (
         <div className="nutrition-add-view">
-          {!aiEstimateResult && (
+          {!aiEstimateResult && !labelScanning && (
             <>
               <p className="muted">Take or choose a photo of the Nutrition Facts panel.</p>
-              <label htmlFor="label-photo-input" className="nutrition-label-upload">
-                Choose label photo
-              </label>
-              <input
-                id="label-photo-input"
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/*"
-                disabled={saving || labelScanning}
-                onChange={(e) => {
-                  onLabelPhoto(e.target.files?.[0] || null);
-                  e.target.value = '';
-                }}
-              />
+              <button type="button" className="btn green" onClick={() => labelInputRef.current?.click()} disabled={saving}>
+                Take or choose label photo
+              </button>
               <p className="muted nutrition-ai-disclaimer">{LABEL_OCR_DISCLAIMER}</p>
             </>
           )}
@@ -317,22 +355,12 @@ export default function NutritionAddFoodPanel(props: NutritionAddFoodPanelProps)
 
       {view === 'meal_photo' && (
         <div className="nutrition-add-view">
-          {!aiEstimateResult && (
+          {!aiEstimateResult && !mealPhotoScanning && (
             <>
               <p className="muted">Photograph your plate or bowl — AI estimates each visible food.</p>
-              <label htmlFor="meal-photo-input" className="nutrition-label-upload">
+              <button type="button" className="btn green" onClick={() => mealPhotoInputRef.current?.click()} disabled={saving}>
                 Take or choose meal photo
-              </label>
-              <input
-                id="meal-photo-input"
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/*"
-                disabled={saving || mealPhotoScanning || labelScanning}
-                onChange={(e) => {
-                  onMealPhoto(e.target.files?.[0] || null);
-                  e.target.value = '';
-                }}
-              />
+              </button>
               <p className="muted nutrition-ai-disclaimer">{MEAL_PHOTO_DISCLAIMER}</p>
             </>
           )}
@@ -341,97 +369,109 @@ export default function NutritionAddFoodPanel(props: NutritionAddFoodPanelProps)
         </div>
       )}
 
-      {view === 'estimate' && (
+      {view === 'find_food' && (
+        <div className="nutrition-add-view">
+          <label htmlFor="estimate-search">Search saved meals, recent foods, or catalog</label>
+          <input
+            id="estimate-search"
+            value={estimateSearch}
+            onChange={(e) => onEstimateSearchChange(e.target.value)}
+            placeholder="Search saved meals or foods…"
+            autoFocus
+          />
+
+          {estimateTemplates.length > 0 && (
+            <>
+              <h4 className="nutrition-add-section-title">Saved meals</h4>
+              <div className="nutrition-food-grid">
+                {estimateTemplates.map((template) => (
+                  <div key={template.id} className="nutrition-food-chip">
+                    <div>
+                      <b>{template.name}</b>
+                      <span className="muted">
+                        {template.items.length} item(s) · {formatMacroLine(sumMacros(template.items))}
+                      </span>
+                    </div>
+                    <button type="button" className="btn small green" onClick={() => onLogTemplate(template)} disabled={saving}>
+                      Log meal
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {estimateQuickItems.length > 0 && (
+            <>
+              <h4 className="nutrition-add-section-title">Recent &amp; saved foods</h4>
+              <div className="nutrition-food-grid">
+                {estimateQuickItems.map((item) => (
+                  <div key={item.key} className="nutrition-food-chip">
+                    <div>
+                      <b>{item.name}</b>
+                      <span className="muted">
+                        {quickAddMeta(item)} · {item.source === 'library' ? 'My foods' : 'Recent'}
+                      </span>
+                    </div>
+                    <button type="button" className="btn small green" onClick={() => onQuickAdd(item)} disabled={saving}>
+                      Add
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {foodCatalogCount > 0 && estimateCatalogMatches.length > 0 && (
+            <>
+              <h4 className="nutrition-add-section-title">Food catalog</h4>
+              <div className="catalog-results">
+                {estimateCatalogMatches.map((item) => (
+                  <button key={item.id} type="button" className="catalog-result" onClick={() => onPickCatalog(item)}>
+                    <span>
+                      <b>{foodCatalogLabel(item)}</b>
+                      <span className="muted">
+                        {foodCatalogMeta(item)} · {item.calories} cal
+                      </span>
+                    </span>
+                    <span className="badge">Use</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {estimateSearch.trim() &&
+            !estimateQuickItems.length &&
+            !estimateTemplates.length &&
+            !estimateCatalogMatches.length && (
+              <p className="muted">No matches — try AI estimate or enter manually.</p>
+            )}
+
+          {!estimateSearch.trim() &&
+            !estimateQuickItems.length &&
+            !estimateTemplates.length &&
+            foodCatalogCount > 0 && (
+              <p className="muted">Type to search the food catalog, or use AI estimate for something new.</p>
+            )}
+        </div>
+      )}
+
+      {view === 'ai_estimate' && (
         <div className="nutrition-add-view">
           {!aiEstimateResult && (
             <>
-              <label htmlFor="estimate-search">Search recent, saved, templates, or catalog</label>
-              <input
-                id="estimate-search"
-                value={estimateSearch}
-                onChange={(e) => onEstimateSearchChange(e.target.value)}
-                placeholder="Search foods, meal templates…"
-                autoFocus
-              />
-
-              {estimateQuickItems.length > 0 && (
-                <>
-                  <h4 className="nutrition-add-section-title">Recent &amp; saved</h4>
-                  <div className="nutrition-food-grid">
-                    {estimateQuickItems.map((item) => (
-                      <div key={item.key} className="nutrition-food-chip">
-                        <div>
-                          <b>{item.name}</b>
-                          <span className="muted">
-                            {quickAddMeta(item)} · {item.source === 'library' ? 'My foods' : 'Recent'}
-                          </span>
-                        </div>
-                        <button type="button" className="btn small green" onClick={() => onQuickAdd(item)} disabled={saving}>
-                          Add
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {estimateTemplates.length > 0 && (
-                <>
-                  <h4 className="nutrition-add-section-title">Meal templates</h4>
-                  <div className="nutrition-food-grid">
-                    {estimateTemplates.map((template) => (
-                      <div key={template.id} className="nutrition-food-chip">
-                        <div>
-                          <b>{template.name}</b>
-                          <span className="muted">
-                            {template.items.length} item(s) · {formatMacroLine(sumMacros(template.items))}
-                          </span>
-                        </div>
-                        <button type="button" className="btn small green" onClick={() => onLogTemplate(template)} disabled={saving}>
-                          Log meal
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {foodCatalogCount > 0 && estimateCatalogMatches.length > 0 && (
-                <>
-                  <h4 className="nutrition-add-section-title">Food catalog</h4>
-                  <div className="catalog-results">
-                    {estimateCatalogMatches.map((item) => (
-                      <button key={item.id} type="button" className="catalog-result" onClick={() => onPickCatalog(item)}>
-                        <span>
-                          <b>{foodCatalogLabel(item)}</b>
-                          <span className="muted">
-                            {foodCatalogMeta(item)} · {item.calories} cal
-                          </span>
-                        </span>
-                        <span className="badge">Use</span>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {estimateSearch.trim() &&
-                !estimateQuickItems.length &&
-                !estimateTemplates.length &&
-                !estimateCatalogMatches.length && (
-                  <p className="muted">No matches — try describing your food below.</p>
-                )}
-
-              <h4 className="nutrition-add-section-title">Describe for AI</h4>
+              <label htmlFor="ai-food-describe">Describe what you ate</label>
               <textarea
                 id="ai-food-describe"
-                rows={2}
+                rows={3}
                 value={aiDescribe}
                 onChange={(e) => onAiDescribeChange(e.target.value)}
                 placeholder="e.g. 6 oz grilled chicken, rice, and broccoli"
+                autoFocus
               />
               <p className="muted nutrition-ai-disclaimer">{AI_FOOD_DISCLAIMER}</p>
-              <button type="button" className="btn secondary" onClick={onEstimateWithAi} disabled={saving || aiEstimating}>
+              <button type="button" className="btn green" onClick={onEstimateWithAi} disabled={saving || aiEstimating}>
                 {aiEstimating ? 'Estimating…' : 'Estimate with AI'}
               </button>
             </>

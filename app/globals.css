@@ -537,6 +537,8 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .nutrition-add-meal-tab{flex:1;min-width:72px;min-height:40px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#070a11;color:var(--muted);font-size:12px;font-weight:700}
 .nutrition-add-meal-tab.active{border-color:var(--accent);color:var(--text);background:var(--accentSoft)}
 .nutrition-add-hub-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:12px 0}
+.nutrition-add-hub-grid--5 .nutrition-add-hub-btn:last-child{grid-column:span 2}
+.nutrition-add-file-input{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .nutrition-add-hub-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:96px;padding:14px 10px;border:1px solid var(--line);border-radius:14px;background:#070a11;color:var(--text);text-align:center}
 .nutrition-add-hub-btn:active{transform:scale(.98)}
 .nutrition-add-hub-icon{font-size:26px;line-height:1}
