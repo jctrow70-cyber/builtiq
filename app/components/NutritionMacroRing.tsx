@@ -1,11 +1,12 @@
 'use client';
 
+import { ReactNode } from 'react';
 import { macroRingArc, macroRingStatus } from '../../lib/nutrition/macroRing';
 
 type NutritionMacroRingProps = {
   label: string;
   value: string;
-  subtitle: string;
+  subtitle: ReactNode;
   footer?: string;
   actual: number;
   target: number;

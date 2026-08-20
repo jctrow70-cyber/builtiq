@@ -15,7 +15,11 @@ export default function NutritionMacroDashboard({ totals, goals }: NutritionMacr
       <NutritionMacroRing
         label="Calories"
         value={formatMacro(totals.calories)}
-        subtitle={`of ${formatMacro(goals.calories)}`}
+        subtitle={
+          <>
+            of <b>{formatMacro(goals.calories)}</b>
+          </>
+        }
         footer={formatCaloriesRemaining(totals.calories, goals.calories)}
         actual={totals.calories}
         target={goals.calories}

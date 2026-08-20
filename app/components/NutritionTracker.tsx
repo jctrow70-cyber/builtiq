@@ -26,7 +26,7 @@ import {
   templateItemsFromEntries,
 } from '../../lib/nutrition/macros';
 import { buildWeeklyNutritionSummary } from '../../lib/nutrition/weeklySummary';
-import { formatEmptyMealHeaderSummary, formatMealHeaderSummary } from '../../lib/nutrition/mealDisplay';
+import { mealCalorieTarget } from '../../lib/nutrition/mealDisplay';
 import {
   foodCatalogLabel,
   FoodCatalogItem,
@@ -1939,9 +1939,9 @@ export default function NutritionTracker({
         const mealEntries = grouped[meal];
         const mealTotals = sumMacros(mealEntries);
         const isExpanded = expandedMeals[meal];
-        const headerSummary = mealEntries.length
-          ? formatMealHeaderSummary(mealTotals, goals.calories, meal)
-          : formatEmptyMealHeaderSummary(goals.calories, meal);
+        const loggedCal = Math.round(mealTotals.calories);
+        const mealCalTarget = mealCalorieTarget(goals.calories, meal);
+        const mealMacroLine = `${formatMacro(mealTotals.protein_g)}P · ${formatMacro(mealTotals.carbs_g)}C · ${formatMacro(mealTotals.fat_g)}F`;
         return (
           <div className="card nutrition-meal-card" key={meal}>
             <button
@@ -1953,7 +1953,27 @@ export default function NutritionTracker({
             >
               <div className="nutrition-meal-header-text">
                 <h3>{MEAL_TYPE_LABELS[meal]}</h3>
-                <span className="muted nutrition-meal-header-summary">{headerSummary}</span>
+                <span className="muted nutrition-meal-header-summary">
+                  {mealEntries.length === 0 ? (
+                    mealCalTarget !== null ? (
+                      <>
+                        0 / <b>{mealCalTarget} cal</b>
+                      </>
+                    ) : (
+                      <>0 cal</>
+                    )
+                  ) : mealCalTarget !== null ? (
+                    <>
+                      {loggedCal} / <b>{mealCalTarget} cal</b>
+                      {' · '}
+                      {mealMacroLine}
+                    </>
+                  ) : (
+                    <>
+                      {loggedCal} cal · {mealMacroLine}
+                    </>
+                  )}
+                </span>
               </div>
               <span className="nutrition-meal-chevron" aria-hidden="true">
                 {isExpanded ? '▼' : '▶'}
