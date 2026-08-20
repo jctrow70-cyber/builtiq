@@ -8,11 +8,12 @@ type DateInputProps = {
   disabled?: boolean;
   id?: string;
   className?: string;
+  'aria-label'?: string;
 };
 
 /** Native calendar date picker. Value is YYYY-MM-DD. */
 const DateInput = forwardRef<HTMLInputElement, DateInputProps>(function DateInput(
-  { value, onChange, disabled, id, className },
+  { value, onChange, disabled, id, className, 'aria-label': ariaLabel },
   ref
 ) {
   return (
@@ -23,6 +24,7 @@ const DateInput = forwardRef<HTMLInputElement, DateInputProps>(function DateInpu
       className={className}
       value={value || ''}
       disabled={disabled}
+      aria-label={ariaLabel}
       onChange={(e) => {
         const next = e.target.value;
         if (next) onChange(next);

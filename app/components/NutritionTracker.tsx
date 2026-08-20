@@ -399,7 +399,6 @@ export default function NutritionTracker({
     Object.fromEntries(MEAL_TYPES.map((meal) => [meal, true])) as Record<MealType, boolean>
   );
   const entriesSyncedForDate = useRef<string | null>(null);
-  const datePickerRef = useRef<HTMLInputElement>(null);
   const [copySource, setCopySource] = useState<{ entries: MealEntry[]; sourceLabel: string } | null>(null);
   const [copyDraft, setCopyDraft] = useState<{ log_date: string; meal_type: MealType }>({
     log_date: todayYmd(),
@@ -955,20 +954,6 @@ export default function NutritionTracker({
     const mealEntries = grouped[meal];
     if (!mealEntries.length) return;
     openCopyEntries(mealEntries, MEAL_TYPE_LABELS[meal], meal);
-  }
-
-  function openDatePicker() {
-    const el = datePickerRef.current;
-    if (!el || dayRefreshing) return;
-    if (typeof el.showPicker === 'function') {
-      try {
-        el.showPicker();
-        return;
-      } catch {
-        // showPicker can throw if not triggered by user gesture on some browsers
-      }
-    }
-    el.click();
   }
 
   async function confirmCopyEntries() {
@@ -1646,23 +1631,23 @@ export default function NutritionTracker({
                     >
                       ›
                     </button>
-                    <button
-                      type="button"
-                      className="nutrition-date-badge-btn"
-                      onClick={openDatePicker}
-                      disabled={dayRefreshing}
-                      aria-label={`Change date, currently ${formatDisplayDate(logDate)}`}
+                    <div
+                      className="nutrition-date-picker-wrap"
+                      onTouchStart={(e) => e.stopPropagation()}
+                      onTouchEnd={(e) => e.stopPropagation()}
                     >
-                      <span className="badge">{formatDisplayDate(logDate)}</span>
-                    </button>
-                    <DateInput
-                      ref={datePickerRef}
-                      id="nutrition-log-date"
-                      value={logDate}
-                      onChange={setDate}
-                      disabled={dayRefreshing}
-                      className="nutrition-date-input-hidden"
-                    />
+                      <span className="badge nutrition-date-picker-label" aria-hidden="true">
+                        {formatDisplayDate(logDate)}
+                      </span>
+                      <DateInput
+                        id="nutrition-log-date"
+                        value={logDate}
+                        onChange={setDate}
+                        disabled={dayRefreshing}
+                        className="nutrition-date-picker-input"
+                        aria-label={`Change date, currently ${formatDisplayDate(logDate)}`}
+                      />
+                    </div>
                   </div>
                 </div>
                 <NutritionMacroDashboard totals={totals} goals={goals} />
