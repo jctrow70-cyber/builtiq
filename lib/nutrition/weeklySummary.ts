@@ -1,4 +1,4 @@
-import { addDaysYmd, currentCalendarWeekBounds, formatDisplayDate, parseYmd } from '../training/programCalendar';
+import { addDaysYmd, currentCalendarWeekBounds, dayLabelFromYmd, formatDisplayDate, parseYmd } from '../training/programCalendar';
 import {
   MacroTotals,
   NutritionGoals,
@@ -57,7 +57,7 @@ export function buildWeeklyNutritionSummary(
     const totals = sumMacros(dayEntries);
     days.push({
       date,
-      label: formatDisplayDate(date).replace(/\/\d{2}$/, ''),
+      label: dayLabelFromYmd(date),
       totals,
       entryCount: dayEntries.length,
       caloriePct: macroProgress(totals.calories, goals.calories),
@@ -108,7 +108,7 @@ export function buildSevenDayNutritionSummary(
     const totals = sumMacros(dayEntries);
     days.push({
       date,
-      label: formatDisplayDate(date).replace(/\/\d{2}$/, ''),
+      label: dayLabelFromYmd(date),
       totals,
       entryCount: dayEntries.length,
       caloriePct: macroProgress(totals.calories, goals.calories),

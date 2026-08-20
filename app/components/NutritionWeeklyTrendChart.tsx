@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { formatMacro, MacroTotals, NutritionGoals } from '../../lib/nutrition/macros';
 import { WeeklyNutritionSummary } from '../../lib/nutrition/weeklySummary';
-import { formatDisplayDate } from '../../lib/training/programCalendar';
+import { dayLabelFromYmd, formatDisplayDate } from '../../lib/training/programCalendar';
 
 type WeeklyTrendMetric = 'calories' | 'protein_g' | 'carbs_g' | 'fat_g';
 
@@ -172,7 +172,7 @@ export default function NutritionWeeklyTrendChart({
               className={`nutrition-weekly-x-label${focusDate === day.date ? ' active' : ''}`}
               onClick={() => onSelectDate?.(day.date)}
             >
-              {day.label.split('/')[0]}
+              {dayLabelFromYmd(day.date)}
             </text>
           ))}
         </svg>
