@@ -38,12 +38,6 @@ import {
   aiEstimateToDraft,
 } from '../../lib/nutrition/aiFoodEstimate';
 import {
-  applyGoalSuggestion,
-  goalsMatchDefaults,
-  ProfileForGoalSuggestion,
-  suggestNutritionGoals,
-} from '../../lib/nutrition/goalSuggestions';
-import {
   barcodeDisplayName,
   barcodeExtraNutritionNote,
   barcodeResultToDraft,
@@ -60,6 +54,7 @@ import {
   quickAddMeta,
   searchQuickAddFoods,
 } from '../../lib/nutrition/recentFoods';
+import { searchFindFood } from '../../lib/nutrition/findFoodSearch';
 import {
   formatLoggedServingDisplay,
   formatServingLabel,
@@ -89,6 +84,7 @@ type NutritionTrackerProps = {
   initialDate?: string;
   onDateChange?: (date: string) => void;
   onDataChange?: () => void;
+  onOpenSettings?: () => void;
 };
 
 type LibraryEditDraft = {
@@ -347,6 +343,7 @@ export default function NutritionTracker({
   initialDate,
   onDateChange,
   onDataChange,
+  onOpenSettings,
 }: NutritionTrackerProps) {
   const [logDate, setLogDate] = useState(initialDate || todayYmd());
   const [entries, setEntries] = useState<MealEntry[]>([]);
@@ -367,21 +364,17 @@ export default function NutritionTracker({
   const [addFoodView, setAddFoodView] = useState<AddFoodView>('hub');
   const [estimateSearch, setEstimateSearch] = useState('');
   const [showMyFoods, setShowMyFoods] = useState(false);
-  const [showGoals, setShowGoals] = useState(false);
   const [addDraft, setAddDraft] = useState<FoodDraft>(emptyFoodDraft());
   const [editEntryId, setEditEntryId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<FoodDraft | null>(null);
   const [editFoodId, setEditFoodId] = useState<string | null>(null);
   const [foodEditDraft, setFoodEditDraft] = useState<LibraryEditDraft | null>(null);
-  const [goalsDraft, setGoalsDraft] = useState<NutritionGoals>({ ...DEFAULT_NUTRITION_GOALS });
   const [foodSearch, setFoodSearch] = useState('');
   const [pickedCatalogId, setPickedCatalogId] = useState<string | null>(null);
   const [aiDescribe, setAiDescribe] = useState('');
   const [aiEstimating, setAiEstimating] = useState(false);
   const [aiEstimateError, setAiEstimateError] = useState('');
   const [aiEstimateResult, setAiEstimateResult] = useState<AiFoodEstimateResult | null>(null);
-  const [profileForGoals, setProfileForGoals] = useState<ProfileForGoalSuggestion | null>(null);
-  const [hasSavedGoals, setHasSavedGoals] = useState(false);
   const [barcodeValue, setBarcodeValue] = useState('');
   const [barcodeLoading, setBarcodeLoading] = useState(false);
   const [barcodeError, setBarcodeError] = useState('');
@@ -412,14 +405,6 @@ export default function NutritionTracker({
     [weekEntries, goals, logDate]
   );
 
-  const goalSuggestion = useMemo(
-    () => suggestNutritionGoals(profileForGoals, profileForGoals?.experience_level),
-    [profileForGoals]
-  );
-
-  const showGoalSuggestionBanner =
-    goalSuggestion.canSuggest && (!hasSavedGoals || goalsMatchDefaults(goals));
-
   const recentFoods = useMemo(() => buildRecentFoods(recentEntryHistory), [recentEntryHistory]);
 
   const myFoodsResults = useMemo(
@@ -427,21 +412,15 @@ export default function NutritionTracker({
     [foodSearch, savedFoods, recentFoods]
   );
 
-  const estimateQuickItems = useMemo(
-    () => searchQuickAddFoods(estimateSearch, savedFoods, recentFoods, 12),
-    [estimateSearch, savedFoods, recentFoods]
-  );
-
   const activeTemplates = useMemo(
     () => (mealTemplates || []).filter((t) => !t.is_archived),
     [mealTemplates]
   );
 
-  const estimateTemplatesFiltered = useMemo(() => {
-    const q = estimateSearch.trim().toLowerCase();
-    if (!q) return activeTemplates;
-    return activeTemplates.filter((t) => t.name.toLowerCase().includes(q));
-  }, [estimateSearch, activeTemplates]);
+  const findFoodResults = useMemo(
+    () => searchFindFood(estimateSearch, savedFoods, recentFoods, activeTemplates),
+    [estimateSearch, savedFoods, recentFoods, activeTemplates]
+  );
 
   const estimateCatalogMatches = useMemo(
     () => searchFoodCatalog(foodCatalog, estimateSearch, 12),
@@ -480,7 +459,6 @@ export default function NutritionTracker({
         setEntries([]);
         setShowAdd(false);
         setShowMyFoods(false);
-        setShowGoals(false);
       }
       setLogDate(next);
       onDateChange?.(next);
@@ -500,7 +478,7 @@ export default function NutritionTracker({
     recentStartDate.setDate(recentStartDate.getDate() - RECENT_FOOD_HISTORY_DAYS);
     const recentStart = formatYmd(recentStartDate);
     try {
-      const [entriesRes, weekRes, recentRes, goalsRes, profileRes, foodsRes, templatesRes, catalogRes] =
+      const [entriesRes, weekRes, recentRes, goalsRes, foodsRes, templatesRes, catalogRes] =
         await Promise.all([
         supabase
           .from('st_meal_entries')
@@ -522,11 +500,6 @@ export default function NutritionTracker({
           .order('created_at', { ascending: false })
           .limit(RECENT_FOOD_FETCH_LIMIT),
         supabase.from('st_nutrition_goals').select('*').eq('user_id', userId).maybeSingle(),
-        supabase
-          .from('st_profiles')
-          .select('weight_lbs,height_inches,birth_year,sex,primary_goal,experience_level')
-          .eq('user_id', userId)
-          .maybeSingle(),
         supabase
           .from('st_food_library')
           .select('*')
@@ -551,7 +524,6 @@ export default function NutritionTracker({
       if (weekRes.error) throw weekRes.error;
       if (recentRes.error) throw recentRes.error;
       if (goalsRes.error) throw goalsRes.error;
-      if (profileRes.error) throw profileRes.error;
       if (foodsRes.error) throw foodsRes.error;
 
       setEntries((entriesRes.data || []) as MealEntry[]);
@@ -559,9 +531,6 @@ export default function NutritionTracker({
       setRecentEntryHistory((recentRes.data || []) as MealEntry[]);
       const nextGoals = goalsFromRow(goalsRes.data);
       setGoals(nextGoals);
-      setGoalsDraft(nextGoals);
-      setHasSavedGoals(!!goalsRes.data);
-      setProfileForGoals((profileRes.data as ProfileForGoalSuggestion) || null);
       setSavedFoods((foodsRes.data || []) as FoodLibraryItem[]);
       if (templatesRes.error) {
         if (!String(templatesRes.error.message || '').includes('st_meal_templates')) {
@@ -599,60 +568,6 @@ export default function NutritionTracker({
   useEffect(() => {
     if (initialDate && initialDate !== logDate) setLogDate(initialDate);
   }, [initialDate]);
-
-  async function saveGoals() {
-    if (!userId) return;
-    setSaving(true);
-    setError('');
-    const payload = {
-      user_id: userId,
-      calories_target: parseMacroInput(goalsDraft.calories),
-      protein_g_target: parseMacroInput(goalsDraft.protein_g),
-      carbs_g_target: parseMacroInput(goalsDraft.carbs_g),
-      fat_g_target: parseMacroInput(goalsDraft.fat_g),
-    };
-    const { error: upsertError } = await supabase
-      .from('st_nutrition_goals')
-      .upsert(payload, { onConflict: 'user_id' });
-    setSaving(false);
-    if (upsertError) return setError(upsertError.message);
-    setGoals({ ...goalsDraft });
-    setHasSavedGoals(true);
-    setShowGoals(false);
-    notifyParent();
-    await loadData();
-  }
-
-  function applySuggestedGoals() {
-    if (!goalSuggestion.canSuggest) return;
-    setGoalsDraft(applyGoalSuggestion(goalSuggestion));
-    setShowGoals(true);
-  }
-
-  async function saveSuggestedGoals() {
-    if (!goalSuggestion.canSuggest || !userId) return;
-    const next = applyGoalSuggestion(goalSuggestion);
-    setGoalsDraft(next);
-    setSaving(true);
-    setError('');
-    const { error: upsertError } = await supabase.from('st_nutrition_goals').upsert(
-      {
-        user_id: userId,
-        calories_target: next.calories,
-        protein_g_target: next.protein_g,
-        carbs_g_target: next.carbs_g,
-        fat_g_target: next.fat_g,
-      },
-      { onConflict: 'user_id' }
-    );
-    setSaving(false);
-    if (upsertError) return setError(upsertError.message);
-    setGoals(next);
-    setHasSavedGoals(true);
-    setShowGoals(false);
-    notifyParent();
-    await loadData();
-  }
 
   function prependRecentEntries(rows: MealEntry[]) {
     if (!rows.length) return;
@@ -1237,7 +1152,6 @@ export default function NutritionTracker({
 
   function openAddFood(meal: MealType = 'breakfast') {
     setShowMyFoods(false);
-    setShowGoals(false);
     setEditEntryId(null);
     setEditDraft(null);
     setEditFoodId(null);
@@ -1652,13 +1566,19 @@ export default function NutritionTracker({
                   </div>
                 </div>
                 <NutritionMacroDashboard totals={totals} goals={goals} />
+                {onOpenSettings && (
+                  <p className="muted nutrition-goals-readonly">
+                    Goals: {formatMacro(goals.calories)} cal · {formatMacro(goals.protein_g)}g protein ·{' '}
+                    {formatMacro(goals.carbs_g)}g carbs · {formatMacro(goals.fat_g)}g fat ·{' '}
+                    <button type="button" className="nutrition-inline-link" onClick={onOpenSettings}>
+                      Edit in Settings
+                    </button>
+                  </p>
+                )}
               </div>
               <div className="actions nutrition-summary-actions">
                 <button type="button" className="btn green" onClick={() => openAddFood()} disabled={saving}>
                   Add food
-                </button>
-                <button type="button" className="btn secondary" onClick={() => setShowGoals(true)} disabled={saving}>
-                  Edit goals
                 </button>
                 <button type="button" className="btn secondary" onClick={copyYesterday} disabled={saving}>
                   Copy yesterday
@@ -1669,115 +1589,6 @@ export default function NutritionTracker({
               </div>
               {error && <p className="nutrition-error">{error}</p>}
             </div>
-
-            {showGoalSuggestionBanner && (
-        <div className="card nutrition-goals-suggest-card">
-          <div className="topline" style={{ justifyContent: 'space-between' }}>
-            <h3>Suggested macro goals</h3>
-            <span className="badge">From profile</span>
-          </div>
-          <p className="muted">{goalSuggestion.summary}</p>
-          <div className="nutrition-totals-grid">
-            <div className="nutrition-total-tile">
-              <b>{formatMacro(goalSuggestion.calories)}</b>
-              <span className="muted">Calories</span>
-            </div>
-            <div className="nutrition-total-tile">
-              <b>{formatMacro(goalSuggestion.protein_g)}g</b>
-              <span className="muted">Protein</span>
-            </div>
-            <div className="nutrition-total-tile">
-              <b>{formatMacro(goalSuggestion.carbs_g)}g</b>
-              <span className="muted">Carbs</span>
-            </div>
-            <div className="nutrition-total-tile">
-              <b>{formatMacro(goalSuggestion.fat_g)}g</b>
-              <span className="muted">Fat</span>
-            </div>
-          </div>
-          <div className="actions" style={{ marginTop: 10 }}>
-            <button type="button" className="btn green" onClick={saveSuggestedGoals} disabled={saving}>
-              {saving ? 'Saving...' : 'Apply suggested goals'}
-            </button>
-            <button type="button" className="btn secondary" onClick={applySuggestedGoals} disabled={saving}>
-              Review & edit
-            </button>
-          </div>
-        </div>
-      )}
-
-      {showGoals && (
-        <div className="card nutrition-goals-card">
-          <h3>Daily macro goals</h3>
-          {goalSuggestion.canSuggest && (
-            <div className="nutrition-goals-suggest-inline">
-              <p className="muted">{goalSuggestion.summary}</p>
-              <div className="actions" style={{ marginBottom: 10 }}>
-                <button
-                  type="button"
-                  className="btn small secondary"
-                  onClick={() => setGoalsDraft(applyGoalSuggestion(goalSuggestion))}
-                  disabled={saving}
-                >
-                  Fill from profile suggestion
-                </button>
-              </div>
-            </div>
-          )}
-          <div className="row">
-            <div>
-              <label htmlFor="goal-calories">Calories</label>
-              <input
-                id="goal-calories"
-                type="number"
-                min="0"
-                value={goalsDraft.calories}
-                onChange={(e) => setGoalsDraft({ ...goalsDraft, calories: parseMacroInput(e.target.value) })}
-              />
-            </div>
-            <div>
-              <label htmlFor="goal-protein">Protein (g)</label>
-              <input
-                id="goal-protein"
-                type="number"
-                min="0"
-                value={goalsDraft.protein_g}
-                onChange={(e) => setGoalsDraft({ ...goalsDraft, protein_g: parseMacroInput(e.target.value) })}
-              />
-            </div>
-          </div>
-          <div className="row">
-            <div>
-              <label htmlFor="goal-carbs">Carbs (g)</label>
-              <input
-                id="goal-carbs"
-                type="number"
-                min="0"
-                value={goalsDraft.carbs_g}
-                onChange={(e) => setGoalsDraft({ ...goalsDraft, carbs_g: parseMacroInput(e.target.value) })}
-              />
-            </div>
-            <div>
-              <label htmlFor="goal-fat">Fat (g)</label>
-              <input
-                id="goal-fat"
-                type="number"
-                min="0"
-                value={goalsDraft.fat_g}
-                onChange={(e) => setGoalsDraft({ ...goalsDraft, fat_g: parseMacroInput(e.target.value) })}
-              />
-            </div>
-          </div>
-          <div className="actions" style={{ marginTop: 10 }}>
-            <button type="button" className="btn green" onClick={saveGoals} disabled={saving}>
-              {saving ? 'Saving...' : 'Save goals'}
-            </button>
-            <button type="button" className="btn secondary" onClick={() => setShowGoals(false)}>
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
 
       {copySource && (
         <NutritionCopyFoodPanel
@@ -1817,8 +1628,7 @@ export default function NutritionTracker({
               onLogAllAiEstimates={logAiEstimates}
               estimateSearch={estimateSearch}
               onEstimateSearchChange={setEstimateSearch}
-              estimateQuickItems={estimateQuickItems}
-              estimateTemplates={estimateTemplatesFiltered}
+              findFoodResults={findFoodResults}
               estimateCatalogMatches={estimateCatalogMatches}
               foodCatalogCount={foodCatalog.length}
               aiDescribe={aiDescribe}

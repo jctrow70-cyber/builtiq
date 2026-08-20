@@ -61,10 +61,10 @@ Remove **Edit goals** from the Nutrition tab; manage daily calorie/macro goals u
 As a user, I want nutrition goals in Settings with my other profile preferences, so the Nutrition screen focuses on logging and daily progress.
 
 ### Acceptance criteria
-- [ ] "Edit goals" removed from Nutrition tab (or reduced to read-only summary + link to Settings)
-- [ ] Settings has full goal edit flow (existing Mifflin-St Jeor suggestions preserved)
-- [ ] Nutrition tab still shows progress bars vs goals (read-only)
-- [ ] Mobile-friendly Settings layout
+- [x] "Edit goals" removed from Nutrition tab (or reduced to read-only summary + link to Settings)
+- [x] Settings has full goal edit flow (existing Mifflin-St Jeor suggestions preserved)
+- [x] Nutrition tab still shows progress bars vs goals (read-only)
+- [x] Mobile-friendly Settings layout
 
 ### Files likely touched
 - `NutritionTracker.tsx`, Settings section in `app/page.tsx`
@@ -227,7 +227,7 @@ As a user tracking nutrition, I want a weekly chart of my intake so I can spot p
 | 2 | NUTR-1, NUTR-2 | Day view clarity | **Done** (BIQ-0121, BIQ-0122 — 2026-08-20) |
 | 3 | NUTR-6, NUTR-7 | Navigation + copy efficiency | **Done** (BIQ-0127, BIQ-0128 — 2026-08-20) |
 | 4 | NUTR-8, NUTR-9 | Bottom of screen refresh | **Done** (BIQ-0131, BIQ-0132 — 2026-08-20) |
-| 5 | NUTR-3 | Settings move (low risk, can parallel) | Not started |
+| 5 | NUTR-3 | Settings move (low risk, can parallel) | **Done** (BIQ-0123 — 2026-08-20) |
 
 ---
 

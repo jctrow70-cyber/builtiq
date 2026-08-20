@@ -8391,3 +8391,89 @@ Replaced the weekly bar chart with a **multi-series line chart** showing Calorie
 ```text
 BIQ-0133 Weekly nutrition multi-series line chart by macro
 ```
+
+---
+
+## BIQ-0123 - Move Edit Nutrition Goals to Settings
+
+Date: 2026-08-20  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Moved daily calorie and macro goal editing from the Nutrition tab to **Settings**. The Nutrition tab keeps read-only progress rings and a link to Settings; Mifflin-St Jeor profile-based suggestions remain available when editing goals.
+
+### Purpose
+
+Keep the Nutrition screen focused on logging and daily progress while grouping long-term preferences with other profile settings (NUTR-3).
+
+### Files Changed
+
+- `app/components/nutrition/NutritionGoalsSettings.tsx` (new)
+- `app/components/NutritionTracker.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `docs/JIRA-NUTRITION-BACKLOG.md`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+- Open Nutrition tab — confirm macro rings show vs goals; no Edit goals button; read-only goals line with **Edit in Settings** link.
+- Tap **Edit in Settings** — navigates to Settings with Nutrition goals card.
+- In Settings, edit and save goals — confirm save succeeds.
+- With profile weight/height/sex filled, confirm suggested goals banner and **Fill from profile suggestion** work.
+- Return to Nutrition tab — confirm updated goals appear in rings and meal targets.
+- Save goals in Settings — confirm Dashboard nutrition card updates.
+- Test on mobile width — Settings goal form uses existing row layout.
+
+### Known Issues
+
+None.
+
+### Recommended Commit Message
+
+```text
+BIQ-0123 Move nutrition goal editing to Settings
+```
+
+---
+
+## BIQ-0134 - Unified Find Food Search for Saved Foods and Meal Templates
+
+Date: 2026-08-20  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+**Find food** now uses one search field for **My foods**, **recent items**, and **meal templates** together. Templates appear in the same results list (labeled “Meal template”) and match by template name or item names inside the template.
+
+### Files Changed
+
+- `lib/nutrition/findFoodSearch.ts` (new)
+- `app/components/nutrition/NutritionAddFoodPanel.tsx`
+- `app/components/NutritionTracker.tsx`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+- Add food → Find food — confirm single search and combined “Saved foods & meals” results.
+- With meal templates saved, confirm they appear when search is empty and when name matches.
+- Search for a food name inside a template — confirm template appears.
+- My foods and recent items still add with **Add**; templates log with **Log meal**.
+- Catalog search still appears below when typing matches system foods.
+
+### Recommended Commit Message
+
+```text
+BIQ-0134 Unify Find food search for saved foods and meal templates
+```

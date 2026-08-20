@@ -14,6 +14,7 @@ import { BarcodeLookupNotFound, BarcodeLookupResult } from '../../../lib/nutriti
 import { LABEL_OCR_DISCLAIMER } from '../../../lib/nutrition/labelOcr';
 import { MEAL_PHOTO_DISCLAIMER } from '../../../lib/nutrition/mealPhotoEstimate';
 import { foodCatalogLabel, foodCatalogMeta, FoodCatalogItem } from '../../../lib/nutrition/foodCatalogSearch';
+import type { FindFoodResult } from '../../../lib/nutrition/findFoodSearch';
 import type { QuickAddFood } from '../../../lib/nutrition/recentFoods';
 import NutritionBarcodeScanner from '../NutritionBarcodeScanner';
 import { NutritionBarcodeNotFoundCard, NutritionBarcodeProductCard } from '../NutritionBarcodeProduct';
@@ -53,8 +54,7 @@ export type NutritionAddFoodPanelProps = {
   // Estimate view
   estimateSearch: string;
   onEstimateSearchChange: (value: string) => void;
-  estimateQuickItems: QuickAddFood[];
-  estimateTemplates: MealTemplate[];
+  findFoodResults: FindFoodResult[];
   estimateCatalogMatches: FoodCatalogItem[];
   foodCatalogCount: number;
   aiDescribe: string;
@@ -121,8 +121,7 @@ export default function NutritionAddFoodPanel(props: NutritionAddFoodPanelProps)
     onLogAllAiEstimates,
     estimateSearch,
     onEstimateSearchChange,
-    estimateQuickItems,
-    estimateTemplates,
+    findFoodResults,
     estimateCatalogMatches,
     foodCatalogCount,
     aiDescribe,
@@ -371,53 +370,58 @@ export default function NutritionAddFoodPanel(props: NutritionAddFoodPanelProps)
 
       {view === 'find_food' && (
         <div className="nutrition-add-view">
-          <label htmlFor="estimate-search">Search saved meals, recent foods, or catalog</label>
+          <label htmlFor="estimate-search">Search saved foods and meal templates</label>
           <input
             id="estimate-search"
             value={estimateSearch}
             onChange={(e) => onEstimateSearchChange(e.target.value)}
-            placeholder="Search saved meals or foods…"
+            placeholder="Search my foods, recent items, or saved meals…"
             autoFocus
           />
 
-          {estimateTemplates.length > 0 && (
+          {findFoodResults.length > 0 && (
             <>
-              <h4 className="nutrition-add-section-title">Saved meals</h4>
+              <h4 className="nutrition-add-section-title">Saved foods &amp; meals</h4>
               <div className="nutrition-food-grid">
-                {estimateTemplates.map((template) => (
-                  <div key={template.id} className="nutrition-food-chip">
-                    <div>
-                      <b>{template.name}</b>
-                      <span className="muted">
-                        {template.items.length} item(s) · {formatMacroLine(sumMacros(template.items))}
-                      </span>
+                {findFoodResults.map((result) =>
+                  result.kind === 'template' ? (
+                    <div key={`template:${result.item.id}`} className="nutrition-food-chip">
+                      <div>
+                        <b>{result.item.name}</b>
+                        <span className="muted">
+                          Meal template · {result.item.items.length} item(s) ·{' '}
+                          {formatMacroLine(sumMacros(result.item.items))}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn small green"
+                        onClick={() => onLogTemplate(result.item)}
+                        disabled={saving}
+                      >
+                        Log meal
+                      </button>
                     </div>
-                    <button type="button" className="btn small green" onClick={() => onLogTemplate(template)} disabled={saving}>
-                      Log meal
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
-          {estimateQuickItems.length > 0 && (
-            <>
-              <h4 className="nutrition-add-section-title">Recent &amp; saved foods</h4>
-              <div className="nutrition-food-grid">
-                {estimateQuickItems.map((item) => (
-                  <div key={item.key} className="nutrition-food-chip">
-                    <div>
-                      <b>{item.name}</b>
-                      <span className="muted">
-                        {quickAddMeta(item)} · {item.source === 'library' ? 'My foods' : 'Recent'}
-                      </span>
+                  ) : (
+                    <div key={result.item.key} className="nutrition-food-chip">
+                      <div>
+                        <b>{result.item.name}</b>
+                        <span className="muted">
+                          {quickAddMeta(result.item)} ·{' '}
+                          {result.item.source === 'library' ? 'My foods' : 'Recent'}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn small green"
+                        onClick={() => onQuickAdd(result.item)}
+                        disabled={saving}
+                      >
+                        Add
+                      </button>
                     </div>
-                    <button type="button" className="btn small green" onClick={() => onQuickAdd(item)} disabled={saving}>
-                      Add
-                    </button>
-                  </div>
-                ))}
+                  )
+                )}
               </div>
             </>
           )}
@@ -441,19 +445,17 @@ export default function NutritionAddFoodPanel(props: NutritionAddFoodPanelProps)
             </>
           )}
 
-          {estimateSearch.trim() &&
-            !estimateQuickItems.length &&
-            !estimateTemplates.length &&
-            !estimateCatalogMatches.length && (
-              <p className="muted">No matches — try AI estimate or enter manually.</p>
-            )}
+          {estimateSearch.trim() && !findFoodResults.length && !estimateCatalogMatches.length && (
+            <p className="muted">No matches — try AI estimate or enter manually.</p>
+          )}
 
-          {!estimateSearch.trim() &&
-            !estimateQuickItems.length &&
-            !estimateTemplates.length &&
-            foodCatalogCount > 0 && (
-              <p className="muted">Type to search the food catalog, or use AI estimate for something new.</p>
-            )}
+          {!estimateSearch.trim() && !findFoodResults.length && foodCatalogCount > 0 && (
+            <p className="muted">Type to search the food catalog, or use AI estimate for something new.</p>
+          )}
+
+          {!estimateSearch.trim() && !findFoodResults.length && foodCatalogCount === 0 && (
+            <p className="muted">Save foods to My foods or create meal templates to find them here quickly.</p>
+          )}
         </div>
       )}
 

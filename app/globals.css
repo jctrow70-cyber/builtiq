@@ -541,6 +541,9 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .nutrition-ai-notes{margin-top:0;margin-bottom:8px;font-size:12px}
 .nutrition-goals-suggest-card,.nutrition-goals-suggest-inline{margin-bottom:4px}
 .nutrition-goals-suggest-inline .muted{font-size:12px;line-height:1.45}
+.nutrition-goals-readonly{margin-top:8px;font-size:13px;line-height:1.5}
+.nutrition-inline-link{display:inline;padding:0;border:none;background:none;color:var(--accent);font:inherit;font-size:inherit;text-decoration:underline;cursor:pointer}
+.nutrition-inline-link:hover{opacity:.85}
 .nutrition-scan-picker{margin-bottom:10px}
 .nutrition-barcode-row{display:flex;gap:8px;align-items:center}
 .nutrition-barcode-row input{flex:1;min-width:0}
