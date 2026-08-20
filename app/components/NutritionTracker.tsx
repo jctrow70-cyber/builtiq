@@ -1957,20 +1957,22 @@ export default function NutritionTracker({
                   {mealEntries.length === 0 ? (
                     mealCalTarget !== null ? (
                       <>
-                        0 / <b>{mealCalTarget} cal</b>
+                        <b>0</b> / <b>{mealCalTarget} cal</b>
                       </>
                     ) : (
-                      <>0 cal</>
+                      <>
+                        <b>0 cal</b>
+                      </>
                     )
                   ) : mealCalTarget !== null ? (
                     <>
-                      {loggedCal} / <b>{mealCalTarget} cal</b>
+                      <b>{loggedCal}</b> / <b>{mealCalTarget} cal</b>
                       {' · '}
                       {mealMacroLine}
                     </>
                   ) : (
                     <>
-                      {loggedCal} cal · {mealMacroLine}
+                      <b>{loggedCal} cal</b> · {mealMacroLine}
                     </>
                   )}
                 </span>
