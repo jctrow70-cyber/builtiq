@@ -8213,3 +8213,67 @@ Meal headers include **% of daily calorie goal** (e.g. `420 cal · 24% of daily 
 ```text
 BIQ-0122 Show per-meal calorie share of daily goal on meal headers
 ```
+
+---
+
+## BIQ-0127 - Tap Nutrition Date to Open Calendar Picker
+
+Date: 2026-08-20  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+The date badge at the top of Nutrition is now **tappable** — opens the native calendar picker to jump to any date. Prev/next day arrows still work; weekly summary date taps unchanged.
+
+### Files Changed
+
+- `app/components/DateInput.tsx` (forwardRef + className)
+- `app/components/NutritionTracker.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Testing Steps
+
+1. Nutrition → tap the **date badge** → native calendar opens (iPhone Safari / PWA)
+2. Pick a past date → that day's entries and totals load
+3. Prev/next arrows still change day by one
+4. Swipe on macro rings still changes day
+
+### Recommended Commit Message
+
+```text
+BIQ-0127 Tap nutrition date badge to open calendar picker
+```
+
+---
+
+## BIQ-0128 - Copy Food or Meal to Another Date
+
+Date: 2026-08-20  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+**Copy** on a food row opens a sheet to pick **target date** and **meal**. **Copy meal** on each meal section copies all items in that meal. Creates new entries without changing the source. Navigates to the target date when copying to a different day.
+
+### Files Changed
+
+- `app/components/nutrition/NutritionCopyFoodPanel.tsx` (new)
+- `app/components/NutritionTracker.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Testing Steps
+
+1. Log several items in Breakfast → **Copy meal** → pick tomorrow + Lunch → confirm → view jumps to tomorrow with copied items
+2. **Copy** on a single row → change date/meal → confirm → entries appear on target day
+3. Copy to same day/meal → duplicates appear (same macros snapshot)
+4. **Copy yesterday** quick action still works unchanged
+
+### Recommended Commit Message
+
+```text
+BIQ-0128 Copy food or whole meal to another date and meal
+```

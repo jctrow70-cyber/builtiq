@@ -69,6 +69,8 @@ import {
 } from '../../lib/nutrition/servingUnits';
 import type { FoodDraft } from './nutrition/NutritionAddFoodTypes';
 import NutritionAddFoodPanel, { type AddFoodView } from './nutrition/NutritionAddFoodPanel';
+import NutritionCopyFoodPanel from './nutrition/NutritionCopyFoodPanel';
+import DateInput from './DateInput';
 import { currentCalendarWeekBounds, formatDisplayDate, formatYmd, parseYmd, todayYmd } from '../../lib/training/programCalendar';
 
 const RECENT_FOOD_HISTORY_DAYS = 90;
@@ -397,6 +399,12 @@ export default function NutritionTracker({
     Object.fromEntries(MEAL_TYPES.map((meal) => [meal, true])) as Record<MealType, boolean>
   );
   const entriesSyncedForDate = useRef<string | null>(null);
+  const datePickerRef = useRef<HTMLInputElement>(null);
+  const [copySource, setCopySource] = useState<{ entries: MealEntry[]; sourceLabel: string } | null>(null);
+  const [copyDraft, setCopyDraft] = useState<{ log_date: string; meal_type: MealType }>({
+    log_date: todayYmd(),
+    meal_type: 'breakfast',
+  });
 
   const totals = useMemo(() => sumMacros(entries), [entries]);
   const grouped = useMemo(() => groupEntriesByMeal(entries), [entries]);
@@ -930,33 +938,72 @@ export default function NutritionTracker({
   }
 
   async function duplicateEntry(entry: MealEntry) {
-    if (!userId) return;
+    openCopyEntries([entry], entry.food_name, entry.meal_type);
+  }
+
+  function openCopyEntries(entriesToCopy: MealEntry[], sourceLabel: string, defaultMeal: MealType) {
+    if (!entriesToCopy.length) return;
+    setCopyDraft({ log_date: logDate, meal_type: defaultMeal });
+    setCopySource({ entries: entriesToCopy, sourceLabel });
+  }
+
+  function closeCopyPanel() {
+    setCopySource(null);
+  }
+
+  function openCopyMeal(meal: MealType) {
+    const mealEntries = grouped[meal];
+    if (!mealEntries.length) return;
+    openCopyEntries(mealEntries, MEAL_TYPE_LABELS[meal], meal);
+  }
+
+  function openDatePicker() {
+    const el = datePickerRef.current;
+    if (!el || dayRefreshing) return;
+    if (typeof el.showPicker === 'function') {
+      try {
+        el.showPicker();
+        return;
+      } catch {
+        // showPicker can throw if not triggered by user gesture on some browsers
+      }
+    }
+    el.click();
+  }
+
+  async function confirmCopyEntries() {
+    if (!copySource || !userId) return;
     setSaving(true);
     setError('');
     try {
-      const inserted = await insertMealRows([
-        {
-          user_id: userId,
-          log_date: logDate,
-          meal_type: entry.meal_type,
-          food_name: entry.food_name,
-          food_library_id: entry.food_library_id || null,
-          serving_qty: entry.serving_qty,
-          serving_size: entry.serving_size ?? 1,
-          serving_unit: normalizeServingUnit(entry.serving_unit),
-          calories: entry.calories,
-          protein_g: entry.protein_g,
-          carbs_g: entry.carbs_g,
-          fat_g: entry.fat_g,
-          notes: entry.notes || null,
-        },
-      ]);
-      setEntries((prev) => [...prev, ...inserted]);
-      prependRecentEntries(inserted);
+      const rows = copySource.entries.map((entry) => ({
+        user_id: userId,
+        log_date: copyDraft.log_date,
+        meal_type: copyDraft.meal_type,
+        food_name: entry.food_name,
+        food_library_id: entry.food_library_id || null,
+        serving_qty: entry.serving_qty,
+        serving_size: entry.serving_size ?? 1,
+        serving_unit: normalizeServingUnit(entry.serving_unit),
+        calories: entry.calories,
+        protein_g: entry.protein_g,
+        carbs_g: entry.carbs_g,
+        fat_g: entry.fat_g,
+        notes: entry.notes || null,
+      }));
+      const inserted = await insertMealRows(rows);
+      if (copyDraft.log_date === logDate) {
+        setEntries((prev) => [...prev, ...inserted]);
+        prependRecentEntries(inserted);
+      }
       notifyParent();
       await loadData();
+      if (copyDraft.log_date !== logDate) {
+        setDate(copyDraft.log_date);
+      }
+      closeCopyPanel();
     } catch (e: any) {
-      setError(e?.message || 'Could not duplicate entry.');
+      setError(e?.message || 'Could not copy food.');
     } finally {
       setSaving(false);
     }
@@ -1599,7 +1646,23 @@ export default function NutritionTracker({
                     >
                       ›
                     </button>
-                    <span className="badge">{formatDisplayDate(logDate)}</span>
+                    <button
+                      type="button"
+                      className="nutrition-date-badge-btn"
+                      onClick={openDatePicker}
+                      disabled={dayRefreshing}
+                      aria-label={`Change date, currently ${formatDisplayDate(logDate)}`}
+                    >
+                      <span className="badge">{formatDisplayDate(logDate)}</span>
+                    </button>
+                    <DateInput
+                      ref={datePickerRef}
+                      id="nutrition-log-date"
+                      value={logDate}
+                      onChange={setDate}
+                      disabled={dayRefreshing}
+                      className="nutrition-date-input-hidden"
+                    />
                   </div>
                 </div>
                 <NutritionMacroDashboard totals={totals} goals={goals} />
@@ -1728,6 +1791,20 @@ export default function NutritionTracker({
             </button>
           </div>
         </div>
+      )}
+
+      {copySource && (
+        <NutritionCopyFoodPanel
+          sourceLabel={copySource.sourceLabel}
+          itemCount={copySource.entries.length}
+          targetDate={copyDraft.log_date}
+          targetMeal={copyDraft.meal_type}
+          onTargetDateChange={(date) => setCopyDraft((prev) => ({ ...prev, log_date: date }))}
+          onTargetMealChange={(meal) => setCopyDraft((prev) => ({ ...prev, meal_type: meal }))}
+          saving={saving}
+          onConfirm={confirmCopyEntries}
+          onClose={closeCopyPanel}
+        />
       )}
 
       {showAdd && (
@@ -2011,6 +2088,16 @@ export default function NutritionTracker({
               >
                 + Add to {MEAL_TYPE_LABELS[meal]}
               </button>
+              {mealEntries.length > 0 && (
+                <button
+                  type="button"
+                  className="btn small secondary"
+                  onClick={() => openCopyMeal(meal)}
+                  disabled={saving}
+                >
+                  Copy meal
+                </button>
+              )}
               {mealEntries.length > 0 && (
                 <button
                   type="button"
