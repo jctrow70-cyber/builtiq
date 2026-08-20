@@ -226,7 +226,7 @@ As a user tracking nutrition, I want a weekly chart of my intake so I can spot p
 | 1 | NUTR-4, NUTR-5 | Add-food UX is the main friction point | **Done** (BIQ-0124, BIQ-0125 — 2026-08-19) |
 | 2 | NUTR-1, NUTR-2 | Day view clarity | **Done** (BIQ-0121, BIQ-0122 — 2026-08-20) |
 | 3 | NUTR-6, NUTR-7 | Navigation + copy efficiency | **Done** (BIQ-0127, BIQ-0128 — 2026-08-20) |
-| 4 | NUTR-8, NUTR-9 | Bottom of screen refresh | Not started |
+| 4 | NUTR-8, NUTR-9 | Bottom of screen refresh | **Done** (BIQ-0131, BIQ-0132 — 2026-08-20) |
 | 5 | NUTR-3 | Settings move (low risk, can parallel) | Not started |
 
 ---

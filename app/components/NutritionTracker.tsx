@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
-import NutritionWeeklySummary from './NutritionWeeklySummary';
+import NutritionWeeklyTrendChart from './NutritionWeeklyTrendChart';
 import NutritionMacroDashboard from './NutritionMacroDashboard';
 import {
   DEFAULT_NUTRITION_GOALS,
@@ -25,7 +25,7 @@ import {
   sumMacros,
   templateItemsFromEntries,
 } from '../../lib/nutrition/macros';
-import { buildWeeklyNutritionSummary } from '../../lib/nutrition/weeklySummary';
+import { buildSevenDayNutritionSummary } from '../../lib/nutrition/weeklySummary';
 import { mealCalorieTarget } from '../../lib/nutrition/mealDisplay';
 import {
   foodCatalogLabel,
@@ -71,7 +71,7 @@ import type { FoodDraft } from './nutrition/NutritionAddFoodTypes';
 import NutritionAddFoodPanel, { type AddFoodView } from './nutrition/NutritionAddFoodPanel';
 import NutritionCopyFoodPanel from './nutrition/NutritionCopyFoodPanel';
 import DateInput from './DateInput';
-import { currentCalendarWeekBounds, formatDisplayDate, formatYmd, parseYmd, todayYmd } from '../../lib/training/programCalendar';
+import { addDaysYmd, formatDisplayDate, formatYmd, parseYmd, todayYmd } from '../../lib/training/programCalendar';
 
 const RECENT_FOOD_HISTORY_DAYS = 90;
 const RECENT_FOOD_FETCH_LIMIT = 200;
@@ -408,7 +408,7 @@ export default function NutritionTracker({
   const totals = useMemo(() => sumMacros(entries), [entries]);
   const grouped = useMemo(() => groupEntriesByMeal(entries), [entries]);
   const weeklySummary = useMemo(
-    () => buildWeeklyNutritionSummary(weekEntries, goals, logDate),
+    () => buildSevenDayNutritionSummary(weekEntries, goals, logDate),
     [weekEntries, goals, logDate]
   );
 
@@ -494,7 +494,8 @@ export default function NutritionTracker({
     if (isInitial) setLoading(true);
     else setDayRefreshing(true);
     setError('');
-    const { monday, sunday } = currentCalendarWeekBounds(parseYmd(logDate));
+    const weekEnd = logDate;
+    const weekStart = addDaysYmd(logDate, -6);
     const recentStartDate = parseYmd(logDate);
     recentStartDate.setDate(recentStartDate.getDate() - RECENT_FOOD_HISTORY_DAYS);
     const recentStart = formatYmd(recentStartDate);
@@ -511,8 +512,8 @@ export default function NutritionTracker({
           .from('st_meal_entries')
           .select('log_date,calories,protein_g,carbs_g,fat_g')
           .eq('user_id', userId)
-          .gte('log_date', monday)
-          .lte('log_date', sunday),
+          .gte('log_date', weekStart)
+          .lte('log_date', weekEnd),
         supabase
           .from('st_meal_entries')
           .select('*')
@@ -2243,7 +2244,7 @@ export default function NutritionTracker({
         </div>
       )}
 
-            <NutritionWeeklySummary
+            <NutritionWeeklyTrendChart
               summary={weeklySummary}
               activeDate={logDate}
               onSelectDate={setDate}

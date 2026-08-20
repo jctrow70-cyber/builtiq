@@ -8310,3 +8310,60 @@ Meal headers now show **logged vs allocated calories** for each meal (e.g. `420 
 ```text
 BIQ-0130 Show per-meal calorie targets on nutrition meal headers
 ```
+
+---
+
+## BIQ-0131 - Remove "This Week" Summary Box from Nutrition
+
+Date: 2026-08-20  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Removed the bottom **This week** metrics card (days logged, avg cal/day, week totals table). Weekly view is replaced by the new 7-day trend chart.
+
+### Files Changed
+
+- `app/components/NutritionTracker.tsx`
+- `app/components/NutritionWeeklySummary.tsx` (removed)
+- `CHANGELOG.md`
+
+### Recommended Commit Message
+
+```text
+BIQ-0131 Remove legacy This week nutrition summary box
+```
+
+---
+
+## BIQ-0132 - Weekly Macro Trend Chart with Metric Tabs
+
+Date: 2026-08-20  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Added **7-day trend** chart at the bottom of Nutrition with tabs for **Calories | Protein | Carbs | Fat**. Shows the seven days ending on the selected date. Tap a bar to jump to that day. Daily goal line shown for the active metric.
+
+### Files Changed
+
+- `app/components/NutritionWeeklyTrendChart.tsx` (new)
+- `lib/nutrition/weeklySummary.ts` (`buildSevenDayNutritionSummary`)
+- `app/components/NutritionTracker.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Testing Steps
+
+1. Log food across several days → chart bars update for each metric tab
+2. Switch Calories / Protein / Carbs / Fat tabs → values and scale change
+3. Tap a bar → navigates to that date
+4. Goal hint and goal line visible when goals are set
+
+### Recommended Commit Message
+
+```text
+BIQ-0132 Add 7-day nutrition trend chart with macro metric tabs
+```

@@ -502,7 +502,13 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .nutrition-entry-main .muted{display:block;font-size:11px;margin-top:2px}
 .nutrition-entry-actions{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
 .nutrition-weekly-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0}
-.nutrition-weekly-chart{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;align-items:end;min-height:160px;margin-top:8px}
+.nutrition-weekly-metric-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.nutrition-weekly-metric-tab{flex:1;min-width:72px;min-height:40px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#070a11;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer}
+.nutrition-weekly-metric-tab.active{border-color:var(--accent);color:var(--text);background:var(--accentSoft)}
+.nutrition-weekly-goal-hint{margin:0 0 6px;font-size:11px}
+.nutrition-weekly-chart-wrap{position:relative;margin-top:8px}
+.nutrition-weekly-goal-line{position:absolute;left:8px;right:8px;height:2px;background:var(--accent);opacity:.55;z-index:2;pointer-events:none;border-radius:1px}
+.nutrition-weekly-chart{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;align-items:end;min-height:160px;position:relative;z-index:1}
 .nutrition-weekly-bar{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;border:1px solid var(--line);background:#0b1119;border-radius:12px;padding:8px 4px;min-height:140px;cursor:pointer;color:inherit}
 .nutrition-weekly-bar.active{border-color:var(--purple);background:#171628}
 .nutrition-weekly-bar.empty{opacity:.75}
