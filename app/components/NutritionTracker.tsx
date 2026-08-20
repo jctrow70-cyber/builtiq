@@ -28,9 +28,9 @@ import {
 import { buildSevenDayNutritionSummary } from '../../lib/nutrition/weeklySummary';
 import { mealCalorieTarget } from '../../lib/nutrition/mealDisplay';
 import {
+  fetchFoodCatalogMatches,
   foodCatalogLabel,
   FoodCatalogItem,
-  searchFoodCatalog,
 } from '../../lib/nutrition/foodCatalogSearch';
 import {
   AiFoodEstimateItem,
@@ -68,8 +68,8 @@ import NutritionCopyFoodPanel from './nutrition/NutritionCopyFoodPanel';
 import DateInput from './DateInput';
 import { addDaysYmd, formatDisplayDate, formatYmd, parseYmd, todayYmd } from '../../lib/training/programCalendar';
 
-const RECENT_FOOD_HISTORY_DAYS = 90;
-const RECENT_FOOD_FETCH_LIMIT = 200;
+const RECENT_FOOD_HISTORY_DAYS = 30;
+const RECENT_FOOD_FETCH_LIMIT = 60;
 
 async function encodeImageFile(file: File): Promise<{ image_base64: string; mime_type: string }> {
   const buffer = await file.arrayBuffer();
@@ -351,12 +351,15 @@ export default function NutritionTracker({
   const [goals, setGoals] = useState<NutritionGoals>({ ...DEFAULT_NUTRITION_GOALS });
   const [savedFoods, setSavedFoods] = useState<FoodLibraryItem[]>([]);
   const [recentEntryHistory, setRecentEntryHistory] = useState<MealEntry[]>([]);
-  const [foodCatalog, setFoodCatalog] = useState<FoodCatalogItem[]>([]);
   const [mealTemplates, setMealTemplates] = useState<MealTemplate[]>([]);
+  const [catalogMatches, setCatalogMatches] = useState<FoodCatalogItem[]>([]);
+  const [catalogSearching, setCatalogSearching] = useState(false);
+  const [addFoodLibraryLoading, setAddFoodLibraryLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [dayRefreshing, setDayRefreshing] = useState(false);
   const [dayAnimDir, setDayAnimDir] = useState<'forward' | 'back' | 'none'>('none');
   const hasLoadedRef = useRef(false);
+  const addFoodLibraryLoadedRef = useRef(false);
   const daySwipeStart = useRef<{ x: number; y: number } | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -422,13 +425,9 @@ export default function NutritionTracker({
     [estimateSearch, savedFoods, recentFoods, activeTemplates]
   );
 
-  const estimateCatalogMatches = useMemo(
-    () => searchFoodCatalog(foodCatalog, estimateSearch, 12),
-    [foodCatalog, estimateSearch]
-  );
-
   useEffect(() => {
     entriesSyncedForDate.current = null;
+    addFoodLibraryLoadedRef.current = false;
   }, [logDate]);
 
   useEffect(() => {
@@ -466,7 +465,7 @@ export default function NutritionTracker({
     [logDate, onDateChange]
   );
 
-  const loadData = useCallback(async () => {
+  const loadDayData = useCallback(async () => {
     if (!userId) return;
     const isInitial = !hasLoadedRef.current;
     if (isInitial) setLoading(true);
@@ -474,12 +473,8 @@ export default function NutritionTracker({
     setError('');
     const weekEnd = logDate;
     const weekStart = addDaysYmd(logDate, -6);
-    const recentStartDate = parseYmd(logDate);
-    recentStartDate.setDate(recentStartDate.getDate() - RECENT_FOOD_HISTORY_DAYS);
-    const recentStart = formatYmd(recentStartDate);
     try {
-      const [entriesRes, weekRes, recentRes, goalsRes, foodsRes, templatesRes, catalogRes] =
-        await Promise.all([
+      const [entriesRes, weekRes, goalsRes] = await Promise.all([
         supabase
           .from('st_meal_entries')
           .select('*')
@@ -492,6 +487,33 @@ export default function NutritionTracker({
           .eq('user_id', userId)
           .gte('log_date', weekStart)
           .lte('log_date', weekEnd),
+        supabase.from('st_nutrition_goals').select('*').eq('user_id', userId).maybeSingle(),
+      ]);
+
+      if (entriesRes.error) throw entriesRes.error;
+      if (weekRes.error) throw weekRes.error;
+      if (goalsRes.error) throw goalsRes.error;
+
+      setEntries((entriesRes.data || []) as MealEntry[]);
+      setWeekEntries(weekRes.data || []);
+      setGoals(goalsFromRow(goalsRes.data));
+    } catch (e: any) {
+      setError(e?.message || 'Could not load nutrition data.');
+    } finally {
+      hasLoadedRef.current = true;
+      setLoading(false);
+      setDayRefreshing(false);
+    }
+  }, [userId, logDate]);
+
+  const loadAddFoodLibrary = useCallback(async () => {
+    if (!userId || addFoodLibraryLoadedRef.current) return;
+    setAddFoodLibraryLoading(true);
+    const recentStartDate = parseYmd(logDate);
+    recentStartDate.setDate(recentStartDate.getDate() - RECENT_FOOD_HISTORY_DAYS);
+    const recentStart = formatYmd(recentStartDate);
+    try {
+      const [recentRes, foodsRes, templatesRes] = await Promise.all([
         supabase
           .from('st_meal_entries')
           .select('*')
@@ -499,7 +521,6 @@ export default function NutritionTracker({
           .gte('log_date', recentStart)
           .order('created_at', { ascending: false })
           .limit(RECENT_FOOD_FETCH_LIMIT),
-        supabase.from('st_nutrition_goals').select('*').eq('user_id', userId).maybeSingle(),
         supabase
           .from('st_food_library')
           .select('*')
@@ -512,25 +533,12 @@ export default function NutritionTracker({
           .eq('user_id', userId)
           .eq('is_archived', false)
           .order('name', { ascending: true }),
-        supabase
-          .from('st_food_catalog')
-          .select('*')
-          .eq('is_system', true)
-          .eq('is_archived', false)
-          .order('name', { ascending: true }),
       ]);
 
-      if (entriesRes.error) throw entriesRes.error;
-      if (weekRes.error) throw weekRes.error;
       if (recentRes.error) throw recentRes.error;
-      if (goalsRes.error) throw goalsRes.error;
       if (foodsRes.error) throw foodsRes.error;
 
-      setEntries((entriesRes.data || []) as MealEntry[]);
-      setWeekEntries(weekRes.data || []);
       setRecentEntryHistory((recentRes.data || []) as MealEntry[]);
-      const nextGoals = goalsFromRow(goalsRes.data);
-      setGoals(nextGoals);
       setSavedFoods((foodsRes.data || []) as FoodLibraryItem[]);
       if (templatesRes.error) {
         if (!String(templatesRes.error.message || '').includes('st_meal_templates')) {
@@ -544,30 +552,60 @@ export default function NutritionTracker({
             .filter(Boolean) as MealTemplate[]
         );
       }
-      if (catalogRes.error) {
-        if (!String(catalogRes.error.message || '').includes('st_food_catalog')) {
-          throw catalogRes.error;
-        }
-        setFoodCatalog([]);
-      } else {
-        setFoodCatalog((catalogRes.data || []) as FoodCatalogItem[]);
-      }
+      addFoodLibraryLoadedRef.current = true;
     } catch (e: any) {
-      setError(e?.message || 'Could not load nutrition data.');
+      setError(e?.message || 'Could not load saved foods.');
     } finally {
-      hasLoadedRef.current = true;
-      setLoading(false);
-      setDayRefreshing(false);
+      setAddFoodLibraryLoading(false);
     }
   }, [userId, logDate]);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    loadDayData();
+  }, [loadDayData]);
+
+  useEffect(() => {
+    if (showAdd || showMyFoods) {
+      void loadAddFoodLibrary();
+    }
+  }, [showAdd, showMyFoods, loadAddFoodLibrary]);
+
+  useEffect(() => {
+    if (!showAdd || addFoodView !== 'find_food') {
+      setCatalogMatches([]);
+      return;
+    }
+    const q = estimateSearch.trim();
+    if (!q) {
+      setCatalogMatches([]);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setCatalogSearching(true);
+      try {
+        const matches = await fetchFoodCatalogMatches(supabase, q, 12);
+        if (!cancelled) setCatalogMatches(matches);
+      } catch {
+        if (!cancelled) setCatalogMatches([]);
+      } finally {
+        if (!cancelled) setCatalogSearching(false);
+      }
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [showAdd, addFoodView, estimateSearch]);
 
   useEffect(() => {
     if (initialDate && initialDate !== logDate) setLogDate(initialDate);
   }, [initialDate]);
+
+  useEffect(() => {
+    hasLoadedRef.current = false;
+    addFoodLibraryLoadedRef.current = false;
+  }, [userId]);
 
   function prependRecentEntries(rows: MealEntry[]) {
     if (!rows.length) return;
@@ -839,7 +877,7 @@ export default function NutritionTracker({
       setEditEntryId(null);
       setEditDraft(null);
       notifyParent();
-      await loadData();
+      await loadDayData();
     }
   }
 
@@ -849,7 +887,7 @@ export default function NutritionTracker({
     if (delError) return setError(delError.message);
     setEntries((prev) => prev.filter((e) => e.id !== id));
     notifyParent();
-    await loadData();
+    await loadDayData();
   }
 
   async function duplicateEntry(entry: MealEntry) {
@@ -898,7 +936,7 @@ export default function NutritionTracker({
         prependRecentEntries(inserted);
       }
       notifyParent();
-      await loadData();
+      await loadDayData();
       if (copyDraft.log_date !== logDate) {
         setDate(copyDraft.log_date);
       }
@@ -945,7 +983,7 @@ export default function NutritionTracker({
       const inserted = await insertMealRows(rows);
       setEntries((prev) => [...prev, ...inserted]);
       notifyParent();
-      await loadData();
+      await loadDayData();
     } catch (e: any) {
       setError(e?.message || 'Could not copy yesterday.');
     } finally {
@@ -1059,23 +1097,23 @@ export default function NutritionTracker({
       }));
       const inserted = await insertMealRows(rows);
       setEntries((prev) => [...prev, ...inserted]);
+      setWeekEntries((prev) => [
+        ...prev,
+        ...inserted.map((row) => ({
+          log_date: row.log_date,
+          calories: row.calories,
+          protein_g: row.protein_g,
+          carbs_g: row.carbs_g,
+          fat_g: row.fat_g,
+        })),
+      ]);
+      prependRecentEntries(inserted);
       notifyParent();
-      await loadData();
     } catch (e: any) {
       setError(e?.message || 'Could not log template.');
     } finally {
       setSaving(false);
     }
-  }
-
-  async function archiveTemplate(id: string) {
-    if (!confirm('Archive this meal template?')) return;
-    const { error: updateError } = await supabase
-      .from('st_meal_templates')
-      .update({ is_archived: true })
-      .eq('id', id);
-    if (updateError) return setError(updateError.message);
-    setMealTemplates((prev) => prev.filter((t) => t.id !== id));
   }
 
   function pickCatalogFood(item: FoodCatalogItem) {
@@ -1456,7 +1494,7 @@ export default function NutritionTracker({
       const inserted = await insertMealRows(rows);
       setEntries((prev) => [...prev, ...inserted]);
       notifyParent();
-      await loadData();
+      await loadDayData();
       closeAddFood();
     } catch (e: any) {
       setError(e?.message || 'Could not log AI estimate.');
@@ -1629,8 +1667,9 @@ export default function NutritionTracker({
               estimateSearch={estimateSearch}
               onEstimateSearchChange={setEstimateSearch}
               findFoodResults={findFoodResults}
-              estimateCatalogMatches={estimateCatalogMatches}
-              foodCatalogCount={foodCatalog.length}
+              estimateCatalogMatches={catalogMatches}
+              catalogSearching={catalogSearching}
+              addFoodLibraryLoading={addFoodLibraryLoading}
               aiDescribe={aiDescribe}
               onAiDescribeChange={setAiDescribe}
               onEstimateWithAi={estimateWithAi}
@@ -1930,49 +1969,6 @@ export default function NutritionTracker({
           </div>
         );
       })}
-
-      <div className="card nutrition-library-card">
-        <h3>Meal templates</h3>
-        <p className="muted">Save a logged meal as a template, then log the whole meal in one tap.</p>
-        {activeTemplates.length === 0 ? (
-          <p className="muted">No templates yet. Use &ldquo;Save as template&rdquo; on a meal section above.</p>
-        ) : (
-          <div className="nutrition-template-grid">
-            {activeTemplates.map((template) => {
-              const templateTotals = sumMacros(template.items);
-              return (
-                <div key={template.id} className="nutrition-template-chip">
-                  <div>
-                    <b>{template.name}</b>
-                    <span className="muted">
-                      {MEAL_TYPE_LABELS[template.meal_type]} · {template.items.length} item(s) ·{' '}
-                      {formatMacroLine(templateTotals)}
-                    </span>
-                  </div>
-                  <div className="nutrition-food-chip-actions">
-                    <button
-                      type="button"
-                      className="btn small green"
-                      onClick={() => logMealTemplate(template)}
-                      disabled={saving}
-                    >
-                      Log today
-                    </button>
-                    <button
-                      type="button"
-                      className="btn small red"
-                      onClick={() => archiveTemplate(template.id)}
-                      disabled={saving}
-                    >
-                      Archive
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
 
       {editFoodId && foodEditDraft && (
         <div className="card nutrition-add-card">

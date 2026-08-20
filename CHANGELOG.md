@@ -8477,3 +8477,44 @@ None.
 ```text
 BIQ-0134 Unify Find food search for saved foods and meal templates
 ```
+
+---
+
+## BIQ-0135 - Faster Nutrition Tab Load and Remove Main-Tab Meal Templates
+
+Date: 2026-08-20  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Nutrition tab initial load now fetches only **today’s entries**, **7-day chart data**, and **goals** (3 queries). Saved foods, recent history, and meal templates load **lazily** when opening Add food or My foods. Food catalog uses **server-side search** instead of downloading the full system catalog. Removed the **Meal templates** card from the main Nutrition day view — templates remain in **Find food**.
+
+### Purpose
+
+Reduce Nutrition tab time-to-interactive and keep the day view focused on logging, not template management.
+
+### Files Changed
+
+- `app/components/NutritionTracker.tsx`
+- `app/components/nutrition/NutritionAddFoodPanel.tsx`
+- `lib/nutrition/foodCatalogSearch.ts`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+- Open Nutrition tab — day view appears quickly without waiting for catalog/library.
+- Swipe/change dates — only day + chart data refresh.
+- Add food → Find food — saved foods, recent items, and templates load; catalog search works when typing.
+- Save as template on a meal — still works; template appears in Find food (not on main tab).
+- My foods panel — still loads saved/recent foods on open.
+
+### Recommended Commit Message
+
+```text
+BIQ-0135 Speed up Nutrition tab load and remove main-tab meal templates
+```

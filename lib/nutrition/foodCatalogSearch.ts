@@ -1,3 +1,5 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 export type FoodCatalogItem = {
   id: string;
   name: string;
@@ -58,4 +60,31 @@ export function countFoodCatalogMatches(items: FoodCatalogItem[], query: string)
   const q = query.trim().toLowerCase();
   if (!q) return (items || []).filter((item) => !item.is_archived).length;
   return searchFoodCatalog(items, q, 9999).length;
+}
+
+function escapeIlike(value: string): string {
+  return value.replace(/[%_,]/g, '');
+}
+
+/** Server-side catalog search — avoids loading the full system catalog client-side. */
+export async function fetchFoodCatalogMatches(
+  client: SupabaseClient,
+  query: string,
+  limit = 12
+): Promise<FoodCatalogItem[]> {
+  const q = escapeIlike(query.trim());
+  if (!q) return [];
+
+  const pattern = `%${q}%`;
+  const { data, error } = await client
+    .from('st_food_catalog')
+    .select('id,name,brand,category,serving_label,calories,protein_g,carbs_g,fat_g,is_system,is_archived')
+    .eq('is_system', true)
+    .eq('is_archived', false)
+    .or(`name.ilike.${pattern},brand.ilike.${pattern}`)
+    .order('name', { ascending: true })
+    .limit(limit);
+
+  if (error) throw error;
+  return (data || []) as FoodCatalogItem[];
 }

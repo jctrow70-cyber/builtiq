@@ -56,7 +56,8 @@ export type NutritionAddFoodPanelProps = {
   onEstimateSearchChange: (value: string) => void;
   findFoodResults: FindFoodResult[];
   estimateCatalogMatches: FoodCatalogItem[];
-  foodCatalogCount: number;
+  catalogSearching?: boolean;
+  addFoodLibraryLoading?: boolean;
   aiDescribe: string;
   onAiDescribeChange: (value: string) => void;
   onEstimateWithAi: () => void;
@@ -123,7 +124,8 @@ export default function NutritionAddFoodPanel(props: NutritionAddFoodPanelProps)
     onEstimateSearchChange,
     findFoodResults,
     estimateCatalogMatches,
-    foodCatalogCount,
+    catalogSearching = false,
+    addFoodLibraryLoading = false,
     aiDescribe,
     onAiDescribeChange,
     onEstimateWithAi,
@@ -379,6 +381,10 @@ export default function NutritionAddFoodPanel(props: NutritionAddFoodPanelProps)
             autoFocus
           />
 
+          {addFoodLibraryLoading && !findFoodResults.length && (
+            <p className="muted">Loading saved foods and meal templates…</p>
+          )}
+
           {findFoodResults.length > 0 && (
             <>
               <h4 className="nutrition-add-section-title">Saved foods &amp; meals</h4>
@@ -426,7 +432,7 @@ export default function NutritionAddFoodPanel(props: NutritionAddFoodPanelProps)
             </>
           )}
 
-          {foodCatalogCount > 0 && estimateCatalogMatches.length > 0 && (
+          {estimateCatalogMatches.length > 0 && (
             <>
               <h4 className="nutrition-add-section-title">Food catalog</h4>
               <div className="catalog-results">
@@ -445,15 +451,15 @@ export default function NutritionAddFoodPanel(props: NutritionAddFoodPanelProps)
             </>
           )}
 
-          {estimateSearch.trim() && !findFoodResults.length && !estimateCatalogMatches.length && (
+          {catalogSearching && estimateSearch.trim() && (
+            <p className="muted">Searching food catalog…</p>
+          )}
+
+          {estimateSearch.trim() && !findFoodResults.length && !estimateCatalogMatches.length && !catalogSearching && !addFoodLibraryLoading && (
             <p className="muted">No matches — try AI estimate or enter manually.</p>
           )}
 
-          {!estimateSearch.trim() && !findFoodResults.length && foodCatalogCount > 0 && (
-            <p className="muted">Type to search the food catalog, or use AI estimate for something new.</p>
-          )}
-
-          {!estimateSearch.trim() && !findFoodResults.length && foodCatalogCount === 0 && (
+          {!estimateSearch.trim() && !findFoodResults.length && !addFoodLibraryLoading && (
             <p className="muted">Save foods to My foods or create meal templates to find them here quickly.</p>
           )}
         </div>
