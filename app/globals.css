@@ -505,7 +505,21 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .nutrition-weekly-metric-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
 .nutrition-weekly-metric-tab{flex:1;min-width:72px;min-height:40px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#070a11;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer}
 .nutrition-weekly-metric-tab.active{border-color:var(--accent);color:var(--text);background:var(--accentSoft)}
-.nutrition-weekly-goal-hint{margin:0 0 6px;font-size:11px}
+.nutrition-weekly-legend{display:flex;flex-wrap:wrap;gap:10px 14px;margin:10px 0 4px}
+.nutrition-weekly-legend-item{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--text)}
+.nutrition-weekly-legend-swatch{width:10px;height:10px;border-radius:999px;flex-shrink:0}
+.nutrition-weekly-chart-note{margin:0 0 8px;font-size:11px}
+.nutrition-weekly-line-chart-wrap{width:100%;overflow:hidden;margin-top:4px}
+.nutrition-weekly-line-chart{display:block;width:100%;height:auto;touch-action:manipulation}
+.nutrition-weekly-grid-line{stroke:var(--line);stroke-width:1;opacity:.55}
+.nutrition-weekly-axis-label{fill:var(--muted);font-size:10px;font-weight:700}
+.nutrition-weekly-x-label{fill:var(--muted);font-size:10px;font-weight:800;cursor:pointer}
+.nutrition-weekly-x-label.active{fill:var(--text)}
+.nutrition-weekly-line{fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+.nutrition-weekly-point{cursor:pointer;stroke:#070a11;stroke-width:1.5}
+.nutrition-weekly-point.active{stroke:var(--text);stroke-width:2}
+.nutrition-weekly-goal-line-svg{stroke:var(--accent);stroke-width:1.5;stroke-dasharray:5 4;opacity:.75}
+.nutrition-weekly-day-detail{margin-top:10px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:#070a11;font-size:12px;line-height:1.45}
 .nutrition-weekly-chart-wrap{position:relative;margin-top:8px}
 .nutrition-weekly-goal-line{position:absolute;left:8px;right:8px;height:2px;background:var(--accent);opacity:.55;z-index:2;pointer-events:none;border-radius:1px}
 .nutrition-weekly-chart{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;align-items:end;min-height:160px;position:relative;z-index:1}

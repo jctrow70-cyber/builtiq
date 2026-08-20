@@ -8367,3 +8367,27 @@ Added **7-day trend** chart at the bottom of Nutrition with tabs for **Calories 
 ```text
 BIQ-0132 Add 7-day nutrition trend chart with macro metric tabs
 ```
+
+---
+
+## BIQ-0133 - Multi-Series Line Chart for Weekly Nutrition Trend
+
+Date: 2026-08-20  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Replaced the weekly bar chart with a **multi-series line chart** showing Calories, Protein, Carbs, and Fat together. Each line uses **% of daily goal** so all macros share one scale. Dashed line marks 100% goal; tap a point or day label to jump dates.
+
+### Files Changed
+
+- `app/components/NutritionWeeklyTrendChart.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Recommended Commit Message
+
+```text
+BIQ-0133 Weekly nutrition multi-series line chart by macro
+```
