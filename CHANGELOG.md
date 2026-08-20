@@ -8277,3 +8277,36 @@ Status: Completed
 ```text
 BIQ-0128 Copy food or whole meal to another date and meal
 ```
+
+---
+
+## BIQ-0130 - Per-Meal Calorie Targets on Meal Headers
+
+Date: 2026-08-20  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Meal headers now show **logged vs allocated calories** for each meal (e.g. `420 / 625 cal`) instead of % of daily goal. Daily goal is split: Breakfast 25%, Lunch 35%, Dinner 35%, Snacks 5%.
+
+### Example (2500 cal goal)
+
+| Meal | Target |
+|------|--------|
+| Breakfast | 625 cal |
+| Lunch | 875 cal |
+| Dinner | 875 cal |
+| Snacks | 125 cal |
+
+### Files Changed
+
+- `lib/nutrition/mealDisplay.ts`
+- `app/components/NutritionTracker.tsx`
+- `CHANGELOG.md`
+
+### Recommended Commit Message
+
+```text
+BIQ-0130 Show per-meal calorie targets on nutrition meal headers
+```

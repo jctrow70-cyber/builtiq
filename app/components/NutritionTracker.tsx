@@ -1940,8 +1940,8 @@ export default function NutritionTracker({
         const mealTotals = sumMacros(mealEntries);
         const isExpanded = expandedMeals[meal];
         const headerSummary = mealEntries.length
-          ? formatMealHeaderSummary(mealTotals, goals.calories)
-          : formatEmptyMealHeaderSummary(goals.calories);
+          ? formatMealHeaderSummary(mealTotals, goals.calories, meal)
+          : formatEmptyMealHeaderSummary(goals.calories, meal);
         return (
           <div className="card nutrition-meal-card" key={meal}>
             <button
