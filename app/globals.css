@@ -472,6 +472,14 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .nutrition-food-chip .muted{display:block;font-size:11px;margin-top:2px}
 .nutrition-food-chip-actions{display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end}
 .nutrition-entry-list{display:grid;gap:8px;margin-top:8px}
+.nutrition-meal-card{padding-top:10px}
+.nutrition-meal-header{display:flex;width:100%;min-height:44px;align-items:center;justify-content:space-between;gap:12px;padding:0 0 10px;margin:0;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer}
+.nutrition-meal-header-text{flex:1;min-width:0}
+.nutrition-meal-header h3{margin:0 0 4px;font-size:16px}
+.nutrition-meal-header-summary{display:block;font-size:12px;line-height:1.4}
+.nutrition-meal-chevron{flex-shrink:0;font-size:12px;color:var(--muted);padding:8px 4px}
+.nutrition-meal-body{padding-top:2px;border-top:1px solid var(--line)}
+.nutrition-meal-actions{margin-top:8px}
 .nutrition-entry-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
 .nutrition-entry-row:first-child{border-top:0;padding-top:0}
 .nutrition-entry-row--editing{display:block;padding:12px;background:#0b1119;border-radius:12px;margin:4px 0}

@@ -26,6 +26,7 @@ import {
   templateItemsFromEntries,
 } from '../../lib/nutrition/macros';
 import { buildWeeklyNutritionSummary } from '../../lib/nutrition/weeklySummary';
+import { formatEmptyMealHeaderSummary, formatMealHeaderSummary } from '../../lib/nutrition/mealDisplay';
 import {
   foodCatalogLabel,
   FoodCatalogItem,
@@ -392,6 +393,10 @@ export default function NutritionTracker({
   const [labelScanError, setLabelScanError] = useState('');
   const [mealPhotoScanning, setMealPhotoScanning] = useState(false);
   const [mealPhotoScanError, setMealPhotoScanError] = useState('');
+  const [expandedMeals, setExpandedMeals] = useState<Record<MealType, boolean>>(() =>
+    Object.fromEntries(MEAL_TYPES.map((meal) => [meal, true])) as Record<MealType, boolean>
+  );
+  const entriesSyncedForDate = useRef<string | null>(null);
 
   const totals = useMemo(() => sumMacros(entries), [entries]);
   const grouped = useMemo(() => groupEntriesByMeal(entries), [entries]);
@@ -435,6 +440,25 @@ export default function NutritionTracker({
     () => searchFoodCatalog(foodCatalog, estimateSearch, 12),
     [foodCatalog, estimateSearch]
   );
+
+  useEffect(() => {
+    entriesSyncedForDate.current = null;
+  }, [logDate]);
+
+  useEffect(() => {
+    if (entriesSyncedForDate.current === logDate) return;
+    if (entries.length > 0 && entries.some((e) => e.log_date !== logDate)) return;
+    entriesSyncedForDate.current = logDate;
+    setExpandedMeals(
+      Object.fromEntries(
+        MEAL_TYPES.map((meal) => [meal, grouped[meal].length > 0])
+      ) as Record<MealType, boolean>
+    );
+  }, [entries, logDate, grouped]);
+
+  const toggleMealExpanded = useCallback((meal: MealType) => {
+    setExpandedMeals((prev) => ({ ...prev, [meal]: !prev[meal] }));
+  }, []);
 
   const notifyParent = useCallback(() => {
     onDataChange?.();
@@ -1852,19 +1876,34 @@ export default function NutritionTracker({
       {MEAL_TYPES.map((meal) => {
         const mealEntries = grouped[meal];
         const mealTotals = sumMacros(mealEntries);
+        const isExpanded = expandedMeals[meal];
+        const headerSummary = mealEntries.length
+          ? formatMealHeaderSummary(mealTotals, goals.calories)
+          : formatEmptyMealHeaderSummary(goals.calories);
         return (
           <div className="card nutrition-meal-card" key={meal}>
-            <div className="topline" style={{ justifyContent: 'space-between' }}>
-              <h3>{MEAL_TYPE_LABELS[meal]}</h3>
-              <span className="badge">
-                {mealEntries.length ? formatMacroLine(mealTotals) : 'No items'}
+            <button
+              type="button"
+              className="nutrition-meal-header"
+              onClick={() => toggleMealExpanded(meal)}
+              aria-expanded={isExpanded}
+              aria-controls={`nutrition-meal-body-${meal}`}
+            >
+              <div className="nutrition-meal-header-text">
+                <h3>{MEAL_TYPE_LABELS[meal]}</h3>
+                <span className="muted nutrition-meal-header-summary">{headerSummary}</span>
+              </div>
+              <span className="nutrition-meal-chevron" aria-hidden="true">
+                {isExpanded ? '▼' : '▶'}
               </span>
-            </div>
-            {mealEntries.length === 0 ? (
-              <p className="muted">Nothing logged yet.</p>
-            ) : (
-              <div className="nutrition-entry-list">
-                {mealEntries.map((entry) => {
+            </button>
+            {isExpanded && (
+              <div className="nutrition-meal-body" id={`nutrition-meal-body-${meal}`}>
+                {mealEntries.length === 0 ? (
+                  <p className="muted">Nothing logged yet.</p>
+                ) : (
+                  <div className="nutrition-entry-list">
+                    {mealEntries.map((entry) => {
                   const isEditing = editEntryId === entry.id && editDraft;
                   const servingNote = formatLoggedServingDisplay(
                     entry.serving_qty,
@@ -1959,10 +1998,12 @@ export default function NutritionTracker({
                       )}
                     </div>
                   );
-                })}
+                    })}
+                  </div>
+                )}
               </div>
             )}
-            <div className="actions" style={{ marginTop: 8 }}>
+            <div className="actions nutrition-meal-actions">
               <button
                 type="button"
                 className="btn small secondary"

@@ -8148,3 +8148,68 @@ Hub buttons now **open the scanner or photo picker immediately** (barcode camera
 ```text
 BIQ-0126 Auto-open scan/photo from Add Food hub; split Find food and AI estimate
 ```
+
+---
+
+## BIQ-0121 - Expandable Meal Headers with Calorie Totals
+
+Date: 2026-08-20  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Each meal section (Breakfast, Lunch, Dinner, Snacks) shows **aggregate calories and macros** in a tappable header. Tap to expand or collapse the item list. Meals with logged food auto-expand when switching dates.
+
+### Files Changed
+
+- `app/components/NutritionTracker.tsx`
+- `lib/nutrition/mealDisplay.ts` (new)
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Testing Steps
+
+1. Log food in multiple meals → each header shows calorie total + P/C/F
+2. Tap header → list collapses; tap again → expands
+3. Collapsed header still shows totals
+4. Empty meals show `0 cal`
+5. **+ Add to meal** works when collapsed
+6. Change date → meals with entries expand; empty meals stay collapsed
+
+### Recommended Commit Message
+
+```text
+BIQ-0121 Expandable meal headers with per-meal calorie totals
+```
+
+---
+
+## BIQ-0122 - Per-Meal Calorie Share of Daily Goal
+
+Date: 2026-08-20  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Meal headers include **% of daily calorie goal** (e.g. `420 cal · 24% of daily goal · 35P · 40C · 12F`). Uses total daily goal from saved nutrition goals; empty meals show `0% of daily goal`.
+
+### Files Changed
+
+- `lib/nutrition/mealDisplay.ts`
+- `app/components/NutritionTracker.tsx`
+- `CHANGELOG.md`
+
+### Testing Steps
+
+1. Set nutrition goals (e.g. 2000 cal)
+2. Log ~500 cal breakfast → header shows ~25% of daily goal
+3. Add/remove entries → percentage updates live
+4. No goals set → shows calories and macros only (no %)
+
+### Recommended Commit Message
+
+```text
+BIQ-0122 Show per-meal calorie share of daily goal on meal headers
+```
