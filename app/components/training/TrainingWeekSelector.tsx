@@ -1,7 +1,7 @@
 'use client';
 
 import DateInput from '../DateInput';
-import { formatDisplayDate, resolveProgramStartDate, weekRangeLabel } from '../../../lib/training/programCalendar';
+import { formatDisplayDate, resolveProgramStartDate, todayYmd, weekRangeLabel } from '../../../lib/training/programCalendar';
 
 type TrainingWeekSelectorProps = {
   week: number;
@@ -25,6 +25,7 @@ export default function TrainingWeekSelector({
   const total = program?.weeks || weeksFallback || 6;
   const start = program ? resolveProgramStartDate(program) : '';
   const rangeLabel = start ? weekRangeLabel(start, week) : '';
+  const isToday = logDate === todayYmd();
 
   return (
     <div className="training-week-block">
@@ -54,12 +55,26 @@ export default function TrainingWeekSelector({
       <div className="training-log-date-picker">
         <label htmlFor="training-log-date-alt">Logging date</label>
         <div className="training-log-date-row">
-          <DateInput id="training-log-date-alt" value={logDate} onChange={onLogDateChange} disabled={disabled} />
+          <DateInput
+            id="training-log-date-alt"
+            value={logDate}
+            onChange={onLogDateChange}
+            disabled={disabled}
+            aria-label={`Logging date, currently ${formatDisplayDate(logDate)}`}
+          />
           <span className="muted training-log-date-display">{formatDisplayDate(logDate)}</span>
+          <button
+            type="button"
+            className="btn small secondary training-log-date-today"
+            disabled={disabled || isToday}
+            onClick={() => onLogDateChange(todayYmd())}
+          >
+            Today
+          </button>
         </div>
         <p className="muted training-log-date-hint">
-          Calendar day your sets are saved to. Workout day tabs (Mon, Tue, …) pick the program template — they usually
-          match, but you can log a different day&apos;s workout on another date.
+          Calendar day your sets are saved to — use Today when you are logging now. Week and day tabs only pick
+          which workout plan to follow; they do not change this date.
         </p>
       </div>
     </div>

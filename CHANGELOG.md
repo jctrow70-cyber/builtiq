@@ -8518,3 +8518,65 @@ None.
 ```text
 BIQ-0135 Speed up Nutrition tab load and remove main-tab meal templates
 ```
+
+---
+
+## BIQ-0136 - Decouple Training Logging Date from Workout Days
+
+Date: 2026-08-25  
+Branch: cursor/training-log-date-customize-168f  
+Status: Completed
+
+### Summary
+
+Training logging date no longer jumps when you pick a different workout day or week. Sets save to the logging date you choose (default **Today**). Each workout day in the week has an editable session date you can apply to logging when backfilling.
+
+### Purpose
+
+Users often complete a Monday (or other) plan on a different calendar day. The logging date should stay as today when logging now, while week/day tabs only select which plan template to follow. Session dates per workout day are independently adjustable.
+
+### Changes
+
+- Personal Training: selecting a workout day no longer overwrites logging date
+- Changing week keeps logging date and only switches to the matching day template
+- Removed continuous effects that forced week/active workout from logging date
+- **Today** quick button on the logging date picker
+- Per-day **Session date** controls with **Use for logging** for backfills
+- Clarified logging-date hint copy
+- Decision 033 documents independence of logging date vs workout day tabs (updates Decision 025 sync behavior for logging)
+
+### Files Changed
+
+- `app/page.tsx`
+- `app/components/training/TrainingWeekSelector.tsx`
+- `app/components/training/TrainingWorkoutDays.tsx`
+- `app/components/training/ActivePlanCard.tsx`
+- `app/globals.css`
+- `DECISIONS.md`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Open Training with an active program; confirm Logging date defaults to today
+2. Switch workout day tabs (e.g. Mon → Wed) — logging date stays today
+3. Change Week — logging date stays put; active day template follows the same weekday when possible
+4. Tap **Today** after changing the date picker — returns to today
+5. Edit a day’s **Session date**, tap **Use for logging** — logging date updates; sets save under that date
+6. Log a set on a non-today plan day while logging date is today — Progress / history show today’s date
+7. Groups member workout view: day tabs still leave logging date alone; session date **Use for logging** works
+8. Mobile: date controls remain usable without horizontal overflow
+
+### Known Issues
+
+- Session date overrides are UI-only for the current week view (reset when changing weeks); they are not stored on the program template
+- Program setup editor still aligns calendar from the workout being edited (intentional for template editing)
+
+### Recommended Commit Message
+
+```text
+BIQ-0136 Decouple training logging date from workout day tabs
+```
