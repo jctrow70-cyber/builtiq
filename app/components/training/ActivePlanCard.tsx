@@ -223,7 +223,7 @@ export function activePlanWeekOptions(program: any, weeksFallback: number) {
 export function trainingLogContextLine(program: any, week: number, logDate: string) {
   if (!program) return '';
   const start = resolveProgramStartDate(program);
-  return `Week ${week} covers ${weekRangeLabel(start, week)}. Logging on ${formatDisplayDate(logDate)} (${dayLabelFromYmd(logDate)}).`;
+  return `Week ${week} covers ${weekRangeLabel(start, week)}. Sets save on ${formatDisplayDate(logDate)} (${dayLabelFromYmd(logDate)}) — independent of which workout day tab is selected.`;
 }
 
 export { dateForWeekAndDay, resolveProgramStartDate, formatDisplayDate };

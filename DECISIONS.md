@@ -798,3 +798,35 @@ Users lose trust when numbers are wrong, not when the flow asks them to verify o
 - BIQ-0118 scoped in ROADMAP
 - Requires `barcode` on food library or verified cache table
 - Shifts product promise from "database is always right" to "we remember what's right for you"
+
+---
+
+## Decision 033 - Logging Date Independent of Workout Day Tabs
+
+Date: 2026-08-25  
+Status: Accepted  
+Category: Training UX
+
+### Decision
+
+**Logging date** (`st_set_logs.log_date`) is independent of which program **week** and **workout day tab** (Mon/Tue/…) is selected. When the user is logging now, the logging date should be **today** unless they explicitly change it (picker or **Today** / **Use for logging**).
+
+Workout day tabs select the plan template only. Optional per-day **session dates** let users customize suggested calendar dates for backfill without rewriting the program calendar.
+
+Program `start_date` still maps week blocks to Mon–Sun ranges for planned labels and history (Decision 025), but Training no longer auto-syncs logging date ↔ week ↔ day tabs during logging.
+
+### Reason
+
+Athletes often run a “Monday” workout on Wednesday (or any other day). Forcing the logging date to the planned weekday made Progress history wrong and fought the user’s intent when logging today.
+
+### Alternatives Considered
+
+- Keep full calendar sync (Decision 025 logging path) — rejected; conflicts with real-world scheduling
+- Only decouple for Groups member view — rejected; personal Training has the same need
+- Persist custom session dates on workout rows — deferred; UI overrides are enough for MVP
+
+### Impact
+
+- Documented in BIQ-0136
+- Supersedes Decision 025’s requirement that Date, Week, and day tabs stay synchronized **while logging**
+- Program setup editor may still align calendar to the workout being edited

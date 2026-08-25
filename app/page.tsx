@@ -28,7 +28,6 @@ import { EQUIPMENT_OPTIONS, hasEquipmentFilter, normalizeEquipmentList, equipmen
 import {
   currentCalendarWeekBounds,
   dateForWeekAndDay,
-  dateForWeekKeepingWeekday,
   dayLabelFromYmd,
   formatDisplayDate,
   mondayOfWeek,
@@ -266,18 +265,8 @@ export default function Page(){
  },[program,logDate,memberWorkoutProgram,memberWorkoutLogDate,viewingMember?.user_id,session?.user?.id]);
  useEffect(()=>{logsRef.current=logs;},[logs]);
  useEffect(()=>()=>{if(prCelebrationTimerRef.current)clearTimeout(prCelebrationTimerRef.current);},[]);
- useEffect(()=>{
-  if(!program||syncingCalendarRef.current||activeAssignedRecipient||viewingMember||draftEditProgramId)return;
-  const start=resolveProgramStartDate(program);
-  const total=program.weeks||weeks||6;
-  const nextWeek=weekForDate(start,logDate,total);
-  if(nextWeek!==week)setWeek(nextWeek);
- },[program?.id,program?.start_date,program?.created_at,program?.weeks,logDate,activeAssignedRecipient?.id,viewingMember?.user_id,draftEditProgramId]);
- useEffect(()=>{
-  if(!program||syncingCalendarRef.current||activeAssignedRecipient||viewingMember||draftEditProgramId)return;
-  const match=workoutForDate(program,logDate,week);
-  if(match&&match.id!==activeWorkout)setActiveWorkout(match.id);
- },[program?.id,program?.start_date,program?.created_at,program?.weeks,logDate,activeAssignedRecipient?.id,viewingMember?.user_id,draftEditProgramId]);
+ // Logging date stays independent of week / workout-day selection (BIQ-0136).
+ // Initial week + day still align from logDate when a program loads.
  useEffect(()=>{if(appNav==='Training'&&!program&&trainingSubNav!=='setup')setShowProgramSetup(false);},[appNav,program,trainingSubNav]);
  useEffect(()=>{
   if(trainingSubNav==='personal'){
@@ -2013,24 +2002,17 @@ export default function Page(){
  function onWeekChange(nextWeek:number){
   const w=Number(nextWeek)||1;
   if(!program){setWeek(w);return;}
-  syncingCalendarRef.current=true;
   setWeek(w);
-  const start=resolveProgramStartDate(program);
-  const nextDate=dateForWeekKeepingWeekday(start,w,logDate);
-  setLogDate(nextDate);
-  const dayLabel=dayLabelFromYmd(nextDate);
+  // Keep logging date as-is; only move to the same weekday template in the new week.
+  const current=(program.st_workouts||[]).find((x:any)=>x.id===activeWorkout);
+  const dayLabel=current?.day_label||dayLabelFromYmd(logDate);
   const match=(program.st_workouts||[]).find((x:any)=>x.week===w&&x.day_label===dayLabel)
     ||(program.st_workouts||[]).filter((x:any)=>x.week===w).sort((a:any,b:any)=>a.day_order-b.day_order)[0];
   if(match)setActiveWorkout(match.id);
-  queueMicrotask(()=>{syncingCalendarRef.current=false;});
  }
  function onSelectWorkoutDay(w:any){
+  // Workout day picks the plan template only — logging date stays (usually today).
   setActiveWorkout(w.id);
-  if(!program)return;
-  syncingCalendarRef.current=true;
-  const start=resolveProgramStartDate(program);
-  setLogDate(dateForWeekAndDay(start,week,w.day_label));
-  queueMicrotask(()=>{syncingCalendarRef.current=false;});
  }
  function onMemberLogDateChange(ymd:string){setMemberWorkoutLogDate(ymd);}
  function onMemberWeekChange(nextWeek:number){
@@ -2252,7 +2234,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
   <div className="card viewing-banner groups-member-workout-banner"><div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}><div><h2>{viewingMember?.display_name||'Member'}&apos;s workout</h2><p className="muted">{assignmentTypeLabel(memberAssignments[viewingMember?.user_id]?.assignment_type||(viewingMember?.training_source||'team')==='personal'?'personal':'team')} · {memberWorkoutProgram?.name||'No program'}{canManageGroupView()?' · manager can log':''}</p></div><button type="button" className="btn small secondary" onClick={closeMemberView}>Close workout</button></div></div>
   {!memberWorkoutProgram&&<div className="card"><p className="muted">No published program assigned for this member yet.</p></div>}
   {memberWorkoutProgram&&<div className="training-plan-card ui-card ui-card--elevated"><TrainingWeekSelector week={memberWorkoutWeek} program={memberWorkoutProgram} weeksFallback={weeks} onWeekChange={onMemberWeekChange} logDate={memberWorkoutLogDate} onLogDateChange={onMemberLogDateChange}/></div>}
-  {memberWorkoutProgram&&memberWeekWorkouts.length>0&&<TrainingWorkoutDays program={memberWorkoutProgram} week={memberWorkoutWeek} workouts={memberWeekWorkouts} activeWorkoutId={memberWorkout?.id||''} logDate={memberWorkoutLogDate} onSelectWorkout={onSelectMemberWorkoutDay}/>}
+  {memberWorkoutProgram&&memberWeekWorkouts.length>0&&<TrainingWorkoutDays program={memberWorkoutProgram} week={memberWorkoutWeek} workouts={memberWeekWorkouts} activeWorkoutId={memberWorkout?.id||''} logDate={memberWorkoutLogDate} onSelectWorkout={onSelectMemberWorkoutDay} onLogDateChange={onMemberLogDateChange}/>}
   <div className="groups-member-workout">{workoutExerciseSections}</div>
  </>;
  const equipmentChips=(list:string[],onToggle:(id:string)=>void,muted?:string)=><><label>Available equipment</label><p className="muted">{muted||'AI plans and exercise search only use gear you select here (bodyweight stretches always allowed).'}</p><div className="focus-muscle-grid equipment-grid">{EQUIPMENT_OPTIONS.map((o:any)=><button type="button" key={o.id} className={`focus-chip${list.includes(o.id)?' active':''}`} onClick={()=>onToggle(o.id)}>{o.label}</button>)}</div>{hasEquipmentFilter(list)&&<p className="muted">Active filter: {equipmentFilterLabel(list)}</p>}</>;
@@ -2336,7 +2318,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
       />
       {program&&<TrainingWeekSelector week={week} program={program} weeksFallback={weeks} onWeekChange={onWeekChange} logDate={logDate} onLogDateChange={onLogDateChange} disabled={!!activeAssignedRecipient}/>}
       </div>
-      {program&&weekWorkouts.length>0&&<TrainingWorkoutDays program={program} week={week} workouts={weekWorkouts} activeWorkoutId={workout?.id||''} logDate={logDate} onSelectWorkout={onSelectWorkoutDay}/>}
+      {program&&weekWorkouts.length>0&&<TrainingWorkoutDays program={program} week={week} workouts={weekWorkouts} activeWorkoutId={workout?.id||''} logDate={logDate} onSelectWorkout={onSelectWorkoutDay} onLogDateChange={onLogDateChange} datesDisabled={!!activeAssignedRecipient}/>}
     </>}
     {trainingSubNav==='personal'&&activeAssignedRecipient&&<div className="card viewing-banner assigned-workout-banner"><div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}><div><h2>Assigned workout</h2><p className="muted">{activeAssignedRecipient.st_workout_assignments?.st_teams?.name||'Group'} · {formatDisplayDate(activeAssignedRecipient.st_workout_assignments?.scheduled_date||logDate)}{activeAssignedRecipient.st_workout_assignments?.notes?` · ${activeAssignedRecipient.st_workout_assignments.notes}`:''}</p>{!assignedHasPersonalCopy(activeAssignedRecipient)?<p className="muted assigned-copy-hint">Group template is read-only. Copy to your personal plan to adjust exercises and sets.</p>:<p className="muted assigned-copy-hint">You are logging your personal copy. Edits stay on your account; completion still counts for the group assignment.</p>}</div><div className="assigned-banner-actions"><button className="btn small secondary" onClick={closeAssignedWorkout}>Back to personal program</button>{assignedHasPersonalCopy(activeAssignedRecipient)?<span className="badge personal-copy-badge">Personal copy</span>:<button type="button" className="btn small green" onClick={()=>copyAssignedWorkoutToPersonal()} disabled={!!assignmentCopyBusy}>{assignmentCopyBusy===activeAssignedRecipient.id?'Copying…':'Copy to personal plan'}</button>}</div></div></div>}
     {trainingSubNav==='personal'&&!viewingMember&&!activeAssignedRecipient&&program&&isDraftProgram(program)&&canEdit()&&<div className="card program-draft-banner"><div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}><div><h2>Draft in Program Setup</h2><p className="muted"><b>{program.name}</b> is a draft — it will not appear here for logging until you publish it.</p></div><button type="button" className="btn small green" onClick={()=>{setTrainingSubNav('setup');setShowProgramSetup(true);openDraftForEditing(program.id);}}>Open draft in Program Setup</button></div></div>}
