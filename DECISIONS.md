@@ -798,3 +798,44 @@ Users lose trust when numbers are wrong, not when the flow asks them to verify o
 - BIQ-0118 scoped in ROADMAP
 - Requires `barcode` on food library or verified cache table
 - Shifts product promise from "database is always right" to "we remember what's right for you"
+
+---
+
+## Decision 030 - Program Design vs Training Separation
+
+Date: 2026-09-02  
+Status: Accepted  
+Category: Product Architecture
+
+### Decision
+
+Separate **program planning** from **daily execution**.
+
+- **Program Design** owns what *should* happen: templates, assigned programs, Monday–Sunday health calendars, and planned activities.
+- **Training** owns what *did* happen: today's plan, logging, substitutions, and completed history.
+- **Health Calendar** is the shared schedule: strength, cardio, mobility, stretching, recovery, sport, and rest — not strength-only.
+
+Reuse existing `st_programs`, `st_workouts`, `st_exercises`, `st_planned_sets`, and `st_set_logs`. Do not replace them. Add:
+
+1. Lifecycle columns on `st_programs` (`end_date`, `cycle_length_weeks`, `record_kind`, expanded `status`).
+2. `st_program_activities` for multiple ordered activities per day, with optional `workout_id` linking a strength activity to the existing workout tree.
+
+Keep `published` as a legacy status so current Training programs keep working. New Program Design programs use `draft` / `scheduled` / `active` / `completed` / `archived`. Training continues to load **published** programs until Phase 3.
+
+Template vs assigned copy: existing `source_program_id` plus `record_kind` (`template` | `instance`). Sharing and group assign (Phase 4) always duplicate into a personal instance.
+
+### Reason
+
+Training mixed program creation, group management, scheduling, and logging on one screen. That does not scale to a physical-health calendar, AI-generated weeks, or per-person copies of a shared program.
+
+### Alternatives Considered
+
+- Rebuild Training in one change — rejected; too much risk to workout history
+- New program tables that replace `st_programs` — rejected; existing history and RLS depend on current IDs
+- One activity per day on `st_workouts` — rejected; users need multiple activities per day
+
+### Impact
+
+- Phase 1 ships the Program Design shell and calendar without changing Training logging
+- Phase 3 is when Training reads the **Active** program
+- Planned data stays on programs/activities/workouts; actual data stays on `st_set_logs` and future activity-completion rows

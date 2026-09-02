@@ -8518,3 +8518,96 @@ None.
 ```text
 BIQ-0135 Speed up Nutrition tab load and remove main-tab meal templates
 ```
+
+---
+
+## BIQ-0136 - Program Design Shell (Phase 1)
+
+Date: 2026-09-02  
+Branch: develop  
+Status: In progress
+
+### Summary
+
+Added **Program Design** as a primary destination for creating and organizing training programs. Planning now has its own home (Personal / Groups, program lists, create flow, Monday–Sunday health calendar, and activity types). **Training is unchanged** as the logging surface. Existing workout history and `st_workouts` / `st_set_logs` are preserved.
+
+### Purpose
+
+Separate program planning from daily execution so BuildIQ can grow into a physical health calendar without stuffing creation, scheduling, and logging into Training.
+
+### Changes
+
+- New **Programs** nav item opens Program Design
+- Personal | Groups library with Active / Scheduled / Draft / Completed / Archived
+- Guided create flow: name, Monday start, cycle length, automatic Sunday end date
+- Weekly health calendar with multiple activities per day
+- Activity types: Strength, Cardio, Mobility, Stretching, Recovery, Sport, Rest
+- Copy week / copy to remaining weeks
+- Draft / Scheduled / Active / Completed / Archived statuses (legacy `published` still valid)
+- Dashboard **Set up program** and Training **Manage** open Program Design
+- Existing Training Program Setup remains available for Groups and current logging
+
+### Files Changed
+
+- `app/components/layout/PrimaryNav.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `app/components/programDesign/ProgramDesignHome.tsx`
+- `app/components/programDesign/CreateProgramFlow.tsx`
+- `app/components/programDesign/ProgramCalendarEditor.tsx`
+- `app/components/programDesign/WeeklyHealthCalendar.tsx`
+- `app/components/programDesign/AddActivitySheet.tsx`
+- `lib/programDesign/types.ts`
+- `lib/programDesign/cycle.ts`
+- `lib/programDesign/lifecycle.ts`
+- `lib/programDesign/activityTypes.ts`
+- `lib/programDesign/programDesignApi.ts`
+- `lib/training/programStatus.ts`
+- `lib/training/programFetch.ts`
+- `supabase/migrations/20250902_042_program_design_foundation.sql`
+- `DECISIONS.md`
+- `ROADMAP.md`
+- `CHANGELOG.md`
+
+### Database Changes
+
+Additive migration: `supabase/migrations/20250902_042_program_design_foundation.sql`
+
+Run on **test** Supabase first, then live when promoting:
+
+- `st_programs.end_date`
+- `st_programs.cycle_length_weeks`
+- `st_programs.record_kind` (`template` | `instance`)
+- Expanded `status` check: `draft`, `published`, `scheduled`, `active`, `completed`, `archived`
+- New `st_program_activities` (multiple ordered activities per day, optional `workout_id`)
+
+No tables dropped. No `st_set_logs` or workout history changes.
+
+Until the migration is applied, programs can still be created; calendar activities will not persist.
+
+### Testing Steps
+
+1. Sign in — confirm 6-item nav includes **Programs**
+2. Programs → Personal — existing programs appear in the right lifecycle section
+3. **+ Create Program** — name, non-Monday start snaps to Monday, cycle length updates end date
+4. Continue — weekly calendar shows Mon–Sun and **+ Add activity**
+5. Add two activities on the same day (e.g. Strength + Mobility)
+6. Copy week / Copy to remaining weeks
+7. Set as Active — confirm only one personal program is Active
+8. Groups tab in Program Design — switch groups; **+ Create Group Program** for owners/managers
+9. Training — existing published program still logs; history unchanged
+10. Mobile width (~390px) — nav labels fit; calendar stacks cleanly
+11. Error: create without a name is blocked; missing migration shows a calendar save note
+
+### Known Issues
+
+- Training still reads **published** programs, not the new Active status (Phase 3)
+- Strength / cardio / mobility builders are not connected yet (Phase 2)
+- Share, assign, Just Today / Rest of Program, and AI generation APIs are Phase 4–5
+- Existing Training Program Setup is still in the app for Groups and current workflows
+
+### Recommended Commit Message
+
+```text
+BIQ-0136 Add Program Design shell and health calendar
+```

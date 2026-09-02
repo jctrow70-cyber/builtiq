@@ -209,6 +209,8 @@ Goal: Prepare BuildIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
+**BIQ-0136 Program Design overhaul** — Phase 1 shell is in progress on `develop`. Apply `20250902_042_program_design_foundation.sql` on test Supabase, then continue Phase 2 (activity builders) and Phase 3 (Training reads the Active program).
+
 Completed through **BIQ-0042** on `main`: iPhone-compatible live barcode scanner for PWA.
 
 ### Recently completed
@@ -378,7 +380,8 @@ See `CHANGELOG.md` BIQ-0013 and BIQ-0024 for full scope.
 
 ### Next priorities
 
-1. **Group Training platform (BIQ-0043)** — P1–P8 complete; epic ready for preview QA
+1. **Program Design overhaul (BIQ-0136)** — separate planning from Training execution. Phase 1 shell in progress; see Decision 030.
+2. **Group Training platform (BIQ-0043)** — P1–P8 complete; epic ready for preview QA
 2. ~~PR detection and strength trends on Progress tab~~ (BIQ-0026)
 3. **App admin roles** — move beyond env-only catalog import admin (see below)
 4. AI program regeneration / edit-from-prompt for existing programs

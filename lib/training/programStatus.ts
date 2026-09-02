@@ -1,10 +1,18 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-export type ProgramStatus = 'draft' | 'published' | 'archived';
+export type ProgramStatus = 'draft' | 'published' | 'scheduled' | 'active' | 'completed' | 'archived';
 
 export function programStatusOf(program: { status?: string | null } | null | undefined): ProgramStatus {
   const status = program?.status;
-  if (status === 'draft' || status === 'archived') return status;
+  if (
+    status === 'draft' ||
+    status === 'archived' ||
+    status === 'scheduled' ||
+    status === 'active' ||
+    status === 'completed'
+  ) {
+    return status;
+  }
   return 'published';
 }
 
@@ -18,6 +26,9 @@ export function isPublishedProgram(program: { status?: string | null } | null | 
 
 export function programStatusLabel(status: ProgramStatus): string {
   if (status === 'draft') return 'Draft';
+  if (status === 'scheduled') return 'Scheduled';
+  if (status === 'active') return 'Active';
+  if (status === 'completed') return 'Completed';
   if (status === 'archived') return 'Archived';
   return 'Published';
 }
