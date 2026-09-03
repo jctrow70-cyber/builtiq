@@ -34,18 +34,49 @@ type SourcePlannedSet = {
   set_type: string | null;
 };
 
+const PLANNED_SET_FIELDS_FULL = 'id, set_number, target_reps, target_weight, target_rpe, target_duration_seconds, rest_seconds, set_type';
+const PLANNED_SET_FIELDS_SAFE = 'id, set_number, target_reps, target_weight, target_rpe, rest_seconds, set_type';
+
+const EXERCISE_FIELDS_FULL = 'id, name, section, sort_order, catalog_exercise_id, exercise_type, superset_group_id, superset_label, superset_order';
+const EXERCISE_FIELDS_SAFE = 'id, name, section, sort_order, catalog_exercise_id';
+
+function buildWorkoutSelect(exerciseFields: string, setFields: string): string {
+  return `id, week, day_label, day_order, workout_type, st_exercises(${exerciseFields}, st_planned_sets(${setFields}))`;
+}
+
 export async function fetchSourceWorkouts(
   supabase: SupabaseClient,
   programId: string
 ): Promise<{ data: SourceWorkout[]; error: string | null }> {
-  const { data, error } = await supabase
-    .from('st_workouts')
-    .select('id, week, day_label, day_order, workout_type, st_exercises(id, name, section, sort_order, catalog_exercise_id, exercise_type, superset_group_id, superset_label, superset_order, st_planned_sets(id, set_number, target_reps, target_weight, target_rpe, target_duration_seconds, rest_seconds, set_type))')
-    .eq('program_id', programId)
-    .order('week', { ascending: true })
-    .order('day_order', { ascending: true });
+  // Try with all columns first, fall back if columns are missing
+  const selects = [
+    buildWorkoutSelect(EXERCISE_FIELDS_FULL, PLANNED_SET_FIELDS_FULL),
+    buildWorkoutSelect(EXERCISE_FIELDS_FULL, PLANNED_SET_FIELDS_SAFE),
+    buildWorkoutSelect(EXERCISE_FIELDS_SAFE, PLANNED_SET_FIELDS_SAFE),
+  ];
 
-  if (error) return { data: [], error: error.message };
+  let data: any[] | null = null;
+  let lastError = '';
+
+  for (const select of selects) {
+    const result = await supabase
+      .from('st_workouts')
+      .select(select)
+      .eq('program_id', programId)
+      .order('week', { ascending: true })
+      .order('day_order', { ascending: true });
+
+    if (!result.error) {
+      data = result.data;
+      break;
+    }
+    lastError = result.error.message;
+    if (!/does not exist|could not find/i.test(result.error.message)) {
+      return { data: [], error: result.error.message };
+    }
+  }
+
+  if (!data) return { data: [], error: lastError || 'Could not load workouts' };
 
   const workouts: SourceWorkout[] = ((data || []) as any[]).map((w) => ({
     id: w.id,
@@ -101,9 +132,12 @@ export async function importWorkoutsIntoActivities(
   strengthActivities: ProgramActivity[],
   sourceWorkouts: SourceWorkout[]
 ): Promise<{ imported: number; error: string | null }> {
-  const week1Workouts = sourceWorkouts.filter((w) => w.week === 1);
+  // Use week 1 if available, otherwise use the lowest week that has workouts
+  const availableWeeks = [...new Set(sourceWorkouts.map((w) => w.week))].sort((a, b) => a - b);
+  const sourceWeek = availableWeeks[0] ?? 1;
+  const week1Workouts = sourceWorkouts.filter((w) => w.week === sourceWeek);
   if (!week1Workouts.length) {
-    return { imported: 0, error: 'Source program has no week 1 workouts to import.' };
+    return { imported: 0, error: 'Source program has no workouts to import.' };
   }
 
   const targetStrength = strengthActivities
@@ -168,24 +202,40 @@ export async function importWorkoutsIntoActivities(
         catalog_exercise_id: ex.catalog_exercise_id,
       };
 
-      // Add optional fields only if they have values (columns may not exist)
       if (ex.exercise_type) exercisePayload.exercise_type = ex.exercise_type;
       if (newSupersetGroupId) exercisePayload.superset_group_id = newSupersetGroupId;
       if (ex.superset_label) exercisePayload.superset_label = ex.superset_label;
       if (ex.superset_order != null) exercisePayload.superset_order = ex.superset_order;
 
-      const { data: newEx, error: exErr } = await supabase
-        .from('st_exercises')
-        .insert(exercisePayload)
-        .select('id')
-        .single();
+      // Try inserting with all fields; retry without optional ones if columns are missing
+      let newEx: { id: string } | null = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const { data, error: exErr } = await supabase
+          .from('st_exercises')
+          .insert(exercisePayload)
+          .select('id')
+          .single();
 
-      if (exErr || !newEx) continue;
+        if (!exErr && data) {
+          newEx = data as { id: string };
+          break;
+        }
+        if (exErr && /does not exist/i.test(exErr.message)) {
+          const col = exErr.message.match(/column\s+\S+\.(\w+)/i)?.[1];
+          if (col && col in exercisePayload) {
+            delete exercisePayload[col];
+            continue;
+          }
+        }
+        break;
+      }
+
+      if (!newEx) continue;
 
       if (ex.planned_sets.length) {
         const setInserts = ex.planned_sets.map((s) => {
           const row: Record<string, unknown> = {
-            exercise_id: newEx.id,
+            exercise_id: newEx!.id,
             set_number: s.set_number,
           };
           if (s.target_reps != null) row.target_reps = s.target_reps;
@@ -196,7 +246,20 @@ export async function importWorkoutsIntoActivities(
           if (s.set_type) row.set_type = s.set_type;
           return row;
         });
-        await supabase.from('st_planned_sets').insert(setInserts);
+
+        // Retry without missing columns
+        for (let attempt = 0; attempt < 3; attempt++) {
+          const { error: setErr } = await supabase.from('st_planned_sets').insert(setInserts);
+          if (!setErr) break;
+          if (/does not exist/i.test(setErr.message)) {
+            const col = setErr.message.match(/column\s+\S+\.(\w+)/i)?.[1];
+            if (col) {
+              for (const row of setInserts) delete row[col];
+              continue;
+            }
+          }
+          break;
+        }
       }
     }
 

@@ -109,7 +109,9 @@ export default function ImportWorkoutsSheet({
   }
 
   const selected = programs.find((p) => p.id === selectedId);
-  const week1 = sourceWorkouts.filter((w) => w.week === 1);
+  const availableWeeks = [...new Set(sourceWorkouts.map((w) => w.week))].sort((a, b) => a - b);
+  const sourceWeek = availableWeeks[0] ?? 1;
+  const week1 = sourceWorkouts.filter((w) => w.week === sourceWeek);
   const targetDayNames = strengthActivities
     .filter((a) => a.activity_type === 'strength')
     .sort((a, b) => a.day_of_week - b.day_of_week)
@@ -165,7 +167,7 @@ export default function ImportWorkoutsSheet({
 
         {selected && week1.length > 0 && !loadingSource && (
           <div className="import-preview">
-            <h3>Week 1 workouts from "{selected.name}"</h3>
+            <h3>Week {sourceWeek} workouts from "{selected.name}"</h3>
             <div className="import-preview-list">
               {week1.map((w) => (
                 <div key={w.id} className="import-preview-item">
@@ -186,7 +188,7 @@ export default function ImportWorkoutsSheet({
         )}
 
         {selected && week1.length === 0 && !loadingSource && (
-          <p className="muted">This program has no week 1 workouts to import.</p>
+          <p className="muted">This program has no workouts to import.</p>
         )}
 
         {error && <p className="pd-error">{error}</p>}
