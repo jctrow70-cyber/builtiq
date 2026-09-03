@@ -877,8 +877,32 @@ label{color:var(--textSecondary)}
 .te-week-day{display:grid;gap:2px;width:100%;padding:12px;border-radius:14px;border:1px solid var(--borderSubtle);background:var(--surfaceElevated);color:inherit;text-align:left;min-height:72px}
 .te-week-day--today{border-color:var(--accent);background:var(--accentSoft)}
 .te-week-day--done{box-shadow:inset 0 0 0 1px var(--success)}
+.te-week-day--selected{border-color:var(--accent)}
 .te-week-dow{font-size:11px;font-weight:900;letter-spacing:.04em}
 .te-week-meta{font-size:11px;color:var(--accentOnSoft);font-weight:800}
+.te-month{display:grid;gap:8px}
+.te-month-dows,.te-month-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.te-month-dows{padding:0 2px}
+.te-month-dows span{font-size:10px;font-weight:800;letter-spacing:.04em;text-align:center;color:var(--textSecondary)}
+.te-month-cell{display:grid;align-content:start;gap:3px;min-height:58px;padding:6px 4px;border-radius:10px;border:1px solid var(--borderSubtle);background:var(--surfaceElevated);color:inherit;text-align:left}
+.te-month-cell--out{opacity:.42}
+.te-month-cell--off{background:transparent}
+.te-month-cell--today{border-color:var(--accent);background:var(--accentSoft)}
+.te-month-cell--selected{box-shadow:inset 0 0 0 1px var(--accent)}
+.te-month-cell--done{box-shadow:inset 0 0 0 1px var(--success)}
+.te-month-num{font-size:12px;font-weight:800;line-height:1}
+.te-month-dots{display:flex;flex-wrap:wrap;gap:3px;min-height:6px}
+.te-dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+.te-dot--strength{background:#3b82f6}
+.te-dot--cardio{background:#ef4444}
+.te-dot--mobility{background:#8b5cf6}
+.te-dot--stretching{background:#14b8a6}
+.te-dot--recovery{background:#22c55e}
+.te-dot--sport{background:#f59e0b}
+.te-dot--rest{background:#94a3b8}
+.te-month-title{display:none;font-size:10px;font-weight:700;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media(min-width:700px){
   .te-week-grid{grid-template-columns:repeat(7,minmax(0,1fr))}
+  .te-month-cell{min-height:84px;padding:8px}
+  .te-month-title{display:block}
 }

@@ -3,7 +3,9 @@
 import SegmentedControl from '../ui/SegmentedControl';
 import SectionHeader from '../ui/SectionHeader';
 import { formatLongWeekday, formatMediumDate } from '../../../lib/programDesign/cycle';
-import type { TrainingDayPlan } from '../../../lib/programDesign/trainingSchedule';
+import type { TrainingDayPlan, TrainingMonthCell } from '../../../lib/programDesign/trainingSchedule';
+
+type CalendarView = 'day' | 'week' | 'month';
 
 type TrainingExecutionProps = {
   programName: string | null;
@@ -11,18 +13,26 @@ type TrainingExecutionProps = {
   today: TrainingDayPlan | null;
   tomorrow: TrainingDayPlan | null;
   weekDays: TrainingDayPlan[];
+  monthCells: TrainingMonthCell[];
+  monthLabel: string;
+  selectedDate: string;
   weekNumber: number;
   totalWeeks: number;
-  calendarView: 'day' | 'week';
-  onCalendarViewChange: (view: 'day' | 'week') => void;
+  calendarView: CalendarView;
+  onCalendarViewChange: (view: CalendarView) => void;
   onPrevWeek: () => void;
   onNextWeek: () => void;
   onThisWeek: () => void;
+  onPrevMonth: () => void;
+  onNextMonth: () => void;
+  onThisMonth: () => void;
   onSelectDay: (date: string) => void;
   onStartWorkout: (workoutId: string | null, date: string) => void;
   onOpenPrograms: () => void;
   completedDates?: string[];
 };
+
+const MONTH_DOWS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 function DayItems({
   plan,
@@ -63,6 +73,9 @@ export default function TrainingExecution({
   today,
   tomorrow,
   weekDays,
+  monthCells,
+  monthLabel,
+  selectedDate,
   weekNumber,
   totalWeeks,
   calendarView,
@@ -70,15 +83,19 @@ export default function TrainingExecution({
   onPrevWeek,
   onNextWeek,
   onThisWeek,
+  onPrevMonth,
+  onNextMonth,
+  onThisMonth,
   onSelectDay,
   onStartWorkout,
   onOpenPrograms,
   completedDates = [],
 }: TrainingExecutionProps) {
+  const viewingToday = !!today?.isToday;
   return (
     <div className="te-screen">
       <SectionHeader
-        title="Today"
+        title={viewingToday ? 'Today' : today ? 'This day' : 'Training'}
         subtitle={today ? formatLongWeekday(today.date) : 'Choose a program to follow'}
         actions={
           <button type="button" className="btn small secondary" onClick={onOpenPrograms}>
@@ -97,10 +114,11 @@ export default function TrainingExecution({
       <SegmentedControl
         ariaLabel="Training calendar"
         value={calendarView}
-        onChange={(v) => onCalendarViewChange(v as 'day' | 'week')}
+        onChange={(v) => onCalendarViewChange(v as CalendarView)}
         options={[
           { value: 'day', label: 'Day' },
           { value: 'week', label: 'Week' },
+          { value: 'month', label: 'Calendar' },
         ]}
         size="sm"
       />
@@ -117,7 +135,7 @@ export default function TrainingExecution({
       {programName && calendarView === 'day' && today && (
         <>
           <section className="te-block">
-            <h2>Today&apos;s plan</h2>
+            <h2>{viewingToday ? "Today's plan" : "This day's plan"}</h2>
             <DayItems
               plan={today}
               completed={completedDates.includes(today.date)}
@@ -137,7 +155,7 @@ export default function TrainingExecution({
           )}
           {tomorrow && (
             <section className="te-block te-tomorrow">
-              <h2>Tomorrow</h2>
+              <h2>{viewingToday ? 'Tomorrow' : 'Next day'}</h2>
               <p>
                 {tomorrow.primary ? (
                   <>
@@ -174,7 +192,7 @@ export default function TrainingExecution({
                 <button
                   key={day.date}
                   type="button"
-                  className={`te-week-day${day.isToday ? ' te-week-day--today' : ''}${done ? ' te-week-day--done' : ''}`}
+                  className={`te-week-day${day.isToday ? ' te-week-day--today' : ''}${done ? ' te-week-day--done' : ''}${day.date === selectedDate ? ' te-week-day--selected' : ''}`}
                   onClick={() => onSelectDay(day.date)}
                 >
                   <span className="te-week-dow">{day.dayLabel}</span>
@@ -187,6 +205,70 @@ export default function TrainingExecution({
               );
             })}
           </div>
+        </>
+      )}
+
+      {programName && calendarView === 'month' && (
+        <>
+          <div className="te-week-nav">
+            <button type="button" className="btn small secondary" onClick={onPrevMonth}>
+              Previous
+            </button>
+            <button type="button" className="btn small secondary" onClick={onThisMonth}>
+              This month
+            </button>
+            <button type="button" className="btn small secondary" onClick={onNextMonth}>
+              Next
+            </button>
+          </div>
+          <p className="te-week-label">{monthLabel}</p>
+          <div className="te-month" role="grid" aria-label={`${monthLabel} training calendar`}>
+            <div className="te-month-dows">
+              {MONTH_DOWS.map((dow) => (
+                <span key={dow}>{dow}</span>
+              ))}
+            </div>
+            <div className="te-month-grid">
+              {monthCells.map((cell) => {
+                const done = completedDates.includes(cell.date);
+                const items = cell.plan?.items || [];
+                return (
+                  <button
+                    key={cell.date}
+                    type="button"
+                    className={[
+                      'te-month-cell',
+                      !cell.inMonth ? 'te-month-cell--out' : '',
+                      !cell.inProgram ? 'te-month-cell--off' : '',
+                      cell.plan?.isToday ? 'te-month-cell--today' : '',
+                      cell.date === selectedDate ? 'te-month-cell--selected' : '',
+                      done ? 'te-month-cell--done' : '',
+                    ].filter(Boolean).join(' ')}
+                    onClick={() => onSelectDay(cell.date)}
+                    aria-label={cell.plan?.primary ? `${cell.date} ${cell.plan.primary.title}` : cell.date}
+                  >
+                    <span className="te-month-num">{Number(cell.date.slice(8, 10))}</span>
+                    <span className="te-month-dots" aria-hidden="true">
+                      {items.slice(0, 3).map((item) => (
+                        <i key={item.id} className={`te-dot te-dot--${item.activityType || 'strength'}`} />
+                      ))}
+                    </span>
+                    {cell.plan?.primary && <span className="te-month-title">{cell.plan.primary.title}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          {today && (
+            <section className="te-block">
+              <h2>{today.isToday ? "Today's plan" : formatLongWeekday(today.date)}</h2>
+              <DayItems
+                plan={today}
+                completed={completedDates.includes(today.date)}
+                onStart={(workoutId) => onStartWorkout(workoutId, today.date)}
+              />
+            </section>
+          )}
         </>
       )}
     </div>

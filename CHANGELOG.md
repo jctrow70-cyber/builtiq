@@ -8756,3 +8756,61 @@ None.
 ```text
 BIQ-0139 Fix Training Vercel type error
 ```
+
+---
+
+## BIQ-0140 - Training Month Calendar View
+
+Date: 2026-09-02  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Training now has a month **Calendar** view next to Day and Week. Users can browse months, see planned activity dots on each day, and tap a day to open that day's plan.
+
+### Purpose
+
+Give Training a real calendar so the followed program is easy to scan beyond a single day or week strip.
+
+### Changes
+
+- Day / Week / Calendar toggle on Training
+- Month grid (Monday–Sunday) with previous / this month / next
+- Activity dots on planned days; tap a day to open Day view
+- Selected day and today are highlighted; completed days keep a done mark
+- No database changes; uses the followed program and existing calendar activities
+
+### Files Changed
+
+- `app/components/training/TrainingExecution.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `lib/programDesign/trainingSchedule.ts`
+- `CHANGELOG.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Training → Calendar — month grid appears with Mon–Sun headers
+2. Previous / This month / Next change the month
+3. Days with activities show colored dots
+4. Tap a day → Day view for that date, Start Workout still works
+5. Week view still lists Mon–Sun for the program week
+6. Mobile (~390px) — 7-day grid stays readable; titles hide, dots remain
+7. No Personal vs Group control
+
+### Known Issues
+
+- Calendar activities still require `20250902_042` applied in Supabase
+- Days outside the program cycle are shown faded with no activities
+
+### Recommended Commit Message
+
+```text
+BIQ-0140 Add Training month calendar view
+```

@@ -53,7 +53,7 @@ import ProgramDesignHome from './components/programDesign/ProgramDesignHome';
 import TrainingExecution from './components/training/TrainingExecution';
 import { cycleLengthOf } from '../lib/programDesign/cycle';
 import { fetchProgramActivities } from '../lib/programDesign/programDesignApi';
-import { mergeProgramActivities, planForDate, tomorrowDate, weekPlans } from '../lib/programDesign/trainingSchedule';
+import { mergeProgramActivities, monthCalendarCells, monthLabel, planForDate, shiftYearMonth, tomorrowDate, weekPlans, yearMonthOf } from '../lib/programDesign/trainingSchedule';
 import type { ProgramActivity } from '../lib/programDesign/types';
 import { formatMacro, macroProgress } from '../lib/nutrition/macros';
 import { canManageGroup, canLogWorkout, canEditGroupProgram, isGroupOwner, roleLabel, roleForDatabase, resolveAssignmentWorkout, assignedHasPersonalCopy, assignmentDisplayTitle, copyAssignmentToPersonal, classificationSlug, loadMemberPerformanceBundle, loadMemberRosterMeta, duplicateTeamProgram, customizeProgramForMember, leaveTeam, deleteTeam, type AssignedWorkoutRow, type GroupClassification, type MemberPerformanceBundle, type MemberRosterMeta } from '../lib/groups';
@@ -158,7 +158,8 @@ export default function Page(){
  const [historyRestoreBusy,setHistoryRestoreBusy]=useState(false);
  const [showProgramSetup,setShowProgramSetup]=useState(false);
  const [trainingSubNav,setTrainingSubNav]=useState<'personal'|'setup'>('personal');
- const [trainingCalendarView,setTrainingCalendarView]=useState<'day'|'week'>('day');
+ const [trainingCalendarView,setTrainingCalendarView]=useState<'day'|'week'|'month'>('day');
+ const [trainingCalendarMonth,setTrainingCalendarMonth]=useState(()=>yearMonthOf(todayYmd()));
  const [trainingSessionOpen,setTrainingSessionOpen]=useState(false);
  const [trainingActivities,setTrainingActivities]=useState<ProgramActivity[]>([]);
  const [addExercisePanel,setAddExercisePanel]=useState<any>(null);
@@ -2180,6 +2181,8 @@ function matchingSet(targetExercise:any, sourceSet:any){
  const trainingTodayPlan=program?planForDate(program,trainingActivities,logDate):null;
  const trainingTomorrowPlan=program?planForDate(program,trainingActivities,tomorrowDate(logDate)):null;
  const trainingWeekPlans=program?weekPlans(program,trainingActivities,week):[];
+ const trainingMonthCells=program?monthCalendarCells(program,trainingActivities,trainingCalendarMonth):[];
+ const trainingMonthLabel=monthLabel(trainingCalendarMonth);
  const trainingCompletedDates=progressLogs.filter((row:any)=>row.completed).map((row:any)=>String(row.log_date||'').slice(0,10));
  const followedFromGroup=program?.source_program_id?teams.find((t:any)=>t.id===program.team_id)?.name||null:null;
  const planned=(workout?.st_exercises||[]).reduce((n:number,e:any)=>n+(e.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).length,0);
@@ -2356,14 +2359,20 @@ function matchingSet(targetExercise:any, sourceSet:any){
       today={trainingTodayPlan}
       tomorrow={trainingTomorrowPlan}
       weekDays={trainingWeekPlans}
+      monthCells={trainingMonthCells}
+      monthLabel={trainingMonthLabel}
+      selectedDate={logDate}
       weekNumber={week}
       totalWeeks={cycleLengthOf(program||{weeks})}
       calendarView={trainingCalendarView}
-      onCalendarViewChange={setTrainingCalendarView}
+      onCalendarViewChange={(view)=>{setTrainingCalendarView(view);if(view==='month')setTrainingCalendarMonth(yearMonthOf(logDate));}}
       onPrevWeek={()=>onWeekChange(Math.max(1,week-1))}
       onNextWeek={()=>onWeekChange(week+1)}
       onThisWeek={()=>{const start=program?resolveProgramStartDate(program):todayYmd();const w=weekForDate(start,todayYmd(),program?.weeks||weeks||6);onWeekChange(w);setLogDate(todayYmd());}}
-      onSelectDay={(date)=>{setLogDate(date);if(program){const start=resolveProgramStartDate(program);onWeekChange(weekForDate(start,date,program.weeks||weeks||6));}setTrainingCalendarView('day');}}
+      onPrevMonth={()=>setTrainingCalendarMonth((m)=>shiftYearMonth(m,-1))}
+      onNextMonth={()=>setTrainingCalendarMonth((m)=>shiftYearMonth(m,1))}
+      onThisMonth={()=>{const now=todayYmd();setTrainingCalendarMonth(yearMonthOf(now));setLogDate(now);}}
+      onSelectDay={(date)=>{setLogDate(date);setTrainingCalendarMonth(yearMonthOf(date));if(program){const start=resolveProgramStartDate(program);onWeekChange(weekForDate(start,date,program.weeks||weeks||6));}if(trainingCalendarView!=='month')setTrainingCalendarView('day');}}
       onStartWorkout={startTrainingSession}
       onOpenPrograms={()=>goNav('Programs')}
       completedDates={trainingCompletedDates}

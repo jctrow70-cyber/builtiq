@@ -1,4 +1,4 @@
-import { addDaysYmd, dayLabelFromYmd, todayYmd, weekForDate } from '../training/programCalendar';
+import { addDaysYmd, dayLabelFromYmd, formatYmd, mondayOfWeek, sundayOfWeek, todayYmd, weekForDate } from '../training/programCalendar';
 import { activityTypeShortLabel, formatDuration } from './activityTypes';
 import { activitiesFromLegacyWorkouts } from './programDesignApi';
 import { cycleLengthOf, dateForProgramDay, programDateRange, weekdayLabel } from './cycle';
@@ -8,6 +8,7 @@ export type TrainingDayItem = {
   id: string;
   title: string;
   typeLabel: string;
+  activityType: string;
   duration: string;
   workoutId: string | null;
   activityId: string | null;
@@ -23,6 +24,13 @@ export type TrainingDayPlan = {
   primary: TrainingDayItem | null;
   later: TrainingDayItem[];
   isToday: boolean;
+};
+
+export type TrainingMonthCell = {
+  date: string;
+  inMonth: boolean;
+  inProgram: boolean;
+  plan: TrainingDayPlan | null;
 };
 
 export function mergeProgramActivities(
@@ -56,6 +64,7 @@ export function planForDate(
     id: a.id,
     title: a.title || activityTypeShortLabel(a.activity_type),
     typeLabel: activityTypeShortLabel(a.activity_type),
+    activityType: a.activity_type,
     duration: formatDuration(a.duration_minutes),
     workoutId: a.workout_id || (a.id.startsWith('legacy-') ? a.id.replace('legacy-', '') : null),
     activityId: a.id.startsWith('legacy-') ? null : a.id,
@@ -91,4 +100,50 @@ export function weekPlans(
 
 export function tomorrowDate(from = todayYmd()): string {
   return addDaysYmd(from, 1);
+}
+
+export function yearMonthOf(ymd: string): string {
+  return String(ymd || todayYmd()).slice(0, 7);
+}
+
+export function shiftYearMonth(yearMonth: string, delta: number): string {
+  const [y, m] = yearMonth.split('-').map(Number);
+  const d = new Date(y || new Date().getFullYear(), (m || 1) - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+export function monthLabel(yearMonth: string): string {
+  const [y, m] = yearMonth.split('-').map(Number);
+  return new Date(y || new Date().getFullYear(), (m || 1) - 1, 1).toLocaleDateString('en-US', {
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+export function monthCalendarCells(
+  program: ProgramDesignRecord,
+  activities: ProgramActivity[],
+  yearMonth: string,
+  today = todayYmd()
+): TrainingMonthCell[] {
+  const [y, m] = yearMonth.split('-').map(Number);
+  const first = formatYmd(new Date(y || new Date().getFullYear(), (m || 1) - 1, 1));
+  const last = formatYmd(new Date(y || new Date().getFullYear(), m || 1, 0));
+  const gridStart = mondayOfWeek(first);
+  const gridEnd = sundayOfWeek(last);
+  const { start, end } = programDateRange(program);
+  const cells: TrainingMonthCell[] = [];
+  let cursor = gridStart;
+  while (cursor <= gridEnd) {
+    const inMonth = yearMonthOf(cursor) === yearMonth;
+    const inProgram = cursor >= start && cursor <= end;
+    cells.push({
+      date: cursor,
+      inMonth,
+      inProgram,
+      plan: inProgram ? planForDate(program, activities, cursor, today) : null,
+    });
+    cursor = addDaysYmd(cursor, 1);
+  }
+  return cells;
 }
