@@ -858,6 +858,32 @@ label{color:var(--textSecondary)}
   .pd-cycle-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
 }
 
+/* BIQ-0141 AI Program Setup Wizard */
+.ai-wiz{display:grid;gap:8px;max-width:640px}
+.ai-wiz h1{margin:0}
+.ai-wiz-lead{margin:0 0 8px}
+.ai-wiz-examples{display:grid;gap:6px;margin:0 0 12px}
+.ai-wiz-examples-label{margin:0;font-size:12px;font-weight:800;color:var(--textSecondary)}
+.ai-wiz-example{border:1px solid var(--borderSubtle);background:var(--surfaceInset);color:var(--textSecondary);border-radius:12px;padding:10px 14px;font-size:13px;text-align:left;cursor:pointer;transition:border-color .15s}
+.ai-wiz-example:hover{border-color:var(--accent);color:var(--textPrimary)}
+.ai-wiz-coach{background:var(--accentSoft);border-radius:14px;padding:14px 16px;margin:4px 0 8px;font-size:14px;line-height:1.5;color:var(--accentOnSoft)}
+.ai-wiz-week{display:grid;gap:10px}
+.ai-wiz-day{padding:14px;border-radius:16px;background:var(--surfaceElevated);border:1px solid var(--borderSubtle);transition:border-color .15s,box-shadow .15s}
+.ai-wiz-day.drop-target{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.ai-wiz-day h3{margin:0 0 8px;font-size:13px;font-weight:900;letter-spacing:.04em}
+.ai-wiz-chip{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 12px;border-radius:12px;border:1px solid var(--borderSubtle);background:var(--surfaceInset);margin-bottom:6px;cursor:grab}
+.ai-wiz-chip.rest{opacity:.55;cursor:default}
+.ai-wiz-chip-info{display:grid;gap:2px}
+.ai-wiz-chip-info b{font-size:14px}
+.ai-wiz-chip-info .muted{font-size:11px}
+.ai-wiz-chip-remove{border:0;background:transparent;color:var(--textSecondary);font-size:18px;line-height:1;padding:0 2px;cursor:pointer}
+.ai-wiz-chip-remove:hover{color:var(--error)}
+[draggable="true"]{cursor:grab}
+.dragging{opacity:.4}
+@media(min-width:700px){
+  .ai-wiz-week{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
 /* BIQ-0138 Training execution calendar */
 .te-screen{display:grid;gap:14px;padding-bottom:20px}
 .te-following{margin:0}
