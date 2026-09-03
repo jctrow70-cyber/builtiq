@@ -11,6 +11,67 @@ Branch:
 Status:
 ```
 
+## BIQ-0142 - Bridge Strength Programs into Program Design Calendar
+
+Date: 2026-09-03  
+Branch: cursor/bridge-strength-workouts-eaa7  
+Status: Completed
+
+### Summary
+
+Users can now import exercises from an existing strength program into their Program Design calendar's strength days. This bridges the gap between the old Program Setup (which builds full workouts with exercises, sets, and reps) and the new Program Design calendar (which schedules activities by day).
+
+### Purpose
+
+When a user creates a program in Program Design with strength days, those days had empty workout shells with no exercises. If they already built a strength program in Training → Program Setup, there was no way to connect it. This change adds an "Import exercises from program" button that copies week 1 workouts (exercises + planned sets) from any existing program into the matching strength days on the calendar.
+
+### How it works
+
+1. Open a program in Program Design → Calendar Editor
+2. If the current week has strength activities, an "Import exercises from program" button appears
+3. Click it → pick a source program from your library
+4. Preview shows week 1 workouts with exercise counts and names
+5. Click "Import exercises into my strength days" → exercises and planned sets are copied in
+6. Matching is by day of week when possible (Mon→Mon), then by order for remaining days
+7. Activity titles update to match the source workout type (e.g. "Upper Body", "Lower Body")
+
+### Files Changed
+
+- `lib/programDesign/importWorkouts.ts` (new — fetch source workouts, copy exercises + sets into target)
+- `app/components/programDesign/ImportWorkoutsSheet.tsx` (new — program picker + preview + import UI)
+- `app/components/programDesign/ProgramCalendarEditor.tsx` (modified — import button + sheet wiring)
+- `app/globals.css` (modified — import sheet styles)
+- `CHANGELOG.md`
+
+### Database Changes
+
+None. Reads from `st_workouts`, `st_exercises`, `st_planned_sets` and writes new rows into the same tables under the target program's workout IDs.
+
+### Testing Steps
+
+1. Build a strength program via Training → Program Setup (with exercises)
+2. Create a new program in Program Design with strength days (via AI wizard or manually)
+3. Open the calendar editor → "Import exercises from program" button visible
+4. Click it → your old program appears in the list
+5. Select it → preview shows week 1 workouts with exercise names
+6. Click Import → exercises copied into your strength days
+7. Follow the program → Training → open a strength day → exercises are there
+8. Start Workout → exercises, sets, reps all present
+9. Non-strength days (cardio, rest, etc.) are unaffected
+
+### Known Issues
+
+- Only week 1 workouts are imported; multi-week periodization requires Copy Week in the calendar
+- If source program has more workout days than target strength days, extra workouts are skipped
+
+### Recommended Commit Message
+
+```text
+BIQ-0142 Bridge strength programs into Program Design calendar
+```
+
+---
+
 ## BIQ-0141 - AI-Powered Program Activity Setup
 
 Date: 2026-09-03  

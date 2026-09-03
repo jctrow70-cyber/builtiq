@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import SectionHeader from '../ui/SectionHeader';
 import WeeklyHealthCalendar from './WeeklyHealthCalendar';
 import AddActivitySheet from './AddActivitySheet';
+import ImportWorkoutsSheet from './ImportWorkoutsSheet';
 import { cycleLengthOf, formatProgramRange, programDateRange } from '../../../lib/programDesign/cycle';
 import { lifecycleLabel, lifecycleStatusOf } from '../../../lib/programDesign/lifecycle';
 import {
@@ -60,6 +61,7 @@ export default function ProgramCalendarEditor({
   const [sheetDay, setSheetDay] = useState<number | null>(null);
   const [editing, setEditing] = useState<ProgramActivity | null>(null);
   const [busy, setBusy] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
 
   const totalWeeks = cycleLengthOf(program);
   const { start, end } = programDateRange(program);
@@ -87,6 +89,11 @@ export default function ProgramCalendarEditor({
   useEffect(() => {
     void reload();
   }, [program.id]);
+
+  const hasStrengthActivities = useMemo(
+    () => activities.some((a) => a.activity_type === 'strength' && a.workout_id && a.week_number === week),
+    [activities, week]
+  );
 
   const dayLabel = useMemo(() => {
     if (sheetDay == null) return '';
@@ -220,6 +227,11 @@ export default function ProgramCalendarEditor({
           <button type="button" className="btn small secondary" disabled={busy} onClick={() => void copyToRemaining()}>
             Copy to remaining weeks
           </button>
+          {hasStrengthActivities && (
+            <button type="button" className="btn small accent" disabled={busy} onClick={() => setImportOpen(true)}>
+              Import exercises from program
+            </button>
+          )}
         </div>
       )}
 
@@ -310,6 +322,20 @@ export default function ProgramCalendarEditor({
           }}
           onSave={saveActivity}
           onDelete={editing ? removeActivity : undefined}
+        />
+      )}
+
+      {importOpen && (
+        <ImportWorkoutsSheet
+          supabase={supabase}
+          userId={ownerUserId}
+          targetProgramId={program.id}
+          strengthActivities={activities.filter((a) => a.week_number === week)}
+          onClose={() => setImportOpen(false)}
+          onImported={() => {
+            setImportOpen(false);
+            void reload();
+          }}
         />
       )}
     </div>
