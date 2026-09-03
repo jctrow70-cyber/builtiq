@@ -11,6 +11,51 @@ Branch:
 Status:
 ```
 
+## BIQ-0143 - Auto-Prompt Import After Adding Strength Activity
+
+Date: 2026-09-03  
+Branch: cursor/attach-program-from-activity-sheet-eaa7  
+Status: Completed
+
+### Summary
+
+When manually adding a Strength activity in the Calendar Editor, the "Import exercises from program" sheet now opens automatically right after the activity is saved. A hint in the Add Activity sheet tells users what will happen. This eliminates the confusion of adding a blank strength day and not knowing how to attach exercises.
+
+### Purpose
+
+Users who skip the AI wizard and add strength activities manually had no obvious path to connect their existing strength programs. Now the import prompt appears immediately after adding a strength day.
+
+### Files Changed
+
+- `app/components/programDesign/ProgramCalendarEditor.tsx` (modified — auto-open import sheet after new strength activity)
+- `app/components/programDesign/AddActivitySheet.tsx` (modified — hint when strength type selected)
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Program Design → open a program → Calendar Editor
+2. Tap "+" on any day → select Strength → see hint about importing
+3. Save the activity → Import sheet opens automatically
+4. Pick a source program → import exercises
+5. If no programs available, sheet shows helpful message and can be closed
+6. Non-strength activities (cardio, rest, etc.) do NOT trigger the import prompt
+
+### Known Issues
+
+None.
+
+### Recommended Commit Message
+
+```text
+BIQ-0143 Auto-prompt import after adding strength activity
+```
+
+---
+
 ## BIQ-0142 - Bridge Strength Programs into Program Design Calendar
 
 Date: 2026-09-03  

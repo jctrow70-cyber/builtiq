@@ -174,6 +174,12 @@ export default function AddActivitySheet({
           </>
         )}
 
+        {type === 'strength' && !existing && (
+          <p className="muted ai-wiz-coach" style={{ margin: '4px 0 8px', padding: '10px 12px', fontSize: '13px' }}>
+            After adding this strength day, you'll be able to import exercises from an existing program.
+          </p>
+        )}
+
         {showMobility && (
           <p className="muted">Individual movements can be added in a later update. Name and duration are enough for now.</p>
         )}

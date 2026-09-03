@@ -103,6 +103,7 @@ export default function ProgramCalendarEditor({
   async function saveActivity(draft: ActivityDraft) {
     if (!canEdit) return;
     if (editing && editing.id.startsWith('legacy-')) return;
+    const isNewStrength = !editing && draft.activity_type === 'strength';
     if (editing) {
       const { error: updateError } = await updateProgramActivity(supabase, editing.id, draft);
       if (updateError) throw new Error(updateError);
@@ -120,6 +121,9 @@ export default function ProgramCalendarEditor({
     setSheetDay(null);
     setEditing(null);
     await reload();
+    if (isNewStrength) {
+      setImportOpen(true);
+    }
   }
 
   async function removeActivity() {
