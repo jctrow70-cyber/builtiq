@@ -8714,3 +8714,45 @@ See the testing plan in the BIQ-0138 handoff notes (Training day/week, Follow sh
 ```text
 BIQ-0138 Add Training calendar and follow shared programs
 ```
+
+---
+
+## BIQ-0139 - Fix Training Vercel Type Error
+
+Date: 2026-09-02  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Fixed the Next.js production typecheck that failed on Training JSX: inside the `trainingSubNav === 'personal'` branch, comparing `trainingSubNav === 'setup'` has no overlap. The workout logger now shows when a session is open or an assigned workout is active.
+
+### Purpose
+
+Unblock the Training calendar deploy without changing how Day/Week or assigned workouts log.
+
+### Files Changed
+
+- `app/page.tsx`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Push and confirm Vercel `next build` completes
+2. Training → Start Workout — logger still opens
+3. Open an assigned workout — logger still opens
+4. Existing published plans still load
+
+### Known Issues
+
+None.
+
+### Recommended Commit Message
+
+```text
+BIQ-0139 Fix Training Vercel type error
+```
