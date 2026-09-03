@@ -11,6 +11,51 @@ Branch:
 Status:
 ```
 
+## BIQ-0144 - Fix Import: Missing Database Columns and Week Matching
+
+Date: 2026-09-03  
+Branch: cursor/fix-import-missing-columns-eaa7  
+Status: Completed
+
+### Summary
+
+Fixes two bugs in the Import Exercises feature:
+1. **"column st_planned_sets.target_duration_seconds does not exist"** — the import query requested columns that may not exist in all databases. Now retries with progressively fewer columns.
+2. **"This program has no week 1 workouts to import"** — programs where workouts start at week numbers other than 1 were unusable. Now uses the lowest available week.
+
+### Purpose
+
+The import feature assumed all optional columns existed and that workouts always start at week 1. Real databases may not have all migration columns applied, and some programs use different week numbering.
+
+### Files Changed
+
+- `lib/programDesign/importWorkouts.ts` (modified — resilient column fallbacks for select, insert exercises, insert planned sets; flexible week matching)
+- `app/components/programDesign/ImportWorkoutsSheet.tsx` (modified — show actual source week number; updated empty state message)
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Open import sheet → select a program → no column errors
+2. Programs with workouts on week 2+ now show their workouts in preview
+3. Import completes even when target_duration_seconds, exercise_type, superset columns don't exist
+4. Preview shows "Week N workouts from …" with the correct week number
+
+### Known Issues
+
+None.
+
+### Recommended Commit Message
+
+```text
+BIQ-0144 Fix import: resilient column fallbacks and flexible week matching
+```
+
+---
+
 ## BIQ-0143 - Auto-Prompt Import After Adding Strength Activity
 
 Date: 2026-09-03  
