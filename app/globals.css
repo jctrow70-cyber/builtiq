@@ -899,6 +899,9 @@ label{color:var(--textSecondary)}
 .pd-success{color:var(--success);font-weight:700;margin:4px 0}
 .btn.accent{background:var(--accentSoft);color:var(--accentOnSoft);border-color:var(--accent)}
 .btn.accent:hover{background:var(--accent);color:#fff}
+.push-mode-chips{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 8px}
+.push-member-list{display:grid;gap:6px;margin:8px 0 4px;max-height:240px;overflow:auto}
+.push-member-row{padding:8px 10px;border-radius:12px;border:1px solid var(--borderSubtle);background:var(--surfaceInset)}
 
 /* BIQ-0138 Training execution calendar */
 .te-screen{display:grid;gap:14px;padding-bottom:20px}

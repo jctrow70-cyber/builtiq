@@ -6,6 +6,7 @@ import SectionHeader from '../ui/SectionHeader';
 import WeeklyHealthCalendar from './WeeklyHealthCalendar';
 import AddActivitySheet from './AddActivitySheet';
 import ImportWorkoutsSheet from './ImportWorkoutsSheet';
+import PushToMembersSheet from './PushToMembersSheet';
 import { cycleLengthOf, formatProgramRange, programDateRange } from '../../../lib/programDesign/cycle';
 import { lifecycleLabel, lifecycleStatusOf } from '../../../lib/programDesign/lifecycle';
 import {
@@ -34,6 +35,8 @@ type ProgramCalendarEditorProps = {
   canEdit: boolean;
   isFollowing?: boolean;
   groups?: { id: string; name: string; my_role?: string | null }[];
+  /** When set, owners/managers can push this program to group members. */
+  pushTeamId?: string | null;
   onBack: () => void;
   onProgramChange: (program: ProgramDesignRecord) => void;
   onFollow?: () => Promise<void>;
@@ -48,6 +51,7 @@ export default function ProgramCalendarEditor({
   canEdit,
   isFollowing,
   groups = [],
+  pushTeamId = null,
   onBack,
   onProgramChange,
   onFollow,
@@ -62,6 +66,7 @@ export default function ProgramCalendarEditor({
   const [editing, setEditing] = useState<ProgramActivity | null>(null);
   const [busy, setBusy] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [pushOpen, setPushOpen] = useState(false);
 
   const totalWeeks = cycleLengthOf(program);
   const { start, end } = programDateRange(program);
@@ -271,6 +276,11 @@ export default function ProgramCalendarEditor({
           </button>
         )}
         {isFollowing && <span className="ui-badge">Following</span>}
+        {canEdit && pushTeamId && (
+          <button type="button" className="btn green" disabled={busy} onClick={() => setPushOpen(true)}>
+            Push to members
+          </button>
+        )}
         {onShareWithGroup && canEdit && groups.length > 0 && (
           <select
             aria-label="Share with group"
@@ -339,6 +349,20 @@ export default function ProgramCalendarEditor({
           onImported={() => {
             setImportOpen(false);
             void reload();
+          }}
+        />
+      )}
+
+      {pushOpen && pushTeamId && (
+        <PushToMembersSheet
+          supabase={supabase}
+          teamId={pushTeamId}
+          programId={program.id}
+          programName={program.name}
+          programStatus={program.status}
+          onClose={() => setPushOpen(false)}
+          onPushed={() => {
+            onProgramChange({ ...program, status: program.status === 'draft' ? 'published' : program.status });
           }}
         />
       )}
