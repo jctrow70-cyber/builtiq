@@ -11,6 +11,30 @@ Branch:
 Status:
 ```
 
+## BIQ-0145 - Fix Vercel Build: Set Spread TypeScript Error
+
+Date: 2026-09-03  
+Branch: cursor/fix-set-spread-build-eaa7  
+Status: Completed
+
+### Summary
+
+Fixes Vercel build failure: `Type 'Set<number>' can only be iterated through when using the '--downlevelIteration' flag`. Replaced `[...new Set()]` with `Array.from(new Set())` in import workout code.
+
+### Files Changed
+
+- `app/components/programDesign/ImportWorkoutsSheet.tsx`
+- `lib/programDesign/importWorkouts.ts`
+- `CHANGELOG.md`
+
+### Recommended Commit Message
+
+```text
+BIQ-0145 Fix Vercel build Set spread TypeScript error
+```
+
+---
+
 ## BIQ-0144 - Fix Import: Missing Database Columns and Week Matching
 
 Date: 2026-09-03  

@@ -109,7 +109,7 @@ export default function ImportWorkoutsSheet({
   }
 
   const selected = programs.find((p) => p.id === selectedId);
-  const availableWeeks = [...new Set(sourceWorkouts.map((w) => w.week))].sort((a, b) => a - b);
+  const availableWeeks = Array.from(new Set(sourceWorkouts.map((w) => w.week))).sort((a, b) => a - b);
   const sourceWeek = availableWeeks[0] ?? 1;
   const week1 = sourceWorkouts.filter((w) => w.week === sourceWeek);
   const targetDayNames = strengthActivities
