@@ -11,6 +11,58 @@ Branch:
 Status:
 ```
 
+## BIQ-0141 - AI-Powered Program Activity Setup
+
+Date: 2026-09-03  
+Branch: cursor/ai-activity-setup-wizard-eaa7  
+Status: Completed
+
+### Summary
+
+When creating a new program in Program Design, users now go through an AI-powered setup wizard before the calendar editor. Users describe their weekly plan in natural language (e.g. "strength training 3 days a week, cardio Tuesday Thursday, stretching Tuesday Thursday") and AI automatically creates activities on the correct days. After AI compiles the schedule, users review each day of the week and can drag activities between days or remove them before confirming.
+
+### Purpose
+
+Eliminate the need for manual activity-by-activity setup. The AI interprets the user's description and populates the weekly calendar automatically. Users review and adjust the result before it's saved, keeping them in control while removing tedious repetition.
+
+### Files Changed
+
+- `app/api/programs/suggest-activities/route.ts` (new — AI endpoint for parsing activity descriptions)
+- `app/components/programDesign/AIProgramSetupWizard.tsx` (new — two-step wizard: describe → review week)
+- `app/components/programDesign/ProgramDesignHome.tsx` (modified — wire AI wizard between program creation and calendar editor)
+- `app/globals.css` (modified — wizard styles)
+- `CHANGELOG.md`
+
+### Database Changes
+
+None. Uses existing `st_program_activities` table.
+
+### Testing Steps
+
+1. Program Design → Create Program → fill name, dates, cycle → Continue
+2. AI wizard appears — type "strength training 3 days a week, cardio Tuesday Thursday"
+3. Click "Build my week with AI" — loading state, then review screen
+4. Review screen shows 7 days with activities placed by AI
+5. Drag an activity from one day to another — it moves
+6. Click × on an activity — it's removed, empty day becomes Rest
+7. Click "Confirm and create calendar" — activities saved, calendar editor opens
+8. Click "Skip — I'll add activities manually" — goes straight to calendar editor
+9. Example buttons fill the description textarea
+10. Mobile (~390px) — wizard and review cards stack vertically
+
+### Known Issues
+
+- AI suggestions depend on OPENAI_API_KEY being configured on the server
+- Drag-and-drop is touch-unfriendly on mobile (tap-to-move planned for follow-up)
+
+### Recommended Commit Message
+
+```text
+BIQ-0141 AI-powered program activity setup wizard
+```
+
+---
+
 ## BIQ-0001 - Documentation Foundation
 
 Date: 2026-07-06  

@@ -5,12 +5,13 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import SectionHeader from '../ui/SectionHeader';
 import SegmentedControl from '../ui/SegmentedControl';
 import CreateProgramFlow from './CreateProgramFlow';
+import AIProgramSetupWizard from './AIProgramSetupWizard';
 import ProgramCalendarEditor from './ProgramCalendarEditor';
 import { canEditGroupProgram } from '../../../lib/groups';
 import { cycleLengthOf, formatCycleLength, formatProgramRange, nextMondayFrom, programDateRange } from '../../../lib/programDesign/cycle';
 import { alreadyFollowing, followProgram, shareProgramWithGroup } from '../../../lib/programDesign/followProgram';
 import { groupProgramsByLifecycle, lifecycleLabel, lifecycleStatusOf } from '../../../lib/programDesign/lifecycle';
-import { createDesignProgram, fetchDesignPrograms } from '../../../lib/programDesign/programDesignApi';
+import { createDesignProgram, createProgramActivity, fetchDesignPrograms } from '../../../lib/programDesign/programDesignApi';
 import type {
   GroupOption,
   ProgramDesignRecord,
@@ -28,7 +29,7 @@ type ProgramDesignHomeProps = {
   onFollowed?: (programId: string) => void;
 };
 
-type View = 'home' | 'create' | 'editor';
+type View = 'home' | 'create' | 'ai-setup' | 'editor';
 
 const LIST_SECTIONS: ProgramLifecycleStatus[] = ['scheduled', 'draft', 'completed', 'archived'];
 
@@ -180,7 +181,7 @@ export default function ProgramDesignHome({
     }
     setPrograms((prev) => [data, ...prev]);
     setEditing(data);
-    setView('editor');
+    setView('ai-setup');
   }
 
   async function handleFollow(source: ProgramDesignRecord) {
@@ -227,6 +228,32 @@ export default function ProgramDesignHome({
             setView('home');
           }}
           onCreate={handleCreate}
+        />
+      </section>
+    );
+  }
+
+  if (view === 'ai-setup' && editing) {
+    return (
+      <section className="pd-screen">
+        <AIProgramSetupWizard
+          supabase={supabase}
+          programName={editing.name}
+          onComplete={async (weekPlan) => {
+            setError('');
+            for (const day of weekPlan) {
+              let sortOrder = 0;
+              for (const act of day.activities) {
+                if (act.activity_type === 'rest') continue;
+                await createProgramActivity(supabase, editing.id, 1, day.dayIndex, act, sortOrder);
+                sortOrder++;
+              }
+            }
+            setView('editor');
+          }}
+          onCancel={() => {
+            setView('editor');
+          }}
         />
       </section>
     );
