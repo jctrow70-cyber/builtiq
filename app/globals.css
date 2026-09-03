@@ -884,6 +884,22 @@ label{color:var(--textSecondary)}
   .ai-wiz-week{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 
+/* BIQ-0142 Import workouts sheet */
+.import-program-list{display:grid;gap:8px;margin:8px 0}
+.import-program-option{display:grid;gap:2px;text-align:left;padding:12px 14px;border-radius:14px;border:1px solid var(--borderSubtle);background:var(--surfaceInset);color:inherit;cursor:pointer;transition:border-color .15s}
+.import-program-option:hover{border-color:var(--accent)}
+.import-program-option.active{border-color:var(--accent);background:var(--accentSoft)}
+.import-program-option b{font-size:15px}
+.import-preview{margin:12px 0 4px}
+.import-preview h3{margin:0 0 8px;font-size:14px;font-weight:900}
+.import-preview-list{display:grid;gap:8px}
+.import-preview-item{display:grid;gap:2px;padding:10px 12px;border-radius:12px;border:1px solid var(--borderSubtle);background:var(--surfaceInset)}
+.import-preview-item b{font-size:14px}
+.import-exercise-name{font-size:12px;color:var(--textSecondary)}
+.pd-success{color:var(--success);font-weight:700;margin:4px 0}
+.btn.accent{background:var(--accentSoft);color:var(--accentOnSoft);border-color:var(--accent)}
+.btn.accent:hover{background:var(--accent);color:#fff}
+
 /* BIQ-0138 Training execution calendar */
 .te-screen{display:grid;gap:14px;padding-bottom:20px}
 .te-following{margin:0}
