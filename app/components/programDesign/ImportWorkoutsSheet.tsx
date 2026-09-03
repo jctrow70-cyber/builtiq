@@ -187,7 +187,7 @@ export default function ImportWorkoutsSheet({
           </div>
         )}
 
-        {selected && week1.length === 0 && !loadingSource && (
+        {selected && week1.length === 0 && !loadingSource && !error && (
           <p className="muted">This program has no workouts to import.</p>
         )}
 

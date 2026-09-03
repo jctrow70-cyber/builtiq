@@ -34,34 +34,47 @@ type SourcePlannedSet = {
   set_type: string | null;
 };
 
-const PLANNED_SET_FIELDS_FULL = 'id, set_number, target_reps, target_weight, target_rpe, target_duration_seconds, rest_seconds, set_type';
-const PLANNED_SET_FIELDS_SAFE = 'id, set_number, target_reps, target_weight, target_rpe, rest_seconds, set_type';
+const EXERCISE_OPTIONAL_COLS = [
+  'exercise_type',
+  'superset_group_id',
+  'superset_label',
+  'superset_order',
+];
+const PLANNED_SET_OPTIONAL_COLS = [
+  'target_duration_seconds',
+  'rest_seconds',
+];
 
-const EXERCISE_FIELDS_FULL = 'id, name, section, sort_order, catalog_exercise_id, exercise_type, superset_group_id, superset_label, superset_order';
-const EXERCISE_FIELDS_SAFE = 'id, name, section, sort_order, catalog_exercise_id';
+const EXERCISE_CORE = ['id', 'name', 'section', 'sort_order', 'catalog_exercise_id'];
+const PLANNED_SET_CORE = ['id', 'set_number', 'set_type', 'target_reps', 'target_weight', 'target_rpe'];
 
-function buildWorkoutSelect(exerciseFields: string, setFields: string): string {
-  return `id, week, day_label, day_order, workout_type, st_exercises(${exerciseFields}, st_planned_sets(${setFields}))`;
+function buildWorkoutSelect(exerciseCols: string[], setCols: string[]): string {
+  return `id, week, day_label, day_order, workout_type, st_exercises(${exerciseCols.join(', ')}, st_planned_sets(${setCols.join(', ')}))`;
+}
+
+function missingColumnFromError(message: string): string | null {
+  // PostgREST: "column st_planned_sets_2.rest_seconds does not exist"
+  const m =
+    message.match(/column\s+[\w.]+\.(\w+)\s+does not exist/i) ||
+    message.match(/Could not find the '(\w+)' column/i);
+  return m?.[1] || null;
 }
 
 export async function fetchSourceWorkouts(
   supabase: SupabaseClient,
   programId: string
 ): Promise<{ data: SourceWorkout[]; error: string | null }> {
-  // Try with all columns first, fall back if columns are missing
-  const selects = [
-    buildWorkoutSelect(EXERCISE_FIELDS_FULL, PLANNED_SET_FIELDS_FULL),
-    buildWorkoutSelect(EXERCISE_FIELDS_FULL, PLANNED_SET_FIELDS_SAFE),
-    buildWorkoutSelect(EXERCISE_FIELDS_SAFE, PLANNED_SET_FIELDS_SAFE),
-  ];
+  // Start with core + optional columns; strip any column the DB doesn't have.
+  let exerciseCols = [...EXERCISE_CORE, ...EXERCISE_OPTIONAL_COLS];
+  let setCols = [...PLANNED_SET_CORE, ...PLANNED_SET_OPTIONAL_COLS];
 
   let data: any[] | null = null;
   let lastError = '';
 
-  for (const select of selects) {
+  for (let attempt = 0; attempt < 12; attempt++) {
     const result = await supabase
       .from('st_workouts')
-      .select(select)
+      .select(buildWorkoutSelect(exerciseCols, setCols))
       .eq('program_id', programId)
       .order('week', { ascending: true })
       .order('day_order', { ascending: true });
@@ -70,17 +83,33 @@ export async function fetchSourceWorkouts(
       data = result.data;
       break;
     }
+
     lastError = result.error.message;
     if (!/does not exist|could not find/i.test(result.error.message)) {
       return { data: [], error: result.error.message };
     }
+
+    const missing = missingColumnFromError(result.error.message);
+    if (!missing) return { data: [], error: lastError };
+
+    if (exerciseCols.includes(missing)) {
+      exerciseCols = exerciseCols.filter((c) => c !== missing);
+      continue;
+    }
+    if (setCols.includes(missing)) {
+      setCols = setCols.filter((c) => c !== missing);
+      continue;
+    }
+
+    // Unknown missing column — can't recover
+    return { data: [], error: lastError };
   }
 
   if (!data) return { data: [], error: lastError || 'Could not load workouts' };
 
   const workouts: SourceWorkout[] = ((data || []) as any[]).map((w) => ({
     id: w.id,
-    week: w.week,
+    week: Number(w.week || 1),
     day_label: w.day_label,
     day_order: w.day_order,
     workout_type: w.workout_type || '',
@@ -209,7 +238,7 @@ export async function importWorkoutsIntoActivities(
 
       // Try inserting with all fields; retry without optional ones if columns are missing
       let newEx: { id: string } | null = null;
-      for (let attempt = 0; attempt < 3; attempt++) {
+      for (let attempt = 0; attempt < 6; attempt++) {
         const { data, error: exErr } = await supabase
           .from('st_exercises')
           .insert(exercisePayload)
@@ -220,8 +249,8 @@ export async function importWorkoutsIntoActivities(
           newEx = data as { id: string };
           break;
         }
-        if (exErr && /does not exist/i.test(exErr.message)) {
-          const col = exErr.message.match(/column\s+\S+\.(\w+)/i)?.[1];
+        if (exErr && /does not exist|could not find/i.test(exErr.message)) {
+          const col = missingColumnFromError(exErr.message);
           if (col && col in exercisePayload) {
             delete exercisePayload[col];
             continue;
@@ -233,26 +262,25 @@ export async function importWorkoutsIntoActivities(
       if (!newEx) continue;
 
       if (ex.planned_sets.length) {
+        // Only insert columns that exist on the base schema. Optional columns
+        // (rest_seconds, target_duration_seconds) are skipped — most DBs don't have them.
         const setInserts = ex.planned_sets.map((s) => {
           const row: Record<string, unknown> = {
             exercise_id: newEx!.id,
             set_number: s.set_number,
+            set_type: s.set_type || 'working',
           };
-          if (s.target_reps != null) row.target_reps = s.target_reps;
-          if (s.target_weight != null) row.target_weight = s.target_weight;
-          if (s.target_rpe != null) row.target_rpe = s.target_rpe;
-          if (s.target_duration_seconds != null) row.target_duration_seconds = s.target_duration_seconds;
-          if (s.rest_seconds != null) row.rest_seconds = s.rest_seconds;
-          if (s.set_type) row.set_type = s.set_type;
+          if (s.target_reps != null) row.target_reps = String(s.target_reps);
+          if (s.target_weight != null) row.target_weight = String(s.target_weight);
+          if (s.target_rpe != null) row.target_rpe = String(s.target_rpe);
           return row;
         });
 
-        // Retry without missing columns
-        for (let attempt = 0; attempt < 3; attempt++) {
+        for (let attempt = 0; attempt < 4; attempt++) {
           const { error: setErr } = await supabase.from('st_planned_sets').insert(setInserts);
           if (!setErr) break;
-          if (/does not exist/i.test(setErr.message)) {
-            const col = setErr.message.match(/column\s+\S+\.(\w+)/i)?.[1];
+          if (/does not exist|could not find/i.test(setErr.message)) {
+            const col = missingColumnFromError(setErr.message);
             if (col) {
               for (const row of setInserts) delete row[col];
               continue;
