@@ -11,6 +11,45 @@ Branch:
 Status:
 ```
 
+## BIQ-0146 - Fix Import: Strip Missing Columns Dynamically
+
+Date: 2026-09-03  
+Branch: cursor/fix-import-column-fallback-eaa7  
+Status: Completed
+
+### Summary
+
+Import still failed with `column st_planned_sets.rest_seconds does not exist` because the previous "safe" select still requested `rest_seconds`. That column is not in the base schema. The fetch now starts with core + optional columns and strips each missing column from the query until it succeeds. Planned set inserts only use base-schema fields (set_number, set_type, target_reps/weight/rpe).
+
+### Purpose
+
+Unblock attaching an existing strength program to Program Design strength days on databases that have not applied every optional column migration.
+
+### Files Changed
+
+- `lib/programDesign/importWorkouts.ts`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Programs → open calendar program → Import exercises from program
+2. Select a published program with workouts (e.g. ET Full Body Push)
+3. Preview shows week workouts and exercise names — no column error
+4. Import exercises into my strength days → succeeds
+5. Follow program → Training → Start Workout → exercises present
+
+### Recommended Commit Message
+
+```text
+BIQ-0146 Fix import by stripping missing planned-set columns
+```
+
+---
+
 ## BIQ-0145 - Fix Vercel Build: Set Spread TypeScript Error
 
 Date: 2026-09-03  
