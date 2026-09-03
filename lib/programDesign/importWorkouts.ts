@@ -133,7 +133,7 @@ export async function importWorkoutsIntoActivities(
   sourceWorkouts: SourceWorkout[]
 ): Promise<{ imported: number; error: string | null }> {
   // Use week 1 if available, otherwise use the lowest week that has workouts
-  const availableWeeks = [...new Set(sourceWorkouts.map((w) => w.week))].sort((a, b) => a - b);
+  const availableWeeks = Array.from(new Set(sourceWorkouts.map((w) => w.week))).sort((a, b) => a - b);
   const sourceWeek = availableWeeks[0] ?? 1;
   const week1Workouts = sourceWorkouts.filter((w) => w.week === sourceWeek);
   if (!week1Workouts.length) {
