@@ -8814,3 +8814,54 @@ None.
 ```text
 BIQ-0140 Add Training month calendar view
 ```
+
+---
+
+## BIQ-0141 - Fix Training Calendar Day Selection Drift
+
+Date: 2026-09-03  
+Branch: cursor/fix-training-calendar-day-click-f329  
+Status: Completed
+
+### Summary
+
+Fixed Training Calendar day selection so tapping any date opens that exact date instead of sometimes drifting to the prior selected weekday.
+
+### Purpose
+
+Users reported that tapping a different weekday (for example Tuesday to Wednesday) could keep them on the wrong day, while tapping the same weekday in a different week worked. This made month navigation feel inconsistent.
+
+### Changes
+
+- Added a dedicated `onSelectTrainingDay` handler in `app/page.tsx`
+- Updated day selection to compute week and active workout from the clicked date directly
+- Removed the month-calendar dependency on `onWeekChange` (which preserves weekday by design for week navigation)
+- Kept existing behavior to switch to Day view when selecting from Week view
+
+### Files Changed
+
+- `app/page.tsx`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Open Training → Calendar.
+2. Select a day with a different weekday than today (for example Tue → Wed).
+3. Verify the selected state and day panel both match the clicked date.
+4. Select same weekday in next week (for example Tue → next Tue) and verify it still works.
+5. Switch to Week view and click a day; verify Day view opens on the exact clicked date.
+6. Start Workout from a clicked day and confirm it opens the matching day workout.
+
+### Known Issues
+
+None identified for this fix.
+
+### Recommended Commit Message
+
+```text
+BIQ-0141 Fix training calendar day click date drift
+```

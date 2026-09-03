@@ -2041,6 +2041,22 @@ export default function Page(){
   if(match)setActiveWorkout(match.id);
   queueMicrotask(()=>{syncingCalendarRef.current=false;});
  }
+function onSelectTrainingDay(date:string){
+  setLogDate(date);
+  setTrainingCalendarMonth(yearMonthOf(date));
+  if(program){
+    syncingCalendarRef.current=true;
+    const start=resolveProgramStartDate(program);
+    const nextWeek=weekForDate(start,date,program.weeks||weeks||6);
+    setWeek(nextWeek);
+    const dayLabel=dayLabelFromYmd(date);
+    const match=(program.st_workouts||[]).find((x:any)=>x.week===nextWeek&&x.day_label===dayLabel)
+      ||(program.st_workouts||[]).filter((x:any)=>x.week===nextWeek).sort((a:any,b:any)=>a.day_order-b.day_order)[0];
+    if(match)setActiveWorkout(match.id);
+    queueMicrotask(()=>{syncingCalendarRef.current=false;});
+  }
+  if(trainingCalendarView!=='month')setTrainingCalendarView('day');
+}
  function onSelectWorkoutDay(w:any){
   setActiveWorkout(w.id);
   if(!program)return;
@@ -2372,7 +2388,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
       onPrevMonth={()=>setTrainingCalendarMonth((m)=>shiftYearMonth(m,-1))}
       onNextMonth={()=>setTrainingCalendarMonth((m)=>shiftYearMonth(m,1))}
       onThisMonth={()=>{const now=todayYmd();setTrainingCalendarMonth(yearMonthOf(now));setLogDate(now);}}
-      onSelectDay={(date)=>{setLogDate(date);setTrainingCalendarMonth(yearMonthOf(date));if(program){const start=resolveProgramStartDate(program);onWeekChange(weekForDate(start,date,program.weeks||weeks||6));}if(trainingCalendarView!=='month')setTrainingCalendarView('day');}}
+      onSelectDay={onSelectTrainingDay}
       onStartWorkout={startTrainingSession}
       onOpenPrograms={()=>goNav('Programs')}
       completedDates={trainingCompletedDates}
