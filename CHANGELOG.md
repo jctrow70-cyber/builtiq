@@ -8611,3 +8611,43 @@ Until the migration is applied, programs can still be created; calendar activiti
 ```text
 BIQ-0136 Add Program Design shell and health calendar
 ```
+
+---
+
+## BIQ-0137 - Fix Program Design Vercel Type Error
+
+Date: 2026-09-02  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Fixed the Next.js production typecheck that failed on `fetchDesignPrograms` when Vercel ran `next build`. Dynamic Supabase `.select()` strings are typed as an error union; results are now cast through `unknown` first.
+
+### Purpose
+
+Unblock the Program Design deploy without changing program loading behavior.
+
+### Files Changed
+
+- `lib/programDesign/programDesignApi.ts`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Push and confirm Vercel `next build` completes
+2. Open Programs after deploy — existing personal/group programs still list
+
+### Known Issues
+
+None.
+
+### Recommended Commit Message
+
+```text
+BIQ-0137 Fix Program Design Vercel type error
+```

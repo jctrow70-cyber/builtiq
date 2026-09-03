@@ -69,7 +69,7 @@ export async function fetchDesignPrograms(
       q = q.eq('visibility', 'team').eq('team_id', opts.teamId || '00000000-0000-0000-0000-000000000000');
     }
     const { data, error } = await q;
-    if (!error) return { data: (data || []) as ProgramDesignRecord[], error: null };
+    if (!error) return { data: ((data || []) as unknown as ProgramDesignRecord[]), error: null };
 
     const missingCol = missingProgramColumnFromError(error);
     if (missingCol && fields.includes(missingCol)) {
@@ -165,7 +165,10 @@ export async function fetchProgramActivities(
     .order('day_of_week', { ascending: true })
     .order('sort_order', { ascending: true });
 
-  if (!error) return { data: (data || []).map((row) => asActivity(row as Record<string, unknown>)), error: null, tableReady: true };
+  if (!error) {
+    const rows = (data || []) as unknown as Record<string, unknown>[];
+    return { data: rows.map((row) => asActivity(row)), error: null, tableReady: true };
+  }
   if (isMissingRelation(error)) return { data: [], error: null, tableReady: false };
   return { data: [], error: error.message || 'Could not load activities', tableReady: true };
 }
@@ -200,7 +203,15 @@ export async function fetchLegacyWorkouts(
     .eq('program_id', programId)
     .order('week', { ascending: true })
     .order('day_order', { ascending: true });
-  return { data: (data || []) as Array<{ id: string; week: number; day_label: string; workout_type: string; day_order: number }> };
+  return {
+    data: (data || []) as unknown as Array<{
+      id: string;
+      week: number;
+      day_label: string;
+      workout_type: string;
+      day_order: number;
+    }>,
+  };
 }
 
 export async function createProgramActivity(
@@ -232,7 +243,7 @@ export async function createProgramActivity(
     }
     return { data: null, error: error.message || 'Could not add activity' };
   }
-  return { data: asActivity(data as Record<string, unknown>), error: null };
+  return { data: asActivity(data as unknown as Record<string, unknown>), error: null };
 }
 
 export async function updateProgramActivity(
