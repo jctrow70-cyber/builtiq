@@ -31,8 +31,12 @@ type ProgramCalendarEditorProps = {
   programs: ProgramDesignRecord[];
   ownerUserId: string;
   canEdit: boolean;
+  isFollowing?: boolean;
+  groups?: { id: string; name: string; my_role?: string | null }[];
   onBack: () => void;
   onProgramChange: (program: ProgramDesignRecord) => void;
+  onFollow?: () => Promise<void>;
+  onShareWithGroup?: (teamId: string) => Promise<void>;
 };
 
 export default function ProgramCalendarEditor({
@@ -41,8 +45,12 @@ export default function ProgramCalendarEditor({
   programs,
   ownerUserId,
   canEdit,
+  isFollowing,
+  groups = [],
   onBack,
   onProgramChange,
+  onFollow,
+  onShareWithGroup,
 }: ProgramCalendarEditorProps) {
   const [week, setWeek] = useState(1);
   const [activities, setActivities] = useState<ProgramActivity[]>([]);
@@ -239,6 +247,33 @@ export default function ProgramCalendarEditor({
           }}
         />
       )}
+
+      <div className="pd-status-row">
+        {onFollow && !isFollowing && (
+          <button type="button" className="btn green" disabled={busy} onClick={() => void onFollow()}>
+            Follow this program
+          </button>
+        )}
+        {isFollowing && <span className="ui-badge">Following</span>}
+        {onShareWithGroup && canEdit && groups.length > 0 && (
+          <select
+            aria-label="Share with group"
+            defaultValue=""
+            onChange={(e) => {
+              const id = e.target.value;
+              if (id) void onShareWithGroup(id);
+              e.target.value = '';
+            }}
+          >
+            <option value="">Share with group…</option>
+            {groups.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.name}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
 
       {canEdit && (
         <div className="pd-status-row">

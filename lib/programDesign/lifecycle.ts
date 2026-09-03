@@ -58,9 +58,10 @@ export function groupProgramsByLifecycle(
   return groups;
 }
 
-/** Training should keep using published programs until Phase 3. */
+/** Training prefers the followed program; published remains the legacy fallback. */
 export function drivesTrainingExperience(program: { status?: string | null } | null | undefined): boolean {
-  return storedStatusOf(program) === 'published';
+  const stored = storedStatusOf(program);
+  return stored === 'published' || stored === 'active';
 }
 
 export function otherActivePersonalConflict(

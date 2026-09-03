@@ -8651,3 +8651,66 @@ None.
 ```text
 BIQ-0137 Fix Program Design Vercel type error
 ```
+
+---
+
+## BIQ-0138 - Training Calendar, Follow Shared Programs
+
+Date: 2026-09-02  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Training is now an execution calendar (Day or Week) with no Personal vs Group toggle. Users pick the program they follow in **Programs**, including programs shared by a group. Following a group program saves a personal copy so the original group plan is not edited.
+
+### Purpose
+
+Separate planning from daily training, and let one followed program drive Training — whether it started as a personal plan or a group share.
+
+### Changes
+
+- Training: **Day / Week** calendar, Today’s plan, Start Workout, Back to calendar
+- Removed Personal vs Group from Training
+- Programs: **Following**, **Shared with you**, Follow this program
+- Follow copies a group program to the user’s library before Training uses it
+- Share with group from a personal program
+- Strength calendar activities create a matching workout so Start Workout can open the existing logger
+- On-the-fly edit labels: **Just today** / **Rest of program**
+- `createProgramFromPlan()` for future AI program creation (same objects as the manual builder)
+
+### Files Changed
+
+- `app/page.tsx`
+- `app/globals.css`
+- `app/components/training/TrainingExecution.tsx`
+- `app/components/programDesign/ProgramDesignHome.tsx`
+- `app/components/programDesign/ProgramCalendarEditor.tsx`
+- `lib/programDesign/followProgram.ts`
+- `lib/programDesign/trainingSchedule.ts`
+- `lib/programDesign/aiProgramFactory.ts`
+- `lib/programDesign/programDesignApi.ts`
+- `supabase/migrations/20250903_043_followed_program.sql`
+- `CHANGELOG.md`
+
+### Database Changes
+
+Additive: `st_profiles.followed_program_id`. No workout history changes.
+
+Apply `20250902_042_program_design_foundation.sql` and `20250903_043_followed_program.sql` on test, then live.
+
+### Testing Steps
+
+See the testing plan in the BIQ-0138 handoff notes (Training day/week, Follow shared program, existing published plan still logs).
+
+### Known Issues
+
+- Full cardio/mobility movement builders are still simple fields
+- Share is group-based, not a user-to-user invite link yet
+- AI can create the same program objects; conversational generation is not wired in this change
+
+### Recommended Commit Message
+
+```text
+BIQ-0138 Add Training calendar and follow shared programs
+```

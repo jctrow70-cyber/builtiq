@@ -209,7 +209,7 @@ Goal: Prepare BuildIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
-**BIQ-0136 Program Design overhaul** — Phase 1 shell is in progress on `develop`. Apply `20250902_042_program_design_foundation.sql` on test Supabase, then continue Phase 2 (activity builders) and Phase 3 (Training reads the Active program).
+**BIQ-0138 Training calendar + follow shared programs** — apply `20250902_042` and `20250903_043` on test Supabase. Training reads the followed program; Program Design is where users choose what to follow.
 
 Completed through **BIQ-0042** on `main`: iPhone-compatible live barcode scanner for PWA.
 

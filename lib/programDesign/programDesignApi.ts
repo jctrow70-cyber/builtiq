@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { insertProgramRecord, missingProgramColumnFromError } from '../training/programStatus';
 import { inferActivityTypeFromWorkout } from './activityTypes';
-import { cycleEndDate, cycleLengthOf, dayOfWeekFromLabel, snapStartToMonday } from './cycle';
+import { cycleEndDate, cycleLengthOf, dayOfWeekFromLabel, snapStartToMonday, weekdayLabel } from './cycle';
 import type {
   ActivityDraft,
   ActivityType,
@@ -243,7 +243,46 @@ export async function createProgramActivity(
     }
     return { data: null, error: error.message || 'Could not add activity' };
   }
-  return { data: asActivity(data as unknown as Record<string, unknown>), error: null };
+  const activity = asActivity(data as unknown as Record<string, unknown>);
+  if (draft.activity_type === 'strength') {
+    const workoutId = await ensureStrengthWorkout(supabase, programId, weekNumber, dayOfWeek, activity.title);
+    if (workoutId) {
+      await supabase.from('st_program_activities').update({ workout_id: workoutId }).eq('id', activity.id);
+      activity.workout_id = workoutId;
+    }
+  }
+  return { data: activity, error: null };
+}
+
+async function ensureStrengthWorkout(
+  supabase: SupabaseClient,
+  programId: string,
+  weekNumber: number,
+  dayOfWeek: number,
+  title: string
+): Promise<string | null> {
+  const dayLabel = weekdayLabel(dayOfWeek);
+  const { data: existing } = await supabase
+    .from('st_workouts')
+    .select('id')
+    .eq('program_id', programId)
+    .eq('week', weekNumber)
+    .eq('day_label', dayLabel)
+    .limit(1);
+  const found = (existing || [])[0] as { id?: string } | undefined;
+  if (found?.id) return found.id;
+  const { data: created } = await supabase
+    .from('st_workouts')
+    .insert({
+      program_id: programId,
+      week: weekNumber,
+      day_order: dayOfWeek,
+      day_label: dayLabel,
+      workout_type: title || 'Strength',
+    })
+    .select('id')
+    .single();
+  return created?.id ? String(created.id) : null;
 }
 
 export async function updateProgramActivity(
