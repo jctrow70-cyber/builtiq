@@ -61,7 +61,7 @@ export default function TeamMembersTab({
       <p className="muted">
         {canManage ? 'Tap a member for details and program actions.' : 'Tap your name to open Training.'}
       </p>
-      {members.length === 0 && <p className="muted">No members yet. Share your team invite code in Settings.</p>}
+      {members.length === 0 && <p className="muted">No members yet. Invite people below or share your team invite code.</p>}
       {members.map((m: any) => {
         const stats = memberStats[m.user_id] || { sets: 0, days: 0 };
         const rosterMeta = memberRosterMeta[m.user_id] || {
