@@ -7,9 +7,23 @@ import SegmentedControl from '../ui/SegmentedControl';
 import CreateProgramFlow from './CreateProgramFlow';
 import AIProgramSetupWizard from './AIProgramSetupWizard';
 import ProgramCalendarEditor from './ProgramCalendarEditor';
-import { canEditGroupProgram } from '../../../lib/groups';
+import { canEditGroupProgram, isGroupOwner, roleLabel } from '../../../lib/groups';
+import {
+  canOptInToGroupProgram,
+  describeEnrollmentRole,
+  isAutoEnrolledMemberRole,
+  isGroupSourcedProgram,
+  shouldPromptUnfollowForPersonalCreate,
+  suggestedNextGroupStart,
+} from '../../../lib/programDesign/enrollment';
 import { cycleLengthOf, formatCycleLength, formatProgramRange, nextMondayFrom, programDateRange } from '../../../lib/programDesign/cycle';
-import { alreadyFollowing, followProgram, shareProgramWithGroup } from '../../../lib/programDesign/followProgram';
+import {
+  alreadyFollowing,
+  followProgram,
+  shareProgramWithGroup,
+  syncMemberGroupEnrollment,
+  unfollowProgram,
+} from '../../../lib/programDesign/followProgram';
 import { groupProgramsByLifecycle, lifecycleLabel, lifecycleStatusOf } from '../../../lib/programDesign/lifecycle';
 import { createDesignProgram, createProgramActivity, fetchDesignPrograms } from '../../../lib/programDesign/programDesignApi';
 import type {
@@ -26,7 +40,7 @@ type ProgramDesignHomeProps = {
   selectedTeamId: string | null;
   followedProgramId?: string | null;
   onSelectTeam: (id: string) => void;
-  onFollowed?: (programId: string) => void;
+  onFollowed?: (programId: string | null) => void;
 };
 
 type View = 'home' | 'create' | 'ai-setup' | 'editor';
@@ -40,6 +54,7 @@ function ProgramRow({
   followLabel,
   onOpen,
   onFollow,
+  onUnfollow,
 }: {
   program: ProgramDesignRecord;
   badge?: string;
@@ -47,6 +62,7 @@ function ProgramRow({
   followLabel?: string;
   onOpen: () => void;
   onFollow?: () => void;
+  onUnfollow?: () => void;
 }) {
   const { start, end } = programDateRange(program);
   return (
@@ -65,6 +81,11 @@ function ProgramRow({
             {followLabel || 'Follow'}
           </button>
         )}
+        {onUnfollow && (
+          <button type="button" className="btn small secondary" onClick={onUnfollow}>
+            Unfollow
+          </button>
+        )}
       </div>
     </div>
   );
@@ -81,7 +102,7 @@ export default function ProgramDesignHome({
 }: ProgramDesignHomeProps) {
   const [scope, setScope] = useState<ProgramScope>('personal');
   const [programs, setPrograms] = useState<ProgramDesignRecord[]>([]);
-  const [sharedPrograms, setSharedPrograms] = useState<(ProgramDesignRecord & { groupName?: string })[]>([]);
+  const [sharedPrograms, setSharedPrograms] = useState<(ProgramDesignRecord & { groupName?: string; groupRole?: string | null })[]>([]);
   const [personalPrograms, setPersonalPrograms] = useState<ProgramDesignRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -89,11 +110,16 @@ export default function ProgramDesignHome({
   const [editing, setEditing] = useState<ProgramDesignRecord | null>(null);
   const [creating, setCreating] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
+  const [createDefaultStart, setCreateDefaultStart] = useState(nextMondayFrom());
+  const [sequencingHint, setSequencingHint] = useState<string | null>(null);
 
   const groupId = selectedTeamId || teams[0]?.id || null;
   const activeGroup = teams.find((t) => t.id === groupId) || null;
   const canEditGroup = canEditGroupProgram(activeGroup?.my_role);
   const canCreate = scope === 'personal' || canEditGroup;
+  const groupRole = activeGroup?.my_role || null;
+  const memberAutoEnroll = isAutoEnrolledMemberRole(groupRole);
+  const editorOptIn = canOptInToGroupProgram(groupRole);
 
   async function loadPersonal() {
     const { data, error: loadError } = await fetchDesignPrograms(supabase, {
@@ -105,14 +131,30 @@ export default function ProgramDesignHome({
     return data;
   }
 
-  async function loadShared(mine: ProgramDesignRecord[]) {
-    const rows: (ProgramDesignRecord & { groupName?: string })[] = [];
+  async function loadShared(mine: ProgramDesignRecord[], followedId: string | null) {
+    const rows: (ProgramDesignRecord & { groupName?: string; groupRole?: string | null })[] = [];
     for (const team of teams) {
       const { data } = await fetchDesignPrograms(supabase, {
         scope: 'group',
         ownerUserId: userId,
         teamId: team.id,
       });
+
+      if (isAutoEnrolledMemberRole(team.my_role)) {
+        const sync = await syncMemberGroupEnrollment(supabase, {
+          userId,
+          role: team.my_role,
+          groupPrograms: data,
+          personalPrograms: mine,
+          followedProgramId: followedId,
+        });
+        if (sync.error) setError(sync.error);
+        if (sync.changed && sync.programId) {
+          followedId = sync.programId;
+          onFollowed?.(sync.programId);
+        }
+      }
+
       for (const program of data) {
         const visible =
           canEditGroupProgram(team.my_role) ||
@@ -120,11 +162,14 @@ export default function ProgramDesignHome({
           program.status === 'active' ||
           program.status === 'scheduled';
         if (!visible) continue;
-        rows.push({ ...program, groupName: team.name });
+        const enrolled = !!alreadyFollowing(program, mine, followedId);
+        if (isAutoEnrolledMemberRole(team.my_role) && enrolled) continue;
+        rows.push({ ...program, groupName: team.name, groupRole: team.my_role });
       }
     }
-    const followable = rows.filter((p) => !alreadyFollowing(p, mine, followedProgramId));
+    const followable = rows.filter((p) => !alreadyFollowing(p, mine, followedId));
     setSharedPrograms(followable);
+    return followedId;
   }
 
   async function reload() {
@@ -132,9 +177,14 @@ export default function ProgramDesignHome({
     setError('');
     try {
       const mine = await loadPersonal();
+      let followedId = followedProgramId;
       if (scope === 'personal') {
         setPrograms(mine);
-        await loadShared(mine);
+        followedId = (await loadShared(mine, followedId)) || followedId;
+        if (followedId !== followedProgramId) {
+          const refreshed = await loadPersonal();
+          setPrograms(refreshed);
+        }
       } else if (!groupId) {
         setPrograms([]);
       } else {
@@ -145,6 +195,17 @@ export default function ProgramDesignHome({
         });
         if (loadError) throw new Error(loadError);
         setPrograms(data);
+        if (isAutoEnrolledMemberRole(activeGroup?.my_role)) {
+          const sync = await syncMemberGroupEnrollment(supabase, {
+            userId,
+            role: activeGroup?.my_role,
+            groupPrograms: data,
+            personalPrograms: mine,
+            followedProgramId: followedId,
+          });
+          if (sync.error) setError(sync.error);
+          if (sync.changed && sync.programId) onFollowed?.(sync.programId);
+        }
       }
     } catch (e: any) {
       setError(e?.message || 'Could not load programs');
@@ -160,8 +221,44 @@ export default function ProgramDesignHome({
   const following =
     personalPrograms.find((p) => p.id === followedProgramId) ||
     programs.find((p) => p.id === followedProgramId) ||
-    grouped.active[0] ||
     null;
+  const followingGroupSourced = isGroupSourcedProgram(following);
+
+  async function beginCreate() {
+    setError('');
+    if (scope === 'personal' && shouldPromptUnfollowForPersonalCreate(following)) {
+      const groupName =
+        teams.find((t) => t.id === (following as any)?.team_id)?.name ||
+        sharedPrograms.find((p) => p.id === following?.source_program_id)?.groupName ||
+        'your group';
+      const ok = window.confirm(
+        `You're following a group program (${following?.name || 'group plan'} from ${groupName}).\n\nUnfollow the group program first to create a personal program?`
+      );
+      if (!ok) return;
+      setFollowBusy(true);
+      const { error: unfollowError } = await unfollowProgram(supabase, userId);
+      setFollowBusy(false);
+      if (unfollowError) {
+        setError(unfollowError);
+        return;
+      }
+      onFollowed?.(null);
+    }
+
+    if (scope === 'group') {
+      const start = suggestedNextGroupStart(programs);
+      setCreateDefaultStart(start);
+      setSequencingHint(
+        isGroupOwner(groupRole)
+          ? `Owners can stack plans by date. Suggested start ${start} — after your latest group plan ends, the next one picks up for members.`
+          : null
+      );
+    } else {
+      setCreateDefaultStart(nextMondayFrom());
+      setSequencingHint(null);
+    }
+    setView('create');
+  }
 
   async function handleCreate(input: { name: string; startDate: string; cycleWeeks: number }) {
     setCreating(true);
@@ -180,11 +277,28 @@ export default function ProgramDesignHome({
       return;
     }
     setPrograms((prev) => [data, ...prev]);
+    if (scope === 'personal') {
+      // Follow the new personal plan immediately so Training won't re-enroll a
+      // group member into the group schedule after they unfollowed to create this.
+      const nextPersonal = [data, ...personalPrograms];
+      setPersonalPrograms(nextPersonal);
+      const followResult = await followProgram(supabase, {
+        userId,
+        source: data,
+        personalPrograms: nextPersonal,
+        followedProgramId: null,
+      });
+      if (followResult.error || !followResult.programId) {
+        setError(followResult.error || 'Program created, but could not set it as the plan you follow');
+      } else {
+        onFollowed?.(followResult.programId);
+      }
+    }
     setEditing(data);
     setView('ai-setup');
   }
 
-  async function handleFollow(source: ProgramDesignRecord) {
+  async function handleFollow(source: ProgramDesignRecord, opts?: { editSource?: boolean }) {
     setFollowBusy(true);
     setError('');
     const result = await followProgram(supabase, {
@@ -192,6 +306,7 @@ export default function ProgramDesignHome({
       source,
       personalPrograms,
       followedProgramId,
+      editSource: opts?.editSource,
     });
     setFollowBusy(false);
     if (result.error || !result.programId) {
@@ -199,6 +314,24 @@ export default function ProgramDesignHome({
       return;
     }
     onFollowed?.(result.programId);
+    await reload();
+  }
+
+  async function handleUnfollow() {
+    const ok = window.confirm(
+      followingGroupSourced
+        ? 'Unfollow this group program? Training will stop using it until you follow a personal plan or (as a member) get enrolled again.'
+        : 'Unfollow this program? Training will stop using it until you follow another plan.'
+    );
+    if (!ok) return;
+    setFollowBusy(true);
+    const { error: unfollowError } = await unfollowProgram(supabase, userId);
+    setFollowBusy(false);
+    if (unfollowError) {
+      setError(unfollowError);
+      return;
+    }
+    onFollowed?.(null);
     await reload();
   }
 
@@ -211,7 +344,7 @@ export default function ProgramDesignHome({
       setError(shareError);
       return;
     }
-    alert('Shared with the group. Members can follow it from Programs.');
+    alert('Shared with the group. Members are enrolled automatically when the plan is active; editors can pull it in.');
   }
 
   if (view === 'create') {
@@ -220,7 +353,8 @@ export default function ProgramDesignHome({
         <CreateProgramFlow
           scope={scope}
           groupName={activeGroup?.name}
-          defaultStart={nextMondayFrom()}
+          defaultStart={createDefaultStart}
+          sequencingHint={sequencingHint}
           saving={creating}
           error={error}
           onCancel={() => {
@@ -261,6 +395,7 @@ export default function ProgramDesignHome({
 
   if (view === 'editor' && editing) {
     const followingThis = !!alreadyFollowing(editing, personalPrograms, followedProgramId);
+    const editorPull = canEditGroup && editing.visibility === 'team';
     return (
       <section className="pd-screen">
         <ProgramCalendarEditor
@@ -285,7 +420,7 @@ export default function ProgramDesignHome({
             setEditing(next);
             setPrograms((prev) => prev.map((p) => (p.id === next.id ? next : p)));
           }}
-          onFollow={() => handleFollow(editing)}
+          onFollow={() => handleFollow(editing, { editSource: editorPull })}
           onShareWithGroup={handleShareWithGroup}
         />
       </section>
@@ -298,12 +433,12 @@ export default function ProgramDesignHome({
         title="Program Design"
         subtitle={
           scope === 'group'
-            ? 'Design the week for your group, then push it to the members you choose.'
-            : 'Plan the week, then follow a program in Training.'
+            ? 'Design dated plans for your group. Members enroll automatically; editors pull in to edit.'
+            : 'Follow one program in Training — personal or group, not both.'
         }
         actions={
           canCreate ? (
-            <button type="button" className="btn green" onClick={() => setView('create')}>
+            <button type="button" className="btn green" onClick={() => void beginCreate()}>
               {scope === 'group' ? '+ Create Group Program' : '+ Create Program'}
             </button>
           ) : undefined
@@ -330,10 +465,13 @@ export default function ProgramDesignHome({
               <select id="pd-group-select" value={groupId || ''} onChange={(e) => onSelectTeam(e.target.value)}>
                 {teams.map((team) => (
                   <option key={team.id} value={team.id}>
-                    {team.name}
+                    {team.name} · {roleLabel(team.my_role)}
                   </option>
                 ))}
               </select>
+              <p className="muted" style={{ marginTop: 8 }}>
+                {describeEnrollmentRole(groupRole)}
+              </p>
             </>
           )}
         </div>
@@ -350,38 +488,59 @@ export default function ProgramDesignHome({
             {following ? (
               <ProgramRow
                 program={following}
-                badge="Following"
+                badge={followingGroupSourced ? (memberAutoEnroll ? 'Enrolled' : 'Following') : 'Following'}
+                extra={
+                  followingGroupSourced
+                    ? memberAutoEnroll
+                      ? 'Group plan · calendar updates with plan dates'
+                      : 'Group plan'
+                    : 'Personal'
+                }
                 onOpen={() => {
                   setEditing(following);
                   setView('editor');
                 }}
+                onUnfollow={() => void handleUnfollow()}
               />
             ) : (
               <p className="muted pd-empty">
-                You are not following a program yet. Follow a personal plan or a program shared by your group.
-                Training will keep using your current published plan until you choose one.
+                You are not following a program yet.
+                {memberAutoEnroll
+                  ? ' As a member, you are enrolled automatically when your group has an active dated plan.'
+                  : ' Follow a personal plan or pull in a group plan (editors are not enrolled automatically).'}
               </p>
             )}
           </div>
 
           {scope === 'personal' && sharedPrograms.length > 0 && (
             <div className="pd-section">
-              <h2>Shared with you</h2>
-              <p className="muted">Programs from your groups. Follow one to use it in Training — your copy stays yours.</p>
-              {sharedPrograms.map((program) => (
-                <ProgramRow
-                  key={program.id}
-                  program={program}
-                  extra={program.groupName}
-                  badge="Shared"
-                  followLabel="Follow"
-                  onOpen={() => {
-                    setEditing(program);
-                    setView('editor');
-                  }}
-                  onFollow={() => void handleFollow(program)}
-                />
-              ))}
+              <h2>{sharedPrograms.some((p) => canOptInToGroupProgram(p.groupRole)) ? 'Available from your groups' : 'Shared with you'}</h2>
+              <p className="muted">
+                {sharedPrograms.some((p) => canOptInToGroupProgram(p.groupRole))
+                  ? 'Editors and owners can pull a group plan into Training. Members are enrolled automatically by plan dates.'
+                  : 'Programs from your groups. Follow one to use it in Training — your copy stays yours.'}
+              </p>
+              {sharedPrograms.map((program) => {
+                const optIn = canOptInToGroupProgram(program.groupRole);
+                return (
+                  <ProgramRow
+                    key={program.id}
+                    program={program}
+                    extra={`${program.groupName || 'Group'}${program.groupRole ? ` · ${roleLabel(program.groupRole)}` : ''}`}
+                    badge={optIn ? 'Available' : 'Shared'}
+                    followLabel={optIn && canEditGroupProgram(program.groupRole) ? 'Pull in & edit' : 'Follow'}
+                    onOpen={() => {
+                      setEditing(program);
+                      setView('editor');
+                    }}
+                    onFollow={() =>
+                      void handleFollow(program, {
+                        editSource: optIn && canEditGroupProgram(program.groupRole),
+                      })
+                    }
+                  />
+                );
+              })}
             </div>
           )}
 
@@ -399,6 +558,11 @@ export default function ProgramDesignHome({
                         ? 'Completed programs'
                         : 'Archived programs'}
                 </h2>
+                {section === 'scheduled' && scope === 'group' && isGroupOwner(groupRole) && (
+                  <p className="muted">
+                    Stack plans by start and end dates. When one ends, the next scheduled plan picks up for members.
+                  </p>
+                )}
                 {rows.map((program) => (
                   <ProgramRow
                     key={program.id}
@@ -407,8 +571,15 @@ export default function ProgramDesignHome({
                       setEditing(program);
                       setView('editor');
                     }}
-                    onFollow={program.id !== followedProgramId ? () => void handleFollow(program) : undefined}
-                    followLabel="Follow"
+                    onFollow={
+                      program.id !== followedProgramId && (scope === 'personal' || editorOptIn)
+                        ? () =>
+                            void handleFollow(program, {
+                              editSource: scope === 'group' && canEditGroup,
+                            })
+                        : undefined
+                    }
+                    followLabel={scope === 'group' && canEditGroup ? 'Pull in & edit' : 'Follow'}
                   />
                 ))}
               </div>
@@ -418,18 +589,23 @@ export default function ProgramDesignHome({
           {scope === 'group' &&
             programs
               .filter((p) => lifecycleStatusOf(p) === 'active' || p.status === 'published')
-              .filter((p) => p.id !== following?.id)
+              .filter((p) => p.id !== following?.id && p.id !== following?.source_program_id)
               .map((program) => (
                 <ProgramRow
                   key={`group-${program.id}`}
                   program={program}
                   extra={activeGroup?.name}
+                  badge={memberAutoEnroll ? 'Active for members' : 'Available'}
                   onOpen={() => {
                     setEditing(program);
                     setView('editor');
                   }}
-                  onFollow={() => void handleFollow(program)}
-                  followLabel="Follow"
+                  onFollow={
+                    editorOptIn
+                      ? () => void handleFollow(program, { editSource: canEditGroup })
+                      : undefined
+                  }
+                  followLabel={canEditGroup ? 'Pull in & edit' : 'Follow'}
                 />
               ))}
 

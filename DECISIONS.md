@@ -839,3 +839,40 @@ Training mixed program creation, group management, scheduling, and logging on on
 - Phase 1 ships the Program Design shell and calendar without changing Training logging
 - Phase 3 is when Training reads the **Active** program
 - Planned data stays on programs/activities/workouts; actual data stays on `st_set_logs` and future activity-completion rows
+
+---
+
+## Decision 031 - Group vs Personal Follow and Role Enrollment
+
+Date: 2026-09-04  
+Status: Accepted  
+Category: Program Design / Groups
+
+### Decision
+
+A user follows **one** program in Training at a time (personal or group-sourced — not both).
+
+Role rules:
+
+1. **Member** — automatically enrolled in the group's date-active plan. Training calendar updates when plan start/end dates change or the next sequenced plan begins. Members may unfollow to create/follow a pure personal program.
+2. **Editor (Manager)** — sees group programs as available; **not** auto-enrolled. May **Pull in & edit** the live group template so edits apply to the shared plan.
+3. **Owner** — may create multiple dated group plans. Suggested start for a new plan is after the latest existing plan ends so members hand off cleanly by calendar date.
+
+Creating a **personal** program while following a group-sourced plan requires an explicit unfollow prompt first.
+
+### Reason
+
+Members should not hunt for Follow when the group schedule is the source of truth. Editors need visibility without being forced onto a plan they manage. Owners need multi-month sequencing without members manually switching programs.
+
+### Alternatives Considered
+
+- Always require Follow for everyone — rejected; too much friction for members
+- Auto-enroll editors/owners — rejected; managers need to opt in before Training uses a plan
+- Allow following personal and group at once — rejected; Training has a single calendar
+
+### Impact
+
+- `lib/programDesign/enrollment.ts` + `syncMemberGroupEnrollment`
+- Programs UI prompts unfollow before personal create
+- Training `loadPrograms` syncs member enrollment by plan dates
+- No new database tables; uses `followed_program_id`, `start_date`, `end_date`, `source_program_id`

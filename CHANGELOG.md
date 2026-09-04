@@ -11,6 +11,71 @@ Branch:
 Status:
 ```
 
+## BIQ-0148 - Group vs Personal Follow Rules by Role
+
+Date: 2026-09-04  
+Branch: cursor/group-personal-follow-rules-f329  
+Status: Completed
+
+### Summary
+
+Programs now enforce one followed plan at a time with role-based group enrollment: members auto-enroll by plan dates, editors opt in with pull-in-and-edit, and owners can sequence multiple dated group plans. Creating a personal program while on a group plan prompts to unfollow first.
+
+### Purpose
+
+Match how groups actually train — members get the active schedule automatically, editors manage without being forced onto a plan, and owners can lay out multi-month handoffs.
+
+### Changes
+
+- Added `lib/programDesign/enrollment.ts` (role checks, date-active plan pick, next-plan start suggestion)
+- Added unfollow + `syncMemberGroupEnrollment` in `followProgram.ts`
+- Programs: unfollow control, unfollow prompt before personal create, Available / Enrolled copy by role
+- Editors: **Pull in & edit** follows the live group template
+- Owners: create flow suggests start after the latest group plan end
+- Training `loadPrograms` auto-syncs member enrollment from active group plan dates
+- Creating a personal program also follows it immediately (prevents member re-enrollment)
+- Preserved AI program setup wizard and Push to members
+- Decision 031 documented
+
+### Files Changed
+
+- `lib/programDesign/enrollment.ts`
+- `lib/programDesign/followProgram.ts`
+- `app/components/programDesign/ProgramDesignHome.tsx`
+- `app/components/programDesign/CreateProgramFlow.tsx`
+- `app/components/programDesign/ProgramCalendarEditor.tsx`
+- `app/page.tsx`
+- `DECISIONS.md`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None. Uses existing `st_profiles.followed_program_id` and program `start_date` / `end_date` / `source_program_id`.
+
+### Testing Steps
+
+1. As a **Member** with an active dated group plan — open Training/Programs and confirm you are Enrolled without tapping Follow.
+2. Change group plan dates / add a later scheduled plan — member Training calendar follows the date-active plan.
+3. As a Member following a group plan — Personal → **+ Create Program** → confirm unfollow prompt appears; cancel leaves you enrolled; accept unfollows then opens create.
+4. As an **Editor** — group plans show as Available; you are not auto-enrolled; **Pull in & edit** sets Training to the group template and allows edits.
+5. As an **Owner** — create a second group plan; suggested start is after the previous plan end; scheduled list explains member handoff.
+6. Unfollow from Following — Training no longer uses that plan until you follow again (members may re-enroll on next load if still only on group-sourced follow).
+7. Confirm AI setup wizard still opens after creating a program, and Push to members still works for owners/editors.
+8. Mobile (~390px) — Programs headers and unfollow/create prompts remain usable.
+
+### Known Issues
+
+- Members who unfollow but do not create a personal plan may be re-enrolled on the next Training load (by design while they have no pure personal follow).
+- Multi-group membership enrolls from each member team in turn; last sync wins if more than one group has an active plan.
+
+### Recommended Commit Message
+
+```text
+BIQ-0148 Add group vs personal follow rules by role
+```
+
+---
+
 ## BIQ-0147 - Push Group Program Design to Selected Members
 
 Date: 2026-09-03  
