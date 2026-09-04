@@ -271,6 +271,11 @@ export default function ProgramDesignHome({
           canEdit={scope === 'personal' || canEditGroup}
           isFollowing={followingThis}
           groups={teams}
+          pushTeamId={
+            canEditGroup && (scope === 'group' || editing.visibility === 'team')
+              ? editing.team_id || groupId
+              : null
+          }
           onBack={() => {
             setEditing(null);
             setView('home');
@@ -291,7 +296,11 @@ export default function ProgramDesignHome({
     <section className="pd-screen">
       <SectionHeader
         title="Program Design"
-        subtitle="Plan the week, then follow a program in Training."
+        subtitle={
+          scope === 'group'
+            ? 'Design the week for your group, then push it to the members you choose.'
+            : 'Plan the week, then follow a program in Training.'
+        }
         actions={
           canCreate ? (
             <button type="button" className="btn green" onClick={() => setView('create')}>

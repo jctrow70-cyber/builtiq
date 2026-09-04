@@ -11,6 +11,64 @@ Branch:
 Status:
 ```
 
+## BIQ-0147 - Push Group Program Design to Selected Members
+
+Date: 2026-09-03  
+Branch: cursor/group-push-to-members-eaa7  
+Status: Completed
+
+### Summary
+
+Group Program Design now works like personal design: build the week (AI or manual), then **Push to members**. Owners/managers pick specific athletes and either assign the shared group program or give each member a personal copy. Optional: also set as the group default for Follow Team Plan.
+
+### Purpose
+
+Coaches need to design one weekly health calendar, then send it only to the members who should use it — not rely on members discovering and following a shared program.
+
+### How it works
+
+1. Programs → Groups → create/edit a group program (same AI wizard + calendar as personal)
+2. Open the calendar → **Push to members**
+3. Choose Shared program (everyone uses this plan) or Personal copy each
+4. Select one or more members (or Select all)
+5. Optional: set as group default
+6. Push — publishes the program if needed, assigns via existing `st_assign_member_program` / `st_customize_program_for_member`, and copies calendar activities onto personal copies
+
+### Files Changed
+
+- `lib/programDesign/pushToMembers.ts` (new)
+- `app/components/programDesign/PushToMembersSheet.tsx` (new)
+- `app/components/programDesign/ProgramCalendarEditor.tsx`
+- `app/components/programDesign/ProgramDesignHome.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None. Reuses existing assignment RPCs and `st_program_activities`.
+
+### Testing Steps
+
+1. Programs → Groups → Create Group Program → build week with AI or manually
+2. Calendar → Push to members → select 1–2 athletes → Shared → Push
+3. Those members should see the assigned program in Groups / Training assignment
+4. Repeat with Personal copy each — each gets an independent plan with calendar activities
+5. Optional checkbox sets team default_program_id
+6. Members without selection are unchanged
+
+### Known Issues
+
+- Members still load assigned programs through Groups/team assignment context; personal Training follow is separate
+- Personal copies depend on `st_customize_program_for_member` existing in Supabase
+
+### Recommended Commit Message
+
+```text
+BIQ-0147 Push group Program Design to selected members
+```
+
+---
+
 ## BIQ-0146 - Fix Import: Strip Missing Columns Dynamically
 
 Date: 2026-09-03  
