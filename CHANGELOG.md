@@ -33,6 +33,7 @@ Match how groups actually train — members get the active schedule automaticall
 - Editors: **Pull in & edit** follows the live group template
 - Owners: create flow suggests start after the latest group plan end
 - Training `loadPrograms` auto-syncs member enrollment from active group plan dates
+- Creating a personal program also follows it immediately (prevents member re-enrollment)
 - Preserved AI program setup wizard and Push to members
 - Decision 031 documented
 

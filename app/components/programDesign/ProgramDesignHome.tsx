@@ -278,7 +278,21 @@ export default function ProgramDesignHome({
     }
     setPrograms((prev) => [data, ...prev]);
     if (scope === 'personal') {
-      setPersonalPrograms((prev) => [data, ...prev]);
+      // Follow the new personal plan immediately so Training won't re-enroll a
+      // group member into the group schedule after they unfollowed to create this.
+      const nextPersonal = [data, ...personalPrograms];
+      setPersonalPrograms(nextPersonal);
+      const followResult = await followProgram(supabase, {
+        userId,
+        source: data,
+        personalPrograms: nextPersonal,
+        followedProgramId: null,
+      });
+      if (followResult.error || !followResult.programId) {
+        setError(followResult.error || 'Program created, but could not set it as the plan you follow');
+      } else {
+        onFollowed?.(followResult.programId);
+      }
     }
     setEditing(data);
     setView('ai-setup');
