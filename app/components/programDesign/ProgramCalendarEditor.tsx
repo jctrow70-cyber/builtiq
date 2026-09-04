@@ -272,10 +272,10 @@ export default function ProgramCalendarEditor({
       <div className="pd-status-row">
         {onFollow && !isFollowing && (
           <button type="button" className="btn green" disabled={busy} onClick={() => void onFollow()}>
-            Follow this program
+            {canEdit && program.visibility === 'team' ? 'Pull in & edit' : 'Follow this program'}
           </button>
         )}
-        {isFollowing && <span className="ui-badge">Following</span>}
+        {isFollowing && <span className="ui-badge">{canEdit && program.visibility === 'team' ? 'Editing in Training' : 'Following'}</span>}
         {canEdit && pushTeamId && (
           <button type="button" className="btn green" disabled={busy} onClick={() => setPushOpen(true)}>
             Push to members
