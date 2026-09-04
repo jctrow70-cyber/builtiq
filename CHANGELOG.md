@@ -11,6 +11,77 @@ Branch:
 Status:
 ```
 
+## BIQ-0149 - Group Member Setup and Email Invites
+
+Date: 2026-09-04  
+Branch: cursor/group-member-invites-f329  
+Status: Completed
+
+### Summary
+
+Creating a group now includes a member invite step. Owners/editors can add people by name, email, and role, then send join invites. Pending invites are tracked, and members can still be invited later from the Members tab.
+
+### Purpose
+
+Groups need an onboarding path: create the team, set up who should join, and send invites instead of only sharing an invite code manually.
+
+### Changes
+
+- Create Team sheet: name → invite members → create & send invites → done with invite code
+- `POST/GET /api/groups/invite` stores pending invites and emails them via Resend when configured
+- Members tab: Invite members panel with pending list and mailto fallback
+- Migration `st_group_invites` + `st_mark_group_invite_accepted` when a user joins
+- Join flow marks matching pending invites accepted
+
+### Files Changed
+
+- `supabase/migrations/20250904_044_group_member_invites.sql`
+- `app/api/groups/invite/route.ts`
+- `lib/groups/invites.ts`
+- `lib/email/groupInviteEmail.ts`
+- `lib/groups/index.ts`
+- `app/components/groups/TeamCreateJoinSheet.tsx`
+- `app/components/groups/GroupInviteMembersPanel.tsx`
+- `app/components/groups/GroupsHub.tsx`
+- `app/components/groups/TeamMembersTab.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Database Changes
+
+Additive: `st_group_invites` table + RLS + `st_mark_group_invite_accepted` RPC.
+
+Apply `20250904_044_group_member_invites.sql` on test, then live.
+
+Requires `RESEND_API_KEY` (and optional `BUILDIQ_EMAIL_FROM` / `NEXT_PUBLIC_APP_URL`) for email delivery. Without email config, invites are still saved and mailto drafts are available.
+
+### Testing Steps
+
+1. Groups → Create Team → enter name → Next
+2. Add 1–2 members with email + Member/Editor role → Create team & send invites
+3. Confirm success screen shows invite code; emails sent if Resend is configured
+4. Second account: Groups → Join Team with that code → appears on roster; pending invite becomes accepted
+5. As owner/editor on Members tab → Invite members → send another invite → pending list updates
+6. Without Resend: invite still saves; use Open email / mailto fallback
+7. Mobile (~390px) — create sheet and invite form remain usable
+
+### Known Issues
+
+- Invite emails require Resend env vars on the Vercel project
+- Migration must be applied before pending invites persist
+- Invite role (Member/Editor) is applied when the invitee joins with a matching email
+
+### Recommended Commit Message
+
+```text
+BIQ-0149 Add group member setup and email invites
+```
+
+---
+
+---
+
 ## BIQ-0148 - Group vs Personal Follow Rules by Role
 
 Date: 2026-09-04  
@@ -73,6 +144,8 @@ None. Uses existing `st_profiles.followed_program_id` and program `start_date` /
 ```text
 BIQ-0148 Add group vs personal follow rules by role
 ```
+
+---
 
 ---
 

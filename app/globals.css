@@ -147,6 +147,16 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .team-sheet-backdrop{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;padding:12px}
 .team-sheet-panel{width:100%;max-width:520px;max-height:85vh;overflow:auto;margin:0;border-radius:16px 16px 0 0}
 .team-sheet-error{color:#f87171;font-size:12px;margin-top:8px}
+.team-invite-list{display:flex;flex-direction:column;gap:12px;margin-top:10px}
+.team-invite-row{padding:10px;border:1px solid var(--line);border-radius:12px;background:var(--surfaceInset,#0f172a)}
+.team-invite-email-row{display:flex;gap:8px;align-items:flex-end}
+.team-invite-email-row input{flex:1}
+.team-invite-code-box{margin:10px 0;padding:12px;border-radius:12px;border:1px solid var(--line);background:#0b1119;font-size:15px}
+.team-invite-mailto-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.team-invite-pending h3{margin:0 0 8px;font-size:14px}
+.team-invite-pending-row{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.team-invite-pending-row b{display:block}
+.team-invite-pending-row .muted{display:block;font-size:11px;margin-top:2px}
 .team-assign-target-chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
 .team-assign-target-chips button{border:1px solid var(--line);background:#0f172a;color:inherit;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer}
 .team-assign-target-chips button.active{border-color:var(--purple);background:#1b1634}
