@@ -320,7 +320,7 @@ export default function ProgramDesignHome({
   async function handleUnfollow() {
     const ok = window.confirm(
       followingGroupSourced
-        ? 'Unfollow this group program? Training will stop using it until you follow a personal plan or (as a member) get enrolled again.'
+        ? 'Unfollow this group program? Training will stop using it until you follow a plan again. (A new group plan may enroll you later if you are a member.)'
         : 'Unfollow this program? Training will stop using it until you follow another plan.'
     );
     if (!ok) return;
@@ -506,7 +506,7 @@ export default function ProgramDesignHome({
               <p className="muted pd-empty">
                 You are not following a program yet.
                 {memberAutoEnroll
-                  ? ' As a member, you are enrolled automatically when your group has an active dated plan.'
+                  ? ' As a member, you are enrolled automatically the first time a group plan is active. After you unfollow, Training stays clear until you follow again (or a new group plan enrolls you).'
                   : ' Follow a personal plan or pull in a group plan (editors are not enrolled automatically).'}
               </p>
             )}

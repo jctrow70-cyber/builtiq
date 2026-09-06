@@ -27,20 +27,35 @@ function isMissingFollowedColumn(error: { message?: string } | null | undefined)
   return /followed_program_id/i.test(error?.message || '');
 }
 
+/**
+ * Find a personal program that is the same as / copied from `source`.
+ * Used when (re)following so we reuse an existing copy instead of duplicating again.
+ */
+export function findPersonalCopyOf(
+  source: ProgramDesignRecord,
+  personalPrograms: ProgramDesignRecord[]
+): ProgramDesignRecord | null {
+  if (source.visibility === 'personal') {
+    return personalPrograms.find((p) => p.id === source.id) || null;
+  }
+  return personalPrograms.find((p) => p.source_program_id === source.id) || null;
+}
+
+/**
+ * True only when the user is currently following this source
+ * (`followed_program_id` matches the source or a personal copy of it).
+ * Having a leftover copy after unfollow does NOT count.
+ */
 export function alreadyFollowing(
   source: ProgramDesignRecord,
   personalPrograms: ProgramDesignRecord[],
   followedProgramId?: string | null
 ): ProgramDesignRecord | null {
-  if (followedProgramId && followedProgramId === source.id) return source;
-  if (followedProgramId) {
-    const hit = personalPrograms.find((p) => p.id === followedProgramId);
-    if (hit && (hit.id === source.id || hit.source_program_id === source.id)) return hit;
-  }
-  if (source.visibility === 'personal') {
-    return personalPrograms.find((p) => p.id === source.id) || null;
-  }
-  return personalPrograms.find((p) => p.source_program_id === source.id) || null;
+  if (!followedProgramId) return null;
+  if (followedProgramId === source.id) return source;
+  const hit = personalPrograms.find((p) => p.id === followedProgramId);
+  if (hit && (hit.id === source.id || hit.source_program_id === source.id)) return hit;
+  return null;
 }
 
 export async function setFollowedProgramId(
@@ -85,7 +100,9 @@ export async function followProgram(
     editSource?: boolean;
   }
 ): Promise<FollowResult> {
-  const existing = alreadyFollowing(input.source, input.personalPrograms, input.followedProgramId);
+  const existing =
+    alreadyFollowing(input.source, input.personalPrograms, input.followedProgramId) ||
+    findPersonalCopyOf(input.source, input.personalPrograms);
   let programId = existing?.id || null;
   let copied = false;
 
@@ -126,6 +143,8 @@ export type MemberEnrollmentSyncResult = {
 /**
  * Members are auto-enrolled in the group's date-active plan.
  * Skipped when the user follows a pure personal program, or when the role is Owner/Editor.
+ * Explicit unfollow (`followed_program_id` null) is respected when a prior copy of the
+ * active plan already exists — Training must not silently re-follow.
  */
 export async function syncMemberGroupEnrollment(
   supabase: SupabaseClient,
@@ -167,7 +186,22 @@ export async function syncMemberGroupEnrollment(
     return { programId: already.id, changed: false, skipped: false, reason: 'already_enrolled', error: null };
   }
 
-  // If currently following a different group-sourced copy, switch to the date-active plan.
+  // Explicit unfollow: keep Training empty if they already have a copy of this active plan.
+  // First-time members (no copy yet) still get auto-enrolled below.
+  if (!input.followedProgramId) {
+    const priorCopy = findPersonalCopyOf(active, input.personalPrograms);
+    if (priorCopy) {
+      return {
+        programId: null,
+        changed: false,
+        skipped: true,
+        reason: 'explicit_unfollow',
+        error: null,
+      };
+    }
+  }
+
+  // If currently following a different group-sourced copy of the same active plan, keep it.
   if (followed && isGroupSourcedProgram(followed) && already && already.id === followed.id) {
     return { programId: followed.id, changed: false, skipped: false, reason: 'already_enrolled', error: null };
   }
