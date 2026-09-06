@@ -11,6 +11,64 @@ Branch:
 Status:
 ```
 
+## BIQ-0150 - Unfollow Clears Training Program
+
+Date: 2026-09-06  
+Branch: cursor/fix-unfollow-training-2d55  
+Status: Completed
+
+### Summary
+
+Unfollowing a program now clears Training. Training no longer falls back to the newest published plan when `followed_program_id` is null, and members who unfollow are not silently re-enrolled on the next Training load when a prior copy of the active group plan already exists.
+
+### Purpose
+
+Users expected Unfollow to stop the plan from showing in Training. The previous fallback and member auto-sync undid unfollow immediately.
+
+### Changes
+
+- Training `loadPrograms` uses only the followed program (no “newest published” fallback after unfollow)
+- `alreadyFollowing` requires `followed_program_id` (leftover personal copies no longer count as following)
+- `findPersonalCopyOf` reuses copies when (re)following without treating them as active follows
+- `syncMemberGroupEnrollment` respects explicit unfollow when a prior copy of the active plan exists; first-time members still auto-enroll
+- Unfollow clears local Training program state immediately; confirm copy updated
+- Regression script: `scripts/test-unfollow-training.ts`
+
+### Files Changed
+
+- `lib/programDesign/followProgram.ts`
+- `app/page.tsx`
+- `app/components/programDesign/ProgramDesignHome.tsx`
+- `scripts/test-unfollow-training.ts`
+- `DECISIONS.md`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Follow a personal program → open Training → plan shows under Following.
+2. Programs → Unfollow → open Training → empty state (“Choose a program to follow”), no calendar for that plan.
+3. Re-follow the same personal program → Training shows it again (same program, no duplicate).
+4. As a Member: follow/enroll in a group plan → Unfollow → Training stays empty (not re-enrolled on load).
+5. As a Member with no prior copy of a new active group plan → first Training/Programs load still auto-enrolls.
+6. Mobile (~390px) — empty Training CTA and Programs Following section remain usable.
+
+### Known Issues
+
+- Multi-group membership still enrolls from each member team in turn; last sync wins if more than one group has an active plan.
+- A brand-new dated group plan (no prior personal copy) can still enroll a member who previously unfollowed an older plan.
+
+### Recommended Commit Message
+
+```text
+BIQ-0150 Fix unfollow so Training clears the program
+```
+
+---
+
 ## BIQ-0149 - Group Member Setup and Email Invites
 
 Date: 2026-09-04  
@@ -136,8 +194,8 @@ None. Uses existing `st_profiles.followed_program_id` and program `start_date` /
 
 ### Known Issues
 
-- Members who unfollow but do not create a personal plan may be re-enrolled on the next Training load (by design while they have no pure personal follow).
 - Multi-group membership enrolls from each member team in turn; last sync wins if more than one group has an active plan.
+- ~~Members who unfollow but do not create a personal plan may be re-enrolled on the next Training load~~ — fixed in BIQ-0150.
 
 ### Recommended Commit Message
 
