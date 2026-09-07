@@ -5,6 +5,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import SectionHeader from '../ui/SectionHeader';
 import WeeklyHealthCalendar from './WeeklyHealthCalendar';
 import AddActivitySheet from './AddActivitySheet';
+import ImportWorkoutsSheet from './ImportWorkoutsSheet';
+import PushToMembersSheet from './PushToMembersSheet';
 import { cycleLengthOf, formatProgramRange, programDateRange } from '../../../lib/programDesign/cycle';
 import { lifecycleLabel, lifecycleStatusOf } from '../../../lib/programDesign/lifecycle';
 import {
@@ -33,6 +35,8 @@ type ProgramCalendarEditorProps = {
   canEdit: boolean;
   isFollowing?: boolean;
   groups?: { id: string; name: string; my_role?: string | null }[];
+  /** When set, owners/managers can push this program to group members. */
+  pushTeamId?: string | null;
   onBack: () => void;
   onProgramChange: (program: ProgramDesignRecord) => void;
   onFollow?: () => Promise<void>;
@@ -47,6 +51,7 @@ export default function ProgramCalendarEditor({
   canEdit,
   isFollowing,
   groups = [],
+  pushTeamId = null,
   onBack,
   onProgramChange,
   onFollow,
@@ -60,6 +65,8 @@ export default function ProgramCalendarEditor({
   const [sheetDay, setSheetDay] = useState<number | null>(null);
   const [editing, setEditing] = useState<ProgramActivity | null>(null);
   const [busy, setBusy] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [pushOpen, setPushOpen] = useState(false);
 
   const totalWeeks = cycleLengthOf(program);
   const { start, end } = programDateRange(program);
@@ -88,6 +95,11 @@ export default function ProgramCalendarEditor({
     void reload();
   }, [program.id]);
 
+  const hasStrengthActivities = useMemo(
+    () => activities.some((a) => a.activity_type === 'strength' && a.workout_id && a.week_number === week),
+    [activities, week]
+  );
+
   const dayLabel = useMemo(() => {
     if (sheetDay == null) return '';
     return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][sheetDay] || 'Day';
@@ -96,6 +108,7 @@ export default function ProgramCalendarEditor({
   async function saveActivity(draft: ActivityDraft) {
     if (!canEdit) return;
     if (editing && editing.id.startsWith('legacy-')) return;
+    const isNewStrength = !editing && draft.activity_type === 'strength';
     if (editing) {
       const { error: updateError } = await updateProgramActivity(supabase, editing.id, draft);
       if (updateError) throw new Error(updateError);
@@ -113,6 +126,9 @@ export default function ProgramCalendarEditor({
     setSheetDay(null);
     setEditing(null);
     await reload();
+    if (isNewStrength) {
+      setImportOpen(true);
+    }
   }
 
   async function removeActivity() {
@@ -220,6 +236,11 @@ export default function ProgramCalendarEditor({
           <button type="button" className="btn small secondary" disabled={busy} onClick={() => void copyToRemaining()}>
             Copy to remaining weeks
           </button>
+          {hasStrengthActivities && (
+            <button type="button" className="btn small accent" disabled={busy} onClick={() => setImportOpen(true)}>
+              Import exercises from program
+            </button>
+          )}
         </div>
       )}
 
@@ -251,10 +272,15 @@ export default function ProgramCalendarEditor({
       <div className="pd-status-row">
         {onFollow && !isFollowing && (
           <button type="button" className="btn green" disabled={busy} onClick={() => void onFollow()}>
-            Follow this program
+            {canEdit && program.visibility === 'team' ? 'Pull in & edit' : 'Follow this program'}
           </button>
         )}
-        {isFollowing && <span className="ui-badge">Following</span>}
+        {isFollowing && <span className="ui-badge">{canEdit && program.visibility === 'team' ? 'Editing in Training' : 'Following'}</span>}
+        {canEdit && pushTeamId && (
+          <button type="button" className="btn green" disabled={busy} onClick={() => setPushOpen(true)}>
+            Push to members
+          </button>
+        )}
         {onShareWithGroup && canEdit && groups.length > 0 && (
           <select
             aria-label="Share with group"
@@ -310,6 +336,34 @@ export default function ProgramCalendarEditor({
           }}
           onSave={saveActivity}
           onDelete={editing ? removeActivity : undefined}
+        />
+      )}
+
+      {importOpen && (
+        <ImportWorkoutsSheet
+          supabase={supabase}
+          userId={ownerUserId}
+          targetProgramId={program.id}
+          strengthActivities={activities.filter((a) => a.week_number === week)}
+          onClose={() => setImportOpen(false)}
+          onImported={() => {
+            setImportOpen(false);
+            void reload();
+          }}
+        />
+      )}
+
+      {pushOpen && pushTeamId && (
+        <PushToMembersSheet
+          supabase={supabase}
+          teamId={pushTeamId}
+          programId={program.id}
+          programName={program.name}
+          programStatus={program.status}
+          onClose={() => setPushOpen(false)}
+          onPushed={() => {
+            onProgramChange({ ...program, status: program.status === 'draft' ? 'published' : program.status });
+          }}
         />
       )}
     </div>

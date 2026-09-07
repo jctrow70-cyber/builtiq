@@ -9,7 +9,8 @@ import {
 } from '../../../lib/groups';
 import type { AssignProgramTarget } from './TeamAssignProgramModal';
 import TeamAssignProgramModal from './TeamAssignProgramModal';
-import TeamCreateJoinSheet from './TeamCreateJoinSheet';
+import TeamCreateJoinSheet, { type CreateGroupPayload } from './TeamCreateJoinSheet';
+import GroupInviteMembersPanel from './GroupInviteMembersPanel';
 import TeamMemberDetail from './TeamMemberDetail';
 import TeamMembersTab from './TeamMembersTab';
 import TeamProgressTab from './TeamProgressTab';
@@ -64,8 +65,9 @@ export type GroupsHubProps = {
   onSelectTeam: (teamId: string) => void;
   defaultTeamId?: string | null;
   onSetDefaultTeam?: (teamId: string) => void;
-  onCreateGroup: (name: string) => Promise<void>;
+  onCreateGroup: (payload: CreateGroupPayload) => Promise<{ inviteCode?: string; inviteSummary?: string } | void>;
   onJoinGroup: (code: string) => Promise<void>;
+  accessToken?: string | null;
   onRefreshMembers: () => void;
   onOpenMember: (member: any) => void;
   onCloseMemberDashboard: () => void;
@@ -159,6 +161,7 @@ export default function GroupsHub(props: GroupsHubProps) {
     onSetDefaultTeam,
     onCreateGroup,
     onJoinGroup,
+    accessToken = null,
     onRefreshMembers,
     onOpenMember,
     onCloseMemberDashboard,
@@ -340,6 +343,15 @@ export default function GroupsHub(props: GroupsHubProps) {
             onSetParticipation={onSetParticipation}
             onToggleMemberClassification={onToggleMemberClassification}
           />
+          {canManage && activeTeam && (
+            <GroupInviteMembersPanel
+              teamId={activeTeam.id}
+              teamName={activeTeam.name}
+              inviteCode={activeTeam.invite_code}
+              accessToken={accessToken}
+              canManage={canManage}
+            />
+          )}
         </>
       );
     }

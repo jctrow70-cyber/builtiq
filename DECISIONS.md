@@ -842,6 +842,7 @@ Training mixed program creation, group management, scheduling, and logging on on
 
 ---
 
+<<<<<<< HEAD
 ## Decision 031 - Science Engine Decides, AI Personalizes
 
 Date: 2026-09-07  
@@ -870,3 +871,43 @@ ChatGPT-authored workouts were inconsistent and hard to validate. Programming ru
 - Programs store `science_version`
 - Historical prescriptions and logs are never overwritten by later adjustments
 - Documented in BIQ-0141
+=======
+## Decision 031 - Group vs Personal Follow and Role Enrollment
+
+Date: 2026-09-04  
+Status: Accepted  
+Category: Program Design / Groups
+
+### Decision
+
+A user follows **one** program in Training at a time (personal or group-sourced — not both).
+
+Role rules:
+
+1. **Member** — automatically enrolled in the group's date-active plan the first time (no personal copy yet). While enrolled, Training calendar updates when plan start/end dates change or the next sequenced plan begins. Explicit unfollow clears Training and is respected until the member follows again or a *new* active group plan (no prior copy) enrolls them.
+2. **Editor (Manager)** — sees group programs as available; **not** auto-enrolled. May **Pull in & edit** the live group template so edits apply to the shared plan.
+3. **Owner** — may create multiple dated group plans. Suggested start for a new plan is after the latest existing plan ends so members hand off cleanly by calendar date.
+
+Creating a **personal** program while following a group-sourced plan requires an explicit unfollow prompt first.
+
+Training loads **only** the program referenced by `followed_program_id`. When that field is null, Training shows the empty “choose a program” state — it must not fall back to the newest published personal program.
+
+### Reason
+
+Members should not hunt for Follow when the group schedule is the source of truth. Editors need visibility without being forced onto a plan they manage. Owners need multi-month sequencing without members manually switching programs. Unfollow must actually clear Training; silent re-pick / re-enroll made Unfollow feel broken.
+
+### Alternatives Considered
+
+- Always require Follow for everyone — rejected; too much friction for members
+- Auto-enroll editors/owners — rejected; managers need to opt in before Training uses a plan
+- Allow following personal and group at once — rejected; Training has a single calendar
+- Re-enroll members on every Training load after unfollow — rejected (BIQ-0150); leftover copies meant unfollow never stuck
+- Fall back to newest published when follow is null — rejected (BIQ-0150); hid unfollow
+
+### Impact
+
+- `lib/programDesign/enrollment.ts` + `syncMemberGroupEnrollment`
+- Programs UI prompts unfollow before personal create
+- Training `loadPrograms` syncs member enrollment by plan dates and honors null follow
+- No new database tables; uses `followed_program_id`, `start_date`, `end_date`, `source_program_id`
+>>>>>>> 43059003029cedda3b15222e1c00c6ca1af15057

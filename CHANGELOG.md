@@ -11,6 +11,526 @@ Branch:
 Status:
 ```
 
+## BIQ-0150 - Unfollow Clears Training Program
+
+Date: 2026-09-06  
+Branch: cursor/fix-unfollow-training-2d55  
+Status: Completed
+
+### Summary
+
+Unfollowing a program now clears Training. Training no longer falls back to the newest published plan when `followed_program_id` is null, and members who unfollow are not silently re-enrolled on the next Training load when a prior copy of the active group plan already exists.
+
+### Purpose
+
+Users expected Unfollow to stop the plan from showing in Training. The previous fallback and member auto-sync undid unfollow immediately.
+
+### Changes
+
+- Training `loadPrograms` uses only the followed program (no “newest published” fallback after unfollow)
+- `alreadyFollowing` requires `followed_program_id` (leftover personal copies no longer count as following)
+- `findPersonalCopyOf` reuses copies when (re)following without treating them as active follows
+- `syncMemberGroupEnrollment` respects explicit unfollow when a prior copy of the active plan exists; first-time members still auto-enroll
+- Unfollow clears local Training program state immediately; confirm copy updated
+- Regression script: `scripts/test-unfollow-training.ts`
+
+### Files Changed
+
+- `lib/programDesign/followProgram.ts`
+- `app/page.tsx`
+- `app/components/programDesign/ProgramDesignHome.tsx`
+- `scripts/test-unfollow-training.ts`
+- `DECISIONS.md`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Follow a personal program → open Training → plan shows under Following.
+2. Programs → Unfollow → open Training → empty state (“Choose a program to follow”), no calendar for that plan.
+3. Re-follow the same personal program → Training shows it again (same program, no duplicate).
+4. As a Member: follow/enroll in a group plan → Unfollow → Training stays empty (not re-enrolled on load).
+5. As a Member with no prior copy of a new active group plan → first Training/Programs load still auto-enrolls.
+6. Mobile (~390px) — empty Training CTA and Programs Following section remain usable.
+
+### Known Issues
+
+- Multi-group membership still enrolls from each member team in turn; last sync wins if more than one group has an active plan.
+- A brand-new dated group plan (no prior personal copy) can still enroll a member who previously unfollowed an older plan.
+
+### Recommended Commit Message
+
+```text
+BIQ-0150 Fix unfollow so Training clears the program
+```
+
+---
+
+## BIQ-0149 - Group Member Setup and Email Invites
+
+Date: 2026-09-04  
+Branch: cursor/group-member-invites-f329  
+Status: Completed
+
+### Summary
+
+Creating a group now includes a member invite step. Owners/editors can add people by name, email, and role, then send join invites. Pending invites are tracked, and members can still be invited later from the Members tab.
+
+### Purpose
+
+Groups need an onboarding path: create the team, set up who should join, and send invites instead of only sharing an invite code manually.
+
+### Changes
+
+- Create Team sheet: name → invite members → create & send invites → done with invite code
+- `POST/GET /api/groups/invite` stores pending invites and emails them via Resend when configured
+- Members tab: Invite members panel with pending list and mailto fallback
+- Migration `st_group_invites` + `st_mark_group_invite_accepted` when a user joins
+- Join flow marks matching pending invites accepted
+
+### Files Changed
+
+- `supabase/migrations/20250904_044_group_member_invites.sql`
+- `app/api/groups/invite/route.ts`
+- `lib/groups/invites.ts`
+- `lib/email/groupInviteEmail.ts`
+- `lib/groups/index.ts`
+- `app/components/groups/TeamCreateJoinSheet.tsx`
+- `app/components/groups/GroupInviteMembersPanel.tsx`
+- `app/components/groups/GroupsHub.tsx`
+- `app/components/groups/TeamMembersTab.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Database Changes
+
+Additive: `st_group_invites` table + RLS + `st_mark_group_invite_accepted` RPC.
+
+Apply `20250904_044_group_member_invites.sql` on test, then live.
+
+Requires `RESEND_API_KEY` (and optional `BUILDIQ_EMAIL_FROM` / `NEXT_PUBLIC_APP_URL`) for email delivery. Without email config, invites are still saved and mailto drafts are available.
+
+### Testing Steps
+
+1. Groups → Create Team → enter name → Next
+2. Add 1–2 members with email + Member/Editor role → Create team & send invites
+3. Confirm success screen shows invite code; emails sent if Resend is configured
+4. Second account: Groups → Join Team with that code → appears on roster; pending invite becomes accepted
+5. As owner/editor on Members tab → Invite members → send another invite → pending list updates
+6. Without Resend: invite still saves; use Open email / mailto fallback
+7. Mobile (~390px) — create sheet and invite form remain usable
+
+### Known Issues
+
+- Invite emails require Resend env vars on the Vercel project
+- Migration must be applied before pending invites persist
+- Invite role (Member/Editor) is applied when the invitee joins with a matching email
+
+### Recommended Commit Message
+
+```text
+BIQ-0149 Add group member setup and email invites
+```
+
+---
+
+---
+
+## BIQ-0148 - Group vs Personal Follow Rules by Role
+
+Date: 2026-09-04  
+Branch: cursor/group-personal-follow-rules-f329  
+Status: Completed
+
+### Summary
+
+Programs now enforce one followed plan at a time with role-based group enrollment: members auto-enroll by plan dates, editors opt in with pull-in-and-edit, and owners can sequence multiple dated group plans. Creating a personal program while on a group plan prompts to unfollow first.
+
+### Purpose
+
+Match how groups actually train — members get the active schedule automatically, editors manage without being forced onto a plan, and owners can lay out multi-month handoffs.
+
+### Changes
+
+- Added `lib/programDesign/enrollment.ts` (role checks, date-active plan pick, next-plan start suggestion)
+- Added unfollow + `syncMemberGroupEnrollment` in `followProgram.ts`
+- Programs: unfollow control, unfollow prompt before personal create, Available / Enrolled copy by role
+- Editors: **Pull in & edit** follows the live group template
+- Owners: create flow suggests start after the latest group plan end
+- Training `loadPrograms` auto-syncs member enrollment from active group plan dates
+- Creating a personal program also follows it immediately (prevents member re-enrollment)
+- Preserved AI program setup wizard and Push to members
+- Decision 031 documented
+
+### Files Changed
+
+- `lib/programDesign/enrollment.ts`
+- `lib/programDesign/followProgram.ts`
+- `app/components/programDesign/ProgramDesignHome.tsx`
+- `app/components/programDesign/CreateProgramFlow.tsx`
+- `app/components/programDesign/ProgramCalendarEditor.tsx`
+- `app/page.tsx`
+- `DECISIONS.md`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None. Uses existing `st_profiles.followed_program_id` and program `start_date` / `end_date` / `source_program_id`.
+
+### Testing Steps
+
+1. As a **Member** with an active dated group plan — open Training/Programs and confirm you are Enrolled without tapping Follow.
+2. Change group plan dates / add a later scheduled plan — member Training calendar follows the date-active plan.
+3. As a Member following a group plan — Personal → **+ Create Program** → confirm unfollow prompt appears; cancel leaves you enrolled; accept unfollows then opens create.
+4. As an **Editor** — group plans show as Available; you are not auto-enrolled; **Pull in & edit** sets Training to the group template and allows edits.
+5. As an **Owner** — create a second group plan; suggested start is after the previous plan end; scheduled list explains member handoff.
+6. Unfollow from Following — Training no longer uses that plan until you follow again (members may re-enroll on next load if still only on group-sourced follow).
+7. Confirm AI setup wizard still opens after creating a program, and Push to members still works for owners/editors.
+8. Mobile (~390px) — Programs headers and unfollow/create prompts remain usable.
+
+### Known Issues
+
+- Multi-group membership enrolls from each member team in turn; last sync wins if more than one group has an active plan.
+- ~~Members who unfollow but do not create a personal plan may be re-enrolled on the next Training load~~ — fixed in BIQ-0150.
+
+### Recommended Commit Message
+
+```text
+BIQ-0148 Add group vs personal follow rules by role
+```
+
+---
+
+---
+
+## BIQ-0147 - Push Group Program Design to Selected Members
+
+Date: 2026-09-03  
+Branch: cursor/group-push-to-members-eaa7  
+Status: Completed
+
+### Summary
+
+Group Program Design now works like personal design: build the week (AI or manual), then **Push to members**. Owners/managers pick specific athletes and either assign the shared group program or give each member a personal copy. Optional: also set as the group default for Follow Team Plan.
+
+### Purpose
+
+Coaches need to design one weekly health calendar, then send it only to the members who should use it — not rely on members discovering and following a shared program.
+
+### How it works
+
+1. Programs → Groups → create/edit a group program (same AI wizard + calendar as personal)
+2. Open the calendar → **Push to members**
+3. Choose Shared program (everyone uses this plan) or Personal copy each
+4. Select one or more members (or Select all)
+5. Optional: set as group default
+6. Push — publishes the program if needed, assigns via existing `st_assign_member_program` / `st_customize_program_for_member`, and copies calendar activities onto personal copies
+
+### Files Changed
+
+- `lib/programDesign/pushToMembers.ts` (new)
+- `app/components/programDesign/PushToMembersSheet.tsx` (new)
+- `app/components/programDesign/ProgramCalendarEditor.tsx`
+- `app/components/programDesign/ProgramDesignHome.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None. Reuses existing assignment RPCs and `st_program_activities`.
+
+### Testing Steps
+
+1. Programs → Groups → Create Group Program → build week with AI or manually
+2. Calendar → Push to members → select 1–2 athletes → Shared → Push
+3. Those members should see the assigned program in Groups / Training assignment
+4. Repeat with Personal copy each — each gets an independent plan with calendar activities
+5. Optional checkbox sets team default_program_id
+6. Members without selection are unchanged
+
+### Known Issues
+
+- Members still load assigned programs through Groups/team assignment context; personal Training follow is separate
+- Personal copies depend on `st_customize_program_for_member` existing in Supabase
+
+### Recommended Commit Message
+
+```text
+BIQ-0147 Push group Program Design to selected members
+```
+
+---
+
+## BIQ-0146 - Fix Import: Strip Missing Columns Dynamically
+
+Date: 2026-09-03  
+Branch: cursor/fix-import-column-fallback-eaa7  
+Status: Completed
+
+### Summary
+
+Import still failed with `column st_planned_sets.rest_seconds does not exist` because the previous "safe" select still requested `rest_seconds`. That column is not in the base schema. The fetch now starts with core + optional columns and strips each missing column from the query until it succeeds. Planned set inserts only use base-schema fields (set_number, set_type, target_reps/weight/rpe).
+
+### Purpose
+
+Unblock attaching an existing strength program to Program Design strength days on databases that have not applied every optional column migration.
+
+### Files Changed
+
+- `lib/programDesign/importWorkouts.ts`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Programs → open calendar program → Import exercises from program
+2. Select a published program with workouts (e.g. ET Full Body Push)
+3. Preview shows week workouts and exercise names — no column error
+4. Import exercises into my strength days → succeeds
+5. Follow program → Training → Start Workout → exercises present
+
+### Recommended Commit Message
+
+```text
+BIQ-0146 Fix import by stripping missing planned-set columns
+```
+
+---
+
+## BIQ-0145 - Fix Vercel Build: Set Spread TypeScript Error
+
+Date: 2026-09-03  
+Branch: cursor/fix-set-spread-build-eaa7  
+Status: Completed
+
+### Summary
+
+Fixes Vercel build failure: `Type 'Set<number>' can only be iterated through when using the '--downlevelIteration' flag`. Replaced `[...new Set()]` with `Array.from(new Set())` in import workout code.
+
+### Files Changed
+
+- `app/components/programDesign/ImportWorkoutsSheet.tsx`
+- `lib/programDesign/importWorkouts.ts`
+- `CHANGELOG.md`
+
+### Recommended Commit Message
+
+```text
+BIQ-0145 Fix Vercel build Set spread TypeScript error
+```
+
+---
+
+## BIQ-0144 - Fix Import: Missing Database Columns and Week Matching
+
+Date: 2026-09-03  
+Branch: cursor/fix-import-missing-columns-eaa7  
+Status: Completed
+
+### Summary
+
+Fixes two bugs in the Import Exercises feature:
+1. **"column st_planned_sets.target_duration_seconds does not exist"** — the import query requested columns that may not exist in all databases. Now retries with progressively fewer columns.
+2. **"This program has no week 1 workouts to import"** — programs where workouts start at week numbers other than 1 were unusable. Now uses the lowest available week.
+
+### Purpose
+
+The import feature assumed all optional columns existed and that workouts always start at week 1. Real databases may not have all migration columns applied, and some programs use different week numbering.
+
+### Files Changed
+
+- `lib/programDesign/importWorkouts.ts` (modified — resilient column fallbacks for select, insert exercises, insert planned sets; flexible week matching)
+- `app/components/programDesign/ImportWorkoutsSheet.tsx` (modified — show actual source week number; updated empty state message)
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Open import sheet → select a program → no column errors
+2. Programs with workouts on week 2+ now show their workouts in preview
+3. Import completes even when target_duration_seconds, exercise_type, superset columns don't exist
+4. Preview shows "Week N workouts from …" with the correct week number
+
+### Known Issues
+
+None.
+
+### Recommended Commit Message
+
+```text
+BIQ-0144 Fix import: resilient column fallbacks and flexible week matching
+```
+
+---
+
+## BIQ-0143 - Auto-Prompt Import After Adding Strength Activity
+
+Date: 2026-09-03  
+Branch: cursor/attach-program-from-activity-sheet-eaa7  
+Status: Completed
+
+### Summary
+
+When manually adding a Strength activity in the Calendar Editor, the "Import exercises from program" sheet now opens automatically right after the activity is saved. A hint in the Add Activity sheet tells users what will happen. This eliminates the confusion of adding a blank strength day and not knowing how to attach exercises.
+
+### Purpose
+
+Users who skip the AI wizard and add strength activities manually had no obvious path to connect their existing strength programs. Now the import prompt appears immediately after adding a strength day.
+
+### Files Changed
+
+- `app/components/programDesign/ProgramCalendarEditor.tsx` (modified — auto-open import sheet after new strength activity)
+- `app/components/programDesign/AddActivitySheet.tsx` (modified — hint when strength type selected)
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Program Design → open a program → Calendar Editor
+2. Tap "+" on any day → select Strength → see hint about importing
+3. Save the activity → Import sheet opens automatically
+4. Pick a source program → import exercises
+5. If no programs available, sheet shows helpful message and can be closed
+6. Non-strength activities (cardio, rest, etc.) do NOT trigger the import prompt
+
+### Known Issues
+
+None.
+
+### Recommended Commit Message
+
+```text
+BIQ-0143 Auto-prompt import after adding strength activity
+```
+
+---
+
+## BIQ-0142 - Bridge Strength Programs into Program Design Calendar
+
+Date: 2026-09-03  
+Branch: cursor/bridge-strength-workouts-eaa7  
+Status: Completed
+
+### Summary
+
+Users can now import exercises from an existing strength program into their Program Design calendar's strength days. This bridges the gap between the old Program Setup (which builds full workouts with exercises, sets, and reps) and the new Program Design calendar (which schedules activities by day).
+
+### Purpose
+
+When a user creates a program in Program Design with strength days, those days had empty workout shells with no exercises. If they already built a strength program in Training → Program Setup, there was no way to connect it. This change adds an "Import exercises from program" button that copies week 1 workouts (exercises + planned sets) from any existing program into the matching strength days on the calendar.
+
+### How it works
+
+1. Open a program in Program Design → Calendar Editor
+2. If the current week has strength activities, an "Import exercises from program" button appears
+3. Click it → pick a source program from your library
+4. Preview shows week 1 workouts with exercise counts and names
+5. Click "Import exercises into my strength days" → exercises and planned sets are copied in
+6. Matching is by day of week when possible (Mon→Mon), then by order for remaining days
+7. Activity titles update to match the source workout type (e.g. "Upper Body", "Lower Body")
+
+### Files Changed
+
+- `lib/programDesign/importWorkouts.ts` (new — fetch source workouts, copy exercises + sets into target)
+- `app/components/programDesign/ImportWorkoutsSheet.tsx` (new — program picker + preview + import UI)
+- `app/components/programDesign/ProgramCalendarEditor.tsx` (modified — import button + sheet wiring)
+- `app/globals.css` (modified — import sheet styles)
+- `CHANGELOG.md`
+
+### Database Changes
+
+None. Reads from `st_workouts`, `st_exercises`, `st_planned_sets` and writes new rows into the same tables under the target program's workout IDs.
+
+### Testing Steps
+
+1. Build a strength program via Training → Program Setup (with exercises)
+2. Create a new program in Program Design with strength days (via AI wizard or manually)
+3. Open the calendar editor → "Import exercises from program" button visible
+4. Click it → your old program appears in the list
+5. Select it → preview shows week 1 workouts with exercise names
+6. Click Import → exercises copied into your strength days
+7. Follow the program → Training → open a strength day → exercises are there
+8. Start Workout → exercises, sets, reps all present
+9. Non-strength days (cardio, rest, etc.) are unaffected
+
+### Known Issues
+
+- Only week 1 workouts are imported; multi-week periodization requires Copy Week in the calendar
+- If source program has more workout days than target strength days, extra workouts are skipped
+
+### Recommended Commit Message
+
+```text
+BIQ-0142 Bridge strength programs into Program Design calendar
+```
+
+---
+
+## BIQ-0141 - AI-Powered Program Activity Setup
+
+Date: 2026-09-03  
+Branch: cursor/ai-activity-setup-wizard-eaa7  
+Status: Completed
+
+### Summary
+
+When creating a new program in Program Design, users now go through an AI-powered setup wizard before the calendar editor. Users describe their weekly plan in natural language (e.g. "strength training 3 days a week, cardio Tuesday Thursday, stretching Tuesday Thursday") and AI automatically creates activities on the correct days. After AI compiles the schedule, users review each day of the week and can drag activities between days or remove them before confirming.
+
+### Purpose
+
+Eliminate the need for manual activity-by-activity setup. The AI interprets the user's description and populates the weekly calendar automatically. Users review and adjust the result before it's saved, keeping them in control while removing tedious repetition.
+
+### Files Changed
+
+- `app/api/programs/suggest-activities/route.ts` (new — AI endpoint for parsing activity descriptions)
+- `app/components/programDesign/AIProgramSetupWizard.tsx` (new — two-step wizard: describe → review week)
+- `app/components/programDesign/ProgramDesignHome.tsx` (modified — wire AI wizard between program creation and calendar editor)
+- `app/globals.css` (modified — wizard styles)
+- `CHANGELOG.md`
+
+### Database Changes
+
+None. Uses existing `st_program_activities` table.
+
+### Testing Steps
+
+1. Program Design → Create Program → fill name, dates, cycle → Continue
+2. AI wizard appears — type "strength training 3 days a week, cardio Tuesday Thursday"
+3. Click "Build my week with AI" — loading state, then review screen
+4. Review screen shows 7 days with activities placed by AI
+5. Drag an activity from one day to another — it moves
+6. Click × on an activity — it's removed, empty day becomes Rest
+7. Click "Confirm and create calendar" — activities saved, calendar editor opens
+8. Click "Skip — I'll add activities manually" — goes straight to calendar editor
+9. Example buttons fill the description textarea
+10. Mobile (~390px) — wizard and review cards stack vertically
+
+### Known Issues
+
+- AI suggestions depend on OPENAI_API_KEY being configured on the server
+- Drag-and-drop is touch-unfriendly on mobile (tap-to-move planned for follow-up)
+
+### Recommended Commit Message
+
+```text
+BIQ-0141 AI-powered program activity setup wizard
+```
+
+---
+
 ## BIQ-0001 - Documentation Foundation
 
 Date: 2026-07-06  
@@ -8817,14 +9337,22 @@ BIQ-0140 Add Training month calendar view
 
 ---
 
+<<<<<<< HEAD
 ## BIQ-0141 - Science-Based Training Engine Foundation
 
 Date: 2026-09-07  
 Branch: develop  
+=======
+## BIQ-0141 - Fix Training Calendar Day Selection Drift
+
+Date: 2026-09-03  
+Branch: cursor/fix-training-calendar-day-click-f329  
+>>>>>>> 43059003029cedda3b15222e1c00c6ca1af15057
 Status: Completed
 
 ### Summary
 
+<<<<<<< HEAD
 BuiltIQ now generates programs with a deterministic science engine. ChatGPT no longer invents workouts. The engine decides volume, split, exercises, sets, reps, RIR, rest, dynamic warm-up, Power Primer, and lift ramp-up. AI may only explain and personalize on top of that prescription.
 
 ### Purpose
@@ -8890,9 +9418,49 @@ Does not replace `st_set_logs` or rewrite existing programs.
 - Catalog metadata is inferred; not every imported exercise has perfect role/contribution values yet
 - Migration `044` must be applied before RIR and science_version persist
 - Template generate() in Program Setup is still the older fallback path
+=======
+Fixed Training Calendar day selection so tapping any date opens that exact date instead of sometimes drifting to the prior selected weekday.
+
+### Purpose
+
+Users reported that tapping a different weekday (for example Tuesday to Wednesday) could keep them on the wrong day, while tapping the same weekday in a different week worked. This made month navigation feel inconsistent.
+
+### Changes
+
+- Added a dedicated `onSelectTrainingDay` handler in `app/page.tsx`
+- Updated day selection to compute week and active workout from the clicked date directly
+- Removed the month-calendar dependency on `onWeekChange` (which preserves weekday by design for week navigation)
+- Kept existing behavior to switch to Day view when selecting from Week view
+
+### Files Changed
+
+- `app/page.tsx`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Open Training → Calendar.
+2. Select a day with a different weekday than today (for example Tue → Wed).
+3. Verify the selected state and day panel both match the clicked date.
+4. Select same weekday in next week (for example Tue → next Tue) and verify it still works.
+5. Switch to Week view and click a day; verify Day view opens on the exact clicked date.
+6. Start Workout from a clicked day and confirm it opens the matching day workout.
+
+### Known Issues
+
+None identified for this fix.
+>>>>>>> 43059003029cedda3b15222e1c00c6ca1af15057
 
 ### Recommended Commit Message
 
 ```text
+<<<<<<< HEAD
 BIQ-0141 Add deterministic science training engine
+=======
+BIQ-0141 Fix training calendar day click date drift
+>>>>>>> 43059003029cedda3b15222e1c00c6ca1af15057
 ```

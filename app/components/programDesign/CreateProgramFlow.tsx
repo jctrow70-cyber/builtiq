@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import DateInput from '../DateInput';
 import {
   cycleEndDate,
@@ -17,6 +17,8 @@ type CreateProgramFlowProps = {
   defaultStart: string;
   saving: boolean;
   error?: string;
+  /** Shown for group owners sequencing multiple dated plans. */
+  sequencingHint?: string | null;
   onCancel: () => void;
   onCreate: (input: { name: string; startDate: string; cycleWeeks: number }) => Promise<void>;
 };
@@ -27,6 +29,7 @@ export default function CreateProgramFlow({
   defaultStart,
   saving,
   error,
+  sequencingHint = null,
   onCancel,
   onCreate,
 }: CreateProgramFlowProps) {
@@ -34,6 +37,10 @@ export default function CreateProgramFlow({
   const [startDate, setStartDate] = useState(defaultStart);
   const [preset, setPreset] = useState<number | 'custom'>(6);
   const [customWeeks, setCustomWeeks] = useState(10);
+
+  useEffect(() => {
+    setStartDate(defaultStart);
+  }, [defaultStart]);
 
   const snapped = useMemo(() => snapStartToMonday(startDate), [startDate]);
   const cycleWeeks = preset === 'custom' ? Math.max(1, Math.min(52, customWeeks || 1)) : preset;
@@ -56,6 +63,7 @@ export default function CreateProgramFlow({
         Start with the basics. You can build the weekly health calendar next.
         {scope === 'group' && groupName ? ` This will belong to ${groupName}.` : ''}
       </p>
+      {sequencingHint && <p className="pd-note">{sequencingHint}</p>}
 
       <label htmlFor="pd-program-name">Program name</label>
       <input
