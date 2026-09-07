@@ -1,6 +1,6 @@
 import { getScienceRules } from './rules';
-import type { MuscleVolumeDecision, TrainingProfile, VolumeTarget, WeeklyReview } from './types';
-import { evaluateProgression, type ProgressionResult } from './progression';
+import type { MuscleVolumeDecision, ProgressionResult, TrainingProfile, VolumeTarget, WeeklyReview } from './types';
+import { evaluateProgression } from './progression';
 import type { MuscleId } from './taxonomy';
 
 export function reviewTrainingWeek(input: {
