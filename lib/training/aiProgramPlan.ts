@@ -1124,6 +1124,17 @@ export async function persistAiProgramPlan(
   return persistWorkoutsForProgram(supabase, String(program.id), plan, config, catalog, catMap);
 }
 
+export async function persistWorkoutsOntoProgram(
+  supabase: any,
+  programId: string,
+  plan: AiProgramPlan,
+  config: GenerationConfig,
+  catalog: any[]
+): Promise<{ programId: string | null; error: string | null }> {
+  const catMap = catalogByName(catalog);
+  return persistWorkoutsForProgram(supabase, programId, plan, config, catalog, catMap);
+}
+
 async function persistWorkoutsForProgram(
   supabase: any,
   programId: string,

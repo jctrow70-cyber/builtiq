@@ -285,6 +285,32 @@ async function ensureStrengthWorkout(
   return created?.id ? String(created.id) : null;
 }
 
+export async function createActivitiesFromWorkouts(
+  supabase: SupabaseClient,
+  programId: string,
+  workouts: Array<{ id: string; week: number; day_label: string; workout_type: string; day_order?: number }>
+): Promise<{ error: string | null }> {
+  if (!workouts.length) return { error: null };
+  const rows = workouts.map((w, idx) => ({
+    program_id: programId,
+    week_number: Number(w.week || 1),
+    day_of_week: dayOfWeekFromLabel(String(w.day_label || 'Mon')),
+    sort_order: Number(w.day_order ?? idx),
+    activity_type: inferActivityTypeFromWorkout(w.workout_type),
+    title: String(w.workout_type || w.day_label || 'Workout'),
+    duration_minutes: 60,
+    notes: '',
+    details: {},
+    workout_id: w.id,
+  }));
+  const { error } = await supabase.from('st_program_activities').insert(rows);
+  if (error) {
+    if (isMissingRelation(error)) return { error: null };
+    return { error: error.message };
+  }
+  return { error: null };
+}
+
 export async function updateProgramActivity(
   supabase: SupabaseClient,
   activityId: string,

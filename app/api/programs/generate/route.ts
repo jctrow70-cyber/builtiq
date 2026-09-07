@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createSupabaseFromRequest, requireAuthUser } from '../../../../lib/supabaseServer';
-import { persistAiProgramPlan, type GenerationConfig } from '../../../../lib/training/aiProgramPlan';
+import { persistAiProgramPlan, persistWorkoutsOntoProgram, type GenerationConfig } from '../../../../lib/training/aiProgramPlan';
+import { createActivitiesFromWorkouts, updateDesignProgram } from '../../../../lib/programDesign/programDesignApi';
 import { fetchAllExerciseCatalog } from '../../../../lib/training/catalogFetch';
 import { builtinCatalogItems } from '../../../../lib/training/catalogSearch';
 import { normalizeEquipmentList } from '../../../../lib/training/equipmentFilter';
@@ -167,7 +168,81 @@ export async function POST(request: Request) {
 
   config.generationMethod = generationMethod;
   const builtinCatalog = builtinCatalogItems(catalog || []);
-  const { programId, error: persistError } = await persistAiProgramPlan(supabase, user.id, plan, config, builtinCatalog);
+  const existingProgramId = body?.existingProgramId ? String(body.existingProgramId) : '';
+
+  let programId: string | null = null;
+  let persistError: string | null = null;
+
+  if (existingProgramId) {
+    const { data: existing, error: existingError } = await supabase
+      .from('st_programs')
+      .select('id, owner_user_id, team_id, visibility')
+      .eq('id', existingProgramId)
+      .maybeSingle();
+    if (existingError || !existing) {
+      return NextResponse.json({ error: 'Program not found' }, { status: 404 });
+    }
+    const owns = existing.owner_user_id === user.id;
+    if (!owns && existing.visibility === 'team' && existing.team_id) {
+      const { data: membership } = await supabase
+        .from('st_team_members')
+        .select('role')
+        .eq('team_id', existing.team_id)
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .maybeSingle();
+      if (!membership || !['owner', 'editor', 'manager'].includes(membership.role)) {
+        return NextResponse.json({ error: 'You cannot edit this program' }, { status: 403 });
+      }
+    } else if (!owns) {
+      return NextResponse.json({ error: 'You cannot edit this program' }, { status: 403 });
+    }
+
+    const { data: existingWorkouts } = await supabase
+      .from('st_workouts')
+      .select('id')
+      .eq('program_id', existingProgramId);
+    const existingWorkoutIds = (existingWorkouts || []).map((w: { id: string }) => w.id);
+    if (existingWorkoutIds.length) {
+      const { data: existingExercises } = await supabase
+        .from('st_exercises')
+        .select('id')
+        .in('workout_id', existingWorkoutIds)
+        .limit(1);
+      if (existingExercises?.length) {
+        return NextResponse.json(
+          { error: 'This program already has workouts. Open the calendar to edit them, or create a new program.' },
+          { status: 409 }
+        );
+      }
+      await supabase.from('st_workouts').delete().eq('program_id', existingProgramId);
+    }
+    await supabase.from('st_program_activities').delete().eq('program_id', existingProgramId);
+
+    const persist = await persistWorkoutsOntoProgram(supabase, existingProgramId, plan, config, builtinCatalog);
+    programId = persist.programId;
+    persistError = persist.error;
+    if (programId) {
+      await updateDesignProgram(supabase, programId, {
+        generation_method: generationMethod,
+        science_version: SCIENCE_ENGINE_VERSION,
+        program_summary: plan.program_summary,
+        coaching_notes: plan.coaching_notes || null,
+        program_style: plan.program_style || null,
+        status: 'active',
+      });
+      const { data: workouts } = await supabase
+        .from('st_workouts')
+        .select('id, week, day_label, workout_type, day_order')
+        .eq('program_id', programId);
+      await createActivitiesFromWorkouts(supabase, programId, workouts || []);
+    }
+  } else {
+    const persist = await persistAiProgramPlan(supabase, user.id, plan, config, builtinCatalog);
+    programId = persist.programId;
+    persistError = persist.error;
+  }
+
   if (persistError || !programId) {
     return NextResponse.json({ error: persistError || 'Failed to save program' }, { status: 500 });
   }

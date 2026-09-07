@@ -60,7 +60,7 @@ export default function CreateProgramFlow({
       <p className="pd-eyebrow">{scope === 'group' ? 'Group program' : 'Personal program'}</p>
       <h1>Create program</h1>
       <p className="muted pd-lead">
-        Start with the basics. You can build the weekly health calendar next.
+        Start with the name and dates. Next you will describe your training so BuiltIQ can create the actual workouts.
         {scope === 'group' && groupName ? ` This will belong to ${groupName}.` : ''}
       </p>
       {sequencingHint && <p className="pd-note">{sequencingHint}</p>}
@@ -136,7 +136,7 @@ export default function CreateProgramFlow({
 
       <div className="actions" style={{ marginTop: 16 }}>
         <button type="button" className="btn green" disabled={saving || !name.trim()} onClick={() => void handleSubmit()}>
-          {saving ? 'Creating…' : 'Continue to calendar'}
+          {saving ? 'Creating…' : 'Create and build workouts'}
         </button>
         <button type="button" className="btn secondary" onClick={onCancel} disabled={saving}>
           Cancel

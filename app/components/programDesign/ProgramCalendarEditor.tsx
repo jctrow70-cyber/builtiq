@@ -41,6 +41,7 @@ type ProgramCalendarEditorProps = {
   onProgramChange: (program: ProgramDesignRecord) => void;
   onFollow?: () => Promise<void>;
   onShareWithGroup?: (teamId: string) => Promise<void>;
+  onBuildWorkouts?: () => void;
 };
 
 export default function ProgramCalendarEditor({
@@ -56,6 +57,7 @@ export default function ProgramCalendarEditor({
   onProgramChange,
   onFollow,
   onShareWithGroup,
+  onBuildWorkouts,
 }: ProgramCalendarEditorProps) {
   const [week, setWeek] = useState(1);
   const [activities, setActivities] = useState<ProgramActivity[]>([]);
@@ -67,6 +69,7 @@ export default function ProgramCalendarEditor({
   const [busy, setBusy] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [pushOpen, setPushOpen] = useState(false);
+  const [hasExercises, setHasExercises] = useState(false);
 
   const totalWeeks = cycleLengthOf(program);
   const { start, end } = programDateRange(program);
@@ -88,6 +91,17 @@ export default function ProgramCalendarEditor({
       (legacy.data || []).filter((w) => !linked.has(w.id))
     );
     setActivities([...planned, ...bridged]);
+    const workoutIds = (legacy.data || []).map((w) => w.id).filter(Boolean);
+    if (workoutIds.length) {
+      const { data: exercises } = await supabase
+        .from('st_exercises')
+        .select('id')
+        .in('workout_id', workoutIds)
+        .limit(1);
+      setHasExercises(!!exercises?.length);
+    } else {
+      setHasExercises(false);
+    }
     setLoading(false);
   }
 
@@ -243,6 +257,11 @@ export default function ProgramCalendarEditor({
           )}
         </div>
       )}
+      {hasExercises && (
+        <p className="muted">
+          Strength days already have exercises and sets. Open Training to log them.
+        </p>
+      )}
 
       {!tableReady && (
         <p className="pd-note">
@@ -250,6 +269,14 @@ export default function ProgramCalendarEditor({
         </p>
       )}
       {error && <p className="pd-error">{error}</p>}
+      {!loading && canEdit && !hasExercises && onBuildWorkouts && (
+        <div className="pd-note" style={{ marginBottom: 12 }}>
+          <p>This program does not have exercises yet. Build the actual workouts to fill the calendar.</p>
+          <button type="button" className="btn green" style={{ marginTop: 8 }} onClick={onBuildWorkouts}>
+            Build my workouts
+          </button>
+        </div>
+      )}
       {loading ? (
         <p className="muted">Loading this week…</p>
       ) : (

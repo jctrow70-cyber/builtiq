@@ -373,6 +373,9 @@ export default function ProgramDesignHome({
         <AIProgramSetupWizard
           supabase={supabase}
           programName={editing.name}
+          programId={editing.id}
+          weeks={Math.min(12, cycleLengthOf(editing))}
+          startDate={editing.start_date}
           onComplete={async (weekPlan) => {
             setError('');
             for (const day of weekPlan) {
@@ -422,6 +425,7 @@ export default function ProgramDesignHome({
           }}
           onFollow={() => handleFollow(editing, { editSource: editorPull })}
           onShareWithGroup={handleShareWithGroup}
+          onBuildWorkouts={() => setView('ai-setup')}
         />
       </section>
     );

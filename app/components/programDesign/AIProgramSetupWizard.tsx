@@ -29,9 +29,32 @@ type WizardStep = 'describe' | 'review';
 type AIProgramSetupWizardProps = {
   supabase: SupabaseClient;
   programName: string;
-  onComplete: (weekPlan: DayPlan[]) => void;
+  programId?: string;
+  weeks?: number;
+  startDate?: string | null;
+  onComplete: (weekPlan: DayPlan[]) => void | Promise<void>;
   onCancel: () => void;
 };
+
+function inferSchedule(text: string): { days: string[]; dayTypes: Record<string, string> } {
+  const t = text.toLowerCase();
+  if (/5.?day|push.?pull.?leg/.test(t)) {
+    return {
+      days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+      dayTypes: { Mon: 'Upper Body', Tue: 'Lower Body', Wed: 'Push', Thu: 'Pull', Fri: 'Legs' },
+    };
+  }
+  if (/3.?day|full body|m\/w\/f|monday wednesday friday/.test(t)) {
+    return {
+      days: ['Mon', 'Wed', 'Fri'],
+      dayTypes: { Mon: 'Full Body', Wed: 'Full Body', Fri: 'Full Body' },
+    };
+  }
+  return {
+    days: ['Mon', 'Tue', 'Thu', 'Fri'],
+    dayTypes: { Mon: 'Upper Body', Tue: 'Lower Body', Thu: 'Upper Body', Fri: 'Lower Body' },
+  };
+}
 
 function dayLabelToIndex(label: string): DayOfWeek {
   const idx = DAY_LABELS.indexOf(label);
@@ -101,6 +124,9 @@ function ActivityChip({ draft, onRemove }: { draft: ActivityDraft; onRemove?: ()
 export default function AIProgramSetupWizard({
   supabase,
   programName,
+  programId,
+  weeks = 6,
+  startDate = null,
   onComplete,
   onCancel,
 }: AIProgramSetupWizardProps) {
@@ -128,26 +154,37 @@ export default function AIProgramSetupWizard({
         return;
       }
 
-      const res = await fetch('/api/programs/suggest-activities', {
+      const schedule = inferSchedule(description);
+      const res = await fetch('/api/programs/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ description: description.trim() }),
+        body: JSON.stringify({
+          prompt: description.trim(),
+          weeks,
+          days: schedule.days,
+          dayTypes: schedule.dayTypes,
+          programName,
+          existingProgramId: programId || undefined,
+          startDate: startDate || undefined,
+          primaryGoal: /muscle|hypertrophy|build muscle/.test(description.toLowerCase())
+            ? 'hypertrophy'
+            : 'strength',
+        }),
       });
 
       const data = await res.json();
       if (!res.ok || data.error) {
-        setError(data.error || 'Could not generate activity suggestions.');
+        setError(data.error || 'Could not generate your training program.');
         setLoading(false);
         return;
       }
 
-      const plan = buildWeekPlan(data.activities || []);
-      setWeekPlan(plan);
-      setCoachMessage(data.coach_message || '');
-      setStep('review');
+      setCoachMessage(data.program_summary || data.coaching_notes || '');
+      await onComplete([]);
+      return;
     } catch (e: any) {
       setError(e?.message || 'Something went wrong.');
     }
@@ -207,9 +244,9 @@ export default function AIProgramSetupWizard({
         <button type="button" className="pd-back" onClick={onCancel}>
           ← Back
         </button>
-        <h1>Set up your week with AI</h1>
+        <h1>Build your workouts</h1>
         <p className="muted ai-wiz-lead">
-          Describe what you want your training week to look like. Be as specific or general as you like — AI will build a weekly plan from your description.
+          Describe the training you want. BuiltIQ will create the actual lifts, sets, and weekly calendar on this program — not just empty day labels.
         </p>
 
         <div className="ai-wiz-examples">
@@ -217,33 +254,33 @@ export default function AIProgramSetupWizard({
           <button
             type="button"
             className="ai-wiz-example"
-            onClick={() => setDescription('Strength training 3 days a week, cardio on Tuesday and Thursday')}
+            onClick={() => setDescription('Upper/lower strength program 4 days a week, build muscle, barbell and dumbbells')}
           >
-            "Strength training 3 days a week, cardio on Tuesday and Thursday"
+            "Upper/lower 4 days a week, build muscle"
           </button>
           <button
             type="button"
             className="ai-wiz-example"
-            onClick={() => setDescription('Upper body Monday and Thursday, lower body Tuesday and Friday, stretching Wednesday')}
+            onClick={() => setDescription('Full body strength workouts Monday Wednesday Friday, focus on squat bench and deadlift')}
           >
-            "Upper/lower split with stretching on Wednesday"
+            "Full body M/W/F, squat bench deadlift"
           </button>
           <button
             type="button"
             className="ai-wiz-example"
-            onClick={() => setDescription('Full body workouts Monday Wednesday Friday, yoga on Saturday')}
+            onClick={() => setDescription('5-day push pull legs strength program for hypertrophy')}
           >
-            "Full body M/W/F, yoga on Saturday"
+            "5-day push pull legs hypertrophy"
           </button>
         </div>
 
-        <label htmlFor="ai-wiz-desc">Describe your weekly plan</label>
+        <label htmlFor="ai-wiz-desc">Describe your training</label>
         <textarea
           id="ai-wiz-desc"
           rows={4}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="I want to do strength training 3 days a week and cardio on Tuesday and Thursday…"
+          placeholder="Upper/lower 4 days a week, build muscle, I have a barbell and dumbbells…"
           autoFocus
         />
 
@@ -256,10 +293,10 @@ export default function AIProgramSetupWizard({
             disabled={loading || description.trim().length < 8}
             onClick={() => void handleGenerate()}
           >
-            {loading ? 'Building your week…' : 'Build my week with AI'}
+            {loading ? 'Building your workouts…' : 'Build my workouts'}
           </button>
           <button type="button" className="btn secondary" onClick={onCancel} disabled={loading}>
-            Skip — I'll add activities manually
+            Skip — I'll add workouts later
           </button>
         </div>
       </div>

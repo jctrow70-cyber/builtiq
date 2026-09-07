@@ -392,7 +392,7 @@ See `CHANGELOG.md` BIQ-0013 and BIQ-0024 for full scope.
 
 ### Next priorities
 
-1. **Program Design overhaul (BIQ-0136)** — separate planning from Training execution. Phase 1 shell in progress; see Decision 030.
+1. **Program Design overhaul (BIQ-0136)** — planning is separate from Training execution (Decision 030). Create Program now builds real workouts on the new program (BIQ-0151). Remaining: richer activity builders, cardio/mobility editors, and program edit-from-prompt.
 2. **Group Training platform (BIQ-0043)** — P1–P8 complete; epic ready for preview QA
 2. ~~PR detection and strength trends on Progress tab~~ (BIQ-0026)
 3. **App admin roles** — move beyond env-only catalog import admin (see below)

@@ -11,6 +11,73 @@ Branch:
 Status:
 ```
 
+## BIQ-0151 - Create Program Builds Actual Workouts
+
+Date: 2026-09-07  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Create Program now generates real workouts (exercises, sets, and calendar days) on the program you just created. The old flow only made an empty calendar shell, so users never reached an actual training program.
+
+### Purpose
+
+Hitting Create Program and then the calendar step felt like a dead end. Users expected lifts and sets, not empty day labels.
+
+### Changes
+
+- Program create continues into “Build my workouts” instead of activity-only AI
+- `POST /api/programs/generate` accepts `existingProgramId` and saves workouts onto that program
+- Generated strength days are written as calendar activities linked to those workouts
+- Empty calendars show a Build my workouts button to reopen the builder
+- Training Program Setup generate is unchanged (still creates a new program when no existing id is sent)
+
+### Files Changed
+
+- `app/components/programDesign/CreateProgramFlow.tsx`
+- `app/components/programDesign/AIProgramSetupWizard.tsx`
+- `app/components/programDesign/ProgramDesignHome.tsx`
+- `app/components/programDesign/ProgramCalendarEditor.tsx`
+- `app/api/programs/generate/route.ts`
+- `lib/training/aiProgramPlan.ts`
+- `lib/programDesign/programDesignApi.ts`
+- `CHANGELOG.md`
+- `ROADMAP.md`
+- `DECISIONS.md`
+
+### Database Changes
+
+None. Reuses existing `st_programs`, `st_workouts`, `st_exercises`, `st_planned_sets`, and `st_program_activities`.
+
+### Testing Steps
+
+1. Programs → Create Program → name + dates → Create and build workouts.
+2. Describe training (or tap an example) → Build my workouts.
+3. Calendar should show strength days (Upper/Lower or the split you described), not an empty week.
+4. Open a strength day and confirm exercises/sets exist (or open Training while following this program and start a workout).
+5. Skip from the builder → calendar shows Build my workouts; generating from there still fills this program (no second program).
+6. Open an older empty program from the previous create flow → Build my workouts fills that same program.
+7. Training → Program Setup → Generate still creates a new draft program (does not overwrite the design program).
+8. Creating a second program and generating again must not copy workouts onto the first program.
+9. Mobile (~390px): create, generate, and calendar cards stay usable.
+10. If generate fails, the error shows on the builder and the program shell remains.
+
+### Known Issues
+
+- Generate onto an existing program is blocked if that program already has exercises. Empty calendar shells from the old create flow can be filled.
+- Cycle lengths over 12 weeks still generate at most 12 weeks of workouts.
+- Cardio/yoga-only descriptions still produce a strength split inferred from the text; extra calendar activities can be added after.
+- Science engine migration `044` should be applied so RIR and `science_version` persist.
+
+### Recommended Commit Message
+
+```text
+BIQ-0151 Build workouts when creating a program
+```
+
+---
+
 ## BIQ-0150 - Unfollow Clears Training Program
 
 Date: 2026-09-06  
@@ -9337,22 +9404,14 @@ BIQ-0140 Add Training month calendar view
 
 ---
 
-<<<<<<< HEAD
 ## BIQ-0141 - Science-Based Training Engine Foundation
 
 Date: 2026-09-07  
 Branch: develop  
-=======
-## BIQ-0141 - Fix Training Calendar Day Selection Drift
-
-Date: 2026-09-03  
-Branch: cursor/fix-training-calendar-day-click-f329  
->>>>>>> 43059003029cedda3b15222e1c00c6ca1af15057
 Status: Completed
 
 ### Summary
 
-<<<<<<< HEAD
 BuiltIQ now generates programs with a deterministic science engine. ChatGPT no longer invents workouts. The engine decides volume, split, exercises, sets, reps, RIR, rest, dynamic warm-up, Power Primer, and lift ramp-up. AI may only explain and personalize on top of that prescription.
 
 ### Purpose
@@ -9418,7 +9477,23 @@ Does not replace `st_set_logs` or rewrite existing programs.
 - Catalog metadata is inferred; not every imported exercise has perfect role/contribution values yet
 - Migration `044` must be applied before RIR and science_version persist
 - Template generate() in Program Setup is still the older fallback path
-=======
+
+### Recommended Commit Message
+
+```text
+BIQ-0141 Add deterministic science training engine
+```
+
+---
+
+## BIQ-0141 - Fix Training Calendar Day Selection Drift
+
+Date: 2026-09-03  
+Branch: cursor/fix-training-calendar-day-click-f329  
+Status: Completed
+
+### Summary
+
 Fixed Training Calendar day selection so tapping any date opens that exact date instead of sometimes drifting to the prior selected weekday.
 
 ### Purpose
@@ -9453,14 +9528,9 @@ None.
 ### Known Issues
 
 None identified for this fix.
->>>>>>> 43059003029cedda3b15222e1c00c6ca1af15057
 
 ### Recommended Commit Message
 
 ```text
-<<<<<<< HEAD
-BIQ-0141 Add deterministic science training engine
-=======
 BIQ-0141 Fix training calendar day click date drift
->>>>>>> 43059003029cedda3b15222e1c00c6ca1af15057
 ```
