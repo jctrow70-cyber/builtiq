@@ -9,6 +9,7 @@ type PlannedSet = {
 type Props = {
   name: string;
   sets: PlannedSet[];
+  badge?: string;
   thumbUrl?: string | null;
   showGuide?: boolean;
   guideLabel?: string;
@@ -46,6 +47,7 @@ export function formatWarmupPrescription(sets: PlannedSet[]): string {
 export default function WarmupExerciseCard({
   name,
   sets,
+  badge,
   thumbUrl,
   showGuide,
   guideLabel,
@@ -87,7 +89,10 @@ export default function WarmupExerciseCard({
           )
         ) : null}
         <div className="warmup-exercise-body">
-          <h3 className="warmup-exercise-name">{name}</h3>
+          <h3 className="warmup-exercise-name">
+            {badge ? <span className="warmup-exercise-badge">{badge}</span> : null}
+            {name}
+          </h3>
           <p className="warmup-exercise-prescription">{formatWarmupPrescription(sets)}</p>
         </div>
         {guideAction && (

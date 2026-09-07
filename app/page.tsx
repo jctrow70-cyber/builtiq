@@ -1933,12 +1933,17 @@ export default function Page(){
     completed:markComplete,
     ...snapshotForLog(ex,ps,workoutRef,catItem)
   };
-  const allKeys=Array.from(new Set([...fieldKeys,'actual_weight','actual_reps','actual_rpe','actual_duration','actual_distance','actual_pace','actual_hr','actual_calories','log_notes']));
+  const allKeys=Array.from(new Set([...fieldKeys,'actual_weight','actual_reps','actual_rpe','actual_rir','actual_duration','actual_distance','actual_pace','actual_hr','actual_calories','log_notes']));
   allKeys.forEach((k:string)=>{
     if(Object.prototype.hasOwnProperty.call(fieldUpdates,k))payload[k]=fieldUpdates[k]==null?'':String(fieldUpdates[k]);
     else payload[k]=old[k]??'';
   });
-  const{data,error}=await supabase.from('st_set_logs').upsert(payload,{onConflict:'planned_set_id,user_id,log_date'}).select().single();
+  let{data,error}=await supabase.from('st_set_logs').upsert(payload,{onConflict:'planned_set_id,user_id,log_date'}).select().single();
+  if(error && /actual_rir|pain_score/i.test(error.message||'')){
+    delete payload.actual_rir;
+    delete payload.pain_score;
+    ({data,error}=await supabase.from('st_set_logs').upsert(payload,{onConflict:'planned_set_id,user_id,log_date'}).select().single());
+  }
   if(error){alert(error.message);return;}
   setLogs((prev:any)=>{
     const next={...prev,[sid]:data};
@@ -1990,7 +1995,7 @@ export default function Page(){
  }
  async function duplicateSetLog(sid:string,source:any){
   if(!canLog()||!source)return;
-  const keys=['actual_weight','actual_reps','actual_rpe','actual_duration','actual_distance','actual_pace','actual_hr','actual_calories','log_notes'];
+  const keys=['actual_weight','actual_reps','actual_rpe','actual_rir','actual_duration','actual_distance','actual_pace','actual_hr','actual_calories','log_notes'];
   const updates:Record<string,any>={};
   keys.forEach((k)=>{
     if(source[k]!=null&&String(source[k]).trim()!=='') updates[k]=String(source[k]);
@@ -2251,7 +2256,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
  const displayWorkout=showGroupsMemberWorkout&&memberWorkoutProgram?memberWorkout:workout;
  const canManageTrainingProgram=mode==='personal'?canEdit():!!activeTeam&&canEditGroupProgram(activeTeam.my_role);
  const memberAssignment=memberDashboard?memberAssignments[memberDashboard.user_id]:null;
- const renderWarmupExerciseCard=(ex:any)=>{const catItem=catalog.find((c:any)=>c.id===ex.catalog_exercise_id);const exThumb=getExerciseThumb(catItem);const showGuide=hasExerciseGuide(catItem);const guidePayload=getExerciseGuidePayload(catItem,ex.name);const sortedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));return <WarmupExerciseCard key={ex.id} name={ex.name||'Exercise'} sets={sortedSets} thumbUrl={exThumb} showGuide={showGuide&&!!guidePayload} guideLabel={guidePayload?.hasVideo?'Watch form':'Form guide'} onOpenGuide={guidePayload?()=>setExerciseGuide(guidePayload):undefined} canEdit={canEdit()} onChange={canEdit()?()=>openReplaceExercisePanel(ex):undefined} onAddSet={canEdit()?()=>addSet(ex):undefined} onRemove={canEdit()?()=>removeExercise(ex):undefined}/>;};
+ const renderWarmupExerciseCard=(ex:any)=>{const catItem=catalog.find((c:any)=>c.id===ex.catalog_exercise_id);const exThumb=getExerciseThumb(catItem);const showGuide=hasExerciseGuide(catItem);const guidePayload=getExerciseGuidePayload(catItem,ex.name);const sortedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));const notes=String(ex.notes||'');const badge=/power primer/i.test(notes)?'Power Primer':/dynamic warm-up/i.test(notes)?'Warm-up':undefined;return <WarmupExerciseCard key={ex.id} name={ex.name||'Exercise'} badge={badge} sets={sortedSets} thumbUrl={exThumb} showGuide={showGuide&&!!guidePayload} guideLabel={guidePayload?.hasVideo?'Watch form':'Form guide'} onOpenGuide={guidePayload?()=>setExerciseGuide(guidePayload):undefined} canEdit={canEdit()} onChange={canEdit()?()=>openReplaceExercisePanel(ex):undefined} onAddSet={canEdit()?()=>addSet(ex):undefined} onRemove={canEdit()?()=>removeExercise(ex):undefined}/>;};
  const renderExerciseCard=(ex:any,inSuperset=false)=>{const catItem=catalog.find((c:any)=>c.id===ex.catalog_exercise_id);const exType=exerciseTypeOf(ex,catItem);const plannedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).length;const exThumb=getExerciseThumb(catItem);const showGuide=hasExerciseGuide(catItem);const guidePayload=getExerciseGuidePayload(catItem,ex.name);const cardKey=`${ex.id}:${ex.catalog_exercise_id||'n'}:${ex.name}`;const isEditingName=exerciseNameSearch?.exerciseId===ex.id;const nameQuery=isEditingName?exerciseNameSearch!.query:(ex.name||'');const nameSearchResults=isEditingName&&nameQuery.trim()?searchCatalog(workoutSearchCatalog,{query:nameQuery,filters:{availableEquipment:hasEquipmentFilter(equipmentForSearch)?equipmentForSearch:undefined},limit:8}):[];const sortedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));const prevBySetId:Record<string,any>={};sortedSets.forEach((s:any)=>{prevBySetId[s.id]=previousFor(ex,s);});const showPreviousSets=!isMobilityStretchExercise(ex,catItem,exType);const weightUnit=profileDraft?.units_preference==='metric'?'kg':'lb';const isCollapsed=!!collapsedExercises[ex.id];const doneSets=sortedSets.filter((s:any)=>logs[s.id]?.completed).length;const allDone=plannedSets>0&&doneSets===plannedSets;const exSection=exerciseSection(ex);const sectionSupersetGroups=workout?getSupersetGroupsForSection(workout,exSection).filter((g:any)=>g.count<3):[];const standalonePeers=workout?sectionExercises(workout,exSection).filter((e:any)=>!e.superset_group_id&&e.id!==ex.id):[];return <div className={`card exercise-card${inSuperset?' in-superset':''}${isCollapsed?' exercise-collapsed':''}${allDone?' exercise-all-done':''}`} data-exercise-id={ex.id} key={cardKey}>
         <div className="exercise-head" data-exercise-head={ex.id}><div className="exercise-head-main">{exThumb&&(showGuide&&guidePayload?<button type="button" className="exercise-card-thumb-btn" title={guidePayload.hasVideo?"Watch form":"Form guide"} onClick={()=>setExerciseGuide(guidePayload)}><img className="exercise-card-thumb" src={exThumb} alt="" loading="lazy" referrerPolicy="no-referrer"/></button>:<img className="exercise-card-thumb" src={exThumb} alt="" loading="lazy" referrerPolicy="no-referrer"/>)}<div className="exercise-meta">{canEdit()?<>
           <div className="exercise-title-row">

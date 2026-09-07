@@ -1,28 +1,25 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createSupabaseFromRequest, requireAuthUser } from '../../../../lib/supabaseServer';
-import {
-  aiGenerationWeeks,
-  buildProgramGenerationPrompt,
-  expandPlanToFullWeeks,
-  isRetryablePlanError,
-  parseAndValidateAiPlan,
-  persistAiProgramPlan,
-  type GenerationConfig,
-} from '../../../../lib/training/aiProgramPlan';
+import { persistAiProgramPlan, type GenerationConfig } from '../../../../lib/training/aiProgramPlan';
 import { fetchAllExerciseCatalog } from '../../../../lib/training/catalogFetch';
 import { builtinCatalogItems } from '../../../../lib/training/catalogSearch';
 import { normalizeEquipmentList } from '../../../../lib/training/equipmentFilter';
+import {
+  SCIENCE_ENGINE_VERSION,
+  buildScienceCoachPrompt,
+  generateProgram,
+  scienceProgramToAiPlan,
+  trainingProfileFromSources,
+  validateProgram,
+} from '../../../../lib/scienceEngine';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
 
-const OPENAI_TIMEOUT_MS = 50_000;
-const ROUTE_BUDGET_MS = 110_000;
-
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-function normalizeDays(days: unknown, dayTypes: Record<string, string>): string[] {
+function normalizeDays(days: unknown): string[] {
   if (!Array.isArray(days) || !days.length) return ['Mon', 'Tue', 'Fri'];
   return days
     .map((d) => String(d))
@@ -31,11 +28,6 @@ function normalizeDays(days: unknown, dayTypes: Record<string, string>): string[
 }
 
 export async function POST(request: Request) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json({ error: 'OPENAI_API_KEY is not configured on the server' }, { status: 503 });
-  }
-
   const { supabase, token } = createSupabaseFromRequest(request);
   const { user, error: authError } = await requireAuthUser(supabase, token);
   if (authError || !user) {
@@ -50,38 +42,20 @@ export async function POST(request: Request) {
   }
 
   const prompt = String(body?.prompt || '').trim();
-  if (!prompt || prompt.length < 8) {
-    return NextResponse.json({ error: 'Provide a program prompt (at least 8 characters)' }, { status: 400 });
-  }
   if (prompt.length > 6000) {
     return NextResponse.json({ error: 'Prompt is too long (max 6000 characters)' }, { status: 400 });
   }
 
   const weeks = Math.max(1, Math.min(12, Number(body?.weeks) || 6));
   const dayTypes: Record<string, string> = body?.dayTypes && typeof body.dayTypes === 'object' ? body.dayTypes : {};
-  const days = normalizeDays(body?.days, dayTypes);
+  const days = normalizeDays(body?.days);
   const mode = body?.mode === 'team' ? 'team' : 'personal';
   const teamId = body?.teamId ? String(body.teamId) : null;
   const focusMuscles = Array.isArray(body?.focusMuscles) ? body.focusMuscles.map(String) : [];
-  const dayEmphasis =
-    body?.dayEmphasis && typeof body.dayEmphasis === 'object'
-      ? Object.fromEntries(
-          Object.entries(body.dayEmphasis).map(([day, emph]) => [String(day), String(emph)])
-        )
-      : {};
   const programName = body?.programName ? String(body.programName).trim() : '';
-  const defaultProgramName = 'AI Strength Program';
+  const defaultProgramName = 'BuiltIQ Training Program';
   const includeCooldown = body?.includeCooldown !== false;
   const startDateRaw = body?.startDate ? String(body.startDate).slice(0, 10) : null;
-  const parseOptionalCount = (v: unknown, min: number, max: number): number | null => {
-    if (v === null || v === undefined || v === '') return null;
-    const n = Number(v);
-    if (!Number.isFinite(n)) return null;
-    return Math.max(min, Math.min(max, Math.round(n)));
-  };
-  const strengthExerciseCount = parseOptionalCount(body?.strengthExerciseCount, 3, 12);
-  const supersetCount = parseOptionalCount(body?.supersetCount, 0, 6);
-  const supersetSize = parseOptionalCount(body?.supersetSize, 2, 3);
 
   if (mode === 'team') {
     if (!teamId) return NextResponse.json({ error: 'teamId required for team programs' }, { status: 400 });
@@ -97,139 +71,119 @@ export async function POST(request: Request) {
     }
   }
 
-  const [{ data: profile }, catalogResult] = await Promise.all([
+  const [{ data: profile }, catalogResult, trainingProfileResult] = await Promise.all([
     supabase.from('st_profiles').select('*').eq('user_id', user.id).maybeSingle(),
     fetchAllExerciseCatalog(supabase),
+    supabase.from('st_training_profiles').select('*').eq('user_id', user.id).maybeSingle(),
   ]);
 
   if (catalogResult.error) {
     return NextResponse.json({ error: `Failed to load exercise catalog: ${catalogResult.error}` }, { status: 500 });
   }
 
+  const trainingProfileRow = trainingProfileResult.error ? null : trainingProfileResult.data;
   const catalog = catalogResult.data;
+  const scienceProfile = trainingProfileFromSources({
+    profile,
+    trainingProfile: trainingProfileRow,
+    config: {
+      days,
+      dayTypes,
+      focusMuscles,
+      availableEquipment: Array.isArray(body?.availableEquipment)
+        ? body.availableEquipment.map(String)
+        : normalizeEquipmentList(profile?.available_equipment),
+      includeCooldown,
+      weeks,
+      sessionMinutes: body?.sessionMinutes,
+      primaryGoal: body?.primaryGoal,
+      experienceLevel: body?.experienceLevel,
+    },
+  });
 
-  const config: GenerationConfig = {
-    prompt,
-    weeks,
-    days,
-    dayTypes,
-    dayEmphasis,
-    focusMuscles,
-    programName: programName || defaultProgramName,
-    mode,
-    teamId,
-    includeCooldown,
-    availableEquipment: Array.isArray(body?.availableEquipment)
-      ? body.availableEquipment.map(String)
-      : normalizeEquipmentList(profile?.available_equipment),
-    startDate: startDateRaw || undefined,
-    strengthExerciseCount,
-    supersetCount,
-    supersetSize,
-  };
-
-  const aiWeeks = aiGenerationWeeks(weeks);
-  const aiConfig: GenerationConfig = aiWeeks < weeks ? { ...config, weeks: aiWeeks, fullWeeks: weeks } : config;
-
-  const { system, user: userContent } = buildProgramGenerationPrompt(prompt, profile, catalog || [], aiConfig);
-  const builtinCatalog = builtinCatalogItems(catalog || []);
-
-  const openai = new OpenAI({ apiKey, timeout: OPENAI_TIMEOUT_MS });
-  let rawContent = '';
-  const startedAt = Date.now();
-  const routeTimeLeftMs = () => Math.max(0, ROUTE_BUDGET_MS - (Date.now() - startedAt));
-
-  const callAi = async (extraSystem?: string) => {
-    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-      { role: 'system', content: system },
-      { role: 'user', content: userContent },
-    ];
-    if (extraSystem) messages.push({ role: 'system', content: extraSystem });
-    const completion = await openai.chat.completions.create({
-      model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-      temperature: 0.45,
-      max_tokens: aiWeeks < weeks ? 6000 : 12000,
-      response_format: { type: 'json_object' },
-      messages,
-    });
-    return completion.choices[0]?.message?.content || '';
-  };
-
+  let scienceProgram;
   try {
-    rawContent = await callAi();
+    scienceProgram = generateProgram(scienceProfile, catalog || []);
   } catch (err: any) {
-    const msg = err?.message || 'OpenAI request failed';
+    return NextResponse.json({ error: err?.message || 'Science engine failed to generate a program' }, { status: 500 });
+  }
+
+  const validation = validateProgram(scienceProgram, scienceProfile);
+  if (!validation.ok) {
     return NextResponse.json(
       {
-        error: msg.includes('timeout')
-          ? 'AI timed out building your plan — try fewer weeks or retry.'
-          : msg,
-      },
-      { status: 502 }
-    );
-  }
-
-  if (!rawContent) {
-    return NextResponse.json({ error: 'Empty response from AI' }, { status: 502 });
-  }
-
-  let { plan, error: validateError } = parseAndValidateAiPlan(rawContent, aiConfig, catalog || []);
-
-  if (plan && aiWeeks < weeks) {
-    plan = expandPlanToFullWeeks(plan, config, catalog || []);
-  }
-
-  if ((validateError || !plan) && isRetryablePlanError(validateError) && routeTimeLeftMs() > 18_000 && aiWeeks >= weeks) {
-    try {
-      const retryContent = await callAi(
-        'Previous plan failed validation. Include at least one exercise per workout, warmup prep on strength days, and a detailed program_summary (3-5 sentences) plus coaching_notes (4-8 sentences).'
-      );
-      if (retryContent) {
-        rawContent = retryContent;
-        const retryResult = parseAndValidateAiPlan(rawContent, aiConfig, catalog || []);
-        if (retryResult.plan) {
-          plan = aiWeeks < weeks ? expandPlanToFullWeeks(retryResult.plan, config, catalog || []) : retryResult.plan;
-          validateError = null;
-        } else {
-          validateError = retryResult.error;
-        }
-      }
-    } catch {
-      /* keep original validation error */
-    }
-  }
-
-  if (validateError || !plan) {
-    return NextResponse.json(
-      {
-        error: validateError || 'Invalid AI plan',
-        hint: 'Please try again in a moment.',
+        error: 'Science engine validation failed',
+        issues: validation.issues,
       },
       { status: 422 }
     );
   }
 
+  const config: GenerationConfig = {
+    prompt: prompt || scienceProgram.summary,
+    weeks,
+    days,
+    dayTypes,
+    focusMuscles,
+    programName: programName || scienceProgram.name || defaultProgramName,
+    mode,
+    teamId,
+    includeCooldown,
+    availableEquipment: scienceProfile.availableEquipment,
+    startDate: startDateRaw || undefined,
+    generationMethod: 'science',
+    scienceVersion: SCIENCE_ENGINE_VERSION,
+  };
+
+  let plan = scienceProgramToAiPlan(scienceProgram, config);
+  let generationMethod: 'science' | 'science_ai' = 'science';
+
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (apiKey && prompt.length >= 8) {
+    try {
+      const { system, user: userContent } = buildScienceCoachPrompt(scienceProgram, scienceProfile, prompt);
+      const openai = new OpenAI({ apiKey, timeout: 20_000 });
+      const completion = await openai.chat.completions.create({
+        model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+        temperature: 0.4,
+        max_tokens: 1200,
+        response_format: { type: 'json_object' },
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: userContent },
+        ],
+      });
+      const raw = completion.choices[0]?.message?.content || '';
+      const parsed = raw ? JSON.parse(raw) : null;
+      if (parsed?.summary) plan.program_summary = String(parsed.summary);
+      if (parsed?.coaching_notes || parsed?.explanation) {
+        plan.coaching_notes = String(parsed.coaching_notes || parsed.explanation);
+      }
+      generationMethod = 'science_ai';
+    } catch {
+      generationMethod = 'science';
+    }
+  }
+
+  config.generationMethod = generationMethod;
+  const builtinCatalog = builtinCatalogItems(catalog || []);
   const { programId, error: persistError } = await persistAiProgramPlan(supabase, user.id, plan, config, builtinCatalog);
   if (persistError || !programId) {
-    const msg = persistError || 'Failed to save program';
-    // coaching_notes column may not exist until migration runs — retry without it
-    if (/coaching_notes/i.test(msg)) {
-      const fallbackPlan = { ...plan, coaching_notes: undefined };
-      const mergedSummary = [plan.program_summary, plan.coaching_notes].filter(Boolean).join('\n\n');
-      fallbackPlan.program_summary = mergedSummary;
-      const retry = await persistAiProgramPlan(supabase, user.id, fallbackPlan, config, builtinCatalog);
-      if (retry.programId) {
-        return NextResponse.json({
-          programId: retry.programId,
-          program_summary: plan.program_summary,
-          coaching_notes: plan.coaching_notes || '',
-          program_name: programName || plan.program_name || defaultProgramName,
-          workout_count: plan.workouts.length,
-          generation_method: 'ai',
-        });
-      }
-    }
-    return NextResponse.json({ error: msg }, { status: 500 });
+    return NextResponse.json({ error: persistError || 'Failed to save program' }, { status: 500 });
+  }
+
+  try {
+    await supabase.from('st_muscle_weekly_targets').insert(
+      scienceProgram.volumeTargets.map((t) => ({
+        program_id: programId,
+        week_number: 1,
+        muscle_group: t.muscle,
+        target_sets: t.targetSets,
+        priority: t.priority,
+      }))
+    );
+  } catch {
+    /* table may not exist until migration 044 */
   }
 
   return NextResponse.json({
@@ -238,6 +192,9 @@ export async function POST(request: Request) {
     coaching_notes: plan.coaching_notes || '',
     program_name: programName || plan.program_name || defaultProgramName,
     workout_count: plan.workouts.length,
-    generation_method: 'ai',
+    generation_method: generationMethod,
+    science_version: SCIENCE_ENGINE_VERSION,
+    volume_targets: scienceProgram.volumeTargets,
+    validation_warnings: validation.issues.filter((i) => i.severity === 'warning'),
   });
 }

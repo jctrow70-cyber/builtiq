@@ -15,6 +15,10 @@ export type AiExercise = {
   reps?: string;
   rpe?: string;
   target_weight?: string;
+  target_rir?: number;
+  rest_seconds?: number;
+  notes?: string;
+  set_details?: { set_type?: string; weight?: string; reps?: string; rir?: number }[];
 };
 
 export type AiWorkoutItem = AiExercise | { superset: AiExercise[] };
@@ -57,6 +61,8 @@ export type GenerationConfig = {
   supersetCount?: number | null;
   /** Exercises per superset (2–3); null = AI decides. */
   supersetSize?: number | null;
+  generationMethod?: 'ai' | 'template' | 'science' | 'science_ai';
+  scienceVersion?: string;
 };
 
 /** OpenAI generates all weeks for short plans; longer plans use week 1 as template. */
@@ -438,6 +444,10 @@ function normalizeExercise(ex: AiExercise): AiExercise {
     reps: ex.reps ? String(ex.reps) : '8-12',
     rpe: ex.rpe ? String(ex.rpe) : '',
     target_weight: ex.target_weight ? String(ex.target_weight) : '',
+    target_rir: ex.target_rir,
+    rest_seconds: ex.rest_seconds,
+    notes: ex.notes,
+    set_details: ex.set_details,
   };
 }
 
@@ -918,20 +928,45 @@ export function matchExerciseToCatalog(name: string, catalog: any[], catMap: Rec
   return best;
 }
 
-function buildPlannedSetRows(sets: number) {
-  const rows: { sort_order: number; set_number: number; set_type: string; target_weight: string; target_reps: string; target_rpe: string }[] = [];
-  const n = Math.max(1, sets);
+function buildPlannedSetRows(
+  sets: number,
+  extras?: {
+    reps?: string;
+    rpe?: string;
+    target_weight?: string;
+    target_rir?: number;
+    rest_seconds?: number;
+    set_details?: { set_type?: string; weight?: string; reps?: string; rir?: number }[];
+  }
+) {
+  const details = extras?.set_details?.length ? extras.set_details : null;
+  const n = details ? details.length : Math.max(1, sets);
+  const rows: Record<string, unknown>[] = [];
   for (let i = 0; i < n; i++) {
+    const detail = details?.[i];
     rows.push({
       sort_order: i,
       set_number: i + 1,
-      set_type: 'working',
-      target_weight: '',
-      target_reps: '',
-      target_rpe: '',
+      set_type: detail?.set_type || 'working',
+      target_weight: detail?.weight || extras?.target_weight || '',
+      target_reps: detail?.reps || extras?.reps || '',
+      target_rpe: extras?.rpe || '',
+      target_rir: detail?.rir ?? extras?.target_rir ?? null,
+      rest_seconds: extras?.rest_seconds ?? null,
+      rep_min: parseRepBound(detail?.reps || extras?.reps || '', 'min'),
+      rep_max: parseRepBound(detail?.reps || extras?.reps || '', 'max'),
     });
   }
   return rows;
+}
+
+function parseRepBound(reps: string, which: 'min' | 'max'): number | null {
+  const m = String(reps || '').match(/(\d+)\s*-\s*(\d+)/);
+  if (!m) {
+    const n = Number(String(reps || '').replace(/[^\d.]/g, ''));
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+  return Number(which === 'min' ? m[1] : m[2]);
 }
 
 function makeSupersetGroupId() {
@@ -942,7 +977,15 @@ function makeSupersetGroupId() {
 
 type PendingExerciseInsert = {
   payload: Record<string, unknown>;
-  planned: { sets: number; reps: string; rpe: string; target_weight: string };
+  planned: {
+    sets: number;
+    reps: string;
+    rpe: string;
+    target_weight: string;
+    target_rir?: number;
+    rest_seconds?: number;
+    set_details?: { set_type?: string; weight?: string; reps?: string; rir?: number }[];
+  };
 };
 
 const PLANNED_SET_INSERT_CHUNK = 500;
@@ -979,6 +1022,7 @@ function collectSectionItems(
             muscle_group: hit?.muscle_group || exItem.muscle_group || 'Muscle',
             catalog_exercise_id: hit?.id || null,
             exercise_type: exType,
+            notes: exItem.notes || null,
             superset_group_id: groupId,
             superset_label: label,
             superset_order: slot,
@@ -988,6 +1032,9 @@ function collectSectionItems(
             reps: exItem.reps || '',
             rpe: exItem.rpe || '',
             target_weight: exItem.target_weight || '',
+            target_rir: exItem.target_rir,
+            rest_seconds: exItem.rest_seconds,
+            set_details: exItem.set_details,
           },
         });
       }
@@ -1004,6 +1051,7 @@ function collectSectionItems(
           muscle_group: hit?.muscle_group || item.muscle_group || 'Muscle',
           catalog_exercise_id: hit?.id || null,
           exercise_type: exType,
+          notes: item.notes || null,
           superset_group_id: null,
         },
         planned: {
@@ -1011,6 +1059,9 @@ function collectSectionItems(
           reps: item.reps || '',
           rpe: item.rpe || '',
           target_weight: item.target_weight || '',
+          target_rir: item.target_rir,
+          rest_seconds: item.rest_seconds,
+          set_details: item.set_details,
         },
       });
       sort++;
@@ -1021,10 +1072,23 @@ function collectSectionItems(
 }
 
 async function insertPlannedSetRows(supabase: any, rows: any[]): Promise<{ error: string | null }> {
+  const optionalCols = ['target_rir', 'rest_seconds', 'rep_min', 'rep_max'];
+  let stripped = new Set<string>();
   for (let i = 0; i < rows.length; i += PLANNED_SET_INSERT_CHUNK) {
-    const chunk = rows.slice(i, i + PLANNED_SET_INSERT_CHUNK);
+    let chunk = rows.slice(i, i + PLANNED_SET_INSERT_CHUNK).map((row) => {
+      const next = { ...row };
+      stripped.forEach((col) => delete next[col]);
+      return next;
+    });
     const { error } = await supabase.from('st_planned_sets').insert(chunk);
-    if (error) return { error: error.message };
+    if (!error) continue;
+    const missing = optionalCols.find((col) => !stripped.has(col) && new RegExp(col, 'i').test(error.message || ''));
+    if (missing) {
+      stripped.add(missing);
+      i -= PLANNED_SET_INSERT_CHUNK;
+      continue;
+    }
+    return { error: error.message };
   }
   return { error: null };
 }
@@ -1046,7 +1110,8 @@ export async function persistAiProgramPlan(
     start_date: mondayOfWeek(config.startDate || todayYmd()),
     focus_muscles: config.focusMuscles?.length ? config.focusMuscles : null,
     generation_prompt: config.prompt.trim(),
-    generation_method: 'ai',
+    generation_method: config.generationMethod || 'ai',
+    science_version: config.scienceVersion || null,
     program_summary: plan.program_summary,
     coaching_notes: plan.coaching_notes || null,
     program_style: plan.program_style || null,
@@ -1111,13 +1176,9 @@ async function persistWorkoutsForProgram(
 
   const plannedSetRows = insertedExercises.flatMap((row: { id: string }, index: number) => {
     const meta = pendingExercises[index].planned;
-    return buildPlannedSetRows(meta.sets).map((r, i) => ({
+    return buildPlannedSetRows(meta.sets, meta).map((r) => ({
       ...r,
       exercise_id: row.id,
-      target_reps: meta.reps || '',
-      target_rpe: meta.rpe || '',
-      target_weight: meta.target_weight || '',
-      set_number: i + 1,
     }));
   });
 

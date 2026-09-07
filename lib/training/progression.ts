@@ -1,6 +1,7 @@
 /**
- * Rule-based progression v1. Swap this module for AI-driven logic later without UI changes.
+ * Legacy last-session helpers. Double-progression decisions live in lib/scienceEngine/progression.ts.
  */
+export { evaluateProgression, estimated1Rm, setsFromLogs } from '../scienceEngine/progression';
 
 export type SetPerformance = { weight: string; reps: string; completed: boolean };
 

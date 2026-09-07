@@ -8814,3 +8814,85 @@ None.
 ```text
 BIQ-0140 Add Training month calendar view
 ```
+
+---
+
+## BIQ-0141 - Science-Based Training Engine Foundation
+
+Date: 2026-09-07  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+BuiltIQ now generates programs with a deterministic science engine. ChatGPT no longer invents workouts. The engine decides volume, split, exercises, sets, reps, RIR, rest, dynamic warm-up, Power Primer, and lift ramp-up. AI may only explain and personalize on top of that prescription.
+
+### Purpose
+
+Move from user goal → ChatGPT → random workout to user goal → BuiltIQ science engine → structured prescription → optional AI coaching → validation → save.
+
+### Changes
+
+- Centralized science rules at version `1.0.0` in `lib/scienceEngine/`
+- Weekly muscle volume, ULUL/split generation, exercise selection, double progression
+- Dynamic warm-up + Power Primer + specific ramp-up
+- Program generate API is science-first; OpenAI is an optional coaching layer
+- Strength logging uses RIR chips (0–5)
+- Warm-up cards can show Warm-up / Power Primer badges
+- Historical programs keep `science_version`
+
+### Files Changed
+
+- `lib/scienceEngine/*` (new)
+- `app/api/programs/generate/route.ts`
+- `lib/training/aiProgramPlan.ts`
+- `lib/training/progression.ts`
+- `lib/training/logFieldUI.ts`
+- `app/components/WorkoutSetLogger.tsx`
+- `app/components/training/WarmupExerciseCard.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `supabase/migrations/20250907_044_science_engine_foundation.sql`
+- `package.json`
+- `CHANGELOG.md`
+- `ROADMAP.md`
+- `DECISIONS.md`
+
+### Database Changes
+
+Apply `20250907_044_science_engine_foundation.sql` on test Supabase first, then live.
+
+Adds `st_science_rule_versions`, `st_training_profiles`, `st_exercise_performance`, `st_muscle_weekly_targets`, `st_weekly_training_reviews`, `st_workout_feedback`.
+
+Adds `st_programs.science_version`, planned-set RIR/rep range/rest, and `st_set_logs.actual_rir` / `pain_score`.
+
+Does not replace `st_set_logs` or rewrite existing programs.
+
+### Testing Steps
+
+1. Run `npm run test:science` — acceptance checks should pass
+2. Apply migration `044` on test Supabase
+3. Program Setup → generate a 4-day hypertrophy program with Chest focus
+4. Confirm split is Upper / Lower / Upper / Lower
+5. Confirm Upper A has a bench-style primary at 3 × 6–8 and RIR 2
+6. Confirm warmup includes goblet squat, push-up to toe touch, RDL, row, rotational lunge
+7. Confirm a Power Primer badge appears (medicine-ball chest pass when available)
+8. Confirm primary lift has warmup ramp sets before working sets
+9. Log strength sets with RIR chips 0–5; save and reload
+10. Personal and group generate both still save a draft program
+11. Existing workout history still loads; old RPE logs still display
+12. Mobile (~390px): RIR chips and warmup badges stay readable
+13. Generate still works if `OPENAI_API_KEY` is missing
+
+### Known Issues
+
+- Fatigue engine, reactive deloads, wearable data, and Training Insights UI are Phase 2/3
+- Catalog metadata is inferred; not every imported exercise has perfect role/contribution values yet
+- Migration `044` must be applied before RIR and science_version persist
+- Template generate() in Program Setup is still the older fallback path
+
+### Recommended Commit Message
+
+```text
+BIQ-0141 Add deterministic science training engine
+```

@@ -722,6 +722,7 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .warmup-exercise-thumb,.warmup-exercise-thumb--static{display:block;width:72px;height:72px;border-radius:12px;object-fit:cover;border:1px solid var(--borderSubtle);background:var(--surfaceInset);flex-shrink:0}
 .warmup-exercise-body{flex:1;min-width:0;padding-top:2px}
 .warmup-exercise-name{margin:0 0 4px;font-size:17px;font-weight:900;line-height:1.25}
+.warmup-exercise-badge{display:inline-block;margin-right:8px;padding:2px 7px;border-radius:999px;background:var(--accentSoft);color:var(--accentOnSoft);font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;vertical-align:middle}
 .warmup-exercise-prescription{margin:0;font-size:14px;font-weight:700;color:var(--textSecondary);line-height:1.35}
 .warmup-exercise-guide-btn{flex-shrink:0;align-self:flex-start;margin-top:2px}
 .warmup-exercise-actions{margin-top:10px;padding-top:10px;border-top:1px solid var(--borderSubtle)}

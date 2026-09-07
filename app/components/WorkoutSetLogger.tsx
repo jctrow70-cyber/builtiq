@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ExerciseType } from '../../lib/training/exerciseTypes';
 import {
   INTENSITY_CHIPS,
+  RIR_CHIPS,
   RPE_CHIPS,
   SIDE_CHIPS,
   allLogFieldsFlat,
@@ -355,9 +356,11 @@ function SetLogCard({
     />
   );
 
-  const hasChipRow = !!(layout.showRpeChips || layout.showIntensityChips || layout.showSideChips);
+  const hasChipRow = !!(layout.showRirChips || layout.showRpeChips || layout.showIntensityChips || layout.showSideChips);
 
-  const chipField = layout.showRpeChips
+  const chipField = layout.showRirChips
+    ? { key: 'actual_rir', label: 'RIR', chipOptions: RIR_CHIPS, size: 'wide' as const }
+    : layout.showRpeChips
     ? { key: 'actual_rpe', label: 'RPE', chipOptions: RPE_CHIPS, size: 'wide' as const }
     : layout.showIntensityChips
       ? { key: 'actual_rpe', label: 'Intensity', chipOptions: INTENSITY_CHIPS, size: 'wide' as const }
@@ -400,11 +403,11 @@ function SetLogCard({
           <div className="set-log-chips">
             <FieldCard
               field={chipField}
-              value={chipField.key === '_side' ? side : String(log.actual_rpe || '')}
+              value={chipField.key === '_side' ? side : String(log[chipField.key] || '')}
               disabled={!canLog}
               onChipPick={(v) => {
                 if (chipField.key === '_side') onSaveField(set.id, 'log_notes', mergeSideIntoNotes(notes, v));
-                else onSaveField(set.id, 'actual_rpe', v);
+                else onSaveField(set.id, chipField.key, v);
               }}
               onBlur={() => {}}
             />

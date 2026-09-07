@@ -209,11 +209,23 @@ Goal: Prepare BuildIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
-**BIQ-0140 Training month calendar** — Training has Day, Week, and Calendar. Apply `20250902_042` and `20250903_043` so calendar activities save. Program Design is where users choose what to follow.
-
-Completed through **BIQ-0042** on `main`: iPhone-compatible live barcode scanner for PWA.
+**BIQ-0141 Science engine Phase 2** — fatigue engine, reactive deloads, adaptive muscle volume, and Training Insights. Apply `20250907_044` so RIR and science versions persist.
 
 ### Recently completed
+
+**BIQ-0141 — Science-Based Training Engine Foundation** (Completed)
+
+| Part | Deliverable |
+|------|-------------|
+| 1 | Deterministic program generation (`lib/scienceEngine`) |
+| 2 | Weekly volume, split, sets/reps/RIR/rest |
+| 3 | Dynamic warm-up, Power Primer, lift ramp-up |
+| 4 | Double progression + weekly review helpers |
+| 5 | Generate API is science-first; AI coaches only |
+
+See `CHANGELOG.md` BIQ-0141.
+
+Completed through **BIQ-0042** on `main`: iPhone-compatible live barcode scanner for PWA.
 
 **BIQ-0042 — iPhone-Compatible Live Barcode Scanner** (Completed)
 

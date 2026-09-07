@@ -22,11 +22,13 @@ export type LogLayout = {
   /** Shown once above all sets for the exercise (not repeated per set). */
   exerciseNotes?: LogFieldUI;
   showRpeChips?: boolean;
+  showRirChips?: boolean;
   showIntensityChips?: boolean;
   showSideChips?: boolean;
 };
 
 const RPE_CHIPS = ['6', '7', '8', '9', '10'];
+const RIR_CHIPS = ['0', '1', '2', '3', '4', '5'];
 const INTENSITY_CHIPS = ['Easy', 'Moderate', 'Hard', 'Max'];
 const SIDE_CHIPS = ['Left', 'Right', 'Each'];
 
@@ -95,7 +97,7 @@ export function logLayoutForType(type: ExerciseType): LogLayout {
         { key: '_assist_weight', label: 'Assist', placeholder: '20', unitGroup: 'weight', optional: true, inputMode: 'decimal', size: 'compact' },
         { key: 'log_notes', label: 'Notes', placeholder: 'Tempo, form…', optional: true, size: 'wide' },
       ],
-      { showRpeChips: true },
+      { showRirChips: true },
     );
   }
   if (isStrengthLike(type)) {
@@ -105,7 +107,7 @@ export function logLayoutForType(type: ExerciseType): LogLayout {
         { key: 'actual_reps', label: 'Reps', placeholder: '8', unit: 'reps', inputMode: 'numeric', size: 'compact' },
       ],
       [{ key: 'log_notes', label: 'Notes', placeholder: 'Felt strong, etc.', optional: true, size: 'wide' }],
-      { showRpeChips: true },
+      { showRirChips: true },
     );
   }
   return layoutWithExerciseNotes(
@@ -123,6 +125,7 @@ export function logFieldKeysForType(type: ExerciseType): string[] {
   });
   if (layout.exerciseNotes && !layout.exerciseNotes.key.startsWith('_')) keys.add(layout.exerciseNotes.key);
   if (layout.showRpeChips) keys.add('actual_rpe');
+  if (layout.showRirChips) keys.add('actual_rir');
   if (layout.showIntensityChips) keys.add('actual_rpe');
   return Array.from(keys);
 }
@@ -132,7 +135,7 @@ export function allLogFieldsFlat(type: ExerciseType): LogFieldUI[] {
   return [...layout.primary, ...(layout.optional || []), ...(layout.exerciseNotes ? [layout.exerciseNotes] : [])];
 }
 
-export { RPE_CHIPS, INTENSITY_CHIPS, SIDE_CHIPS };
+export { RPE_CHIPS, RIR_CHIPS, INTENSITY_CHIPS, SIDE_CHIPS };
 
 /** Parse virtual assist weight from notes. */
 export function parseAssistFromNotes(notes: string): string {

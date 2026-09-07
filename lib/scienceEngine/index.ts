@@ -1,0 +1,18 @@
+export { SCIENCE_ENGINE_VERSION } from './version';
+export { SCIENCE_RULES_V1, getScienceRules } from './rules';
+export { SCIENCE_EVIDENCE_V1 } from './evidence';
+export { trainingProfileFromSources } from './profile';
+export { calculateWeeklyVolume } from './volume';
+export { generateTrainingSplit } from './split';
+export { generateProgram } from './generateProgram';
+export { generateWarmup } from './warmup';
+export { generatePotentiation } from './potentiation';
+export { generateRampSets, benchRampExample } from './rampUp';
+export { evaluateProgression, estimated1Rm, setsFromLogs } from './progression';
+export { reviewTrainingWeek } from './weeklyReview';
+export { validateProgram, validateAIResponse } from './validator';
+export { scienceProgramToAiPlan } from './toAiPlan';
+export { buildScienceCoachPrompt } from './aiLayer';
+export { explainProgression, explainWarmup, explainPowerPrimer } from './explain';
+export { adaptCatalog } from './catalogAdapter';
+export type { TrainingProfile, ScienceProgram, ProgressionResult, WeeklyReview, ValidationResult } from './types';
