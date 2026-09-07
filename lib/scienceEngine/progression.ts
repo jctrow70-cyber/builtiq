@@ -1,5 +1,7 @@
 import type { PerWorkingSet, ProgressionInput, ProgressionResult } from './types';
 
+export type { ProgressionResult };
+
 export function estimated1Rm(weight: number, reps: number): number {
   if (reps > 12 || weight <= 0 || reps <= 0) return weight;
   return weight * (1 + reps / 30);
