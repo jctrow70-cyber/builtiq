@@ -925,7 +925,15 @@ label{color:var(--textSecondary)}
 .te-item{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .te-item > div{display:grid;gap:2px}
 .te-item-type{font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--accentOnSoft)}
-.te-later{margin:0 0 6px}
+.te-item-title{background:none;border:0;padding:0;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.te-item-title:disabled{cursor:default}
+.te-plan-sheet{max-height:86vh;overflow:auto}
+.te-plan-section{margin:14px 0 0}
+.te-plan-section h3{margin:0 0 8px;font-size:13px;letter-spacing:.04em;text-transform:uppercase}
+.te-plan-ex{display:grid;gap:2px;padding:10px 12px;margin-bottom:8px;border-radius:12px;border:1px solid var(--borderSubtle);background:var(--surfaceInset)}
+.te-plan-ex b{font-size:14px}
+.te-later{margin:0 0 6px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.te-later p{margin:0}
 .te-tomorrow{opacity:.95}
 .te-week-nav{display:flex;flex-wrap:wrap;gap:8px}
 .te-week-label{margin:0;font-weight:800}

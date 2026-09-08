@@ -61,7 +61,7 @@ function mapExplicitType(raw: string): SplitDayType | null {
 }
 
 export function generateTrainingSplit(profile: TrainingProfile, _volumeTargets?: VolumeTarget[]): SplitDay[] {
-  const daysCount = Math.max(2, Math.min(6, profile.trainingDaysPerWeek || 4));
+  const daysCount = Math.max(1, Math.min(6, profile.trainingDaysPerWeek || 4));
   const days = pickDays(profile, daysCount);
 
   if (profile.explicitDayTypes && Object.keys(profile.explicitDayTypes).length) {

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createSupabaseFromRequest, requireAuthUser } from '../../../../lib/supabaseServer';
 import { persistAiProgramPlan, persistWorkoutsOntoProgram, type GenerationConfig } from '../../../../lib/training/aiProgramPlan';
+import { inferScheduleFromPrompt } from '../../../../lib/programDesign/inferSchedule';
 import { createActivitiesFromWorkouts, updateDesignProgram } from '../../../../lib/programDesign/programDesignApi';
 import { fetchAllExerciseCatalog } from '../../../../lib/training/catalogFetch';
 import { builtinCatalogItems } from '../../../../lib/training/catalogSearch';
@@ -48,8 +49,14 @@ export async function POST(request: Request) {
   }
 
   const weeks = Math.max(1, Math.min(12, Number(body?.weeks) || 6));
-  const dayTypes: Record<string, string> = body?.dayTypes && typeof body.dayTypes === 'object' ? body.dayTypes : {};
-  const days = normalizeDays(body?.days);
+  const promptSchedule = inferScheduleFromPrompt(prompt);
+  const dayTypes: Record<string, string> =
+    promptSchedule.named && Object.keys(promptSchedule.dayTypes).length
+      ? promptSchedule.dayTypes
+      : body?.dayTypes && typeof body.dayTypes === 'object'
+        ? body.dayTypes
+        : {};
+  const days = promptSchedule.named ? normalizeDays(promptSchedule.days) : normalizeDays(body?.days);
   const mode = body?.mode === 'team' ? 'team' : 'personal';
   const teamId = body?.teamId ? String(body.teamId) : null;
   const focusMuscles = Array.isArray(body?.focusMuscles) ? body.focusMuscles.map(String) : [];

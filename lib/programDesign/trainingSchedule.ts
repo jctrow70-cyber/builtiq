@@ -3,6 +3,7 @@ import { activityTypeShortLabel, formatDuration } from './activityTypes';
 import { activitiesFromLegacyWorkouts } from './programDesignApi';
 import { cycleLengthOf, dateForProgramDay, programDateRange, weekdayLabel } from './cycle';
 import type { ProgramActivity, ProgramDesignRecord } from './types';
+import { calendarItemsForDate, type UserCalendarActivity } from './userCalendar';
 
 export type TrainingDayItem = {
   id: string;
@@ -13,6 +14,7 @@ export type TrainingDayItem = {
   workoutId: string | null;
   activityId: string | null;
   isRest: boolean;
+  source?: 'program' | 'calendar';
 };
 
 export type TrainingDayPlan = {
@@ -69,19 +71,78 @@ export function planForDate(
     workoutId: a.workout_id || (a.id.startsWith('legacy-') ? a.id.replace('legacy-', '') : null),
     activityId: a.id.startsWith('legacy-') ? null : a.id,
     isRest: a.activity_type === 'rest',
+    source: 'program',
   }));
 
   const actionable = items.filter((i) => !i.isRest);
+  return attachCalendarItems(
+    {
+      date: dateYmd,
+      dayLabel,
+      weekNumber,
+      dayOfWeek: dayOfWeek < 0 ? 0 : dayOfWeek,
+      items,
+      primary: actionable[0] || items[0] || null,
+      later: actionable.slice(1),
+      isToday: dateYmd === today,
+    },
+    []
+  );
+}
+
+export function emptyDayPlan(dateYmd: string, today = todayYmd()): TrainingDayPlan {
+  const dayLabel = dayLabelFromYmd(dateYmd);
+  const dayOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].indexOf(dayLabel);
   return {
     date: dateYmd,
     dayLabel,
-    weekNumber,
+    weekNumber: 1,
     dayOfWeek: dayOfWeek < 0 ? 0 : dayOfWeek,
+    items: [],
+    primary: null,
+    later: [],
+    isToday: dateYmd === today,
+  };
+}
+
+export function attachCalendarItems(plan: TrainingDayPlan, calendarActivities: UserCalendarActivity[]): TrainingDayPlan {
+  const extra = calendarItemsForDate(calendarActivities, plan.date);
+  if (!extra.length) {
+    const actionable = plan.items.filter((i) => !i.isRest);
+    return { ...plan, primary: actionable[0] || plan.items[0] || null, later: actionable.slice(1) };
+  }
+  const items = [...plan.items, ...extra];
+  const actionable = items.filter((i) => !i.isRest);
+  return {
+    ...plan,
     items,
     primary: actionable[0] || items[0] || null,
     later: actionable.slice(1),
-    isToday: dateYmd === today,
   };
+}
+
+export function planForCalendarDate(
+  program: ProgramDesignRecord | null,
+  activities: ProgramActivity[],
+  calendarActivities: UserCalendarActivity[],
+  dateYmd: string,
+  today = todayYmd()
+): TrainingDayPlan {
+  const base = program ? planForDate(program, activities, dateYmd, today) : emptyDayPlan(dateYmd, today);
+  return attachCalendarItems(base, calendarActivities);
+}
+
+export function weekPlansForMonday(
+  monday: string,
+  program: ProgramDesignRecord | null,
+  activities: ProgramActivity[],
+  calendarActivities: UserCalendarActivity[],
+  today = todayYmd()
+): TrainingDayPlan[] {
+  return [0, 1, 2, 3, 4, 5, 6].map((dayOfWeek) => {
+    const date = addDaysYmd(monday, dayOfWeek);
+    return planForCalendarDate(program, activities, calendarActivities, date, today);
+  });
 }
 
 export function weekPlans(
@@ -121,27 +182,28 @@ export function monthLabel(yearMonth: string): string {
 }
 
 export function monthCalendarCells(
-  program: ProgramDesignRecord,
+  program: ProgramDesignRecord | null,
   activities: ProgramActivity[],
   yearMonth: string,
-  today = todayYmd()
+  today = todayYmd(),
+  calendarActivities: UserCalendarActivity[] = []
 ): TrainingMonthCell[] {
   const [y, m] = yearMonth.split('-').map(Number);
   const first = formatYmd(new Date(y || new Date().getFullYear(), (m || 1) - 1, 1));
   const last = formatYmd(new Date(y || new Date().getFullYear(), m || 1, 0));
   const gridStart = mondayOfWeek(first);
   const gridEnd = sundayOfWeek(last);
-  const { start, end } = programDateRange(program);
+  const range = program ? programDateRange(program) : { start: '', end: '' };
   const cells: TrainingMonthCell[] = [];
   let cursor = gridStart;
   while (cursor <= gridEnd) {
     const inMonth = yearMonthOf(cursor) === yearMonth;
-    const inProgram = cursor >= start && cursor <= end;
+    const inProgram = !!(program && cursor >= range.start && cursor <= range.end);
     cells.push({
       date: cursor,
       inMonth,
       inProgram,
-      plan: inProgram ? planForDate(program, activities, cursor, today) : null,
+      plan: planForCalendarDate(program, activities, calendarActivities, cursor, today),
     });
     cursor = addDaysYmd(cursor, 1);
   }

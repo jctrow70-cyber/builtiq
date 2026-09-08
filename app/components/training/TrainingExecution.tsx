@@ -28,7 +28,10 @@ type TrainingExecutionProps = {
   onThisMonth: () => void;
   onSelectDay: (date: string) => void;
   onStartWorkout: (workoutId: string | null, date: string) => void;
+  onViewWorkout?: (workoutId: string, date: string) => void;
   onOpenPrograms: () => void;
+  onAddActivity?: (date: string) => void;
+  onDeleteActivity?: (activityId: string) => void;
   completedDates?: string[];
 };
 
@@ -38,13 +41,17 @@ function DayItems({
   plan,
   completed,
   onStart,
+  onView,
+  onDelete,
 }: {
   plan: TrainingDayPlan;
   completed: boolean;
   onStart: (workoutId: string | null) => void;
+  onView?: (workoutId: string) => void;
+  onDelete?: (activityId: string) => void;
 }) {
   if (!plan.items.length) {
-    return <p className="muted">No activities planned.</p>;
+    return <p className="muted">No activities on this day. Add one anytime.</p>;
   }
   return (
     <div className="te-day-items">
@@ -52,15 +59,34 @@ function DayItems({
         <div key={item.id} className="te-item">
           <div>
             <span className="te-item-type">{item.typeLabel}</span>
-            <b>{item.title}</b>
+            <button
+              type="button"
+              className="te-item-title"
+              disabled={!item.workoutId || !onView}
+              onClick={() => item.workoutId && onView?.(item.workoutId)}
+            >
+              <b>{item.title}</b>
+            </button>
             {item.duration && <span className="muted">{item.duration}</span>}
             {completed && idx === 0 && <span className="ui-badge">Done</span>}
           </div>
-          {!item.isRest && (
-            <button type="button" className={`btn ${idx === 0 ? 'green' : 'secondary'} small`} onClick={() => onStart(item.workoutId)}>
-              {idx === 0 ? 'Start Workout' : 'Open'}
-            </button>
-          )}
+          <div className="actions">
+            {!item.isRest && item.workoutId && onView && (
+              <button type="button" className="btn small secondary" onClick={() => onView(item.workoutId!)}>
+                View
+              </button>
+            )}
+            {!item.isRest && item.workoutId && (
+              <button type="button" className={`btn ${idx === 0 ? 'green' : 'secondary'} small`} onClick={() => onStart(item.workoutId)}>
+                Start
+              </button>
+            )}
+            {item.source === 'calendar' && item.activityId && onDelete && (
+              <button type="button" className="btn small secondary" onClick={() => onDelete(item.activityId!)}>
+                Remove
+              </button>
+            )}
+          </div>
         </div>
       ))}
     </div>
@@ -88,7 +114,10 @@ export default function TrainingExecution({
   onThisMonth,
   onSelectDay,
   onStartWorkout,
+  onViewWorkout,
   onOpenPrograms,
+  onAddActivity,
+  onDeleteActivity,
   completedDates = [],
 }: TrainingExecutionProps) {
   const viewingToday = !!today?.isToday;
@@ -96,11 +125,18 @@ export default function TrainingExecution({
     <div className="te-screen">
       <SectionHeader
         title={viewingToday ? 'Today' : today ? 'This day' : 'Training'}
-        subtitle={today ? formatLongWeekday(today.date) : 'Choose a program to follow'}
+        subtitle={today ? formatLongWeekday(today.date) : 'Your calendar'}
         actions={
-          <button type="button" className="btn small secondary" onClick={onOpenPrograms}>
-            My programs
-          </button>
+          <div className="actions">
+            {onAddActivity && today && (
+              <button type="button" className="btn small green" onClick={() => onAddActivity(today.date)}>
+                Add activity
+              </button>
+            )}
+            <button type="button" className="btn small secondary" onClick={onOpenPrograms}>
+              My programs
+            </button>
+          </div>
         }
       />
 
@@ -124,15 +160,12 @@ export default function TrainingExecution({
       />
 
       {!programName && (
-        <div className="te-empty">
-          <p>No program selected yet.</p>
-          <button type="button" className="btn green" onClick={onOpenPrograms}>
-            Choose a program to follow
-          </button>
-        </div>
+        <p className="muted te-following">
+          No program on this calendar yet. Add activities here, or create a program with start and end dates.
+        </p>
       )}
 
-      {programName && calendarView === 'day' && today && (
+      {calendarView === 'day' && today && (
         <>
           <section className="te-block">
             <h2>{viewingToday ? "Today's plan" : "This day's plan"}</h2>
@@ -140,16 +173,25 @@ export default function TrainingExecution({
               plan={today}
               completed={completedDates.includes(today.date)}
               onStart={(workoutId) => onStartWorkout(workoutId, today.date)}
+              onView={onViewWorkout ? (workoutId) => onViewWorkout(workoutId, today.date) : undefined}
+              onDelete={onDeleteActivity}
             />
           </section>
           {today.later.length > 0 && (
             <section className="te-block">
               <h2>Later today</h2>
               {today.later.map((item) => (
-                <p key={item.id} className="te-later">
-                  <b>{item.title}</b>
-                  {item.duration ? ` · ${item.duration}` : ''}
-                </p>
+                <div key={item.id} className="te-later">
+                  <p>
+                    <b>{item.title}</b>
+                    {item.duration ? ` · ${item.duration}` : ''}
+                  </p>
+                  {item.workoutId && onViewWorkout && (
+                    <button type="button" className="btn small secondary" onClick={() => onViewWorkout(item.workoutId!, today.date)}>
+                      View
+                    </button>
+                  )}
+                </div>
               ))}
             </section>
           )}
@@ -171,20 +213,24 @@ export default function TrainingExecution({
         </>
       )}
 
-      {programName && calendarView === 'week' && (
+      {calendarView === 'week' && (
         <>
           <div className="te-week-nav">
-            <button type="button" className="btn small secondary" onClick={onPrevWeek} disabled={weekNumber <= 1}>
+            <button type="button" className="btn small secondary" onClick={onPrevWeek}>
               Previous
             </button>
             <button type="button" className="btn small secondary" onClick={onThisWeek}>
               This week
             </button>
-            <button type="button" className="btn small secondary" onClick={onNextWeek} disabled={weekNumber >= totalWeeks}>
+            <button type="button" className="btn small secondary" onClick={onNextWeek}>
               Next
             </button>
           </div>
-          <p className="te-week-label">Week {weekNumber} of {totalWeeks}</p>
+          <p className="te-week-label">
+            {weekDays[0] ? formatMediumDate(weekDays[0].date) : ''}
+            {weekDays[6] ? ` – ${formatMediumDate(weekDays[6].date)}` : ''}
+            {programName ? ` · Program week ${weekNumber} of ${totalWeeks}` : ''}
+          </p>
           <div className="te-week-grid">
             {weekDays.map((day) => {
               const done = completedDates.includes(day.date);
@@ -205,10 +251,22 @@ export default function TrainingExecution({
               );
             })}
           </div>
+          {today && (
+            <section className="te-block">
+              <h2>{today.isToday ? "Today's plan" : formatLongWeekday(today.date)}</h2>
+              <DayItems
+                plan={today}
+                completed={completedDates.includes(today.date)}
+                onStart={(workoutId) => onStartWorkout(workoutId, today.date)}
+                onView={onViewWorkout ? (workoutId) => onViewWorkout(workoutId, today.date) : undefined}
+                onDelete={onDeleteActivity}
+              />
+            </section>
+          )}
         </>
       )}
 
-      {programName && calendarView === 'month' && (
+      {calendarView === 'month' && (
         <>
           <div className="te-week-nav">
             <button type="button" className="btn small secondary" onClick={onPrevMonth}>
@@ -266,6 +324,8 @@ export default function TrainingExecution({
                 plan={today}
                 completed={completedDates.includes(today.date)}
                 onStart={(workoutId) => onStartWorkout(workoutId, today.date)}
+                onView={onViewWorkout ? (workoutId) => onViewWorkout(workoutId, today.date) : undefined}
+                onDelete={onDeleteActivity}
               />
             </section>
           )}

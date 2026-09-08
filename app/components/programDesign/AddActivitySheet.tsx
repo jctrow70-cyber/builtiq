@@ -7,6 +7,7 @@ import { ACTIVITY_TYPES, type ActivityDraft, type ActivityType, type ProgramActi
 type AddActivitySheetProps = {
   dayLabel: string;
   existing?: ProgramActivity | null;
+  allowRecurrence?: boolean;
   onClose: () => void;
   onSave: (draft: ActivityDraft) => Promise<void>;
   onDelete?: () => Promise<void>;
@@ -19,6 +20,8 @@ function emptyDraft(type: ActivityType = 'strength'): ActivityDraft {
     duration_minutes: type === 'rest' ? null : 45,
     notes: '',
     details: {},
+    recurrence: 'none',
+    recurrence_until: null,
   };
 }
 
@@ -35,6 +38,7 @@ function draftFromActivity(activity: ProgramActivity): ActivityDraft {
 export default function AddActivitySheet({
   dayLabel,
   existing,
+  allowRecurrence = false,
   onClose,
   onSave,
   onDelete,
@@ -182,6 +186,32 @@ export default function AddActivitySheet({
 
         {showMobility && (
           <p className="muted">Individual movements can be added in a later update. Name and duration are enough for now.</p>
+        )}
+
+        {allowRecurrence && !existing && (
+          <>
+            <label className="remember-row" style={{ marginTop: 8 }}>
+              <input
+                type="checkbox"
+                checked={draft.recurrence === 'weekly'}
+                onChange={(e) =>
+                  setDraft({ ...draft, recurrence: e.target.checked ? 'weekly' : 'none' })
+                }
+              />
+              Repeat weekly
+            </label>
+            {draft.recurrence === 'weekly' && (
+              <>
+                <label htmlFor="pd-recur-until">Repeat until (optional)</label>
+                <input
+                  id="pd-recur-until"
+                  type="date"
+                  value={draft.recurrence_until || ''}
+                  onChange={(e) => setDraft({ ...draft, recurrence_until: e.target.value || null })}
+                />
+              </>
+            )}
+          </>
         )}
 
         <label>Notes</label>

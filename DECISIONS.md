@@ -912,3 +912,61 @@ ChatGPT-authored workouts were inconsistent and hard to validate. Programming ru
 - Historical prescriptions and logs are never overwritten by later adjustments
 - Originally labeled Decision 031 in BIQ-0141; renumbered to 032 so it does not collide with group enrollment
 - Create Program in Program Design persists workouts onto the program just created (BIQ-0151)
+
+---
+
+## Decision 033 - Calendar First, Programs Overlay Dates
+
+Date: 2026-09-08  
+Status: Accepted  
+Category: Product Architecture
+
+### Decision
+
+Training owns a standing day / week / month calendar. A program is a dated overlay (start and end) that appears on that calendar when followed. Users can also add personal activities, including weekly repeats, that are not tied to a followed program.
+
+Personal items live in `st_user_calendar_activities`. Program templates stay on `st_program_activities` / `st_workouts`. Logging history stays on `st_set_logs`.
+
+### Reason
+
+Users treat Training as a calendar first. Hiding the grid until a program is followed made the product feel empty, and blocked one-off or recurring life activities (cardio, mobility, sport).
+
+### Alternatives Considered
+
+- Keep the calendar hidden until Follow — rejected; users could not add anything
+- Store personal events on a hidden “My Calendar” program — rejected; mixes overlay programs with the standing calendar
+- Replace program activity tables — rejected; history and RLS depend on current IDs
+
+### Impact
+
+- Training calendar is always visible
+- Programs apply by start/end dates
+- Recurring personal activities are series-based in v1 (delete removes the series)
+
+---
+
+## Decision 034 - View the Plan Before Logging
+
+Date: 2026-09-08  
+Status: Accepted  
+Category: Training UX
+
+### Decision
+
+A planned workout can be opened from the calendar or Dashboard as a read-only plan. Start Workout begins logging. Edit workout opens the existing exercise editor to change the template, and does not by itself start a logging session.
+
+Completed set history still does not change when the template is edited later.
+
+### Reason
+
+Users need to see what they will do, and fix the plan, without pretending they have started the workout.
+
+### Alternatives Considered
+
+- Keep Start Workout as the only way to see exercises — rejected; it hid the plan
+- Build a second editor only for calendar edits — rejected; the current exercise editor already updates templates
+
+### Impact
+
+- View and Start are separate actions
+- Edit is available when the user can change the program

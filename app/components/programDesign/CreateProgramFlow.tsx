@@ -60,7 +60,7 @@ export default function CreateProgramFlow({
       <p className="pd-eyebrow">{scope === 'group' ? 'Group program' : 'Personal program'}</p>
       <h1>Create program</h1>
       <p className="muted pd-lead">
-        Start with the name and dates. Next you will describe your training so BuiltIQ can build the workouts. After that you can follow the program in Training or just save it.
+        Set the name and start/end dates. After you build workouts and follow the program, those days show on your Training calendar. You can still add other activities there anytime.
         {scope === 'group' && groupName ? ` This will belong to ${groupName}.` : ''}
       </p>
       {sequencingHint && <p className="pd-note">{sequencingHint}</p>}

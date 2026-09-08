@@ -81,6 +81,8 @@ export type ActivityDraft = {
   duration_minutes: number | null;
   notes: string;
   details: ProgramActivityDetails;
+  recurrence?: 'none' | 'weekly';
+  recurrence_until?: string | null;
 };
 
 export type GroupOption = {

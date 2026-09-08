@@ -2,6 +2,7 @@
  * BIQ-0141 acceptance checks for the science engine.
  * Run: npx tsx lib/scienceEngine/acceptanceCheck.ts
  */
+import { assertInferScheduleExamples } from '../programDesign/inferSchedule';
 import { trainingProfileFromSources } from './profile';
 import { generateProgram } from './generateProgram';
 import { evaluateProgression } from './progression';
@@ -33,6 +34,7 @@ function acceptanceProfile(): TrainingProfile {
 }
 
 function run() {
+  assertInferScheduleExamples();
   const profile = acceptanceProfile();
   const program = generateProgram(profile);
   const validation = validateProgram(program, profile);

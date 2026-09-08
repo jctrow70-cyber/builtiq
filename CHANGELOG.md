@@ -11,6 +11,184 @@ Branch:
 Status:
 ```
 
+## BIQ-0156 - View and Edit a Workout Without Starting It
+
+Date: 2026-09-08  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+You can open a planned workout from the Training calendar or Dashboard and see every exercise and set. Start Workout is only for logging. Edit workout opens the existing plan editor.
+
+### Purpose
+
+The calendar only showed the day title. The full plan was hidden until Start Workout, so there was no way to review or change a session without beginning a log.
+
+### Changes
+
+- View on each program workout in Day and Calendar views (title is also clickable)
+- Overlay lists warm-up, strength, and cooldown with prescribed sets, reps, weight, and RIR
+- Edit workout uses the current exercise editor without treating that as a logging session
+- Dashboard has View plan next to Start / Continue / Review logs
+- Week tap still opens that day so View and Start are available
+
+### Files Changed
+
+- `app/components/training/WorkoutPlanSheet.tsx`
+- `app/components/training/TrainingExecution.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+- `ROADMAP.md`
+- `DECISIONS.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Training → Day: tap View (or the workout title). The plan sheet lists exercises. Calendar stays underneath.
+2. Close the sheet. You are still on the calendar, not inside a logging session.
+3. Tap Edit workout. Header says Edit workout. Change an exercise or set, then Back to calendar.
+4. Tap Start Workout from the sheet. Logging session opens as before.
+5. Dashboard → View plan opens the same sheet for today.
+6. Mobile (~390px): sheet scrolls; View and Start stay usable.
+
+### Known Issues
+
+- Personal calendar strength items without a linked workout still have no exercise list.
+- Edit workout still shows the logger cards so you can change sets; it is not a separate design editor.
+- Viewing a group member’s program stays read-only.
+
+### Recommended Commit Message
+
+```text
+BIQ-0156 Let users view and edit a workout without starting it
+```
+
+---
+
+## BIQ-0155 - Always-On Training Calendar and Recurring Activities
+
+Date: 2026-09-08  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Training now always shows the day / week / month calendar. Programs with start and end dates appear on that calendar. You can add other activities yourself, including weekly repeats, even if you are not following a program.
+
+### Purpose
+
+The calendar disappeared when no program was followed, and extra activities could not live on a normal calendar.
+
+### Changes
+
+- Day / week / month stay visible with or without a followed program
+- Week navigation moves by real calendar weeks, not only program week numbers
+- Add activity on any selected day (strength, cardio, mobility, and the other health types)
+- Optional weekly repeat, with an optional end date
+- Followed program workouts still overlay the same calendar by start/end dates
+
+### Files Changed
+
+- `supabase/migrations/20250908_045_user_calendar_activities.sql`
+- `lib/programDesign/userCalendar.ts`
+- `lib/programDesign/trainingSchedule.ts`
+- `lib/programDesign/types.ts`
+- `app/components/training/TrainingExecution.tsx`
+- `app/components/programDesign/AddActivitySheet.tsx`
+- `app/page.tsx`
+- `CHANGELOG.md`
+- `ROADMAP.md`
+- `DECISIONS.md`
+
+### Database Changes
+
+Apply `20250908_045_user_calendar_activities.sql` on test Supabase first, then live.
+
+Adds `st_user_calendar_activities` for personal calendar items owned by the user (RLS: own rows only). Recurrence is `none` or `weekly`. This does not replace `st_program_activities` or workout history.
+
+Until the migration is applied, the calendar still shows; adding a personal activity will ask you to apply the migration.
+
+### Testing Steps
+
+1. Training with no followed program — Day / Week / Calendar tabs still show.
+2. Add a cardio activity on Wednesday; it appears on that day.
+3. Add “Yoga” with Repeat weekly; it shows on later Wednesdays.
+4. Follow a dated program — its workouts show on the same calendar inside the start/end range.
+5. Remove a personal activity; program workouts stay.
+6. Mobile (~390px): Add activity and week/month grids stay usable.
+
+### Known Issues
+
+- Recurring edits/deletes apply to the whole series, not one occurrence.
+- Personal strength activities do not auto-create a full exercise logger until they are linked to a workout.
+- Migration `045` must be applied before personal calendar saves persist.
+
+### Recommended Commit Message
+
+```text
+BIQ-0155 Keep the Training calendar always available
+```
+
+---
+
+## BIQ-0154 - Honor Named Training Days When Building Workouts
+
+Date: 2026-09-08  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Program generate now uses the weekdays you name. Asking for full body Wednesday and Friday no longer adds a Monday workout.
+
+### Purpose
+
+“Full body” was treated as a Mon/Wed/Fri template, so named days like Wednesday and Friday were ignored.
+
+### Changes
+
+- Parse named weekdays from the create-program prompt and use those days
+- Generate API uses named days from the prompt when present
+- Science split allows a 1-day week instead of forcing a second default day
+
+### Files Changed
+
+- `lib/programDesign/inferSchedule.ts`
+- `app/components/programDesign/AIProgramSetupWizard.tsx`
+- `app/api/programs/generate/route.ts`
+- `lib/scienceEngine/split.ts`
+- `lib/scienceEngine/acceptanceCheck.ts`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Programs → Create Program → Build workouts.
+2. Enter: “full body Wednesday and Friday of this week”.
+3. Confirm the calendar has Wednesday and Friday only — no Monday workout.
+4. A generic “full body 3 days a week” prompt should still use Mon/Wed/Fri.
+5. Mobile (~390px): generated Wed/Fri cards stay readable.
+
+### Known Issues
+
+- “This week” still copies Wednesday/Friday across the program cycle; it does not limit generation to the current calendar week only.
+
+### Recommended Commit Message
+
+```text
+BIQ-0154 Use named weekdays instead of adding a Monday workout
+```
+
+---
+
 ## BIQ-0153 - Fix Follow Handler Type for Vercel Build
 
 Date: 2026-09-08  

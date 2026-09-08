@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { ACTIVITY_TYPE_META } from '../../../lib/programDesign/activityTypes';
+import { inferScheduleFromPrompt } from '../../../lib/programDesign/inferSchedule';
 import type { ActivityDraft, ActivityType } from '../../../lib/programDesign/types';
 
 type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
@@ -39,23 +40,7 @@ type AIProgramSetupWizardProps = {
 };
 
 function inferSchedule(text: string): { days: string[]; dayTypes: Record<string, string> } {
-  const t = text.toLowerCase();
-  if (/5.?day|push.?pull.?leg/.test(t)) {
-    return {
-      days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-      dayTypes: { Mon: 'Upper Body', Tue: 'Lower Body', Wed: 'Push', Thu: 'Pull', Fri: 'Legs' },
-    };
-  }
-  if (/3.?day|full body|m\/w\/f|monday wednesday friday/.test(t)) {
-    return {
-      days: ['Mon', 'Wed', 'Fri'],
-      dayTypes: { Mon: 'Full Body', Wed: 'Full Body', Fri: 'Full Body' },
-    };
-  }
-  return {
-    days: ['Mon', 'Tue', 'Thu', 'Fri'],
-    dayTypes: { Mon: 'Upper Body', Tue: 'Lower Body', Thu: 'Upper Body', Fri: 'Lower Body' },
-  };
+  return inferScheduleFromPrompt(text);
 }
 
 function dayLabelToIndex(label: string): DayOfWeek {
