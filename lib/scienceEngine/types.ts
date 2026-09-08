@@ -24,7 +24,17 @@ export type WarmupCategory = 'raise' | 'mobility' | 'activation' | 'integration'
 export type WarmupFatigue = 'very_low' | 'low' | 'moderate';
 export type ImpactLevel = 'none' | 'low' | 'moderate' | 'high';
 export type Plane = 'sagittal' | 'frontal' | 'transverse' | 'multiplanar';
-export type SplitDayType = 'Full Body' | 'Upper Body' | 'Lower Body' | 'Push' | 'Pull' | 'Legs';
+export type SplitDayType =
+  | 'Full Body'
+  | 'Upper Body'
+  | 'Lower Body'
+  | 'Push'
+  | 'Pull'
+  | 'Legs'
+  | 'Chest'
+  | 'Back'
+  | 'Shoulders'
+  | 'Arms';
 export type SetKind = 'warmup' | 'working' | 'backoff' | 'dropset' | 'amrap';
 
 export type ProgressionDecision =

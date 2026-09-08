@@ -12,7 +12,17 @@ export function warmupTemplateFor(workoutType: SplitDayType, muscles: MuscleId[]
   if (hasChest && hasBack && !hasLegs) return 'chest_back';
   if (workoutType === 'Upper Body' && hasChest && hasBack) return 'chest_back';
   if (workoutType === 'Lower Body' || workoutType === 'Legs') return 'lower_body';
-  if (workoutType === 'Upper Body' || workoutType === 'Push' || workoutType === 'Pull') return 'upper_body';
+  if (
+    workoutType === 'Upper Body' ||
+    workoutType === 'Push' ||
+    workoutType === 'Pull' ||
+    workoutType === 'Chest' ||
+    workoutType === 'Back' ||
+    workoutType === 'Shoulders' ||
+    workoutType === 'Arms'
+  ) {
+    return 'upper_body';
+  }
   if (hasChest && hasBack) return 'chest_back';
   return 'default';
 }

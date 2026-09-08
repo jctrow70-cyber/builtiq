@@ -326,6 +326,13 @@ export default function AIProgramSetupWizard({
           >
             "5-day push pull legs hypertrophy"
           </button>
+          <button
+            type="button"
+            className="ai-wiz-example"
+            onClick={() => setDescription('Bro split, one body part per day: chest, back, shoulders, arms, and legs')}
+          >
+            "Bro split: chest, back, shoulders, arms, legs"
+          </button>
         </div>
 
         <label htmlFor="ai-wiz-desc">Describe your training</label>

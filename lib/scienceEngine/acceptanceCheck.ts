@@ -126,6 +126,30 @@ function run() {
     },
   });
   const fullBody = generateProgram(fullBodyProfile);
+  const broProfile = trainingProfileFromSources({
+    profile: { experience_level: 'intermediate', primary_goal: 'muscle', birth_year: 1990 },
+    trainingProfile: { preferred_session_minutes: 60 },
+    config: {
+      days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+      dayTypes: { Mon: 'Chest', Tue: 'Back', Wed: 'Shoulders', Thu: 'Arms', Fri: 'Legs' },
+      weeks: 4,
+      sessionMinutes: 60,
+    },
+  });
+  const broProgram = generateProgram(broProfile);
+  const broWeek1 = broProgram.workouts.filter((w) => w.week === 1);
+  assert(
+    broWeek1.map((w) => w.workoutType).join(',') === 'Chest,Back,Shoulders,Arms,Legs',
+    `Bro split types should be Chest/Back/Shoulders/Arms/Legs, got ${broWeek1.map((w) => w.workoutType).join(',')}`
+  );
+  const chestDay = broWeek1.find((w) => w.workoutType === 'Chest');
+  const backDay = broWeek1.find((w) => w.workoutType === 'Back');
+  const legsDay = broWeek1.find((w) => w.workoutType === 'Legs');
+  assert(chestDay && chestDay.exercises.some((e) => /bench|press|fly/i.test(e.name)), `Chest day missing press/fly, got ${chestDay?.exercises.map((e) => e.name).join(', ')}`);
+  assert(chestDay && !chestDay.exercises.some((e) => /squat|deadlift|row/i.test(e.name)), `Chest day should not include squat/deadlift/row`);
+  assert(backDay && backDay.exercises.some((e) => /row|pulldown|pull-?up/i.test(e.name)), `Back day missing pull, got ${backDay?.exercises.map((e) => e.name).join(', ')}`);
+  assert(legsDay && legsDay.exercises.some((e) => /squat|lunge|rdl|deadlift/i.test(e.name)), `Legs day missing lower lift, got ${legsDay?.exercises.map((e) => e.name).join(', ')}`);
+
   const fbWeek1 = fullBody.workouts.filter((w) => w.week === 1);
   assert(fbWeek1.length === 3, `Expected 3 full-body days, got ${fbWeek1.length}`);
   const fbLists = fbWeek1.map((w) => w.exercises.map((e) => e.name).join(' | '));
@@ -144,6 +168,7 @@ function run() {
   assert(fbWeek1[0].name === 'Full Body A' && fbWeek1[1].name === 'Full Body B' && fbWeek1[2].name === 'Full Body C', `Expected Full Body A/B/C names, got ${fbWeek1.map((w) => w.name).join(', ')}`);
 
   console.log('BIQ-0141 science engine acceptance checks passed.');
+  console.log(`Bro split: ${broWeek1.map((w) => `${w.workoutType} (${w.exercises[0]?.name})`).join(' / ')}`);
   console.log(`Full body week: ${fbWeek1.map((w) => `${w.name} (${w.exercises[0]?.name})`).join(' / ')}`);
   console.log(`Split: ${types.join(' / ')}`);
   console.log(`Chest target: ${chest?.targetSets}`);

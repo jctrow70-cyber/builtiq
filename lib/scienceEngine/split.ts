@@ -46,6 +46,10 @@ function musclesForType(type: SplitDayType): MuscleId[] {
   if (type === 'Lower Body' || type === 'Legs') return [...LOWER_MUSCLES, ...CORE_MUSCLES];
   if (type === 'Push') return [...PUSH_MUSCLES, ...CORE_MUSCLES];
   if (type === 'Pull') return [...PULL_MUSCLES, ...CORE_MUSCLES];
+  if (type === 'Chest') return ['chest', 'front_delts'];
+  if (type === 'Back') return ['lats', 'upper_back', 'rear_delts', 'spinal_erectors'];
+  if (type === 'Shoulders') return ['front_delts', 'side_delts', 'rear_delts'];
+  if (type === 'Arms') return ['biceps', 'triceps', 'forearms'];
   return ALL_LIFT_MUSCLES;
 }
 
@@ -57,6 +61,10 @@ function mapExplicitType(raw: string): SplitDayType | null {
   if (v === 'push') return 'Push';
   if (v === 'pull') return 'Pull';
   if (v === 'legs') return 'Legs';
+  if (v === 'chest') return 'Chest';
+  if (v === 'back') return 'Back';
+  if (v === 'shoulders' || v === 'shoulder') return 'Shoulders';
+  if (v === 'arms' || v === 'arm') return 'Arms';
   return null;
 }
 

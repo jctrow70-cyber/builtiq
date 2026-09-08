@@ -85,7 +85,20 @@ export function expandPlanToFullWeeks(plan: AiProgramPlan, config: GenerationCon
 }
 
 const DAY_ORDER = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const VALID_WORKOUT_TYPES = ['Lower Body', 'Upper Body', 'Full Body', 'Cardio', 'Mobility'];
+const VALID_WORKOUT_TYPES = [
+  'Lower Body',
+  'Upper Body',
+  'Full Body',
+  'Push',
+  'Pull',
+  'Legs',
+  'Chest',
+  'Back',
+  'Shoulders',
+  'Arms',
+  'Cardio',
+  'Mobility',
+];
 const SECTION_SORT_BASE: Record<string, number> = { warmup: 0, strength: 100, cooldown: 200 };
 
 const MOBILITY_NAME_PATTERN = /stretch|mobility|foam|pigeon|inchworm|cat\s*cow|world'?s?\s*greatest|rotation|dislocation|breathing/i;

@@ -11,6 +11,64 @@ Branch:
 Status:
 ```
 
+## BIQ-0160 - Honor Bro Split / Body-Part-Per-Day Programs
+
+Date: 2026-09-08  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Asking for a bro split (chest, back, shoulders, arms, legs) now builds those five days. It no longer falls back to a 4-day upper/lower plan.
+
+### Purpose
+
+`inferSchedule` did not recognize bro split or listed body parts, so the default was upper/lower.
+
+### Changes
+
+- Detect “bro split”, “body part split”, and lists of 3+ body parts
+- Add Chest, Back, Shoulders, and Arms day types with matching exercises
+- Persist those workout types instead of rewriting them to Full Body
+- Example chip in the build-workouts wizard
+
+### Files Changed
+
+- `lib/programDesign/inferSchedule.ts`
+- `lib/scienceEngine/types.ts`
+- `lib/scienceEngine/split.ts`
+- `lib/scienceEngine/generateProgram.ts`
+- `lib/scienceEngine/warmup.ts`
+- `lib/scienceEngine/catalogAdapter.ts`
+- `lib/scienceEngine/acceptanceCheck.ts`
+- `lib/training/aiProgramPlan.ts`
+- `app/components/programDesign/AIProgramSetupWizard.tsx`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None. Existing programs stay as saved until you create a new one.
+
+### Testing Steps
+
+1. Create a program and describe: “Bro split, chest, back, shoulders, arms, and legs.”
+2. After it builds, the five days should be Chest, Back, Shoulders, Arms, Legs — not Upper/Lower.
+3. Chest should be presses/flies; legs should be squats/hinges.
+4. `npm run test:science` passes.
+
+### Known Issues
+
+- Programs already generated stay upper/lower until you create a new program (rebuild is blocked if exercises exist).
+- Classic bro-split order is Chest → Back → Shoulders → Arms → Legs on Mon–Fri unless you name other days.
+
+### Recommended Commit Message
+
+```text
+BIQ-0160 Honor bro split body-part-per-day programs
+```
+
+---
+
 ## BIQ-0159 - Distinct Full-Body Workouts Each Training Day
 
 Date: 2026-09-08  

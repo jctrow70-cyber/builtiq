@@ -116,6 +116,42 @@ function slotsForDay(type: SplitDay['workoutType'], variantIndex: number): DaySl
       { muscle: 'biceps', role: 'isolation', preferred: ['Dumbbell Curl'] },
     ];
   }
+  if (type === 'Chest') {
+    return [
+      { muscle: 'chest', role: 'primary', pattern: 'horizontal_push', preferred: ['Barbell Bench Press', 'Bench Press'], preferPressRange: true },
+      { muscle: 'chest', role: 'primary', pattern: 'horizontal_push', preferred: ['Incline Dumbbell Press', 'Incline Bench'] },
+      { muscle: 'chest', role: 'secondary', pattern: 'horizontal_push', preferred: ['Dumbbell Bench Press', 'Push-Up'] },
+      { muscle: 'chest', role: 'isolation', pattern: 'horizontal_push', preferred: ['Cable Chest Fly', 'Dumbbell Fly'] },
+      { muscle: 'chest', role: 'isolation', pattern: 'horizontal_push', preferred: ['Cable Crossover', 'Pec Deck'] },
+    ];
+  }
+  if (type === 'Back') {
+    return [
+      { muscle: 'lats', role: 'primary', pattern: 'vertical_pull', preferred: ['Pull-Up', 'Lat Pulldown'] },
+      { muscle: 'upper_back', role: 'primary', pattern: 'horizontal_pull', preferred: ['Barbell Row', 'Pendlay Row'] },
+      { muscle: 'lats', role: 'secondary', pattern: 'vertical_pull', preferred: ['Lat Pulldown', 'Straight-Arm Pulldown'] },
+      { muscle: 'upper_back', role: 'secondary', pattern: 'horizontal_pull', preferred: ['Seated Cable Row', 'Dumbbell Row'] },
+      { muscle: 'rear_delts', role: 'isolation', preferred: ['Face Pull'] },
+    ];
+  }
+  if (type === 'Shoulders') {
+    return [
+      { muscle: 'front_delts', role: 'primary', pattern: 'vertical_push', preferred: ['Overhead Press', 'Dumbbell Shoulder Press'] },
+      { muscle: 'side_delts', role: 'isolation', pattern: 'shoulder_abduction', preferred: ['Lateral Raise'] },
+      { muscle: 'rear_delts', role: 'isolation', preferred: ['Rear Delt Fly', 'Face Pull'] },
+      { muscle: 'side_delts', role: 'isolation', preferred: ['Cable Lateral Raise', 'Lateral Raise'] },
+      { muscle: 'front_delts', role: 'isolation', preferred: ['Front Raise'] },
+    ];
+  }
+  if (type === 'Arms') {
+    return [
+      { muscle: 'biceps', role: 'primary', pattern: 'elbow_flexion', preferred: ['Dumbbell Curl'] },
+      { muscle: 'triceps', role: 'primary', pattern: 'elbow_extension', preferred: ['Triceps Pushdown'] },
+      { muscle: 'biceps', role: 'isolation', pattern: 'elbow_flexion', preferred: ['Hammer Curl', 'Incline Dumbbell Curl'] },
+      { muscle: 'triceps', role: 'isolation', pattern: 'elbow_extension', preferred: ['Overhead Triceps Extension', 'Skull Crusher'] },
+      { muscle: 'forearms', role: 'isolation', preferred: ['Wrist Curl', 'Hammer Curl'] },
+    ];
+  }
   return [
     { muscle: 'quads', role: 'primary', pattern: 'squat', preferred: ['Back Squat', 'Goblet Squat'] },
     { muscle: 'chest', role: 'primary', pattern: 'horizontal_push', preferred: ['Barbell Bench Press', 'Bench Press'], preferPressRange: true },
