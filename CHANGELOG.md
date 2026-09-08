@@ -11,6 +11,50 @@ Branch:
 Status:
 ```
 
+## BIQ-0158 - Fix Vercel Type Error on Program Workout Editor
+
+Date: 2026-09-08  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Renamed a shadowed Supabase `error` binding so `next build` type-check passes on Vercel.
+
+### Purpose
+
+`error: setError` in `addExercise` hid the React state setter and failed the production type check.
+
+### Changes
+
+- Destructure insert errors as `setsInsertError` instead of `setError`
+
+### Files Changed
+
+- `app/components/programDesign/ProgramWorkoutPlan.tsx`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. `npm run build` completes type-check.
+2. Vercel deploy of this commit succeeds.
+
+### Known Issues
+
+None.
+
+### Recommended Commit Message
+
+```text
+BIQ-0158 Fix ProgramWorkoutPlan setError type clash
+```
+
+---
+
 ## BIQ-0157 - See and Edit the Built Plan in Programs
 
 Date: 2026-09-08  

@@ -284,10 +284,10 @@ function WorkoutEditSheet({
       set_type: 'working',
       target_reps: addReps.trim() || '8-12',
     }));
-    const { data: sets, error: setError } = await supabase.from('st_planned_sets').insert(rows).select();
+    const { data: sets, error: setsInsertError } = await supabase.from('st_planned_sets').insert(rows).select();
     setBusy(false);
-    if (setError) {
-      setError(setError.message);
+    if (setsInsertError) {
+      setError(setsInsertError.message);
       return;
     }
     setDraft((prev: any) => ({
