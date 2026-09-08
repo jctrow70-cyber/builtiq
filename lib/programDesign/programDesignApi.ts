@@ -214,6 +214,20 @@ export async function fetchLegacyWorkouts(
   };
 }
 
+export async function fetchProgramWorkoutTree(
+  supabase: SupabaseClient,
+  programId: string
+): Promise<{ data: any[]; error: string | null }> {
+  const { data, error } = await supabase
+    .from('st_workouts')
+    .select('id, week, day_label, workout_type, day_order, st_exercises(*, st_planned_sets(*))')
+    .eq('program_id', programId)
+    .order('week', { ascending: true })
+    .order('day_order', { ascending: true });
+  if (error) return { data: [], error: error.message || 'Could not load workouts' };
+  return { data: data || [], error: null };
+}
+
 export async function createProgramActivity(
   supabase: SupabaseClient,
   programId: string,

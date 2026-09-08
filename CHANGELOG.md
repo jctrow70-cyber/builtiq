@@ -11,6 +11,72 @@ Branch:
 Status:
 ```
 
+## BIQ-0157 - See and Edit the Built Plan in Programs
+
+Date: 2026-09-08  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+When workouts finish generating, Programs opens the actual plan — every day’s exercises and sets — instead of a Follow/Save screen or empty calendar. You can view and edit that plan on the Programs tab.
+
+### Purpose
+
+Developing a program only produced the plan in the background. The finish screen did not show lifts, and the Programs editor only showed day titles, so there was no way to review or change the work without going to Training.
+
+### Changes
+
+- After Build my workouts, the wizard closes and the program editor shows the Workouts tab
+- Each workout lists warm-up, strength, and cooldown with prescribed sets
+- View / edit opens a sheet to change reps, weight, RIR, add/remove sets, add/remove exercises
+- Opening a program from the Programs list uses the same workout view
+- Calendar remains available for non-strength activities
+- Follow from the editor stays on Programs so you can keep reviewing the plan
+- Completed history is still not rewritten when the template changes
+
+### Files Changed
+
+- `lib/programDesign/workoutPreview.ts`
+- `lib/programDesign/programDesignApi.ts`
+- `app/components/programDesign/ProgramWorkoutPlan.tsx`
+- `app/components/programDesign/ProgramCalendarEditor.tsx`
+- `app/components/programDesign/AIProgramSetupWizard.tsx`
+- `app/components/programDesign/ProgramDesignHome.tsx`
+- `app/components/training/WorkoutPlanSheet.tsx`
+- `app/api/programs/generate/route.ts`
+- `app/globals.css`
+- `CHANGELOG.md`
+- `ROADMAP.md`
+- `DECISIONS.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Programs → Create Program → Build my workouts. When it finishes, you should see the exercise list, not Follow/Save.
+2. Open View / edit on a day. Change a rep target, add a set, then Done. The card should show the new prescription.
+3. Back to programs, open the same program. Workouts tab should still show the plan.
+4. Switch to Calendar. Tapping a strength day should open that workout.
+5. Follow this program from the editor — stay on Programs with the plan still visible.
+6. Mobile (~390px): workout cards and the edit sheet should scroll.
+
+### Known Issues
+
+- Add exercise is by name (no catalog search yet).
+- The unused week-review drag step in the wizard is still in the file but is skipped after generate.
+- Personal calendar items without a linked workout still have no exercise list.
+
+### Recommended Commit Message
+
+```text
+BIQ-0157 Show the built workout plan in Programs and let users edit it
+```
+
+---
+
 ## BIQ-0156 - View and Edit a Workout Without Starting It
 
 Date: 2026-09-08  

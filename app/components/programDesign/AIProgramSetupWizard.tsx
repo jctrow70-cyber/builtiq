@@ -34,7 +34,10 @@ type AIProgramSetupWizardProps = {
   weeks?: number;
   startDate?: string | null;
   isFollowing?: boolean;
-  onComplete: (weekPlan: DayPlan[]) => void | Promise<void>;
+  onComplete: (
+    weekPlan: DayPlan[],
+    result?: { coachMessage?: string; workoutCount?: number }
+  ) => void | Promise<void>;
   onFollow?: () => void | Promise<void>;
   onCancel: () => void;
 };
@@ -175,8 +178,11 @@ export default function AIProgramSetupWizard({
 
       setCoachMessage(data.program_summary || data.coaching_notes || '');
       setWorkoutCount(Number(data.workout_count) || 0);
-      setStep('done');
       setLoading(false);
+      await onComplete([], {
+        coachMessage: data.program_summary || data.coaching_notes || '',
+        workoutCount: Number(data.workout_count) || 0,
+      });
       return;
     } catch (e: any) {
       setError(e?.message || 'Something went wrong.');

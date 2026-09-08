@@ -1,53 +1,11 @@
 'use client';
 
-const SECTIONS = [
-  { id: 'warmup', label: 'Warm-up' },
-  { id: 'strength', label: 'Strength' },
-  { id: 'cooldown', label: 'Cooldown' },
-];
-
-function exerciseSection(ex: any): string {
-  return String(ex?.section || 'strength');
-}
-
-function sectionExercises(workout: any, section: string) {
-  return (workout?.st_exercises || [])
-    .filter((e: any) => exerciseSection(e) === section)
-    .sort((a: any, b: any) => (a.sort_order || 0) - (b.sort_order || 0) || (a.superset_order || 0) - (b.superset_order || 0));
-}
-
-function plannedSets(ex: any) {
-  return (ex?.st_planned_sets || [])
-    .filter((s: any) => !s.is_deleted)
-    .sort((a: any, b: any) => (a.set_number || 0) - (b.set_number || 0));
-}
-
-function setLine(set: any): string {
-  const kind = set.set_type && set.set_type !== 'working' ? `${set.set_type} ` : '';
-  const reps = set.target_reps || (set.rep_min && set.rep_max ? `${set.rep_min}-${set.rep_max}` : set.rep_min || set.rep_max || '');
-  const weight = set.target_weight ? ` @ ${set.target_weight}` : '';
-  const rir = set.target_rir != null && set.target_rir !== '' ? ` · ${set.target_rir} RIR` : '';
-  const rpe = !rir && set.target_rpe ? ` · RPE ${set.target_rpe}` : '';
-  return `${kind}${reps || 'reps'}${weight}${rir}${rpe}`.trim();
-}
-
-function summarizeExercise(ex: any): string {
-  const sets = plannedSets(ex);
-  if (!sets.length) return 'No sets prescribed';
-  const first = sets[0];
-  const same = sets.every(
-    (s: any) =>
-      String(s.target_reps || '') === String(first.target_reps || '') &&
-      String(s.rep_min || '') === String(first.rep_min || '') &&
-      String(s.rep_max || '') === String(first.rep_max || '')
-  );
-  if (same) {
-    const working = sets.filter((s: any) => (s.set_type || 'working') === 'working');
-    const count = working.length || sets.length;
-    return `${count} × ${setLine(first)}`;
-  }
-  return sets.map((s: any, i: number) => `Set ${s.set_number || i + 1}: ${setLine(s)}`).join(' · ');
-}
+import {
+  WORKOUT_SECTIONS,
+  exerciseSection,
+  sectionExercises,
+  summarizeExercise,
+} from '../../../lib/programDesign/workoutPreview';
 
 type WorkoutPlanSheetProps = {
   workout: any;
@@ -68,6 +26,8 @@ export default function WorkoutPlanSheet({
 }: WorkoutPlanSheetProps) {
   const title = workout?.workout_type || workout?.day_label || 'Workout';
   const hasExercises = (workout?.st_exercises || []).length > 0;
+  const known = new Set(WORKOUT_SECTIONS.map((s) => s.id));
+  const other = (workout?.st_exercises || []).filter((e: any) => !known.has(exerciseSection(e)));
 
   return (
     <div className="panel-overlay" onClick={onClose}>
@@ -85,7 +45,7 @@ export default function WorkoutPlanSheet({
 
         {!hasExercises && <p className="muted">This day does not have exercises yet.</p>}
 
-        {SECTIONS.map((sec) => {
+        {WORKOUT_SECTIONS.map((sec) => {
           const list = sectionExercises(workout, sec.id);
           if (!list.length) return null;
           return (
@@ -103,22 +63,17 @@ export default function WorkoutPlanSheet({
             </section>
           );
         })}
-        {(() => {
-          const known = new Set(SECTIONS.map((s) => s.id));
-          const other = (workout?.st_exercises || []).filter((e: any) => !known.has(exerciseSection(e)));
-          if (!other.length) return null;
-          return (
-            <section className="te-plan-section">
-              <h3>Other</h3>
-              {other.map((ex: any) => (
-                <div key={ex.id} className="te-plan-ex">
-                  <b>{ex.name}</b>
-                  <span className="muted">{summarizeExercise(ex)}</span>
-                </div>
-              ))}
-            </section>
-          );
-        })()}
+        {other.length > 0 && (
+          <section className="te-plan-section">
+            <h3>Other</h3>
+            {other.map((ex: any) => (
+              <div key={ex.id} className="te-plan-ex">
+                <b>{ex.name}</b>
+                <span className="muted">{summarizeExercise(ex)}</span>
+              </div>
+            ))}
+          </section>
+        )}
 
         <div className="actions" style={{ marginTop: 16 }}>
           <button type="button" className="btn green" onClick={onStart} disabled={!hasExercises}>

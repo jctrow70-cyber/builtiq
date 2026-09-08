@@ -218,7 +218,7 @@ export async function POST(request: Request) {
         .limit(1);
       if (existingExercises?.length) {
         return NextResponse.json(
-          { error: 'This program already has workouts. Open the calendar to edit them, or create a new program.' },
+          { error: 'This program already has workouts. Open it in Programs to view or edit them, or create a new program.' },
           { status: 409 }
         );
       }

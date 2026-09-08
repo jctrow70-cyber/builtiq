@@ -7,6 +7,8 @@ import WeeklyHealthCalendar from './WeeklyHealthCalendar';
 import AddActivitySheet from './AddActivitySheet';
 import ImportWorkoutsSheet from './ImportWorkoutsSheet';
 import PushToMembersSheet from './PushToMembersSheet';
+import ProgramWorkoutPlan from './ProgramWorkoutPlan';
+import SegmentedControl from '../ui/SegmentedControl';
 import { cycleLengthOf, formatProgramRange, programDateRange } from '../../../lib/programDesign/cycle';
 import { lifecycleLabel, lifecycleStatusOf } from '../../../lib/programDesign/lifecycle';
 import {
@@ -42,6 +44,7 @@ type ProgramCalendarEditorProps = {
   onFollow?: () => Promise<void>;
   onShareWithGroup?: (teamId: string) => Promise<void>;
   onBuildWorkouts?: () => void;
+  justBuiltMessage?: string | null;
 };
 
 export default function ProgramCalendarEditor({
@@ -58,6 +61,7 @@ export default function ProgramCalendarEditor({
   onFollow,
   onShareWithGroup,
   onBuildWorkouts,
+  justBuiltMessage = null,
 }: ProgramCalendarEditorProps) {
   const [week, setWeek] = useState(1);
   const [activities, setActivities] = useState<ProgramActivity[]>([]);
@@ -70,6 +74,8 @@ export default function ProgramCalendarEditor({
   const [importOpen, setImportOpen] = useState(false);
   const [pushOpen, setPushOpen] = useState(false);
   const [hasExercises, setHasExercises] = useState(false);
+  const [pane, setPane] = useState<'workouts' | 'calendar' | null>(null);
+  const [openWorkoutId, setOpenWorkoutId] = useState<string | null>(null);
 
   const totalWeeks = cycleLengthOf(program);
   const { start, end } = programDateRange(program);
@@ -106,8 +112,13 @@ export default function ProgramCalendarEditor({
   }
 
   useEffect(() => {
+    setPane(null);
     void reload();
   }, [program.id]);
+
+  useEffect(() => {
+    if (pane == null && !loading) setPane(hasExercises || justBuiltMessage ? 'workouts' : 'calendar');
+  }, [loading, hasExercises, justBuiltMessage, pane]);
 
   const hasStrengthActivities = useMemo(
     () => activities.some((a) => a.activity_type === 'strength' && a.workout_id && a.week_number === week),
@@ -257,11 +268,23 @@ export default function ProgramCalendarEditor({
           )}
         </div>
       )}
-      {hasExercises && (
-        <p className="muted">
-          Strength days already have exercises and sets. Open Training to log them.
-        </p>
+      {justBuiltMessage && (
+        <div className="ai-wiz-coach">
+          <p>Your workouts are ready. Review them below and edit anything you want to change.</p>
+          <p>{justBuiltMessage}</p>
+        </div>
       )}
+
+      <SegmentedControl
+        ariaLabel="Program editor"
+        value={pane || (hasExercises ? 'workouts' : 'calendar')}
+        onChange={(v) => setPane(v as 'workouts' | 'calendar')}
+        options={[
+          { value: 'workouts', label: 'Workouts' },
+          { value: 'calendar', label: 'Calendar' },
+        ]}
+        size="sm"
+      />
 
       {!tableReady && (
         <p className="pd-note">
@@ -269,7 +292,7 @@ export default function ProgramCalendarEditor({
         </p>
       )}
       {error && <p className="pd-error">{error}</p>}
-      {!loading && canEdit && !hasExercises && onBuildWorkouts && (
+      {!loading && canEdit && !hasExercises && !justBuiltMessage && onBuildWorkouts && (
         <div className="pd-note" style={{ marginBottom: 12 }}>
           <p>This program does not have exercises yet. Build the actual workouts to fill the calendar.</p>
           <button type="button" className="btn green" style={{ marginTop: 8 }} onClick={onBuildWorkouts}>
@@ -279,6 +302,16 @@ export default function ProgramCalendarEditor({
       )}
       {loading ? (
         <p className="muted">Loading this week…</p>
+      ) : pane === 'workouts' ? (
+        <ProgramWorkoutPlan
+          supabase={supabase}
+          programId={program.id}
+          week={week}
+          canEdit={canEdit}
+          openWorkoutId={openWorkoutId}
+          onOpenHandled={() => setOpenWorkoutId(null)}
+          onLoaded={(info) => setHasExercises(info.hasExercises)}
+        />
       ) : (
         <WeeklyHealthCalendar
           startMonday={start}
@@ -290,6 +323,11 @@ export default function ProgramCalendarEditor({
             setSheetDay(day);
           }}
           onOpenActivity={(activity) => {
+            if (activity.workout_id && hasExercises) {
+              setOpenWorkoutId(activity.workout_id);
+              setPane('workouts');
+              return;
+            }
             setEditing(activity);
             setSheetDay(activity.day_of_week);
           }}

@@ -112,6 +112,7 @@ export default function ProgramDesignHome({
   const [followBusy, setFollowBusy] = useState(false);
   const [createDefaultStart, setCreateDefaultStart] = useState(nextMondayFrom());
   const [sequencingHint, setSequencingHint] = useState<string | null>(null);
+  const [buildBanner, setBuildBanner] = useState<string | null>(null);
 
   const groupId = selectedTeamId || teams[0]?.id || null;
   const activeGroup = teams.find((t) => t.id === groupId) || null;
@@ -284,7 +285,7 @@ export default function ProgramDesignHome({
     setView('ai-setup');
   }
 
-  async function handleFollow(source: ProgramDesignRecord, opts?: { editSource?: boolean }): Promise<{ error: string | null }> {
+  async function handleFollow(source: ProgramDesignRecord, opts?: { editSource?: boolean; openTraining?: boolean }): Promise<{ error: string | null }> {
     setFollowBusy(true);
     setError('');
     const result = await followProgram(supabase, {
@@ -300,7 +301,7 @@ export default function ProgramDesignHome({
       setError(message);
       return { error: message };
     }
-    onFollowed?.(result.programId);
+    onFollowed?.(result.programId, { openTraining: opts?.openTraining });
     await reload();
     return { error: null };
   }
@@ -365,7 +366,7 @@ export default function ProgramDesignHome({
           weeks={Math.min(12, cycleLengthOf(editing))}
           startDate={editing.start_date}
           isFollowing={!!alreadyFollowing(editing, personalPrograms, followedProgramId)}
-          onComplete={async (weekPlan) => {
+          onComplete={async (weekPlan, result) => {
             setError('');
             for (const day of weekPlan) {
               let sortOrder = 0;
@@ -375,10 +376,13 @@ export default function ProgramDesignHome({
                 sortOrder++;
               }
             }
+            if (result?.coachMessage) setBuildBanner(result.coachMessage);
+            else if (result?.workoutCount) setBuildBanner(`Built ${result.workoutCount} workouts.`);
+            else setBuildBanner('Your workouts are ready. Review and edit them below.');
             setView('editor');
           }}
           onFollow={async () => {
-            const result = await handleFollow(editing);
+            const result = await handleFollow(editing, { openTraining: false });
             if (result.error) throw new Error(result.error);
           }}
           onCancel={() => {
@@ -409,6 +413,7 @@ export default function ProgramDesignHome({
           }
           onBack={() => {
             setEditing(null);
+            setBuildBanner(null);
             setView('home');
             void reload();
           }}
@@ -417,10 +422,11 @@ export default function ProgramDesignHome({
             setPrograms((prev) => prev.map((p) => (p.id === next.id ? next : p)));
           }}
           onFollow={async () => {
-            await handleFollow(editing, { editSource: editorPull });
+            await handleFollow(editing, { editSource: editorPull, openTraining: false });
           }}
           onShareWithGroup={handleShareWithGroup}
           onBuildWorkouts={() => setView('ai-setup')}
+          justBuiltMessage={buildBanner}
         />
       </section>
     );

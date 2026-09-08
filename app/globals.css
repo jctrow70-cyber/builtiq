@@ -932,6 +932,19 @@ label{color:var(--textSecondary)}
 .te-plan-section h3{margin:0 0 8px;font-size:13px;letter-spacing:.04em;text-transform:uppercase}
 .te-plan-ex{display:grid;gap:2px;padding:10px 12px;margin-bottom:8px;border-radius:12px;border:1px solid var(--borderSubtle);background:var(--surfaceInset)}
 .te-plan-ex b{font-size:14px}
+.pd-workout-plan{display:grid;gap:14px;margin-top:12px}
+.pd-workout-card{padding:14px;border-radius:16px;border:1px solid var(--borderSubtle);background:var(--surfaceElevated)}
+.pd-workout-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px}
+.pd-workout-card-head h3{margin:0}
+.pd-workout-body{display:grid;gap:4px}
+.pd-edit-ex{margin:0 0 14px;padding:12px;border-radius:12px;border:1px solid var(--borderSubtle);background:var(--surfaceInset)}
+.pd-edit-ex-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
+.pd-edit-set{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(0,1fr) 72px auto;gap:6px;align-items:center;margin-bottom:6px}
+.pd-add-ex{margin-top:12px;display:grid;gap:8px}
+@media (max-width:520px){
+  .pd-edit-set{grid-template-columns:1fr 1fr; }
+  .pd-edit-set span{grid-column:1/-1}
+}
 .te-later{margin:0 0 6px;display:flex;align-items:center;justify-content:space-between;gap:10px}
 .te-later p{margin:0}
 .te-tomorrow{opacity:.95}

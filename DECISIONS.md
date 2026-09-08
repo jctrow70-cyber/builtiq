@@ -970,3 +970,31 @@ Users need to see what they will do, and fix the plan, without pretending they h
 
 - View and Start are separate actions
 - Edit is available when the user can change the program
+
+---
+
+## Decision 035 - Generated Plans Open in Program Design
+
+Date: 2026-09-08  
+Status: Accepted  
+Category: Program Design
+
+### Decision
+
+When workouts are generated, Program Design immediately shows the built plan (exercises and sets). Template edits happen there. Training remains for logging. Follow is optional after review and does not hide the plan.
+
+### Reason
+
+Users need to see what was built and fix it in the same place they created it. A Follow/Save gate and a calendar of day titles hid the work.
+
+### Alternatives Considered
+
+- Keep the Follow/Save finish screen — rejected; it never showed lifts
+- Send people to Training to inspect the plan — rejected; Training is for logging
+- Build a second full logger inside Programs — rejected; a focused plan editor is enough
+
+### Impact
+
+- Generate finishes on the Workouts tab
+- Programs list → open program shows the same plan
+- History still does not change when templates are edited
