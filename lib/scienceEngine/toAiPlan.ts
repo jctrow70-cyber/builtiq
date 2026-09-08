@@ -39,7 +39,7 @@ function toAiWorkout(workout: ScienceWorkout): AiWorkout {
   return {
     week: workout.week,
     day_label: workout.dayLabel,
-    workout_type: workout.workoutType,
+    workout_type: workout.name || workout.workoutType,
     warmup,
     strength,
     cooldown,

@@ -11,6 +11,59 @@ Branch:
 Status:
 ```
 
+## BIQ-0159 - Distinct Full-Body Workouts Each Training Day
+
+Date: 2026-09-08  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Full-body programs now build a different session for each training day (Full Body A/B/C, and D if needed). The same day still repeats across weeks so you can progress.
+
+### Purpose
+
+Every full-body day used the same squat / bench / row template, so Wednesday and Friday were copies of Monday.
+
+### Changes
+
+- Rotate four full-body templates with different primary lifts
+- Do not reuse the same exercise or movement family later in the same week
+- Show Full Body A/B/C on the plan
+- Acceptance check covers a Mon/Wed/Fri full-body week
+
+### Files Changed
+
+- `lib/scienceEngine/generateProgram.ts`
+- `lib/scienceEngine/exerciseSelection.ts`
+- `lib/scienceEngine/toAiPlan.ts`
+- `lib/scienceEngine/acceptanceCheck.ts`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None. Existing programs keep their current workouts until you create or rebuild a program.
+
+### Testing Steps
+
+1. Create a new full-body program (for example Mon/Wed/Fri).
+2. After it builds, Monday, Wednesday, and Friday should list different exercises.
+3. Week 2 Monday should match Week 1 Monday (same session, for progression).
+4. `npm run test:science` passes.
+
+### Known Issues
+
+- Programs already saved stay as they were until rebuilt.
+- Rebuild is still blocked if the program already has exercises (create a new program, or delete and recreate).
+
+### Recommended Commit Message
+
+```text
+BIQ-0159 Give each full-body day a different workout
+```
+
+---
+
 ## BIQ-0158 - Fix Vercel Type Error on Program Workout Editor
 
 Date: 2026-09-08  

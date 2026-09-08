@@ -51,6 +51,12 @@ export function scoreExercise(ex: CatalogExercise, ctx: {
   return score;
 }
 
+function sameMovementFamily(name: string, alreadyNames: string[]): boolean {
+  const family = movementFamily(name);
+  if (!family) return false;
+  return alreadyNames.some((n) => movementFamily(n) === family);
+}
+
 function redundancyPenalty(ex: CatalogExercise, alreadyNames: string[]): number {
   const family = movementFamily(ex.name);
   if (!family) return 0;
@@ -65,9 +71,17 @@ function movementFamily(name: string): string {
   if (/fly|pec deck/.test(n)) return 'fly';
   if (/row/.test(n)) return 'row';
   if (/pulldown|pull-?up/.test(n)) return 'vertical_pull';
-  if (/squat/.test(n)) return 'squat';
-  if (/deadlift|rdl/.test(n)) return 'hinge';
+  if (/squat/.test(n) && !/split squat/.test(n)) return 'squat';
+  if (/split squat|bulgarian/.test(n)) return 'split_squat';
+  if (/\brdl\b|romanian deadlift/.test(n)) return 'rdl';
+  if (/deadlift/.test(n)) return 'deadlift';
   return '';
+}
+
+function isWarmupOnly(ex: CatalogExercise, role: ProgramRole): boolean {
+  if (role === 'warmup' || role === 'power') return false;
+  const strengthRoles = ex.programRoles.filter((r) => r !== 'warmup' && r !== 'power');
+  return ex.programRoles.includes('warmup') && strengthRoles.length === 0;
 }
 
 export function pickExercise(
@@ -81,13 +95,16 @@ export function pickExercise(
     preferredNames?: string[];
   }
 ): CatalogExercise | null {
+  const blocked = new Set((ctx.alreadyNames || []).map((n) => n.toLowerCase()));
   const preferred = (ctx.preferredNames || [])
     .map((name) => findByName(pool, name))
-    .find((ex) => ex && scoreExercise(ex, ctx) > -20);
+    .find((ex) => ex && !blocked.has(ex.name.toLowerCase()) && !sameMovementFamily(ex.name, ctx.alreadyNames) && scoreExercise(ex, ctx) > -20);
   if (preferred) return preferred;
 
   const ranked = pool
     .filter((ex) => !ctx.alreadyNames.some((n) => n.toLowerCase() === ex.name.toLowerCase()))
+    .filter((ex) => !isWarmupOnly(ex, ctx.role))
+    .filter((ex) => !sameMovementFamily(ex.name, ctx.alreadyNames))
     .map((ex) => ({ ex, score: scoreExercise(ex, ctx) }))
     .sort((a, b) => b.score - a.score);
   return ranked[0] && ranked[0].score > 0 ? ranked[0].ex : null;

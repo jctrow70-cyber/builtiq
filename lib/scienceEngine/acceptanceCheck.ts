@@ -115,7 +115,36 @@ function run() {
   assert(week3.decision === 'PROGRESS_REPS' || week3.decision === 'MAINTAIN', `190x7/6/6 should keep load, got ${week3.decision}`);
   assert(week3.nextLoad === 190, `Should keep 190, got ${week3.nextLoad}`);
 
+  const fullBodyProfile = trainingProfileFromSources({
+    profile: { experience_level: 'intermediate', primary_goal: 'muscle', birth_year: 1990 },
+    trainingProfile: { preferred_session_minutes: 60 },
+    config: {
+      days: ['Mon', 'Wed', 'Fri'],
+      dayTypes: { Mon: 'Full Body', Wed: 'Full Body', Fri: 'Full Body' },
+      weeks: 4,
+      sessionMinutes: 60,
+    },
+  });
+  const fullBody = generateProgram(fullBodyProfile);
+  const fbWeek1 = fullBody.workouts.filter((w) => w.week === 1);
+  assert(fbWeek1.length === 3, `Expected 3 full-body days, got ${fbWeek1.length}`);
+  const fbLists = fbWeek1.map((w) => w.exercises.map((e) => e.name).join(' | '));
+  assert(fbLists[0] !== fbLists[1], `Full Body A and B should differ:\nA: ${fbLists[0]}\nB: ${fbLists[1]}`);
+  assert(fbLists[1] !== fbLists[2], `Full Body B and C should differ:\nB: ${fbLists[1]}\nC: ${fbLists[2]}`);
+  const fbPrimaries = fbWeek1.map((w) => w.exercises[0]?.name || '');
+  assert(new Set(fbPrimaries).size === 3, `Full-body days should start with different primary lifts, got ${fbPrimaries.join(', ')}`);
+  assert(
+    fbWeek1.every((w) => w.exercises.length >= 4),
+    `Each full-body day should have at least 4 lifts, got ${fbWeek1.map((w) => `${w.name}:${w.exercises.length}`).join(', ')}`
+  );
+  assert(
+    !/leg curl|reverse lunge \+ rotation/i.test(fbPrimaries.join(' | ')),
+    `Full-body primaries should be compounds, got ${fbPrimaries.join(', ')}`
+  );
+  assert(fbWeek1[0].name === 'Full Body A' && fbWeek1[1].name === 'Full Body B' && fbWeek1[2].name === 'Full Body C', `Expected Full Body A/B/C names, got ${fbWeek1.map((w) => w.name).join(', ')}`);
+
   console.log('BIQ-0141 science engine acceptance checks passed.');
+  console.log(`Full body week: ${fbWeek1.map((w) => `${w.name} (${w.exercises[0]?.name})`).join(' / ')}`);
   console.log(`Split: ${types.join(' / ')}`);
   console.log(`Chest target: ${chest?.targetSets}`);
   console.log(`Bench: ${bench!.sets} x ${bench!.repMin}-${bench!.repMax} @ ${bench!.targetRir} RIR`);

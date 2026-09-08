@@ -23,9 +23,60 @@ import type {
 } from './types';
 import type { MovementPatternId, MuscleId } from './taxonomy';
 
-function slotsForDay(type: SplitDay['workoutType'], upperIndex: number): { muscle: MuscleId; role: ProgramRole; pattern?: MovementPatternId; preferred?: string[]; preferPressRange?: boolean }[] {
+type DaySlot = {
+  muscle: MuscleId;
+  role: ProgramRole;
+  pattern?: MovementPatternId;
+  preferred?: string[];
+  preferPressRange?: boolean;
+};
+
+function fullBodySlots(variantIndex: number): DaySlot[] {
+  const rotations: DaySlot[][] = [
+    [
+      { muscle: 'quads', role: 'primary', pattern: 'squat', preferred: ['Back Squat', 'Goblet Squat'] },
+      { muscle: 'chest', role: 'primary', pattern: 'horizontal_push', preferred: ['Barbell Bench Press', 'Bench Press'], preferPressRange: true },
+      { muscle: 'upper_back', role: 'primary', pattern: 'horizontal_pull', preferred: ['Barbell Row', 'Pendlay Row'] },
+      { muscle: 'hamstrings', role: 'secondary', pattern: 'hinge', preferred: ['Romanian Deadlift', 'Dumbbell RDL'] },
+      { muscle: 'lats', role: 'secondary', pattern: 'vertical_pull', preferred: ['Lat Pulldown'] },
+      { muscle: 'side_delts', role: 'isolation', preferred: ['Lateral Raise'] },
+      { muscle: 'abs', role: 'accessory', preferred: ['Plank'] },
+    ],
+    [
+      { muscle: 'hamstrings', role: 'primary', pattern: 'hinge', preferred: ['Conventional Deadlift', 'Trap Bar Deadlift', 'Romanian Deadlift'] },
+      { muscle: 'front_delts', role: 'primary', pattern: 'vertical_push', preferred: ['Overhead Press', 'Dumbbell Shoulder Press'] },
+      { muscle: 'lats', role: 'primary', pattern: 'vertical_pull', preferred: ['Pull-Up', 'Chin-Up', 'Lat Pulldown'] },
+      { muscle: 'quads', role: 'secondary', pattern: 'lunge', preferred: ['Walking Lunge', 'Bulgarian Split Squat', 'Leg Press'] },
+      { muscle: 'upper_back', role: 'secondary', pattern: 'horizontal_pull', preferred: ['Dumbbell Row', 'Chest-Supported Row'] },
+      { muscle: 'triceps', role: 'isolation', preferred: ['Triceps Pushdown', 'Overhead Triceps Extension'] },
+      { muscle: 'abs', role: 'accessory', preferred: ['Pallof Press', 'Dead Bug'] },
+    ],
+    [
+      { muscle: 'quads', role: 'primary', pattern: 'lunge', preferred: ['Bulgarian Split Squat', 'Front Squat', 'Goblet Squat'] },
+      { muscle: 'chest', role: 'primary', pattern: 'horizontal_push', preferred: ['Incline Dumbbell Press', 'Incline Bench'] },
+      { muscle: 'upper_back', role: 'primary', pattern: 'horizontal_pull', preferred: ['Seated Cable Row', 'Chest-Supported Row', 'Dumbbell Row'] },
+      { muscle: 'glutes', role: 'secondary', pattern: 'hinge', preferred: ['Hip Thrust', 'Glute Bridge'] },
+      { muscle: 'lats', role: 'secondary', pattern: 'vertical_pull', preferred: ['Straight-Arm Pulldown', 'Lat Pulldown'] },
+      { muscle: 'biceps', role: 'isolation', preferred: ['Dumbbell Curl', 'Hammer Curl'] },
+      { muscle: 'abs', role: 'accessory', preferred: ['Hanging Knee Raise', 'Cable Crunch'] },
+    ],
+    [
+      { muscle: 'quads', role: 'primary', pattern: 'squat', preferred: ['Leg Press', 'Hack Squat', 'Goblet Squat'] },
+      { muscle: 'chest', role: 'secondary', pattern: 'horizontal_push', preferred: ['Dumbbell Bench Press', 'Push-Up'] },
+      { muscle: 'hamstrings', role: 'primary', pattern: 'knee_flexion', preferred: ['Leg Curl', 'Nordic Curl'] },
+      { muscle: 'lats', role: 'primary', pattern: 'vertical_pull', preferred: ['Lat Pulldown', 'Assisted Pull-Up'] },
+      { muscle: 'rear_delts', role: 'isolation', preferred: ['Face Pull', 'Rear Delt Fly'] },
+      { muscle: 'calves', role: 'isolation', pattern: 'calf_raise', preferred: ['Calf Raise'] },
+      { muscle: 'abs', role: 'accessory', preferred: ['Ab Wheel', 'Plank'] },
+    ],
+  ];
+  return rotations[variantIndex % rotations.length];
+}
+
+function slotsForDay(type: SplitDay['workoutType'], variantIndex: number): DaySlot[] {
+  if (type === 'Full Body') return fullBodySlots(variantIndex);
   if (type === 'Upper Body' || type === 'Push') {
-    if (upperIndex % 2 === 0) {
+    if (variantIndex % 2 === 0) {
       return [
         { muscle: 'chest', role: 'primary', pattern: 'horizontal_push', preferred: ['Barbell Bench Press', 'Bench Press'], preferPressRange: true },
         { muscle: 'upper_back', role: 'primary', pattern: 'horizontal_pull', preferred: ['Barbell Row', 'Dumbbell Row'] },
@@ -100,8 +151,9 @@ export function generateProgram(profile: TrainingProfile, catalogRows?: any[]): 
   const sessionCursor: Record<string, number> = {};
 
   const weekCount = Math.max(1, Math.min(12, profile.weeks || rules.blockWeeksDefault));
-  const week1 = split.map((day, index) =>
-    buildWorkout({
+  const usedThisWeek: string[] = [];
+  const week1 = split.map((day, index) => {
+    const built = buildWorkout({
       profile,
       catalog,
       day,
@@ -110,8 +162,11 @@ export function generateProgram(profile: TrainingProfile, catalogRows?: any[]): 
       remaining,
       sessionBudget,
       sessionCursor,
-    })
-  );
+      alreadyThisWeek: usedThisWeek,
+    });
+    usedThisWeek.push(...built.exercises.map((ex) => ex.name));
+    return built;
+  });
 
   const workouts: ScienceWorkout[] = [];
   for (let week = 1; week <= weekCount; week += 1) {
@@ -131,7 +186,7 @@ export function generateProgram(profile: TrainingProfile, catalogRows?: any[]): 
       chest
         ? `Chest weekly target is ${chest.targetSets} effective sets because volume starts at the productive end of the ${profile.experienceLevel} range and ${chest.priority === 'high_priority' ? 'priority increases that dose by 20%' : 'volume is not maximized automatically'}.`
         : 'Weekly muscle targets start at the low productive end of each experience band.',
-      'Exercises persist across weeks so progress can be measured. Novelty is not used as progression.',
+      'Exercises persist across weeks so progress can be measured. Full-body days rotate different sessions (A/B/C) inside the week; novelty is not used as week-to-week progression.',
     ],
   };
 
@@ -151,13 +206,15 @@ function buildWorkout(opts: {
   remaining: Record<string, number>;
   sessionBudget: Record<string, number[]>;
   sessionCursor: Record<string, number>;
+  alreadyThisWeek?: string[];
 }): ScienceWorkout {
   const { profile, catalog, day, index, split } = opts;
   const name = splitDayName(day.workoutType, index, split.map((d) => d.workoutType));
-  const already: string[] = [];
+  const already: string[] = [...(opts.alreadyThisWeek || [])];
   const exercises: ExercisePrescription[] = [];
-  const upperIndex = split.slice(0, index + 1).filter((d) => d.workoutType === 'Upper Body' || d.workoutType === 'Push').length - 1;
-  const slots = slotsForDay(day.workoutType, Math.max(0, upperIndex));
+  const variantIndex =
+    split.slice(0, index + 1).filter((d) => d.workoutType === day.workoutType).length - 1;
+  const slots = slotsForDay(day.workoutType, Math.max(0, variantIndex));
 
   slots.forEach((slot) => {
     if (exercises.length >= 7) return;
