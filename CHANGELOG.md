@@ -11,6 +11,50 @@ Branch:
 Status:
 ```
 
+## BIQ-0153 - Fix Follow Handler Type for Vercel Build
+
+Date: 2026-09-08  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Fixed a TypeScript error that failed the Vercel production build. `handleFollow` now returns an error object, and the calendar Follow button expected `Promise<void>`.
+
+### Purpose
+
+Unblock deploy after BIQ-0152.
+
+### Changes
+
+- Calendar `onFollow` awaits `handleFollow` and does not pass the error object through as the return type
+
+### Files Changed
+
+- `app/components/programDesign/ProgramDesignHome.tsx`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Run `npm run build` locally and confirm typecheck passes.
+2. Confirm Programs calendar Follow still follows the open program.
+
+### Known Issues
+
+None.
+
+### Recommended Commit Message
+
+```text
+BIQ-0153 Fix Follow handler type so Vercel build passes
+```
+
+---
+
 ## BIQ-0152 - Create Program Stays Until Workouts Are Built
 
 Date: 2026-09-08  

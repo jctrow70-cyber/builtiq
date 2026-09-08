@@ -416,7 +416,9 @@ export default function ProgramDesignHome({
             setEditing(next);
             setPrograms((prev) => prev.map((p) => (p.id === next.id ? next : p)));
           }}
-          onFollow={() => handleFollow(editing, { editSource: editorPull })}
+          onFollow={async () => {
+            await handleFollow(editing, { editSource: editorPull });
+          }}
           onShareWithGroup={handleShareWithGroup}
           onBuildWorkouts={() => setView('ai-setup')}
         />
