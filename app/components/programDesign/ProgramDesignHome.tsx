@@ -40,7 +40,7 @@ type ProgramDesignHomeProps = {
   selectedTeamId: string | null;
   followedProgramId?: string | null;
   onSelectTeam: (id: string) => void;
-  onFollowed?: (programId: string | null) => void;
+  onFollowed?: (programId: string | null, opts?: { openTraining?: boolean }) => void;
 };
 
 type View = 'home' | 'create' | 'ai-setup' | 'editor';
@@ -278,27 +278,13 @@ export default function ProgramDesignHome({
     }
     setPrograms((prev) => [data, ...prev]);
     if (scope === 'personal') {
-      // Follow the new personal plan immediately so Training won't re-enroll a
-      // group member into the group schedule after they unfollowed to create this.
-      const nextPersonal = [data, ...personalPrograms];
-      setPersonalPrograms(nextPersonal);
-      const followResult = await followProgram(supabase, {
-        userId,
-        source: data,
-        personalPrograms: nextPersonal,
-        followedProgramId: null,
-      });
-      if (followResult.error || !followResult.programId) {
-        setError(followResult.error || 'Program created, but could not set it as the plan you follow');
-      } else {
-        onFollowed?.(followResult.programId);
-      }
+      setPersonalPrograms((prev) => [data, ...prev]);
     }
     setEditing(data);
     setView('ai-setup');
   }
 
-  async function handleFollow(source: ProgramDesignRecord, opts?: { editSource?: boolean }) {
+  async function handleFollow(source: ProgramDesignRecord, opts?: { editSource?: boolean }): Promise<{ error: string | null }> {
     setFollowBusy(true);
     setError('');
     const result = await followProgram(supabase, {
@@ -310,11 +296,13 @@ export default function ProgramDesignHome({
     });
     setFollowBusy(false);
     if (result.error || !result.programId) {
-      setError(result.error || 'Could not follow this program');
-      return;
+      const message = result.error || 'Could not follow this program';
+      setError(message);
+      return { error: message };
     }
     onFollowed?.(result.programId);
     await reload();
+    return { error: null };
   }
 
   async function handleUnfollow() {
@@ -376,6 +364,7 @@ export default function ProgramDesignHome({
           programId={editing.id}
           weeks={Math.min(12, cycleLengthOf(editing))}
           startDate={editing.start_date}
+          isFollowing={!!alreadyFollowing(editing, personalPrograms, followedProgramId)}
           onComplete={async (weekPlan) => {
             setError('');
             for (const day of weekPlan) {
@@ -387,6 +376,10 @@ export default function ProgramDesignHome({
               }
             }
             setView('editor');
+          }}
+          onFollow={async () => {
+            const result = await handleFollow(editing);
+            if (result.error) throw new Error(result.error);
           }}
           onCancel={() => {
             setView('editor');

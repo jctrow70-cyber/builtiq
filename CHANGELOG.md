@@ -11,6 +11,63 @@ Branch:
 Status:
 ```
 
+## BIQ-0152 - Create Program Stays Until Workouts Are Built
+
+Date: 2026-09-08  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Create Program no longer jumps to Training before workouts exist. After the workouts are built, you can follow the program or save it without following.
+
+### Purpose
+
+Clicking Create and build workouts auto-followed the empty program, which switched the app to Training. Users never saw the builder and thought the workout was not created.
+
+### Changes
+
+- Personal create no longer auto-follows the new program
+- Following still opens Training; creating a program does not
+- After workouts generate, choose Follow this program or Save without following
+- Empty programs can still be opened later and built from the calendar
+
+### Files Changed
+
+- `app/page.tsx`
+- `app/components/programDesign/ProgramDesignHome.tsx`
+- `app/components/programDesign/AIProgramSetupWizard.tsx`
+- `app/components/programDesign/CreateProgramFlow.tsx`
+- `CHANGELOG.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Programs → Create Program → name + dates → Create and build workouts.
+2. Confirm you stay on Programs and see Build your workouts (not Training).
+3. Describe training → Build my workouts → wait until Workouts are ready.
+4. Save without following → calendar shows the built week; Training should not switch to this program.
+5. Repeat create/generate → Follow this program → Training opens with the new workouts.
+6. Open an older empty program → Build my workouts still works, then Follow or Save.
+7. Mobile (~390px): create, generate, and Follow/Save buttons stay usable.
+
+### Known Issues
+
+- Group members who unfollow a group plan, create a personal program, and save without following may be enrolled in a group plan again on the next Programs/Training load.
+- Cycle lengths over 12 weeks still generate at most 12 weeks of workouts.
+
+### Recommended Commit Message
+
+```text
+BIQ-0152 Keep create program on Programs until workouts exist
+```
+
+---
+
 ## BIQ-0151 - Create Program Builds Actual Workouts
 
 Date: 2026-09-07  

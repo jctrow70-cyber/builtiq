@@ -24,7 +24,7 @@ type DayPlan = {
   activities: ActivityDraft[];
 };
 
-type WizardStep = 'describe' | 'review';
+type WizardStep = 'describe' | 'review' | 'done';
 
 type AIProgramSetupWizardProps = {
   supabase: SupabaseClient;
@@ -32,7 +32,9 @@ type AIProgramSetupWizardProps = {
   programId?: string;
   weeks?: number;
   startDate?: string | null;
+  isFollowing?: boolean;
   onComplete: (weekPlan: DayPlan[]) => void | Promise<void>;
+  onFollow?: () => void | Promise<void>;
   onCancel: () => void;
 };
 
@@ -127,7 +129,9 @@ export default function AIProgramSetupWizard({
   programId,
   weeks = 6,
   startDate = null,
+  isFollowing = false,
   onComplete,
+  onFollow,
   onCancel,
 }: AIProgramSetupWizardProps) {
   const [step, setStep] = useState<WizardStep>('describe');
@@ -135,9 +139,11 @@ export default function AIProgramSetupWizard({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [coachMessage, setCoachMessage] = useState('');
+  const [workoutCount, setWorkoutCount] = useState(0);
   const [weekPlan, setWeekPlan] = useState<DayPlan[]>([]);
   const [dragSource, setDragSource] = useState<{ dayIdx: number; actIdx: number } | null>(null);
   const [dropTarget, setDropTarget] = useState<number | null>(null);
+  const [choiceBusy, setChoiceBusy] = useState(false);
 
   async function handleGenerate() {
     if (description.trim().length < 8) {
@@ -183,7 +189,9 @@ export default function AIProgramSetupWizard({
       }
 
       setCoachMessage(data.program_summary || data.coaching_notes || '');
-      await onComplete([]);
+      setWorkoutCount(Number(data.workout_count) || 0);
+      setStep('done');
+      setLoading(false);
       return;
     } catch (e: any) {
       setError(e?.message || 'Something went wrong.');
@@ -233,10 +241,65 @@ export default function AIProgramSetupWizard({
     onComplete(weekPlan);
   }
 
+  async function handleFollowChoice() {
+    if (!onFollow) {
+      await onComplete([]);
+      return;
+    }
+    setChoiceBusy(true);
+    setError('');
+    try {
+      await onFollow();
+    } catch (e: any) {
+      setError(e?.message || 'Could not follow this program.');
+      setChoiceBusy(false);
+    }
+  }
+
+  async function handleSaveChoice() {
+    setChoiceBusy(true);
+    setError('');
+    try {
+      await onComplete([]);
+    } catch (e: any) {
+      setError(e?.message || 'Could not open the saved program.');
+      setChoiceBusy(false);
+    }
+  }
+
   const activeDayCount = useMemo(
     () => weekPlan.filter((d) => d.activities.some((a) => a.activity_type !== 'rest')).length,
     [weekPlan]
   );
+
+  if (step === 'done') {
+    return (
+      <div className="ai-wiz">
+        <h1>Workouts are ready</h1>
+        <p className="muted ai-wiz-lead">
+          {programName} is saved
+          {workoutCount ? ` with ${workoutCount} workout${workoutCount === 1 ? '' : 's'}` : ''}.
+          Follow it to use it in Training, or save it and follow later.
+        </p>
+        {coachMessage && <p className="ai-wiz-coach">{coachMessage}</p>}
+        {error && <p className="pd-error">{error}</p>}
+        <div className="actions" style={{ marginTop: 16 }}>
+          {isFollowing ? (
+            <button type="button" className="btn green" disabled={choiceBusy} onClick={() => void handleFollowChoice()}>
+              {choiceBusy ? 'Opening…' : 'Use in Training'}
+            </button>
+          ) : (
+            <button type="button" className="btn green" disabled={choiceBusy} onClick={() => void handleFollowChoice()}>
+              {choiceBusy ? 'Following…' : 'Follow this program'}
+            </button>
+          )}
+          <button type="button" className="btn secondary" disabled={choiceBusy} onClick={() => void handleSaveChoice()}>
+            Save without following
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (step === 'describe') {
     return (
