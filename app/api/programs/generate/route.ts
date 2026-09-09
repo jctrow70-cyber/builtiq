@@ -13,6 +13,7 @@ import {
   buildProgramDesignerPrompt,
   generateProgram,
   scienceProgramToAiPlan,
+  summarizeRecentLogs,
   trainingProfileFromSources,
   validateProgram,
   validateProgramQuality,
@@ -154,12 +155,19 @@ export async function POST(request: Request) {
   if (apiKey && prompt.length >= 8) {
     try {
       const adapted = adaptCatalog(catalog || []);
-      const { system, user: userContent } = buildProgramDesignerPrompt(scienceProgram, scienceProfile, prompt, adapted);
+      const recentTraining = await fetchRecentTrainingSummary(supabase, user.id);
+      const { system, user: userContent } = buildProgramDesignerPrompt(
+        scienceProgram,
+        scienceProfile,
+        prompt,
+        adapted,
+        recentTraining
+      );
       const openai = new OpenAI({ apiKey, timeout: 60_000 });
       const completion = await openai.chat.completions.create({
         model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
         temperature: 0.5,
-        max_tokens: 4000,
+        max_tokens: 8000,
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: system },
@@ -293,4 +301,23 @@ export async function POST(request: Request) {
     volume_targets: scienceProgram.volumeTargets,
     validation_warnings: qualityWarnings,
   });
+}
+
+async function fetchRecentTrainingSummary(supabase: any, userId: string) {
+  const since = new Date();
+  since.setDate(since.getDate() - 56);
+  try {
+    const { data, error } = await supabase
+      .from('st_set_logs')
+      .select('snapshot_exercise_name, actual_weight, log_date, completed')
+      .eq('user_id', userId)
+      .eq('completed', true)
+      .gte('log_date', since.toISOString().slice(0, 10))
+      .order('log_date', { ascending: false })
+      .limit(120);
+    if (error) return [];
+    return summarizeRecentLogs(data);
+  } catch {
+    return [];
+  }
 }

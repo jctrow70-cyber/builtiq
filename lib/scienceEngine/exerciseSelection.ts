@@ -1,4 +1,5 @@
 import { hasEquipmentFilter } from '../training/equipmentFilter';
+import { aliasExerciseName } from './exerciseAliases';
 import type { CatalogExercise, ProgramRole, TrainingProfile } from './types';
 import type { MovementPatternId, MuscleId } from './taxonomy';
 
@@ -111,9 +112,13 @@ export function pickExercise(
 }
 
 export function findByName(pool: CatalogExercise[], name: string): CatalogExercise | null {
-  const key = name.toLowerCase();
+  const raw = String(name || '').trim();
+  if (!raw) return null;
+  const key = raw.toLowerCase();
+  const aliased = aliasExerciseName(raw).toLowerCase();
   return (
     pool.find((ex) => ex.name.toLowerCase() === key) ||
+    pool.find((ex) => ex.name.toLowerCase() === aliased) ||
     pool.find((ex) => ex.name.toLowerCase().includes(key) || key.includes(ex.name.toLowerCase())) ||
     null
   );

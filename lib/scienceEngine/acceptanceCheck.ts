@@ -7,6 +7,9 @@ import { trainingProfileFromSources } from './profile';
 import { generateProgram } from './generateProgram';
 import { applyAiWeekDesign } from './applyAiDesign';
 import { adaptCatalog } from './catalogAdapter';
+import { buildProgramDesignerPrompt } from './programDesigner';
+import { findByName } from './exerciseSelection';
+import { summarizeRecentLogs } from './recentTraining';
 import { evaluateProgression } from './progression';
 import { validateProgram } from './validator';
 import type { TrainingProfile } from './types';
@@ -221,6 +224,64 @@ function run() {
   assert(designedWeek[0].exercises[0].name === 'Back Squat', `Designed A should start with squat, got ${designedWeek[0].exercises[0]?.name}`);
   assert(designedWeek[1].exercises.some((e: any) => e.supersetGroupId), 'Designed B should keep a selective superset');
   assert(designedWeek[0].warmup[0].name !== designedWeek[1].warmup[0].name, 'Designed warm-ups should differ by session');
+
+  const blockDesigned = applyAiWeekDesign(
+    fullBody,
+    {
+      workouts: [
+        {
+          day_label: 'Mon',
+          name: 'Full Body A',
+          emphasis: 'Squat / press',
+          warmup: [{ name: 'Goblet Squat', sets: 1, reps: '8' }, { name: 'Push-Up to Toe Touch', sets: 1, reps: '6' }, { name: 'Band Row', sets: 1, reps: '12' }],
+          strength: [
+            { type: 'straight_sets', exercises: [{ name: 'Back Squat', sets: 3, reps: '5', role: 'primary' }] },
+            { type: 'superset', exercises: [{ name: 'Chest-Supported Row', sets: 3, reps: '8' }, { name: 'Incline Dumbbell Press', sets: 3, reps: '8' }] },
+            { type: 'straight_sets', exercises: [{ name: 'Walking Lunge', sets: 2, reps: '10' }] },
+          ],
+        },
+        {
+          day_label: 'Wed',
+          warmup: [{ name: 'Light DB RDL', sets: 1, reps: '8' }, { name: 'Reverse Lunge + Rotation', sets: 1, reps: '5' }, { name: 'Scapular Push-Up', sets: 1, reps: '8' }],
+          strength: [
+            { type: 'straight_sets', exercises: [{ name: 'Deadlift', sets: 3, reps: '5', role: 'primary' }] },
+            { name: 'Overhead Press', sets: 3, reps: '8' },
+            { name: 'Lat Pulldown', sets: 3, reps: '10' },
+          ],
+        },
+        {
+          day_label: 'Fri',
+          warmup: [{ name: 'Lateral Lunge', sets: 1, reps: '5' }, { name: 'Glute Bridge', sets: 1, reps: '10' }, { name: 'Band Row', sets: 1, reps: '12' }],
+          strength: [
+            { name: 'Bulgarian Split Squat', sets: 3, reps: '8' },
+            { name: 'Dumbbell Bench Press', sets: 3, reps: '8' },
+            { name: 'Seated Cable Row', sets: 3, reps: '10' },
+          ],
+        },
+      ],
+    },
+    adaptCatalog([]),
+    fullBodyProfile
+  );
+  assert(blockDesigned.applied, 'Block-format AI week should apply');
+  const blockWeek = blockDesigned.program.workouts.filter((w: any) => w.week === 1);
+  assert(blockWeek[0].exercises.some((e: any) => e.supersetGroupId), 'Block superset should map to existing superset grouping');
+  assert(blockWeek[0].exercises.some((e: any) => /row/i.test(e.name)), `Chest-Supported Row should alias to a row, got ${blockWeek[0].exercises.map((e: any) => e.name).join(', ')}`);
+  assert(/deadlift/i.test(blockWeek[1].exercises[0]?.name || ''), `Deadlift alias should resolve, got ${blockWeek[1].exercises[0]?.name}`);
+
+  const designer = buildProgramDesignerPrompt(fullBody, fullBodyProfile, '3 day full body strength', adaptCatalog([]), []);
+  assert(!designer.user.includes('science_seed_exercises'), 'Designer prompt must not send science seed lifts for the AI to fill');
+  assert(designer.user.includes('week_to_design'), 'Designer prompt should send the week skeleton without pre-picked lifts');
+  assert(designer.system.includes('Do not fill predetermined slots') || designer.system.includes('do not fill predetermined slots'), 'Prompt should tell the model it owns programming judgment');
+
+  const catalog = adaptCatalog([]);
+  assert(findByName(catalog, 'Chest-Supported Row')?.name === 'Dumbbell Row', 'Chest-supported row should alias to a proven row');
+  assert(findByName(catalog, 'Light DB RDL')?.name === 'Dumbbell RDL', 'Light DB RDL should alias to Dumbbell RDL');
+  const recent = summarizeRecentLogs([
+    { snapshot_exercise_name: 'Back Squat', actual_weight: '185', log_date: '2026-09-01', completed: true },
+    { snapshot_exercise_name: 'Back Squat', actual_weight: '190', log_date: '2026-09-08', completed: true },
+  ]);
+  assert(recent[0]?.name === 'Back Squat' && recent[0].sessions === 2 && recent[0].best_weight === '190', 'Recent training summary should roll up logged lifts');
 
   console.log('BIQ-0141 science engine acceptance checks passed.');
   console.log(`Bro split: ${broWeek1.map((w) => `${w.workoutType} (${w.exercises[0]?.name})`).join(' / ')}`);

@@ -40,6 +40,8 @@ const PROVEN_NAMES = [
   'Pallof Press',
   'Plank',
   'Farmer Carry',
+  'Dumbbell Shoulder Press',
+  'Dumbbell Bench Press',
   'Kettlebell Swing',
   'Medicine-Ball Chest Pass',
   'Vertical Jump',

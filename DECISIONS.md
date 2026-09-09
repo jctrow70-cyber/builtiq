@@ -947,6 +947,36 @@ Decision 032 made AI explain a slot-filled program. Users experienced repetitive
 
 ---
 
+## Decision 037 - Do Not Send Science Seed Lifts to the Designer
+
+Date: 2026-09-08  
+Status: Accepted  
+Category: Program Design
+
+### Decision
+
+The program-designer model receives constraints and context, not the science engine's pre-picked exercise list. Context includes days, day types, suggested session emphasis, weekly muscle targets, equipment, limitations, a proven-exercise library, and a summary of recent completed lifts when available.
+
+Science still builds a valid fallback program. If the model output is too thin, that fallback is saved. Week 1 remains the template copied across the cycle so progression from logs can be added later.
+
+### Reason
+
+Sending `science_seed_exercises` recreated slot-filling: the model tweaked a predetermined list instead of designing complementary sessions.
+
+### Alternatives Considered
+
+- Keep seeds as "suggestions" — rejected; the model treated them as the program
+- Per-day generation with prior days attached — rejected; one weekly call is simpler and already in place
+- Destructive catalog metadata migration — deferred until current adapter fields are used well
+
+### Impact
+
+- Science engine version 1.2.0
+- Existing Program Design UI, persist path, and `st_set_logs` history unchanged
+- Block JSON (`straight_sets`, `superset`, `tri_set`) maps onto existing superset columns
+
+---
+
 ## Decision 033 - Calendar First, Programs Overlay Dates
 
 Date: 2026-09-08  

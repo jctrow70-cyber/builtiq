@@ -16,6 +16,7 @@ export { buildScienceCoachPrompt } from './aiLayer';
 export { buildProgramDesignerPrompt } from './programDesigner';
 export { applyAiWeekDesign } from './applyAiDesign';
 export { validateProgramQuality } from './qualityCheck';
+export { summarizeRecentLogs } from './recentTraining';
 export { explainProgression, explainWarmup, explainPowerPrimer } from './explain';
 export { adaptCatalog } from './catalogAdapter';
 export type { TrainingProfile, ScienceProgram, ProgressionResult, WeeklyReview, ValidationResult } from './types';

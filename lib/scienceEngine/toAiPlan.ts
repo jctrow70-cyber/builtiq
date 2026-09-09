@@ -51,6 +51,15 @@ function strengthItems(workout: ScienceWorkout) {
 
 function withRamp(workout: ScienceWorkout, ex: ExercisePrescription): AiExercise {
   const item = prescriptionToAi(ex);
+  if (ex.setDetails?.length) {
+    item.set_details = ex.setDetails.map((row) => ({
+      set_type: row.setType,
+      weight: row.weight || '',
+      reps: row.reps,
+      rir: row.rir,
+    }));
+    return item;
+  }
   if (workout.rampFor && ex.name === workout.rampFor && workout.rampSets.length) {
     item.set_details = [
       ...workout.rampSets.map((ramp) => ({

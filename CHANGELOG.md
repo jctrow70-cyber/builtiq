@@ -11,6 +11,77 @@ Branch:
 Status:
 ```
 
+## BIQ-0163 - AI Designs the Week, Not Science Slots
+
+Date: 2026-09-08  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Program generation still uses science for schedule, safety, volume, ramps, and fallback. The OpenAI call now designs the week without seeing the science-picked exercise list. It gets athlete context, the week skeleton (days / types / suggested emphasis), weekly muscle targets, recent logged lifts when available, and a proven-exercise library. Strength can be returned as straight_sets / superset / tri_set blocks that map onto existing superset columns.
+
+### Purpose
+
+BIQ-0161 asked the model to design the week, but still sent `science_seed_exercises`. That kept generation in slot-filling mode. Warm-ups and full-body days could still collapse toward the deterministic seed.
+
+### Changes
+
+- Designer prompt no longer includes science-picked lifts
+- Prompt covers weekly programming, purposeful variety, session-specific warm-ups, selective supersets, and a 16-point self-review
+- Recent completed set logs (last ~8 weeks) are summarized into the prompt for later progression
+- AI block types map to existing `st_exercises` superset grouping; circuit is a 3-move group
+- Common S&C aliases resolve to catalog names (e.g. Chest-Supported Row → Dumbbell Row)
+- Quality warnings for cloned primaries, missing weekly patterns, and superset overuse
+- Output token cap raised to 8000 so a full week JSON can complete
+- No database migration. Catalog metadata already on the adapter is enough; joint-stress fields still wait
+
+### Files Changed
+
+- `app/api/programs/generate/route.ts`
+- `lib/scienceEngine/programDesigner.ts`
+- `lib/scienceEngine/applyAiDesign.ts`
+- `lib/scienceEngine/qualityCheck.ts`
+- `lib/scienceEngine/exerciseSelection.ts`
+- `lib/scienceEngine/exerciseAliases.ts`
+- `lib/scienceEngine/recentTraining.ts`
+- `lib/scienceEngine/designerCatalog.ts`
+- `lib/scienceEngine/toAiPlan.ts`
+- `lib/scienceEngine/version.ts`
+- `lib/scienceEngine/index.ts`
+- `lib/scienceEngine/acceptanceCheck.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. `npm run test:science` passes.
+2. Create a **new** 3-day full-body program with `OPENAI_API_KEY` set. Days should have different emphasis and warm-ups. Check `generation_method` is `science_ai` when the model succeeds.
+3. Create a bro split. Day types stay chest/back/shoulders/arms/legs; lifts can differ from the science seed.
+4. If OpenAI is missing or the design is too thin, science fallback still saves a valid program.
+5. Existing logged workouts are unchanged. Existing programs with exercises still return 409 (create a new program).
+6. Completing a set on an older program still works (BIQ-0162).
+
+### Known Issues
+
+- AI still picks from a proven-name library, not the entire catalog.
+- Extra catalog fields (joint_stress, primary_lift_appropriate) are not migrated yet.
+- Logged performance is passed as context only; it does not yet auto-adjust next week's loads.
+- Saved programs do not regenerate themselves.
+
+### Recommended Commit Message
+
+```text
+BIQ-0163 Let AI design the week instead of filling science slots
+```
+
+---
+
 ## BIQ-0162 - Fix Set Complete Invalid Syntax Error
 
 Date: 2026-09-08  

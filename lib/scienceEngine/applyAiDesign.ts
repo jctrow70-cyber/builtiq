@@ -77,9 +77,9 @@ function workoutFromAi(seed: ScienceWorkout, row: any, catalog: CatalogExercise[
   const items: AiStrengthItem[] = Array.isArray(row.strength) ? row.strength : [];
   let groupNum = 0;
 
-  items.forEach((item) => {
-    if (item && Array.isArray((item as any).superset)) {
-      const pair = (item as any).superset.filter((ex: any) => ex?.name).slice(0, 3);
+  flattenStrengthItems(items).forEach((block) => {
+    if (block.kind === 'group') {
+      const pair = block.exercises.slice(0, 3);
       if (pair.length < 2) {
         const one = resolveExercise(pair[0], catalog, profile, exercises.length === 0 ? 'primary' : 'secondary');
         if (one) exercises.push(one);
@@ -108,8 +108,9 @@ function workoutFromAi(seed: ScienceWorkout, row: any, catalog: CatalogExercise[
       });
       return;
     }
-    const role = exercises.length === 0 ? 'primary' : String((item as any).role || 'secondary');
-    const prescribed = resolveExercise(item, catalog, profile, role);
+    const raw = block.exercises[0];
+    const role = exercises.length === 0 ? 'primary' : String(raw?.role || 'secondary');
+    const prescribed = resolveExercise(raw, catalog, profile, role);
     if (prescribed) exercises.push(prescribed);
   });
 
@@ -163,7 +164,38 @@ function resolveExercise(raw: any, catalog: CatalogExercise[], profile: Training
     prescribed.targetRir = Number(raw.target_rir);
   }
   if (raw?.rest_seconds) prescribed.restSeconds = Number(raw.rest_seconds);
+  if (Array.isArray(raw?.set_details) && raw.set_details.length) {
+    prescribed.setDetails = raw.set_details.slice(0, 8).map((row: any, i: number) => ({
+      setNumber: i + 1,
+      setType: String(row.set_type || 'working') === 'warmup' ? 'warmup' : 'working',
+      weight: row.weight ? String(row.weight) : undefined,
+      reps: String(row.reps || prescribed.repMax),
+      rir: row.rir != null ? Number(row.rir) : prescribed.targetRir,
+    }));
+  }
   return prescribed;
+}
+
+function flattenStrengthItems(items: AiStrengthItem[]): Array<{ kind: 'single' | 'group'; exercises: any[] }> {
+  const out: Array<{ kind: 'single' | 'group'; exercises: any[] }> = [];
+  (items || []).forEach((item: any) => {
+    if (Array.isArray(item?.exercises) && item.type) {
+      const type = String(item.type).toLowerCase();
+      const exs = item.exercises.filter((ex: any) => ex?.name);
+      if (type === 'superset' || type === 'tri_set' || type === 'circuit') {
+        out.push({ kind: 'group', exercises: exs });
+      } else {
+        exs.forEach((ex: any) => out.push({ kind: 'single', exercises: [ex] }));
+      }
+      return;
+    }
+    if (Array.isArray(item?.superset)) {
+      out.push({ kind: 'group', exercises: item.superset.filter((ex: any) => ex?.name) });
+      return;
+    }
+    if (item?.name) out.push({ kind: 'single', exercises: [item] });
+  });
+  return out;
 }
 
 function resolveWarmup(

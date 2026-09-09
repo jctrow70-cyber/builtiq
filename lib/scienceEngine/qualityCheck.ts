@@ -22,6 +22,20 @@ export function validateProgramQuality(program: ScienceProgram): ValidationResul
         }
       }
     }
+
+    const primaries = fullBody.map((w) => (w.exercises.find((e) => e.role === 'primary') || w.exercises[0])?.name?.toLowerCase() || '');
+    if (primaries.filter(Boolean).length >= 2 && new Set(primaries).size === 1) {
+      issues.push(warn('PRIMARY_CLONE', 'Full-body days share the same primary lift. Distribute squat / hinge / unilateral work across the week.'));
+    }
+
+    const patterns = new Set(fullBody.flatMap((w) => w.exercises.map((e) => e.movementPattern)));
+    ['squat', 'hinge', 'horizontal_push', 'horizontal_pull'].forEach((need) => {
+      const hit =
+        patterns.has(need as any) ||
+        (need === 'squat' && (patterns.has('lunge' as any) || [...patterns].some((p) => String(p).includes('squat')))) ||
+        [...patterns].some((p) => String(p) === need || String(p).includes(need));
+      if (!hit) issues.push(warn('PATTERN_GAP', `The full-body week is light on ${need.replace('_', ' ')} work.`));
+    });
   }
 
   week1.forEach((workout) => {
@@ -31,6 +45,10 @@ export function validateProgramQuality(program: ScienceProgram): ValidationResul
         issues.push(warn('PRIMARY_SUPERSET', `${ex.name} on ${workout.name} should not be in a heavy-compound superset.`));
       }
     });
+    const grouped = workout.exercises.filter((ex) => ex.supersetGroupId).length;
+    if (workout.exercises.length >= 4 && grouped / workout.exercises.length >= 0.85) {
+      issues.push(warn('SUPERSET_OVERUSE', `${workout.name} supersets almost every lift. Use supersets selectively.`));
+    }
     if (workout.exercises.length < 3) {
       issues.push(err('THIN_SESSION', `${workout.name} has too few working exercises.`));
     }
