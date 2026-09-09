@@ -16,6 +16,8 @@ type Props = {
   onOpenGuide?: () => void;
   canEdit?: boolean;
   onChange?: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
   onAddSet?: () => void;
   onRemove?: () => void;
 };
@@ -54,6 +56,8 @@ export default function WarmupExerciseCard({
   onOpenGuide,
   canEdit,
   onChange,
+  onMoveUp,
+  onMoveDown,
   onAddSet,
   onRemove,
 }: Props) {
@@ -101,11 +105,21 @@ export default function WarmupExerciseCard({
           </button>
         )}
       </div>
-      {canEdit && (onChange || onAddSet || onRemove) && (
+      {canEdit && (onChange || onMoveUp || onMoveDown || onAddSet || onRemove) && (
         <div className="warmup-exercise-actions actions">
           {onChange && (
             <button type="button" className="btn small secondary" onClick={onChange}>
               Change
+            </button>
+          )}
+          {onMoveUp && (
+            <button type="button" className="btn small secondary" title="Move up" onClick={onMoveUp}>
+              ↑
+            </button>
+          )}
+          {onMoveDown && (
+            <button type="button" className="btn small secondary" title="Move down" onClick={onMoveDown}>
+              ↓
             </button>
           )}
           {onAddSet && (

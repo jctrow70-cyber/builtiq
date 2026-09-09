@@ -1,10 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { duplicateTeamProgram } from '../groups/teamProgramTools';
-import { missingProgramColumnFromError } from '../training/programStatus';
+import { insertProgramRecord, missingProgramColumnFromError } from '../training/programStatus';
 import {
   isAutoEnrolledMemberRole,
   isGroupSourcedProgram,
   isPurePersonalProgram,
+  liveTemplateId,
   pickActiveGroupProgramByDate,
 } from './enrollment';
 import { updateDesignProgram } from './programDesignApi';
@@ -75,19 +76,48 @@ export async function setFollowedProgramId(
   };
 }
 
+async function ensureUnfollowMarker(
+  supabase: SupabaseClient,
+  userId: string,
+  source: ProgramDesignRecord,
+  personalPrograms: ProgramDesignRecord[]
+): Promise<void> {
+  const liveId = liveTemplateId(source);
+  if (!liveId) return;
+  const liveSource =
+    source.visibility === 'team' ? source : { ...source, id: liveId, visibility: 'team' as const };
+  if (findPersonalCopyOf(liveSource, personalPrograms)) return;
+  await insertProgramRecord(supabase, {
+    owner_user_id: userId,
+    visibility: 'personal',
+    team_id: null,
+    name: source.name || 'Group plan',
+    source_program_id: liveId,
+    status: 'archived',
+    weeks: source.weeks || 1,
+    cycle_length_weeks: source.cycle_length_weeks || source.weeks || 1,
+    start_date: source.start_date || null,
+    end_date: source.end_date || null,
+    record_kind: 'instance',
+  });
+}
+
 /** Clear the followed program so Training no longer uses it. */
 export async function unfollowProgram(
   supabase: SupabaseClient,
-  userId: string
+  userId: string,
+  opts?: { source?: ProgramDesignRecord | null; personalPrograms?: ProgramDesignRecord[] }
 ): Promise<UnfollowResult> {
+  if (opts?.source && isGroupSourcedProgram(opts.source)) {
+    await ensureUnfollowMarker(supabase, userId, opts.source, opts.personalPrograms || []);
+  }
   return setFollowedProgramId(supabase, userId, null);
 }
 
 /**
  * Follow a program for Training.
- * Group / shared programs are copied to a personal program first so the
- * original group plan is not edited — unless `editSource` is true for Editors
- * who pull in the group template itself.
+ * Group / shared programs follow the live template so members see owner/editor
+ * updates. Personal snapshots are not used for Training (Decision 031 / BIQ-0168).
  */
 export async function followProgram(
   supabase: SupabaseClient,
@@ -96,37 +126,40 @@ export async function followProgram(
     source: ProgramDesignRecord;
     personalPrograms: ProgramDesignRecord[];
     followedProgramId?: string | null;
-    /** Editors may follow the live group template so edits apply to the group plan. */
+    /** Kept for callers; group plans always follow the live template. */
     editSource?: boolean;
   }
 ): Promise<FollowResult> {
-  const existing =
-    alreadyFollowing(input.source, input.personalPrograms, input.followedProgramId) ||
-    findPersonalCopyOf(input.source, input.personalPrograms);
-  let programId = existing?.id || null;
+  const ownsPersonal = input.source.visibility === 'personal' && input.source.owner_user_id === input.userId;
+  const groupSourced = isGroupSourcedProgram(input.source);
+  let programId: string | null = null;
   let copied = false;
 
-  if (!programId) {
-    const ownsPersonal = input.source.visibility === 'personal' && input.source.owner_user_id === input.userId;
-    const followGroupTemplate = !!input.editSource && input.source.visibility === 'team';
-    if (ownsPersonal || followGroupTemplate) {
-      programId = input.source.id;
-    } else {
-      const { programId: copyId, error } = await duplicateTeamProgram(supabase, input.source.id, {
-        name: input.source.name,
-        visibility: 'personal',
-        teamId: null,
-        ownerUserId: input.userId,
-      });
-      if (error || !copyId) {
-        return { programId: null, copied: false, error: error || 'Could not save a copy of this program' };
-      }
-      programId = copyId;
-      copied = true;
+  if (groupSourced) {
+    programId = liveTemplateId(input.source);
+  } else if (ownsPersonal) {
+    programId = input.source.id;
+  } else {
+    const { programId: copyId, error } = await duplicateTeamProgram(supabase, input.source.id, {
+      name: input.source.name,
+      visibility: 'personal',
+      teamId: null,
+      ownerUserId: input.userId,
+    });
+    if (error || !copyId) {
+      return { programId: null, copied: false, error: error || 'Could not save a copy of this program' };
     }
+    programId = copyId;
+    copied = true;
   }
 
-  await updateDesignProgram(supabase, programId, { status: 'published' });
+  if (!programId) {
+    return { programId: null, copied: false, error: 'Could not follow this program' };
+  }
+
+  if (!groupSourced) {
+    await updateDesignProgram(supabase, programId, { status: 'published' });
+  }
   const { error } = await setFollowedProgramId(supabase, input.userId, programId);
   if (error) return { programId: null, copied, error };
   return { programId, copied, error: null };
@@ -141,10 +174,10 @@ export type MemberEnrollmentSyncResult = {
 };
 
 /**
- * Members are auto-enrolled in the group's date-active plan.
+ * Members are auto-enrolled in the group's date-active plan (live template).
  * Skipped when the user follows a pure personal program, or when the role is Owner/Editor.
- * Explicit unfollow (`followed_program_id` null) is respected when a prior copy of the
- * active plan already exists — Training must not silently re-follow.
+ * Explicit unfollow (`followed_program_id` null) is respected when a prior copy or
+ * unfollow marker of the active plan already exists — Training must not silently re-follow.
  */
 export async function syncMemberGroupEnrollment(
   supabase: SupabaseClient,
@@ -181,12 +214,33 @@ export async function syncMemberGroupEnrollment(
     return { programId: input.followedProgramId || null, changed: false, skipped: true, reason: 'no_active_group_plan', error: null };
   }
 
-  const already = alreadyFollowing(active, input.personalPrograms, input.followedProgramId);
-  if (already && already.id === input.followedProgramId) {
-    return { programId: already.id, changed: false, skipped: false, reason: 'already_enrolled', error: null };
+  if (input.followedProgramId === active.id) {
+    return { programId: active.id, changed: false, skipped: false, reason: 'already_enrolled', error: null };
   }
 
-  // Explicit unfollow: keep Training empty if they already have a copy of this active plan.
+  // Snapshot copy of this live plan — switch Training onto the shared template.
+  const already = alreadyFollowing(active, input.personalPrograms, input.followedProgramId);
+  if (already && already.id === input.followedProgramId && already.source_program_id === active.id) {
+    const { error } = await setFollowedProgramId(supabase, input.userId, active.id);
+    if (error) {
+      return {
+        programId: input.followedProgramId || null,
+        changed: false,
+        skipped: false,
+        reason: 'follow_failed',
+        error,
+      };
+    }
+    return {
+      programId: active.id,
+      changed: true,
+      skipped: false,
+      reason: 'switched_to_live_template',
+      error: null,
+    };
+  }
+
+  // Explicit unfollow: keep Training empty if they already have a copy/marker of this active plan.
   // First-time members (no copy yet) still get auto-enrolled below.
   if (!input.followedProgramId) {
     const priorCopy = findPersonalCopyOf(active, input.personalPrograms);
@@ -199,11 +253,6 @@ export async function syncMemberGroupEnrollment(
         error: null,
       };
     }
-  }
-
-  // If currently following a different group-sourced copy of the same active plan, keep it.
-  if (followed && isGroupSourcedProgram(followed) && already && already.id === followed.id) {
-    return { programId: followed.id, changed: false, skipped: false, reason: 'already_enrolled', error: null };
   }
 
   const result = await followProgram(supabase, {

@@ -49,6 +49,16 @@ export function canEditGroupProgram(role: string | null | undefined): boolean {
   return canManageGroup(role);
 }
 
+/** Members may log a group plan; only Owner/Editor may change the shared template. */
+export function canEditProgramRecord(
+  program: { visibility?: string | null } | null | undefined,
+  role: string | null | undefined
+): boolean {
+  if (!program) return false;
+  if (program.visibility === 'team') return canEditGroupProgram(role);
+  return true;
+}
+
 /** Role value to persist — BIQ-0043-P2 stores `manager` in DB (editor backfilled). */
 export function roleForDatabase(uiRole: string): StoredMemberRole {
   return normalizeRole(uiRole);

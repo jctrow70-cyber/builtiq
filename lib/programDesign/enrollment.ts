@@ -22,6 +22,27 @@ export function isGroupSourcedProgram(program: ProgramDesignRecord | null | unde
   return program.visibility === 'team';
 }
 
+/** Group template id Training should follow (not a personal snapshot). */
+export function liveTemplateId(program: ProgramDesignRecord | null | undefined): string | null {
+  if (!program?.id) return null;
+  if (program.visibility === 'team') return program.id;
+  if (program.source_program_id) return program.source_program_id;
+  return program.id;
+}
+
+/**
+ * Archived personal row used only so unfollow is not overwritten by auto-enroll.
+ * Hidden from the Programs library.
+ */
+export function isGroupEnrollmentMarker(program: ProgramDesignRecord | null | undefined): boolean {
+  if (!program) return false;
+  return (
+    program.visibility === 'personal' &&
+    !!program.source_program_id &&
+    String(program.status || '').toLowerCase() === 'archived'
+  );
+}
+
 export function isPurePersonalProgram(program: ProgramDesignRecord | null | undefined): boolean {
   if (!program) return false;
   return program.visibility === 'personal' && !program.source_program_id;

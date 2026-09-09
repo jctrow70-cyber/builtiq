@@ -22,6 +22,7 @@ import {
   nextSupersetLabel,
   openAddPanelState,
   openReplacePanelState,
+  planExerciseMove,
   sectionDefaultSets,
   siblingWorkouts,
   WORKOUT_TEMPLATE_SECTIONS,
@@ -352,6 +353,39 @@ export default function WorkoutTemplateEditor({
     await onReload();
   }
 
+  async function moveExercise(ex: any, dir: number) {
+    if (!canEdit) return;
+    const plan = planExerciseMove(workout, ex, dir);
+    if (plan.kind === 'noop') return;
+    setBusy(true);
+    setError('');
+    if (plan.kind === 'superset_order') {
+      for (const tw of targets) {
+        const match = tw.id === workout.id ? plan.a : matchingExercise(tw, plan.a);
+        const otherMatch = tw.id === workout.id ? plan.b : matchingExercise(tw, plan.b);
+        if (!match || !otherMatch) continue;
+        const { error: firstError } = await supabase.from('st_exercises').update({ superset_order: plan.otherOrder }).eq('id', match.id);
+        if (firstError) return persistError(firstError.message);
+        const { error: secondError } = await supabase.from('st_exercises').update({ superset_order: plan.myOrder }).eq('id', otherMatch.id);
+        if (secondError) return persistError(secondError.message);
+      }
+    } else {
+      for (const tw of targets) {
+        for (const row of plan.rows) {
+          const match = tw.id === workout.id ? row.source : matchingExercise(tw, row.source);
+          if (!match) continue;
+          const { error: updateError } = await supabase.from('st_exercises').update({ sort_order: row.sort_order }).eq('id', match.id);
+          if (updateError) return persistError(updateError.message);
+        }
+      }
+    }
+    await reload();
+  }
+
+  function canMove(ex: any, dir: number) {
+    return canEdit && planExerciseMove(workout, ex, dir).kind !== 'noop';
+  }
+
   const ids = (workout.st_exercises || []).map((e: any) => e.id);
 
   return (
@@ -442,6 +476,8 @@ export default function WorkoutTemplateEditor({
                         onOpenGuide={payload ? () => setGuide(payload) : undefined}
                         canEdit={canEdit}
                         onChange={canEdit ? () => setPanel(openReplacePanelState(ex)) : undefined}
+                        onMoveUp={canEdit ? () => void moveExercise(ex, -1) : undefined}
+                        onMoveDown={canEdit ? () => void moveExercise(ex, 1) : undefined}
                         onAddSet={canEdit ? () => void addSet(ex) : undefined}
                         onRemove={canEdit ? () => void removeExercise(ex) : undefined}
                       />
@@ -502,6 +538,9 @@ export default function WorkoutTemplateEditor({
                             onMuscle={(v) => void updateMuscle(ex, v)}
                             onOpenGuide={setGuide}
                             onChange={() => setPanel(openReplacePanelState(ex))}
+                            onMove={(dir) => void moveExercise(ex, dir)}
+                            canMoveUp={canMove(ex, -1)}
+                            canMoveDown={canMove(ex, 1)}
                             onAddSet={() => void addSet(ex)}
                             onRemove={() => void removeExercise(ex)}
                             onUpdateSet={(set, field, value) => void updateSet(ex, set, field, value)}
@@ -532,6 +571,9 @@ export default function WorkoutTemplateEditor({
                       onMuscle={(v) => void updateMuscle(block.exercises[0], v)}
                       onOpenGuide={setGuide}
                       onChange={() => setPanel(openReplacePanelState(block.exercises[0]))}
+                      onMove={(dir) => void moveExercise(block.exercises[0], dir)}
+                      canMoveUp={canMove(block.exercises[0], -1)}
+                      canMoveDown={canMove(block.exercises[0], 1)}
                       onAddSet={() => void addSet(block.exercises[0])}
                       onRemove={() => void removeExercise(block.exercises[0])}
                       onUpdateSet={(set, field, value) => void updateSet(block.exercises[0], set, field, value)}
@@ -626,6 +668,9 @@ function TemplateExerciseCard({
   onMuscle,
   onOpenGuide,
   onChange,
+  onMove,
+  canMoveUp,
+  canMoveDown,
   onAddSet,
   onRemove,
   onUpdateSet,
@@ -648,6 +693,9 @@ function TemplateExerciseCard({
   onMuscle: (value: string) => void;
   onOpenGuide: (payload: ExerciseGuidePayload) => void;
   onChange: () => void;
+  onMove: (dir: number) => void;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
   onAddSet: () => void;
   onRemove: () => void;
   onUpdateSet: (set: any, field: string, value: any) => void;
@@ -776,6 +824,12 @@ function TemplateExerciseCard({
             <div className="actions">
               <button type="button" className="btn small secondary" title="Search catalog and replace this exercise" onClick={onChange}>
                 Change
+              </button>
+              <button type="button" className="btn small secondary" title="Move up" onClick={() => onMove(-1)} disabled={busy || !canMoveUp}>
+                ↑
+              </button>
+              <button type="button" className="btn small secondary" title="Move down" onClick={() => onMove(1)} disabled={busy || !canMoveDown}>
+                ↓
               </button>
               <button type="button" className="btn small secondary" onClick={onAddSet} disabled={busy}>
                 + Set

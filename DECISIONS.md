@@ -854,7 +854,7 @@ A user follows **one** program in Training at a time (personal or group-sourced 
 
 Role rules:
 
-1. **Member** — automatically enrolled in the group's date-active plan the first time (no personal copy yet). While enrolled, Training calendar updates when plan start/end dates change or the next sequenced plan begins. Explicit unfollow clears Training and is respected until the member follows again or a *new* active group plan (no prior copy) enrolls them.
+1. **Member** — automatically enrolled in the group's date-active **live template** (same `st_programs` id owners/editors edit). Training shows later template edits without a Push. Members may log sets; they cannot change the shared template. Explicit unfollow clears Training and is respected until the member follows again or a *new* active group plan (no prior copy/marker) enrolls them. Leftover personal snapshots from before BIQ-0168 are not used for Training.
 2. **Editor (Manager)** — sees group programs as available; **not** auto-enrolled. May **Pull in & edit** the live group template so edits apply to the shared plan.
 3. **Owner** — may create multiple dated group plans. Suggested start for a new plan is after the latest existing plan ends so members hand off cleanly by calendar date.
 
@@ -880,6 +880,7 @@ Members should not hunt for Follow when the group schedule is the source of trut
 - Programs UI prompts unfollow before personal create
 - Training `loadPrograms` syncs member enrollment by plan dates and honors null follow
 - No new database tables; uses `followed_program_id`, `start_date`, `end_date`, `source_program_id`
+- BIQ-0168: members follow the live group program id (not a duplicated snapshot) so owner/editor template edits appear in Training/Programs. Unfollow writes an archived personal marker so auto-enroll does not immediately reverse it.
 
 ---
 
@@ -1146,5 +1147,34 @@ A name-only add sheet was not usable. Users already know the Training editor, in
 
 - Shared `AddExercisePanel` and `WorkoutTemplateEditor`
 - `st_set_logs` history unchanged when the template is edited
+- BIQ-0169: Programs exercise cards include ↑ ↓ reorder, matching Training
+
+---
+
+## Decision 041 - Group Members Follow the Live Template
+
+Date: 2026-09-08  
+Status: Accepted  
+Category: Program Design / Groups
+
+### Decision
+
+Members train on the **live group program** (`visibility: team`), not a duplicated personal snapshot. Owner and editor template edits in Programs appear in every member's Training and Programs view on the next load. Members can log; they cannot edit the shared template. Unfollow still sticks: a leftover snapshot or an archived enrollment marker blocks silent re-enroll (BIQ-0150).
+
+### Reason
+
+Copy-on-follow made group edits invisible to members. The copy existed to protect the template from member edits. Read-only follow of the live template protects it without hiding updates.
+
+### Alternatives Considered
+
+- Keep copies and require Push after every edit — rejected; members expected to see group edits immediately
+- Re-copy the template on every Training load — rejected; extra writes and ID churn
+- New `unfollowed_program_id` column — deferred; archived marker reuses `source_program_id`
+
+### Impact
+
+- `followProgram` / `syncMemberGroupEnrollment` point `followed_program_id` at the group program id
+- Members already on a snapshot are switched to the live template
+- Template edit UI is role-gated when `visibility` is `team`
 
 ---

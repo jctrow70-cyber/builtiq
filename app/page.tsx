@@ -666,7 +666,7 @@ export default function Page(){
  }
  function canManageGroupView(){return !!activeTeam&&canManageGroup(activeTeam.my_role);}
  function canLog(){if(!session?.user)return false; const uid=viewingMember?.user_id||session.user.id; return canLogWorkout(session.user.id,uid,activeTeam?.my_role);}
- function canEdit(){if(!session?.user)return false; if(activeAssignedRecipient)return assignedHasPersonalCopy(activeAssignedRecipient); if(viewingMember&&viewingMember.user_id!==session.user.id)return false; return mode==='personal'||canEditGroupProgram(activeTeam?.my_role);}
+ function canEdit(){if(!session?.user)return false; if(activeAssignedRecipient)return assignedHasPersonalCopy(activeAssignedRecipient); if(viewingMember&&viewingMember.user_id!==session.user.id)return false; if(program?.visibility==='team'){const team=teams.find((t:any)=>t.id===program.team_id)||activeTeam;return canEditGroupProgram(team?.my_role);} return mode==='personal'||canEditGroupProgram(activeTeam?.my_role);}
  function isOwner(){return isGroupOwner(activeTeam?.my_role);}
  function logUserId(){return viewingMember?.user_id||session?.user?.id;}
  function activeProgramForLogging(){

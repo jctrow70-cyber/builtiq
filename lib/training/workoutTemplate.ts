@@ -179,6 +179,55 @@ export function siblingWorkouts(all: any[], current: any, remainingWeeks: boolea
   );
 }
 
+export type ExerciseMovePlan =
+  | { kind: 'superset_order'; a: any; b: any; myOrder: number; otherOrder: number }
+  | { kind: 'sort_order'; rows: Array<{ source: any; sort_order: number }> }
+  | { kind: 'noop' };
+
+/** Same reorder rules as Training: swap inside a superset first, otherwise swap section blocks. */
+export function planExerciseMove(workout: any, exercise: any, dir: number): ExerciseMovePlan {
+  const section = exerciseSection(exercise);
+  const gid = exercise.superset_group_id;
+  if (gid) {
+    const groupMembers = sectionExercises(workout, section)
+      .filter((x: any) => x.superset_group_id === gid)
+      .sort((a: any, b: any) => (a.superset_order || 0) - (b.superset_order || 0));
+    const idx = groupMembers.findIndex((x: any) => x.id === exercise.id);
+    const innerSwap = idx + dir;
+    if (idx >= 0 && innerSwap >= 0 && innerSwap < groupMembers.length) {
+      const other = groupMembers[innerSwap];
+      return {
+        kind: 'superset_order',
+        a: exercise,
+        b: other,
+        myOrder: exercise.superset_order || idx + 1,
+        otherOrder: other.superset_order || innerSwap + 1,
+      };
+    }
+  }
+  const exercises = sectionExercises(workout, section);
+  const blocks = groupSectionBlocks(exercises);
+  const blockIdx = blocks.findIndex((b: any) =>
+    b.type === 'superset' ? b.exercises.some((x: any) => x.id === exercise.id) : b.exercises[0]?.id === exercise.id
+  );
+  const swapIdx = blockIdx + dir;
+  if (blockIdx < 0 || swapIdx < 0 || swapIdx >= blocks.length) return { kind: 'noop' };
+  const reordered = [...blocks];
+  const tmp = reordered[blockIdx];
+  reordered[blockIdx] = reordered[swapIdx];
+  reordered[swapIdx] = tmp;
+  const base = SECTION_SORT_BASE[section] ?? 100;
+  let sort = base;
+  const rows: Array<{ source: any; sort_order: number }> = [];
+  reordered.forEach((b: any) => {
+    b.exercises.forEach((ex: any) => {
+      rows.push({ source: ex, sort_order: sort });
+      sort += 1;
+    });
+  });
+  return { kind: 'sort_order', rows };
+}
+
 export function openAddPanelState(section: string, supersetGroupId?: string | null): AddPanelState {
   const pending = !!supersetGroupId;
   return {

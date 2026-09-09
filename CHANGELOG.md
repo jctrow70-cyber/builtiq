@@ -11,6 +11,126 @@ Branch:
 Status:
 ```
 
+## BIQ-0169 - Reorder Exercises in Programs Edit
+
+Date: 2026-09-08  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Programs View / edit now has ↑ and ↓ on exercise cards, the same reorder controls as Training.
+
+### Purpose
+
+The Programs template editor from BIQ-0167 omitted move-up / move-down, so you could not change exercise order without removing and re-adding lifts.
+
+### Changes
+
+- Shared `planExerciseMove` helper (swap inside a superset, otherwise swap section blocks)
+- Strength, warmup, cooldown, and superset cards in Programs show ↑ ↓
+- Remaining-week apply still uses the same scope selector
+- Completed set history is not rewritten
+
+### Files Changed
+
+- `lib/training/workoutTemplate.ts`
+- `app/components/training/WorkoutTemplateEditor.tsx`
+- `app/components/training/WarmupExerciseCard.tsx`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Programs → open a program you can edit → Workouts → View / edit a day with at least two strength exercises.
+2. Confirm ↑ and ↓ appear next to Change / + Set / Remove.
+3. Tap ↓ on the first lift. It should move below the next lift. Tap ↑ to restore.
+4. In a superset, ↑ ↓ should swap order inside the pair first; at the ends, the whole superset moves.
+5. Warm Up / Cooldown cards should also show ↑ ↓.
+6. Apply “This workout only” vs “remaining weeks” and confirm order follows that scope.
+7. Mobile (~390px): arrows still tappable (they wrap with the other action buttons).
+
+### Known Issues
+
+- Training warmup cards still do not show reorder arrows (Training strength cards already do).
+- Arrows at the top or bottom of a section are disabled / no-op.
+
+### Recommended Commit Message
+
+```text
+BIQ-0169 Add exercise up/down arrows in Programs edit
+```
+
+---
+
+## BIQ-0168 - Group Members See Live Program Edits
+
+Date: 2026-09-08  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Group members now follow the shared group program itself. When an owner or editor changes exercises or sets in Programs, other group users see those template updates in Training and Programs. Members can still log; they cannot edit the shared template.
+
+### Purpose
+
+Enrollment used to duplicate the group plan into a personal snapshot. Later edits stayed on the live group program, so members never saw them.
+
+### Changes
+
+- Auto-enroll and Follow point `followed_program_id` at the live group program id
+- Members already on a snapshot are switched to the live template on the next Training/Programs load
+- Template edit controls stay owner/editor-only when the program is a group plan
+- Unfollow still sticks (leftover snapshot or an archived enrollment marker)
+- Completed set history is not rewritten
+
+### Files Changed
+
+- `lib/programDesign/followProgram.ts`
+- `lib/programDesign/enrollment.ts`
+- `lib/groups/permissions.ts`
+- `app/page.tsx`
+- `app/components/programDesign/ProgramDesignHome.tsx`
+- `app/components/programDesign/ProgramCalendarEditor.tsx`
+- `scripts/test-unfollow-training.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. As owner/editor: Programs → Groups → open the group program → edit an exercise (add/change/remove).
+2. As a member of that group: open Training (or Programs → Following). Confirm the same exercise change appears. Members should not see Change / + Set / Remove on the group template.
+3. If the member previously trained on an old personal copy, open Training once so enrollment can switch to the live plan, then confirm the new exercises.
+4. Member Unfollow → Training empty. Reload Training: still empty (not silently re-enrolled).
+5. Log a set as the member. History stays on that user’s logs. Editing the template later must not change completed history.
+6. Mobile (~390px): Training day view still usable read-only for members.
+
+### Known Issues
+
+- The member must reload Training/Programs after the editor saves; there is no live socket.
+- A leftover personal snapshot may still appear in the member’s personal program list, labeled as a snapshot. Training uses the live group plan.
+- Personal program edits (not the group program) are still private to that user.
+- Push “personal copy each” still creates snapshots that do not receive later live edits.
+
+### Recommended Commit Message
+
+```text
+BIQ-0168 Show group program edits to members on the live template
+```
+
+---
+
 ## BIQ-0167 - Programs Uses the Same Exercise Editor as Training
 
 Date: 2026-09-08  
