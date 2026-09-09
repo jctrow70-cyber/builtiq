@@ -4,6 +4,7 @@ import { prescribeExercise } from './prescription';
 import { generateRampSets, isPrimaryLift } from './rampUp';
 import { trimForDuration } from './duration';
 import { generateWarmup } from './warmup';
+import type { MovementPatternId, MuscleId } from './taxonomy';
 import type { CatalogExercise, ExercisePrescription, ScienceProgram, ScienceWorkout, TrainingProfile, WarmupItem } from './types';
 
 type AiStrengthItem =
@@ -24,25 +25,25 @@ export function applyAiWeekDesign(
   catalog: CatalogExercise[],
   profile: TrainingProfile
 ): { program: ScienceProgram; applied: boolean; replacedDays: number } {
-  const aiWorkouts = Array.isArray(ai?.workouts) ? ai.workouts : [];
+  const aiWorkouts = extractAiWorkouts(ai);
   if (!aiWorkouts.length) return { program: science, applied: false, replacedDays: 0 };
 
   const week1 = science.workouts.filter((w) => w.week === 1);
   const replaced: ScienceWorkout[] = [];
   let replacedDays = 0;
 
-  for (const seed of week1) {
-    const row = aiWorkouts.find((w: any) => String(w.day_label || '').slice(0, 3) === seed.dayLabel);
+  week1.forEach((seed, index) => {
+    const row = matchAiWorkout(seed, aiWorkouts, index);
     const built = row ? workoutFromAi(seed, row, catalog, profile) : null;
-    if (built && built.exercises.length >= 3) {
+    if (built && built.exercises.length >= 2) {
       replaced.push(built);
       replacedDays += 1;
     } else {
       replaced.push(seed);
     }
-  }
+  });
 
-  if (replacedDays < Math.ceil(week1.length / 2)) {
+  if (replacedDays < 1) {
     return { program: science, applied: false, replacedDays: 0 };
   }
 
@@ -72,9 +73,42 @@ export function applyAiWeekDesign(
   };
 }
 
+function extractAiWorkouts(ai: any): any[] {
+  if (Array.isArray(ai?.workouts)) return ai.workouts;
+  if (Array.isArray(ai?.days)) return ai.days;
+  if (Array.isArray(ai?.week)) return ai.week;
+  if (Array.isArray(ai?.program?.workouts)) return ai.program.workouts;
+  if (Array.isArray(ai?.program?.days)) return ai.program.days;
+  return [];
+}
+
+function matchAiWorkout(seed: ScienceWorkout, aiWorkouts: any[], index: number): any | null {
+  const byLabel = aiWorkouts.find((w: any) => {
+    const label = String(w.day_label || w.dayLabel || w.day || '').trim();
+    if (!label) return false;
+    if (label.slice(0, 3) === seed.dayLabel) return true;
+    if (label.toLowerCase() === String(seed.name || '').toLowerCase()) return true;
+    return false;
+  });
+  if (byLabel) return byLabel;
+  const unlabeled = aiWorkouts[index];
+  if (!unlabeled) return null;
+  const unlabeledHasDay = String(unlabeled.day_label || unlabeled.dayLabel || unlabeled.day || '').trim();
+  if (unlabeledHasDay) return null;
+  return unlabeled;
+}
+
+function strengthFromRow(row: any): AiStrengthItem[] {
+  const candidates = [row?.strength, row?.exercises, row?.blocks, row?.main, row?.lifts];
+  for (const value of candidates) {
+    if (Array.isArray(value) && value.length) return value;
+  }
+  return [];
+}
+
 function workoutFromAi(seed: ScienceWorkout, row: any, catalog: CatalogExercise[], profile: TrainingProfile): ScienceWorkout | null {
   const exercises: ExercisePrescription[] = [];
-  const items: AiStrengthItem[] = Array.isArray(row.strength) ? row.strength : [];
+  const items = strengthFromRow(row);
   let groupNum = 0;
 
   flattenStrengthItems(items).forEach((block) => {
@@ -114,10 +148,10 @@ function workoutFromAi(seed: ScienceWorkout, row: any, catalog: CatalogExercise[
     if (prescribed) exercises.push(prescribed);
   });
 
-  if (exercises.length < 3) return null;
+  if (exercises.length < 2) return null;
 
   const primary = exercises.find((ex) => ex.role === 'primary') || exercises[0];
-  const primaryCatalog = findByName(catalog, primary.name);
+  const primaryCatalog = findByName(catalog, primary.name) || catalogStub(primary.name);
   const warmup = resolveWarmup(row.warmup, seed, exercises, catalog, profile);
   const primer = resolvePrimer(row.potentiation, primaryCatalog, catalog, profile);
   const rampSets = isPrimaryLift(primary.name)
@@ -145,8 +179,8 @@ function resolveExercise(raw: any, catalog: CatalogExercise[], profile: Training
   const name = String(raw?.name || '').trim();
   if (!name) return null;
   if (profile.excludedExercises.some((n) => n.toLowerCase() === name.toLowerCase())) return null;
-  const hit = findByName(catalog, name);
-  if (!hit) return null;
+  const matched = findByName(catalog, name);
+  const hit = matched || catalogStub(name);
   const [repMin, repMax] = parseReps(raw?.reps);
   const sets = Math.max(2, Math.min(5, Number(raw?.sets) || 3));
   const prescribed = prescribeExercise({
@@ -156,6 +190,7 @@ function resolveExercise(raw: any, catalog: CatalogExercise[], profile: Training
     sets,
     why: 'Selected as part of the weekly program design.',
   });
+  if (!matched) prescribed.name = name;
   if (repMin && repMax) {
     prescribed.repMin = repMin;
     prescribed.repMax = Math.max(repMin, repMax);
@@ -174,6 +209,64 @@ function resolveExercise(raw: any, catalog: CatalogExercise[], profile: Training
     }));
   }
   return prescribed;
+}
+
+function catalogStub(name: string): CatalogExercise {
+  const n = name.toLowerCase();
+  const isolation = /curl|raise|fly|extension|pushdown|kickback|shrug|plank|crunch|pallof/.test(n);
+  return {
+    name,
+    movementPattern: inferPattern(n),
+    exerciseType: isolation ? 'isolation' : 'compound',
+    programRoles: isolation ? ['isolation', 'accessory'] : ['secondary', 'accessory'],
+    equipment: [],
+    primaryMuscles: inferMuscles(n),
+    secondaryMuscles: [],
+    stabilityRequirement: 'medium',
+    fatigueCost: isolation ? 'low' : 'medium',
+    skillRequirement: 'medium',
+    suitableForBeginner: true,
+    unilateral: /lunge|split squat|single/.test(n),
+    defaultRepMin: isolation ? 8 : 5,
+    defaultRepMax: isolation ? 15 : 10,
+    warmupSuitable: false,
+    warmupCategory: null,
+    planes: /lateral|rotation/.test(n) ? ['frontal'] : ['sagittal'],
+    warmupFatigue: 'low',
+    impactLevel: /jump|bound|plyo/.test(n) ? 'moderate' : 'low',
+  };
+}
+
+function inferPattern(n: string): MovementPatternId {
+  if (/lunge|split squat/.test(n)) return 'lunge';
+  if (/squat|leg press/.test(n)) return 'squat';
+  if (/deadlift|rdl|hip thrust|hinge|good morning/.test(n)) return 'hinge';
+  if (/row/.test(n)) return 'horizontal_pull';
+  if (/pulldown|pull-?up|chin-?up/.test(n)) return 'vertical_pull';
+  if (/overhead|shoulder press/.test(n)) return 'vertical_push';
+  if (/bench|push-?up|chest press|floor press/.test(n)) return 'horizontal_push';
+  if (/curl/.test(n)) return 'elbow_flexion';
+  if (/extension|pushdown|skull/.test(n)) return 'elbow_extension';
+  if (/lateral raise/.test(n)) return 'shoulder_abduction';
+  if (/calf/.test(n)) return 'calf_raise';
+  if (/carry|farmer/.test(n)) return 'carry';
+  if (/jump/.test(n)) return 'jump';
+  return 'other';
+}
+
+function inferMuscles(n: string): MuscleId[] {
+  if (/lunge|squat|leg press/.test(n)) return ['quads'];
+  if (/deadlift|rdl|hamstring|leg curl/.test(n)) return ['hamstrings'];
+  if (/hip thrust|glute/.test(n)) return ['glutes'];
+  if (/row/.test(n)) return ['upper_back'];
+  if (/pulldown|pull-?up|chin-?up|lat/.test(n)) return ['lats'];
+  if (/overhead|shoulder press|lateral raise|delt/.test(n)) return ['side_delts'];
+  if (/bench|push-?up|chest|fly|floor press/.test(n)) return ['chest'];
+  if (/curl/.test(n) && !/leg curl/.test(n)) return ['biceps'];
+  if (/extension|pushdown|skull|tricep/.test(n)) return ['triceps'];
+  if (/calf/.test(n)) return ['calves'];
+  if (/plank|pallof|crunch|ab/.test(n)) return ['abs'];
+  return ['chest'];
 }
 
 function flattenStrengthItems(items: AiStrengthItem[]): Array<{ kind: 'single' | 'group'; exercises: any[] }> {
@@ -235,18 +328,16 @@ function resolveWarmup(
 function resolvePrimer(raw: any, primary: CatalogExercise | null, catalog: CatalogExercise[], profile: TrainingProfile) {
   if (raw === null) return [];
   if (raw?.name) {
-    const hit = findByName(catalog, String(raw.name));
-    if (hit) {
-      return [
-        prescribeExercise({
-          exercise: hit,
-          role: 'power',
-          profile,
-          sets: Math.max(1, Math.min(3, Number(raw.sets) || 2)),
-          why: 'Short potentiation for this session.',
-        }),
-      ];
-    }
+    const hit = findByName(catalog, String(raw.name)) || catalogStub(String(raw.name));
+    return [
+      prescribeExercise({
+        exercise: hit,
+        role: 'power',
+        profile,
+        sets: Math.max(1, Math.min(3, Number(raw.sets) || 2)),
+        why: 'Short potentiation for this session.',
+      }),
+    ];
   }
   return generatePotentiation({ profile, primary, catalog }).items;
 }

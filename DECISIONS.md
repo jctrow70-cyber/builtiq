@@ -1004,6 +1004,34 @@ Free-text-only intake made the model guess facts the user can tap. Duration and 
 - Program Design AI wizard is multi-step
 - Migration `20250909_046` is additive
 - History and existing programs unchanged
+- Follow-up BIQ-0166: request intake wins over a stale profile; AI days apply if any succeed; unmatched names are kept
+
+---
+
+## Decision 039 - Apply Any Successful AI Day; Request Intake Wins
+
+Date: 2026-09-08  
+Status: Accepted  
+Category: Program Design
+
+### Decision
+
+When the user submits structured intake, those request fields override the saved training profile for that generate. The AI week is applied if at least one day maps. Exercise names that are not in the catalog are still saved. The whole AI week is discarded only when zero days can be built. Programs with no set logs may be regenerated from intake; programs with logged sets stay 409.
+
+### Reason
+
+BIQ-0165 showed the intake and then saved the science slot template whenever catalog matching failed on enough days, or when a previous profile row beat the form.
+
+### Alternatives Considered
+
+- Keep the half-week apply threshold — rejected; one mismatched day wiped the design
+- Drop unknown names — rejected; that emptied sessions and triggered fallback
+- Always 409 when workouts exist — rejected for unused drafts; keep 409 when set logs exist
+
+### Impact
+
+- Science engine 1.3.1
+- `st_set_logs` history unchanged
 
 ---
 

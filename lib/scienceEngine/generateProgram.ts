@@ -257,13 +257,14 @@ function buildWorkout(opts: {
     if (exercises.length >= maxMoves) return;
     const remainingForMuscle = opts.remaining[slot.muscle] ?? 0;
     if (remainingForMuscle < 1.5 && slot.role !== 'primary') return;
+    if (skipIsolationForStrength(profile, slot.role, exercises)) return;
     const picked = pickExercise(catalog, {
       profile,
       muscle: slot.muscle,
       role: slot.role,
       pattern: slot.pattern,
       alreadyNames: already,
-      preferredNames: slot.preferred,
+      preferredNames: profile.varietyPreference === 'high' ? undefined : slot.preferred,
     });
     if (!picked) return;
     const cursor = opts.sessionCursor[slot.muscle] || 0;
@@ -321,7 +322,48 @@ function buildWorkout(opts: {
     cooldown: profile.includeCooldown === false ? [] : defaultCooldown(day.workoutType),
     estimatedMinutes: 0,
   };
-  return trimForDuration(built, profile);
+  const trimmed = trimForDuration(built, profile);
+  trimmed.exercises = applyIntakeSupersets(trimmed.exercises, profile, day.dayLabel);
+  return trimmed;
+}
+
+function skipIsolationForStrength(profile: TrainingProfile, role: ProgramRole, exercises: ExercisePrescription[]): boolean {
+  if (role !== 'isolation' && role !== 'accessory') return false;
+  const strengthBias = profile.primaryGoal === 'strength' || (profile.trainingFeel || []).includes('traditional_strength');
+  if (!strengthBias) return false;
+  const compounds = exercises.filter((ex) => ex.role === 'primary' || ex.role === 'secondary').length;
+  return compounds >= 3;
+}
+
+function applyIntakeSupersets(exercises: ExercisePrescription[], profile: TrainingProfile, dayLabel: string): ExercisePrescription[] {
+  const feel = profile.trainingFeel || [];
+  let pref = profile.supersetPreference || 'sometimes';
+  if (feel.includes('fast_paced') && pref === 'sometimes') pref = 'frequently';
+  if (pref !== 'frequently' && pref !== 'sometimes') return exercises;
+  const maxPairs = pref === 'frequently' || feel.includes('fast_paced') ? 2 : 1;
+  const result = exercises.map((ex) => ({ ...ex }));
+  let pairs = 0;
+  let i = 0;
+  while (i < result.length - 1 && pairs < maxPairs) {
+    const a = result[i];
+    const b = result[i + 1];
+    const heavy = a.role === 'primary' || b.role === 'primary' || isPrimaryLift(a.name) || isPrimaryLift(b.name);
+    if (heavy || a.supersetGroupId || b.supersetGroupId) {
+      i += 1;
+      continue;
+    }
+    pairs += 1;
+    const groupId = `sci-${dayLabel}-${pairs}`;
+    const label = `Superset ${String.fromCharCode(64 + pairs)}`;
+    a.supersetGroupId = groupId;
+    a.supersetLabel = label;
+    a.supersetOrder = 1;
+    b.supersetGroupId = groupId;
+    b.supersetLabel = label;
+    b.supersetOrder = 2;
+    i += 2;
+  }
+  return result;
 }
 
 function workingLoadFor(profile: TrainingProfile, name: string): number | undefined {

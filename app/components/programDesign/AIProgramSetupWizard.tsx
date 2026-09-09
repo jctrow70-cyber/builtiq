@@ -48,7 +48,7 @@ type AIProgramSetupWizardProps = {
   isFollowing?: boolean;
   onComplete: (
     weekPlan: DayPlan[],
-    result?: { coachMessage?: string; workoutCount?: number }
+    result?: { coachMessage?: string; workoutCount?: number; generationMethod?: string }
   ) => void | Promise<void>;
   onFollow?: () => void | Promise<void>;
   onCancel: () => void;
@@ -208,9 +208,19 @@ export default function AIProgramSetupWizard({
         return;
       }
       setLoading(false);
+      const method = String(data.generation_method || '');
+      const summary = String(data.program_summary || data.coaching_notes || '').trim();
+      const aiNote = String(data.ai_error || '').trim();
+      const coachMessage =
+        method === 'science_ai'
+          ? summary || 'Built with AI using your intake.'
+          : [aiNote || 'Built from the science template. Your intake was applied to days, duration, and style.', summary]
+              .filter(Boolean)
+              .join(' ');
       await onComplete([], {
-        coachMessage: data.program_summary || data.coaching_notes || '',
+        coachMessage,
         workoutCount: Number(data.workout_count) || 0,
+        generationMethod: method,
       });
     } catch (e: any) {
       setError(e?.message || 'Something went wrong.');

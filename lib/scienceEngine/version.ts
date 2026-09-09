@@ -1,1 +1,1 @@
-export const SCIENCE_ENGINE_VERSION = '1.3.0';
+export const SCIENCE_ENGINE_VERSION = '1.3.1';

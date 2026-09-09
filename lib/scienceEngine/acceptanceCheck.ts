@@ -279,6 +279,74 @@ function run() {
   const catalog = adaptCatalog([]);
   assert(findByName(catalog, 'Chest-Supported Row')?.name === 'Dumbbell Row', 'Chest-supported row should alias to a proven row');
   assert(findByName(catalog, 'Light DB RDL')?.name === 'Dumbbell RDL', 'Light DB RDL should alias to Dumbbell RDL');
+
+  const requestWins = trainingProfileFromSources({
+    profile: { experience_level: 'beginner', primary_goal: 'muscle' },
+    trainingProfile: {
+      primary_goal: 'hypertrophy',
+      experience_level: 'beginner',
+      preferred_session_minutes: 90,
+      superset_preference: 'minimal',
+    },
+    config: {
+      days: ['Mon', 'Wed', 'Fri'],
+      primaryGoal: 'strength',
+      experienceLevel: 'advanced',
+      sessionMinutes: 45,
+      supersetPreference: 'frequently',
+      varietyPreference: 'high',
+      trainingFeel: ['athletic'],
+      intakeNotes: 'No barbell back squats.',
+    },
+  });
+  assert(requestWins.primaryGoal === 'strength', `Request goal should win, got ${requestWins.primaryGoal}`);
+  assert(requestWins.experienceLevel === 'advanced', `Request experience should win, got ${requestWins.experienceLevel}`);
+  assert(requestWins.preferredSessionMinutes === 45, `Request minutes should win, got ${requestWins.preferredSessionMinutes}`);
+  assert(requestWins.supersetPreference === 'frequently', 'Request superset preference should win');
+  assert(requestWins.potentiationPreference === 'athletic', 'Athletic feel should turn on athletic potentiation');
+
+  const unknownApplied = applyAiWeekDesign(
+    fullBody,
+    {
+      workouts: [
+        {
+          day_label: 'Mon',
+          exercises: [
+            { name: 'Safety Bar Squat', sets: 3, reps: '5', role: 'primary' },
+            { name: 'Floor Press', sets: 3, reps: '6-8' },
+            { name: 'Meadows Row', sets: 3, reps: '10' },
+          ],
+        },
+      ],
+    },
+    adaptCatalog([]),
+    fullBodyProfile
+  );
+  assert(unknownApplied.applied && unknownApplied.replacedDays === 1, `Unknown AI names should still apply 1 day, got ${unknownApplied.replacedDays}`);
+  const unknownWeek = unknownApplied.program.workouts.filter((w: any) => w.week === 1);
+  assert(
+    unknownWeek[0].exercises.some((e: any) => /safety bar squat/i.test(e.name)),
+    `Safety Bar Squat should be kept, got ${unknownWeek[0].exercises.map((e: any) => e.name).join(', ')}`
+  );
+  assert(unknownWeek[1].exercises[0]?.name === fbWeek1[1].exercises[0]?.name, 'Unmatched days should keep the science seed');
+
+  const frequent = trainingProfileFromSources({
+    profile: { experience_level: 'intermediate', primary_goal: 'muscle' },
+    trainingProfile: { preferred_session_minutes: 60 },
+    config: {
+      days: ['Mon', 'Wed', 'Fri'],
+      dayTypes: { Mon: 'Full Body', Wed: 'Full Body', Fri: 'Full Body' },
+      sessionMinutes: 60,
+      weeks: 4,
+      supersetPreference: 'frequently',
+    },
+  });
+  const frequentProgram = generateProgram(frequent);
+  const frequentWeek = frequentProgram.workouts.filter((w) => w.week === 1);
+  assert(
+    frequentWeek.some((w) => w.exercises.some((e) => e.supersetGroupId)),
+    'Frequent supersets should appear on the science fallback'
+  );
   const recent = summarizeRecentLogs([
     { snapshot_exercise_name: 'Back Squat', actual_weight: '185', log_date: '2026-09-01', completed: true },
     { snapshot_exercise_name: 'Back Squat', actual_weight: '190', log_date: '2026-09-08', completed: true },

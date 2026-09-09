@@ -71,25 +71,36 @@ export function trainingProfileFromSources(input: {
   const tp = input.trainingProfile || {};
   const config = input.config || {};
   const days = (config.days || []).filter(Boolean);
-  const focusLabels = config.focusMuscles || tp.priority_muscles_labels || [];
-  const priorityMuscles = [
-    ...asMuscles(tp.priority_muscles),
-    ...musclesFromFocusLabels(Array.isArray(focusLabels) ? focusLabels : []),
-  ].filter((m, i, arr) => arr.indexOf(m) === i);
+  const focusFromConfig = config.focusMuscles !== undefined;
+  const focusLabels = focusFromConfig ? config.focusMuscles || [] : tp.priority_muscles_labels || [];
+  const priorityMuscles = focusFromConfig
+    ? musclesFromFocusLabels(Array.isArray(focusLabels) ? focusLabels : [])
+    : [
+        ...asMuscles(tp.priority_muscles),
+        ...musclesFromFocusLabels(Array.isArray(focusLabels) ? focusLabels : []),
+      ].filter((m, i, arr) => arr.indexOf(m) === i);
 
   const warmupStyle = (tp.warmup_style || 'dynamic') as WarmupStyle;
   const warmupDuration = (tp.warmup_duration || 'standard') as WarmupDurationPref;
-  const potentiationPreference = (tp.potentiation_preference || 'automatic') as PotentiationPref;
+  const trainingFeel = asList(config.trainingFeel !== undefined ? config.trainingFeel : tp.training_feel);
+  const potentiationPreference = potentiationFromIntake(
+    (tp.potentiation_preference || 'automatic') as PotentiationPref,
+    trainingFeel
+  );
 
   return {
     userId: profile.user_id || tp.user_id,
-    primaryGoal: asGoal(tp.primary_goal || config.primaryGoal || profile.primary_goal),
+    primaryGoal: asGoal(config.primaryGoal || tp.primary_goal || profile.primary_goal),
     secondaryGoal: tp.secondary_goal ? asGoal(tp.secondary_goal) : null,
-    experienceLevel: asExperience(tp.experience_level || config.experienceLevel || profile.experience_level),
+    experienceLevel: asExperience(config.experienceLevel || tp.experience_level || profile.experience_level),
     trainingDaysPerWeek: days.length || Number(tp.training_days_per_week) || 4,
     preferredDays: days.length ? days : undefined,
-    preferredSessionMinutes: Number(config.sessionMinutes || tp.preferred_session_minutes) || 60,
-    availableEquipment: asList(config.availableEquipment || tp.available_equipment || profile.available_equipment),
+    preferredSessionMinutes: Number(config.sessionMinutes) > 0 ? Number(config.sessionMinutes) : Number(tp.preferred_session_minutes) || 60,
+    availableEquipment: asList(
+      Array.isArray(config.availableEquipment) && config.availableEquipment.length
+        ? config.availableEquipment
+        : tp.available_equipment || profile.available_equipment
+    ),
     preferredExercises: asList(tp.preferred_exercises),
     excludedExercises: [...asList(tp.excluded_exercises), ...asList(config.excludedExercises)].filter(
       (n, i, arr) => arr.findIndex((x) => x.toLowerCase() === n.toLowerCase()) === i
@@ -115,8 +126,15 @@ export function trainingProfileFromSources(input: {
     weeks: config.weeks || 6,
     supersetPreference: (config.supersetPreference || tp.superset_preference || 'sometimes') as TrainingProfile['supersetPreference'],
     varietyPreference: (config.varietyPreference || tp.variety_preference || 'balanced') as TrainingProfile['varietyPreference'],
-    trainingFeel: asList(config.trainingFeel || tp.training_feel),
+    trainingFeel,
     trainingSplit: String(config.trainingSplit || tp.training_split || ''),
-    intakeNotes: String(config.intakeNotes || tp.intake_notes || ''),
+    intakeNotes: String(config.intakeNotes !== undefined ? config.intakeNotes : tp.intake_notes || ''),
   };
+}
+
+function potentiationFromIntake(saved: PotentiationPref, feel: string[]): PotentiationPref {
+  if (feel.includes('low_impact')) return 'off';
+  if (feel.includes('athletic')) return 'athletic';
+  if (['off', 'automatic', 'athletic'].includes(saved)) return saved;
+  return 'automatic';
 }

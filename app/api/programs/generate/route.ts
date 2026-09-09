@@ -167,9 +167,13 @@ export async function POST(request: Request) {
   let plan = scienceProgramToAiPlan(scienceProgram, config);
   let generationMethod: 'science' | 'science_ai' = 'science';
   let qualityWarnings = validation.issues.filter((i) => i.severity === 'warning');
+  let aiError: string | null = null;
+  let replacedDays = 0;
 
   const apiKey = process.env.OPENAI_API_KEY;
-  if (apiKey && (structuredIntake || prompt.length >= 8)) {
+  if (!apiKey) {
+    aiError = 'AI is not configured; used the science template.';
+  } else if (structuredIntake || prompt.length >= 8) {
     try {
       const adapted = adaptCatalog(catalog || []);
       const recentTraining = await fetchRecentTrainingSummary(supabase, user.id);
@@ -192,23 +196,29 @@ export async function POST(request: Request) {
         ],
       });
       const raw = completion.choices[0]?.message?.content || '';
-      const parsed = raw ? JSON.parse(raw) : null;
-      if (parsed) {
+      const parsed = parseAiJson(raw);
+      if (!parsed) {
+        aiError = 'AI returned unreadable JSON; used the science template.';
+      } else {
         const applied = applyAiWeekDesign(scienceProgram, parsed, adapted, scienceProfile);
+        replacedDays = applied.replacedDays;
         if (applied.applied) {
           scienceProgram = applied.program;
           const quality = validateProgramQuality(scienceProgram, scienceProfile.preferredSessionMinutes);
           qualityWarnings = [...qualityWarnings, ...quality.issues.filter((i) => i.severity === 'warning')];
+          generationMethod = 'science_ai';
+        } else {
+          aiError = 'AI week could not be applied; used the science template.';
         }
         plan = scienceProgramToAiPlan(scienceProgram, config);
         if (parsed.summary) plan.program_summary = String(parsed.summary);
         if (parsed.coaching_notes || parsed.explanation) {
           plan.coaching_notes = String(parsed.coaching_notes || parsed.explanation);
         }
-        generationMethod = applied.applied ? 'science_ai' : 'science';
       }
-    } catch {
+    } catch (err: any) {
       generationMethod = 'science';
+      aiError = err?.message ? `AI design failed (${err.message}); used the science template.` : 'AI design failed; used the science template.';
     }
   }
 
@@ -253,13 +263,15 @@ export async function POST(request: Request) {
       const { data: existingExercises } = await supabase
         .from('st_exercises')
         .select('id')
-        .in('workout_id', existingWorkoutIds)
-        .limit(1);
+        .in('workout_id', existingWorkoutIds);
       if (existingExercises?.length) {
-        return NextResponse.json(
-          { error: 'This program already has workouts. Open it in Programs to view or edit them, or create a new program.' },
-          { status: 409 }
-        );
+        const canReplace = structuredIntake && (await programHasNoSetLogs(supabase, existingExercises.map((row: { id: string }) => row.id)));
+        if (!canReplace) {
+          return NextResponse.json(
+            { error: 'This program already has workouts. Open it in Programs to view or edit them, or create a new program.' },
+            { status: 409 }
+          );
+        }
       }
       await supabase.from('st_workouts').delete().eq('program_id', existingProgramId);
     }
@@ -317,7 +329,46 @@ export async function POST(request: Request) {
     science_version: SCIENCE_ENGINE_VERSION,
     volume_targets: scienceProgram.volumeTargets,
     validation_warnings: qualityWarnings,
+    ai_error: aiError,
+    replaced_days: replacedDays,
   });
+}
+
+function parseAiJson(raw: string): any | null {
+  const trimmed = String(raw || '').trim();
+  if (!trimmed) return null;
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    /* try fence / slice below */
+  }
+  const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (fence?.[1]) {
+    try {
+      return JSON.parse(fence[1]);
+    } catch {
+      /* continue */
+    }
+  }
+  const start = trimmed.indexOf('{');
+  const end = trimmed.lastIndexOf('}');
+  if (start >= 0 && end > start) {
+    try {
+      return JSON.parse(trimmed.slice(start, end + 1));
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+async function programHasNoSetLogs(supabase: any, exerciseIds: string[]): Promise<boolean> {
+  if (!exerciseIds.length) return true;
+  const { data: planned } = await supabase.from('st_planned_sets').select('id').in('exercise_id', exerciseIds);
+  const plannedIds = (planned || []).map((row: { id: string }) => row.id);
+  if (!plannedIds.length) return true;
+  const { count } = await supabase.from('st_set_logs').select('id', { count: 'exact', head: true }).in('planned_set_id', plannedIds);
+  return !count;
 }
 
 async function fetchRecentTrainingSummary(supabase: any, userId: string) {

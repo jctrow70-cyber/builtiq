@@ -11,6 +11,68 @@ Branch:
 Status:
 ```
 
+## BIQ-0166 - Intake Actually Changes the Generated Program
+
+Date: 2026-09-08  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Program Design intake was collected and shown, then ignored. Generate now uses the request fields (goal, minutes, experience, supersets, variety, feel, notes) instead of a stale saved profile. AI exercise names that are not in the catalog are kept. A successful AI day is saved even if other days stay on the science seed. Science fallback pairs accessories when supersets are requested. Regenerating a program with no logged sets replaces the old workouts. The wizard reports whether AI or the science template was used.
+
+### Purpose
+
+Users filled the new intake and got the same science slot template because unmatched AI names dropped the whole week, and the saved profile beat the form.
+
+### Changes
+
+- Request body wins over `st_training_profiles` for goal, minutes, experience, equipment, and focus
+- Apply AI days when at least one session maps; keep unmatched exercise names
+- Athletic / low-impact feel changes potentiation; frequent supersets appear on science fallback
+- Generate returns `generation_method` and `ai_error`; empty-log programs can regenerate
+- Science engine 1.3.1
+
+### Files Changed
+
+- `lib/scienceEngine/applyAiDesign.ts`
+- `lib/scienceEngine/profile.ts`
+- `lib/scienceEngine/generateProgram.ts`
+- `lib/scienceEngine/version.ts`
+- `lib/scienceEngine/acceptanceCheck.ts`
+- `app/api/programs/generate/route.ts`
+- `app/components/programDesign/AIProgramSetupWizard.tsx`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. `npm run test:science` passes.
+2. Create a **new** program (or regenerate one with no logged sets). Fill intake with a non-default mix: strength goal, frequent supersets, athletic feel, and a note like “no barbell back squats.”
+3. Generate. The week should not look like the old Full Body A/B/C slot template. Banner should say AI or science template.
+4. Open a day: exercise names, supersets, and session length should reflect the intake.
+5. Generate again on the same unused program. It should replace workouts (not 409) if you have not logged sets.
+6. Existing programs with logged sets still 409. History is unchanged.
+
+### Known Issues
+
+- Dedicated cardio/mobility days are still not in intake.
+- If OpenAI is down, science fallback is used and the banner says so.
+- Saved programs from before this fix are not rebuilt until you generate again.
+
+### Recommended Commit Message
+
+```text
+BIQ-0166 Make program intake actually change generated workouts
+```
+
+---
+
 ## BIQ-0165 - Structured Program Intake Plus Free Text
 
 Date: 2026-09-08  
