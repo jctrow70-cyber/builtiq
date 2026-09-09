@@ -81,6 +81,11 @@ export type TrainingProfile = {
   includeCooldown?: boolean;
   workingLoads?: Record<string, number>;
   weeks?: number;
+  supersetPreference?: 'minimal' | 'sometimes' | 'frequently' | 'ai_decide';
+  varietyPreference?: 'consistent' | 'balanced' | 'high' | 'ai_decide';
+  trainingFeel?: string[];
+  trainingSplit?: string;
+  intakeNotes?: string;
 };
 
 export type CatalogExercise = {

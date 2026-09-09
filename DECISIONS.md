@@ -977,6 +977,36 @@ Sending `science_seed_exercises` recreated slot-filling: the model tweaked a pre
 
 ---
 
+## Decision 038 - Structured Intake Is Canonical, Free Text Is Nuance
+
+Date: 2026-09-08  
+Status: Accepted  
+Category: Program Design
+
+### Decision
+
+Program generation input is a hybrid: structured selections for goal, days, duration, split, experience, equipment, priorities, supersets, and variety; optional free text for nuance. Structured fields win over prompt parsing when `structuredIntake` is true.
+
+Reusable defaults live on `st_training_profiles` (user-level). Each generate still stamps days, duration, and notes onto that program. Chat may later update the same structured object; it must not replace it.
+
+### Reason
+
+Free-text-only intake made the model guess facts the user can tap. Duration and split were the most common misses.
+
+### Alternatives Considered
+
+- Keep a single prompt box — rejected; too unreliable
+- JSON blob on `st_programs` only — rejected for defaults; users would re-enter every time
+- New table for every preference — deferred; additive columns on `st_training_profiles` match existing science profile
+
+### Impact
+
+- Program Design AI wizard is multi-step
+- Migration `20250909_046` is additive
+- History and existing programs unchanged
+
+---
+
 ## Decision 033 - Calendar First, Programs Overlay Dates
 
 Date: 2026-09-08  

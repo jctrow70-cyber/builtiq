@@ -9,7 +9,7 @@ import { prescribeExercise } from './prescription';
 import { generateWarmup } from './warmup';
 import { generatePotentiation } from './potentiation';
 import { benchRampExample, generateRampSets, isPrimaryLift } from './rampUp';
-import { trimForDuration } from './duration';
+import { maxStrengthMoves, trimForDuration } from './duration';
 import { validateProgram } from './validator';
 import type {
   CatalogExercise,
@@ -250,10 +250,11 @@ function buildWorkout(opts: {
   const exercises: ExercisePrescription[] = [];
   const variantIndex =
     split.slice(0, index + 1).filter((d) => d.workoutType === day.workoutType).length - 1;
-  const slots = slotsForDay(day.workoutType, Math.max(0, variantIndex));
+    const slots = slotsForDay(day.workoutType, Math.max(0, variantIndex));
+  const maxMoves = maxStrengthMoves(profile.preferredSessionMinutes);
 
   slots.forEach((slot) => {
-    if (exercises.length >= 7) return;
+    if (exercises.length >= maxMoves) return;
     const remainingForMuscle = opts.remaining[slot.muscle] ?? 0;
     if (remainingForMuscle < 1.5 && slot.role !== 'primary') return;
     const picked = pickExercise(catalog, {

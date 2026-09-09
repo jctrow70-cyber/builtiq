@@ -3,6 +3,20 @@ import type { ExercisePrescription, ScienceWorkout, TrainingProfile, WarmupItem 
 const SET_SECONDS = 35;
 const TRANSITION_SECONDS = 25;
 
+export function maxStrengthMoves(minutes: number): number {
+  if (minutes <= 30) return 4;
+  if (minutes <= 45) return 5;
+  if (minutes <= 60) return 8;
+  if (minutes <= 75) return 9;
+  return 10;
+}
+
+export function minStrengthMoves(minutes: number): number {
+  if (minutes <= 30) return 3;
+  if (minutes <= 45) return 4;
+  return 5;
+}
+
 export function estimateWorkoutMinutes(opts: {
   warmupItems: WarmupItem[];
   potentiation: ExercisePrescription[];
@@ -18,6 +32,7 @@ export function estimateWorkoutMinutes(opts: {
 
 export function trimForDuration(workout: ScienceWorkout, profile: TrainingProfile): ScienceWorkout {
   const limit = profile.preferredSessionMinutes || 60;
+  const minMoves = minStrengthMoves(limit);
   let next = { ...workout, exercises: workout.exercises.slice() };
   next.estimatedMinutes = estimateWorkoutMinutes({
     warmupItems: next.warmup,
@@ -26,7 +41,7 @@ export function trimForDuration(workout: ScienceWorkout, profile: TrainingProfil
     exercises: next.exercises,
   });
 
-  while (next.estimatedMinutes > limit + 8 && next.exercises.length > 4) {
+  while (next.estimatedMinutes > limit + 8 && next.exercises.length > minMoves) {
     const idx = next.exercises.map((ex, i) => ({ ex, i })).reverse().find((row) => row.ex.role === 'isolation' || row.ex.role === 'accessory')?.i;
     if (idx == null) break;
     next.exercises.splice(idx, 1);

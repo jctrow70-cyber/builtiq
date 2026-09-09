@@ -1,31 +1,43 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { ACTIVITY_TYPE_META } from '../../../lib/programDesign/activityTypes';
-import { inferScheduleFromPrompt } from '../../../lib/programDesign/inferSchedule';
-import type { ActivityDraft, ActivityType } from '../../../lib/programDesign/types';
+import { EQUIPMENT_OPTIONS } from '../../../lib/training/equipmentFilter';
+import { SCHEDULE_DAY_LABELS } from '../../../lib/programDesign/inferSchedule';
+import {
+  DEFAULT_DAYS_BY_FREQUENCY,
+  INTAKE_DURATION_OPTIONS,
+  INTAKE_FEEL_OPTIONS,
+  INTAKE_GOALS,
+  INTAKE_LIMITATIONS,
+  INTAKE_PRIORITY_AREAS,
+  INTAKE_SPLITS,
+  defaultProgramIntake,
+  experienceLabel,
+  generateBodyFromIntake,
+  goalLabel,
+  intakeFromProfileRow,
+  intakeLooksSaved,
+  splitLabel,
+  supersetLabel,
+  trainingProfilePayload,
+  varietyLabel,
+  type IntakeExperience,
+  type IntakeFeel,
+  type IntakeLimitation,
+  type IntakeSplit,
+  type IntakeSupersets,
+  type IntakeVariety,
+  type ProgramIntake,
+} from '../../../lib/programDesign/intakePreferences';
+import type { ScheduleDayLabel } from '../../../lib/programDesign/inferSchedule';
+import type { ActivityDraft } from '../../../lib/programDesign/types';
 
 type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+type DayPlan = { dayIndex: DayOfWeek; activities: ActivityDraft[] };
+type WizardStep = 'goal' | 'schedule' | 'session' | 'athlete' | 'style' | 'notes' | 'review';
 
-const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-type SuggestedActivity = {
-  day: string;
-  activity_type: string;
-  title: string;
-  duration_minutes: number | null;
-  notes: string;
-  details: Record<string, unknown>;
-};
-
-type DayPlan = {
-  dayIndex: DayOfWeek;
-  activities: ActivityDraft[];
-};
-
-type WizardStep = 'describe' | 'review' | 'done';
+const STEPS: WizardStep[] = ['goal', 'schedule', 'session', 'athlete', 'style', 'notes', 'review'];
 
 type AIProgramSetupWizardProps = {
   supabase: SupabaseClient;
@@ -42,72 +54,19 @@ type AIProgramSetupWizardProps = {
   onCancel: () => void;
 };
 
-function inferSchedule(text: string): { days: string[]; dayTypes: Record<string, string> } {
-  return inferScheduleFromPrompt(text);
-}
-
-function dayLabelToIndex(label: string): DayOfWeek {
-  const idx = DAY_LABELS.indexOf(label);
-  return (idx >= 0 ? idx : 0) as DayOfWeek;
-}
-
-function suggestedToActivityDraft(s: SuggestedActivity): ActivityDraft {
-  const validTypes = new Set(['strength', 'cardio', 'mobility', 'stretching', 'recovery', 'sport', 'rest']);
-  const actType = validTypes.has(s.activity_type) ? (s.activity_type as ActivityType) : 'strength';
-  return {
-    activity_type: actType,
-    title: s.title || ACTIVITY_TYPE_META[actType]?.defaultTitle || 'Activity',
-    duration_minutes: s.duration_minutes,
-    notes: s.notes || '',
-    details: s.details || {},
-  };
-}
-
-function buildWeekPlan(activities: SuggestedActivity[]): DayPlan[] {
-  const byDay: Record<number, ActivityDraft[]> = {};
-  for (let i = 0; i < 7; i++) byDay[i] = [];
-
-  for (const act of activities) {
-    const idx = dayLabelToIndex(act.day);
-    if (act.activity_type === 'rest') continue;
-    byDay[idx].push(suggestedToActivityDraft(act));
-  }
-
-  // Fill empty days with rest
-  for (let i = 0; i < 7; i++) {
-    if (byDay[i].length === 0) {
-      byDay[i].push({
-        activity_type: 'rest',
-        title: 'Rest',
-        duration_minutes: null,
-        notes: '',
-        details: {},
-      });
-    }
-  }
-
-  return Array.from({ length: 7 }, (_, i) => ({
-    dayIndex: i as DayOfWeek,
-    activities: byDay[i],
-  }));
-}
-
-function ActivityChip({ draft, onRemove }: { draft: ActivityDraft; onRemove?: () => void }) {
-  const meta = ACTIVITY_TYPE_META[draft.activity_type];
-  const isRest = draft.activity_type === 'rest';
+function Chip({
+  active,
+  children,
+  onClick,
+}: {
+  active: boolean;
+  children: ReactNode;
+  onClick: () => void;
+}) {
   return (
-    <div className={`ai-wiz-chip${isRest ? ' rest' : ''}`}>
-      <div className="ai-wiz-chip-info">
-        <b>{draft.title}</b>
-        {draft.duration_minutes && <span className="muted">{draft.duration_minutes} min</span>}
-        {!isRest && <span className="muted">{meta?.shortLabel}</span>}
-      </div>
-      {onRemove && !isRest && (
-        <button type="button" className="ai-wiz-chip-remove" onClick={onRemove} aria-label="Remove">
-          ×
-        </button>
-      )}
-    </div>
+    <button type="button" className={`pd-cycle-chip${active ? ' active' : ''}`} onClick={onClick}>
+      {children}
+    </button>
   );
 }
 
@@ -119,309 +78,401 @@ export default function AIProgramSetupWizard({
   startDate = null,
   isFollowing = false,
   onComplete,
-  onFollow,
   onCancel,
 }: AIProgramSetupWizardProps) {
-  const [step, setStep] = useState<WizardStep>('describe');
-  const [description, setDescription] = useState('');
+  const [step, setStep] = useState<WizardStep>('goal');
+  const [intake, setIntake] = useState<ProgramIntake>(() => defaultProgramIntake());
+  const [loaded, setLoaded] = useState(false);
+  const [hasSaved, setHasSaved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [coachMessage, setCoachMessage] = useState('');
-  const [workoutCount, setWorkoutCount] = useState(0);
-  const [weekPlan, setWeekPlan] = useState<DayPlan[]>([]);
-  const [dragSource, setDragSource] = useState<{ dayIdx: number; actIdx: number } | null>(null);
-  const [dropTarget, setDropTarget] = useState<number | null>(null);
-  const [choiceBusy, setChoiceBusy] = useState(false);
+  const [customMinutes, setCustomMinutes] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: auth } = await supabase.auth.getUser();
+      const uid = auth.user?.id;
+      if (!uid) {
+        setLoaded(true);
+        return;
+      }
+      const [{ data: training }, { data: profile }] = await Promise.all([
+        supabase.from('st_training_profiles').select('*').eq('user_id', uid).maybeSingle(),
+        supabase.from('st_profiles').select('primary_goal, experience_level, available_equipment').eq('user_id', uid).maybeSingle(),
+      ]);
+      if (cancelled) return;
+      const next = intakeFromProfileRow(training, profile);
+      setIntake(next);
+      const saved = intakeLooksSaved(next) && Boolean(training);
+      setHasSaved(saved);
+      if (saved) setStep('review');
+      setLoaded(true);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase]);
+
+  const stepIndex = STEPS.indexOf(step);
+  const daysCount = intake.trainingDaysPerWeek === 'ai_recommend' ? intake.preferredDays.length || 3 : Number(intake.trainingDaysPerWeek);
+
+  function patch(partial: Partial<ProgramIntake>) {
+    setIntake((prev) => ({ ...prev, ...partial }));
+  }
+
+  function setFrequency(n: number | 'ai_recommend') {
+    if (n === 'ai_recommend') {
+      patch({ trainingDaysPerWeek: 'ai_recommend', preferredDays: DEFAULT_DAYS_BY_FREQUENCY[3] });
+      return;
+    }
+    const current = intake.preferredDays;
+    const nextDays = current.length === n ? current : DEFAULT_DAYS_BY_FREQUENCY[n] || current.slice(0, n);
+    patch({ trainingDaysPerWeek: n, preferredDays: nextDays });
+  }
+
+  function toggleDay(day: ScheduleDayLabel) {
+    const has = intake.preferredDays.includes(day);
+    const preferredDays = has ? intake.preferredDays.filter((d) => d !== day) : [...intake.preferredDays, day];
+    preferredDays.sort((a, b) => SCHEDULE_DAY_LABELS.indexOf(a) - SCHEDULE_DAY_LABELS.indexOf(b));
+    patch({
+      preferredDays,
+      trainingDaysPerWeek: preferredDays.length || intake.trainingDaysPerWeek,
+    });
+  }
+
+  function toggleList<T extends string>(key: 'priorityAreas' | 'trainingFeel' | 'limitations' | 'equipment', value: T) {
+    setIntake((prev) => {
+      const list = prev[key] as string[];
+      const next = list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
+      if (key === 'equipment' && value === 'full_gym') return { ...prev, equipment: list.includes('full_gym') ? [] : ['full_gym'] };
+      if (key === 'equipment' && next.includes('full_gym') && value !== 'full_gym') return { ...prev, equipment: next.filter((v) => v !== 'full_gym') };
+      return { ...prev, [key]: next };
+    });
+  }
+
+  async function persistIntake(userId: string) {
+    const payload = { user_id: userId, ...trainingProfilePayload(intake), updated_at: new Date().toISOString() };
+    const { error: upsertError } = await supabase.from('st_training_profiles').upsert(payload, { onConflict: 'user_id' });
+    if (upsertError) {
+      await supabase.from('st_training_profiles').upsert(
+        {
+          user_id: userId,
+          primary_goal: payload.primary_goal,
+          experience_level: payload.experience_level,
+          training_days_per_week: payload.training_days_per_week,
+          preferred_session_minutes: payload.preferred_session_minutes,
+          available_equipment: payload.available_equipment,
+        },
+        { onConflict: 'user_id' }
+      );
+    }
+    await supabase
+      .from('st_profiles')
+      .update({
+        primary_goal: payload.primary_goal === 'hypertrophy' ? 'muscle' : payload.primary_goal,
+        experience_level: payload.experience_level,
+        available_equipment: payload.available_equipment,
+      })
+      .eq('user_id', userId);
+  }
 
   async function handleGenerate() {
-    if (description.trim().length < 8) {
-      setError('Tell us more about your weekly plan (at least a few words).');
+    if (!intake.preferredDays.length && intake.trainingDaysPerWeek !== 'ai_recommend') {
+      setError('Pick at least one training day.');
       return;
     }
     setLoading(true);
     setError('');
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) {
+      if (!session?.access_token || !session.user?.id) {
         setError('Sign in to use AI program setup.');
         setLoading(false);
         return;
       }
-
-      const schedule = inferSchedule(description);
+      await persistIntake(session.user.id);
+      const body = generateBodyFromIntake(intake, { weeks, programName, programId, startDate });
       const res = await fetch('/api/programs/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({
-          prompt: description.trim(),
-          weeks,
-          days: schedule.days,
-          dayTypes: schedule.dayTypes,
-          programName,
-          existingProgramId: programId || undefined,
-          startDate: startDate || undefined,
-          primaryGoal: /muscle|hypertrophy|build muscle/.test(description.toLowerCase())
-            ? 'hypertrophy'
-            : 'strength',
-        }),
+        body: JSON.stringify(body),
       });
-
       const data = await res.json();
       if (!res.ok || data.error) {
         setError(data.error || 'Could not generate your training program.');
         setLoading(false);
         return;
       }
-
-      setCoachMessage(data.program_summary || data.coaching_notes || '');
-      setWorkoutCount(Number(data.workout_count) || 0);
       setLoading(false);
       await onComplete([], {
         coachMessage: data.program_summary || data.coaching_notes || '',
         workoutCount: Number(data.workout_count) || 0,
       });
-      return;
     } catch (e: any) {
       setError(e?.message || 'Something went wrong.');
-    }
-    setLoading(false);
-  }
-
-  function removeActivity(dayIdx: number, actIdx: number) {
-    setWeekPlan((prev) => {
-      const updated = prev.map((day, di) => {
-        if (di !== dayIdx) return day;
-        const acts = day.activities.filter((_, ai) => ai !== actIdx);
-        if (acts.length === 0) {
-          acts.push({ activity_type: 'rest', title: 'Rest', duration_minutes: null, notes: '', details: {} });
-        }
-        return { ...day, activities: acts };
-      });
-      return updated;
-    });
-  }
-
-  function moveActivity(fromDay: number, fromAct: number, toDay: number) {
-    if (fromDay === toDay) return;
-    setWeekPlan((prev) => {
-      const activity = prev[fromDay]?.activities[fromAct];
-      if (!activity || activity.activity_type === 'rest') return prev;
-
-      return prev.map((day, di) => {
-        if (di === fromDay) {
-          const acts = day.activities.filter((_, ai) => ai !== fromAct);
-          if (acts.length === 0) {
-            acts.push({ activity_type: 'rest', title: 'Rest', duration_minutes: null, notes: '', details: {} });
-          }
-          return { ...day, activities: acts };
-        }
-        if (di === toDay) {
-          const acts = day.activities.filter((a) => a.activity_type !== 'rest');
-          acts.push(activity);
-          return { ...day, activities: acts };
-        }
-        return day;
-      });
-    });
-  }
-
-  function handleConfirm() {
-    onComplete(weekPlan);
-  }
-
-  async function handleFollowChoice() {
-    if (!onFollow) {
-      await onComplete([]);
-      return;
-    }
-    setChoiceBusy(true);
-    setError('');
-    try {
-      await onFollow();
-    } catch (e: any) {
-      setError(e?.message || 'Could not follow this program.');
-      setChoiceBusy(false);
+      setLoading(false);
     }
   }
 
-  async function handleSaveChoice() {
-    setChoiceBusy(true);
-    setError('');
-    try {
-      await onComplete([]);
-    } catch (e: any) {
-      setError(e?.message || 'Could not open the saved program.');
-      setChoiceBusy(false);
-    }
-  }
-
-  const activeDayCount = useMemo(
-    () => weekPlan.filter((d) => d.activities.some((a) => a.activity_type !== 'rest')).length,
-    [weekPlan]
+  const summary = useMemo(
+    () => [
+      { label: 'Goal', value: goalLabel(intake.primaryGoal) },
+      { label: 'Schedule', value: `${intake.preferredDays.length || daysCount} days/week${intake.preferredDays.length ? ` · ${intake.preferredDays.join(', ')}` : ''}` },
+      { label: 'Workout length', value: `${intake.sessionMinutes} minutes` },
+      { label: 'Style', value: splitLabel(intake.trainingSplit) },
+      { label: 'Experience', value: experienceLabel(intake.experienceLevel) },
+      { label: 'Supersets', value: supersetLabel(intake.supersetPreference) },
+      { label: 'Exercise variety', value: varietyLabel(intake.varietyPreference) },
+      { label: 'Equipment', value: intake.equipment.includes('full_gym') || !intake.equipment.length ? 'Full gym' : intake.equipment.join(', ') },
+      { label: 'Priorities', value: intake.priorityAreas.length ? intake.priorityAreas.join(', ') : 'No special priority' },
+    ],
+    [intake, daysCount]
   );
 
-  if (step === 'done') {
+  if (!loaded) {
     return (
       <div className="ai-wiz">
-        <h1>Workouts are ready</h1>
-        <p className="muted ai-wiz-lead">
-          {programName} is saved
-          {workoutCount ? ` with ${workoutCount} workout${workoutCount === 1 ? '' : 's'}` : ''}.
-          Follow it to use it in Training, or save it and follow later.
-        </p>
-        {coachMessage && <p className="ai-wiz-coach">{coachMessage}</p>}
-        {error && <p className="pd-error">{error}</p>}
-        <div className="actions" style={{ marginTop: 16 }}>
-          {isFollowing ? (
-            <button type="button" className="btn green" disabled={choiceBusy} onClick={() => void handleFollowChoice()}>
-              {choiceBusy ? 'Opening…' : 'Use in Training'}
-            </button>
-          ) : (
-            <button type="button" className="btn green" disabled={choiceBusy} onClick={() => void handleFollowChoice()}>
-              {choiceBusy ? 'Following…' : 'Follow this program'}
-            </button>
-          )}
-          <button type="button" className="btn secondary" disabled={choiceBusy} onClick={() => void handleSaveChoice()}>
-            Save without following
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (step === 'describe') {
-    return (
-      <div className="ai-wiz">
-        <button type="button" className="pd-back" onClick={onCancel}>
-          ← Back
-        </button>
-        <h1>Build your workouts</h1>
-        <p className="muted ai-wiz-lead">
-          Describe the training you want. BuiltIQ will create the actual lifts, sets, and weekly calendar on this program — not just empty day labels.
-        </p>
-
-        <div className="ai-wiz-examples">
-          <p className="ai-wiz-examples-label">Examples:</p>
-          <button
-            type="button"
-            className="ai-wiz-example"
-            onClick={() => setDescription('Upper/lower strength program 4 days a week, build muscle, barbell and dumbbells')}
-          >
-            "Upper/lower 4 days a week, build muscle"
-          </button>
-          <button
-            type="button"
-            className="ai-wiz-example"
-            onClick={() => setDescription('Full body strength workouts Monday Wednesday Friday, focus on squat bench and deadlift')}
-          >
-            "Full body M/W/F, squat bench deadlift"
-          </button>
-          <button
-            type="button"
-            className="ai-wiz-example"
-            onClick={() => setDescription('5-day push pull legs strength program for hypertrophy')}
-          >
-            "5-day push pull legs hypertrophy"
-          </button>
-          <button
-            type="button"
-            className="ai-wiz-example"
-            onClick={() => setDescription('Bro split, one body part per day: chest, back, shoulders, arms, and legs')}
-          >
-            "Bro split: chest, back, shoulders, arms, legs"
-          </button>
-        </div>
-
-        <label htmlFor="ai-wiz-desc">Describe your training</label>
-        <textarea
-          id="ai-wiz-desc"
-          rows={4}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Upper/lower 4 days a week, build muscle, I have a barbell and dumbbells…"
-          autoFocus
-        />
-
-        {error && <p className="pd-error">{error}</p>}
-
-        <div className="actions" style={{ marginTop: 16 }}>
-          <button
-            type="button"
-            className="btn green"
-            disabled={loading || description.trim().length < 8}
-            onClick={() => void handleGenerate()}
-          >
-            {loading ? 'Building your workouts…' : 'Build my workouts'}
-          </button>
-          <button type="button" className="btn secondary" onClick={onCancel} disabled={loading}>
-            Skip — I'll add workouts later
-          </button>
-        </div>
+        <p className="muted">Loading your training profile…</p>
       </div>
     );
   }
 
   return (
     <div className="ai-wiz">
-      <button type="button" className="pd-back" onClick={() => setStep('describe')}>
-        ← Change description
+      <button type="button" className="pd-back" onClick={step === 'goal' || (hasSaved && step === 'review') ? onCancel : () => setStep(STEPS[Math.max(0, stepIndex - 1)])}>
+        ← Back
       </button>
-      <h1>Review your week</h1>
-      {coachMessage && <p className="ai-wiz-coach">{coachMessage}</p>}
-      <p className="muted">
-        {activeDayCount} active day{activeDayCount !== 1 ? 's' : ''} planned.
-        Drag activities between days to rearrange, or remove what you don't need.
+      <p className="ai-wiz-progress muted">
+        {step === 'review' ? 'Ready to generate' : `Step ${stepIndex + 1} of ${STEPS.length - 1}`}
       </p>
 
-      <div className="ai-wiz-week">
-        {weekPlan.map((day, dayIdx) => (
-          <div
-            key={dayIdx}
-            className={`ai-wiz-day${dropTarget === dayIdx ? ' drop-target' : ''}`}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDropTarget(dayIdx);
-            }}
-            onDragLeave={() => setDropTarget(null)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDropTarget(null);
-              if (dragSource) {
-                moveActivity(dragSource.dayIdx, dragSource.actIdx, dayIdx);
-                setDragSource(null);
-              }
-            }}
-          >
-            <h3>{DAY_NAMES[dayIdx]}</h3>
-            {day.activities.map((act, actIdx) => (
-              <div
-                key={actIdx}
-                draggable={act.activity_type !== 'rest'}
-                onDragStart={() => setDragSource({ dayIdx, actIdx })}
-                onDragEnd={() => { setDragSource(null); setDropTarget(null); }}
-                className={dragSource?.dayIdx === dayIdx && dragSource?.actIdx === actIdx ? 'dragging' : ''}
-              >
-                <ActivityChip
-                  draft={act}
-                  onRemove={act.activity_type !== 'rest' ? () => removeActivity(dayIdx, actIdx) : undefined}
-                />
-              </div>
+      {step === 'goal' && (
+        <>
+          <h1>What is your main goal?</h1>
+          <p className="muted ai-wiz-lead">Pick one. You can add nuance later.</p>
+          <div className="pd-cycle-grid">
+            {INTAKE_GOALS.map((g) => (
+              <Chip key={g.id} active={intake.primaryGoal === g.id} onClick={() => patch({ primaryGoal: g.id })}>
+                {g.label}
+              </Chip>
             ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
+
+      {step === 'schedule' && (
+        <>
+          <h1>How many days per week?</h1>
+          <p className="muted ai-wiz-lead">Then tap the days you want to lift.</p>
+          <div className="pd-cycle-grid">
+            {[2, 3, 4, 5, 6, 7].map((n) => (
+              <Chip key={n} active={intake.trainingDaysPerWeek === n} onClick={() => setFrequency(n)}>
+                {n}
+              </Chip>
+            ))}
+            <Chip active={intake.trainingDaysPerWeek === 'ai_recommend'} onClick={() => setFrequency('ai_recommend')}>
+              Let BuildIQ Recommend
+            </Chip>
+          </div>
+          <label>Preferred training days</label>
+          <div className="pd-cycle-grid">
+            {SCHEDULE_DAY_LABELS.map((day) => (
+              <Chip key={day} active={intake.preferredDays.includes(day)} onClick={() => toggleDay(day)}>
+                {day}
+              </Chip>
+            ))}
+          </div>
+        </>
+      )}
+
+      {step === 'session' && (
+        <>
+          <h1>How long should most workouts take?</h1>
+          <p className="muted ai-wiz-lead">This controls volume. A 30-minute day is not a 60-minute day with less rest.</p>
+          <div className="pd-cycle-grid">
+            {INTAKE_DURATION_OPTIONS.map((n) => (
+              <Chip
+                key={n}
+                active={intake.sessionMinutes === n && !customMinutes}
+                onClick={() => {
+                  setCustomMinutes('');
+                  patch({ sessionMinutes: n });
+                }}
+              >
+                {n} min
+              </Chip>
+            ))}
+            <Chip active={!!customMinutes} onClick={() => setCustomMinutes(String(intake.sessionMinutes))}>
+              Custom
+            </Chip>
+          </div>
+          {customMinutes !== '' && (
+            <>
+              <label htmlFor="ai-custom-min">Minutes</label>
+              <input
+                id="ai-custom-min"
+                type="number"
+                min={20}
+                max={120}
+                value={customMinutes}
+                onChange={(e) => {
+                  setCustomMinutes(e.target.value);
+                  patch({ sessionMinutes: Math.max(20, Math.min(120, Number(e.target.value) || 60)) });
+                }}
+              />
+            </>
+          )}
+          <h2 className="ai-wiz-sub">How should we organize training?</h2>
+          <div className="pd-cycle-grid">
+            {INTAKE_SPLITS.map((s) => (
+              <Chip key={s.id} active={intake.trainingSplit === s.id} onClick={() => patch({ trainingSplit: s.id as IntakeSplit })}>
+                {s.label}
+              </Chip>
+            ))}
+          </div>
+        </>
+      )}
+
+      {step === 'athlete' && (
+        <>
+          <h1>Experience and equipment</h1>
+          <p className="muted ai-wiz-lead">This shapes exercise complexity and what we can prescribe.</p>
+          <label>Training experience</label>
+          <div className="pd-cycle-grid">
+            {(['beginner', 'intermediate', 'advanced', 'not_sure'] as IntakeExperience[]).map((id) => (
+              <Chip key={id} active={intake.experienceLevel === id} onClick={() => patch({ experienceLevel: id })}>
+                {experienceLabel(id)}
+              </Chip>
+            ))}
+          </div>
+          <label>Available equipment</label>
+          <div className="pd-cycle-grid">
+            {EQUIPMENT_OPTIONS.map((opt) => (
+              <Chip key={opt.id} active={intake.equipment.includes(opt.id)} onClick={() => toggleList('equipment', opt.id)}>
+                {opt.label}
+              </Chip>
+            ))}
+          </div>
+        </>
+      )}
+
+      {step === 'style' && (
+        <>
+          <h1>How should the work feel?</h1>
+          <p className="muted ai-wiz-lead">Priorities are preferences, not a license to overtrain one area.</p>
+          <label>Priority areas</label>
+          <div className="pd-cycle-grid">
+            {INTAKE_PRIORITY_AREAS.map((area) => (
+              <Chip key={area} active={intake.priorityAreas.includes(area)} onClick={() => toggleList('priorityAreas', area)}>
+                {area}
+              </Chip>
+            ))}
+            <Chip active={intake.priorityAreas.length === 0} onClick={() => patch({ priorityAreas: [] })}>
+              No Special Priority
+            </Chip>
+          </div>
+          <label>Supersets</label>
+          <div className="pd-cycle-grid">
+            {(['minimal', 'sometimes', 'frequently', 'ai_decide'] as IntakeSupersets[]).map((id) => (
+              <Chip key={id} active={intake.supersetPreference === id} onClick={() => patch({ supersetPreference: id })}>
+                {supersetLabel(id)}
+              </Chip>
+            ))}
+          </div>
+          <label>Exercise variety</label>
+          <div className="pd-cycle-grid">
+            {(['consistent', 'balanced', 'high', 'ai_decide'] as IntakeVariety[]).map((id) => (
+              <Chip key={id} active={intake.varietyPreference === id} onClick={() => patch({ varietyPreference: id })}>
+                {varietyLabel(id)}
+              </Chip>
+            ))}
+          </div>
+          <label>Training feel</label>
+          <div className="pd-cycle-grid">
+            {INTAKE_FEEL_OPTIONS.map((opt) => (
+              <Chip key={opt.id} active={intake.trainingFeel.includes(opt.id)} onClick={() => toggleList('trainingFeel', opt.id as IntakeFeel)}>
+                {opt.label}
+              </Chip>
+            ))}
+          </div>
+        </>
+      )}
+
+      {step === 'notes' && (
+        <>
+          <h1>Anything else BuildIQ should know?</h1>
+          <p className="muted ai-wiz-lead">Optional. Structured choices already cover days, duration, and split.</p>
+          <label>Limitations / exercises to avoid</label>
+          <div className="pd-cycle-grid">
+            {INTAKE_LIMITATIONS.map((opt) => (
+              <Chip key={opt.id} active={intake.limitations.includes(opt.id)} onClick={() => toggleList('limitations', opt.id as IntakeLimitation)}>
+                {opt.label}
+              </Chip>
+            ))}
+          </div>
+          <label htmlFor="ai-wiz-notes">Free-text notes</label>
+          <textarea
+            id="ai-wiz-notes"
+            rows={4}
+            value={intake.notes}
+            onChange={(e) => patch({ notes: e.target.value })}
+            placeholder="I don’t like barbell back squats. I want the workouts to feel athletic."
+          />
+        </>
+      )}
+
+      {step === 'review' && (
+        <>
+          <h1>{hasSaved ? 'Your training profile' : 'Review and generate'}</h1>
+          <p className="muted ai-wiz-lead">
+            {hasSaved
+              ? 'We reused your last intake. Generate, or adjust anything first.'
+              : 'Structured choices plus your notes will be sent to the program designer.'}
+          </p>
+          <div className="ai-wiz-summary">
+            {summary.map((row) => (
+              <div key={row.label} className="ai-wiz-summary-row">
+                <span className="muted">{row.label}</span>
+                <b>{row.value}</b>
+              </div>
+            ))}
+            {intake.notes.trim() ? (
+              <div className="ai-wiz-summary-row">
+                <span className="muted">Notes</span>
+                <b>{intake.notes.trim()}</b>
+              </div>
+            ) : null}
+          </div>
+        </>
+      )}
 
       {error && <p className="pd-error">{error}</p>}
 
       <div className="actions" style={{ marginTop: 16 }}>
-        <button type="button" className="btn green" onClick={handleConfirm}>
-          Confirm and create calendar
-        </button>
-        <button type="button" className="btn secondary" onClick={() => setStep('describe')}>
-          Start over
+        {step !== 'review' ? (
+          <button
+            type="button"
+            className="btn green"
+            onClick={() => setStep(STEPS[Math.min(STEPS.length - 1, stepIndex + 1)])}
+          >
+            Continue
+          </button>
+        ) : (
+          <>
+            <button type="button" className="btn green" disabled={loading} onClick={() => void handleGenerate()}>
+              {loading ? 'Building your workouts…' : 'Generate program'}
+            </button>
+            <button type="button" className="btn secondary" disabled={loading} onClick={() => { setHasSaved(false); setStep('goal'); }}>
+              Adjust preferences
+            </button>
+          </>
+        )}
+        <button type="button" className="btn secondary" onClick={onCancel} disabled={loading}>
+          Skip — I&apos;ll add workouts later
         </button>
       </div>
     </div>

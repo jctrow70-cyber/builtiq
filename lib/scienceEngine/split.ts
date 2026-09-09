@@ -69,7 +69,7 @@ function mapExplicitType(raw: string): SplitDayType | null {
 }
 
 export function generateTrainingSplit(profile: TrainingProfile, _volumeTargets?: VolumeTarget[]): SplitDay[] {
-  const daysCount = Math.max(1, Math.min(6, profile.trainingDaysPerWeek || 4));
+  const daysCount = Math.max(1, Math.min(7, profile.trainingDaysPerWeek || 4));
   const days = pickDays(profile, daysCount);
 
   if (profile.explicitDayTypes && Object.keys(profile.explicitDayTypes).length) {
@@ -96,6 +96,7 @@ export function defaultSplitTypes(days: number): SplitDayType[] {
   if (days === 3) return ['Full Body', 'Full Body', 'Full Body'];
   if (days === 4) return ['Upper Body', 'Lower Body', 'Upper Body', 'Lower Body'];
   if (days === 5) return ['Upper Body', 'Lower Body', 'Push', 'Pull', 'Legs'];
+  if (days === 7) return ['Push', 'Pull', 'Legs', 'Upper Body', 'Lower Body', 'Push', 'Full Body'];
   return ['Push', 'Pull', 'Legs', 'Push', 'Pull', 'Legs'];
 }
 

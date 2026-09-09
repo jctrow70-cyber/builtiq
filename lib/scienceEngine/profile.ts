@@ -58,6 +58,13 @@ export function trainingProfileFromSources(input: {
     primaryGoal?: string;
     experienceLevel?: string;
     workingLoads?: Record<string, number>;
+    excludedExercises?: string[];
+    injuryLimitations?: string[];
+    supersetPreference?: string;
+    varietyPreference?: string;
+    trainingFeel?: string[];
+    trainingSplit?: string;
+    intakeNotes?: string;
   };
 }): TrainingProfile {
   const profile = input.profile || {};
@@ -84,8 +91,12 @@ export function trainingProfileFromSources(input: {
     preferredSessionMinutes: Number(config.sessionMinutes || tp.preferred_session_minutes) || 60,
     availableEquipment: asList(config.availableEquipment || tp.available_equipment || profile.available_equipment),
     preferredExercises: asList(tp.preferred_exercises),
-    excludedExercises: asList(tp.excluded_exercises),
-    injuryLimitations: asList(tp.injury_limitations),
+    excludedExercises: [...asList(tp.excluded_exercises), ...asList(config.excludedExercises)].filter(
+      (n, i, arr) => arr.findIndex((x) => x.toLowerCase() === n.toLowerCase()) === i
+    ),
+    injuryLimitations: [...asList(tp.injury_limitations), ...asList(config.injuryLimitations)].filter(
+      (n, i, arr) => arr.indexOf(n) === i
+    ),
     painAreas: asList(tp.pain_areas),
     priorityMuscles,
     lowPriorityMuscles: asMuscles(tp.low_priority_muscles),
@@ -102,5 +113,10 @@ export function trainingProfileFromSources(input: {
     includeCooldown: config.includeCooldown !== false,
     workingLoads: config.workingLoads || {},
     weeks: config.weeks || 6,
+    supersetPreference: (config.supersetPreference || tp.superset_preference || 'sometimes') as TrainingProfile['supersetPreference'],
+    varietyPreference: (config.varietyPreference || tp.variety_preference || 'balanced') as TrainingProfile['varietyPreference'],
+    trainingFeel: asList(config.trainingFeel || tp.training_feel),
+    trainingSplit: String(config.trainingSplit || tp.training_split || ''),
+    intakeNotes: String(config.intakeNotes || tp.intake_notes || ''),
   };
 }

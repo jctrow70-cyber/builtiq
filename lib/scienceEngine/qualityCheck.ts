@@ -1,6 +1,6 @@
 import type { ScienceProgram, ValidationIssue, ValidationResult } from './types';
 
-export function validateProgramQuality(program: ScienceProgram): ValidationResult {
+export function validateProgramQuality(program: ScienceProgram, sessionMinutes = 60): ValidationResult {
   const issues: ValidationIssue[] = [];
   const week1 = program.workouts.filter((w) => w.week === 1);
   const fullBody = week1.filter((w) => w.workoutType === 'Full Body');
@@ -52,6 +52,17 @@ export function validateProgramQuality(program: ScienceProgram): ValidationResul
     }
     if (workout.exercises.length < 3) {
       issues.push(err('THIN_SESSION', `${workout.name} has too few working exercises.`));
+    }
+    const minutes = Number(workout.estimatedMinutes || 0);
+    const cap = sessionMinutes;
+    if (minutes && cap && minutes > cap + 15) {
+      issues.push(warn('DURATION_OVER', `${workout.name} is estimated at ${minutes} min vs a ${cap}-minute session.`));
+    }
+    if (minutes && cap >= 55 && cap <= 70 && workout.exercises.length < 5 && workout.workoutType === 'Full Body') {
+      issues.push(warn('DURATION_UNDER', `${workout.name} looks light for a ~${cap}-minute full-body session.`));
+    }
+    if (workout.workoutType === 'Full Body' && cap >= 50 && workout.exercises.length < 6) {
+      issues.push(warn('FULL_BODY_THIN', `${workout.name} should usually cover more of the body in a ~${cap || 60}-minute session.`));
     }
   });
 

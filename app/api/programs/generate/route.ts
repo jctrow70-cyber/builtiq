@@ -7,6 +7,7 @@ import { createActivitiesFromWorkouts, updateDesignProgram } from '../../../../l
 import { fetchAllExerciseCatalog } from '../../../../lib/training/catalogFetch';
 import { builtinCatalogItems } from '../../../../lib/training/catalogSearch';
 import { normalizeEquipmentList } from '../../../../lib/training/equipmentFilter';
+import { limitationExclusions, limitationNotesFromIds } from '../../../../lib/programDesign/intakePreferences';
 import {
   SCIENCE_ENGINE_VERSION,
   applyAiWeekDesign,
@@ -53,14 +54,21 @@ export async function POST(request: Request) {
   }
 
   const weeks = Math.max(1, Math.min(12, Number(body?.weeks) || 6));
+  const structuredIntake = body?.structuredIntake === true;
   const promptSchedule = inferScheduleFromPrompt(prompt);
   const dayTypes: Record<string, string> =
-    promptSchedule.named && Object.keys(promptSchedule.dayTypes).length
-      ? promptSchedule.dayTypes
-      : body?.dayTypes && typeof body.dayTypes === 'object'
-        ? body.dayTypes
-        : {};
-  const days = promptSchedule.named ? normalizeDays(promptSchedule.days) : normalizeDays(body?.days);
+    structuredIntake && body?.dayTypes && typeof body.dayTypes === 'object'
+      ? body.dayTypes
+      : promptSchedule.named && Object.keys(promptSchedule.dayTypes).length
+        ? promptSchedule.dayTypes
+        : body?.dayTypes && typeof body.dayTypes === 'object'
+          ? body.dayTypes
+          : {};
+  const days = structuredIntake
+    ? normalizeDays(body?.days)
+    : promptSchedule.named
+      ? normalizeDays(promptSchedule.days)
+      : normalizeDays(body?.days);
   const mode = body?.mode === 'team' ? 'team' : 'personal';
   const teamId = body?.teamId ? String(body.teamId) : null;
   const focusMuscles = Array.isArray(body?.focusMuscles) ? body.focusMuscles.map(String) : [];
@@ -110,6 +118,15 @@ export async function POST(request: Request) {
       sessionMinutes: body?.sessionMinutes,
       primaryGoal: body?.primaryGoal,
       experienceLevel: body?.experienceLevel,
+      excludedExercises: Array.isArray(body?.limitations)
+        ? limitationExclusions(body.limitations)
+        : undefined,
+      injuryLimitations: Array.isArray(body?.limitations) ? limitationNotesFromIds(body.limitations) : undefined,
+      supersetPreference: body?.supersetPreference,
+      varietyPreference: body?.varietyPreference,
+      trainingFeel: Array.isArray(body?.trainingFeel) ? body.trainingFeel.map(String) : undefined,
+      trainingSplit: body?.trainingSplit,
+      intakeNotes: body?.notes,
     },
   });
 
@@ -152,7 +169,7 @@ export async function POST(request: Request) {
   let qualityWarnings = validation.issues.filter((i) => i.severity === 'warning');
 
   const apiKey = process.env.OPENAI_API_KEY;
-  if (apiKey && prompt.length >= 8) {
+  if (apiKey && (structuredIntake || prompt.length >= 8)) {
     try {
       const adapted = adaptCatalog(catalog || []);
       const recentTraining = await fetchRecentTrainingSummary(supabase, user.id);
@@ -180,7 +197,7 @@ export async function POST(request: Request) {
         const applied = applyAiWeekDesign(scienceProgram, parsed, adapted, scienceProfile);
         if (applied.applied) {
           scienceProgram = applied.program;
-          const quality = validateProgramQuality(scienceProgram);
+          const quality = validateProgramQuality(scienceProgram, scienceProfile.preferredSessionMinutes);
           qualityWarnings = [...qualityWarnings, ...quality.issues.filter((i) => i.severity === 'warning')];
         }
         plan = scienceProgramToAiPlan(scienceProgram, config);

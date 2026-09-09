@@ -11,6 +11,78 @@ Branch:
 Status:
 ```
 
+## BIQ-0165 - Structured Program Intake Plus Free Text
+
+Date: 2026-09-08  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Program Design AI setup is a short guided intake (goal, days, duration, split, experience, equipment, priorities, supersets, variety, notes) instead of a free-text box. Saved choices reuse as a training-profile summary. Those fields are sent as structured data on generate. Free text is optional nuance.
+
+### Purpose
+
+The model was inferring basic facts from prose. Duration, split, and days need to be selected, not guessed.
+
+### Changes
+
+- Multi-step intake with a review/generate screen
+- Reuses `st_training_profiles` plus additive columns
+- Generate honors `structuredIntake` days/types over prompt parsing
+- Designer prompt includes duration, superset, variety, feel, and full-body coverage guidance
+- Science fallback scales strength-move count by session minutes
+- Cardio/mobility dedicated days and chat-to-field parsing are not in this pass
+
+### Files Changed
+
+- `app/components/programDesign/AIProgramSetupWizard.tsx`
+- `app/api/programs/generate/route.ts`
+- `app/globals.css`
+- `lib/programDesign/intakePreferences.ts`
+- `lib/scienceEngine/programDesigner.ts`
+- `lib/scienceEngine/profile.ts`
+- `lib/scienceEngine/types.ts`
+- `lib/scienceEngine/duration.ts`
+- `lib/scienceEngine/generateProgram.ts`
+- `lib/scienceEngine/split.ts`
+- `lib/scienceEngine/qualityCheck.ts`
+- `lib/scienceEngine/version.ts`
+- `lib/scienceEngine/acceptanceCheck.ts`
+- `supabase/migrations/20250909_046_training_intake_preferences.sql`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+Additive on `st_training_profiles`: `training_split`, `preferred_training_days`, `priority_areas`, `superset_preference`, `variety_preference`, `training_feel`, `intake_limitations`, `intake_notes`.
+
+Apply `supabase/migrations/20250909_046_training_intake_preferences.sql` on test and live Supabase. Generate still works if the extra columns are missing (core profile fields still upsert).
+
+### Testing Steps
+
+1. `npm run test:science` passes.
+2. Create a new program. Intake asks goal, days, duration, split — not only a textarea.
+3. Pick 3 days, 60 minutes, Full Body, then add notes. Generate should honor those days and duration.
+4. Create another program. Review screen should show the saved profile with Generate / Adjust.
+5. Skip still opens the calendar without generating.
+6. Existing programs and set logs are unchanged.
+
+### Known Issues
+
+- Dedicated cardio/mobility days are not in this pass.
+- Chat does not yet write these structured fields.
+- Extra profile columns need the migration applied for full persist.
+
+### Recommended Commit Message
+
+```text
+BIQ-0165 Add structured program intake with optional free-text notes
+```
+
+---
+
 ## BIQ-0164 - Fix Vercel Type Error Spreading a Set
 
 Date: 2026-09-08  

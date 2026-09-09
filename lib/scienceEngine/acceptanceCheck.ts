@@ -3,6 +3,7 @@
  * Run: npx tsx lib/scienceEngine/acceptanceCheck.ts
  */
 import { assertInferScheduleExamples } from '../programDesign/inferSchedule';
+import { assertIntakeScheduleExamples } from '../programDesign/intakePreferences';
 import { trainingProfileFromSources } from './profile';
 import { generateProgram } from './generateProgram';
 import { applyAiWeekDesign } from './applyAiDesign';
@@ -40,6 +41,7 @@ function acceptanceProfile(): TrainingProfile {
 
 function run() {
   assertInferScheduleExamples();
+  assertIntakeScheduleExamples();
   const profile = acceptanceProfile();
   const program = generateProgram(profile);
   const validation = validateProgram(program, profile);

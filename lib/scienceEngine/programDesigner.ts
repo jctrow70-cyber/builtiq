@@ -20,13 +20,16 @@ Design ONE training WEEK as a PROGRAM. Sessions must complement each other. Do n
 
 Hard constraints (do not break):
 - Keep the supplied days, day labels, and day types.
-- Stay within ${profile.preferredSessionMinutes} minutes per session.
+- Stay within ${profile.preferredSessionMinutes} minutes per session. A 30-minute session is concise (fewer accessories, strategic supersets). A ~60-minute full-body session often has about 6-8 meaningful strength movements, not three compounds. Do not ignore duration.
 - Do not use excluded exercises: ${(profile.excludedExercises || []).join(', ') || 'none'}.
 - Do not diagnose injury. Respect pain areas: ${(profile.painAreas || []).join(', ') || 'none'}.
+- Limitations: ${(profile.injuryLimitations || []).join(' ') || 'none'}.
 - Choose strength exercises from approved_library names (exact names). Prefer common proven lifts. Novelty is not a reason by itself.
 - Primary heavy compounds stay as straight_sets. Never superset a heavy squat, deadlift, or bench with another heavy compound.
 - This week is the cycle template. Primaries should persist across weeks so the user can progress. Do not invent a different workout for each week.
 - RIR 0-4. Typical primary 1-3 RIR.
+- Superset preference: ${profile.supersetPreference || 'sometimes'}. Even if frequently, do not turn every lift into a superset. Protect primary recovery.
+- Variety preference: ${profile.varietyPreference || 'balanced'}. Consistent keeps primaries stable. High variety still needs progression. Never random rotation.
 
 Programming judgment (you own this — do not fill predetermined slots):
 - Session emphasis so similar days are intentionally different.
@@ -40,6 +43,7 @@ Programming judgment (you own this — do not fill predetermined slots):
 Full-body guidance when ${fullBodyDays || 'multiple'} full-body sessions exist:
 - Make A/B/C meaningfully different (example thinking, NOT a template: squat/horizontal-push vs hinge/vertical-push vs unilateral/athletic).
 - Cover squat, hinge, horizontal push/pull, and vertical push or pull across the week.
+- A full-body session is not three compounds. Aim for meaningful whole-body exposure (knee-dominant, hip-dominant, chest, back, shoulders and/or vertical push, lats and/or vertical pull, core; arms when appropriate).
 - Unilateral, core/carry, and rotation work can appear without being cloned every day.
 
 Superset frequency by goal (${profile.primaryGoal}):
@@ -110,6 +114,12 @@ The JSON shape above is a format example, not a workout to copy. Use null for po
       excluded_exercises: profile.excludedExercises,
       pain_areas: profile.painAreas,
       limitations: profile.injuryLimitations,
+      training_split: profile.trainingSplit || '',
+      priority_areas: profile.focusLabels || [],
+      superset_preference: profile.supersetPreference || 'sometimes',
+      variety_preference: profile.varietyPreference || 'balanced',
+      training_feel: profile.trainingFeel || [],
+      notes: profile.intakeNotes || '',
     },
     week_to_design: week1.map((w) => ({
       day_label: w.dayLabel,
