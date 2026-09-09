@@ -28,12 +28,13 @@ export function validateProgramQuality(program: ScienceProgram): ValidationResul
       issues.push(warn('PRIMARY_CLONE', 'Full-body days share the same primary lift. Distribute squat / hinge / unilateral work across the week.'));
     }
 
-    const patterns = new Set(fullBody.flatMap((w) => w.exercises.map((e) => e.movementPattern)));
+    const patternList = fullBody.flatMap((w) => w.exercises.map((e) => String(e.movementPattern)));
     ['squat', 'hinge', 'horizontal_push', 'horizontal_pull'].forEach((need) => {
-      const hit =
-        patterns.has(need as any) ||
-        (need === 'squat' && (patterns.has('lunge' as any) || [...patterns].some((p) => String(p).includes('squat')))) ||
-        [...patterns].some((p) => String(p) === need || String(p).includes(need));
+      const hit = patternList.some((p) => {
+        const value = String(p);
+        if (value === need || value.includes(need)) return true;
+        return need === 'squat' && value === 'lunge';
+      });
       if (!hit) issues.push(warn('PATTERN_GAP', `The full-body week is light on ${need.replace('_', ' ')} work.`));
     });
   }

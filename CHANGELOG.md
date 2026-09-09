@@ -11,6 +11,46 @@ Branch:
 Status:
 ```
 
+## BIQ-0164 - Fix Vercel Type Error Spreading a Set
+
+Date: 2026-09-08  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Production `next build` failed on `lib/scienceEngine/qualityCheck.ts` because a `Set` was spread with `[...patterns]`. The check now uses a plain array.
+
+### Purpose
+
+The app `tsconfig` targets ES5. Spreading a Set requires `downlevelIteration`, which this project does not enable.
+
+### Files Changed
+
+- `lib/scienceEngine/qualityCheck.ts`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. `npm run build` completes type-check.
+2. `npm run test:science` still passes.
+
+### Known Issues
+
+None.
+
+### Recommended Commit Message
+
+```text
+BIQ-0164 Fix ES5 Set spread that broke Vercel type-check
+```
+
+---
+
 ## BIQ-0163 - AI Designs the Week, Not Science Slots
 
 Date: 2026-09-08  
