@@ -11,6 +11,66 @@ Branch:
 Status:
 ```
 
+## BIQ-0167 - Programs Uses the Same Exercise Editor as Training
+
+Date: 2026-09-08  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+View / edit in Programs now uses the Training exercise-card layout: catalog search to add or replace lifts, form guides, supersets, and planned sets (reps, weight, RIR). Free-text “type a name” add is gone.
+
+### Purpose
+
+The Programs sheet only accepted a typed name, so users could not pick from the exercise database. Training already had that flow.
+
+### Changes
+
+- Shared Add Exercise catalog panel
+- Programs editor matches Training cards, Change, + Set, Remove, and remaining-week apply
+- Warm-up / cooldown use the same warmup cards as Training
+- Logging stays on Training; Programs still only edits the template
+- Completed set history is not rewritten
+
+### Files Changed
+
+- `lib/training/workoutTemplate.ts`
+- `app/components/training/AddExercisePanel.tsx`
+- `app/components/training/WorkoutTemplateEditor.tsx`
+- `app/components/programDesign/ProgramWorkoutPlan.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Programs → open a generated program → Workouts → View / edit.
+2. Confirm Warm Up / Strength / Cooldown cards look like Training (thumbs, Change, + Set, Remove).
+3. Strength → + Add Exercise. Search the library, pick a lift, set reps, Add Exercise. It should appear with a catalog link.
+4. Tap Change on an existing lift and pick a different catalog exercise. Sets should stay.
+5. Add a set, change reps/weight/RIR, Done/Back to workouts. The week card should show the new prescription.
+6. Mobile (~390px): catalog overlay and cards should scroll.
+
+### Known Issues
+
+- Training still has its own copy of the Add Exercise overlay in `page.tsx`; Programs uses the shared panel.
+- Pair-into-superset from an existing card (Join / Pair) is not in this Programs pass; Add Exercise → Superset is.
+- Occurrence-level edits (one calendar date only) are still Training-side.
+
+### Recommended Commit Message
+
+```text
+BIQ-0167 Use the Training catalog editor when editing programs
+```
+
+---
+
 ## BIQ-0166 - Intake Actually Changes the Generated Program
 
 Date: 2026-09-08  

@@ -2,11 +2,11 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import WorkoutTemplateEditor from '../training/WorkoutTemplateEditor';
 import { fetchProgramWorkoutTree } from '../../../lib/programDesign/programDesignApi';
 import {
   WORKOUT_SECTIONS,
   exerciseSection,
-  plannedSets,
   sectionExercises,
   summarizeExercise,
 } from '../../../lib/programDesign/workoutPreview';
@@ -35,8 +35,8 @@ export default function ProgramWorkoutPlan({
   const [error, setError] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  async function reload() {
-    setLoading(true);
+  async function reload(opts?: { silent?: boolean }) {
+    if (!opts?.silent) setLoading(true);
     setError('');
     const { data, error: loadError } = await fetchProgramWorkoutTree(supabase, programId);
     if (loadError) setError(loadError);
@@ -49,6 +49,10 @@ export default function ProgramWorkoutPlan({
   useEffect(() => {
     void reload();
   }, [programId]);
+
+  useEffect(() => {
+    setEditingId(null);
+  }, [week]);
 
   useEffect(() => {
     if (!openWorkoutId) return;
@@ -65,14 +69,28 @@ export default function ProgramWorkoutPlan({
   );
   const editing = weekWorkouts.find((w) => w.id === editingId) || workouts.find((w) => w.id === editingId) || null;
 
-  if (loading) return <p className="muted">Loading workouts…</p>;
-  if (error) return <p className="pd-error">{error}</p>;
-  if (!weekWorkouts.length) {
+  if (loading && !editing) return <p className="muted">Loading workouts…</p>;
+  if (error && !workouts.length) return <p className="pd-error">{error}</p>;
+  if (!weekWorkouts.length && !editing) {
     return <p className="muted">No workouts in week {week} yet.</p>;
+  }
+
+  if (editing) {
+    return (
+      <WorkoutTemplateEditor
+        supabase={supabase}
+        workout={editing}
+        allWorkouts={workouts}
+        canEdit={canEdit}
+        onBack={() => setEditingId(null)}
+        onReload={() => reload({ silent: true })}
+      />
+    );
   }
 
   return (
     <div className="pd-workout-plan">
+      {error && <p className="pd-error">{error}</p>}
       {weekWorkouts.map((workout) => {
         const count = (workout.st_exercises || []).length;
         return (
@@ -93,15 +111,6 @@ export default function ProgramWorkoutPlan({
           </article>
         );
       })}
-      {editing && (
-        <WorkoutEditSheet
-          supabase={supabase}
-          workout={editing}
-          canEdit={canEdit}
-          onClose={() => setEditingId(null)}
-          onChanged={reload}
-        />
-      )}
     </div>
   );
 }
@@ -131,320 +140,6 @@ function WorkoutPreview({ workout }: { workout: any }) {
           ))}
         </section>
       ))}
-    </div>
-  );
-}
-
-function WorkoutEditSheet({
-  supabase,
-  workout,
-  canEdit,
-  onClose,
-  onChanged,
-}: {
-  supabase: SupabaseClient;
-  workout: any;
-  canEdit: boolean;
-  onClose: () => void;
-  onChanged: () => Promise<void>;
-}) {
-  const [draft, setDraft] = useState<any>(workout);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const [addName, setAddName] = useState('');
-  const [addSets, setAddSets] = useState(3);
-  const [addReps, setAddReps] = useState('8-12');
-
-  useEffect(() => {
-    setDraft(workout);
-  }, [workout]);
-
-  const sections = WORKOUT_SECTIONS.map((sec) => ({
-    ...sec,
-    list: sectionExercises(draft, sec.id),
-  })).filter((sec) => sec.list.length);
-  const known = new Set(WORKOUT_SECTIONS.map((s) => s.id));
-  const other = (draft?.st_exercises || []).filter((e: any) => !known.has(exerciseSection(e)));
-  if (other.length) sections.push({ id: 'other', label: 'Other', list: other });
-
-  async function updateSet(setId: string, field: string, value: string | number | null) {
-    if (!canEdit) return;
-    setBusy(true);
-    setError('');
-    const { error: updateError } = await supabase.from('st_planned_sets').update({ [field]: value }).eq('id', setId);
-    setBusy(false);
-    if (updateError) {
-      setError(updateError.message);
-      return;
-    }
-    setDraft((prev: any) => ({
-      ...prev,
-      st_exercises: (prev.st_exercises || []).map((ex: any) => ({
-        ...ex,
-        st_planned_sets: (ex.st_planned_sets || []).map((s: any) => (s.id === setId ? { ...s, [field]: value } : s)),
-      })),
-    }));
-  }
-
-  async function addSet(ex: any) {
-    if (!canEdit) return;
-    const active = plannedSets(ex);
-    const n = active.length ? Math.max(...active.map((s: any) => s.set_number || 0)) + 1 : 1;
-    const sort = active.length ? Math.max(...active.map((s: any) => s.sort_order || 0)) + 1 : 0;
-    const sample = active[0];
-    setBusy(true);
-    setError('');
-    const { data, error: insertError } = await supabase
-      .from('st_planned_sets')
-      .insert({
-        exercise_id: ex.id,
-        sort_order: sort,
-        set_number: n,
-        set_type: 'working',
-        target_reps: sample?.target_reps || '',
-        target_rir: sample?.target_rir ?? null,
-      })
-      .select()
-      .single();
-    setBusy(false);
-    if (insertError || !data) {
-      setError(insertError?.message || 'Could not add set');
-      return;
-    }
-    setDraft((prev: any) => ({
-      ...prev,
-      st_exercises: (prev.st_exercises || []).map((row: any) =>
-        row.id === ex.id ? { ...row, st_planned_sets: [...(row.st_planned_sets || []), data] } : row
-      ),
-    }));
-  }
-
-  async function removeSet(setId: string) {
-    if (!canEdit) return;
-    setBusy(true);
-    setError('');
-    const { error: updateError } = await supabase.from('st_planned_sets').update({ is_deleted: true }).eq('id', setId);
-    setBusy(false);
-    if (updateError) {
-      setError(updateError.message);
-      return;
-    }
-    setDraft((prev: any) => ({
-      ...prev,
-      st_exercises: (prev.st_exercises || []).map((ex: any) => ({
-        ...ex,
-        st_planned_sets: (ex.st_planned_sets || []).map((s: any) => (s.id === setId ? { ...s, is_deleted: true } : s)),
-      })),
-    }));
-  }
-
-  async function removeExercise(exId: string) {
-    if (!canEdit) return;
-    if (!window.confirm('Remove this exercise from the plan? Past logged sets stay in history.')) return;
-    setBusy(true);
-    setError('');
-    const { error: deleteError } = await supabase.from('st_exercises').delete().eq('id', exId);
-    setBusy(false);
-    if (deleteError) {
-      setError(deleteError.message);
-      return;
-    }
-    setDraft((prev: any) => ({
-      ...prev,
-      st_exercises: (prev.st_exercises || []).filter((ex: any) => ex.id !== exId),
-    }));
-  }
-
-  async function addExercise() {
-    if (!canEdit || !addName.trim()) return;
-    const sort =
-      (draft.st_exercises || []).reduce((n: number, ex: any) => Math.max(n, Number(ex.sort_order || 0)), -1) + 1;
-    setBusy(true);
-    setError('');
-    const { data: ex, error: exError } = await supabase
-      .from('st_exercises')
-      .insert({
-        workout_id: draft.id,
-        section: 'strength',
-        sort_order: sort,
-        name: addName.trim(),
-      })
-      .select()
-      .single();
-    if (exError || !ex) {
-      setBusy(false);
-      setError(exError?.message || 'Could not add exercise');
-      return;
-    }
-    const setCount = Math.max(1, Math.min(10, Number(addSets) || 3));
-    const rows = Array.from({ length: setCount }, (_, i) => ({
-      exercise_id: ex.id,
-      sort_order: i,
-      set_number: i + 1,
-      set_type: 'working',
-      target_reps: addReps.trim() || '8-12',
-    }));
-    const { data: sets, error: setsInsertError } = await supabase.from('st_planned_sets').insert(rows).select();
-    setBusy(false);
-    if (setsInsertError) {
-      setError(setsInsertError.message);
-      return;
-    }
-    setDraft((prev: any) => ({
-      ...prev,
-      st_exercises: [...(prev.st_exercises || []), { ...ex, st_planned_sets: sets || [] }],
-    }));
-    setAddName('');
-  }
-
-  async function handleClose() {
-    await onChanged();
-    onClose();
-  }
-
-  return (
-    <div className="panel-overlay" onClick={() => void handleClose()}>
-      <div className="pd-sheet card te-plan-sheet" onClick={(e) => e.stopPropagation()}>
-        <div className="topline" style={{ justifyContent: 'space-between' }}>
-          <div>
-            <p className="pd-eyebrow">{draft.day_label}</p>
-            <h2>{draft.workout_type || 'Workout'}</h2>
-          </div>
-          <button type="button" className="btn small secondary" onClick={() => void handleClose()}>
-            Done
-          </button>
-        </div>
-        <p className="muted">
-          {canEdit
-            ? 'Change the planned exercises and sets. Completed history is not rewritten.'
-            : 'This plan is read-only.'}
-        </p>
-
-        {sections.map((sec) => (
-          <section key={sec.id} className="te-plan-section">
-            <h3>{sec.label}</h3>
-            {sec.list.map((ex: any) => {
-              const sets = plannedSets(ex);
-              return (
-                <div key={ex.id} className="pd-edit-ex">
-                  <div className="pd-edit-ex-head">
-                    <b>{ex.name}</b>
-                    {canEdit && (
-                      <button type="button" className="btn small secondary" disabled={busy} onClick={() => void removeExercise(ex.id)}>
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                  {sets.map((set: any) => (
-                    <div key={set.id} className="pd-edit-set">
-                      <span className="muted">Set {set.set_number || ''}</span>
-                      <input
-                        aria-label="Target reps"
-                        value={set.target_reps || ''}
-                        disabled={!canEdit || busy}
-                        placeholder="reps"
-                        onChange={(e) =>
-                          setDraft((prev: any) => ({
-                            ...prev,
-                            st_exercises: (prev.st_exercises || []).map((row: any) =>
-                              row.id === ex.id
-                                ? {
-                                    ...row,
-                                    st_planned_sets: (row.st_planned_sets || []).map((s: any) =>
-                                      s.id === set.id ? { ...s, target_reps: e.target.value } : s
-                                    ),
-                                  }
-                                : row
-                            ),
-                          }))
-                        }
-                        onBlur={(e) => void updateSet(set.id, 'target_reps', e.target.value)}
-                      />
-                      <input
-                        aria-label="Target weight"
-                        value={set.target_weight || ''}
-                        disabled={!canEdit || busy}
-                        placeholder="weight"
-                        onChange={(e) =>
-                          setDraft((prev: any) => ({
-                            ...prev,
-                            st_exercises: (prev.st_exercises || []).map((row: any) =>
-                              row.id === ex.id
-                                ? {
-                                    ...row,
-                                    st_planned_sets: (row.st_planned_sets || []).map((s: any) =>
-                                      s.id === set.id ? { ...s, target_weight: e.target.value } : s
-                                    ),
-                                  }
-                                : row
-                            ),
-                          }))
-                        }
-                        onBlur={(e) => void updateSet(set.id, 'target_weight', e.target.value || null)}
-                      />
-                      <input
-                        aria-label="Target RIR"
-                        value={set.target_rir ?? ''}
-                        disabled={!canEdit || busy}
-                        placeholder="RIR"
-                        inputMode="decimal"
-                        onChange={(e) =>
-                          setDraft((prev: any) => ({
-                            ...prev,
-                            st_exercises: (prev.st_exercises || []).map((row: any) =>
-                              row.id === ex.id
-                                ? {
-                                    ...row,
-                                    st_planned_sets: (row.st_planned_sets || []).map((s: any) =>
-                                      s.id === set.id ? { ...s, target_rir: e.target.value } : s
-                                    ),
-                                  }
-                                : row
-                            ),
-                          }))
-                        }
-                        onBlur={(e) => void updateSet(set.id, 'target_rir', e.target.value === '' ? null : Number(e.target.value))}
-                      />
-                      {canEdit && (
-                        <button type="button" className="btn small secondary" disabled={busy} onClick={() => void removeSet(set.id)}>
-                          ×
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  {canEdit && (
-                    <button type="button" className="btn small secondary" disabled={busy} onClick={() => void addSet(ex)}>
-                      Add set
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </section>
-        ))}
-
-        {canEdit && (
-          <div className="pd-add-ex">
-            <h3>Add exercise</h3>
-            <input value={addName} onChange={(e) => setAddName(e.target.value)} placeholder="Exercise name" />
-            <div className="row">
-              <div>
-                <label>Sets</label>
-                <input type="number" min={1} max={10} value={addSets} onChange={(e) => setAddSets(Number(e.target.value))} />
-              </div>
-              <div>
-                <label>Reps</label>
-                <input value={addReps} onChange={(e) => setAddReps(e.target.value)} placeholder="8-12" />
-              </div>
-            </div>
-            <button type="button" className="btn small green" disabled={busy || !addName.trim()} onClick={() => void addExercise()}>
-              Add exercise
-            </button>
-          </div>
-        )}
-
-        {error && <p className="pd-error">{error}</p>}
-      </div>
     </div>
   );
 }

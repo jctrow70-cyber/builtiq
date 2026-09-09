@@ -1118,3 +1118,33 @@ Users need to see what was built and fix it in the same place they created it. A
 - Generate finishes on the Workouts tab
 - Programs list → open program shows the same plan
 - History still does not change when templates are edited
+- Follow-up BIQ-0167: Programs template edits use the Training catalog/card editor (still not a logger)
+
+---
+
+## Decision 040 - Programs Template Edits Use the Training Editor Format
+
+Date: 2026-09-08  
+Status: Accepted  
+Category: Program Design
+
+### Decision
+
+Editing a workout in Programs uses the same catalog search, exercise cards, supersets, and planned-set fields as Training. Programs does not start a logging session. Add and Change pick from `st_exercise_catalog`.
+
+### Reason
+
+A name-only add sheet was not usable. Users already know the Training editor, including picking lifts from the database.
+
+### Alternatives Considered
+
+- Keep the Programs name-only sheet — rejected; no catalog
+- Send users to Training to edit — rejected; Program Design is where generated plans are reviewed
+- Embed the full Training logger in Programs — rejected; logging stays on Training
+
+### Impact
+
+- Shared `AddExercisePanel` and `WorkoutTemplateEditor`
+- `st_set_logs` history unchanged when the template is edited
+
+---
