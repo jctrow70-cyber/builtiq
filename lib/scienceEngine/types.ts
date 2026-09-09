@@ -151,6 +151,9 @@ export type ExercisePrescription = {
   coachingNote?: string;
   why?: string;
   setDetails?: PrescribedSet[];
+  supersetGroupId?: string | null;
+  supersetLabel?: string | null;
+  supersetOrder?: number | null;
 };
 
 export type WarmupItem = {
@@ -186,6 +189,7 @@ export type ScienceWorkout = {
   dayLabel: string;
   workoutType: SplitDayType;
   name: string;
+  emphasis?: string;
   warmup: WarmupItem[];
   potentiation: ExercisePrescription[];
   rampFor?: string;

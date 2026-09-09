@@ -9,12 +9,15 @@ import { builtinCatalogItems } from '../../../../lib/training/catalogSearch';
 import { normalizeEquipmentList } from '../../../../lib/training/equipmentFilter';
 import {
   SCIENCE_ENGINE_VERSION,
-  buildScienceCoachPrompt,
+  applyAiWeekDesign,
+  buildProgramDesignerPrompt,
   generateProgram,
   scienceProgramToAiPlan,
   trainingProfileFromSources,
   validateProgram,
+  validateProgramQuality,
 } from '../../../../lib/scienceEngine';
+import { adaptCatalog } from '../../../../lib/scienceEngine/catalogAdapter';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
@@ -145,16 +148,18 @@ export async function POST(request: Request) {
 
   let plan = scienceProgramToAiPlan(scienceProgram, config);
   let generationMethod: 'science' | 'science_ai' = 'science';
+  let qualityWarnings = validation.issues.filter((i) => i.severity === 'warning');
 
   const apiKey = process.env.OPENAI_API_KEY;
   if (apiKey && prompt.length >= 8) {
     try {
-      const { system, user: userContent } = buildScienceCoachPrompt(scienceProgram, scienceProfile, prompt);
-      const openai = new OpenAI({ apiKey, timeout: 20_000 });
+      const adapted = adaptCatalog(catalog || []);
+      const { system, user: userContent } = buildProgramDesignerPrompt(scienceProgram, scienceProfile, prompt, adapted);
+      const openai = new OpenAI({ apiKey, timeout: 60_000 });
       const completion = await openai.chat.completions.create({
         model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-        temperature: 0.4,
-        max_tokens: 1200,
+        temperature: 0.5,
+        max_tokens: 4000,
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: system },
@@ -163,11 +168,20 @@ export async function POST(request: Request) {
       });
       const raw = completion.choices[0]?.message?.content || '';
       const parsed = raw ? JSON.parse(raw) : null;
-      if (parsed?.summary) plan.program_summary = String(parsed.summary);
-      if (parsed?.coaching_notes || parsed?.explanation) {
-        plan.coaching_notes = String(parsed.coaching_notes || parsed.explanation);
+      if (parsed) {
+        const applied = applyAiWeekDesign(scienceProgram, parsed, adapted, scienceProfile);
+        if (applied.applied) {
+          scienceProgram = applied.program;
+          const quality = validateProgramQuality(scienceProgram);
+          qualityWarnings = [...qualityWarnings, ...quality.issues.filter((i) => i.severity === 'warning')];
+        }
+        plan = scienceProgramToAiPlan(scienceProgram, config);
+        if (parsed.summary) plan.program_summary = String(parsed.summary);
+        if (parsed.coaching_notes || parsed.explanation) {
+          plan.coaching_notes = String(parsed.coaching_notes || parsed.explanation);
+        }
+        generationMethod = applied.applied ? 'science_ai' : 'science';
       }
-      generationMethod = 'science_ai';
     } catch {
       generationMethod = 'science';
     }
@@ -277,6 +291,6 @@ export async function POST(request: Request) {
     generation_method: generationMethod,
     science_version: SCIENCE_ENGINE_VERSION,
     volume_targets: scienceProgram.volumeTargets,
-    validation_warnings: validation.issues.filter((i) => i.severity === 'warning'),
+    validation_warnings: qualityWarnings,
   });
 }

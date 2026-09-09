@@ -5,6 +5,8 @@
 import { assertInferScheduleExamples } from '../programDesign/inferSchedule';
 import { trainingProfileFromSources } from './profile';
 import { generateProgram } from './generateProgram';
+import { applyAiWeekDesign } from './applyAiDesign';
+import { adaptCatalog } from './catalogAdapter';
 import { evaluateProgression } from './progression';
 import { validateProgram } from './validator';
 import type { TrainingProfile } from './types';
@@ -59,9 +61,8 @@ function run() {
   assert(bench!.targetRir === 2, `Bench RIR should be 2, got ${bench!.targetRir}`);
 
   const warmupNames = upperA!.warmup.map((w) => w.name.toLowerCase()).join(' | ');
-  ['goblet squat', 'push-up to toe touch', 'rdl', 'row', 'lunge'].forEach((needle) => {
-    assert(warmupNames.includes(needle) || warmupNames.includes(needle.replace('-', ' ')), `Warm-up missing ${needle}: ${warmupNames}`);
-  });
+  assert(upperA!.warmup.length >= 3, `Upper A warm-up should have at least 3 moves, got ${warmupNames}`);
+  assert(/push-up|row|scapular|thoracic/i.test(warmupNames), `Upper A warm-up should prep press/row patterns, got ${warmupNames}`);
 
   const primer = upperA!.potentiation[0];
   assert(primer && /chest pass|medicine/i.test(primer.name), `Expected medicine-ball chest pass, got ${primer?.name}`);
@@ -166,6 +167,60 @@ function run() {
     `Full-body primaries should be compounds, got ${fbPrimaries.join(', ')}`
   );
   assert(fbWeek1[0].name === 'Full Body A' && fbWeek1[1].name === 'Full Body B' && fbWeek1[2].name === 'Full Body C', `Expected Full Body A/B/C names, got ${fbWeek1.map((w) => w.name).join(', ')}`);
+  const warmA = fbWeek1[0].warmup.map((w) => w.name).join(' | ');
+  const warmB = fbWeek1[1].warmup.map((w) => w.name).join(' | ');
+  assert(warmA !== warmB, `Full-body warm-ups should match each session, not a clone.\nA: ${warmA}\nB: ${warmB}`);
+
+  const designed = applyAiWeekDesign(
+    fullBody,
+    {
+      summary: 'Test week',
+      workouts: [
+        {
+          day_label: 'Mon',
+          name: 'Full Body A',
+          emphasis: 'Squat / press',
+          warmup: [{ name: 'Goblet Squat', sets: 1, reps: '8' }, { name: 'Push-Up to Toe Touch', sets: 1, reps: '6' }, { name: 'Band Row', sets: 1, reps: '12' }],
+          potentiation: null,
+          strength: [
+            { name: 'Back Squat', sets: 3, reps: '5-6', target_rir: 2, role: 'primary' },
+            { name: 'Barbell Bench Press', sets: 3, reps: '6-8', target_rir: 2 },
+            { name: 'Dumbbell Row', sets: 3, reps: '8-10' },
+            { name: 'Walking Lunge', sets: 2, reps: '10' },
+          ],
+        },
+        {
+          day_label: 'Wed',
+          name: 'Full Body B',
+          emphasis: 'Hinge / overhead',
+          warmup: [{ name: 'Light DB RDL', sets: 1, reps: '8' }, { name: 'Reverse Lunge + Rotation', sets: 1, reps: '5' }, { name: 'Scapular Push-Up', sets: 1, reps: '8' }],
+          strength: [
+            { name: 'Conventional Deadlift', sets: 3, reps: '4-6', target_rir: 2, role: 'primary' },
+            { superset: [{ name: 'Overhead Press', sets: 3, reps: '8' }, { name: 'Pull-Up', sets: 3, reps: '6-8' }] },
+            { name: 'Bulgarian Split Squat', sets: 3, reps: '8' },
+          ],
+        },
+        {
+          day_label: 'Fri',
+          name: 'Full Body C',
+          warmup: [{ name: 'Lateral Lunge', sets: 1, reps: '5' }, { name: 'Glute Bridge', sets: 1, reps: '10' }, { name: 'Band Row', sets: 1, reps: '12' }],
+          strength: [
+            { name: 'Bulgarian Split Squat', sets: 3, reps: '8' },
+            { name: 'Incline Dumbbell Press', sets: 3, reps: '8-10' },
+            { name: 'Seated Cable Row', sets: 3, reps: '10' },
+            { name: 'Pallof Press', sets: 2, reps: '10' },
+          ],
+        },
+      ],
+    },
+    adaptCatalog([]),
+    fullBodyProfile
+  );
+  assert(designed.applied && designed.replacedDays === 3, `AI week design should replace 3 days, got ${designed.replacedDays}`);
+  const designedWeek = designed.program.workouts.filter((w: any) => w.week === 1);
+  assert(designedWeek[0].exercises[0].name === 'Back Squat', `Designed A should start with squat, got ${designedWeek[0].exercises[0]?.name}`);
+  assert(designedWeek[1].exercises.some((e: any) => e.supersetGroupId), 'Designed B should keep a selective superset');
+  assert(designedWeek[0].warmup[0].name !== designedWeek[1].warmup[0].name, 'Designed warm-ups should differ by session');
 
   console.log('BIQ-0141 science engine acceptance checks passed.');
   console.log(`Bro split: ${broWeek1.map((w) => `${w.workoutType} (${w.exercises[0]?.name})`).join(' / ')}`);

@@ -392,7 +392,7 @@ See `CHANGELOG.md` BIQ-0013 and BIQ-0024 for full scope.
 
 ### Next priorities
 
-1. **Program Design overhaul (BIQ-0136)** — planning is separate from Training execution (Decision 030). Training calendar is always on; programs overlay start/end dates; personal recurring activities are supported (BIQ-0155). After generate, Programs shows the built workouts and you can edit them there (BIQ-0157). Remaining: occurrence-level recurring edits, richer activity builders, catalog pick when adding exercises, and program edit-from-prompt.
+1. **Program Design overhaul (BIQ-0136)** — planning is separate from Training execution (Decision 030). After generate, Programs shows the built workouts (BIQ-0157). AI now designs the week inside science constraints (BIQ-0161). Remaining: occurrence-level recurring edits, catalog pick when adding exercises, program edit-from-prompt, and progression from logged performance.
 2. **Group Training platform (BIQ-0043)** — P1–P8 complete; epic ready for preview QA
 2. ~~PR detection and strength trends on Progress tab~~ (BIQ-0026)
 3. **App admin roles** — move beyond env-only catalog import admin (see below)

@@ -915,6 +915,38 @@ ChatGPT-authored workouts were inconsistent and hard to validate. Programming ru
 
 ---
 
+## Decision 036 - AI Designs the Week Inside Science Constraints
+
+Date: 2026-09-08  
+Status: Accepted  
+Category: Program Design
+
+### Decision
+
+Deterministic science remains the source of hard constraints: schedule, volume bands, exclusions, pain rules, duration, valid exercises, RIR bounds, and fallback if the model fails.
+
+OpenAI is responsible for programming judgment when a key is present: session emphasis, exercise choice from a proven library, order, session-specific warm-ups, optional potentiation, and selective supersets. It designs the whole week in one call. Week 1 is the progression template for later weeks.
+
+The model’s workout JSON is applied when it is structurally valid. Summary-only responses are no longer the intended path.
+
+### Reason
+
+Decision 032 made AI explain a slot-filled program. Users experienced repetitive full-body days and identical warm-ups. The previous generate route also dropped AI workouts because of a 1200-token cap.
+
+### Alternatives Considered
+
+- Keep science as the only author — rejected; sessions still feel like filled slots
+- Let the model invent structure with no validator — rejected; history and safety depend on constraints
+- Per-day API calls — rejected; the week must be designed together
+
+### Impact
+
+- `POST /api/programs/generate` still falls back to science
+- Existing `st_exercises` / `st_set_logs` and superset columns are reused
+- Science version is 1.1.0
+
+---
+
 ## Decision 033 - Calendar First, Programs Overlay Dates
 
 Date: 2026-09-08  

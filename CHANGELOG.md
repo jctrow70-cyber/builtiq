@@ -11,6 +11,126 @@ Branch:
 Status:
 ```
 
+## BIQ-0162 - Fix Set Complete Invalid Syntax Error
+
+Date: 2026-09-08  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Checking Done on a set no longer fails with Postgres `invalid input syntax` when RIR was left blank. Empty RIR is saved as null. This restores logging on older generated programs as well as new ones.
+
+### Purpose
+
+Science migration 044 added `st_set_logs.actual_rir` as `smallint`. Completing a set always sent `actual_rir: ""`. Postgres rejects that as invalid syntax and does not name the column, so the existing retry never ran. Users on programs generated before the design change hit this whenever they ticked Done without picking RIR.
+
+### Changes
+
+- Empty `actual_rir` / `pain_score` coerce to null instead of empty string
+- Snapshot catalog/superset IDs must be valid UUIDs or null
+- Retry also catches `invalid input syntax` for numeric and uuid types
+
+### Files Changed
+
+- `app/page.tsx`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Open Training on a program generated before BIQ-0161.
+2. Enter weight/reps if desired. Leave RIR blank.
+3. Check Done on a set. It should save without an alert.
+4. Uncheck and re-check Done. Still saves.
+5. Optionally pick an RIR chip, then check Done. RIR should persist.
+6. Confirm Progress still shows the completed set.
+7. Repeat on a newly generated program.
+
+### Known Issues
+
+- Could not browser-verify against the live user account from this session.
+- If `actual_rir` column is missing (migration 044 not applied), the retry still drops that field and saves the rest.
+
+### Recommended Commit Message
+
+```text
+BIQ-0162 Fix set-complete invalid syntax when RIR is blank
+```
+
+---
+
+## BIQ-0161 - AI Designs the Training Week, Science Enforces Constraints
+
+Date: 2026-09-08  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Program generation still uses the science engine for days, volume caps, safety, and fallback. When OpenAI is available, it now designs the whole week — session emphasis, exercises, session-specific warm-ups, and optional supersets — instead of only writing a summary. Week 1 is copied across the cycle so primaries can progress.
+
+### Purpose
+
+The API asked the model for workouts but discarded them (`max_tokens` 1200). Deterministic slots plus a shared warm-up template made every full-body day feel the same.
+
+### Changes
+
+- New program-designer prompt with weekly context and a proven-exercise library
+- Apply AI week onto the science program when at least half the days validate
+- Warm-ups are built from that day’s movement patterns, not a copied template
+- Heavy primaries stay as straight sets; supersets reuse existing `superset_group_id`
+- Quality warnings for cloned full-body days / identical warm-ups
+- Science fallback if the model fails or the design is too thin
+- No database migration. Catalog metadata already on the adapter is enough for v1; extra joint-stress fields can wait
+
+### Files Changed
+
+- `app/api/programs/generate/route.ts`
+- `lib/scienceEngine/programDesigner.ts`
+- `lib/scienceEngine/applyAiDesign.ts`
+- `lib/scienceEngine/qualityCheck.ts`
+- `lib/scienceEngine/designerCatalog.ts`
+- `lib/scienceEngine/warmup.ts`
+- `lib/scienceEngine/generateProgram.ts`
+- `lib/scienceEngine/toAiPlan.ts`
+- `lib/scienceEngine/types.ts`
+- `lib/scienceEngine/version.ts`
+- `lib/scienceEngine/index.ts`
+- `lib/scienceEngine/acceptanceCheck.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Create a new full-body program with an OpenAI key set. Days should have different emphasis and warm-ups.
+2. Create a bro split. Chest/back/shoulders/arms/legs should still be those days, with AI choosing the lifts.
+3. If OpenAI is missing or fails, the science fallback still saves a valid program.
+4. `npm run test:science` passes.
+5. Existing logged workouts are unchanged.
+
+### Known Issues
+
+- AI still picks from a proven-name library, not the entire catalog.
+- Extra catalog fields (joint_stress, primary_lift_appropriate) are not migrated yet.
+- Programs already saved do not regenerate themselves.
+
+### Recommended Commit Message
+
+```text
+BIQ-0161 Let AI design the week inside science constraints
+```
+
+---
+
 ## BIQ-0160 - Honor Bro Split / Body-Part-Per-Day Programs
 
 Date: 2026-09-08  

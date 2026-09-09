@@ -125,7 +125,18 @@ const logHistoryKeys=(row:any)=>{const joinEx=row.st_planned_sets?.st_exercises;
 const logHasPerformance=(row:any)=>!!(
   row&&(String(row.actual_weight||'').trim()||String(row.actual_reps||'').trim()||String(row.actual_duration||'').trim()||String(row.actual_distance||'').trim()||String(row.log_notes||'').trim())
 );
-const snapshotForLog=(ex:any,set:any,workoutRef:any,catItem?:any)=>({snapshot_exercise_name:ex?.name||'',snapshot_catalog_exercise_id:ex?.catalog_exercise_id||null,snapshot_superset_group_id:ex?.superset_group_id||null,snapshot_muscle_group:ex?.muscle_group||'',snapshot_section:exerciseSection(ex),snapshot_exercise_type:exerciseTypeOf(ex,catItem),snapshot_set_type:set?.set_type||'working',snapshot_set_number:set?.set_number||1,snapshot_target_weight:set?.target_weight||'',snapshot_target_reps:set?.target_reps||'',snapshot_target_rpe:'',snapshot_day_label:workoutRef?.day_label||'',snapshot_workout_type:workoutRef?.workout_type||'',snapshot_week:workoutRef?.week??null,snapshot_day_order:workoutRef?.day_order??null});
+const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const uuidOrNull=(v:any)=>{const s=String(v||'').trim();return UUID_RE.test(s)?s:null;};
+const NUMERIC_SET_LOG_KEYS=new Set(['actual_rir','pain_score']);
+const coerceSetLogValue=(key:string,raw:any)=>{
+  if(NUMERIC_SET_LOG_KEYS.has(key)){
+    if(raw==null||String(raw).trim()==='')return null;
+    const n=Number(raw);
+    return Number.isFinite(n)?n:null;
+  }
+  return raw==null?'':String(raw);
+};
+const snapshotForLog=(ex:any,set:any,workoutRef:any,catItem?:any)=>({snapshot_exercise_name:ex?.name||'',snapshot_catalog_exercise_id:uuidOrNull(ex?.catalog_exercise_id),snapshot_superset_group_id:uuidOrNull(ex?.superset_group_id),snapshot_muscle_group:ex?.muscle_group||'',snapshot_section:exerciseSection(ex),snapshot_exercise_type:exerciseTypeOf(ex,catItem),snapshot_set_type:set?.set_type||'working',snapshot_set_number:set?.set_number||1,snapshot_target_weight:set?.target_weight||'',snapshot_target_reps:set?.target_reps||'',snapshot_target_rpe:set?.target_rpe||'',snapshot_day_label:workoutRef?.day_label||'',snapshot_workout_type:workoutRef?.workout_type||'',snapshot_week:workoutRef?.week??null,snapshot_day_order:workoutRef?.day_order??null});
 const catalogByName=(items:any[])=>{const map:any={};(items||[]).filter((c:any)=>!c.is_archived).forEach((c:any)=>{map[String(c.name||'').toLowerCase()]=c;});return map;};
 const today=todayYmd;
 const makeInviteCode=()=>(typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID().replace(/-/g,'').slice(0,8):Math.random().toString(36).slice(2,10)).toUpperCase();
@@ -2017,19 +2028,19 @@ export default function Page(){
   const payload:any={
     planned_set_id:sid,
     user_id:uid,
-    logged_by_user_id:coachLogging?session.user.id:null,
-    team_id:logTeamId,
+    logged_by_user_id:uuidOrNull(coachLogging?session.user.id:null),
+    team_id:uuidOrNull(logTeamId),
     log_date:logDay,
     completed:markComplete,
     ...snapshotForLog(ex,ps,workoutRef,catItem)
   };
   const allKeys=Array.from(new Set([...fieldKeys,'actual_weight','actual_reps','actual_rpe','actual_rir','actual_duration','actual_distance','actual_pace','actual_hr','actual_calories','log_notes']));
   allKeys.forEach((k:string)=>{
-    if(Object.prototype.hasOwnProperty.call(fieldUpdates,k))payload[k]=fieldUpdates[k]==null?'':String(fieldUpdates[k]);
-    else payload[k]=old[k]??'';
+    const raw=Object.prototype.hasOwnProperty.call(fieldUpdates,k)?fieldUpdates[k]:old[k];
+    payload[k]=coerceSetLogValue(k,raw);
   });
   let{data,error}=await supabase.from('st_set_logs').upsert(payload,{onConflict:'planned_set_id,user_id,log_date'}).select().single();
-  if(error && /actual_rir|pain_score/i.test(error.message||'')){
+  if(error && /actual_rir|pain_score|invalid input syntax for type (smallint|integer|numeric|uuid)/i.test(error.message||'')){
     delete payload.actual_rir;
     delete payload.pain_score;
     ({data,error}=await supabase.from('st_set_logs').upsert(payload,{onConflict:'planned_set_id,user_id,log_date'}).select().single());

@@ -290,7 +290,13 @@ function buildWorkout(opts: {
 
   const primary = exercises.find((ex) => ex.role === 'primary') || exercises[0];
   const primaryCatalog = primary ? findByName(catalog, primary.name) : null;
-  const warmup = generateWarmup({ workoutType: day.workoutType, muscles: day.targetMuscles, profile, catalog });
+  const warmup = generateWarmup({
+    workoutType: day.workoutType,
+    muscles: exercises.flatMap((ex) => ex.primaryMuscles).length ? exercises.flatMap((ex) => ex.primaryMuscles) : day.targetMuscles,
+    profile,
+    catalog,
+    sessionPatterns: exercises.map((ex) => ex.movementPattern),
+  });
   const primer = generatePotentiation({ profile, primary: primaryCatalog, catalog });
   const workingLoad = workingLoadFor(profile, primary?.name || '');
   const rampSets =
@@ -305,6 +311,7 @@ function buildWorkout(opts: {
     dayLabel: day.dayLabel,
     workoutType: day.workoutType,
     name,
+    emphasis: sessionEmphasis(day.workoutType, Math.max(0, variantIndex)),
     warmup: warmup.items,
     potentiation: primer.items,
     rampFor: primary?.name,
@@ -335,6 +342,28 @@ function defaultCooldown(type: SplitDay['workoutType']) {
     { name: 'Doorway Pec Stretch', category: 'mobility' as const, reps: '30 sec/side', sets: 1, muscleGroup: 'chest' },
     { name: 'Lat Stretch', category: 'mobility' as const, reps: '30 sec/side', sets: 1, muscleGroup: 'lats' },
   ];
+}
+
+function sessionEmphasis(type: SplitDay['workoutType'], variantIndex: number): string {
+  if (type === 'Full Body') {
+    return (
+      [
+        'Squat / horizontal push',
+        'Hinge / vertical push',
+        'Unilateral / athletic hypertrophy',
+        'Accessory balance / density',
+      ][variantIndex % 4] || 'Whole-body strength'
+    );
+  }
+  if (type === 'Upper Body') return variantIndex % 2 === 0 ? 'Horizontal push / pull' : 'Vertical push / pull';
+  if (type === 'Lower Body' || type === 'Legs') return 'Squat and hinge';
+  if (type === 'Chest') return 'Horizontal press volume';
+  if (type === 'Back') return 'Vertical and horizontal pull';
+  if (type === 'Shoulders') return 'Overhead strength and delt isolation';
+  if (type === 'Arms') return 'Elbow flexion and extension';
+  if (type === 'Push') return 'Pressing and triceps';
+  if (type === 'Pull') return 'Rows, pulldowns, and biceps';
+  return type;
 }
 
 function programName(profile: TrainingProfile): string {
