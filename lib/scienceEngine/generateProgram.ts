@@ -186,7 +186,11 @@ export function generateProgram(profile: TrainingProfile, catalogRows?: any[]): 
   });
   const sessionCursor: Record<string, number> = {};
 
-  const weekCount = Math.max(1, Math.min(12, profile.weeks || rules.blockWeeksDefault));
+  const profileWeeks = Number(profile.weeks);
+  const weekCount = Math.max(
+    1,
+    Math.min(12, Number.isFinite(profileWeeks) && profileWeeks >= 1 ? Math.floor(profileWeeks) : rules.blockWeeksDefault)
+  );
   const usedThisWeek: string[] = [];
   const week1 = split.map((day, index) => {
     const built = buildWorkout({

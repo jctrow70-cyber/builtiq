@@ -11,6 +11,76 @@ Branch:
 Status:
 ```
 
+## BIQ-0170 - Respect Custom Program Week Length
+
+Date: 2026-09-10  
+Branch: cursor/fix-custom-weeks-generation-c29a  
+Status: Completed
+
+### Summary
+
+Custom cycle length (including 1 week) is honored when generating workouts. Programs no longer expand to the old 6-week default when you asked for a shorter custom length.
+
+### Purpose
+
+Users who set Custom weeks (for example 1 week) still got a multi-week plan because generation fell back to 6 weeks, and `cycle_length_weeks` could stay stale at 6 after Training week edits.
+
+### Changes
+
+- Generate API loads the existing program’s saved week length and uses that instead of defaulting to 6
+- After generate, `weeks`, `cycle_length_weeks`, and `end_date` stay in sync with what was built
+- `cycleLengthOf` prefers `weeks` when fields disagree (Training edits update `weeks`)
+- Training week selectors use `cycleLengthOf`
+- Updating weeks in Training also updates `cycle_length_weeks` and `end_date`
+- Create Program Custom starts from 1 (or the last preset) instead of jumping to 10
+- AI setup review shows program length and whether week 1 will be copied across the cycle
+- NOT NULL DB errors are no longer misread as missing columns
+
+### Files Changed
+
+- `app/api/programs/generate/route.ts`
+- `app/components/programDesign/CreateProgramFlow.tsx`
+- `app/components/programDesign/AIProgramSetupWizard.tsx`
+- `app/components/programDesign/ProgramDesignHome.tsx`
+- `app/components/training/TrainingWeekSelector.tsx`
+- `app/components/training/ActivePlanCard.tsx`
+- `app/page.tsx`
+- `lib/programDesign/cycle.ts`
+- `lib/scienceEngine/profile.ts`
+- `lib/scienceEngine/generateProgram.ts`
+- `lib/training/aiProgramPlan.ts`
+- `lib/training/programStatus.ts`
+- `scripts/test-custom-weeks-generation.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Programs → Create Program → Cycle length **Custom** → set **1**.
+2. Confirm the end card shows **1 Week**.
+3. Complete AI intake → Generate. Review should say **1 week**.
+4. Open Workouts — only week 1 should exist (Previous/Next week disabled at week 1).
+5. Create another program with Custom **8**. Generate. Confirm weeks 1–8 exist, not a silent 6.
+6. Training → change Weeks on a program → blur/save → Programs should show the same length.
+7. Mobile (~390px): Custom weeks input and Generate still usable.
+
+### Known Issues
+
+- Cycle lengths over 12 weeks still generate at most 12 weeks of workouts.
+- For programs longer than 4 weeks, week 1 is still copied across the cycle (by design for progression).
+
+### Recommended Commit Message
+
+```text
+BIQ-0170 Respect custom program week length on generate
+```
+
+---
+
 ## BIQ-0169 - Reorder Exercises in Programs Edit
 
 Date: 2026-09-08  

@@ -28,8 +28,36 @@ export function cycleLengthOf(program: {
   cycle_length_weeks?: number | null;
   weeks?: number | null;
 }): number {
-  const n = Number(program.cycle_length_weeks || program.weeks || 6);
-  return Math.max(1, Math.min(52, n || 6));
+  // Prefer `weeks` when both are set — Training edits update `weeks`, and the two
+  // can drift if `cycle_length_weeks` was left at an older create-time value (often 6).
+  const weeks = Number(program.weeks);
+  const cycle = Number(program.cycle_length_weeks);
+  const n =
+    Number.isFinite(weeks) && weeks >= 1
+      ? weeks
+      : Number.isFinite(cycle) && cycle >= 1
+        ? cycle
+        : 6;
+  return Math.max(1, Math.min(52, Math.floor(n)));
+}
+
+/** Weeks of workouts to generate (AI/science). Caps at 12; never invents 6 when length is known. */
+export function generationWeeksOf(
+  programOrWeeks: number | { cycle_length_weeks?: number | null; weeks?: number | null } | null | undefined,
+  bodyWeeks?: unknown
+): number {
+  const fromProgram =
+    programOrWeeks == null
+      ? null
+      : typeof programOrWeeks === 'number'
+        ? programOrWeeks
+        : cycleLengthOf(programOrWeeks);
+  const fromBody = Number(bodyWeeks);
+  const bodyOk = Number.isFinite(fromBody) && fromBody >= 1;
+  const programOk = fromProgram != null && Number.isFinite(fromProgram) && fromProgram >= 1;
+  // Saved program cycle length is authoritative when generating onto an existing program.
+  const n = programOk ? fromProgram : bodyOk ? fromBody : 6;
+  return Math.max(1, Math.min(12, Math.floor(n)));
 }
 
 export function programDateRange(program: {

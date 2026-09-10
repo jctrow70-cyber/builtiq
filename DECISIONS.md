@@ -1036,6 +1036,33 @@ BIQ-0165 showed the intake and then saved the science slot template whenever cat
 
 ---
 
+## Decision 040 - Saved Cycle Length Controls Generation
+
+Date: 2026-09-10  
+Status: Accepted  
+Category: Program Design
+
+### Decision
+
+When generating workouts onto an existing program, the saved cycle length (`weeks` / `cycle_length_weeks`) is authoritative. Do not fall back to 6 weeks if the program was created with a custom length (including 1 week). Keep `weeks`, `cycle_length_weeks`, and `end_date` in sync whenever length changes. Prefer `weeks` when the two length fields disagree, because Training edits historically updated only `weeks`.
+
+### Reason
+
+Users who chose Custom weeks still saw ~6 weeks of workouts. Generation used `Number(body.weeks) || 6` and Program Design preferred a stale `cycle_length_weeks` of 6 after Training length edits.
+
+### Alternatives Considered
+
+- Always trust the request body — rejected; the wizard default of 6 could override a 1-week program
+- Prefer `cycle_length_weeks` forever — rejected while Training only patched `weeks`
+- Generate only week 1 and leave the rest empty — deferred; multi-week programs still copy week 1 across the cycle for progression (Decision 032/033)
+
+### Impact
+
+- BIQ-0170
+- Generation still caps at 12 weeks of workout rows
+
+---
+
 ## Decision 033 - Calendar First, Programs Overlay Dates
 
 Date: 2026-09-08  

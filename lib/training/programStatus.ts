@@ -45,9 +45,13 @@ export function isMissingProgramStatusColumn(error: { message?: string } | null 
 /** Parse Supabase/PostgREST errors like "Could not find the 'start_date' column ..." */
 export function missingProgramColumnFromError(error: { message?: string } | null | undefined): string | null {
   const msg = error?.message || '';
+  // Do not treat NOT NULL / check violations as missing columns (stripping would make retries worse).
+  if (/violates not-null constraint|violates check constraint|invalid input syntax/i.test(msg)) {
+    return null;
+  }
   const quoted = msg.match(/could not find the ['"](\w+)['"] column/i);
   if (quoted) return quoted[1].toLowerCase();
-  const relation = msg.match(/column ["'](\w+)["'] of relation/i);
+  const relation = msg.match(/column ["'](\w+)["'] of relation [^"]+ does not exist/i);
   if (relation) return relation[1].toLowerCase();
   const pgMissing = msg.match(/column (?:[\w.]+\.)?(\w+) does not exist/i);
   if (pgMissing) return pgMissing[1].toLowerCase();
