@@ -11,6 +11,63 @@ Branch:
 Status:
 ```
 
+## BIQ-0171 - Block Same-Day Deadlift Variations
+
+Date: 2026-09-10  
+Branch: cursor/fix-same-day-deadlift-c29a  
+Status: Completed
+
+### Summary
+
+A single workout can no longer include two deadlift variations (for example Conventional Deadlift + Romanian Deadlift). Full-body weeks may still use different hinge variations on different days.
+
+### Purpose
+
+Users saw Conventional Deadlift and Romanian Deadlift in the same session. Science templates only schedule one hinge slot per day; the AI week rewrite could still stack both because RDL and conventional were treated as separate movement families.
+
+### Changes
+
+- Session-level conflict: any second deadlift variation is rejected while building a workout
+- AI apply path skips / strips extra deadlift variations in the same day
+- Quality check warns on `SAME_DAY_DEADLIFTS`
+- Program designer prompt: never two deadlift variations in one session
+- Week-level variety kept: Day A RDL + Day B conventional remains allowed
+
+### Files Changed
+
+- `lib/scienceEngine/exerciseSelection.ts`
+- `lib/scienceEngine/generateProgram.ts`
+- `lib/scienceEngine/applyAiDesign.ts`
+- `lib/scienceEngine/qualityCheck.ts`
+- `lib/scienceEngine/programDesigner.ts`
+- `scripts/test-same-day-deadlift.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Programs → create a full-body plan → Generate.
+2. Open each training day: at most one of Conventional / Trap Bar / Romanian / RDL per day.
+3. Across the week, different days may still use different hinge variations (e.g. RDL on one day, conventional on another).
+4. `npx tsx scripts/test-same-day-deadlift.ts`
+5. `npx tsx lib/scienceEngine/acceptanceCheck.ts`
+
+### Known Issues
+
+- Other high lower-back pairings (e.g. heavy squat + heavy good morning) are still prompt-guided rather than hard-blocked.
+
+### Recommended Commit Message
+
+```text
+BIQ-0171 Block two deadlift variations in the same workout
+```
+
+---
+
 ## BIQ-0169 - Reorder Exercises in Programs Edit
 
 Date: 2026-09-08  

@@ -1036,6 +1036,34 @@ BIQ-0165 showed the intake and then saved the science slot template whenever cat
 
 ---
 
+## Decision 041 - One Deadlift Variation Per Session
+
+Date: 2026-09-10  
+Status: Accepted  
+Category: Program Design
+
+### Decision
+
+A single workout may include at most one deadlift variation (conventional, trap-bar, Romanian, stiff-leg, RDL, etc.). Full-body weeks may still use different hinge variations on different days (for example RDL on Day A and conventional on Day B).
+
+### Reason
+
+Users reported Conventional Deadlift and Romanian Deadlift in the same session. Science day templates only schedule one hinge slot, but the AI week rewrite could stack both because RDL and conventional were tracked as separate movement families for week variety.
+
+### Alternatives Considered
+
+- Treat all deadlifts as one family for the whole week — rejected; that would block intentional Day A RDL + Day B conventional variety
+- Prompt-only guidance — rejected; the model still stacked both on one day
+- Allow same-day RDL after conventional as “accessory” — rejected; lower-back fatigue is too high for most users
+
+### Impact
+
+- BIQ-0171
+- Session conflict checks in exercise selection and AI apply
+- Quality warning `SAME_DAY_DEADLIFTS`
+
+---
+
 ## Decision 033 - Calendar First, Programs Overlay Dates
 
 Date: 2026-09-08  

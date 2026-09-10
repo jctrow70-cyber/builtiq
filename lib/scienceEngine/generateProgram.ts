@@ -247,6 +247,7 @@ function buildWorkout(opts: {
   const { profile, catalog, day, index, split } = opts;
   const name = splitDayName(day.workoutType, index, split.map((d) => d.workoutType));
   const already: string[] = [...(opts.alreadyThisWeek || [])];
+  const sessionNames: string[] = [];
   const exercises: ExercisePrescription[] = [];
   const variantIndex =
     split.slice(0, index + 1).filter((d) => d.workoutType === day.workoutType).length - 1;
@@ -262,6 +263,7 @@ function buildWorkout(opts: {
       profile,
       muscle: slot.muscle,
       role: slot.role,
+      sessionNames,
       pattern: slot.pattern,
       alreadyNames: already,
       preferredNames: profile.varietyPreference === 'high' ? undefined : slot.preferred,
@@ -280,6 +282,7 @@ function buildWorkout(opts: {
     });
     exercises.push(prescribed);
     already.push(picked.name);
+    sessionNames.push(picked.name);
     const credits = creditSets(contributionsForExercise(picked), sets);
     Object.entries(credits).forEach(([muscle, value]) => {
       opts.remaining[muscle] = Math.max(0, (opts.remaining[muscle] || 0) - value);

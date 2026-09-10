@@ -54,6 +54,7 @@ Superset frequency by goal (${profile.primaryGoal}):
 - short sessions: supersets may help fit volume.
 
 Avoid: heavy squat + heavy RDL; heavy deadlift + bent-over row; two chest presses; two high lower-back-fatigue compounds.
+Never put two deadlift variations in the same session (e.g. Conventional Deadlift + Romanian Deadlift / RDL). Put different hinge variations on different days of the week instead.
 
 Session structure is flexible. A day may include some of: dynamic warm-up, potentiation, primary, secondary, accessories, optional supersets, core/carries, optional finisher, cooldown. Not every section every day.
 
