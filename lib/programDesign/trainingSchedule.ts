@@ -15,6 +15,8 @@ export type TrainingDayItem = {
   activityId: string | null;
   isRest: boolean;
   source?: 'program' | 'calendar';
+  isRecurring?: boolean;
+  occurrenceDate?: string;
 };
 
 export type TrainingDayPlan = {

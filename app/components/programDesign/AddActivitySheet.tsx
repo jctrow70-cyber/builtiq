@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { ACTIVITY_TYPE_META } from '../../../lib/programDesign/activityTypes';
-import { draftWeekdays, normalizeWeekdays } from '../../../lib/programDesign/recurrence';
+import { draftWeekdays, isWeeklyRecurrence, normalizeWeekdays } from '../../../lib/programDesign/recurrence';
+import { draftFromCalendarActivity, type UserCalendarActivity } from '../../../lib/programDesign/userCalendar';
 import {
   ACTIVITY_TYPES,
   WEEKDAY_LABELS,
@@ -14,13 +15,15 @@ import {
 type AddActivitySheetProps = {
   dayLabel: string;
   existing?: ProgramActivity | null;
+  calendarExisting?: UserCalendarActivity | null;
+  occurrenceDate?: string;
   allowRecurrence?: boolean;
   allowMultiDay?: boolean;
   allowRemainingWeeks?: boolean;
   defaultWeekday?: number;
   onClose: () => void;
   onSave: (draft: ActivityDraft) => Promise<void>;
-  onDelete?: () => Promise<void>;
+  onDelete?: (scope?: 'this-day' | 'series') => Promise<void>;
 };
 
 function emptyDraft(type: ActivityType = 'strength', weekday = 0): ActivityDraft {
@@ -49,6 +52,17 @@ function draftFromActivity(activity: ProgramActivity, weekday: number): Activity
       weekday
     ),
   };
+}
+
+function initialDraft(
+  existing: ProgramActivity | null | undefined,
+  calendarExisting: UserCalendarActivity | null | undefined,
+  occurrenceDate: string | undefined,
+  defaultWeekday: number
+): ActivityDraft {
+  if (calendarExisting) return draftFromCalendarActivity(calendarExisting, occurrenceDate || calendarExisting.activity_date);
+  if (existing) return draftFromActivity(existing, defaultWeekday);
+  return emptyDraft('strength', defaultWeekday);
 }
 
 function toggleWeekday(days: number[], day: number): number[] {
@@ -86,6 +100,8 @@ function WeekdayPicker({
 export default function AddActivitySheet({
   dayLabel,
   existing,
+  calendarExisting,
+  occurrenceDate,
   allowRecurrence = false,
   allowMultiDay = false,
   allowRemainingWeeks = false,
@@ -94,24 +110,61 @@ export default function AddActivitySheet({
   onSave,
   onDelete,
 }: AddActivitySheetProps) {
-  const [draft, setDraft] = useState<ActivityDraft>(
-    existing ? draftFromActivity(existing, defaultWeekday) : emptyDraft('strength', defaultWeekday)
+  const [draft, setDraft] = useState<ActivityDraft>(() =>
+    initialDraft(existing, calendarExisting, occurrenceDate, defaultWeekday)
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const isLegacy = !!existing?.id.startsWith('legacy-');
   const weekdays = draftWeekdays(draft, defaultWeekday);
+  const isCalendarSeries = !!calendarExisting && isWeeklyRecurrence(calendarExisting.recurrence);
+  const scope = draft.occurrenceScope || (isCalendarSeries ? 'this-day' : 'series');
+  const isNew = !existing && !calendarExisting;
+  const showWeekdays =
+    allowMultiDay &&
+    ((isNew && (allowRecurrence ? draft.recurrence === 'weekly' : true)) ||
+      (isCalendarSeries && scope === 'series'));
+  const showSeriesRecurrence = isCalendarSeries && scope === 'series';
+  const editingAny = !!(existing || calendarExisting);
 
   useEffect(() => {
-    setDraft(existing ? draftFromActivity(existing, defaultWeekday) : emptyDraft('strength', defaultWeekday));
+    setDraft(initialDraft(existing, calendarExisting, occurrenceDate, defaultWeekday));
     setError('');
-  }, [existing, defaultWeekday]);
+  }, [existing, calendarExisting, occurrenceDate, defaultWeekday]);
+
+  function setScope(next: 'this-day' | 'series') {
+    if (!calendarExisting) {
+      setDraft({ ...draft, occurrenceScope: next });
+      return;
+    }
+    if (next === 'series') {
+      setDraft({
+        ...draftFromCalendarActivity(
+          { ...calendarExisting, details: { ...calendarExisting.details, occurrence_overrides: {} } },
+          occurrenceDate || calendarExisting.activity_date
+        ),
+        occurrenceScope: 'series',
+        title: calendarExisting.title,
+        activity_type: calendarExisting.activity_type,
+        duration_minutes: calendarExisting.duration_minutes,
+        notes: calendarExisting.notes,
+        details: { ...(calendarExisting.details || {}) },
+        recurrence: calendarExisting.recurrence,
+        recurrence_until: calendarExisting.recurrence_until,
+        recurrence_weekdays: calendarExisting.recurrence_weekdays,
+      });
+      return;
+    }
+    setDraft({
+      ...draftFromCalendarActivity(calendarExisting, occurrenceDate || calendarExisting.activity_date),
+      occurrenceScope: 'this-day',
+    });
+  }
 
   const type = draft.activity_type;
   const showCardio = type === 'cardio';
   const showMobility = type === 'mobility' || type === 'stretching';
   const showDuration = type !== 'rest';
-  const showWeekdays = allowMultiDay && !existing && (allowRecurrence ? draft.recurrence === 'weekly' : true);
 
   async function handleSave() {
     if (!draft.title.trim()) {
@@ -124,9 +177,23 @@ export default function AddActivitySheet({
       await onSave({
         ...draft,
         recurrence_weekdays: weekdays,
+        occurrenceScope: isCalendarSeries ? scope : draft.occurrenceScope,
       });
     } catch (e: any) {
       setError(e?.message || 'Could not save activity');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    if (!onDelete) return;
+    setSaving(true);
+    setError('');
+    try {
+      await onDelete(isCalendarSeries ? scope : 'series');
+    } catch (e: any) {
+      setError(e?.message || 'Could not remove activity');
     } finally {
       setSaving(false);
     }
@@ -137,7 +204,7 @@ export default function AddActivitySheet({
       <div className="pd-sheet card" onClick={(e) => e.stopPropagation()}>
         <div className="topline" style={{ justifyContent: 'space-between' }}>
           <div>
-            <p className="pd-eyebrow">{existing ? 'Edit activity' : 'Add activity'}</p>
+            <p className="pd-eyebrow">{editingAny ? 'Edit activity' : 'Add activity'}</p>
             <h2>{dayLabel}</h2>
           </div>
           <button type="button" className="btn small secondary" onClick={onClose}>
@@ -149,6 +216,35 @@ export default function AddActivitySheet({
           <p className="muted pd-note">
             This day comes from an existing Training workout. Full strength editing stays in Training for now.
           </p>
+        )}
+
+        {isCalendarSeries && (
+          <fieldset className="pd-scope">
+            <legend>Change</legend>
+            <label className="remember-row">
+              <input
+                type="radio"
+                name="pd-occurrence-scope"
+                checked={scope === 'this-day'}
+                onChange={() => setScope('this-day')}
+              />
+              This day only
+            </label>
+            <label className="remember-row">
+              <input
+                type="radio"
+                name="pd-occurrence-scope"
+                checked={scope === 'series'}
+                onChange={() => setScope('series')}
+              />
+              All days in this series
+            </label>
+            <p className="muted" style={{ margin: '4px 0 0' }}>
+              {scope === 'this-day'
+                ? 'Only this date will change. Other days in the series stay as they are.'
+                : 'Every remaining day in this weekly series will change.'}
+            </p>
+          </fieldset>
         )}
 
         <label>Activity type</label>
@@ -236,7 +332,7 @@ export default function AddActivitySheet({
           </>
         )}
 
-        {type === 'strength' && !existing && (
+        {type === 'strength' && !editingAny && (
           <p className="muted ai-wiz-coach" style={{ margin: '4px 0 8px', padding: '10px 12px', fontSize: '13px' }}>
             After adding this strength day, you'll be able to import exercises from an existing program.
           </p>
@@ -246,7 +342,7 @@ export default function AddActivitySheet({
           <p className="muted">Individual movements can be added in a later update. Name and duration are enough for now.</p>
         )}
 
-        {allowRecurrence && !existing && (
+        {allowRecurrence && !editingAny && (
           <>
             <label className="remember-row" style={{ marginTop: 8 }}>
               <input
@@ -279,9 +375,21 @@ export default function AddActivitySheet({
           </>
         )}
 
+        {showSeriesRecurrence && (
+          <>
+            <label htmlFor="pd-edit-recur-until">Repeat until (optional)</label>
+            <input
+              id="pd-edit-recur-until"
+              type="date"
+              value={draft.recurrence_until || ''}
+              onChange={(e) => setDraft({ ...draft, recurrence_until: e.target.value || null })}
+            />
+          </>
+        )}
+
         {showWeekdays && (
           <>
-            <label>{allowRecurrence ? 'Repeat on' : 'Add on these days'}</label>
+            <label>{allowRecurrence || showSeriesRecurrence ? 'Repeat on' : 'Add on these days'}</label>
             <WeekdayPicker
               value={weekdays}
               onChange={(days) => setDraft({ ...draft, recurrence_weekdays: days })}
@@ -312,7 +420,7 @@ export default function AddActivitySheet({
           </>
         )}
 
-        {allowRemainingWeeks && !existing && (
+        {allowRemainingWeeks && !editingAny && (
           <label className="remember-row" style={{ marginTop: 8 }}>
             <input
               type="checkbox"
@@ -335,11 +443,11 @@ export default function AddActivitySheet({
 
         <div className="actions" style={{ marginTop: 12 }}>
           <button type="button" className="btn green" onClick={() => void handleSave()} disabled={saving || isLegacy}>
-            {saving ? 'Saving…' : existing ? 'Save activity' : 'Add activity'}
+            {saving ? 'Saving…' : editingAny ? 'Save activity' : 'Add activity'}
           </button>
-          {existing && onDelete && !isLegacy && (
-            <button type="button" className="btn small red" onClick={() => void onDelete()}>
-              Remove
+          {editingAny && onDelete && !isLegacy && (
+            <button type="button" className="btn small red" onClick={() => void handleDelete()} disabled={saving}>
+              {isCalendarSeries && scope === 'this-day' ? 'Remove this day' : isCalendarSeries ? 'Remove series' : 'Remove'}
             </button>
           )}
         </div>

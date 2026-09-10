@@ -36,12 +36,8 @@ export default function CreateProgramFlow({
   const [name, setName] = useState('');
   const [startDate, setStartDate] = useState(defaultStart);
   const [preset, setPreset] = useState<number | 'custom'>(6);
-<<<<<<< HEAD
-  const [customWeeks, setCustomWeeks] = useState(10);
-  const [inclusivePlan, setInclusivePlan] = useState(false);
-=======
   const [customWeeks, setCustomWeeks] = useState(1);
->>>>>>> 69e7434b80ac5d889b76b42bd12c18b4ed5868f1
+  const [inclusivePlan, setInclusivePlan] = useState(false);
 
   useEffect(() => {
     setStartDate(defaultStart);

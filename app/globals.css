@@ -845,6 +845,8 @@ label{color:var(--textSecondary)}
 .pd-weekday-row{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
 .pd-weekday-chip{min-width:44px;min-height:44px;padding:8px 10px;border-radius:12px;border:1px solid var(--borderSubtle);background:var(--surfaceInset);color:var(--textPrimary);font-weight:800}
 .pd-weekday-chip.active{background:var(--accentSoft);border-color:var(--accent);color:var(--accentOnSoft)}
+.pd-scope{border:1px solid var(--borderSubtle);background:var(--surfaceInset);border-radius:16px;padding:12px 14px;margin:8px 0 12px}
+.pd-scope legend{font-size:12px;font-weight:800;padding:0 4px}
 .pd-cycle-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:6px 0 10px}
 .pd-cycle-chip,.pd-type-chip{border:1px solid var(--borderSubtle);background:var(--surfaceInset);color:var(--textPrimary);border-radius:14px;padding:10px 8px;font-weight:800;min-height:44px}
 .pd-cycle-chip.active,.pd-type-chip.active{background:var(--accentSoft);border-color:var(--accent);color:var(--accentOnSoft)}

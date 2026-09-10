@@ -57,9 +57,10 @@ import AddActivitySheet from './components/programDesign/AddActivitySheet';
 import { fetchDesignPrograms, fetchProgramActivities } from '../lib/programDesign/programDesignApi';
 import {
   createUserCalendarActivity,
-  deleteUserCalendarActivity,
   fetchUserCalendarActivities,
   monthWindow,
+  saveUserCalendarOccurrence,
+  deleteUserCalendarOccurrence,
   type UserCalendarActivity,
 } from '../lib/programDesign/userCalendar';
 import { isAutoEnrolledMemberRole } from '../lib/programDesign/enrollment';
@@ -187,6 +188,7 @@ export default function Page(){
  const [trainingActivities,setTrainingActivities]=useState<ProgramActivity[]>([]);
  const [userCalendarActivities,setUserCalendarActivities]=useState<UserCalendarActivity[]>([]);
  const [trainingAddActivityOpen,setTrainingAddActivityOpen]=useState(false);
+ const [trainingEditActivity,setTrainingEditActivity]=useState<{id:string;date:string}|null>(null);
  const [viewingWorkoutId,setViewingWorkoutId]=useState<string|null>(null);
  const [trainingSessionIntent,setTrainingSessionIntent]=useState<'log'|'edit'>('log');
  const [addExercisePanel,setAddExercisePanel]=useState<any>(null);
@@ -2315,6 +2317,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
  const trainingTomorrowPlan=planForCalendarDate(program,trainingActivities,userCalendarActivities,tomorrowDate(logDate));
  const trainingWeekPlans=weekPlansForMonday(mondayOfWeek(logDate),program,trainingActivities,userCalendarActivities);
  const trainingMonthCells=monthCalendarCells(program,trainingActivities,trainingCalendarMonth,todayYmd(),userCalendarActivities);
+ const trainingCalendarEditing=trainingEditActivity?userCalendarActivities.find((a)=>a.id===trainingEditActivity.id)||null:null;
  const trainingMonthLabel=monthLabel(trainingCalendarMonth);
  const trainingCompletedDates=progressLogs.filter((row:any)=>row.completed).map((row:any)=>String(row.log_date||'').slice(0,10));
  const followedFromGroup=program?.source_program_id?teams.find((t:any)=>t.id===program.team_id)?.name||null:null;
@@ -2523,7 +2526,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
       onViewWorkout={(id,date)=>{setLogDate(date);setViewingWorkoutId(id);if(program){const start=resolveProgramStartDate(program);const nextWeek=weekForDate(start,date,program.weeks||weeks||6);setWeek(nextWeek);setActiveWorkout(id);}}}
       onOpenPrograms={()=>goNav('Programs')}
       onAddActivity={()=>setTrainingAddActivityOpen(true)}
-      onDeleteActivity={async(activityId)=>{const{error}=await deleteUserCalendarActivity(supabase,activityId);if(error)return alert(error);const win=monthWindow(yearMonthOf(logDate));const cal=await fetchUserCalendarActivities(supabase,session.user.id,win.from,win.to);setUserCalendarActivities(cal.data||[]);}}
+      onEditActivity={(activityId,date)=>setTrainingEditActivity({id:activityId,date})}
       completedDates={trainingCompletedDates}
     />}
     {viewingWorkoutId&&<WorkoutPlanSheet
@@ -2542,6 +2545,17 @@ function matchingSet(targetExercise:any, sourceSet:any){
       defaultWeekday={weekdayIndexFromYmd(logDate)}
       onClose={()=>setTrainingAddActivityOpen(false)}
       onSave={async(draft)=>{const{error}=await createUserCalendarActivity(supabase,session.user.id,logDate,draft);if(error)throw new Error(error);const win=monthWindow(yearMonthOf(logDate));const cal=await fetchUserCalendarActivities(supabase,session.user.id,win.from,win.to);setUserCalendarActivities(cal.data||[]);setTrainingAddActivityOpen(false);}}
+    />}
+    {trainingEditActivity&&trainingCalendarEditing&&session?.user&&<AddActivitySheet
+      dayLabel={formatDisplayDate(trainingEditActivity.date)}
+      calendarExisting={trainingCalendarEditing}
+      occurrenceDate={trainingEditActivity.date}
+      allowRecurrence
+      allowMultiDay
+      defaultWeekday={weekdayIndexFromYmd(trainingEditActivity.date)}
+      onClose={()=>setTrainingEditActivity(null)}
+      onSave={async(draft)=>{const{error}=await saveUserCalendarOccurrence(supabase,trainingCalendarEditing,trainingEditActivity.date,draft);if(error)throw new Error(error);const win=monthWindow(yearMonthOf(logDate));const cal=await fetchUserCalendarActivities(supabase,session.user.id,win.from,win.to);setUserCalendarActivities(cal.data||[]);setTrainingEditActivity(null);}}
+      onDelete={async(scope)=>{const{error}=await deleteUserCalendarOccurrence(supabase,trainingCalendarEditing,trainingEditActivity.date,scope||'this-day');if(error)throw new Error(error);const win=monthWindow(yearMonthOf(logDate));const cal=await fetchUserCalendarActivities(supabase,session.user.id,win.from,win.to);setUserCalendarActivities(cal.data||[]);setTrainingEditActivity(null);}}
     />}
     {trainingSubNav==='personal'&&activeAssignedRecipient&&<div className="card viewing-banner assigned-workout-banner"><div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}><div><h2>Assigned workout</h2><p className="muted">{activeAssignedRecipient.st_workout_assignments?.st_teams?.name||'Group'} · {formatDisplayDate(activeAssignedRecipient.st_workout_assignments?.scheduled_date||logDate)}{activeAssignedRecipient.st_workout_assignments?.notes?` · ${activeAssignedRecipient.st_workout_assignments.notes}`:''}</p>{!assignedHasPersonalCopy(activeAssignedRecipient)?<p className="muted assigned-copy-hint">Group template is read-only. Copy to your personal plan to adjust exercises and sets.</p>:<p className="muted assigned-copy-hint">You are logging your personal copy. Edits stay on your account; completion still counts for the group assignment.</p>}</div><div className="assigned-banner-actions"><button className="btn small secondary" onClick={closeAssignedWorkout}>Back to personal program</button>{assignedHasPersonalCopy(activeAssignedRecipient)?<span className="badge personal-copy-badge">Personal copy</span>:<button type="button" className="btn small green" onClick={()=>copyAssignedWorkoutToPersonal()} disabled={!!assignmentCopyBusy}>{assignmentCopyBusy===activeAssignedRecipient.id?'Copying…':'Copy to personal plan'}</button>}</div></div></div>}
     {trainingSubNav==='personal'&&!viewingMember&&!activeAssignedRecipient&&program&&isDraftProgram(program)&&canEdit()&&<div className="card program-draft-banner"><div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}><div><h2>Draft in Program Setup</h2><p className="muted"><b>{program.name}</b> is a draft — it will not appear here for logging until you publish it.</p></div><button type="button" className="btn small green" onClick={()=>{setTrainingSubNav('setup');setShowProgramSetup(true);openDraftForEditing(program.id);}}>Open draft in Program Setup</button></div></div>}

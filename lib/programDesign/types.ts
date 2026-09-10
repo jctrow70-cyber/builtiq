@@ -87,6 +87,8 @@ export type ActivityDraft = {
   /** Monday = 0 … Sunday = 6. Used for weekly repeats and multi-day program stamps. */
   recurrence_weekdays?: number[];
   applyRemainingWeeks?: boolean;
+  /** Weekly calendar series: change one date or the whole series. */
+  occurrenceScope?: 'this-day' | 'series';
 };
 
 export type GroupOption = {

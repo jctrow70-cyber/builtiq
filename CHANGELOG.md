@@ -11,22 +11,137 @@ Branch:
 Status:
 ```
 
-<<<<<<< HEAD
-## BIQ-0170 - Multi-Day Recurrence and All-Inclusive Programs
+## BIQ-0172 - Edit a Single Day in a Recurring Series
 
 Date: 2026-09-10  
 Branch: develop  
-=======
-## BIQ-0171 - Block Same-Day Deadlift Variations
-
-Date: 2026-09-10  
-Branch: cursor/fix-same-day-deadlift-c29a  
->>>>>>> 69e7434b80ac5d889b76b42bd12c18b4ed5868f1
 Status: Completed
 
 ### Summary
 
-<<<<<<< HEAD
+Training calendar series can now be edited or removed for **this day only**, without changing the rest of the weekly repeat. Choose **All days in this series** when you still want the old whole-series change.
+
+### Purpose
+
+Weekly repeats were series-only: Remove deleted every date, and there was no way to change one occurrence (for example a shorter ride on Friday).
+
+### Changes
+
+- Calendar items have **Edit** instead of immediate Remove
+- Recurring activities open a sheet with This day only (default) vs All days in this series
+- This-day save stores an occurrence override on the series `details`
+- This-day remove stores an exception date so that date is skipped
+- Series save/remove still updates or deletes the whole row
+- Completed workout history (`st_set_logs`) is not rewritten
+
+### Files Changed
+
+- `lib/programDesign/types.ts`
+- `lib/programDesign/userCalendar.ts`
+- `lib/programDesign/trainingSchedule.ts`
+- `app/components/programDesign/AddActivitySheet.tsx`
+- `app/components/training/TrainingExecution.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `scripts/test-calendar-recurrence.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None. Exceptions and overrides use existing `st_user_calendar_activities.details` (`exception_dates`, `occurrence_overrides`).
+
+### Testing Steps
+
+1. Training → Add activity → Repeat weekly on Mon/Wed/Fri → save.
+2. Open a Friday in that series → Edit → leave **This day only** → rename it and shorten the duration → Save. That Friday should show the new name; Monday and Wednesday should still show the original.
+3. Edit another date → **Remove this day**. That date should disappear; other days in the series stay.
+4. Edit any remaining day → **All days in this series** → change the name → Save. Un-overridden days should pick up the new series name; the Friday override from step 2 should keep its own name.
+5. **Remove series** should delete every remaining day.
+6. One-off (non-repeating) activities still edit/remove the single row.
+7. Mobile (~390px): the This day / All days radios stay tappable.
+8. `npx tsx scripts/test-calendar-recurrence.ts`
+
+### Known Issues
+
+- Personal strength calendar items still do not auto-create a full logger until linked to a workout.
+- Inclusive flag needs migration 046 to persist.
+- Program week activities are already separate rows per weekday; this change is for Training calendar series only.
+
+### Recommended Commit Message
+
+```text
+BIQ-0172 Allow editing a single day in a recurring Training series
+```
+
+---
+
+## BIQ-0171 - Block Same-Day Deadlift Variations
+
+Date: 2026-09-10  
+Branch: cursor/fix-same-day-deadlift-c29a  
+Status: Completed
+
+### Summary
+
+A single workout can no longer include two deadlift variations (for example Conventional Deadlift + Romanian Deadlift). Full-body weeks may still use different hinge variations on different days.
+
+### Purpose
+
+Users saw Conventional Deadlift and Romanian Deadlift in the same session. Science templates only schedule one hinge slot per day; the AI week rewrite could still stack both because RDL and conventional were treated as separate movement families.
+
+### Changes
+
+- Session-level conflict: any second deadlift variation is rejected while building a workout
+- AI apply path skips / strips extra deadlift variations in the same day
+- Quality check warns on `SAME_DAY_DEADLIFTS`
+- Program designer prompt: never two deadlift variations in one session
+- Week-level variety kept: Day A RDL + Day B conventional remains allowed
+
+### Files Changed
+
+- `lib/scienceEngine/exerciseSelection.ts`
+- `lib/scienceEngine/generateProgram.ts`
+- `lib/scienceEngine/applyAiDesign.ts`
+- `lib/scienceEngine/qualityCheck.ts`
+- `lib/scienceEngine/programDesigner.ts`
+- `scripts/test-same-day-deadlift.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Programs → create a full-body plan → Generate.
+2. Open each training day: at most one of Conventional / Trap Bar / Romanian / RDL per day.
+3. Across the week, different days may still use different hinge variations (e.g. RDL on one day, conventional on another).
+4. `npx tsx scripts/test-same-day-deadlift.ts`
+5. `npx tsx lib/scienceEngine/acceptanceCheck.ts`
+
+### Known Issues
+
+- Other high lower-back pairings (e.g. heavy squat + heavy good morning) are still prompt-guided rather than hard-blocked.
+
+### Recommended Commit Message
+
+```text
+BIQ-0171 Block two deadlift variations in the same workout
+```
+
+---
+
+## BIQ-0170 - Multi-Day Recurrence and All-Inclusive Programs
+
+Date: 2026-09-10  
+Branch: develop  
+Status: Completed
+
+### Summary
+
 Training **Add activity** can repeat weekly on multiple weekdays (Mon/Wed/Fri, Tue/Thu, every day, or any mix), with an optional end date. Programs default to **training only**. You can opt into an **all-inclusive plan** during create (or later) so cardio, mobility, sport, and rest live on that program and can be pushed to a group.
 
 ### Purpose
@@ -80,59 +195,13 @@ Until 046 is applied, new programs still create; the inclusive flag is skipped a
 
 ### Known Issues
 
-- Recurring edits/deletes still apply to the whole series, not one date.
 - Personal strength calendar items still do not auto-create a full logger until linked to a workout.
 - Inclusive flag needs migration 046 to persist.
-=======
-A single workout can no longer include two deadlift variations (for example Conventional Deadlift + Romanian Deadlift). Full-body weeks may still use different hinge variations on different days.
-
-### Purpose
-
-Users saw Conventional Deadlift and Romanian Deadlift in the same session. Science templates only schedule one hinge slot per day; the AI week rewrite could still stack both because RDL and conventional were treated as separate movement families.
-
-### Changes
-
-- Session-level conflict: any second deadlift variation is rejected while building a workout
-- AI apply path skips / strips extra deadlift variations in the same day
-- Quality check warns on `SAME_DAY_DEADLIFTS`
-- Program designer prompt: never two deadlift variations in one session
-- Week-level variety kept: Day A RDL + Day B conventional remains allowed
-
-### Files Changed
-
-- `lib/scienceEngine/exerciseSelection.ts`
-- `lib/scienceEngine/generateProgram.ts`
-- `lib/scienceEngine/applyAiDesign.ts`
-- `lib/scienceEngine/qualityCheck.ts`
-- `lib/scienceEngine/programDesigner.ts`
-- `scripts/test-same-day-deadlift.ts`
-- `CHANGELOG.md`
-- `DECISIONS.md`
-
-### Database Changes
-
-None.
-
-### Testing Steps
-
-1. Programs → create a full-body plan → Generate.
-2. Open each training day: at most one of Conventional / Trap Bar / Romanian / RDL per day.
-3. Across the week, different days may still use different hinge variations (e.g. RDL on one day, conventional on another).
-4. `npx tsx scripts/test-same-day-deadlift.ts`
-5. `npx tsx lib/scienceEngine/acceptanceCheck.ts`
-
-### Known Issues
-
-- Other high lower-back pairings (e.g. heavy squat + heavy good morning) are still prompt-guided rather than hard-blocked.
->>>>>>> 69e7434b80ac5d889b76b42bd12c18b4ed5868f1
 
 ### Recommended Commit Message
 
 ```text
-<<<<<<< HEAD
 BIQ-0170 Add multi-day repeats and optional all-inclusive programs
-=======
-BIQ-0171 Block two deadlift variations in the same workout
 ```
 
 ---
@@ -203,7 +272,6 @@ None.
 
 ```text
 BIQ-0170 Respect custom program week length on generate
->>>>>>> 69e7434b80ac5d889b76b42bd12c18b4ed5868f1
 ```
 
 ---

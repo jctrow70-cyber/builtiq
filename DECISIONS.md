@@ -1243,7 +1243,7 @@ Category: Program Design / Training
 
 ### Decision
 
-Personal Training activities can repeat weekly on **one or more weekdays**, with an optional end date. Series still start on the add date (days earlier in that week are not backfilled). Delete still removes the whole series.
+Personal Training activities can repeat weekly on **one or more weekdays**, with an optional end date. Series still start on the add date (days earlier in that week are not backfilled). A single date can be edited or skipped without changing the rest of the series (`details.occurrence_overrides` and `details.exception_dates`). Series-wide save and remove remain available.
 
 Programs default to **training only** (workouts and sets). During create — or later on the program — the author can opt into an **all-inclusive plan**, which also holds cardio, mobility, sport, and rest on the program week and can be pushed to a group with the training.
 
@@ -1254,12 +1254,13 @@ A single weekday repeat is not a real calendar. Extra lifestyle activities shoul
 ### Alternatives Considered
 
 - Put all calendar events on the program template — rejected; Programs would stay a second calendar
-- RRULE / this-occurrence-only edits in v1 — deferred; weekday chips plus until-date cover the common case
+- RRULE / Google-style split of the series — deferred; this-day overrides plus exception dates cover the common case
 - Separate “lifestyle program” type — rejected; one flag on the existing program is enough
 
 ### Impact
 
 - `details.recurrence_weekdays` on personal calendar rows
+- `details.exception_dates` / `details.occurrence_overrides` for this-day edits
 - `st_programs.inclusive_plan` (migration 046)
 - Create Program asks Training only vs All-inclusive
 

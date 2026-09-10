@@ -31,7 +31,7 @@ type TrainingExecutionProps = {
   onViewWorkout?: (workoutId: string, date: string) => void;
   onOpenPrograms: () => void;
   onAddActivity?: (date: string) => void;
-  onDeleteActivity?: (activityId: string) => void;
+  onEditActivity?: (activityId: string, date: string) => void;
   completedDates?: string[];
 };
 
@@ -42,13 +42,13 @@ function DayItems({
   completed,
   onStart,
   onView,
-  onDelete,
+  onEdit,
 }: {
   plan: TrainingDayPlan;
   completed: boolean;
   onStart: (workoutId: string | null) => void;
   onView?: (workoutId: string) => void;
-  onDelete?: (activityId: string) => void;
+  onEdit?: (activityId: string) => void;
 }) {
   if (!plan.items.length) {
     return <p className="muted">No activities on this day. Add one anytime.</p>;
@@ -81,9 +81,9 @@ function DayItems({
                 Start
               </button>
             )}
-            {item.source === 'calendar' && item.activityId && onDelete && (
-              <button type="button" className="btn small secondary" onClick={() => onDelete(item.activityId!)}>
-                Remove
+            {item.source === 'calendar' && item.activityId && onEdit && (
+              <button type="button" className="btn small secondary" onClick={() => onEdit(item.activityId!)}>
+                Edit
               </button>
             )}
           </div>
@@ -117,7 +117,7 @@ export default function TrainingExecution({
   onViewWorkout,
   onOpenPrograms,
   onAddActivity,
-  onDeleteActivity,
+  onEditActivity,
   completedDates = [],
 }: TrainingExecutionProps) {
   const viewingToday = !!today?.isToday;
@@ -174,7 +174,7 @@ export default function TrainingExecution({
               completed={completedDates.includes(today.date)}
               onStart={(workoutId) => onStartWorkout(workoutId, today.date)}
               onView={onViewWorkout ? (workoutId) => onViewWorkout(workoutId, today.date) : undefined}
-              onDelete={onDeleteActivity}
+              onEdit={onEditActivity ? (activityId) => onEditActivity(activityId, today.date) : undefined}
             />
           </section>
           {today.later.length > 0 && (
@@ -259,7 +259,7 @@ export default function TrainingExecution({
                 completed={completedDates.includes(today.date)}
                 onStart={(workoutId) => onStartWorkout(workoutId, today.date)}
                 onView={onViewWorkout ? (workoutId) => onViewWorkout(workoutId, today.date) : undefined}
-                onDelete={onDeleteActivity}
+                onEdit={onEditActivity ? (activityId) => onEditActivity(activityId, today.date) : undefined}
               />
             </section>
           )}
@@ -325,7 +325,7 @@ export default function TrainingExecution({
                 completed={completedDates.includes(today.date)}
                 onStart={(workoutId) => onStartWorkout(workoutId, today.date)}
                 onView={onViewWorkout ? (workoutId) => onViewWorkout(workoutId, today.date) : undefined}
-                onDelete={onDeleteActivity}
+                onEdit={onEditActivity ? (activityId) => onEditActivity(activityId, today.date) : undefined}
               />
             </section>
           )}
