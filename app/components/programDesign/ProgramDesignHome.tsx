@@ -275,7 +275,7 @@ export default function ProgramDesignHome({
     setView('create');
   }
 
-  async function handleCreate(input: { name: string; startDate: string; cycleWeeks: number }) {
+  async function handleCreate(input: { name: string; startDate: string; cycleWeeks: number; inclusivePlan: boolean }) {
     setCreating(true);
     setError('');
     const { data, error: createError } = await createDesignProgram(supabase, {
@@ -285,6 +285,7 @@ export default function ProgramDesignHome({
       cycleWeeks: input.cycleWeeks,
       scope,
       teamId: groupId,
+      inclusivePlan: input.inclusivePlan,
     });
     setCreating(false);
     if (createError || !data) {

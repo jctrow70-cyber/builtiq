@@ -11,6 +11,79 @@ Branch:
 Status:
 ```
 
+## BIQ-0170 - Multi-Day Recurrence and All-Inclusive Programs
+
+Date: 2026-09-10  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Training **Add activity** can repeat weekly on multiple weekdays (Mon/Wed/Fri, Tue/Thu, every day, or any mix), with an optional end date. Programs default to **training only**. You can opt into an **all-inclusive plan** during create (or later) so cardio, mobility, sport, and rest live on that program and can be pushed to a group.
+
+### Purpose
+
+Weekly repeat was locked to one weekday. Programs also mixed lifestyle calendar editing into every training plan.
+
+### Changes
+
+- Weekday chips, Every day / MWF / Tue-Thu shortcuts on Training Add activity
+- Programs create: Training only vs All-inclusive plan
+- Inclusive programs get a Week plan tab and multi-day + remaining-week stamps
+- Training-only programs stay on Workouts
+- Completed history is not rewritten
+
+### Files Changed
+
+- `lib/programDesign/recurrence.ts`
+- `lib/programDesign/userCalendar.ts`
+- `lib/programDesign/types.ts`
+- `lib/programDesign/programDesignApi.ts`
+- `lib/training/programFetch.ts`
+- `app/components/programDesign/AddActivitySheet.tsx`
+- `app/components/programDesign/CreateProgramFlow.tsx`
+- `app/components/programDesign/ProgramCalendarEditor.tsx`
+- `app/components/programDesign/ProgramDesignHome.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `supabase/migrations/20250910_046_inclusive_plan.sql`
+- `scripts/test-calendar-recurrence.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+Apply `20250910_046_inclusive_plan.sql` on test Supabase, then live.
+
+Adds `st_programs.inclusive_plan` (boolean, default false). Personal multi-day repeats use existing `st_user_calendar_activities.details.recurrence_weekdays` (no new calendar table).
+
+Until 046 is applied, new programs still create; the inclusive flag is skipped and the plan behaves as training-only until the column exists.
+
+### Testing Steps
+
+1. Training → pick a Wednesday → Add activity → Repeat weekly → tap Mon and Fri as well → save. Later Mondays, Wednesdays, and Fridays should show it. Tuesday should not. The Monday *before* that Wednesday should not.
+2. Add “Yoga” with Every day and an until date. Confirm it stops after that date.
+3. Remove the series — all future days of that activity should disappear.
+4. Programs → Create → leave **Training only**. Confirm the editor is workouts, no Week plan tab.
+5. Create (or toggle) **All-inclusive plan**. Week plan tab appears. Add a ride on Wednesday, also select Mon/Fri and remaining weeks. Those days should fill.
+6. Group inclusive plan → Push to members. Members should get the extra activities with the training.
+7. Mobile (~390px): weekday chips wrap and stay tappable.
+
+### Known Issues
+
+- Recurring edits/deletes still apply to the whole series, not one date.
+- Personal strength calendar items still do not auto-create a full logger until linked to a workout.
+- Inclusive flag needs migration 046 to persist.
+
+### Recommended Commit Message
+
+```text
+BIQ-0170 Add multi-day repeats and optional all-inclusive programs
+```
+
+---
+
 ## BIQ-0169 - Reorder Exercises in Programs Edit
 
 Date: 2026-09-08  

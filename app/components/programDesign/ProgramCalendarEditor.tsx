@@ -20,6 +20,7 @@ import {
   fetchProgramActivities,
   nextSortOrder,
   setProgramLifecycle,
+  updateDesignProgram,
   updateProgramActivity,
 } from '../../../lib/programDesign/programDesignApi';
 import type {
@@ -28,6 +29,7 @@ import type {
   ProgramDesignRecord,
   ProgramLifecycleStatus,
 } from '../../../lib/programDesign/types';
+import { draftWeekdays } from '../../../lib/programDesign/recurrence';
 
 type ProgramCalendarEditorProps = {
   supabase: SupabaseClient;
@@ -80,6 +82,7 @@ export default function ProgramCalendarEditor({
   const totalWeeks = cycleLengthOf(program);
   const { start, end } = programDateRange(program);
   const status = lifecycleStatusOf(program);
+  const inclusive = !!program.inclusive_plan;
 
   async function reload() {
     setLoading(true);
@@ -117,7 +120,7 @@ export default function ProgramCalendarEditor({
   }, [program.id]);
 
   useEffect(() => {
-    if (pane == null && !loading) setPane(hasExercises || justBuiltMessage ? 'workouts' : 'calendar');
+    if (pane == null && !loading) setPane(hasExercises || justBuiltMessage || !inclusive ? 'workouts' : 'calendar');
   }, [loading, hasExercises, justBuiltMessage, pane]);
 
   const hasStrengthActivities = useMemo(
@@ -138,15 +141,23 @@ export default function ProgramCalendarEditor({
       const { error: updateError } = await updateProgramActivity(supabase, editing.id, draft);
       if (updateError) throw new Error(updateError);
     } else if (sheetDay != null) {
-      const { error: createError } = await createProgramActivity(
-        supabase,
-        program.id,
-        week,
-        sheetDay,
-        draft,
-        nextSortOrder(activities, week, sheetDay)
-      );
-      if (createError) throw new Error(createError);
+      const days = draftWeekdays(draft, sheetDay);
+      const weeks = draft.applyRemainingWeeks
+        ? Array.from({ length: totalWeeks }, (_, i) => i + 1).filter((w) => w >= week)
+        : [week];
+      for (const targetWeek of weeks) {
+        for (const day of days) {
+          const { error: createError } = await createProgramActivity(
+            supabase,
+            program.id,
+            targetWeek,
+            day,
+            draft,
+            nextSortOrder(activities, targetWeek, day)
+          );
+          if (createError) throw new Error(createError);
+        }
+      }
     }
     setSheetDay(null);
     setEditing(null);
@@ -227,6 +238,20 @@ export default function ProgramCalendarEditor({
     onProgramChange({ ...program, status: next });
   }
 
+  async function toggleInclusive(next: boolean) {
+    if (!canEdit) return;
+    setBusy(true);
+    const { error: updateError } = await updateDesignProgram(supabase, program.id, { inclusive_plan: next });
+    setBusy(false);
+    if (updateError) {
+      setError(updateError);
+      return;
+    }
+    onProgramChange({ ...program, inclusive_plan: next });
+    if (next) setPane('calendar');
+    else setPane('workouts');
+  }
+
   return (
     <div className="pd-editor">
       <button type="button" className="pd-back" onClick={onBack}>
@@ -234,7 +259,7 @@ export default function ProgramCalendarEditor({
       </button>
       <SectionHeader
         title={program.name}
-        subtitle={`${formatProgramRange(start, end)} · Week ${week} of ${totalWeeks}`}
+        subtitle={`${formatProgramRange(start, end)} · Week ${week} of ${totalWeeks}${inclusive ? ' · All-inclusive' : ' · Training'}`}
         actions={<span className="ui-badge">{lifecycleLabel(status)}</span>}
       />
 
@@ -253,7 +278,7 @@ export default function ProgramCalendarEditor({
         </button>
       </div>
 
-      {canEdit && (
+      {canEdit && inclusive && (
         <div className="pd-week-actions">
           <button type="button" className="btn small secondary" disabled={busy} onClick={() => void copyCurrentWeek()}>
             Copy week
@@ -268,6 +293,13 @@ export default function ProgramCalendarEditor({
           )}
         </div>
       )}
+      {canEdit && !inclusive && hasStrengthActivities && (
+        <div className="pd-week-actions">
+          <button type="button" className="btn small accent" disabled={busy} onClick={() => setImportOpen(true)}>
+            Import exercises from program
+          </button>
+        </div>
+      )}
       {justBuiltMessage && (
         <div className="ai-wiz-coach">
           <p>Your workouts are ready. Review them below and edit anything you want to change.</p>
@@ -275,16 +307,22 @@ export default function ProgramCalendarEditor({
         </div>
       )}
 
-      <SegmentedControl
-        ariaLabel="Program editor"
-        value={pane || (hasExercises ? 'workouts' : 'calendar')}
-        onChange={(v) => setPane(v as 'workouts' | 'calendar')}
-        options={[
-          { value: 'workouts', label: 'Workouts' },
-          { value: 'calendar', label: 'Calendar' },
-        ]}
-        size="sm"
-      />
+      {inclusive ? (
+        <SegmentedControl
+          ariaLabel="Program editor"
+          value={pane || (hasExercises ? 'workouts' : 'calendar')}
+          onChange={(v) => setPane(v as 'workouts' | 'calendar')}
+          options={[
+            { value: 'workouts', label: 'Workouts' },
+            { value: 'calendar', label: 'Week plan' },
+          ]}
+          size="sm"
+        />
+      ) : (
+        <p className="muted pd-note">
+          This is a training program. Build and edit workouts here. Add walks, yoga, or sport on the Training calendar, or turn on an all-inclusive week below if you want those on this plan.
+        </p>
+      )}
 
       {!tableReady && (
         <p className="pd-note">
@@ -302,17 +340,7 @@ export default function ProgramCalendarEditor({
       )}
       {loading ? (
         <p className="muted">Loading this week…</p>
-      ) : pane === 'workouts' ? (
-        <ProgramWorkoutPlan
-          supabase={supabase}
-          programId={program.id}
-          week={week}
-          canEdit={canEdit}
-          openWorkoutId={openWorkoutId}
-          onOpenHandled={() => setOpenWorkoutId(null)}
-          onLoaded={(info) => setHasExercises(info.hasExercises)}
-        />
-      ) : (
+      ) : pane === 'calendar' && inclusive ? (
         <WeeklyHealthCalendar
           startMonday={start}
           weekNumber={week}
@@ -331,6 +359,16 @@ export default function ProgramCalendarEditor({
             setEditing(activity);
             setSheetDay(activity.day_of_week);
           }}
+        />
+      ) : (
+        <ProgramWorkoutPlan
+          supabase={supabase}
+          programId={program.id}
+          week={week}
+          canEdit={canEdit}
+          openWorkoutId={openWorkoutId}
+          onOpenHandled={() => setOpenWorkoutId(null)}
+          onLoaded={(info) => setHasExercises(info.hasExercises)}
         />
       )}
 
@@ -370,6 +408,18 @@ export default function ProgramCalendarEditor({
       )}
 
       {canEdit && (
+        <label className="remember-row" style={{ marginTop: 16 }}>
+          <input
+            type="checkbox"
+            checked={inclusive}
+            disabled={busy}
+            onChange={(e) => void toggleInclusive(e.target.checked)}
+          />
+          All-inclusive plan — include cardio, mobility, sport, and rest on this program (can push to a group)
+        </label>
+      )}
+
+      {canEdit && (
         <div className="pd-status-row">
           {status === 'draft' && (
             <button type="button" className="btn secondary" disabled={busy} onClick={() => void changeStatus('scheduled')}>
@@ -398,6 +448,9 @@ export default function ProgramCalendarEditor({
         <AddActivitySheet
           dayLabel={dayLabel}
           existing={editing}
+          allowMultiDay={inclusive && !editing}
+          allowRemainingWeeks={inclusive && !editing}
+          defaultWeekday={sheetDay}
           onClose={() => {
             setSheetDay(null);
             setEditing(null);

@@ -48,6 +48,7 @@ export type ProgramDesignRecord = {
   owner_user_id?: string | null;
   record_kind?: string | null;
   source_program_id?: string | null;
+  inclusive_plan?: boolean | null;
 };
 
 export type ProgramActivityDetails = {
@@ -83,6 +84,9 @@ export type ActivityDraft = {
   details: ProgramActivityDetails;
   recurrence?: 'none' | 'weekly';
   recurrence_until?: string | null;
+  /** Monday = 0 … Sunday = 6. Used for weekly repeats and multi-day program stamps. */
+  recurrence_weekdays?: number[];
+  applyRemainingWeeks?: boolean;
 };
 
 export type GroupOption = {

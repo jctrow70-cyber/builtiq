@@ -63,6 +63,7 @@ import {
   type UserCalendarActivity,
 } from '../lib/programDesign/userCalendar';
 import { isAutoEnrolledMemberRole } from '../lib/programDesign/enrollment';
+import { weekdayIndexFromYmd } from '../lib/programDesign/recurrence';
 import { syncMemberGroupEnrollment } from '../lib/programDesign/followProgram';
 import { mergeProgramActivities, monthCalendarCells, monthLabel, planForCalendarDate, shiftYearMonth, tomorrowDate, weekPlansForMonday, yearMonthOf } from '../lib/programDesign/trainingSchedule';
 import type { ProgramActivity } from '../lib/programDesign/types';
@@ -2529,6 +2530,8 @@ function matchingSet(targetExercise:any, sourceSet:any){
     {trainingAddActivityOpen&&session?.user&&<AddActivitySheet
       dayLabel={formatDisplayDate(logDate)}
       allowRecurrence
+      allowMultiDay
+      defaultWeekday={weekdayIndexFromYmd(logDate)}
       onClose={()=>setTrainingAddActivityOpen(false)}
       onSave={async(draft)=>{const{error}=await createUserCalendarActivity(supabase,session.user.id,logDate,draft);if(error)throw new Error(error);const win=monthWindow(yearMonthOf(logDate));const cal=await fetchUserCalendarActivities(supabase,session.user.id,win.from,win.to);setUserCalendarActivities(cal.data||[]);setTrainingAddActivityOpen(false);}}
     />}

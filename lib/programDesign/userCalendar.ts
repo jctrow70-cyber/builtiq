@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { addDaysYmd, dayLabelFromYmd } from '../training/programCalendar';
+import { addDaysYmd } from '../training/programCalendar';
 import { activityTypeShortLabel, formatDuration } from './activityTypes';
+import { isWeeklyRecurrence, weekdayIndexFromYmd, weekdaysFromDetails, withRecurrenceDetails } from './recurrence';
 import type { ActivityDraft, ActivityType } from './types';
 
 export type UserCalendarActivity = {
@@ -14,6 +15,7 @@ export type UserCalendarActivity = {
   details: Record<string, unknown>;
   recurrence: 'none' | 'weekly';
   recurrence_until: string | null;
+  recurrence_weekdays: number[];
   workout_id: string | null;
 };
 
@@ -29,6 +31,10 @@ function asActivity(row: Record<string, unknown>): UserCalendarActivity {
     details: row.details && typeof row.details === 'object' ? (row.details as Record<string, unknown>) : {},
     recurrence: row.recurrence === 'weekly' ? 'weekly' : 'none',
     recurrence_until: row.recurrence_until ? String(row.recurrence_until).slice(0, 10) : null,
+    recurrence_weekdays: weekdaysFromDetails(
+      row.details && typeof row.details === 'object' ? (row.details as Record<string, unknown>) : {},
+      weekdayIndexFromYmd(String(row.activity_date).slice(0, 10))
+    ),
     workout_id: row.workout_id ? String(row.workout_id) : null,
   };
 }
@@ -59,10 +65,13 @@ export async function fetchUserCalendarActivities(
 }
 
 export function activityOccursOnDate(activity: UserCalendarActivity, dateYmd: string): boolean {
-  if (activity.recurrence === 'weekly') {
+  if (isWeeklyRecurrence(activity.recurrence)) {
     if (dateYmd < activity.activity_date) return false;
     if (activity.recurrence_until && dateYmd > activity.recurrence_until) return false;
-    return dayLabelFromYmd(dateYmd) === dayLabelFromYmd(activity.activity_date);
+    const weekdays = activity.recurrence_weekdays?.length
+      ? activity.recurrence_weekdays
+      : [weekdayIndexFromYmd(activity.activity_date)];
+    return weekdays.includes(weekdayIndexFromYmd(dateYmd));
   }
   return activity.activity_date === dateYmd;
 }
@@ -96,7 +105,12 @@ export async function createUserCalendarActivity(
     title: draft.title.trim() || 'Activity',
     duration_minutes: draft.duration_minutes,
     notes: draft.notes.trim(),
-    details: draft.details || {},
+    details: withRecurrenceDetails(
+      draft.details || {},
+      draft.recurrence === 'weekly'
+        ? (draft.recurrence_weekdays?.length ? draft.recurrence_weekdays : [weekdayIndexFromYmd(dateYmd)])
+        : []
+    ),
     recurrence: draft.recurrence === 'weekly' ? 'weekly' : 'none',
     recurrence_until: draft.recurrence === 'weekly' ? draft.recurrence_until || null : null,
   });

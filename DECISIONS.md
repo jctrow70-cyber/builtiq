@@ -1063,6 +1063,7 @@ Users treat Training as a calendar first. Hiding the grid until a program is fol
 - Training calendar is always visible
 - Programs apply by start/end dates
 - Recurring personal activities are series-based in v1 (delete removes the series)
+- BIQ-0170: weekly repeats can cover multiple weekdays (Mon/Wed/Fri, every day, etc.)
 
 ---
 
@@ -1176,5 +1177,35 @@ Copy-on-follow made group edits invisible to members. The copy existed to protec
 - `followProgram` / `syncMemberGroupEnrollment` point `followed_program_id` at the group program id
 - Members already on a snapshot are switched to the live template
 - Template edit UI is role-gated when `visibility` is `team`
+
+---
+
+## Decision 042 - Training Calendar Recurs; Programs Are Training Unless Inclusive
+
+Date: 2026-09-10  
+Status: Accepted  
+Category: Program Design / Training
+
+### Decision
+
+Personal Training activities can repeat weekly on **one or more weekdays**, with an optional end date. Series still start on the add date (days earlier in that week are not backfilled). Delete still removes the whole series.
+
+Programs default to **training only** (workouts and sets). During create — or later on the program — the author can opt into an **all-inclusive plan**, which also holds cardio, mobility, sport, and rest on the program week and can be pushed to a group with the training.
+
+### Reason
+
+A single weekday repeat is not a real calendar. Extra lifestyle activities should live on Training by default so Programs stay a training builder. Groups still need a way to send a full health week, not only lifts.
+
+### Alternatives Considered
+
+- Put all calendar events on the program template — rejected; Programs would stay a second calendar
+- RRULE / this-occurrence-only edits in v1 — deferred; weekday chips plus until-date cover the common case
+- Separate “lifestyle program” type — rejected; one flag on the existing program is enough
+
+### Impact
+
+- `details.recurrence_weekdays` on personal calendar rows
+- `st_programs.inclusive_plan` (migration 046)
+- Create Program asks Training only vs All-inclusive
 
 ---

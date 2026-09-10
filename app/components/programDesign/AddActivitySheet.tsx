@@ -2,18 +2,28 @@
 
 import { useEffect, useState } from 'react';
 import { ACTIVITY_TYPE_META } from '../../../lib/programDesign/activityTypes';
-import { ACTIVITY_TYPES, type ActivityDraft, type ActivityType, type ProgramActivity } from '../../../lib/programDesign/types';
+import { draftWeekdays, normalizeWeekdays } from '../../../lib/programDesign/recurrence';
+import {
+  ACTIVITY_TYPES,
+  WEEKDAY_LABELS,
+  type ActivityDraft,
+  type ActivityType,
+  type ProgramActivity,
+} from '../../../lib/programDesign/types';
 
 type AddActivitySheetProps = {
   dayLabel: string;
   existing?: ProgramActivity | null;
   allowRecurrence?: boolean;
+  allowMultiDay?: boolean;
+  allowRemainingWeeks?: boolean;
+  defaultWeekday?: number;
   onClose: () => void;
   onSave: (draft: ActivityDraft) => Promise<void>;
   onDelete?: () => Promise<void>;
 };
 
-function emptyDraft(type: ActivityType = 'strength'): ActivityDraft {
+function emptyDraft(type: ActivityType = 'strength', weekday = 0): ActivityDraft {
   return {
     activity_type: type,
     title: ACTIVITY_TYPE_META[type].defaultTitle,
@@ -22,41 +32,86 @@ function emptyDraft(type: ActivityType = 'strength'): ActivityDraft {
     details: {},
     recurrence: 'none',
     recurrence_until: null,
+    recurrence_weekdays: [weekday],
+    applyRemainingWeeks: true,
   };
 }
 
-function draftFromActivity(activity: ProgramActivity): ActivityDraft {
+function draftFromActivity(activity: ProgramActivity, weekday: number): ActivityDraft {
   return {
     activity_type: activity.activity_type,
     title: activity.title,
     duration_minutes: activity.duration_minutes,
     notes: activity.notes,
     details: { ...(activity.details || {}) },
+    recurrence_weekdays: draftWeekdays(
+      { recurrence_weekdays: (activity.details as { recurrence_weekdays?: number[] })?.recurrence_weekdays },
+      weekday
+    ),
   };
+}
+
+function toggleWeekday(days: number[], day: number): number[] {
+  if (days.includes(day)) {
+    const next = days.filter((d) => d !== day);
+    return next.length ? next : days;
+  }
+  return normalizeWeekdays([...days, day]);
+}
+
+function WeekdayPicker({
+  value,
+  onChange,
+}: {
+  value: number[];
+  onChange: (days: number[]) => void;
+}) {
+  return (
+    <div className="pd-weekday-row" role="group" aria-label="Days of the week">
+      {WEEKDAY_LABELS.map((label, idx) => (
+        <button
+          key={label}
+          type="button"
+          className={`pd-weekday-chip${value.includes(idx) ? ' active' : ''}`}
+          aria-pressed={value.includes(idx)}
+          onClick={() => onChange(toggleWeekday(value, idx))}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 export default function AddActivitySheet({
   dayLabel,
   existing,
   allowRecurrence = false,
+  allowMultiDay = false,
+  allowRemainingWeeks = false,
+  defaultWeekday = 0,
   onClose,
   onSave,
   onDelete,
 }: AddActivitySheetProps) {
-  const [draft, setDraft] = useState<ActivityDraft>(existing ? draftFromActivity(existing) : emptyDraft());
+  const [draft, setDraft] = useState<ActivityDraft>(
+    existing ? draftFromActivity(existing, defaultWeekday) : emptyDraft('strength', defaultWeekday)
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const isLegacy = !!existing?.id.startsWith('legacy-');
+  const weekdays = draftWeekdays(draft, defaultWeekday);
 
   useEffect(() => {
-    setDraft(existing ? draftFromActivity(existing) : emptyDraft());
+    setDraft(existing ? draftFromActivity(existing, defaultWeekday) : emptyDraft('strength', defaultWeekday));
     setError('');
-  }, [existing]);
+  }, [existing, defaultWeekday]);
 
   const type = draft.activity_type;
   const showCardio = type === 'cardio';
   const showMobility = type === 'mobility' || type === 'stretching';
   const showDuration = type !== 'rest';
+  const showWeekdays = allowMultiDay && !existing && (allowRecurrence ? draft.recurrence === 'weekly' : true);
 
   async function handleSave() {
     if (!draft.title.trim()) {
@@ -66,7 +121,10 @@ export default function AddActivitySheet({
     setSaving(true);
     setError('');
     try {
-      await onSave(draft);
+      await onSave({
+        ...draft,
+        recurrence_weekdays: weekdays,
+      });
     } catch (e: any) {
       setError(e?.message || 'Could not save activity');
     } finally {
@@ -195,13 +253,20 @@ export default function AddActivitySheet({
                 type="checkbox"
                 checked={draft.recurrence === 'weekly'}
                 onChange={(e) =>
-                  setDraft({ ...draft, recurrence: e.target.checked ? 'weekly' : 'none' })
+                  setDraft({
+                    ...draft,
+                    recurrence: e.target.checked ? 'weekly' : 'none',
+                    recurrence_weekdays: e.target.checked ? weekdays : [defaultWeekday],
+                  })
                 }
               />
               Repeat weekly
             </label>
             {draft.recurrence === 'weekly' && (
               <>
+                <p className="muted" style={{ margin: '8px 0 0' }}>
+                  Repeats on the days you pick, starting from this date. Days before today this week are skipped.
+                </p>
                 <label htmlFor="pd-recur-until">Repeat until (optional)</label>
                 <input
                   id="pd-recur-until"
@@ -212,6 +277,50 @@ export default function AddActivitySheet({
               </>
             )}
           </>
+        )}
+
+        {showWeekdays && (
+          <>
+            <label>{allowRecurrence ? 'Repeat on' : 'Add on these days'}</label>
+            <WeekdayPicker
+              value={weekdays}
+              onChange={(days) => setDraft({ ...draft, recurrence_weekdays: days })}
+            />
+            <div className="actions" style={{ marginTop: 0 }}>
+              <button
+                type="button"
+                className="btn small secondary"
+                onClick={() => setDraft({ ...draft, recurrence_weekdays: [0, 1, 2, 3, 4, 5, 6] })}
+              >
+                Every day
+              </button>
+              <button
+                type="button"
+                className="btn small secondary"
+                onClick={() => setDraft({ ...draft, recurrence_weekdays: [0, 2, 4] })}
+              >
+                Mon / Wed / Fri
+              </button>
+              <button
+                type="button"
+                className="btn small secondary"
+                onClick={() => setDraft({ ...draft, recurrence_weekdays: [1, 3] })}
+              >
+                Tue / Thu
+              </button>
+            </div>
+          </>
+        )}
+
+        {allowRemainingWeeks && !existing && (
+          <label className="remember-row" style={{ marginTop: 8 }}>
+            <input
+              type="checkbox"
+              checked={!!draft.applyRemainingWeeks}
+              onChange={(e) => setDraft({ ...draft, applyRemainingWeeks: e.target.checked })}
+            />
+            Add through remaining weeks of this program
+          </label>
         )}
 
         <label>Notes</label>

@@ -27,6 +27,7 @@ const PROGRAM_FIELDS = [
   'owner_user_id',
   'record_kind',
   'source_program_id',
+  'inclusive_plan',
 ];
 
 function isMissingRelation(error: { message?: string } | null | undefined): boolean {
@@ -92,6 +93,7 @@ export async function createDesignProgram(
     scope: ProgramScope;
     teamId?: string | null;
     recordKind?: ProgramRecordKind;
+    inclusivePlan?: boolean;
   }
 ): Promise<{ data: ProgramDesignRecord | null; error: string | null }> {
   const { startDate } = snapStartToMonday(input.startDate);
@@ -108,6 +110,7 @@ export async function createDesignProgram(
     end_date: endDate,
     status: 'draft',
     record_kind: input.recordKind || 'instance',
+    inclusive_plan: !!input.inclusivePlan,
   };
 
   const { data, error } = await insertProgramRecord(supabase, payload);

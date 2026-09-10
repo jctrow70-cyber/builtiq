@@ -20,7 +20,7 @@ type CreateProgramFlowProps = {
   /** Shown for group owners sequencing multiple dated plans. */
   sequencingHint?: string | null;
   onCancel: () => void;
-  onCreate: (input: { name: string; startDate: string; cycleWeeks: number }) => Promise<void>;
+  onCreate: (input: { name: string; startDate: string; cycleWeeks: number; inclusivePlan: boolean }) => Promise<void>;
 };
 
 export default function CreateProgramFlow({
@@ -37,6 +37,7 @@ export default function CreateProgramFlow({
   const [startDate, setStartDate] = useState(defaultStart);
   const [preset, setPreset] = useState<number | 'custom'>(6);
   const [customWeeks, setCustomWeeks] = useState(10);
+  const [inclusivePlan, setInclusivePlan] = useState(false);
 
   useEffect(() => {
     setStartDate(defaultStart);
@@ -49,7 +50,7 @@ export default function CreateProgramFlow({
 
   async function handleSubmit() {
     if (!name.trim()) return;
-    await onCreate({ name: name.trim(), startDate: snapped.startDate, cycleWeeks });
+    await onCreate({ name: name.trim(), startDate: snapped.startDate, cycleWeeks, inclusivePlan });
   }
 
   return (
@@ -60,7 +61,9 @@ export default function CreateProgramFlow({
       <p className="pd-eyebrow">{scope === 'group' ? 'Group program' : 'Personal program'}</p>
       <h1>Create program</h1>
       <p className="muted pd-lead">
-        Set the name and start/end dates. After you build workouts and follow the program, those days show on your Training calendar. You can still add other activities there anytime.
+        {inclusivePlan
+          ? 'Build training plus cardio, mobility, sport, and rest on this plan. You can push the whole week to a group.'
+          : 'Build the training workouts. Extra activities like walks or yoga live on your Training calendar unless you make this an all-inclusive plan.'}
         {scope === 'group' && groupName ? ` This will belong to ${groupName}.` : ''}
       </p>
       {sequencingHint && <p className="pd-note">{sequencingHint}</p>}
@@ -73,6 +76,26 @@ export default function CreateProgramFlow({
         placeholder="Strength & Longevity"
         autoFocus
       />
+
+      <label>What belongs on this program?</label>
+      <div className="pd-plan-kind">
+        <button
+          type="button"
+          className={`pd-plan-kind-card${!inclusivePlan ? ' active' : ''}`}
+          onClick={() => setInclusivePlan(false)}
+        >
+          <b>Training only</b>
+          <span>Workouts and sets. Add walks, yoga, or sport on the Training calendar whenever you want.</span>
+        </button>
+        <button
+          type="button"
+          className={`pd-plan-kind-card${inclusivePlan ? ' active' : ''}`}
+          onClick={() => setInclusivePlan(true)}
+        >
+          <b>All-inclusive plan</b>
+          <span>Training plus cardio, mobility, sport, and rest on this week — push the whole plan to a group.</span>
+        </button>
+      </div>
 
       <label htmlFor="pd-start-date">Start date</label>
       <DateInput id="pd-start-date" value={startDate} onChange={setStartDate} />
@@ -130,7 +153,11 @@ export default function CreateProgramFlow({
           <b>{formatCycleLength(cycleWeeks)}</b>
         </div>
       </div>
-      <p className="muted">Programs use complete Monday–Sunday weeks. Only this cycle is scheduled — not an open-ended calendar.</p>
+      <p className="muted">
+        {inclusivePlan
+          ? 'Programs use complete Monday–Sunday weeks. Lifestyle activities you add here repeat with the cycle and can be pushed with the training.'
+          : 'Programs use complete Monday–Sunday weeks. Only this training cycle is scheduled — not an open-ended calendar.'}
+      </p>
 
       {error && <p className="pd-error">{error}</p>}
 

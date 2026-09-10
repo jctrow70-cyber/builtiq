@@ -19,6 +19,7 @@ const PROGRAM_INDEX_FIELD_LIST = [
   'coaching_notes',
   'focus_muscles',
   'source_program_id',
+  'inclusive_plan',
 ];
 
 function programIndexQuery(
