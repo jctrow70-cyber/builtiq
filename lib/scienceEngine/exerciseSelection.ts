@@ -58,6 +58,20 @@ function sameMovementFamily(name: string, alreadyNames: string[]): boolean {
   return alreadyNames.some((n) => movementFamily(n) === family);
 }
 
+/** Conventional, Romanian, trap-bar, stiff-leg, etc. — one per session max. */
+export function isDeadliftVariation(name: string): boolean {
+  const n = String(name || '').toLowerCase();
+  return /\bdeadlift\b|\brdl\b/.test(n);
+}
+
+/** Session-only: never stack two deadlift variations in the same workout. */
+export function conflictsInSession(name: string, sessionNames: string[]): boolean {
+  if (!sessionNames.length) return false;
+  if (sameMovementFamily(name, sessionNames)) return true;
+  if (isDeadliftVariation(name) && sessionNames.some(isDeadliftVariation)) return true;
+  return false;
+}
+
 function redundancyPenalty(ex: CatalogExercise, alreadyNames: string[]): number {
   const family = movementFamily(ex.name);
   if (!family) return 0;
@@ -74,6 +88,8 @@ function movementFamily(name: string): string {
   if (/pulldown|pull-?up/.test(n)) return 'vertical_pull';
   if (/squat/.test(n) && !/split squat/.test(n)) return 'squat';
   if (/split squat|bulgarian/.test(n)) return 'split_squat';
+  // Keep RDL distinct from conventional across the WEEK so full-body A/B can vary.
+  // Same-session stacking is blocked separately via conflictsInSession / isDeadliftVariation.
   if (/\brdl\b|romanian deadlift/.test(n)) return 'rdl';
   if (/deadlift/.test(n)) return 'deadlift';
   return '';
@@ -93,19 +109,30 @@ export function pickExercise(
     role: ProgramRole;
     pattern?: MovementPatternId;
     alreadyNames: string[];
+    /** Names already chosen in this workout (not prior days). */
+    sessionNames?: string[];
     preferredNames?: string[];
   }
 ): CatalogExercise | null {
+  const sessionNames = ctx.sessionNames || [];
   const blocked = new Set((ctx.alreadyNames || []).map((n) => n.toLowerCase()));
   const preferred = (ctx.preferredNames || [])
     .map((name) => findByName(pool, name))
-    .find((ex) => ex && !blocked.has(ex.name.toLowerCase()) && !sameMovementFamily(ex.name, ctx.alreadyNames) && scoreExercise(ex, ctx) > -20);
+    .find(
+      (ex) =>
+        ex &&
+        !blocked.has(ex.name.toLowerCase()) &&
+        !sameMovementFamily(ex.name, ctx.alreadyNames) &&
+        !conflictsInSession(ex.name, sessionNames) &&
+        scoreExercise(ex, ctx) > -20
+    );
   if (preferred) return preferred;
 
   const ranked = pool
     .filter((ex) => !ctx.alreadyNames.some((n) => n.toLowerCase() === ex.name.toLowerCase()))
     .filter((ex) => !isWarmupOnly(ex, ctx.role))
     .filter((ex) => !sameMovementFamily(ex.name, ctx.alreadyNames))
+    .filter((ex) => !conflictsInSession(ex.name, sessionNames))
     .map((ex) => ({ ex, score: scoreExercise(ex, ctx) }))
     .sort((a, b) => b.score - a.score);
   return ranked[0] && ranked[0].score > 0 ? ranked[0].ex : null;
