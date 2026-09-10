@@ -36,7 +36,7 @@ export default function CreateProgramFlow({
   const [name, setName] = useState('');
   const [startDate, setStartDate] = useState(defaultStart);
   const [preset, setPreset] = useState<number | 'custom'>(6);
-  const [customWeeks, setCustomWeeks] = useState(10);
+  const [customWeeks, setCustomWeeks] = useState(1);
 
   useEffect(() => {
     setStartDate(defaultStart);
@@ -50,6 +50,11 @@ export default function CreateProgramFlow({
   async function handleSubmit() {
     if (!name.trim()) return;
     await onCreate({ name: name.trim(), startDate: snapped.startDate, cycleWeeks });
+  }
+
+  function chooseCustom() {
+    setCustomWeeks((prev) => (preset === 'custom' ? prev : typeof preset === 'number' ? preset : 1));
+    setPreset('custom');
   }
 
   return (
@@ -97,7 +102,7 @@ export default function CreateProgramFlow({
         <button
           type="button"
           className={`pd-cycle-chip${preset === 'custom' ? ' active' : ''}`}
-          onClick={() => setPreset('custom')}
+          onClick={chooseCustom}
         >
           Custom
         </button>
@@ -113,6 +118,11 @@ export default function CreateProgramFlow({
             value={customWeeks}
             onChange={(e) => setCustomWeeks(Number(e.target.value))}
           />
+          <p className="muted">
+            {cycleWeeks <= 12
+              ? `Generate will build ${cycleWeeks} week${cycleWeeks === 1 ? '' : 's'} of workouts — not the default 6.`
+              : `Generate builds the first 12 weeks; weeks 13–${cycleWeeks} stay empty until you copy or add them.`}
+          </p>
         </>
       )}
 

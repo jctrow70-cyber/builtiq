@@ -3,7 +3,7 @@
 import { inferExerciseType } from './exerciseTypes';
 import { hasExerciseGuide } from './exerciseMedia';
 import { filterCatalogByEquipment, hasEquipmentFilter, normalizeEquipmentList } from './equipmentFilter';
-import { mondayOfWeek, todayYmd } from './programCalendar';
+import { mondayOfWeek, programEndDate, todayYmd } from './programCalendar';
 import { insertProgramRecord } from './programStatus';
 import { PUSH_FULL_BODY_EMPHASIS, PULL_FULL_BODY_EMPHASIS } from './scheduleSuggestion';
 import { normalizeCatalogNameKey, catalogItemPreferenceScore } from './catalogSources';
@@ -1120,7 +1120,9 @@ export async function persistAiProgramPlan(
     visibility: config.mode,
     name: config.programName?.trim() || plan.program_name || 'AI Strength Program',
     weeks: config.weeks,
+    cycle_length_weeks: config.weeks,
     start_date: mondayOfWeek(config.startDate || todayYmd()),
+    end_date: programEndDate(mondayOfWeek(config.startDate || todayYmd()), config.weeks),
     focus_muscles: config.focusMuscles?.length ? config.focusMuscles : null,
     generation_prompt: config.prompt.trim(),
     generation_method: config.generationMethod || 'ai',

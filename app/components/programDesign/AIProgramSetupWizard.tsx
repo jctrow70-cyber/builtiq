@@ -230,6 +230,7 @@ export default function AIProgramSetupWizard({
 
   const summary = useMemo(
     () => [
+      { label: 'Program length', value: weeks === 1 ? '1 week' : `${weeks} weeks` },
       { label: 'Goal', value: goalLabel(intake.primaryGoal) },
       { label: 'Schedule', value: `${intake.preferredDays.length || daysCount} days/week${intake.preferredDays.length ? ` · ${intake.preferredDays.join(', ')}` : ''}` },
       { label: 'Workout length', value: `${intake.sessionMinutes} minutes` },
@@ -240,7 +241,7 @@ export default function AIProgramSetupWizard({
       { label: 'Equipment', value: intake.equipment.includes('full_gym') || !intake.equipment.length ? 'Full gym' : intake.equipment.join(', ') },
       { label: 'Priorities', value: intake.priorityAreas.length ? intake.priorityAreas.join(', ') : 'No special priority' },
     ],
-    [intake, daysCount]
+    [intake, daysCount, weeks]
   );
 
   if (!loaded) {
@@ -443,6 +444,15 @@ export default function AIProgramSetupWizard({
               ? 'We reused your last intake. Generate, or adjust anything first.'
               : 'Structured choices plus your notes will be sent to the program designer.'}
           </p>
+          {weeks > 4 ? (
+            <p className="muted">
+              AI designs week 1 in detail; BuildIQ copies that template across all {weeks} weeks so you can progress the same lifts.
+            </p>
+          ) : (
+            <p className="muted">
+              This program is {weeks} week{weeks === 1 ? '' : 's'} long — generate will not expand it to the old 6-week default.
+            </p>
+          )}
           <div className="ai-wiz-summary">
             {summary.map((row) => (
               <div key={row.label} className="ai-wiz-summary-row">

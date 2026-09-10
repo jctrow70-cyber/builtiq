@@ -123,7 +123,7 @@ export function trainingProfileFromSources(input: {
     explicitDayTypes: config.dayTypes,
     includeCooldown: config.includeCooldown !== false,
     workingLoads: config.workingLoads || {},
-    weeks: config.weeks || 6,
+    weeks: Number(config.weeks) >= 1 ? Math.min(12, Math.floor(Number(config.weeks))) : 6,
     supersetPreference: (config.supersetPreference || tp.superset_preference || 'sometimes') as TrainingProfile['supersetPreference'],
     varietyPreference: (config.varietyPreference || tp.variety_preference || 'balanced') as TrainingProfile['varietyPreference'],
     trainingFeel,

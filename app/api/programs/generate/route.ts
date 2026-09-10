@@ -2,8 +2,10 @@ import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createSupabaseFromRequest, requireAuthUser } from '../../../../lib/supabaseServer';
 import { persistAiProgramPlan, persistWorkoutsOntoProgram, type GenerationConfig } from '../../../../lib/training/aiProgramPlan';
+import { missingProgramColumnFromError } from '../../../../lib/training/programStatus';
 import { inferScheduleFromPrompt } from '../../../../lib/programDesign/inferSchedule';
 import { createActivitiesFromWorkouts, updateDesignProgram } from '../../../../lib/programDesign/programDesignApi';
+import { cycleEndDate, generationWeeksOf, snapStartToMonday } from '../../../../lib/programDesign/cycle';
 import { fetchAllExerciseCatalog } from '../../../../lib/training/catalogFetch';
 import { builtinCatalogItems } from '../../../../lib/training/catalogSearch';
 import { normalizeEquipmentList } from '../../../../lib/training/equipmentFilter';
@@ -53,7 +55,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Prompt is too long (max 6000 characters)' }, { status: 400 });
   }
 
-  const weeks = Math.max(1, Math.min(12, Number(body?.weeks) || 6));
   const structuredIntake = body?.structuredIntake === true;
   const promptSchedule = inferScheduleFromPrompt(prompt);
   const dayTypes: Record<string, string> =
@@ -76,6 +77,64 @@ export async function POST(request: Request) {
   const defaultProgramName = 'BuiltIQ Training Program';
   const includeCooldown = body?.includeCooldown !== false;
   const startDateRaw = body?.startDate ? String(body.startDate).slice(0, 10) : null;
+  const existingProgramId = body?.existingProgramId ? String(body.existingProgramId) : '';
+
+  type ExistingProgramRow = {
+    id: string;
+    owner_user_id: string;
+    team_id: string | null;
+    visibility: string;
+    weeks?: number | null;
+    cycle_length_weeks?: number | null;
+    start_date?: string | null;
+  };
+  let existingProgram: ExistingProgramRow | null = null;
+
+  if (existingProgramId) {
+    let fields = 'id, owner_user_id, team_id, visibility, weeks, cycle_length_weeks, start_date';
+    let existing: ExistingProgramRow | null = null;
+    let existingError: { message?: string } | null = null;
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const result = await supabase.from('st_programs').select(fields).eq('id', existingProgramId).maybeSingle();
+      existingError = result.error;
+      if (!result.error) {
+        existing = result.data as unknown as ExistingProgramRow | null;
+        break;
+      }
+      const col = missingProgramColumnFromError(result.error);
+      if (col && fields.split(',').some((f) => f.trim() === col)) {
+        fields = fields
+          .split(',')
+          .map((f) => f.trim())
+          .filter((f) => f !== col)
+          .join(', ');
+        continue;
+      }
+      break;
+    }
+    if (existingError || !existing) {
+      return NextResponse.json({ error: 'Program not found' }, { status: 404 });
+    }
+    existingProgram = existing;
+    const owns = existingProgram.owner_user_id === user.id;
+    if (!owns && existingProgram.visibility === 'team' && existingProgram.team_id) {
+      const { data: membership } = await supabase
+        .from('st_team_members')
+        .select('role')
+        .eq('team_id', existingProgram.team_id)
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .maybeSingle();
+      if (!membership || !['owner', 'editor', 'manager'].includes(membership.role)) {
+        return NextResponse.json({ error: 'You cannot edit this program' }, { status: 403 });
+      }
+    } else if (!owns) {
+      return NextResponse.json({ error: 'You cannot edit this program' }, { status: 403 });
+    }
+  }
+
+  // Prefer the program's saved cycle length so Custom weeks (e.g. 1) are not replaced by the old 6-week default.
+  const weeks = generationWeeksOf(existingProgram, body?.weeks);
 
   if (mode === 'team') {
     if (!teamId) return NextResponse.json({ error: 'teamId required for team programs' }, { status: 400 });
@@ -224,36 +283,11 @@ export async function POST(request: Request) {
 
   config.generationMethod = generationMethod;
   const builtinCatalog = builtinCatalogItems(catalog || []);
-  const existingProgramId = body?.existingProgramId ? String(body.existingProgramId) : '';
 
   let programId: string | null = null;
   let persistError: string | null = null;
 
-  if (existingProgramId) {
-    const { data: existing, error: existingError } = await supabase
-      .from('st_programs')
-      .select('id, owner_user_id, team_id, visibility')
-      .eq('id', existingProgramId)
-      .maybeSingle();
-    if (existingError || !existing) {
-      return NextResponse.json({ error: 'Program not found' }, { status: 404 });
-    }
-    const owns = existing.owner_user_id === user.id;
-    if (!owns && existing.visibility === 'team' && existing.team_id) {
-      const { data: membership } = await supabase
-        .from('st_team_members')
-        .select('role')
-        .eq('team_id', existing.team_id)
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .maybeSingle();
-      if (!membership || !['owner', 'editor', 'manager'].includes(membership.role)) {
-        return NextResponse.json({ error: 'You cannot edit this program' }, { status: 403 });
-      }
-    } else if (!owns) {
-      return NextResponse.json({ error: 'You cannot edit this program' }, { status: 403 });
-    }
-
+  if (existingProgramId && existingProgram) {
     const { data: existingWorkouts } = await supabase
       .from('st_workouts')
       .select('id')
@@ -277,10 +311,19 @@ export async function POST(request: Request) {
     }
     await supabase.from('st_program_activities').delete().eq('program_id', existingProgramId);
 
+    // Never persist more weeks than the program cycle length.
+    plan = {
+      ...plan,
+      workouts: (plan.workouts || []).filter((w) => Number(w.week) >= 1 && Number(w.week) <= weeks),
+    };
+
     const persist = await persistWorkoutsOntoProgram(supabase, existingProgramId, plan, config, builtinCatalog);
     programId = persist.programId;
     persistError = persist.error;
     if (programId) {
+      const startMonday = snapStartToMonday(
+        String(existingProgram.start_date || startDateRaw || new Date().toISOString().slice(0, 10)).slice(0, 10)
+      ).startDate;
       await updateDesignProgram(supabase, programId, {
         generation_method: generationMethod,
         science_version: SCIENCE_ENGINE_VERSION,
@@ -288,6 +331,9 @@ export async function POST(request: Request) {
         coaching_notes: plan.coaching_notes || null,
         program_style: plan.program_style || null,
         status: 'active',
+        weeks,
+        cycle_length_weeks: weeks,
+        end_date: cycleEndDate(startMonday, weeks),
       });
       const { data: workouts } = await supabase
         .from('st_workouts')
