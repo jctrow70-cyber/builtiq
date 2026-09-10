@@ -11,14 +11,22 @@ Branch:
 Status:
 ```
 
+<<<<<<< HEAD
 ## BIQ-0170 - Multi-Day Recurrence and All-Inclusive Programs
 
 Date: 2026-09-10  
 Branch: develop  
+=======
+## BIQ-0171 - Block Same-Day Deadlift Variations
+
+Date: 2026-09-10  
+Branch: cursor/fix-same-day-deadlift-c29a  
+>>>>>>> 69e7434b80ac5d889b76b42bd12c18b4ed5868f1
 Status: Completed
 
 ### Summary
 
+<<<<<<< HEAD
 Training **Add activity** can repeat weekly on multiple weekdays (Mon/Wed/Fri, Tue/Thu, every day, or any mix), with an optional end date. Programs default to **training only**. You can opt into an **all-inclusive plan** during create (or later) so cardio, mobility, sport, and rest live on that program and can be pushed to a group.
 
 ### Purpose
@@ -75,11 +83,127 @@ Until 046 is applied, new programs still create; the inclusive flag is skipped a
 - Recurring edits/deletes still apply to the whole series, not one date.
 - Personal strength calendar items still do not auto-create a full logger until linked to a workout.
 - Inclusive flag needs migration 046 to persist.
+=======
+A single workout can no longer include two deadlift variations (for example Conventional Deadlift + Romanian Deadlift). Full-body weeks may still use different hinge variations on different days.
+
+### Purpose
+
+Users saw Conventional Deadlift and Romanian Deadlift in the same session. Science templates only schedule one hinge slot per day; the AI week rewrite could still stack both because RDL and conventional were treated as separate movement families.
+
+### Changes
+
+- Session-level conflict: any second deadlift variation is rejected while building a workout
+- AI apply path skips / strips extra deadlift variations in the same day
+- Quality check warns on `SAME_DAY_DEADLIFTS`
+- Program designer prompt: never two deadlift variations in one session
+- Week-level variety kept: Day A RDL + Day B conventional remains allowed
+
+### Files Changed
+
+- `lib/scienceEngine/exerciseSelection.ts`
+- `lib/scienceEngine/generateProgram.ts`
+- `lib/scienceEngine/applyAiDesign.ts`
+- `lib/scienceEngine/qualityCheck.ts`
+- `lib/scienceEngine/programDesigner.ts`
+- `scripts/test-same-day-deadlift.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Programs → create a full-body plan → Generate.
+2. Open each training day: at most one of Conventional / Trap Bar / Romanian / RDL per day.
+3. Across the week, different days may still use different hinge variations (e.g. RDL on one day, conventional on another).
+4. `npx tsx scripts/test-same-day-deadlift.ts`
+5. `npx tsx lib/scienceEngine/acceptanceCheck.ts`
+
+### Known Issues
+
+- Other high lower-back pairings (e.g. heavy squat + heavy good morning) are still prompt-guided rather than hard-blocked.
+>>>>>>> 69e7434b80ac5d889b76b42bd12c18b4ed5868f1
 
 ### Recommended Commit Message
 
 ```text
+<<<<<<< HEAD
 BIQ-0170 Add multi-day repeats and optional all-inclusive programs
+=======
+BIQ-0171 Block two deadlift variations in the same workout
+```
+
+---
+
+## BIQ-0170 - Respect Custom Program Week Length
+
+Date: 2026-09-10  
+Branch: cursor/fix-custom-weeks-generation-c29a  
+Status: Completed
+
+### Summary
+
+Custom cycle length (including 1 week) is honored when generating workouts. Programs no longer expand to the old 6-week default when you asked for a shorter custom length.
+
+### Purpose
+
+Users who set Custom weeks (for example 1 week) still got a multi-week plan because generation fell back to 6 weeks, and `cycle_length_weeks` could stay stale at 6 after Training week edits.
+
+### Changes
+
+- Generate API loads the existing program’s saved week length and uses that instead of defaulting to 6
+- After generate, `weeks`, `cycle_length_weeks`, and `end_date` stay in sync with what was built
+- `cycleLengthOf` prefers `weeks` when fields disagree (Training edits update `weeks`)
+- Training week selectors use `cycleLengthOf`
+- Updating weeks in Training also updates `cycle_length_weeks` and `end_date`
+- Create Program Custom starts from 1 (or the last preset) instead of jumping to 10
+- AI setup review shows program length and whether week 1 will be copied across the cycle
+- NOT NULL DB errors are no longer misread as missing columns
+
+### Files Changed
+
+- `app/api/programs/generate/route.ts`
+- `app/components/programDesign/CreateProgramFlow.tsx`
+- `app/components/programDesign/AIProgramSetupWizard.tsx`
+- `app/components/programDesign/ProgramDesignHome.tsx`
+- `app/components/training/TrainingWeekSelector.tsx`
+- `app/components/training/ActivePlanCard.tsx`
+- `app/page.tsx`
+- `lib/programDesign/cycle.ts`
+- `lib/scienceEngine/profile.ts`
+- `lib/scienceEngine/generateProgram.ts`
+- `lib/training/aiProgramPlan.ts`
+- `lib/training/programStatus.ts`
+- `scripts/test-custom-weeks-generation.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Programs → Create Program → Cycle length **Custom** → set **1**.
+2. Confirm the end card shows **1 Week**.
+3. Complete AI intake → Generate. Review should say **1 week**.
+4. Open Workouts — only week 1 should exist (Previous/Next week disabled at week 1).
+5. Create another program with Custom **8**. Generate. Confirm weeks 1–8 exist, not a silent 6.
+6. Training → change Weeks on a program → blur/save → Programs should show the same length.
+7. Mobile (~390px): Custom weeks input and Generate still usable.
+
+### Known Issues
+
+- Cycle lengths over 12 weeks still generate at most 12 weeks of workouts.
+- For programs longer than 4 weeks, week 1 is still copied across the cycle (by design for progression).
+
+### Recommended Commit Message
+
+```text
+BIQ-0170 Respect custom program week length on generate
+>>>>>>> 69e7434b80ac5d889b76b42bd12c18b4ed5868f1
 ```
 
 ---

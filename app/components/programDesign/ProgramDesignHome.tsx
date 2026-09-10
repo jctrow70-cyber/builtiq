@@ -17,7 +17,7 @@ import {
   shouldPromptUnfollowForPersonalCreate,
   suggestedNextGroupStart,
 } from '../../../lib/programDesign/enrollment';
-import { cycleLengthOf, formatCycleLength, formatProgramRange, nextMondayFrom, programDateRange } from '../../../lib/programDesign/cycle';
+import { cycleLengthOf, formatCycleLength, formatProgramRange, generationWeeksOf, nextMondayFrom, programDateRange } from '../../../lib/programDesign/cycle';
 import {
   alreadyFollowing,
   followProgram,
@@ -381,7 +381,7 @@ export default function ProgramDesignHome({
           supabase={supabase}
           programName={editing.name}
           programId={editing.id}
-          weeks={Math.min(12, cycleLengthOf(editing))}
+          weeks={generationWeeksOf(editing)}
           startDate={editing.start_date}
           isFollowing={!!alreadyFollowing(editing, personalPrograms, followedProgramId)}
           onComplete={async (weekPlan, result) => {

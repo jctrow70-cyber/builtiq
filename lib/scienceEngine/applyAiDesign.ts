@@ -1,4 +1,4 @@
-import { findByName } from './exerciseSelection';
+import { findByName, conflictsInSession } from './exerciseSelection';
 import { generatePotentiation } from './potentiation';
 import { prescribeExercise } from './prescription';
 import { generateRampSets, isPrimaryLift } from './rampUp';
@@ -108,45 +108,75 @@ function strengthFromRow(row: any): AiStrengthItem[] {
 
 function workoutFromAi(seed: ScienceWorkout, row: any, catalog: CatalogExercise[], profile: TrainingProfile): ScienceWorkout | null {
   const exercises: ExercisePrescription[] = [];
+  const sessionNames: string[] = [];
   const items = strengthFromRow(row);
   let groupNum = 0;
+
+  function tryAdd(raw: any, role: string, extras?: Partial<ExercisePrescription>): boolean {
+    const name = String(raw?.name || '').trim();
+    if (!name) return false;
+    if (conflictsInSession(name, sessionNames)) return false;
+    const prescribed = resolveExercise(raw, catalog, profile, role);
+    if (!prescribed) return false;
+    if (extras) Object.assign(prescribed, extras);
+    exercises.push(prescribed);
+    sessionNames.push(prescribed.name);
+    return true;
+  }
 
   flattenStrengthItems(items).forEach((block) => {
     if (block.kind === 'group') {
       const pair = block.exercises.slice(0, 3);
       if (pair.length < 2) {
-        const one = resolveExercise(pair[0], catalog, profile, exercises.length === 0 ? 'primary' : 'secondary');
-        if (one) exercises.push(one);
+        tryAdd(pair[0], exercises.length === 0 ? 'primary' : 'secondary');
         return;
       }
       const firstName = String(pair[0].name || '');
       if (isPrimaryLift(firstName) && exercises.length === 0) {
-        const standalone = resolveExercise(pair[0], catalog, profile, 'primary');
-        if (standalone) exercises.push(standalone);
+        tryAdd(pair[0], 'primary');
         pair.slice(1).forEach((ex: any) => {
-          const next = resolveExercise(ex, catalog, profile, 'secondary');
-          if (next) exercises.push(next);
+          tryAdd(ex, 'secondary');
         });
         return;
       }
       groupNum += 1;
       const label = `Superset ${String.fromCharCode(64 + groupNum)}`;
       const groupId = `ai-${seed.dayLabel}-${groupNum}`;
+      let added = 0;
       pair.forEach((ex: any, i: number) => {
-        const prescribed = resolveExercise(ex, catalog, profile, i === 0 ? 'secondary' : 'isolation');
-        if (!prescribed) return;
-        prescribed.supersetGroupId = groupId;
-        prescribed.supersetLabel = label;
-        prescribed.supersetOrder = i + 1;
-        exercises.push(prescribed);
+        const ok = tryAdd(ex, i === 0 ? 'secondary' : 'isolation', {
+          supersetGroupId: groupId,
+          supersetLabel: label,
+          supersetOrder: i + 1,
+        });
+        if (ok) added += 1;
       });
+      // If only one side of the pair survived dedupe, clear orphaned superset metadata.
+      if (added === 1) {
+        const last = exercises[exercises.length - 1];
+        if (last?.supersetGroupId === groupId) {
+          last.supersetGroupId = undefined;
+          last.supersetLabel = undefined;
+          last.supersetOrder = undefined;
+        }
+      }
       return;
     }
     const raw = block.exercises[0];
     const role = exercises.length === 0 ? 'primary' : String(raw?.role || 'secondary');
-    const prescribed = resolveExercise(raw, catalog, profile, role);
-    if (prescribed) exercises.push(prescribed);
+    tryAdd(raw, role);
   });
+
+  // Safety net: keep the first deadlift variation if any slipped through.
+  const kept: ExercisePrescription[] = [];
+  const keptNames: string[] = [];
+  for (const ex of exercises) {
+    if (conflictsInSession(ex.name, keptNames)) continue;
+    kept.push(ex);
+    keptNames.push(ex.name);
+  }
+  exercises.length = 0;
+  exercises.push(...kept);
 
   if (exercises.length < 2) return null;
 

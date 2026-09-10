@@ -2206,9 +2206,17 @@ function onSelectTrainingDay(date:string){
  async function updateProgramWeeks(nextWeeks:number){
   if(!program||!canEdit())return;
   const w=Math.max(1,Math.min(12,Number(nextWeeks)||6));
-  const{error}=await supabase.from('st_programs').update({weeks:w}).eq('id',program.id);
-  if(error)return alert(error.message);
-  setProgram({...program,weeks:w});
+  const start=resolveProgramStartDate({...program,weeks:w});
+  const end=programEndDate(start,w);
+  const{error}=await supabase.from('st_programs').update({weeks:w,cycle_length_weeks:w,end_date:end}).eq('id',program.id);
+  if(error){
+   const{error:fallbackError}=await supabase.from('st_programs').update({weeks:w}).eq('id',program.id);
+   if(fallbackError)return alert(fallbackError.message);
+   setProgram({...program,weeks:w});
+   setWeeks(w);
+   return;
+  }
+  setProgram({...program,weeks:w,cycle_length_weeks:w,end_date:end});
   setWeeks(w);
  }
  async function reloadKeepDay(){

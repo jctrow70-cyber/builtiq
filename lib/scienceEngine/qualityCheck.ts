@@ -40,6 +40,15 @@ export function validateProgramQuality(program: ScienceProgram, sessionMinutes =
   }
 
   week1.forEach((workout) => {
+    const deadlifts = workout.exercises.filter((ex) => /\bdeadlift\b|\brdl\b/i.test(ex.name));
+    if (deadlifts.length >= 2) {
+      issues.push(
+        warn(
+          'SAME_DAY_DEADLIFTS',
+          `${workout.name} has multiple deadlift variations (${deadlifts.map((d) => d.name).join(', ')}). Keep one hinge variation per session.`
+        )
+      );
+    }
     const primaries = workout.exercises.filter((ex) => ex.role === 'primary');
     primaries.forEach((ex) => {
       if (ex.supersetGroupId && /squat|deadlift|bench press/i.test(ex.name)) {

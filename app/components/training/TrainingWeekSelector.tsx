@@ -2,6 +2,7 @@
 
 import DateInput from '../DateInput';
 import { formatDisplayDate, resolveProgramStartDate, weekRangeLabel } from '../../../lib/training/programCalendar';
+import { cycleLengthOf } from '../../../lib/programDesign/cycle';
 
 type TrainingWeekSelectorProps = {
   week: number;
@@ -22,7 +23,7 @@ export default function TrainingWeekSelector({
   onLogDateChange,
   disabled,
 }: TrainingWeekSelectorProps) {
-  const total = program?.weeks || weeksFallback || 6;
+  const total = program ? cycleLengthOf(program) : weeksFallback || 6;
   const start = program ? resolveProgramStartDate(program) : '';
   const rangeLabel = start ? weekRangeLabel(start, week) : '';
 

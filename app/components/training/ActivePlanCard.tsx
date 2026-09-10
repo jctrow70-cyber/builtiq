@@ -12,6 +12,7 @@ import {
   resolveProgramStartDate,
   weekRangeLabel,
 } from '../../../lib/training/programCalendar';
+import { cycleLengthOf } from '../../../lib/programDesign/cycle';
 
 type ActivePlanCardProps = {
   programName: string | null;
@@ -207,7 +208,7 @@ export default function ActivePlanCard({
 }
 
 export function activePlanWeekOptions(program: any, weeksFallback: number) {
-  const total = program?.weeks || weeksFallback || 6;
+  const total = program ? cycleLengthOf(program) : Math.max(1, weeksFallback || 6);
   const start = program ? resolveProgramStartDate(program) : '';
   return Array.from({ length: total }, (_, i) => {
     const w = i + 1;
