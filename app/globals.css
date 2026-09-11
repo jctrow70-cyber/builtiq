@@ -367,6 +367,27 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .progress-pr-main b{font-size:14px}
 .progress-pr-badge{background:#3b2f63;color:#e9d5ff;margin-left:6px;font-size:10px}
 .progress-pr-date{font-size:11px;white-space:nowrap}
+.progress-section{display:grid;gap:10px}
+.body-progress{display:grid;gap:10px}
+.body-progress-metrics .body-delta{display:block;font-size:11px;margin-top:2px}
+.body-progress-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:8px}
+.body-field{display:grid;gap:4px;min-width:0}
+.body-field span{font-size:12px;font-weight:700;color:var(--muted)}
+.body-field input,.body-field input[type=date]{width:100%;min-height:40px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:#070a11;color:var(--text);font-size:14px}
+.body-field--wide{grid-column:1 / -1}
+.body-history-list{margin-top:8px}
+.body-history-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.body-history-row:first-child{border-top:none;padding-top:0}
+.body-history-main{display:grid;gap:4px;min-width:0}
+.body-history-notes{font-size:12px}
+.body-error{color:#fca5a5;font-size:13px;margin-top:8px}
+.body-dash-card{min-height:auto}
+.body-quick-add{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.body-quick-field{display:grid;gap:4px;min-width:0}
+.body-quick-field input{width:100%;min-height:40px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:#070a11;color:var(--text);font-size:14px}
+.body-dash-actions{margin-top:10px;flex-wrap:wrap}
+.body-dash-msg{margin-top:6px;font-size:12px}
+@media(max-width:600px){.body-progress-form,.body-quick-add{grid-template-columns:1fr}}
 .pr-celebration-toast{position:fixed;left:50%;bottom:calc(72px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;width:min(420px,calc(100vw - 24px));pointer-events:none}
 .pr-celebration-card{pointer-events:auto;display:flex;align-items:flex-start;gap:12px;padding:14px 16px;border-radius:16px;background:linear-gradient(135deg,#2a1f4d 0%,#1a2744 100%);border:1px solid #6d28d9;box-shadow:0 12px 40px rgba(0,0,0,.45);animation:prCelebrationIn .35s ease-out}
 .pr-celebration-icon{font-size:28px;line-height:1;flex-shrink:0}

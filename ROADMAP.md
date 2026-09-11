@@ -97,7 +97,7 @@ Goal: Help users see improvement over time.
 ### Priorities
 
 - Strength progress charts
-- Bodyweight tracking
+- Bodyweight tracking — **BIQ-0173 started** (weight + waist circumference history + Dashboard quick-add)
 - Workout frequency tracking
 - Personal records
 - Volume trends
@@ -109,6 +109,7 @@ Goal: Help users see improvement over time.
 - Exercise progress detail screen
 - Personal record tracking
 - Weekly summary view
+- Body measurements history (weight, waist; more metrics later)
 
 ## Phase 5 — Nutrition Tracking MVP
 
