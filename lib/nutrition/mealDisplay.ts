@@ -1,4 +1,4 @@
-import { formatMacro, MacroTotals, MealType } from './macros';
+import { formatMacro, formatMacroGrams, MacroTotals, MealType } from './macros';
 
 /**
  * Default daily calorie split: three main meals plus a small snacks allowance.
@@ -28,7 +28,7 @@ export function formatMealHeaderSummary(
   const calPart = target !== null ? `${logged} / ${target} cal` : `${logged} cal`;
   const parts = [calPart];
   parts.push(
-    `${formatMacro(totals.protein_g)}P · ${formatMacro(totals.carbs_g)}C · ${formatMacro(totals.fat_g)}F`
+    `${formatMacroGrams(totals.protein_g)}P · ${formatMacroGrams(totals.carbs_g)}C · ${formatMacroGrams(totals.fat_g)}F`
   );
   return parts.join(' · ');
 }

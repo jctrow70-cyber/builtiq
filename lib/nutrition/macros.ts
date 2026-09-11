@@ -97,15 +97,22 @@ export function scaleMacros(base: MacroTotals, qty: number): MacroTotals {
 }
 
 export function sumMacros(items: Array<Partial<MacroTotals>>): MacroTotals {
-  return items.reduce<MacroTotals>(
+  // Sum raw values first, then round P/C/F once — avoids step-wise 0.1 drift.
+  const raw = items.reduce<MacroTotals>(
     (acc, item) => ({
       calories: acc.calories + (Number(item.calories) || 0),
-      protein_g: parseMacroInput(acc.protein_g + (Number(item.protein_g) || 0)),
-      carbs_g: parseMacroInput(acc.carbs_g + (Number(item.carbs_g) || 0)),
-      fat_g: parseMacroInput(acc.fat_g + (Number(item.fat_g) || 0)),
+      protein_g: acc.protein_g + (Number(item.protein_g) || 0),
+      carbs_g: acc.carbs_g + (Number(item.carbs_g) || 0),
+      fat_g: acc.fat_g + (Number(item.fat_g) || 0),
     }),
     emptyMacroTotals()
   );
+  return {
+    calories: Math.round(raw.calories),
+    protein_g: parseMacroInput(raw.protein_g),
+    carbs_g: parseMacroInput(raw.carbs_g),
+    fat_g: parseMacroInput(raw.fat_g),
+  };
 }
 
 export function groupEntriesByMeal(entries: MealEntry[]): Record<MealType, MealEntry[]> {
@@ -134,8 +141,19 @@ export function formatMacro(value: number, decimals = 0): string {
   return n.toFixed(decimals);
 }
 
+/**
+ * Protein / carbs / fat display.
+ * Keeps one decimal when needed so food-line grams and day gauges match
+ * (avoids sum-of-rounded-integers ≠ round-of-sum, e.g. 40.4+51.4 → 91 vs 92).
+ */
+export function formatMacroGrams(value: number): string {
+  const n = parseMacroInput(value);
+  if (Number.isInteger(n)) return String(n);
+  return n.toFixed(1);
+}
+
 export function formatMacroLine(totals: MacroTotals): string {
-  return `${formatMacro(totals.calories)} cal · ${formatMacro(totals.protein_g)}P · ${formatMacro(totals.carbs_g)}C · ${formatMacro(totals.fat_g)}F`;
+  return `${formatMacro(totals.calories)} cal · ${formatMacroGrams(totals.protein_g)}P · ${formatMacroGrams(totals.carbs_g)}C · ${formatMacroGrams(totals.fat_g)}F`;
 }
 
 export function goalsFromRow(row: any | null | undefined): NutritionGoals {

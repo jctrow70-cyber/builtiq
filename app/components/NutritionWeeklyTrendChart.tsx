@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { formatMacro, MacroTotals, NutritionGoals } from '../../lib/nutrition/macros';
+import { formatMacro, formatMacroGrams, MacroTotals, NutritionGoals } from '../../lib/nutrition/macros';
 import { WeeklyNutritionSummary } from '../../lib/nutrition/weeklySummary';
 import { dayLabelFromYmd, formatDisplayDate } from '../../lib/training/programCalendar';
 
@@ -41,7 +41,7 @@ function goalPercent(value: number, goal: number): number {
 
 function formatMetricDisplay(metric: WeeklyTrendMetric, value: number): string {
   if (metric === 'calories') return `${formatMacro(value)} cal`;
-  return `${formatMacro(value)}g`;
+  return `${formatMacroGrams(value)}g`;
 }
 
 function buildPolyline(points: { x: number; y: number }[]): string {
