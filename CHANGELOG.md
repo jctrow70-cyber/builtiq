@@ -11,6 +11,62 @@ Branch:
 Status:
 ```
 
+## BIQ-0174 - Group Members Can Read Active Program Templates
+
+Date: 2026-09-11  
+Branch: cursor/fix-member-live-program-visibility-0e59  
+Status: Completed
+
+### Summary
+
+Group members can now read group programs in `scheduled`, `active`, and `completed` status (not only legacy `published`). Owner/editor edits in Programs show up for members who follow the live template.
+
+### Purpose
+
+BIQ-0168 pointed members at the live group program, but RLS still allowed members to select only `status = 'published'`. Programs lifecycle uses `active` / `scheduled`, so members could not load the plan their spouse or coach was editing.
+
+### Changes
+
+- Migration updates `st_user_can_read_program` and `programs_read` so team members may read `published | scheduled | active | completed`
+- Draft and archived team programs remain owner/editor-only
+- Helper + unit test for member-readable statuses
+
+### Files Changed
+
+- `supabase/migrations/20250911_048_member_read_active_programs.sql`
+- `lib/programDesign/lifecycle.ts`
+- `scripts/test-member-program-visibility.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+Apply `20250911_048_member_read_active_programs.sql` on test and live Supabase.
+
+### Testing Steps
+
+1. Apply the migration in Supabase SQL Editor.
+2. As owner: Programs → Groups → open the active group program → change an exercise (add/rename/remove a set).
+3. As a group member (e.g. spouse): open Training or Programs → Following. Confirm the same change appears after refresh.
+4. Confirm the member still cannot edit the shared template.
+5. Confirm draft group programs are still hidden from members.
+6. `npx tsx scripts/test-member-program-visibility.ts`
+7. `npx tsx scripts/test-unfollow-training.ts`
+
+### Known Issues
+
+- Members still need to reload Training/Programs after the owner saves (no live socket).
+- Push “personal copy each” snapshots still do not receive later live edits.
+
+### Recommended Commit Message
+
+```text
+BIQ-0174 Let group members read active program templates
+```
+
+---
+
 ## BIQ-0173 - Body Progress Measurements
 
 Date: 2026-09-11  

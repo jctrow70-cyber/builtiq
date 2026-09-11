@@ -58,6 +58,22 @@ export function groupProgramsByLifecycle(
   return groups;
 }
 
+/**
+ * Team program statuses group members may read via RLS (BIQ-0174).
+ * Draft and archived stay owner/editor-only.
+ */
+export const MEMBER_READABLE_PROGRAM_STATUSES: StoredProgramStatus[] = [
+  'published',
+  'scheduled',
+  'active',
+  'completed',
+];
+
+export function isMemberReadableProgramStatus(status: string | null | undefined): boolean {
+  const stored = storedStatusOf({ status });
+  return MEMBER_READABLE_PROGRAM_STATUSES.includes(stored);
+}
+
 /** Training prefers the followed program; published remains the legacy fallback. */
 export function drivesTrainingExperience(program: { status?: string | null } | null | undefined): boolean {
   const stored = storedStatusOf(program);
