@@ -1232,6 +1232,7 @@ Copy-on-follow made group edits invisible to members. The copy existed to protec
 - `followProgram` / `syncMemberGroupEnrollment` point `followed_program_id` at the group program id
 - Members already on a snapshot are switched to the live template
 - Template edit UI is role-gated when `visibility` is `team`
+- BIQ-0174: RLS lets members read team programs in `published | scheduled | active | completed` (not only legacy `published`), so live template edits are actually loadable
 
 ---
 
