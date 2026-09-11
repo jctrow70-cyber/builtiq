@@ -1265,3 +1265,31 @@ A single weekday repeat is not a real calendar. Extra lifestyle activities shoul
 - Create Program asks Training only vs All-inclusive
 
 ---
+
+## Decision 043 - Body Measurements Live Under Progress
+
+Date: 2026-09-11  
+Status: Accepted  
+Category: Progress / Body Tracking
+
+### Decision
+
+Body composition check-ins (starting with **weight** and **waist circumference**) live under Progress → Body, not under Nutrition or Settings. Dashboard shows a Body card with quick-add for today’s values. Storage is `st_body_measurements` with one row per user per calendar day; values are stored in imperial canonical units (`weight_lbs`, `waist_inches`) to match `st_profiles`, and displayed using the profile units preference. Same-day updates merge so a blank field does not erase an earlier value that day.
+
+### Reason
+
+Users asked for body progress next to strength progress, plus a fast dashboard entry path. A separate top-level nav item would crowd the primary nav. Canonical imperial storage avoids unit drift across devices and matches existing profile fields.
+
+### Alternatives Considered
+
+- Store separate rows per metric type — deferred; day check-ins are simpler for quick-add of both values
+- Put body tracking only on the Dashboard — rejected; history belongs under Progress
+- Auto-update `st_profiles.weight_lbs` on every check-in — deferred; profile weight remains an onboarding/settings field for now
+
+### Impact
+
+- Progress has Strength | Body subsections
+- Dashboard Body quick-add writes the same table as Progress
+- Future metrics (hips, body fat %, etc.) can add nullable columns on the same table
+
+---

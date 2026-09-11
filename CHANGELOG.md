@@ -11,6 +11,77 @@ Branch:
 Status:
 ```
 
+## BIQ-0173 - Body Progress Measurements
+
+Date: 2026-09-11  
+Branch: cursor/body-progress-measurements-0e59  
+Status: Completed
+
+### Summary
+
+Progress now has a **Body** subsection for weight and waist circumference with history. The Dashboard includes a Body card with quick-add for today’s check-in.
+
+### Purpose
+
+Users need a simple place to log body measurements over time and add them quickly from the home dashboard without opening Training or Nutrition.
+
+### Changes
+
+- New `st_body_measurements` table (one row per user per day) with owner-only RLS
+- Progress → Strength | Body segmented navigation
+- Body log form (date, weight, waist, notes) + filterable history and delete
+- Dashboard Body card with latest values and quick-add (weight + waist)
+- Values stored in imperial canonical units (`weight_lbs`, `waist_inches`); display follows profile units preference
+- Same-day saves merge: blank fields keep the prior value for that day
+
+### Files Changed
+
+- `supabase/migrations/20250911_047_body_measurements.sql`
+- `lib/body/measurements.ts`
+- `lib/body/api.ts`
+- `app/components/BodyProgress.tsx`
+- `app/components/BodyDashboardCard.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `scripts/test-body-measurements.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+Apply migration `20250911_047_body_measurements.sql` on test and live Supabase projects:
+
+- Creates `public.st_body_measurements`
+- Unique `(user_id, measured_on)`
+- RLS: select/insert/update/delete where `user_id = auth.uid()`
+
+### Testing Steps
+
+1. Apply the migration in Supabase (SQL editor or CLI).
+2. Sign in → Progress → Body. Log weight only, then waist only on the same date — both should appear on one check-in.
+3. Log a second day and confirm history order (newest first) and “vs prior” deltas.
+4. Dashboard → Body card: quick-add weight and waist for today; confirm “Saved for today” and refreshed latest values.
+5. Tap View history → lands on Progress → Body.
+6. Delete a history row and confirm it disappears from Progress and Dashboard.
+7. Switch Settings units to Metric; confirm labels show kg/cm and saved values convert correctly on reload.
+8. Mobile (~390px): Body form and dashboard quick-add stack cleanly; segmented Strength/Body tabs stay tappable.
+9. `npx tsx scripts/test-body-measurements.ts`
+
+### Known Issues
+
+- Body charts / trends are not included yet (history list only).
+- Profile `weight_lbs` is not auto-updated when logging a body check-in.
+- Metric units preference still labeled “future display” in Settings; body UI already respects it.
+
+### Recommended Commit Message
+
+```text
+BIQ-0173 Add body progress weight and waist tracking
+```
+
+---
+
 ## BIQ-0172 - Edit a Single Day in a Recurring Series
 
 Date: 2026-09-10  
