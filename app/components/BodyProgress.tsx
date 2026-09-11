@@ -128,11 +128,10 @@ export default function BodyProgress({ userId, unitsPreference, onDataChange }: 
               Latest weight
               {latestWeight ? ` · ${formatDisplayDate(latestWeight.measured_on)}` : ''}
             </span>
-            {deltaLabel(latestWeight?.weight_lbs, priorWeight?.weight_lbs, units, 'weight') && (
-              <span className="body-delta muted">
-                {deltaLabel(latestWeight?.weight_lbs, priorWeight?.weight_lbs, units, 'weight')} vs prior
-              </span>
-            )}
+            {(() => {
+              const d = deltaLabel(latestWeight?.weight_lbs, priorWeight?.weight_lbs, units, 'weight');
+              return d ? <span className="body-delta muted">{d} vs prior</span> : null;
+            })()}
           </div>
           <div>
             <b>{formatWaist(latestWaist?.waist_inches, units)}</b>
@@ -140,11 +139,10 @@ export default function BodyProgress({ userId, unitsPreference, onDataChange }: 
               Latest waist
               {latestWaist ? ` · ${formatDisplayDate(latestWaist.measured_on)}` : ''}
             </span>
-            {deltaLabel(latestWaist?.waist_inches, priorWaist?.waist_inches, units, 'waist') && (
-              <span className="body-delta muted">
-                {deltaLabel(latestWaist?.waist_inches, priorWaist?.waist_inches, units, 'waist')} vs prior
-              </span>
-            )}
+            {(() => {
+              const d = deltaLabel(latestWaist?.waist_inches, priorWaist?.waist_inches, units, 'waist');
+              return d ? <span className="body-delta muted">{d} vs prior</span> : null;
+            })()}
           </div>
         </div>
       </div>

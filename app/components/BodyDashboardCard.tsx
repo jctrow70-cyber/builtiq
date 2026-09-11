@@ -87,19 +87,16 @@ export default function BodyDashboardCard({
       {loading ? (
         <p className="muted">Loading…</p>
       ) : hasAny ? (
-        <>
-          <p className="dash-title">{formatWeight(latestWeight?.weight_lbs, units)}</p>
-          <div className="dash-metrics">
-            <div>
-              <b>{formatWeight(latestWeight?.weight_lbs, units)}</b>
-              <span className="muted">Weight</span>
-            </div>
-            <div>
-              <b>{formatWaist(latestWaist?.waist_inches, units)}</b>
-              <span className="muted">Waist</span>
-            </div>
+        <div className="dash-metrics">
+          <div>
+            <b>{formatWeight(latestWeight?.weight_lbs, units)}</b>
+            <span className="muted">Weight</span>
           </div>
-        </>
+          <div>
+            <b>{formatWaist(latestWaist?.waist_inches, units)}</b>
+            <span className="muted">Waist</span>
+          </div>
+        </div>
       ) : (
         <>
           <p className="muted">Log weight and waist to track body progress.</p>
