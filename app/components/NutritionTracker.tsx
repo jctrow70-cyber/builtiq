@@ -9,6 +9,7 @@ import {
   entryToPerServing,
   FoodLibraryItem,
   formatMacro,
+  formatMacroGrams,
   formatMacroLine,
   goalsFromRow,
   groupEntriesByMeal,
@@ -1791,7 +1792,7 @@ export default function NutritionTracker({
         const isExpanded = expandedMeals[meal];
         const loggedCal = Math.round(mealTotals.calories);
         const mealCalTarget = mealCalorieTarget(goals.calories, meal);
-        const mealMacroLine = `${formatMacro(mealTotals.protein_g)}P · ${formatMacro(mealTotals.carbs_g)}C · ${formatMacro(mealTotals.fat_g)}F`;
+        const mealMacroLine = `${formatMacroGrams(mealTotals.protein_g)}P · ${formatMacroGrams(mealTotals.carbs_g)}C · ${formatMacroGrams(mealTotals.fat_g)}F`;
         return (
           <div className="card nutrition-meal-card" key={meal}>
             <button

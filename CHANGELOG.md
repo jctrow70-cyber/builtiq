@@ -11,7 +11,64 @@ Branch:
 Status:
 ```
 
+## BIQ-0175 - Nutrition Fat Gauge Matches Food Log Totals
+
+Date: 2026-09-11  
+Branch: cursor/fix-nutrition-macro-rounding-0e59  
+Status: Completed
+
+### Summary
+
+Protein, carbs, and fat on food lines and the day “gauge” rings now use the same gram formatting, so adding the foods you see matches the ring total (fixes 91 vs 92 fat).
+
+### Purpose
+
+Each food row was rounded to a whole number for display, while the fat ring rounded the precise day sum. That classic rounding gap made the log look like 91g fat while the gauge showed 92g.
+
+### Changes
+
+- `formatMacroGrams` keeps one decimal when needed (whole numbers stay clean: `40`, `91.8`)
+- Food lines, meal headers, macro rings, dashboard nutrition card, and weekly trend grams use it
+- `sumMacros` sums raw values then rounds P/C/F once (less step-wise drift)
+
+### Files Changed
+
+- `lib/nutrition/macros.ts`
+- `lib/nutrition/mealDisplay.ts`
+- `app/components/NutritionMacroDashboard.tsx`
+- `app/components/NutritionTracker.tsx`
+- `app/components/NutritionWeeklyTrendChart.tsx`
+- `app/page.tsx`
+- `scripts/test-nutrition-macro-rounding.ts`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Nutrition → log foods with fractional fat (or existing day that showed 91 vs 92).
+2. Confirm each food line fat (e.g. `40.4F`) plus the others equals the Fat ring value (e.g. `91.8g`).
+3. Confirm protein/carbs behave the same way.
+4. Whole-number macros still display without a trailing `.0`.
+5. `npx tsx scripts/test-nutrition-macro-rounding.ts`
+6. Mobile (~390px): rings and food lines still readable.
+
+### Known Issues
+
+None.
+
+### Recommended Commit Message
+
+```text
+BIQ-0175 Align nutrition fat gauge with food log totals
+```
+
+---
+
 ## BIQ-0174 - Group Members Can Read Active Program Templates
+
 
 Date: 2026-09-11  
 Branch: cursor/fix-member-live-program-visibility-0e59  
