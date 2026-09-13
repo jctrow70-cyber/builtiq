@@ -27,7 +27,7 @@ ${
 Hard constraints (do not break):
 - Keep the supplied days, day labels, and day types.
 - Stay within ${profile.preferredSessionMinutes} minutes per session. A 30-minute session is concise (fewer accessories, strategic supersets). A ~60-minute session needs about 5–8 working strength movements, not three compounds. A ~90-minute body-part session (Chest, Back, Shoulders, Arms) typically has 6–8 working lifts. Do not ignore duration.
-- Honor athlete.notes when they specify counts (e.g. 2 glute exercises per day). Those are dedicated glute movements (hip thrust, kickback, abduction, single-leg hip thrust, step-up) — a squat or RDL does not count as one of those two.
+- Honor athlete.notes when they specify counts (e.g. 2 glute / chest / bicep exercises per day). Those are dedicated movements for that muscle. A squat does not count as a glute exercise; a close-grip press does not count as a biceps exercise.
 - Variety: do not clone the same three lifts onto every day. Rotate glute and lower-body patterns across the week when variety is balanced or high.
 - Do not use excluded exercises: ${(profile.excludedExercises || []).join(', ') || 'none'}.
 - Do not diagnose injury. Respect pain areas: ${(profile.painAreas || []).join(', ') || 'none'}.

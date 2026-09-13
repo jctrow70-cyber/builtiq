@@ -140,7 +140,7 @@ function quotasFromNotes(notes: string): TrainingProfile['sessionMuscleQuotas'] 
   const mapped: NonNullable<TrainingProfile['sessionMuscleQuotas']> = {};
   Object.entries(raw).forEach(([key, count]) => {
     const muscle =
-      key === 'back' ? 'lats' : key === 'shoulders' ? 'side_delts' : normalizeMuscleId(key);
+      key === 'back' ? 'lats' : key === 'shoulders' ? 'side_delts' : key === 'arms' ? 'biceps' : normalizeMuscleId(key);
     if (muscle) mapped[muscle] = count;
   });
   return mapped;

@@ -1392,9 +1392,9 @@ Category: Program Design / Science Engine
 
 ### Decision
 
-Structured intake still wins for days, duration, split, and priority muscles (Decision 038). When notes (or the generate prompt) specify a per-day count such as **2 glute exercises per day**, that count is a hard session quota. Dedicated glute movements (hip thrust, kickback, abduction, single-leg hip thrust, step-up) fill it. A squat or RDL does not count as one of those two.
+Structured intake still wins for days, duration, split, and priority muscles (Decision 038). When notes (or the generate prompt) specify a per-day count such as **2 glute / chest / bicep exercises per day**, that count is a hard session quota. Dedicated movements for that muscle fill it (glute: hip thrust, kickback, abduction; chest: press/fly; biceps: curls). A squat does not count as a glute exercise.
 
-Glute as a priority area without that note still adds two dedicated glute slots on lower / full-body / legs days. 60-minute sessions keep accessories (about 5+ working lifts). Balanced and high variety do not lock the first preferred catalog lift every generate.
+That muscle as a priority area without a note still adds two dedicated slots on days that train it (lower/full for glutes, upper/push/chest/full for chest, upper/pull/arms/full for biceps). 60-minute sessions keep accessories (about 5+ working lifts). Balanced and high variety do not lock the first preferred catalog lift every generate.
 
 ### Reason
 

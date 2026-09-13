@@ -392,6 +392,45 @@ function run() {
   const daySignatures = gluteWeek.map((w) => w.exercises.slice(0, 3).map((e) => e.name).join('|'));
   assert(new Set(daySignatures).size >= 2, `Glute-focus days should not clone the same first three lifts: ${daySignatures.join(' / ')}`);
 
+  const chestNotePlan = trainingProfileFromSources({
+    profile: { experience_level: 'intermediate', primary_goal: 'hypertrophy' },
+    config: {
+      days: ['Mon', 'Wed', 'Fri'],
+      dayTypes: { Mon: 'Full Body', Wed: 'Full Body', Fri: 'Full Body' },
+      focusMuscles: ['Chest'],
+      weeks: 4,
+      sessionMinutes: 60,
+      intakeNotes: '2 chest exercises per day',
+    },
+  });
+  generateProgram(chestNotePlan)
+    .workouts.filter((w) => w.week === 1)
+    .forEach((w) => {
+      const dedicated = w.exercises.filter(
+        (ex) => (ex.primaryMuscles || []).includes('chest') || /bench|chest|fly|crossover|pec|dip/i.test(ex.name)
+      );
+      assert(dedicated.length >= 2, `${w.name} should have 2 chest lifts, got ${w.exercises.map((e) => e.name).join(', ')}`);
+    });
+
+  const armNotePlan = trainingProfileFromSources({
+    profile: { experience_level: 'intermediate', primary_goal: 'hypertrophy' },
+    config: {
+      days: ['Mon', 'Wed', 'Fri'],
+      dayTypes: { Mon: 'Full Body', Wed: 'Full Body', Fri: 'Full Body' },
+      focusMuscles: ['Arms'],
+      weeks: 4,
+      sessionMinutes: 60,
+      intakeNotes: 'two bicep exercises each session',
+    },
+  });
+  assert(armNotePlan.sessionMuscleQuotas?.biceps === 2, 'Bicep notes should map to biceps quota');
+  generateProgram(armNotePlan)
+    .workouts.filter((w) => w.week === 1)
+    .forEach((w) => {
+      const dedicated = w.exercises.filter((ex) => /curl/i.test(ex.name) && !/leg curl/i.test(ex.name));
+      assert(dedicated.length >= 2, `${w.name} should have 2 biceps lifts, got ${w.exercises.map((e) => e.name).join(', ')}`);
+    });
+
   const catalog = adaptCatalog([]);
   assert(findByName(catalog, 'Chest-Supported Row')?.name === 'Dumbbell Row', 'Chest-supported row should alias to a proven row');
   assert(findByName(catalog, 'Light DB RDL')?.name === 'Dumbbell RDL', 'Light DB RDL should alias to Dumbbell RDL');

@@ -19,7 +19,7 @@ Status: Completed
 
 ### Summary
 
-A glute-focus program that asks for **2 glute exercises per day** and **60-minute** sessions now gets dedicated glute work on each day and about **5+ working lifts**, not a 3-lift squat/hinge clone. Days rotate glute patterns (thrust, kickback, single-leg, abduction) instead of repeating the same preferred list every generate.
+A focus program that asks for **2 glute / chest / bicep exercises per day** and **60-minute** sessions now gets that dedicated work on each day and about **5+ working lifts**, not a 3-lift clone. Days rotate patterns instead of repeating the same preferred list every generate.
 
 ### Purpose
 
@@ -27,8 +27,8 @@ Intake notes were sent to the AI as nuance only. Structured generate still used 
 
 ### Changes
 
-- Parse notes / prompt for counts such as `2 glute exercises per day`
-- Glute priority or that note injects dedicated glute slots (hip thrust, kickback, abduction — squat does not count)
+- Parse notes / prompt for counts such as `2 glute / chest / bicep exercises per day`
+- Priority muscle or that note injects dedicated slots (glute: hip thrust/kickback; chest: press/fly; biceps: curl variations)
 - 55–60 minute sessions keep accessories and fill to at least 5 working lifts
 - Balanced / high variety no longer lock the first preferred exercise
 - Lower-body and glute slots rotate across A/B/C days

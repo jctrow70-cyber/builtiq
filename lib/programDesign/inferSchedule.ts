@@ -195,6 +195,8 @@ const WORD_COUNTS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4,
 const QUOTA_MUSCLES: Array<{ id: string; pattern: RegExp }> = [
   { id: 'glutes', pattern: /glutes?/ },
   { id: 'chest', pattern: /chest|pecs?/ },
+  { id: 'biceps', pattern: /biceps?|arms?/ },
+  { id: 'triceps', pattern: /triceps?/ },
   { id: 'quads', pattern: /quads?|quadriceps/ },
   { id: 'hamstrings', pattern: /hams?|hamstrings?/ },
   { id: 'back', pattern: /lats?|upper back|back/ },
@@ -312,5 +314,11 @@ export function assertInferScheduleExamples() {
   const gluteQuota = inferSessionMuscleQuotasFromText('I wanted 2 glute exercises per day');
   if (gluteQuota.glutes !== 2) {
     throw new Error(`Expected 2 glute exercises/day, got ${JSON.stringify(gluteQuota)}`);
+  }
+  if (inferSessionMuscleQuotasFromText('2 chest exercises per day').chest !== 2) {
+    throw new Error('Chest notes should parse to 2/day');
+  }
+  if (inferSessionMuscleQuotasFromText('two bicep exercises each session').biceps !== 2) {
+    throw new Error('Bicep notes should parse to 2/session');
   }
 }
