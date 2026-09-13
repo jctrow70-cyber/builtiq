@@ -287,16 +287,16 @@ function run() {
       sessionMinutes: 45,
     },
   });
-  const chestDay = generateProgram(chestDayProfile);
-  const chestWorkout = chestDay.workouts.find((w) => w.week === 1);
+  const singleChestProgram = generateProgram(chestDayProfile);
+  const chestWorkout = singleChestProgram.workouts.find((w) => w.week === 1);
   assert(chestWorkout?.workoutType === 'Chest', `Single-day chest request should stay Chest, got ${chestWorkout?.workoutType}`);
   const chestWarm = (chestWorkout?.warmup || []).map((w) => w.name).join(' | ');
   assert(!/squat|lunge/i.test(chestWarm), `Chest-day warm-up should be upper/chest prep, not lower-body primers. Got ${chestWarm}`);
   assert(/push-up|press|scapular|row|thoracic|inchworm|face pull/i.test(chestWarm), `Chest-day warm-up should include upper prep, got ${chestWarm}`);
-  const chestDesigner = buildProgramDesignerPrompt(chestDay, chestDayProfile, 'generate a chest workout just for today with a warm up geared towards chest.', adaptCatalog([]), []);
+  const chestDesigner = buildProgramDesignerPrompt(singleChestProgram, chestDayProfile, 'generate a chest workout just for today with a warm up geared towards chest.', adaptCatalog([]), []);
   assert(chestDesigner.system.includes('ONE training SESSION'), 'Single-day generate should ask for one session, not a full week');
   const chestAiWarm = applyAiWeekDesign(
-    chestDay,
+    singleChestProgram,
     {
       summary: 'Chest today',
       workouts: [

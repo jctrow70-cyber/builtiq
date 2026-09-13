@@ -65,6 +65,7 @@ None.
 - Ambiguous prompts (`chest and back`, or no muscle named) still fall back to Upper Body or Full Body.
 - Catalog `findByName` can still rename a library move to a nearby catalog title (e.g. reverse lunge → barbell rear lunge) when a lower-body warm-up is actually intended.
 - Single-day generate still uses the full science + optional AI week path, constrained to one weekday.
+- Vercel `tsc` failed on `Cannot redeclare block-scoped variable 'chestDay'` in `acceptanceCheck.ts` (bro-split workout vs single-day program). Renamed the later binding to `singleChestProgram`. `backDay` / `legsDay` were not duplicated.
 
 ### Recommended Commit Message
 
