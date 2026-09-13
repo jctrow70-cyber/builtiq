@@ -4,13 +4,23 @@ import { activityTypeShortLabel, formatDuration } from './activityTypes';
 import { isWeeklyRecurrence, weekdayIndexFromYmd, weekdaysFromDetails, withRecurrenceDetails } from './recurrence';
 import type { ActivityDraft, ActivityType } from './types';
 
-const META_DETAIL_KEYS = new Set(['recurrence_weekdays', 'exception_dates', 'occurrence_overrides']);
+const META_DETAIL_KEYS = new Set([
+  'recurrence_weekdays',
+  'exception_dates',
+  'occurrence_overrides',
+  'completed_dates',
+  'completion_ledger',
+  'program_completions',
+]);
+
+export const COMPLETION_LEDGER_FLAG = 'completion_ledger';
 
 export type OccurrenceOverride = {
   title?: string;
   activity_type?: ActivityType;
   duration_minutes?: number | null;
   notes?: string;
+  completed?: boolean;
   details?: Record<string, unknown>;
 };
 
@@ -77,6 +87,42 @@ export function exceptionDatesFromDetails(details: Record<string, unknown> | nul
   return normalizeYmdList(details?.exception_dates);
 }
 
+export function completedDatesFromDetails(details: Record<string, unknown> | null | undefined): string[] {
+  return normalizeYmdList(details?.completed_dates);
+}
+
+export function isCompletionLedger(activity: Pick<UserCalendarActivity, 'details'> | null | undefined): boolean {
+  return activity?.details?.[COMPLETION_LEDGER_FLAG] === true;
+}
+
+export function isActivityCompletedOnDate(
+  activity: Pick<UserCalendarActivity, 'details'>,
+  dateYmd: string
+): boolean {
+  if (completedDatesFromDetails(activity.details).includes(dateYmd)) return true;
+  const override = occurrenceOverridesFromDetails(activity.details)[dateYmd];
+  if (override?.completed === true) return true;
+  if (override?.details && override.details.completed === true) return true;
+  return false;
+}
+
+export function detailsWithCompletedDate(
+  details: Record<string, unknown> | null | undefined,
+  dateYmd: string,
+  completed: boolean
+): Record<string, unknown> {
+  const next = { ...(details || {}) };
+  const dates = new Set(completedDatesFromDetails(next));
+  if (isYmd(dateYmd)) {
+    if (completed) dates.add(dateYmd);
+    else dates.delete(dateYmd);
+  }
+  const list = Array.from(dates).sort();
+  if (list.length) next.completed_dates = list;
+  else delete next.completed_dates;
+  return next;
+}
+
 export function occurrenceOverridesFromDetails(
   details: Record<string, unknown> | null | undefined
 ): Record<string, OccurrenceOverride> {
@@ -92,6 +138,7 @@ export function occurrenceOverridesFromDetails(
       activity_type: ov.activity_type ? (ov.activity_type as ActivityType) : undefined,
       duration_minutes: ov.duration_minutes === undefined ? undefined : ov.duration_minutes == null ? null : Number(ov.duration_minutes),
       notes: ov.notes == null ? undefined : String(ov.notes),
+      completed: ov.completed == null ? undefined : ov.completed === true,
       details:
         ov.details && typeof ov.details === 'object' && !Array.isArray(ov.details)
           ? occurrenceDetailsPayload(ov.details as Record<string, unknown>)
@@ -153,6 +200,7 @@ export function applyOccurrenceOverride(activity: UserCalendarActivity, dateYmd:
       recurrence_weekdays: activity.details.recurrence_weekdays,
       exception_dates: activity.details.exception_dates,
       occurrence_overrides: activity.details.occurrence_overrides,
+      completed_dates: activity.details.completed_dates,
     },
   };
 }
@@ -211,7 +259,19 @@ export async function fetchUserCalendarActivities(
     if (isMissingRelation(error)) return { data: [], error: null };
     return { data: [], error: error.message };
   }
-  return { data: (data || []).map((row) => asActivity(row as Record<string, unknown>)), error: null };
+  const rows = (data || []).map((row) => asActivity(row as Record<string, unknown>));
+  const { data: ledgerRows } = await supabase
+    .from('st_user_calendar_activities')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('activity_date', '1970-01-01')
+    .limit(5);
+  (ledgerRows || []).forEach((row) => {
+    const led = asActivity(row as Record<string, unknown>);
+    if (!isCompletionLedger(led)) return;
+    if (!rows.some((existing) => existing.id === led.id)) rows.push(led);
+  });
+  return { data: rows, error: null };
 }
 
 export function activityOccursOnDate(activity: UserCalendarActivity, dateYmd: string): boolean {
@@ -229,7 +289,7 @@ export function activityOccursOnDate(activity: UserCalendarActivity, dateYmd: st
 
 export function calendarItemsForDate(activities: UserCalendarActivity[], dateYmd: string) {
   return activities
-    .filter((a) => activityOccursOnDate(a, dateYmd))
+    .filter((a) => !isCompletionLedger(a) && activityOccursOnDate(a, dateYmd))
     .map((a) => {
       const shown = applyOccurrenceOverride(a, dateYmd);
       return {
@@ -244,6 +304,7 @@ export function calendarItemsForDate(activities: UserCalendarActivity[], dateYmd
         source: 'calendar' as const,
         isRecurring: isWeeklyRecurrence(a.recurrence),
         occurrenceDate: dateYmd,
+        completed: isActivityCompletedOnDate(a, dateYmd),
       };
     });
 }
@@ -293,6 +354,17 @@ export async function linkCalendarActivityWorkout(
   return updateCalendarRow(supabase, activityId, { workout_id: workoutId });
 }
 
+export async function setUserCalendarActivityCompleted(
+  supabase: SupabaseClient,
+  activity: UserCalendarActivity,
+  dateYmd: string,
+  completed: boolean
+): Promise<{ error: string | null }> {
+  return updateCalendarRow(supabase, activity.id, {
+    details: detailsWithCompletedDate(activity.details, dateYmd, completed),
+  });
+}
+
 async function updateCalendarRow(
   supabase: SupabaseClient,
   activityId: string,
@@ -324,6 +396,9 @@ export async function saveUserCalendarOccurrence(
   const kept = {
     exception_dates: activity.details.exception_dates,
     occurrence_overrides: activity.details.occurrence_overrides,
+    completed_dates: activity.details.completed_dates,
+    completion_ledger: activity.details.completion_ledger,
+    program_completions: activity.details.program_completions,
   };
   const details = withRecurrenceDetails(
     { ...occurrenceDetailsPayload(draft.details), ...kept },

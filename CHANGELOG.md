@@ -11,6 +11,72 @@ Branch:
 Status:
 ```
 
+## BIQ-0176 - Complete Training Calendar Items
+
+Date: 2026-09-13  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Training day items now have a **Complete** / **Completed** control. Cardio, mobility, rest, sport, and other calendar-only activities can be checked off for that date (one occurrence of a weekly series). Strength items with a workout show Done only when the existing set logger has completed every planned set for that date.
+
+### Purpose
+
+Users could start and log strength, but could not mark a ride, mobility session, or rest day done, and the calendar Done badge only reflected set logs on the first item of the day.
+
+### Changes
+
+- Personal calendar check-offs store `details.completed_dates` on `st_user_calendar_activities` (this date only for weekly series)
+- Program rest/cardio without a logger store completions on a hidden user ledger row (`details.completion_ledger`) so shared program templates are not edited
+- Strength Complete opens the existing Start / logger flow; Completed follows `st_set_logs.completed` for every planned set
+- Day, week, and month “done” styling includes calendar check-offs as well as logged strength days
+- This-day / series edits (BIQ-0172) and on-the-fly strength (BIQ-0175) keep completed_dates
+
+### Files Changed
+
+- `lib/programDesign/userCalendar.ts`
+- `lib/programDesign/activityCompletion.ts`
+- `lib/programDesign/trainingSchedule.ts`
+- `app/components/training/TrainingExecution.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `scripts/test-activity-completion.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None. Completions use existing `st_user_calendar_activities.details` JSON (`completed_dates`, optional `completion_ledger` / `program_completions`). Strength completion is still `st_set_logs` only. No new column or migration.
+
+### Testing Steps
+
+1. Training → add a **cardio** activity → tap **Complete**. The item shows a Done badge, struck title, and **Completed**. Week/month “done” styling includes that date.
+2. Tap **Completed** to undo. The item is incomplete again and other dates in a weekly series are unchanged.
+3. Add a weekly cardio (e.g. Mon/Wed/Fri). Complete Friday only. Monday and Wednesday still show Complete.
+4. Add or start a **Strength** workout. Log and mark every set Done in the logger, return to the calendar. That strength item shows Done / Completed. `st_set_logs` history is unchanged if you later edit the template.
+5. Tap **Complete** on an unfinished strength item. It opens Start (the logger), and does not invent a second completed flag.
+6. Mobile (~390px): Complete is a large tap target and wraps with Start / Edit.
+7. Inclusive-plan rest/cardio without Start can be checked off; a group template is not rewritten.
+8. `npx tsx scripts/test-activity-completion.ts`
+9. `npx tsx scripts/test-calendar-recurrence.ts`
+10. `npx tsx scripts/test-personal-strength-activity.ts`
+
+### Known Issues
+
+- Strength with no planned sets cannot show Completed until exercises exist (Set up / logger first).
+- Completing one cardio on a day that also has an unfinished lift still marks the day “done” in week/month, matching the existing “any completed set log” rule.
+- The program-item ledger is a hidden `st_user_calendar_activities` row dated 1970-01-01 and is filtered from the calendar.
+
+### Recommended Commit Message
+
+```text
+BIQ-0176 Add Complete on Training calendar items
+```
+
+---
+
 ## BIQ-0175 - Add Strength Workouts On the Fly
 
 Date: 2026-09-13  

@@ -1322,3 +1322,33 @@ Strength rows without a workout could not be started. Adding exercises onto the 
 - Single-workout AI generate fills one existing workout only
 
 ---
+
+## Decision 045 - Calendar Complete Does Not Rewrite Strength History
+
+Date: 2026-09-13  
+Status: Accepted  
+Category: Training
+
+### Decision
+
+Personal calendar activities (cardio, mobility, sport, recovery, stretching, rest) can be marked complete for **one date** using `st_user_calendar_activities.details.completed_dates`. Weekly series store only that occurrence’s date. Program rest/cardio without a logger use a hidden user-owned ledger row (`details.completion_ledger`) so group templates are not mutated.
+
+Strength items with a workout stay on the existing source of truth: every planned set has `st_set_logs.completed = true` for that `log_date`. The calendar Complete control opens the existing Start / logger flow. It does not write a second completed flag and does not change `st_set_logs` history. Undo is allowed for check-off items only.
+
+### Reason
+
+Users needed to mark lifestyle activities done without a set logger. Inventing a parallel “fake complete” for strength would disagree with Dashboard, Progress, and assigned-workout completion, which already infer status from set logs.
+
+### Alternatives Considered
+
+- New `completed` column or table — deferred; JSON details are enough and need no migration
+- Mark all planned sets complete from the calendar — rejected; rewrites history and skips the logger
+- Write completion onto `st_program_activities` — rejected; that is a shared template
+
+### Impact
+
+- Training day items show Complete / Completed
+- Month/week “done” styling includes calendar check-offs as well as logged strength days
+- `st_workouts` is not a completion record
+
+---

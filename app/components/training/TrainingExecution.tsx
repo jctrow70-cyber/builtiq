@@ -3,7 +3,8 @@
 import SegmentedControl from '../ui/SegmentedControl';
 import SectionHeader from '../ui/SectionHeader';
 import { formatLongWeekday, formatMediumDate } from '../../../lib/programDesign/cycle';
-import type { TrainingDayPlan, TrainingMonthCell } from '../../../lib/programDesign/trainingSchedule';
+import { itemAllowsCheckoff } from '../../../lib/programDesign/activityCompletion';
+import type { TrainingDayItem, TrainingDayPlan, TrainingMonthCell } from '../../../lib/programDesign/trainingSchedule';
 
 type CalendarView = 'day' | 'week' | 'month';
 
@@ -33,6 +34,8 @@ type TrainingExecutionProps = {
   onAddActivity?: (date: string) => void;
   onEditActivity?: (activityId: string, date: string) => void;
   onSetupWorkout?: (activityId: string, date: string) => void;
+  onCompleteItem?: (item: TrainingDayItem, date: string) => void;
+  completingItemId?: string | null;
   completedDates?: string[];
 };
 
@@ -40,19 +43,21 @@ const MONTH_DOWS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 function DayItems({
   plan,
-  completed,
   onStart,
   onView,
   onEdit,
   onSetup,
+  onComplete,
+  completingItemId,
   onAdd,
 }: {
   plan: TrainingDayPlan;
-  completed: boolean;
   onStart: (workoutId: string | null) => void;
   onView?: (workoutId: string) => void;
   onEdit?: (activityId: string) => void;
   onSetup?: (activityId: string) => void;
+  onComplete?: (item: TrainingDayItem) => void;
+  completingItemId?: string | null;
   onAdd?: () => void;
 }) {
   if (!plan.items.length) {
@@ -69,8 +74,12 @@ function DayItems({
   }
   return (
     <div className="te-day-items">
-      {plan.items.map((item, idx) => (
-        <div key={item.id} className="te-item">
+      {plan.items.map((item, idx) => {
+        const checkoff = itemAllowsCheckoff(item);
+        const showComplete = !!onComplete && (checkoff || !!item.workoutId);
+        const busy = completingItemId === item.id;
+        return (
+        <div key={item.id} className={`te-item${item.completed ? ' te-item--done' : ''}`}>
           <div>
             <span className="te-item-type">{item.typeLabel}</span>
             <button
@@ -82,9 +91,9 @@ function DayItems({
               <b>{item.title}</b>
             </button>
             {item.duration && <span className="muted">{item.duration}</span>}
-            {completed && idx === 0 && <span className="ui-badge">Done</span>}
+            {item.completed && <span className="ui-badge">Done</span>}
           </div>
-          <div className="actions">
+          <div className="actions te-item-actions">
             {!item.isRest && item.workoutId && onView && (
               <button type="button" className="btn small secondary" onClick={() => onView(item.workoutId!)}>
                 View
@@ -92,12 +101,23 @@ function DayItems({
             )}
             {!item.isRest && item.workoutId && (
               <button type="button" className={`btn ${idx === 0 ? 'green' : 'secondary'} small`} onClick={() => onStart(item.workoutId)}>
-                Start
+                {item.completed ? 'Review' : 'Start'}
               </button>
             )}
             {!item.isRest && item.activityType === 'strength' && !item.workoutId && item.source === 'calendar' && item.activityId && onSetup && (
               <button type="button" className="btn green small" onClick={() => onSetup(item.activityId!)}>
                 Set up
+              </button>
+            )}
+            {showComplete && (
+              <button
+                type="button"
+                className={`btn te-complete-btn ${item.completed ? 'secondary' : 'green'}`}
+                disabled={busy || (item.completed && !!item.workoutId)}
+                aria-pressed={!!item.completed}
+                onClick={() => onComplete?.(item)}
+              >
+                {busy ? 'Saving…' : item.completed ? 'Completed' : 'Complete'}
               </button>
             )}
             {item.source === 'calendar' && item.activityId && onEdit && (
@@ -107,7 +127,8 @@ function DayItems({
             )}
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
@@ -138,6 +159,8 @@ export default function TrainingExecution({
   onAddActivity,
   onEditActivity,
   onSetupWorkout,
+  onCompleteItem,
+  completingItemId = null,
   completedDates = [],
 }: TrainingExecutionProps) {
   const viewingToday = !!today?.isToday;
@@ -191,11 +214,12 @@ export default function TrainingExecution({
             <h2>{viewingToday ? "Today's plan" : "This day's plan"}</h2>
             <DayItems
               plan={today}
-              completed={completedDates.includes(today.date)}
               onStart={(workoutId) => onStartWorkout(workoutId, today.date)}
               onView={onViewWorkout ? (workoutId) => onViewWorkout(workoutId, today.date) : undefined}
               onEdit={onEditActivity ? (activityId) => onEditActivity(activityId, today.date) : undefined}
               onSetup={onSetupWorkout ? (activityId) => onSetupWorkout(activityId, today.date) : undefined}
+              onComplete={onCompleteItem ? (item) => onCompleteItem(item, today.date) : undefined}
+              completingItemId={completingItemId}
               onAdd={onAddActivity ? () => onAddActivity(today.date) : undefined}
             />
           </section>
@@ -278,11 +302,12 @@ export default function TrainingExecution({
               <h2>{today.isToday ? "Today's plan" : formatLongWeekday(today.date)}</h2>
               <DayItems
                 plan={today}
-                completed={completedDates.includes(today.date)}
                 onStart={(workoutId) => onStartWorkout(workoutId, today.date)}
                 onView={onViewWorkout ? (workoutId) => onViewWorkout(workoutId, today.date) : undefined}
                 onEdit={onEditActivity ? (activityId) => onEditActivity(activityId, today.date) : undefined}
                 onSetup={onSetupWorkout ? (activityId) => onSetupWorkout(activityId, today.date) : undefined}
+                onComplete={onCompleteItem ? (item) => onCompleteItem(item, today.date) : undefined}
+                completingItemId={completingItemId}
                 onAdd={onAddActivity ? () => onAddActivity(today.date) : undefined}
               />
             </section>
@@ -346,11 +371,12 @@ export default function TrainingExecution({
               <h2>{today.isToday ? "Today's plan" : formatLongWeekday(today.date)}</h2>
               <DayItems
                 plan={today}
-                completed={completedDates.includes(today.date)}
                 onStart={(workoutId) => onStartWorkout(workoutId, today.date)}
                 onView={onViewWorkout ? (workoutId) => onViewWorkout(workoutId, today.date) : undefined}
                 onEdit={onEditActivity ? (activityId) => onEditActivity(activityId, today.date) : undefined}
                 onSetup={onSetupWorkout ? (activityId) => onSetupWorkout(activityId, today.date) : undefined}
+                onComplete={onCompleteItem ? (item) => onCompleteItem(item, today.date) : undefined}
+                completingItemId={completingItemId}
                 onAdd={onAddActivity ? () => onAddActivity(today.date) : undefined}
               />
             </section>

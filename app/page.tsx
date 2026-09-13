@@ -66,12 +66,22 @@ import {
 import {
   createUserCalendarActivity,
   fetchUserCalendarActivities,
+  isActivityCompletedOnDate,
   linkCalendarActivityWorkout,
   monthWindow,
   saveUserCalendarOccurrence,
   deleteUserCalendarOccurrence,
+  setUserCalendarActivityCompleted,
   type UserCalendarActivity,
 } from '../lib/programDesign/userCalendar';
+import {
+  decorateDayPlanCompletion,
+  isProgramItemCompletedOnDate,
+  itemAllowsCheckoff,
+  mergeTrainingCompletedDates,
+  setProgramItemCompleted,
+} from '../lib/programDesign/activityCompletion';
+import type { TrainingDayItem } from '../lib/programDesign/trainingSchedule';
 import { isAutoEnrolledMemberRole } from '../lib/programDesign/enrollment';
 import { weekdayIndexFromYmd } from '../lib/programDesign/recurrence';
 import { syncMemberGroupEnrollment } from '../lib/programDesign/followProgram';
@@ -204,6 +214,7 @@ export default function Page(){
  const [strengthSetup,setStrengthSetup]=useState<{activityId:string;workoutId:string;date:string;title:string}|null>(null);
  const [strengthSetupGenerating,setStrengthSetupGenerating]=useState(false);
  const [strengthSetupError,setStrengthSetupError]=useState('');
+ const [trainingCompleteBusy,setTrainingCompleteBusy]=useState<string|null>(null);
  const [viewingWorkoutId,setViewingWorkoutId]=useState<string|null>(null);
  const [trainingSessionIntent,setTrainingSessionIntent]=useState<'log'|'edit'>('log');
  const [addExercisePanel,setAddExercisePanel]=useState<any>(null);
@@ -1436,6 +1447,7 @@ export default function Page(){
   const workoutOnDay=workoutForDate(p,day);
   const overlaid=mapDateLogsToProgram(dateLogs||[],p,workoutOnDay);
   Object.keys(overlaid).forEach((sid)=>{if(!by[sid])by[sid]=overlaid[sid];});
+  (dateLogs||[]).forEach((l:any)=>{if(l?.planned_set_id&&!by[l.planned_set_id])by[l.planned_set_id]=l;});
   logsRef.current=by;
   setLogs(by);
  }
@@ -2078,6 +2090,10 @@ export default function Page(){
     return next;
   });
   if(String(logDay)===today())setDashboardTodayLogs((prev:any)=>({...prev,[sid]:data}));
+  setProgressLogs((prev:any[])=>{
+    const rest=prev.filter((row:any)=>row?.id!==data.id);
+    return data.completed||logHasPerformance(data)?[data,...rest]:rest;
+  });
   if(activeAssignedRecipient&&located?.workout){
     const nextLogs={...logsRef.current,[sid]:data};
     await maybeCompleteAssignedWorkout(located.workout,nextLogs);
@@ -2304,6 +2320,30 @@ function onSelectTrainingDay(date:string){
   await refreshCalendarForDate(dateYmd);
   await openStrengthSetup(activity.id,dateYmd,String(created.workout.id),activity.title||'Strength');
  }
+ async function toggleTrainingItemComplete(item:TrainingDayItem,dateYmd:string){
+  if(item.workoutId){
+   startTrainingSession(item.workoutId,dateYmd,'log');
+   return;
+  }
+  if(!session?.user||!itemAllowsCheckoff(item)||!item.activityId)return;
+  setTrainingCompleteBusy(item.id);
+  try{
+   if(item.source==='calendar'){
+    const activity=userCalendarActivities.find((a)=>a.id===item.activityId);
+    if(!activity)return;
+    const next=!isActivityCompletedOnDate(activity,dateYmd);
+    const{error}=await setUserCalendarActivityCompleted(supabase,activity,dateYmd,next);
+    if(error)return alert(error);
+   }else{
+    const next=!isProgramItemCompletedOnDate(userCalendarActivities,item.activityId,dateYmd);
+    const{error}=await setProgramItemCompleted(supabase,session.user.id,userCalendarActivities,item.activityId,dateYmd,next);
+    if(error)return alert(error);
+   }
+   await refreshCalendarForDate(dateYmd);
+  }finally{
+   setTrainingCompleteBusy(null);
+  }
+ }
  async function generateStrengthForSetup(promptText:string){
   if(!strengthSetup)return;
   if(!session?.access_token){setStrengthSetupError('Sign in to generate this workout.');return;}
@@ -2354,7 +2394,7 @@ function onSelectTrainingDay(date:string){
   }
   setAppNav(n);
   if(n==='Progress'&&opts?.progressSub) setProgressSubNav(opts.progressSub);
-  if(n==='Progress'||n==='Dashboard'){loadProgressLogs();if(n==='Dashboard'){void loadDashboardProgram();loadDashboardTodayNutrition();setBodyDashRefreshKey(k=>k+1);}}
+  if(n==='Progress'||n==='Dashboard'||n==='Training'){loadProgressLogs();if(n==='Dashboard'){void loadDashboardProgram();loadDashboardTodayNutrition();setBodyDashRefreshKey(k=>k+1);}}
   if(n==='Nutrition')loadDashboardTodayNutrition();
   if(n==='Settings'){loadCatalog(); loadGuidedImportStatus(); if(activeTeam)loadMembers();}
   if(n==='Groups'){if(teams.length){if(!selectedTeamId)setSelectedTeamId(teams[0].id);setMode('team');} loadMembers(); loadMemberStats(); loadMemberAssignments(); loadGroupProgramForAssign(); loadClassifications(); loadPrograms(canManageGroupView()||groupsProgramWizardOpen?'setup':'training');}
@@ -2413,13 +2453,14 @@ function matchingSet(targetExercise:any, sourceSet:any){
  const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sort((a:any,b:any)=>a.day_order-b.day_order);
  const extraActiveWorkout=calendarWorkouts.find((w:any)=>w.id===activeWorkout)||null;
  const workout=extraActiveWorkout||weekWorkouts.find((w:any)=>w.id===activeWorkout)||weekWorkouts[0];
- const trainingTodayPlan=planForCalendarDate(program,trainingActivities,userCalendarActivities,logDate);
+ const trainingCompletionWorkouts=[...(program?.st_workouts||[]),...calendarWorkouts];
+ const trainingTodayPlan=decorateDayPlanCompletion(planForCalendarDate(program,trainingActivities,userCalendarActivities,logDate),{activities:userCalendarActivities,workouts:trainingCompletionWorkouts,progressLogs,sessionLogs:logs,selectedDate:logDate});
  const trainingTomorrowPlan=planForCalendarDate(program,trainingActivities,userCalendarActivities,tomorrowDate(logDate));
  const trainingWeekPlans=weekPlansForMonday(mondayOfWeek(logDate),program,trainingActivities,userCalendarActivities);
  const trainingMonthCells=monthCalendarCells(program,trainingActivities,trainingCalendarMonth,todayYmd(),userCalendarActivities);
  const trainingCalendarEditing=trainingEditActivity?userCalendarActivities.find((a)=>a.id===trainingEditActivity.id)||null:null;
  const trainingMonthLabel=monthLabel(trainingCalendarMonth);
- const trainingCompletedDates=progressLogs.filter((row:any)=>row.completed).map((row:any)=>String(row.log_date||'').slice(0,10));
+ const trainingCompletedDates=mergeTrainingCompletedDates(progressLogs.filter((row:any)=>row.completed).map((row:any)=>String(row.log_date||'').slice(0,10)),userCalendarActivities);
  const followedFromGroup=program?.source_program_id?teams.find((t:any)=>t.id===program.team_id)?.name||null:null;
  const planned=(workout?.st_exercises||[]).reduce((n:number,e:any)=>n+(e.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).length,0);
  const logged=Object.values(logs).filter((x:any)=>x.completed).length;
@@ -2633,6 +2674,8 @@ function matchingSet(targetExercise:any, sourceSet:any){
       onAddActivity={()=>setTrainingAddActivityOpen(true)}
       onEditActivity={(activityId,date)=>setTrainingEditActivity({id:activityId,date})}
       onSetupWorkout={(activityId,date)=>void setupExistingStrengthActivity(activityId,date)}
+      onCompleteItem={(item,date)=>void toggleTrainingItemComplete(item,date)}
+      completingItemId={trainingCompleteBusy}
       completedDates={trainingCompletedDates}
     />}
     {viewingWorkoutId&&<WorkoutPlanSheet
