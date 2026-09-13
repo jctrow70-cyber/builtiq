@@ -67,7 +67,9 @@ export function generateWarmup(opts: {
   const rounds = style === 'minimal' ? 1 : durationPref === 'extended' ? 3 : rules.warmupRounds;
   const templateId = warmupTemplateFor(opts.workoutType, opts.muscles);
   const fromSession = sessionPrepMoves(opts.sessionPatterns || []);
-  let moves = fromSession.length >= 3 ? fromSession : WARMUP_TEMPLATES[templateId];
+  // Upper/chest templates stay on upper prep. Session squat/lunge primers are for mixed or lower days.
+  const useSessionPrep = templateId !== 'upper_body' && fromSession.length >= 3;
+  let moves = useSessionPrep ? fromSession : WARMUP_TEMPLATES[templateId];
   if (style === 'minimal') moves = moves.slice(0, 3);
   if (durationPref === 'quick') moves = moves.slice(0, 4);
 

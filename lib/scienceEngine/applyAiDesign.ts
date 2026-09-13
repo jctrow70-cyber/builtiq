@@ -345,7 +345,11 @@ function resolveWarmup(
       };
     })
     .filter(Boolean) as WarmupItem[];
-  if (fromAi.length >= 3) return fromAi.slice(0, 6);
+  const listedWarmup =
+    fromAi.length >= 3 && isUpperOnlyDay(seed.workoutType)
+      ? fromAi.filter((item) => !isLowerBodyWarmupName(item.name))
+      : fromAi;
+  if (listedWarmup.length >= 3) return listedWarmup.slice(0, 6);
   return generateWarmup({
     workoutType: seed.workoutType,
     muscles: exercises.flatMap((ex) => ex.primaryMuscles),
@@ -353,6 +357,14 @@ function resolveWarmup(
     catalog,
     sessionPatterns: exercises.map((ex) => ex.movementPattern),
   }).items;
+}
+
+function isUpperOnlyDay(type: string): boolean {
+  return ['Chest', 'Back', 'Shoulders', 'Arms', 'Upper Body', 'Push', 'Pull'].includes(type);
+}
+
+function isLowerBodyWarmupName(name: string): boolean {
+  return /\b(squat|lunge|rdl|deadlift|hip thrust|glute bridge|leg press|leg curl)\b/i.test(name);
 }
 
 function resolvePrimer(raw: any, primary: CatalogExercise | null, catalog: CatalogExercise[], profile: TrainingProfile) {

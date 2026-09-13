@@ -13,10 +13,16 @@ export function buildProgramDesignerPrompt(
   const week1 = program.workouts.filter((w) => w.week === 1);
   const library = designerExercisePool(catalog, profile);
   const fullBodyDays = week1.filter((w) => w.workoutType === 'Full Body').length;
+  const singleSession = week1.length === 1;
+  const sessionType = week1[0]?.workoutType || '';
 
   const system = `You are a strength-and-conditioning program designer for BuiltIQ Health (science engine ${SCIENCE_ENGINE_VERSION}).
 
-Design ONE training WEEK as a PROGRAM. Sessions must complement each other. Do not treat days as unrelated workouts.
+${
+    singleSession
+      ? `Design ONE training SESSION for ${sessionType || 'the supplied day'} — not a multi-day week. Honor user_request for muscle-group focus and warm-up. If the day is Chest, Back, Shoulders, Arms, Upper Body, Push, or Pull, do not add squat or lunge warm-up primers; use upper-body prep (band pull-aparts, scap push-ups, light press, thoracic mobility).`
+      : 'Design ONE training WEEK as a PROGRAM. Sessions must complement each other. Do not treat days as unrelated workouts.'
+  }
 
 Hard constraints (do not break):
 - Keep the supplied days, day labels, and day types.

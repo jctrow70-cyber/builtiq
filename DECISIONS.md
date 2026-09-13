@@ -1320,6 +1320,36 @@ Strength rows without a workout could not be started. Adding exercises onto the 
 - Training Add activity for Strength always produces a Start-able workout
 - Programs lists hide the on-the-fly container
 - Single-workout AI generate fills one existing workout only
+- Follow-up BIQ-0178: the free-text prompt sets that session’s day type and warm-up focus. The client must not hardcode Full Body when the user asked for chest (or another body part).
+
+---
+
+## Decision 046 - Single-Day Generate Honors Prompt Focus
+
+Date: 2026-09-13  
+Status: Accepted  
+Category: Training / Science Engine
+
+### Decision
+
+On-the-fly / `targetWorkoutId` generate is one session. If the prompt names a body part (chest, back, legs, upper body), that becomes the structured day type and focus. Warm-up then follows that session: Chest / Upper / Push / Pull / Shoulders / Arms use the upper-body prep list, not goblet squat or rear-lunge primers. Full Body / Lower still use those lower-body primers as general raise and integration.
+
+Structured intake still wins for a **weekly** Program Design generate (Decision 038). Single-day Training generate has no day-type picker, so the prompt is the intake.
+
+### Reason
+
+Users asked for a chest day with a chest warm-up and received a Full Body science warm-up. That was leftover session typing, not a documented “always squat to warm up the chest” rule. Evidence in the engine only says dynamic warm-ups should prepare the work that follows.
+
+### Alternatives Considered
+
+- Keep Full Body and explain goblet squat as general temperature raise — rejected for an explicit chest request
+- Filter warm-up only, leave main lifts as full body — rejected; the user asked for a chest workout
+- New lightweight single-day model — deferred; reuse science + AI with the correct day type
+
+### Impact
+
+- Science engine 1.3.2
+- Weekly program generate and `st_set_logs` history unchanged
 
 ---
 

@@ -11,6 +11,69 @@ Branch:
 Status:
 ```
 
+## BIQ-0178 - Honor Chest Focus on Single-Day Generate
+
+Date: 2026-09-13  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+A one-day Training generate that asks for a **chest workout** with a **chest warm-up** no longer stamps a Full Body science template. The prompt sets the day type (Chest, Upper Body, etc.). Warm-up for those days uses upper/chest prep (scap push-ups, light press, band row, thoracic mobility) instead of goblet squat or rear lunge.
+
+### Purpose
+
+`generateStrengthForSetup` always sent `dayTypes: Full Body` with `structuredIntake: true`. Decision 038 treats structured fields as the source of truth, so “chest today” was ignored. The science engine then built a full-body session and used the `chest_legs` / `default` warm-up templates, which include Goblet Squat and Reverse Lunge as general primers — not a chest-specific rule.
+
+### Changes
+
+- Single-day prompt infers Chest / Back / Upper / Legs (etc.) instead of always Full Body
+- `/api/programs/generate` `targetWorkoutId` uses that inferred type and focus muscles
+- Chest / upper science warm-up stays on the `upper_body` template; AI squat/lunge warm-up items on those days are dropped
+- Designer prompt for one day asks for a session, not a complementary week
+- Science engine 1.3.2
+
+### Files Changed
+
+- `lib/programDesign/inferSchedule.ts`
+- `app/page.tsx`
+- `app/api/programs/generate/route.ts`
+- `lib/scienceEngine/warmup.ts`
+- `lib/scienceEngine/applyAiDesign.ts`
+- `lib/scienceEngine/programDesigner.ts`
+- `lib/scienceEngine/version.ts`
+- `lib/scienceEngine/acceptanceCheck.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. `npm run test:science` passes (includes the “chest workout just for today…” infer + chest-day warm-up assertions).
+2. Training → Add **Strength** → Generate with AI using: `generate a chest workout just for today with a warm up geared towards chest.`
+3. Warm-up should be chest/upper (band row, scap push-up, light press, thoracic work) — not goblet squat or rear lunge.
+4. Strength work should be pressing / chest, not a full-body squat day.
+5. A prompt like `full body for today` can still use goblet squat / lunge as general prep.
+6. Existing weekly Program Design generate is unchanged. Logged `st_set_logs` are not rewritten.
+
+### Known Issues
+
+- Ambiguous prompts (`chest and back`, or no muscle named) still fall back to Upper Body or Full Body.
+- Catalog `findByName` can still rename a library move to a nearby catalog title (e.g. reverse lunge → barbell rear lunge) when a lower-body warm-up is actually intended.
+- Single-day generate still uses the full science + optional AI week path, constrained to one weekday.
+
+### Recommended Commit Message
+
+```text
+BIQ-0178 Honor chest focus on single-day Training generate
+```
+
+---
+
 ## BIQ-0177 - Fix On-the-Fly Strength Program Insert
 
 Date: 2026-09-13  
@@ -194,7 +257,7 @@ None. Uses existing `st_user_calendar_activities.workout_id` and `st_workouts` /
 
 - The automatic **Personal workouts** container is a draft program used only as a workout parent. It is hidden from Programs by reserved name (and leftover `on_the_fly` rows, if any).
 - **Fix (2026-09-13):** Creating the container with `generation_method = on_the_fly` failed on live/test (`st_programs_generation_method_check` allows only `ai`, `template`, `manual`). Insert now uses `manual`. No migration.
-- AI generate for one day still uses the full science-engine generate path constrained to that weekday; it is not a separate lightweight model.
+- AI generate for one day still uses the full science-engine generate path constrained to that weekday; it is not a separate lightweight model. **Fix (BIQ-0178):** that path now infers Chest / Upper / etc. from the prompt so a chest request is not stamped as Full Body with a lower-body warm-up.
 - Recurring weekly strength shares one workout template across the series.
 
 ### Recommended Commit Message

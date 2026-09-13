@@ -56,6 +56,7 @@ import ProgramDesignHome from './components/programDesign/ProgramDesignHome';
 import TrainingExecution from './components/training/TrainingExecution';
 import WorkoutPlanSheet from './components/training/WorkoutPlanSheet';
 import { cycleLengthOf } from '../lib/programDesign/cycle';
+import { focusMusclesForSingleDayType, inferSingleDayTypeFromPrompt } from '../lib/programDesign/inferSchedule';
 import AddActivitySheet from './components/programDesign/AddActivitySheet';
 import StrengthWorkoutSetupSheet from './components/programDesign/StrengthWorkoutSetupSheet';
 import { fetchDesignPrograms, fetchProgramActivities } from '../lib/programDesign/programDesignApi';
@@ -2348,6 +2349,8 @@ function onSelectTrainingDay(date:string){
   if(!strengthSetup)return;
   if(!session?.access_token){setStrengthSetupError('Sign in to generate this workout.');return;}
   const dayLabel=dayLabelFromYmd(strengthSetup.date);
+  const prompt=promptText.trim()||`One ${strengthSetup.title||'strength'} workout for ${dayLabel}.`;
+  const dayType=inferSingleDayTypeFromPrompt(prompt);
   setStrengthSetupGenerating(true);
   setStrengthSetupError('');
   try{
@@ -2355,8 +2358,9 @@ function onSelectTrainingDay(date:string){
     targetWorkoutId:strengthSetup.workoutId,
     weeks:1,
     days:[dayLabel],
-    dayTypes:{[dayLabel]:'Full Body'},
-    prompt:promptText.trim()||`One ${strengthSetup.title||'strength'} workout for ${dayLabel}.`,
+    dayTypes:{[dayLabel]:dayType},
+    focusMuscles:focusMusclesForSingleDayType(dayType),
+    prompt,
     structuredIntake:true,
     sessionMinutes:45,
     availableEquipment:normalizeEquipmentList(profileDraft.available_equipment),

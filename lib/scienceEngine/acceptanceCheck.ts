@@ -276,6 +276,51 @@ function run() {
   assert(designer.user.includes('week_to_design'), 'Designer prompt should send the week skeleton without pre-picked lifts');
   assert(designer.system.includes('Do not fill predetermined slots') || designer.system.includes('do not fill predetermined slots'), 'Prompt should tell the model it owns programming judgment');
 
+  const chestDayProfile = trainingProfileFromSources({
+    profile: { experience_level: 'intermediate', primary_goal: 'muscle' },
+    trainingProfile: { warmup_style: 'dynamic', warmup_duration: 'standard', preferred_session_minutes: 45 },
+    config: {
+      days: ['Sun'],
+      dayTypes: { Sun: 'Chest' },
+      focusMuscles: ['Chest'],
+      weeks: 1,
+      sessionMinutes: 45,
+    },
+  });
+  const chestDay = generateProgram(chestDayProfile);
+  const chestWorkout = chestDay.workouts.find((w) => w.week === 1);
+  assert(chestWorkout?.workoutType === 'Chest', `Single-day chest request should stay Chest, got ${chestWorkout?.workoutType}`);
+  const chestWarm = (chestWorkout?.warmup || []).map((w) => w.name).join(' | ');
+  assert(!/squat|lunge/i.test(chestWarm), `Chest-day warm-up should be upper/chest prep, not lower-body primers. Got ${chestWarm}`);
+  assert(/push-up|press|scapular|row|thoracic|inchworm|face pull/i.test(chestWarm), `Chest-day warm-up should include upper prep, got ${chestWarm}`);
+  const chestDesigner = buildProgramDesignerPrompt(chestDay, chestDayProfile, 'generate a chest workout just for today with a warm up geared towards chest.', adaptCatalog([]), []);
+  assert(chestDesigner.system.includes('ONE training SESSION'), 'Single-day generate should ask for one session, not a full week');
+  const chestAiWarm = applyAiWeekDesign(
+    chestDay,
+    {
+      summary: 'Chest today',
+      workouts: [
+        {
+          day_label: chestWorkout?.dayLabel || 'Sun',
+          warmup: [
+            { name: 'Goblet Squat', sets: 1, reps: '8' },
+            { name: 'Barbell Rear Lunge', sets: 1, reps: '8' },
+            { name: 'Scapular Push-Up', sets: 1, reps: '10' },
+          ],
+          strength: [
+            { name: 'Barbell Bench Press', sets: 3, reps: '6-8', target_rir: 2, role: 'primary' },
+            { name: 'Incline Dumbbell Press', sets: 3, reps: '8-10' },
+            { name: 'Cable Chest Fly', sets: 3, reps: '10-12' },
+          ],
+        },
+      ],
+    },
+    adaptCatalog([]),
+    chestDayProfile
+  );
+  const appliedChestWarm = (chestAiWarm.program.workouts.find((w) => w.week === 1)?.warmup || []).map((w) => w.name).join(' | ');
+  assert(!/squat|lunge/i.test(appliedChestWarm), `AI lower-body warm-up on a Chest day should be replaced. Got ${appliedChestWarm}`);
+
   const catalog = adaptCatalog([]);
   assert(findByName(catalog, 'Chest-Supported Row')?.name === 'Dumbbell Row', 'Chest-supported row should alias to a proven row');
   assert(findByName(catalog, 'Light DB RDL')?.name === 'Dumbbell RDL', 'Light DB RDL should alias to Dumbbell RDL');

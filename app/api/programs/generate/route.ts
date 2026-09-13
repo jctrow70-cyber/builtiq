@@ -3,7 +3,7 @@ import OpenAI from 'openai';
 import { createSupabaseFromRequest, requireAuthUser } from '../../../../lib/supabaseServer';
 import { persistAiProgramPlan, persistExercisesOntoWorkout, persistWorkoutsOntoProgram, type GenerationConfig } from '../../../../lib/training/aiProgramPlan';
 import { missingProgramColumnFromError } from '../../../../lib/training/programStatus';
-import { inferScheduleFromPrompt } from '../../../../lib/programDesign/inferSchedule';
+import { focusMusclesForSingleDayType, inferScheduleFromPrompt, inferSingleDayTypeFromPrompt } from '../../../../lib/programDesign/inferSchedule';
 import { createActivitiesFromWorkouts, updateDesignProgram } from '../../../../lib/programDesign/programDesignApi';
 import { cycleEndDate, generationWeeksOf, snapStartToMonday } from '../../../../lib/programDesign/cycle';
 import { fetchAllExerciseCatalog } from '../../../../lib/training/catalogFetch';
@@ -72,7 +72,7 @@ export async function POST(request: Request) {
       : normalizeDays(body?.days);
   const mode = body?.mode === 'team' ? 'team' : 'personal';
   const teamId = body?.teamId ? String(body.teamId) : null;
-  const focusMuscles = Array.isArray(body?.focusMuscles) ? body.focusMuscles.map(String) : [];
+  let focusMuscles = Array.isArray(body?.focusMuscles) ? body.focusMuscles.map(String) : [];
   const programName = body?.programName ? String(body.programName).trim() : '';
   const defaultProgramName = 'BuiltIQ Training Program';
   const includeCooldown = body?.includeCooldown !== false;
@@ -173,7 +173,15 @@ export async function POST(request: Request) {
     }
     const dayLabel = String(targetWorkout.day_label || days[0] || 'Mon');
     days = normalizeDays([dayLabel]);
-    if (!dayTypes[dayLabel]) dayTypes[dayLabel] = String(targetWorkout.workout_type || 'Full Body');
+    const inferredType = inferSingleDayTypeFromPrompt(prompt);
+    if (inferredType !== 'Full Body') {
+      dayTypes[dayLabel] = inferredType;
+    } else if (!dayTypes[dayLabel]) {
+      dayTypes[dayLabel] = String(targetWorkout.workout_type || 'Full Body');
+    }
+    if (!focusMuscles.length) {
+      focusMuscles = focusMusclesForSingleDayType(dayTypes[dayLabel] || inferredType);
+    }
   }
 
   // Prefer the program's saved cycle length so Custom weeks (e.g. 1) are not replaced by the old 6-week default.

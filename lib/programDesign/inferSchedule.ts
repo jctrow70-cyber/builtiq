@@ -131,6 +131,45 @@ function broDays(namedDays: ScheduleDayLabel[], partCount: number): ScheduleDayL
   return (['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as ScheduleDayLabel[]).slice(0, count);
 }
 
+const FOCUS_FOR_DAY_TYPE: Record<string, string[]> = {
+  Chest: ['Chest'],
+  Back: ['Lats'],
+  Shoulders: ['Shoulders'],
+  Arms: ['Arms'],
+  Legs: ['Quads', 'Hamstrings', 'Glutes'],
+  Push: ['Chest', 'Shoulders'],
+  Pull: ['Lats'],
+  'Upper Body': ['Chest', 'Shoulders'],
+  'Lower Body': ['Quads', 'Hamstrings', 'Glutes'],
+};
+
+/** One Training session from free text (chest today), not a weekly split. */
+export function inferSingleDayTypeFromPrompt(text: string): string {
+  const t = String(text || '').trim();
+  if (!t) return 'Full Body';
+  if (/\bfull[-\s]?body\b|\btotal body\b/i.test(t)) return 'Full Body';
+  if (/\bupper body\b/i.test(t) && /\blower body\b/i.test(t)) return 'Full Body';
+  if (/\bupper body\b/i.test(t)) return 'Upper Body';
+  if (/\blower body\b/i.test(t)) return 'Lower Body';
+  if (/\bpush\b/i.test(t) && /\bpull\b/i.test(t)) return 'Upper Body';
+  if (/\bpush(?:\s+day|\s+workout)?\b/i.test(t) && !/\bchest\b/i.test(t)) return 'Push';
+  if (/\bpull(?:\s+day|\s+workout)?\b/i.test(t) && !/\bback\b/i.test(t)) return 'Pull';
+  const parts = extractBroPartsInOrder(t);
+  if (parts.length === 1) return parts[0];
+  if (parts.length === 2) {
+    const set = new Set(parts);
+    if (set.has('Chest') && set.has('Back')) return 'Upper Body';
+    if (set.has('Chest') && set.has('Shoulders')) return 'Push';
+    return parts[0];
+  }
+  if (parts.length >= 3) return 'Full Body';
+  return 'Full Body';
+}
+
+export function focusMusclesForSingleDayType(dayType: string): string[] {
+  return FOCUS_FOR_DAY_TYPE[String(dayType || '')] || [];
+}
+
 /** Named weekdays in the prompt always win over full-body / 3-day templates. */
 export function inferScheduleFromPrompt(text: string): InferredSchedule {
   const namedDays = extractNamedDaysFromText(text);
@@ -194,5 +233,21 @@ export function assertInferScheduleExamples() {
   const broTypes = bro.days.map((d) => bro.dayTypes[d]).join(',');
   if (broTypes !== 'Chest,Back,Shoulders,Arms,Legs') {
     throw new Error(`Expected Chest,Back,Shoulders,Arms,Legs — got ${broTypes}`);
+  }
+
+  const chestToday = inferSingleDayTypeFromPrompt(
+    'generate a chest workout just for today with a warm up geared towards chest.'
+  );
+  if (chestToday !== 'Chest') {
+    throw new Error(`Single-day chest prompt should infer Chest — got ${chestToday}`);
+  }
+  if (inferSingleDayTypeFromPrompt('upper body for today') !== 'Upper Body') {
+    throw new Error('Single-day upper-body prompt should infer Upper Body');
+  }
+  if (inferSingleDayTypeFromPrompt('full body Saturday only') !== 'Full Body') {
+    throw new Error('Single-day full-body prompt should stay Full Body');
+  }
+  if (focusMusclesForSingleDayType('Chest').join(',') !== 'Chest') {
+    throw new Error('Chest day should focus Chest');
   }
 }
