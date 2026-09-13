@@ -31,7 +31,7 @@ export function withRecurrenceDetails(
   details: Record<string, unknown> | null | undefined,
   weekdays: number[]
 ): Record<string, unknown> {
-  const next = { ...(details || {}) };
+  const next: Record<string, unknown> = { ...(details || {}) };
   const days = normalizeWeekdays(weekdays);
   if (days.length) next.recurrence_weekdays = days;
   else delete next.recurrence_weekdays;

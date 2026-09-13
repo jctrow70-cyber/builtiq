@@ -111,7 +111,7 @@ export function detailsWithCompletedDate(
   dateYmd: string,
   completed: boolean
 ): Record<string, unknown> {
-  const next = { ...(details || {}) };
+  const next: Record<string, unknown> = { ...(details || {}) };
   const dates = new Set(completedDatesFromDetails(next));
   if (isYmd(dateYmd)) {
     if (completed) dates.add(dateYmd);
@@ -152,7 +152,7 @@ export function withExceptionDate(
   details: Record<string, unknown> | null | undefined,
   dateYmd: string
 ): Record<string, unknown> {
-  const next = { ...(details || {}) };
+  const next: Record<string, unknown> = { ...(details || {}) };
   const dates = exceptionDatesFromDetails(next);
   if (isYmd(dateYmd) && !dates.includes(dateYmd)) dates.push(dateYmd);
   dates.sort();
@@ -166,7 +166,7 @@ export function withOccurrenceOverride(
   dateYmd: string,
   override: OccurrenceOverride
 ): Record<string, unknown> {
-  const next = { ...(details || {}) };
+  const next: Record<string, unknown> = { ...(details || {}) };
   const overrides = occurrenceOverridesFromDetails(next);
   if (isYmd(dateYmd)) overrides[dateYmd] = override;
   next.occurrence_overrides = overrides;
@@ -177,7 +177,7 @@ export function withoutOccurrenceOverride(
   details: Record<string, unknown> | null | undefined,
   dateYmd: string
 ): Record<string, unknown> {
-  const next = { ...(details || {}) };
+  const next: Record<string, unknown> = { ...(details || {}) };
   const overrides = occurrenceOverridesFromDetails(next);
   delete overrides[dateYmd];
   if (Object.keys(overrides).length) next.occurrence_overrides = overrides;

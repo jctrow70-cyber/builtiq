@@ -68,6 +68,7 @@ None. Completions use existing `st_user_calendar_activities.details` JSON (`comp
 - Strength with no planned sets cannot show Completed until exercises exist (Set up / logger first).
 - Completing one cardio on a day that also has an unfinished lift still marks the day “done” in week/month, matching the existing “any completed set log” rule.
 - The program-item ledger is a hidden `st_user_calendar_activities` row dated 1970-01-01 and is filtered from the calendar.
+- Production `next build` failed assigning `details.program_completions` because `next` was inferred as `{ completion_ledger: boolean }`. Ledger/calendar details copies are now typed as `Record<string, unknown>` (no behavior change).
 
 ### Recommended Commit Message
 

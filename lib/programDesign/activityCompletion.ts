@@ -73,7 +73,7 @@ export function detailsWithProgramItemCompleted(
   dateYmd: string,
   completed: boolean
 ): Record<string, unknown> {
-  const next = { ...(details || {}), [COMPLETION_LEDGER_FLAG]: true };
+  const next: Record<string, unknown> = { ...(details || {}), [COMPLETION_LEDGER_FLAG]: true };
   const completions = programCompletionsFromDetails(next);
   const dates = new Set(completions[programActivityId] || []);
   if (isYmd(dateYmd)) {
