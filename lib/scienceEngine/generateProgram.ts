@@ -98,11 +98,21 @@ function slotsForDay(type: SplitDay['workoutType'], variantIndex: number): DaySl
     ];
   }
   if (type === 'Lower Body' || type === 'Legs') {
+    const gluteA = [
+      ['Hip Thrust', 'Barbell Hip Thrust'],
+      ['Cable Kickback', 'Hip Abduction'],
+      ['Single-Leg Hip Thrust', 'Step-Up'],
+    ][variantIndex % 3];
+    const hinge = [
+      ['Romanian Deadlift', 'Dumbbell RDL'],
+      ['Dumbbell RDL', 'Romanian Deadlift'],
+      ['Hip Thrust', 'Romanian Deadlift'],
+    ][variantIndex % 3];
     return [
-      { muscle: 'quads', role: 'primary', pattern: 'squat', preferred: ['Back Squat', 'Goblet Squat'] },
-      { muscle: 'hamstrings', role: 'primary', pattern: 'hinge', preferred: ['Romanian Deadlift', 'Dumbbell RDL'] },
-      { muscle: 'glutes', role: 'secondary', pattern: 'hinge', preferred: ['Hip Thrust'] },
-      { muscle: 'quads', role: 'secondary', pattern: 'lunge', preferred: ['Walking Lunge'] },
+      { muscle: 'quads', role: 'primary', pattern: 'squat', preferred: variantIndex % 2 === 0 ? ['Back Squat', 'Goblet Squat'] : ['Goblet Squat', 'Leg Press'] },
+      { muscle: 'hamstrings', role: 'primary', pattern: 'hinge', preferred: hinge },
+      { muscle: 'glutes', role: 'primary', pattern: 'hinge', preferred: gluteA },
+      { muscle: 'quads', role: 'secondary', pattern: 'lunge', preferred: variantIndex % 2 === 0 ? ['Walking Lunge'] : ['Bulgarian Split Squat', 'Step-Up'] },
       { muscle: 'hamstrings', role: 'isolation', pattern: 'knee_flexion', preferred: ['Leg Curl'] },
       { muscle: 'calves', role: 'isolation', pattern: 'calf_raise', preferred: ['Calf Raise'] },
       { muscle: 'abs', role: 'accessory', preferred: ['Pallof Press', 'Plank'] },
@@ -120,9 +130,12 @@ function slotsForDay(type: SplitDay['workoutType'], variantIndex: number): DaySl
     return [
       { muscle: 'chest', role: 'primary', pattern: 'horizontal_push', preferred: ['Barbell Bench Press', 'Bench Press'], preferPressRange: true },
       { muscle: 'chest', role: 'primary', pattern: 'horizontal_push', preferred: ['Incline Dumbbell Press', 'Incline Bench'] },
-      { muscle: 'chest', role: 'secondary', pattern: 'horizontal_push', preferred: ['Dumbbell Bench Press', 'Push-Up'] },
+      { muscle: 'chest', role: 'secondary', pattern: 'horizontal_push', preferred: ['Chest Dip', 'Push-Up'] },
       { muscle: 'chest', role: 'isolation', pattern: 'horizontal_push', preferred: ['Cable Chest Fly', 'Dumbbell Fly'] },
-      { muscle: 'chest', role: 'isolation', pattern: 'horizontal_push', preferred: ['Cable Crossover', 'Pec Deck'] },
+      { muscle: 'chest', role: 'isolation', preferred: ['Dumbbell Pullover'] },
+      { muscle: 'chest', role: 'accessory', pattern: 'horizontal_push', preferred: ['Push-Up'] },
+      { muscle: 'triceps', role: 'isolation', pattern: 'elbow_extension', preferred: ['Triceps Pushdown'] },
+      { muscle: 'triceps', role: 'isolation', pattern: 'elbow_extension', preferred: ['Overhead Triceps Extension'] },
     ];
   }
   if (type === 'Back') {
@@ -255,22 +268,23 @@ function buildWorkout(opts: {
   const exercises: ExercisePrescription[] = [];
   const variantIndex =
     split.slice(0, index + 1).filter((d) => d.workoutType === day.workoutType).length - 1;
-    const slots = slotsForDay(day.workoutType, Math.max(0, variantIndex));
+    const slots = withPriorityMuscleSlots(slotsForDay(day.workoutType, Math.max(0, variantIndex)), day, profile, Math.max(0, variantIndex));
   const maxMoves = maxStrengthMoves(profile.preferredSessionMinutes);
+  const weekNames = profile.varietyPreference === 'high' ? already : sessionNames;
 
   slots.forEach((slot) => {
     if (exercises.length >= maxMoves) return;
     const remainingForMuscle = opts.remaining[slot.muscle] ?? 0;
-    if (remainingForMuscle < 1.5 && slot.role !== 'primary') return;
-    if (skipIsolationForStrength(profile, slot.role, exercises)) return;
+    if (remainingForMuscle < 1.5 && slot.role !== 'primary' && !shouldFillSession(profile, day.workoutType)) return;
+    if (skipIsolationForStrength(profile, slot.role, exercises, day.workoutType)) return;
     const picked = pickExercise(catalog, {
       profile,
       muscle: slot.muscle,
       role: slot.role,
       sessionNames,
       pattern: slot.pattern,
-      alreadyNames: already,
-      preferredNames: profile.varietyPreference === 'high' ? undefined : slot.preferred,
+      alreadyNames: weekNames,
+      preferredNames: slot.preferred,
     });
     if (!picked) return;
     const cursor = opts.sessionCursor[slot.muscle] || 0;
@@ -291,6 +305,17 @@ function buildWorkout(opts: {
     Object.entries(credits).forEach(([muscle, value]) => {
       opts.remaining[muscle] = Math.max(0, (opts.remaining[muscle] || 0) - value);
     });
+  });
+  fillMuscleQuotas({
+    profile,
+    catalog,
+    day,
+    variantIndex: Math.max(0, variantIndex),
+    exercises,
+    sessionNames,
+    already,
+    remaining: opts.remaining,
+    maxMoves,
   });
 
   day.targetMuscles.forEach((muscle) => {
@@ -334,8 +359,113 @@ function buildWorkout(opts: {
   return trimmed;
 }
 
-function skipIsolationForStrength(profile: TrainingProfile, role: ProgramRole, exercises: ExercisePrescription[]): boolean {
+function trainsLower(type: SplitDay['workoutType']): boolean {
+  return type === 'Full Body' || type === 'Lower Body' || type === 'Legs';
+}
+
+function gluteSlotPool(variantIndex: number): DaySlot[] {
+  const rotations: DaySlot[][] = [
+    [
+      { muscle: 'glutes', role: 'primary', pattern: 'hinge', preferred: ['Hip Thrust', 'Barbell Hip Thrust'] },
+      { muscle: 'glutes', role: 'isolation', preferred: ['Cable Kickback', 'Hip Abduction'] },
+    ],
+    [
+      { muscle: 'glutes', role: 'primary', preferred: ['Single-Leg Hip Thrust', 'Step-Up'] },
+      { muscle: 'glutes', role: 'isolation', preferred: ['Hip Abduction', 'Cable Kickback'] },
+    ],
+    [
+      { muscle: 'glutes', role: 'secondary', preferred: ['Bulgarian Split Squat', 'Step-Up'] },
+      { muscle: 'glutes', role: 'isolation', preferred: ['Glute Bridge', 'Cable Kickback'] },
+    ],
+  ];
+  return rotations[variantIndex % rotations.length];
+}
+
+function muscleQuotaForDay(profile: TrainingProfile, day: SplitDay, muscle: MuscleId): number {
+  const fromNotes = Number(profile.sessionMuscleQuotas?.[muscle] || 0);
+  if (fromNotes > 0) return fromNotes;
+  if (muscle === 'glutes' && profile.priorityMuscles.includes('glutes') && trainsLower(day.workoutType)) return 2;
+  return 0;
+}
+
+function withPriorityMuscleSlots(slots: DaySlot[], day: SplitDay, profile: TrainingProfile, variantIndex: number): DaySlot[] {
+  const next = slots.slice();
+  const need = muscleQuotaForDay(profile, day, 'glutes');
+  if (need < 1) return next;
+  const have = next.filter((slot) => slot.muscle === 'glutes').length;
+  const extras = gluteSlotPool(variantIndex);
+  for (let i = have; i < need; i += 1) {
+    next.push(extras[i % extras.length]);
+  }
+  return next;
+}
+
+function isDedicatedGlute(ex: Pick<ExercisePrescription, 'name' | 'primaryMuscles'>): boolean {
+  if ((ex.primaryMuscles || []).includes('glutes')) return true;
+  return /hip thrust|glute|kickback|hip abduction|step-?up|frog pump|pull-through/i.test(ex.name);
+}
+
+function fillMuscleQuotas(opts: {
+  profile: TrainingProfile;
+  catalog: CatalogExercise[];
+  day: SplitDay;
+  variantIndex: number;
+  exercises: ExercisePrescription[];
+  sessionNames: string[];
+  already: string[];
+  remaining: Record<string, number>;
+  maxMoves: number;
+}) {
+  const need = muscleQuotaForDay(opts.profile, opts.day, 'glutes');
+  if (need < 1) return;
+  const pool = gluteSlotPool(opts.variantIndex);
+  let guard = 0;
+  while (opts.exercises.filter(isDedicatedGlute).length < need && opts.exercises.length < opts.maxMoves && guard < 6) {
+    guard += 1;
+    const slot = pool[guard % pool.length];
+    const picked = pickExercise(opts.catalog, {
+      profile: opts.profile,
+      muscle: 'glutes',
+      role: slot.role,
+      sessionNames: opts.sessionNames,
+      pattern: slot.pattern,
+      alreadyNames: opts.sessionNames,
+      preferredNames: slot.preferred,
+    });
+    if (!picked) break;
+    const prescribed = prescribeExercise({
+      exercise: picked,
+      role: slot.role,
+      profile: opts.profile,
+      sets: 3,
+      why: 'Dedicated glute work from the glute-focus request.',
+    });
+    opts.exercises.push(prescribed);
+    opts.already.push(picked.name);
+    opts.sessionNames.push(picked.name);
+    const credits = creditSets(contributionsForExercise(picked), 3);
+    Object.entries(credits).forEach(([muscle, value]) => {
+      opts.remaining[muscle] = Math.max(0, (opts.remaining[muscle] || 0) - value);
+    });
+  }
+}
+
+function shouldFillSession(profile: TrainingProfile, workoutType: SplitDay['workoutType']): boolean {
+  const minutes = profile.preferredSessionMinutes || 60;
+  if (minutes >= 55) return true;
+  const bodyPart = ['Chest', 'Back', 'Shoulders', 'Arms'].includes(workoutType);
+  return bodyPart && Number(profile.weeks) === 1 && profile.trainingDaysPerWeek <= 2;
+}
+
+function skipIsolationForStrength(
+  profile: TrainingProfile,
+  role: ProgramRole,
+  exercises: ExercisePrescription[],
+  workoutType: SplitDay['workoutType']
+): boolean {
   if (role !== 'isolation' && role !== 'accessory') return false;
+  if ((profile.preferredSessionMinutes || 60) >= 55) return false;
+  if (['Chest', 'Back', 'Shoulders', 'Arms'].includes(workoutType)) return false;
   const strengthBias = profile.primaryGoal === 'strength' || (profile.trainingFeel || []).includes('traditional_strength');
   if (!strengthBias) return false;
   const compounds = exercises.filter((ex) => ex.role === 'primary' || ex.role === 'secondary').length;

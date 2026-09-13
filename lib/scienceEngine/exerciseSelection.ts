@@ -84,6 +84,9 @@ function movementFamily(name: string): string {
   if (/bench press|chest press/.test(n)) return 'flat_press';
   if (/incline/.test(n) && /press|bench/.test(n)) return 'incline_press';
   if (/fly|pec deck/.test(n)) return 'fly';
+  if (/hip thrust/.test(n)) return 'hip_thrust';
+  if (/kickback/.test(n)) return 'glute_kickback';
+  if (/hip abduction|lateral band/.test(n)) return 'hip_abduction';
   if (/row/.test(n)) return 'row';
   if (/pulldown|pull-?up/.test(n)) return 'vertical_pull';
   if (/squat/.test(n) && !/split squat/.test(n)) return 'squat';
@@ -116,6 +119,7 @@ export function pickExercise(
 ): CatalogExercise | null {
   const sessionNames = ctx.sessionNames || [];
   const blocked = new Set((ctx.alreadyNames || []).map((n) => n.toLowerCase()));
+  const lockPreferred = ctx.profile.varietyPreference === 'consistent';
   const preferred = (ctx.preferredNames || [])
     .map((name) => findByName(pool, name))
     .find(
@@ -126,7 +130,7 @@ export function pickExercise(
         !conflictsInSession(ex.name, sessionNames) &&
         scoreExercise(ex, ctx) > -20
     );
-  if (preferred) return preferred;
+  if (lockPreferred && preferred) return preferred;
 
   const ranked = pool
     .filter((ex) => !ctx.alreadyNames.some((n) => n.toLowerCase() === ex.name.toLowerCase()))

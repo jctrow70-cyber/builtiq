@@ -67,11 +67,23 @@ export function validateProgramQuality(program: ScienceProgram, sessionMinutes =
     if (minutes && cap && minutes > cap + 15) {
       issues.push(warn('DURATION_OVER', `${workout.name} is estimated at ${minutes} min vs a ${cap}-minute session.`));
     }
-    if (minutes && cap >= 55 && cap <= 70 && workout.exercises.length < 5 && workout.workoutType === 'Full Body') {
-      issues.push(warn('DURATION_UNDER', `${workout.name} looks light for a ~${cap}-minute full-body session.`));
+    if (minutes && cap >= 55 && cap <= 70 && workout.exercises.length < 5) {
+      issues.push(warn('DURATION_UNDER', `${workout.name} looks light for a ~${cap}-minute session.`));
     }
     if (workout.workoutType === 'Full Body' && cap >= 50 && workout.exercises.length < 6) {
       issues.push(warn('FULL_BODY_THIN', `${workout.name} should usually cover more of the body in a ~${cap || 60}-minute session.`));
+    }
+    if (
+      ['Chest', 'Back', 'Shoulders', 'Arms'].includes(workout.workoutType) &&
+      cap >= 80 &&
+      workout.exercises.length < 6
+    ) {
+      issues.push(
+        warn(
+          'DURATION_UNDER',
+          `${workout.name} looks light for a ~${cap}-minute ${workout.workoutType.toLowerCase()} session.`
+        )
+      );
     }
   });
 

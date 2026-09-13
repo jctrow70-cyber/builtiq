@@ -56,7 +56,7 @@ import ProgramDesignHome from './components/programDesign/ProgramDesignHome';
 import TrainingExecution from './components/training/TrainingExecution';
 import WorkoutPlanSheet from './components/training/WorkoutPlanSheet';
 import { cycleLengthOf } from '../lib/programDesign/cycle';
-import { focusMusclesForSingleDayType, inferSingleDayTypeFromPrompt } from '../lib/programDesign/inferSchedule';
+import { focusMusclesForSingleDayType, inferSessionMinutesFromPrompt, inferSingleDayTypeFromPrompt } from '../lib/programDesign/inferSchedule';
 import AddActivitySheet from './components/programDesign/AddActivitySheet';
 import StrengthWorkoutSetupSheet from './components/programDesign/StrengthWorkoutSetupSheet';
 import { fetchDesignPrograms, fetchProgramActivities } from '../lib/programDesign/programDesignApi';
@@ -2351,6 +2351,7 @@ function onSelectTrainingDay(date:string){
   const dayLabel=dayLabelFromYmd(strengthSetup.date);
   const prompt=promptText.trim()||`One ${strengthSetup.title||'strength'} workout for ${dayLabel}.`;
   const dayType=inferSingleDayTypeFromPrompt(prompt);
+  const sessionMinutes=inferSessionMinutesFromPrompt(prompt)||Number(profileDraft?.preferred_session_minutes)||60;
   setStrengthSetupGenerating(true);
   setStrengthSetupError('');
   try{
@@ -2362,7 +2363,7 @@ function onSelectTrainingDay(date:string){
     focusMuscles:focusMusclesForSingleDayType(dayType),
     prompt,
     structuredIntake:true,
-    sessionMinutes:45,
+    sessionMinutes,
     availableEquipment:normalizeEquipmentList(profileDraft.available_equipment),
     primaryGoal:profileDraft.primary_goal,
     experienceLevel:profileDraft.experience_level,
@@ -2372,6 +2373,9 @@ function onSelectTrainingDay(date:string){
    if(!res.ok||data.error){
     setStrengthSetupError(data.error||'Could not generate this workout.');
     return;
+   }
+   if(strengthSetup.activityId){
+    await supabase.from('st_user_calendar_activities').update({duration_minutes:sessionMinutes}).eq('id',strengthSetup.activityId);
    }
    await refreshCalendarForDate(strengthSetup.date);
    const workoutId=strengthSetup.workoutId;

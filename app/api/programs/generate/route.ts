@@ -3,7 +3,7 @@ import OpenAI from 'openai';
 import { createSupabaseFromRequest, requireAuthUser } from '../../../../lib/supabaseServer';
 import { persistAiProgramPlan, persistExercisesOntoWorkout, persistWorkoutsOntoProgram, type GenerationConfig } from '../../../../lib/training/aiProgramPlan';
 import { missingProgramColumnFromError } from '../../../../lib/training/programStatus';
-import { focusMusclesForSingleDayType, inferScheduleFromPrompt, inferSingleDayTypeFromPrompt } from '../../../../lib/programDesign/inferSchedule';
+import { focusMusclesForSingleDayType, inferScheduleFromPrompt, inferSessionMinutesFromPrompt, inferSingleDayTypeFromPrompt } from '../../../../lib/programDesign/inferSchedule';
 import { createActivitiesFromWorkouts, updateDesignProgram } from '../../../../lib/programDesign/programDesignApi';
 import { cycleEndDate, generationWeeksOf, snapStartToMonday } from '../../../../lib/programDesign/cycle';
 import { fetchAllExerciseCatalog } from '../../../../lib/training/catalogFetch';
@@ -226,7 +226,7 @@ export async function POST(request: Request) {
         : normalizeEquipmentList(profile?.available_equipment),
       includeCooldown,
       weeks,
-      sessionMinutes: body?.sessionMinutes,
+      sessionMinutes: inferSessionMinutesFromPrompt(prompt) || body?.sessionMinutes,
       primaryGoal: body?.primaryGoal,
       experienceLevel: body?.experienceLevel,
       excludedExercises: Array.isArray(body?.limitations)
@@ -237,7 +237,7 @@ export async function POST(request: Request) {
       varietyPreference: body?.varietyPreference,
       trainingFeel: Array.isArray(body?.trainingFeel) ? body.trainingFeel.map(String) : undefined,
       trainingSplit: body?.trainingSplit,
-      intakeNotes: body?.notes,
+      intakeNotes: [body?.notes, prompt].filter((s) => String(s || '').trim()).join('\n'),
     },
   });
 

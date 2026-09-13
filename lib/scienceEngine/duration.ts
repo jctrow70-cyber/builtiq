@@ -14,7 +14,9 @@ export function maxStrengthMoves(minutes: number): number {
 export function minStrengthMoves(minutes: number): number {
   if (minutes <= 30) return 3;
   if (minutes <= 45) return 4;
-  return 5;
+  if (minutes <= 60) return 5;
+  if (minutes <= 75) return 6;
+  return 7;
 }
 
 export function estimateWorkoutMinutes(opts: {

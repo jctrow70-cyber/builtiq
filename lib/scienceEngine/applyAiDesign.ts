@@ -2,7 +2,7 @@ import { findByName, conflictsInSession } from './exerciseSelection';
 import { generatePotentiation } from './potentiation';
 import { prescribeExercise } from './prescription';
 import { generateRampSets, isPrimaryLift } from './rampUp';
-import { trimForDuration } from './duration';
+import { minStrengthMoves, trimForDuration } from './duration';
 import { generateWarmup } from './warmup';
 import type { MovementPatternId, MuscleId } from './taxonomy';
 import type { CatalogExercise, ExercisePrescription, ScienceProgram, ScienceWorkout, TrainingProfile, WarmupItem } from './types';
@@ -179,6 +179,7 @@ function workoutFromAi(seed: ScienceWorkout, row: any, catalog: CatalogExercise[
   exercises.push(...kept);
 
   if (exercises.length < 2) return null;
+  padThinSession(exercises, seed, profile);
 
   const primary = exercises.find((ex) => ex.role === 'primary') || exercises[0];
   const primaryCatalog = findByName(catalog, primary.name) || catalogStub(primary.name);
@@ -357,6 +358,19 @@ function resolveWarmup(
     catalog,
     sessionPatterns: exercises.map((ex) => ex.movementPattern),
   }).items;
+}
+
+function padThinSession(exercises: ExercisePrescription[], seed: ScienceWorkout, profile: TrainingProfile) {
+  const minMoves = minStrengthMoves(profile.preferredSessionMinutes);
+  if (exercises.length >= minMoves) return;
+  const names = exercises.map((ex) => ex.name);
+  for (const extra of seed.exercises || []) {
+    if (exercises.length >= minMoves) break;
+    if (names.some((n) => n.toLowerCase() === extra.name.toLowerCase())) continue;
+    if (conflictsInSession(extra.name, names)) continue;
+    exercises.push({ ...extra, supersetGroupId: undefined, supersetLabel: undefined, supersetOrder: undefined });
+    names.push(extra.name);
+  }
 }
 
 function isUpperOnlyDay(type: string): boolean {

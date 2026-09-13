@@ -321,6 +321,77 @@ function run() {
   const appliedChestWarm = (chestAiWarm.program.workouts.find((w) => w.week === 1)?.warmup || []).map((w) => w.name).join(' | ');
   assert(!/squat|lunge/i.test(appliedChestWarm), `AI lower-body warm-up on a Chest day should be replaced. Got ${appliedChestWarm}`);
 
+  const longChestProfile = trainingProfileFromSources({
+    profile: { experience_level: 'intermediate', primary_goal: 'muscle' },
+    trainingProfile: { warmup_style: 'dynamic', warmup_duration: 'standard', preferred_session_minutes: 90 },
+    config: {
+      days: ['Sun'],
+      dayTypes: { Sun: 'Chest' },
+      focusMuscles: ['Chest'],
+      weeks: 1,
+      sessionMinutes: 90,
+    },
+  });
+  const longChest = generateProgram(longChestProfile).workouts.find((w) => w.week === 1);
+  assert(
+    (longChest?.exercises.length || 0) >= 6,
+    `90-minute chest session should have at least 6 working lifts, got ${longChest?.exercises.map((e) => e.name).join(', ')}`
+  );
+  const thinAiChest = applyAiWeekDesign(
+    generateProgram(longChestProfile),
+    {
+      summary: 'Long chest',
+      workouts: [
+        {
+          day_label: longChest?.dayLabel || 'Sun',
+          strength: [
+            { name: 'Barbell Bench Press', sets: 3, reps: '6-8', role: 'primary' },
+            { name: 'Incline Dumbbell Press', sets: 3, reps: '8-10' },
+            { name: 'Cable Chest Fly', sets: 3, reps: '10-12' },
+          ],
+        },
+      ],
+    },
+    adaptCatalog([]),
+    longChestProfile
+  );
+  const paddedChest = thinAiChest.program.workouts.find((w) => w.week === 1);
+  assert(
+    (paddedChest?.exercises.length || 0) >= 6,
+    `AI 3-lift chest day should be padded to a 90-minute session, got ${paddedChest?.exercises.map((e) => e.name).join(', ')}`
+  );
+
+  const gluteFocus = trainingProfileFromSources({
+    profile: { experience_level: 'intermediate', primary_goal: 'hypertrophy' },
+    trainingProfile: { preferred_session_minutes: 60 },
+    config: {
+      days: ['Mon', 'Wed', 'Fri'],
+      dayTypes: { Mon: 'Full Body', Wed: 'Full Body', Fri: 'Full Body' },
+      focusMuscles: ['Glutes'],
+      weeks: 4,
+      sessionMinutes: 60,
+      varietyPreference: 'balanced',
+      intakeNotes: 'I wanted 2 glute exercises per day',
+    },
+  });
+  assert(gluteFocus.sessionMuscleQuotas?.glutes === 2, `Glute notes should parse to 2/day, got ${JSON.stringify(gluteFocus.sessionMuscleQuotas)}`);
+  const gluteWeek = generateProgram(gluteFocus).workouts.filter((w) => w.week === 1);
+  gluteWeek.forEach((w) => {
+    const dedicated = w.exercises.filter((ex) =>
+      (ex.primaryMuscles || []).includes('glutes') || /hip thrust|glute|kickback|hip abduction|step-?up/i.test(ex.name)
+    );
+    assert(
+      dedicated.length >= 2,
+      `${w.name} should have 2 dedicated glute lifts, got ${w.exercises.map((e) => e.name).join(', ')}`
+    );
+    assert(
+      w.exercises.length >= 5,
+      `${w.name} should have at least 5 working lifts for 60 minutes, got ${w.exercises.map((e) => e.name).join(', ')}`
+    );
+  });
+  const daySignatures = gluteWeek.map((w) => w.exercises.slice(0, 3).map((e) => e.name).join('|'));
+  assert(new Set(daySignatures).size >= 2, `Glute-focus days should not clone the same first three lifts: ${daySignatures.join(' / ')}`);
+
   const catalog = adaptCatalog([]);
   assert(findByName(catalog, 'Chest-Supported Row')?.name === 'Dumbbell Row', 'Chest-supported row should alias to a proven row');
   assert(findByName(catalog, 'Light DB RDL')?.name === 'Dumbbell RDL', 'Light DB RDL should alias to Dumbbell RDL');

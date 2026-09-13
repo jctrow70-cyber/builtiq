@@ -170,6 +170,56 @@ export function focusMusclesForSingleDayType(dayType: string): string[] {
   return FOCUS_FOR_DAY_TYPE[String(dayType || '')] || [];
 }
 
+/** Session length from free text (90 minute chest). Null if the prompt does not name a time. */
+export function inferSessionMinutesFromPrompt(text: string): number | null {
+  const t = String(text || '');
+  const hour = t.match(/\b(\d+(?:\.\d+)?)\s*(?:hours?|hrs?)\b/i);
+  if (hour) {
+    const minutes = Math.round(Number(hour[1]) * 60);
+    if (minutes >= 20 && minutes <= 180) return snapSessionMinutes(minutes);
+  }
+  const min = t.match(/\b(\d{2,3})\s*(?:-\s*)?(?:minute|min)s?\b/i);
+  if (min) {
+    const minutes = Number(min[1]);
+    if (minutes >= 20 && minutes <= 180) return snapSessionMinutes(minutes);
+  }
+  return null;
+}
+
+function snapSessionMinutes(minutes: number): number {
+  const allowed = [30, 45, 60, 75, 90, 120];
+  return allowed.reduce((best, option) => (Math.abs(option - minutes) < Math.abs(best - minutes) ? option : best));
+}
+
+const WORD_COUNTS: Record<string, number> = { one: 1, two: 2, three: 3, four: 4, five: 5 };
+const QUOTA_MUSCLES: Array<{ id: string; pattern: RegExp }> = [
+  { id: 'glutes', pattern: /glutes?/ },
+  { id: 'chest', pattern: /chest|pecs?/ },
+  { id: 'quads', pattern: /quads?|quadriceps/ },
+  { id: 'hamstrings', pattern: /hams?|hamstrings?/ },
+  { id: 'back', pattern: /lats?|upper back|back/ },
+  { id: 'shoulders', pattern: /shoulders?|delts?/ },
+];
+
+/** Notes like "2 glute exercises per day" become per-session minimums. */
+export function inferSessionMuscleQuotasFromText(text: string): Record<string, number> {
+  const t = String(text || '');
+  const quotas: Record<string, number> = {};
+  const re =
+    /\b(one|two|three|four|five|\d)\s+([a-z][a-z\s]{2,18}?)\s+(exercises?|movements?|lifts?)\s+(?:per|each|a|every)\s+(?:day|session|workout)\b/gi;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(t)) !== null) {
+    const rawCount = match[1].toLowerCase();
+    const count = WORD_COUNTS[rawCount] || Number(rawCount);
+    if (!Number.isFinite(count) || count < 1 || count > 6) continue;
+    const muscleText = match[2].toLowerCase().trim();
+    const hit = QUOTA_MUSCLES.find((row) => row.pattern.test(muscleText));
+    if (!hit) continue;
+    quotas[hit.id] = Math.max(quotas[hit.id] || 0, count);
+  }
+  return quotas;
+}
+
 /** Named weekdays in the prompt always win over full-body / 3-day templates. */
 export function inferScheduleFromPrompt(text: string): InferredSchedule {
   const namedDays = extractNamedDaysFromText(text);
@@ -249,5 +299,18 @@ export function assertInferScheduleExamples() {
   }
   if (focusMusclesForSingleDayType('Chest').join(',') !== 'Chest') {
     throw new Error('Chest day should focus Chest');
+  }
+  if (inferSessionMinutesFromPrompt('90 minute chest workout') !== 90) {
+    throw new Error('90 minute prompt should infer 90');
+  }
+  if (inferSessionMinutesFromPrompt('generate a chest workout just for today') != null) {
+    throw new Error('Prompt without a time should not invent session minutes');
+  }
+  if (inferSessionMinutesFromPrompt('1.5 hour chest session') !== 90) {
+    throw new Error('1.5 hour prompt should infer 90');
+  }
+  const gluteQuota = inferSessionMuscleQuotasFromText('I wanted 2 glute exercises per day');
+  if (gluteQuota.glutes !== 2) {
+    throw new Error(`Expected 2 glute exercises/day, got ${JSON.stringify(gluteQuota)}`);
   }
 }

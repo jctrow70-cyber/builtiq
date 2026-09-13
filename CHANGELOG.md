@@ -11,6 +11,138 @@ Branch:
 Status:
 ```
 
+## BIQ-0180 - Honor Glute Focus, Notes, Duration, and Variety
+
+Date: 2026-09-13  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+A glute-focus program that asks for **2 glute exercises per day** and **60-minute** sessions now gets dedicated glute work on each day and about **5+ working lifts**, not a 3-lift squat/hinge clone. Days rotate glute patterns (thrust, kickback, single-leg, abduction) instead of repeating the same preferred list every generate.
+
+### Purpose
+
+Intake notes were sent to the AI as nuance only. Structured generate still used fixed slots (one Hip Thrust on some lower days), skipped isolations after three compounds, and always picked the first preferred lift. A squat or RDL was treated as “enough glute work.” 60 minutes still produced 3 exercises.
+
+### Changes
+
+- Parse notes / prompt for counts such as `2 glute exercises per day`
+- Glute priority or that note injects dedicated glute slots (hip thrust, kickback, abduction — squat does not count)
+- 55–60 minute sessions keep accessories and fill to at least 5 working lifts
+- Balanced / high variety no longer lock the first preferred exercise
+- Lower-body and glute slots rotate across A/B/C days
+- Science engine 1.3.4
+
+### Files Changed
+
+- `lib/programDesign/inferSchedule.ts`
+- `lib/scienceEngine/profile.ts`
+- `lib/scienceEngine/types.ts`
+- `lib/scienceEngine/generateProgram.ts`
+- `lib/scienceEngine/exerciseSelection.ts`
+- `lib/scienceEngine/catalogAdapter.ts`
+- `lib/scienceEngine/programDesigner.ts`
+- `lib/scienceEngine/qualityCheck.ts`
+- `lib/scienceEngine/acceptanceCheck.ts`
+- `lib/scienceEngine/version.ts`
+- `app/api/programs/generate/route.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Programs → generate a glute-focus plan, 60-minute sessions, notes: `2 glute exercises per day`.
+2. Each training day should include two dedicated glute moves (hip thrust, kickback, abduction, single-leg hip thrust, or step-up) — not “squat counts.”
+3. Each day should have about 5 or more working lifts, not 3.
+4. Monday / Wednesday / Friday should not be the same three exercises.
+5. `npm run test:science` includes the glute-focus + notes assertions.
+6. Completed `st_set_logs` are not rewritten.
+
+### Known Issues
+
+- “Per day” on an upper/lower split also adds glute accessories to upper days if the note says per day.
+- Catalog matching can still rename a library move to a nearby title.
+
+### Recommended Commit Message
+
+```text
+BIQ-0180 Honor glute-focus notes, 60-minute session size, and variety
+```
+
+---
+
+## BIQ-0179 - Size Single-Day Generate to Requested Minutes
+
+Date: 2026-09-13  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+A Training **Add activity** generate that asks for a **90-minute chest workout** now builds a longer chest session (about 6–8 working lifts), not the 3–4 lifts that came from the 45-minute activity default. If the prompt does not name a time, generate uses the profile session length or 60 minutes instead of hardcoding 45.
+
+### Purpose
+
+`generateStrengthForSetup` always sent `sessionMinutes: 45` (the Add activity duration default). Decision 038 treats structured fields as truth, so “90 minute chest” was ignored. The Chest template also stopped after weekly volume was met and skipped isolations on a strength-biased profile, which produced a 3-lift day when no time was named.
+
+### Changes
+
+- Infer session minutes from the prompt (`90 minute`, `1.5 hour`)
+- Single-day generate uses that length; otherwise profile / 60, not hardcoded 45
+- Calendar activity duration updates to the generated session length
+- Chest days have more press / fly / triceps slots for long sessions
+- Dedicated body-part days keep isolations; 75–90 minute sessions keep filling after weekly volume is met
+- Thin AI returns are padded from the science template to the session minimum
+- Science engine 1.3.3
+
+### Files Changed
+
+- `lib/programDesign/inferSchedule.ts`
+- `lib/scienceEngine/generateProgram.ts`
+- `lib/scienceEngine/duration.ts`
+- `lib/scienceEngine/applyAiDesign.ts`
+- `lib/scienceEngine/catalogAdapter.ts`
+- `lib/scienceEngine/programDesigner.ts`
+- `lib/scienceEngine/qualityCheck.ts`
+- `lib/scienceEngine/acceptanceCheck.ts`
+- `lib/scienceEngine/version.ts`
+- `app/api/programs/generate/route.ts`
+- `app/page.tsx`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. `npm run test:science` (includes 90-minute chest ≥ 6 lifts, and padding a 3-lift AI chest day).
+2. Training → Add **Strength** (duration can stay 45) → Generate with AI: `90 minute chest workout`. Expect about 6–8 working lifts (press angles, fly, triceps), not 3–4.
+3. Generate without a time: more than 3 working lifts (about 5+ at 60 minutes).
+4. A 30–45 minute prompt should stay concise.
+5. Followed program and `st_set_logs` are unchanged.
+
+### Known Issues
+
+- Very long sessions (120 minutes) still cap at 10 working lifts.
+- AI may still prefer fewer lifts; the science pad fills to the session minimum.
+
+### Recommended Commit Message
+
+```text
+BIQ-0179 Size single-day generate to the requested session length
+```
+
+---
+
 ## BIQ-0178 - Honor Chest Focus on Single-Day Generate
 
 Date: 2026-09-13  

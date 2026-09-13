@@ -1,3 +1,4 @@
+import { inferSessionMuscleQuotasFromText } from '../programDesign/inferSchedule';
 import { musclesFromFocusLabels, normalizeMuscleId, type MuscleId } from './taxonomy';
 import type { ExperienceLevel, PrimaryGoal, TrainingProfile, WarmupDurationPref, WarmupStyle, PotentiationPref } from './types';
 
@@ -87,6 +88,7 @@ export function trainingProfileFromSources(input: {
     (tp.potentiation_preference || 'automatic') as PotentiationPref,
     trainingFeel
   );
+  const intakeNotes = String(config.intakeNotes !== undefined ? config.intakeNotes : tp.intake_notes || '');
 
   return {
     userId: profile.user_id || tp.user_id,
@@ -128,8 +130,20 @@ export function trainingProfileFromSources(input: {
     varietyPreference: (config.varietyPreference || tp.variety_preference || 'balanced') as TrainingProfile['varietyPreference'],
     trainingFeel,
     trainingSplit: String(config.trainingSplit || tp.training_split || ''),
-    intakeNotes: String(config.intakeNotes !== undefined ? config.intakeNotes : tp.intake_notes || ''),
+    intakeNotes,
+    sessionMuscleQuotas: quotasFromNotes(intakeNotes),
   };
+}
+
+function quotasFromNotes(notes: string): TrainingProfile['sessionMuscleQuotas'] {
+  const raw = inferSessionMuscleQuotasFromText(notes);
+  const mapped: NonNullable<TrainingProfile['sessionMuscleQuotas']> = {};
+  Object.entries(raw).forEach(([key, count]) => {
+    const muscle =
+      key === 'back' ? 'lats' : key === 'shoulders' ? 'side_delts' : normalizeMuscleId(key);
+    if (muscle) mapped[muscle] = count;
+  });
+  return mapped;
 }
 
 function potentiationFromIntake(saved: PotentiationPref, feel: string[]): PotentiationPref {

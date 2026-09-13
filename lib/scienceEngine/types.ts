@@ -86,6 +86,8 @@ export type TrainingProfile = {
   trainingFeel?: string[];
   trainingSplit?: string;
   intakeNotes?: string;
+  /** Per-session minimum dedicated lifts, from notes such as "2 glute exercises per day". */
+  sessionMuscleQuotas?: Partial<Record<MuscleId, number>>;
 };
 
 export type CatalogExercise = {

@@ -1332,7 +1332,7 @@ Category: Training / Science Engine
 
 ### Decision
 
-On-the-fly / `targetWorkoutId` generate is one session. If the prompt names a body part (chest, back, legs, upper body), that becomes the structured day type and focus. Warm-up then follows that session: Chest / Upper / Push / Pull / Shoulders / Arms use the upper-body prep list, not goblet squat or rear-lunge primers. Full Body / Lower still use those lower-body primers as general raise and integration.
+On-the-fly / `targetWorkoutId` generate is one session. If the prompt names a body part (chest, back, legs, upper body), that becomes the structured day type and focus. If the prompt names a duration (90 minutes, 1.5 hours), that becomes the session length and the engine sizes the working-lift count to it. Warm-up then follows that session: Chest / Upper / Push / Pull / Shoulders / Arms use the upper-body prep list, not goblet squat or rear-lunge primers. Full Body / Lower still use those lower-body primers as general raise and integration.
 
 Structured intake still wins for a **weekly** Program Design generate (Decision 038). Single-day Training generate has no day-type picker, so the prompt is the intake.
 
@@ -1348,8 +1348,9 @@ Users asked for a chest day with a chest warm-up and received a Full Body scienc
 
 ### Impact
 
-- Science engine 1.3.2
+- Science engine 1.3.3
 - Weekly program generate and `st_set_logs` history unchanged
+- Follow-up BIQ-0179: do not hardcode 45 minutes from the Add activity duration default when the user asked for a longer session
 
 ---
 
@@ -1380,5 +1381,34 @@ Users needed to mark lifestyle activities done without a set logger. Inventing a
 - Training day items show Complete / Completed
 - Month/week “done” styling includes calendar check-offs as well as logged strength days
 - `st_workouts` is not a completion record
+
+---
+
+## Decision 047 - Intake Notes Can Set Per-Day Muscle Counts
+
+Date: 2026-09-13  
+Status: Accepted  
+Category: Program Design / Science Engine
+
+### Decision
+
+Structured intake still wins for days, duration, split, and priority muscles (Decision 038). When notes (or the generate prompt) specify a per-day count such as **2 glute exercises per day**, that count is a hard session quota. Dedicated glute movements (hip thrust, kickback, abduction, single-leg hip thrust, step-up) fill it. A squat or RDL does not count as one of those two.
+
+Glute as a priority area without that note still adds two dedicated glute slots on lower / full-body / legs days. 60-minute sessions keep accessories (about 5+ working lifts). Balanced and high variety do not lock the first preferred catalog lift every generate.
+
+### Reason
+
+Users selected glute focus, wrote the 2-per-day note, and set 60 minutes, then received a 3-lift day of the same squat/hinge/thrust trio. Notes were treated as AI flavor text only.
+
+### Alternatives Considered
+
+- Leave counts to the model — rejected; the last generate ignored them
+- Count any lower-body lift as a glute exercise — rejected; that is how the note was skipped
+- New intake stepper field for “exercises per muscle” — deferred; parse the note users already write
+
+### Impact
+
+- Science engine 1.3.4
+- `st_set_logs` history unchanged
 
 ---
