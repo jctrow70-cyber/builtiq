@@ -252,31 +252,45 @@ export async function createUserCalendarActivity(
   supabase: SupabaseClient,
   userId: string,
   dateYmd: string,
-  draft: ActivityDraft
-): Promise<{ error: string | null }> {
-  const { error } = await supabase.from('st_user_calendar_activities').insert({
-    user_id: userId,
-    activity_date: dateYmd,
-    activity_type: draft.activity_type,
-    title: draft.title.trim() || 'Activity',
-    duration_minutes: draft.duration_minutes,
-    notes: draft.notes.trim(),
-    details: withRecurrenceDetails(
-      draft.details || {},
-      draft.recurrence === 'weekly'
-        ? (draft.recurrence_weekdays?.length ? draft.recurrence_weekdays : [weekdayIndexFromYmd(dateYmd)])
-        : []
-    ),
-    recurrence: draft.recurrence === 'weekly' ? 'weekly' : 'none',
-    recurrence_until: draft.recurrence === 'weekly' ? draft.recurrence_until || null : null,
-  });
+  draft: ActivityDraft,
+  opts?: { workoutId?: string | null }
+): Promise<{ data: UserCalendarActivity | null; error: string | null }> {
+  const { data, error } = await supabase
+    .from('st_user_calendar_activities')
+    .insert({
+      user_id: userId,
+      activity_date: dateYmd,
+      activity_type: draft.activity_type,
+      title: draft.title.trim() || 'Activity',
+      duration_minutes: draft.duration_minutes,
+      notes: draft.notes.trim(),
+      details: withRecurrenceDetails(
+        draft.details || {},
+        draft.recurrence === 'weekly'
+          ? (draft.recurrence_weekdays?.length ? draft.recurrence_weekdays : [weekdayIndexFromYmd(dateYmd)])
+          : []
+      ),
+      recurrence: draft.recurrence === 'weekly' ? 'weekly' : 'none',
+      recurrence_until: draft.recurrence === 'weekly' ? draft.recurrence_until || null : null,
+      workout_id: opts?.workoutId || null,
+    })
+    .select('*')
+    .single();
   if (error) {
     if (isMissingRelation(error)) {
-      return { error: 'Apply the personal calendar migration to save activities on Training.' };
+      return { data: null, error: 'Apply the personal calendar migration to save activities on Training.' };
     }
-    return { error: error.message || 'Could not add activity' };
+    return { data: null, error: error.message || 'Could not add activity' };
   }
-  return { error: null };
+  return { data: data ? asActivity(data as Record<string, unknown>) : null, error: null };
+}
+
+export async function linkCalendarActivityWorkout(
+  supabase: SupabaseClient,
+  activityId: string,
+  workoutId: string
+): Promise<{ error: string | null }> {
+  return updateCalendarRow(supabase, activityId, { workout_id: workoutId });
 }
 
 async function updateCalendarRow(

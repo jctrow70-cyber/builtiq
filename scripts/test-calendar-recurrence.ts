@@ -97,6 +97,7 @@ const items = calendarItemsForDate([{ ...series, details: afterEdit }], '2026-09
 assert.equal(items.length, 1);
 assert.equal(items[0].title, 'Easy spin');
 assert.equal(items[0].duration, '20 min');
+assert.equal(items[0].workoutId, null);
 const unchanged = calendarItemsForDate([{ ...series, details: afterEdit }], '2026-09-14');
 assert.equal(unchanged[0].title, 'Ride');
 

@@ -1150,6 +1150,84 @@ export async function persistWorkoutsOntoProgram(
   return persistWorkoutsForProgram(supabase, programId, plan, config, catalog, catMap);
 }
 
+async function workoutHasNoSetLogs(supabase: any, workoutId: string): Promise<boolean> {
+  const { data: exercises } = await supabase.from('st_exercises').select('id').eq('workout_id', workoutId);
+  const exerciseIds = (exercises || []).map((row: { id: string }) => row.id);
+  if (!exerciseIds.length) return true;
+  const { data: planned } = await supabase.from('st_planned_sets').select('id').in('exercise_id', exerciseIds);
+  const plannedIds = (planned || []).map((row: { id: string }) => row.id);
+  if (!plannedIds.length) return true;
+  const { count } = await supabase
+    .from('st_set_logs')
+    .select('id', { count: 'exact', head: true })
+    .in('planned_set_id', plannedIds);
+  return !count;
+}
+
+/** Fill one existing workout from an AI/science plan. Does not create or delete other workouts. */
+export async function persistExercisesOntoWorkout(
+  supabase: any,
+  workoutId: string,
+  plan: AiProgramPlan,
+  catalog: any[],
+  dayLabel?: string
+): Promise<{ workoutId: string | null; error: string | null }> {
+  const tpl =
+    (dayLabel && plan.workouts.find((w) => w.day_label === dayLabel)) ||
+    plan.workouts.find((w) => Number(w.week) === 1) ||
+    plan.workouts[0];
+  if (!tpl) return { workoutId: null, error: 'AI did not return a workout for this day' };
+
+  const canReplace = await workoutHasNoSetLogs(supabase, workoutId);
+  if (!canReplace) {
+    return { workoutId: null, error: 'This workout already has logged sets. History was not changed.' };
+  }
+
+  await supabase.from('st_exercises').delete().eq('workout_id', workoutId);
+
+  const catMap = catalogByName(catalog);
+  const pendingExercises: PendingExerciseInsert[] = [];
+  for (const sec of ['warmup', 'strength', 'cooldown'] as const) {
+    const list = tpl[sec] || [];
+    if (!list.length) continue;
+    const { exercises } = collectSectionItems(workoutId, sec, list, SECTION_SORT_BASE[sec] ?? 0, catalog, catMap);
+    pendingExercises.push(...exercises);
+  }
+
+  if (tpl.workout_type) {
+    await supabase.from('st_workouts').update({ workout_type: tpl.workout_type }).eq('id', workoutId);
+  }
+
+  if (!pendingExercises.length) return { workoutId, error: null };
+
+  const { data: insertedExercises, error: exErr } = await supabase
+    .from('st_exercises')
+    .insert(pendingExercises.map((entry) => entry.payload))
+    .select('id');
+
+  if (exErr || !insertedExercises?.length) {
+    return { workoutId: null, error: exErr?.message || 'Failed to create exercises' };
+  }
+  if (insertedExercises.length !== pendingExercises.length) {
+    return { workoutId: null, error: 'Failed to create all exercises for this workout' };
+  }
+
+  const plannedSetRows = insertedExercises.flatMap((row: { id: string }, index: number) => {
+    const meta = pendingExercises[index].planned;
+    return buildPlannedSetRows(meta.sets, meta).map((r) => ({
+      ...r,
+      exercise_id: row.id,
+    }));
+  });
+
+  if (plannedSetRows.length) {
+    const { error: setErr } = await insertPlannedSetRows(supabase, plannedSetRows);
+    if (setErr) return { workoutId: null, error: setErr };
+  }
+
+  return { workoutId, error: null };
+}
+
 async function persistWorkoutsForProgram(
   supabase: any,
   programId: string,

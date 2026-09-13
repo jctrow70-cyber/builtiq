@@ -1294,3 +1294,31 @@ Users asked for body progress next to strength progress, plus a fast dashboard e
 - Future metrics (hips, body fat %, etc.) can add nullable columns on the same table
 
 ---
+
+## Decision 044 - On-the-Fly Strength Lives on a Personal Workout Container
+
+Date: 2026-09-13  
+Status: Accepted  
+Category: Training / Program Design
+
+### Decision
+
+When a user adds a **Strength** activity on the Training calendar, BuildIQ creates a real `st_workouts` row and links it with `st_user_calendar_activities.workout_id`. Those workouts attach to an automatic personal container program (`generation_method = on_the_fly`, named **Personal workouts**) that the user owns. They do not attach to a followed group program or rewrite an existing plan. After save, the user chooses **Generate with AI** (single-workout generate via the existing `/api/programs/generate` `targetWorkoutId` path) or **Create manually** (the existing Training catalog editor). Cardio, mobility, rest, and other types stay calendar-only.
+
+### Reason
+
+Strength rows without a workout could not be started. Adding exercises onto the followed program would mutate a shared or published plan and could rewrite other days. A hidden personal container keeps on-the-fly sessions loggable without destroying the followed program or `st_set_logs` history.
+
+### Alternatives Considered
+
+- Attach the workout to the currently followed program — rejected; group members cannot edit those templates, and it would change the plan
+- Call full-program generate on an existing program — rejected; that path deletes other workouts
+- Require the user to create a personal program first — rejected; dead-ends the on-the-fly flow
+
+### Impact
+
+- Training Add activity for Strength always produces a Start-able workout
+- Programs lists hide the on-the-fly container
+- Single-workout AI generate fills one existing workout only
+
+---

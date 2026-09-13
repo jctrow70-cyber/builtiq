@@ -57,10 +57,16 @@ import TrainingExecution from './components/training/TrainingExecution';
 import WorkoutPlanSheet from './components/training/WorkoutPlanSheet';
 import { cycleLengthOf } from '../lib/programDesign/cycle';
 import AddActivitySheet from './components/programDesign/AddActivitySheet';
+import StrengthWorkoutSetupSheet from './components/programDesign/StrengthWorkoutSetupSheet';
 import { fetchDesignPrograms, fetchProgramActivities } from '../lib/programDesign/programDesignApi';
+import {
+  createPersonalStrengthWorkout,
+  fetchWorkoutsByIds,
+} from '../lib/programDesign/personalStrengthWorkout';
 import {
   createUserCalendarActivity,
   fetchUserCalendarActivities,
+  linkCalendarActivityWorkout,
   monthWindow,
   saveUserCalendarOccurrence,
   deleteUserCalendarOccurrence,
@@ -194,6 +200,10 @@ export default function Page(){
  const [userCalendarActivities,setUserCalendarActivities]=useState<UserCalendarActivity[]>([]);
  const [trainingAddActivityOpen,setTrainingAddActivityOpen]=useState(false);
  const [trainingEditActivity,setTrainingEditActivity]=useState<{id:string;date:string}|null>(null);
+ const [calendarWorkouts,setCalendarWorkouts]=useState<any[]>([]);
+ const [strengthSetup,setStrengthSetup]=useState<{activityId:string;workoutId:string;date:string;title:string}|null>(null);
+ const [strengthSetupGenerating,setStrengthSetupGenerating]=useState(false);
+ const [strengthSetupError,setStrengthSetupError]=useState('');
  const [viewingWorkoutId,setViewingWorkoutId]=useState<string|null>(null);
  const [trainingSessionIntent,setTrainingSessionIntent]=useState<'log'|'edit'>('log');
  const [addExercisePanel,setAddExercisePanel]=useState<any>(null);
@@ -674,7 +684,9 @@ export default function Page(){
  }
  function canManageGroupView(){return !!activeTeam&&canManageGroup(activeTeam.my_role);}
  function canLog(){if(!session?.user)return false; const uid=viewingMember?.user_id||session.user.id; return canLogWorkout(session.user.id,uid,activeTeam?.my_role);}
- function canEdit(){if(!session?.user)return false; if(activeAssignedRecipient)return assignedHasPersonalCopy(activeAssignedRecipient); if(viewingMember&&viewingMember.user_id!==session.user.id)return false; if(program?.visibility==='team'){const team=teams.find((t:any)=>t.id===program.team_id)||activeTeam;return canEditGroupProgram(team?.my_role);} return mode==='personal'||canEditGroupProgram(activeTeam?.my_role);}
+ function isPersonalCalendarWorkout(workoutId?:string|null){return !!workoutId&&calendarWorkouts.some((w:any)=>w.id===workoutId);}
+ function findWorkoutAnywhere(workoutId?:string|null){if(!workoutId)return null;return findWorkoutInProgram(program,workoutId)||calendarWorkouts.find((w:any)=>w.id===workoutId)||null;}
+ function canEdit(){if(!session?.user)return false; if(activeAssignedRecipient)return assignedHasPersonalCopy(activeAssignedRecipient); if(viewingMember&&viewingMember.user_id!==session.user.id)return false; if(isPersonalCalendarWorkout(activeWorkout))return true; if(program?.visibility==='team'){const team=teams.find((t:any)=>t.id===program.team_id)||activeTeam;return canEditGroupProgram(team?.my_role);} return mode==='personal'||canEditGroupProgram(activeTeam?.my_role);}
  function isOwner(){return isGroupOwner(activeTeam?.my_role);}
  function logUserId(){return viewingMember?.user_id||session?.user?.id;}
  function activeProgramForLogging(){
@@ -792,11 +804,13 @@ export default function Page(){
     const start=resolveProgramStartDate(pickedFull);
     const alignedWeek=weekForDate(start,logDate,pickedFull.weeks||weeks||6);
     setWeek(alignedWeek);
+    const preserveId=options?.preserveWorkoutId||(trainingSessionOpen?activeWorkout:null);
     const dayLabel=dayLabelFromYmd(logDate);
     const match=(pickedFull.st_workouts||[]).find((w:any)=>w.week===alignedWeek&&w.day_label===dayLabel)
       ||(pickedFull.st_workouts||[]).filter((w:any)=>w.week===alignedWeek).sort((a:any,b:any)=>a.day_order-b.day_order)[0]
       ||pickedFull.st_workouts?.sort((a:any,b:any)=>a.week-b.week||a.day_order-b.day_order)?.[0];
-    if(match)setActiveWorkout(match.id);
+    if(preserveId)setActiveWorkout(preserveId);
+    else if(match)setActiveWorkout(match.id);
     checkHistoryRestoreOffer(pickedFull);
     const planned=await fetchProgramActivities(supabase,pickedFull.id);
     setTrainingActivities(mergeProgramActivities(pickedFull,planned.data||[],pickedFull.st_workouts||[]));
@@ -809,6 +823,10 @@ export default function Page(){
     const win=monthWindow(yearMonthOf(logDate));
     const cal=await fetchUserCalendarActivities(supabase,session.user.id,win.from,win.to);
     setUserCalendarActivities(cal.data||[]);
+    const linkedIds=(cal.data||[]).map((a)=>a.workout_id).filter(Boolean) as string[];
+    const extraIds=linkedIds.filter((id)=>!(pickedFull?.st_workouts||[]).some((w:any)=>w.id===id));
+    const extras=await fetchWorkoutsByIds(supabase,extraIds);
+    setCalendarWorkouts(extras.data||[]);
   }
  }
  async function openMemberDashboard(member:any){
@@ -2237,9 +2255,14 @@ function onSelectTrainingDay(date:string){
    const start=resolveProgramStartDate(program);
    const nextWeek=weekForDate(start,dateYmd,program.weeks||weeks||6);
    setWeek(nextWeek);
+  }
+  if(workoutId){
+   setActiveWorkout(workoutId);
+  } else if(program){
+   const start=resolveProgramStartDate(program);
+   const nextWeek=weekForDate(start,dateYmd,program.weeks||weeks||6);
    const dayLabel=dayLabelFromYmd(dateYmd);
-   const match=(program.st_workouts||[]).find((w:any)=>w.id===workoutId)
-    ||(program.st_workouts||[]).find((w:any)=>w.week===nextWeek&&w.day_label===dayLabel)
+   const match=(program.st_workouts||[]).find((w:any)=>w.week===nextWeek&&w.day_label===dayLabel)
     ||(program.st_workouts||[]).filter((w:any)=>w.week===nextWeek).sort((a:any,b:any)=>a.day_order-b.day_order)[0];
    if(match)setActiveWorkout(match.id);
   }
@@ -2247,6 +2270,75 @@ function onSelectTrainingDay(date:string){
   setTrainingSessionIntent(intent);
   setViewingWorkoutId(null);
   setTrainingSessionOpen(true);
+ }
+ async function refreshCalendarForDate(dateYmd:string){
+  if(!session?.user)return {activities:userCalendarActivities,workouts:calendarWorkouts};
+  const win=monthWindow(yearMonthOf(dateYmd));
+  const cal=await fetchUserCalendarActivities(supabase,session.user.id,win.from,win.to);
+  const activities=cal.data||[];
+  setUserCalendarActivities(activities);
+  const linkedIds=activities.map((a)=>a.workout_id).filter(Boolean) as string[];
+  const extraIds=linkedIds.filter((id)=>!(program?.st_workouts||[]).some((w:any)=>w.id===id));
+  const extras=await fetchWorkoutsByIds(supabase,extraIds);
+  const workouts=extras.data||[];
+  setCalendarWorkouts(workouts);
+  return {activities,workouts};
+ }
+ async function openStrengthSetup(activityId:string,dateYmd:string,workoutId:string,title:string){
+  setStrengthSetupError('');
+  setStrengthSetup({activityId,workoutId,date:dateYmd,title});
+ }
+ async function setupExistingStrengthActivity(activityId:string,dateYmd:string){
+  if(!session?.user)return;
+  const activity=userCalendarActivities.find((a)=>a.id===activityId);
+  if(!activity)return;
+  if(activity.workout_id){
+   await openStrengthSetup(activity.id,dateYmd,activity.workout_id,activity.title);
+   return;
+  }
+  const created=await createPersonalStrengthWorkout(supabase,session.user.id,dateYmd,activity.title||'Strength');
+  if(created.error||!created.workout?.id)return alert(created.error||'Could not create a strength workout.');
+  const link=await linkCalendarActivityWorkout(supabase,activity.id,String(created.workout.id));
+  if(link.error)return alert(link.error);
+  if(created.workout)setCalendarWorkouts((prev)=>[created.workout,...prev.filter((w:any)=>w.id!==created.workout?.id)]);
+  await refreshCalendarForDate(dateYmd);
+  await openStrengthSetup(activity.id,dateYmd,String(created.workout.id),activity.title||'Strength');
+ }
+ async function generateStrengthForSetup(promptText:string){
+  if(!strengthSetup)return;
+  if(!session?.access_token){setStrengthSetupError('Sign in to generate this workout.');return;}
+  const dayLabel=dayLabelFromYmd(strengthSetup.date);
+  setStrengthSetupGenerating(true);
+  setStrengthSetupError('');
+  try{
+   const res=await fetch('/api/programs/generate',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`},body:JSON.stringify({
+    targetWorkoutId:strengthSetup.workoutId,
+    weeks:1,
+    days:[dayLabel],
+    dayTypes:{[dayLabel]:'Full Body'},
+    prompt:promptText.trim()||`One ${strengthSetup.title||'strength'} workout for ${dayLabel}.`,
+    structuredIntake:true,
+    sessionMinutes:45,
+    availableEquipment:normalizeEquipmentList(profileDraft.available_equipment),
+    primaryGoal:profileDraft.primary_goal,
+    experienceLevel:profileDraft.experience_level,
+    mode:'personal',
+   })});
+   const data=await res.json();
+   if(!res.ok||data.error){
+    setStrengthSetupError(data.error||'Could not generate this workout.');
+    return;
+   }
+   await refreshCalendarForDate(strengthSetup.date);
+   const workoutId=strengthSetup.workoutId;
+   const date=strengthSetup.date;
+   setStrengthSetup(null);
+   startTrainingSession(workoutId,date,'edit');
+  }catch(e:any){
+   setStrengthSetupError(e?.message||'Could not generate this workout.');
+  }finally{
+   setStrengthSetupGenerating(false);
+  }
  }
  function switchTrainingContext(next:'personal'|'group'){setMode(next==='group'?'team':'personal');if(next==='group'&&teams.length&&!selectedTeamId)setSelectedTeamId(teams[0].id);}
  function handleGroupsWorkspaceTabChange(tab:string){
@@ -2273,6 +2365,7 @@ function onSelectTrainingDay(date:string){
 
 function targetWorkoutsFrom(current:any){
   if(!current) return [];
+  if(isPersonalCalendarWorkout(current.id)) return [current];
   const all=(program?.st_workouts||[]).filter((w:any)=>w.day_order===current.day_order);
   return applyScope==='future'
     ? all.filter((w:any)=>w.week>=current.week).sort((a:any,b:any)=>a.week-b.week)
@@ -2318,7 +2411,8 @@ function matchingSet(targetExercise:any, sourceSet:any){
 }
 
  const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sort((a:any,b:any)=>a.day_order-b.day_order);
- const workout=weekWorkouts.find((w:any)=>w.id===activeWorkout)||weekWorkouts[0];
+ const extraActiveWorkout=calendarWorkouts.find((w:any)=>w.id===activeWorkout)||null;
+ const workout=extraActiveWorkout||weekWorkouts.find((w:any)=>w.id===activeWorkout)||weekWorkouts[0];
  const trainingTodayPlan=planForCalendarDate(program,trainingActivities,userCalendarActivities,logDate);
  const trainingTomorrowPlan=planForCalendarDate(program,trainingActivities,userCalendarActivities,tomorrowDate(logDate));
  const trainingWeekPlans=weekPlansForMonday(mondayOfWeek(logDate),program,trainingActivities,userCalendarActivities);
@@ -2399,7 +2493,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
  const panelSupersetGroups=addExercisePanel&&workout?getSupersetGroupsForSection(workout,addExercisePanel.section).filter((g:any)=>g.count<3):[];
  const pendingGroupId=addExercisePanel?pendingSupersetGroup[addExercisePanel.section]:null;
  const pendingGroupInfo=pendingGroupId?panelSupersetGroups.find((g:any)=>g.id===pendingGroupId):null;
- const showEditScope=canEdit()&&(trainingSubNav==='setup'||!!draftEditProgramId||!!addExercisePanel);
+ const showEditScope=canEdit()&&!isPersonalCalendarWorkout(activeWorkout)&&(trainingSubNav==='setup'||!!draftEditProgramId||!!addExercisePanel);
  const showGroupsMemberWorkout=appNav==='Groups'&&!!viewingMember&&viewingMember.user_id!==session?.user?.id;
  const memberWeekWorkouts=(memberWorkoutProgram?.st_workouts||[]).filter((w:any)=>w.week===memberWorkoutWeek).sort((a:any,b:any)=>a.day_order-b.day_order);
  const memberWorkout=memberWeekWorkouts.find((w:any)=>w.id===memberWorkoutActiveId)||memberWeekWorkouts[0];
@@ -2538,12 +2632,13 @@ function matchingSet(targetExercise:any, sourceSet:any){
       onOpenPrograms={()=>goNav('Programs')}
       onAddActivity={()=>setTrainingAddActivityOpen(true)}
       onEditActivity={(activityId,date)=>setTrainingEditActivity({id:activityId,date})}
+      onSetupWorkout={(activityId,date)=>void setupExistingStrengthActivity(activityId,date)}
       completedDates={trainingCompletedDates}
     />}
     {viewingWorkoutId&&<WorkoutPlanSheet
-      workout={(program?.st_workouts||[]).find((w:any)=>w.id===viewingWorkoutId)||null}
+      workout={findWorkoutAnywhere(viewingWorkoutId)}
       dateLabel={formatDisplayDate(logDate)}
-      canEdit={canEdit()}
+      canEdit={canEdit()||isPersonalCalendarWorkout(viewingWorkoutId)}
       onClose={()=>setViewingWorkoutId(null)}
       onStart={()=>startTrainingSession(viewingWorkoutId,logDate,'log')}
       onEdit={()=>startTrainingSession(viewingWorkoutId,logDate,'edit')}
@@ -2555,7 +2650,31 @@ function matchingSet(targetExercise:any, sourceSet:any){
       allowMultiDay
       defaultWeekday={weekdayIndexFromYmd(logDate)}
       onClose={()=>setTrainingAddActivityOpen(false)}
-      onSave={async(draft)=>{const{error}=await createUserCalendarActivity(supabase,session.user.id,logDate,draft);if(error)throw new Error(error);const win=monthWindow(yearMonthOf(logDate));const cal=await fetchUserCalendarActivities(supabase,session.user.id,win.from,win.to);setUserCalendarActivities(cal.data||[]);setTrainingAddActivityOpen(false);}}
+      onSave={async(draft)=>{
+        let workoutId:string|null=null;
+        let createdWorkout:any=null;
+        if(draft.activity_type==='strength'){
+          const created=await createPersonalStrengthWorkout(supabase,session.user.id,logDate,draft.title||'Strength');
+          if(created.error||!created.workout?.id)throw new Error(created.error||'Could not create a strength workout.');
+          workoutId=String(created.workout.id);
+          createdWorkout=created.workout;
+        }
+        const{error}=await createUserCalendarActivity(supabase,session.user.id,logDate,draft,{workoutId});
+        if(error)throw new Error(error);
+        if(createdWorkout)setCalendarWorkouts((prev)=>[createdWorkout,...prev.filter((w:any)=>w.id!==createdWorkout.id)]);
+        await refreshCalendarForDate(logDate);
+        setTrainingAddActivityOpen(false);
+        if(workoutId)await openStrengthSetup('',logDate,workoutId,draft.title||'Strength');
+      }}
+    />}
+    {strengthSetup&&session?.user&&<StrengthWorkoutSetupSheet
+      dayLabel={formatDisplayDate(strengthSetup.date)}
+      title={strengthSetup.title}
+      generating={strengthSetupGenerating}
+      error={strengthSetupError}
+      onClose={()=>setStrengthSetup(null)}
+      onManual={()=>{const{workoutId,date}=strengthSetup;setStrengthSetup(null);startTrainingSession(workoutId,date,'edit');}}
+      onGenerate={generateStrengthForSetup}
     />}
     {trainingEditActivity&&trainingCalendarEditing&&session?.user&&<AddActivitySheet
       dayLabel={formatDisplayDate(trainingEditActivity.date)}

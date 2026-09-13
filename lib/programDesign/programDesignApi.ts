@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { insertProgramRecord, missingProgramColumnFromError } from '../training/programStatus';
 import { inferActivityTypeFromWorkout } from './activityTypes';
 import { cycleEndDate, cycleLengthOf, dayOfWeekFromLabel, snapStartToMonday, weekdayLabel } from './cycle';
+import { excludeOnTheFlyPrograms } from './personalStrengthWorkout';
 import type {
   ActivityDraft,
   ActivityType,
@@ -28,6 +29,7 @@ const PROGRAM_FIELDS = [
   'record_kind',
   'source_program_id',
   'inclusive_plan',
+  'generation_method',
 ];
 
 function isMissingRelation(error: { message?: string } | null | undefined): boolean {
@@ -70,7 +72,9 @@ export async function fetchDesignPrograms(
       q = q.eq('visibility', 'team').eq('team_id', opts.teamId || '00000000-0000-0000-0000-000000000000');
     }
     const { data, error } = await q;
-    if (!error) return { data: ((data || []) as unknown as ProgramDesignRecord[]), error: null };
+    if (!error) {
+      return { data: excludeOnTheFlyPrograms((data || []) as unknown as ProgramDesignRecord[]), error: null };
+    }
 
     const missingCol = missingProgramColumnFromError(error);
     if (missingCol && fields.includes(missingCol)) {

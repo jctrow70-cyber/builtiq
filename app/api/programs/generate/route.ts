@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createSupabaseFromRequest, requireAuthUser } from '../../../../lib/supabaseServer';
-import { persistAiProgramPlan, persistWorkoutsOntoProgram, type GenerationConfig } from '../../../../lib/training/aiProgramPlan';
+import { persistAiProgramPlan, persistExercisesOntoWorkout, persistWorkoutsOntoProgram, type GenerationConfig } from '../../../../lib/training/aiProgramPlan';
 import { missingProgramColumnFromError } from '../../../../lib/training/programStatus';
 import { inferScheduleFromPrompt } from '../../../../lib/programDesign/inferSchedule';
 import { createActivitiesFromWorkouts, updateDesignProgram } from '../../../../lib/programDesign/programDesignApi';
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
         : body?.dayTypes && typeof body.dayTypes === 'object'
           ? body.dayTypes
           : {};
-  const days = structuredIntake
+  let days = structuredIntake
     ? normalizeDays(body?.days)
     : promptSchedule.named
       ? normalizeDays(promptSchedule.days)
@@ -78,6 +78,7 @@ export async function POST(request: Request) {
   const includeCooldown = body?.includeCooldown !== false;
   const startDateRaw = body?.startDate ? String(body.startDate).slice(0, 10) : null;
   const existingProgramId = body?.existingProgramId ? String(body.existingProgramId) : '';
+  const targetWorkoutId = body?.targetWorkoutId ? String(body.targetWorkoutId) : '';
 
   type ExistingProgramRow = {
     id: string;
@@ -133,8 +134,51 @@ export async function POST(request: Request) {
     }
   }
 
+  type TargetWorkoutRow = { id: string; program_id: string; day_label: string; week: number | null; workout_type: string | null };
+  let targetWorkout: TargetWorkoutRow | null = null;
+  if (targetWorkoutId) {
+    const { data: workoutRow, error: workoutError } = await supabase
+      .from('st_workouts')
+      .select('id, program_id, day_label, week, workout_type')
+      .eq('id', targetWorkoutId)
+      .maybeSingle();
+    if (workoutError || !workoutRow) {
+      return NextResponse.json({ error: 'Workout not found' }, { status: 404 });
+    }
+    targetWorkout = workoutRow as TargetWorkoutRow;
+    if (!existingProgram || existingProgram.id !== targetWorkout.program_id) {
+      const { data: workoutProgram, error: workoutProgramError } = await supabase
+        .from('st_programs')
+        .select('id, owner_user_id, team_id, visibility')
+        .eq('id', targetWorkout.program_id)
+        .maybeSingle();
+      if (workoutProgramError || !workoutProgram) {
+        return NextResponse.json({ error: 'Program not found' }, { status: 404 });
+      }
+      const owns = workoutProgram.owner_user_id === user.id;
+      if (!owns && workoutProgram.visibility === 'team' && workoutProgram.team_id) {
+        const { data: membership } = await supabase
+          .from('st_team_members')
+          .select('role')
+          .eq('team_id', workoutProgram.team_id)
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .maybeSingle();
+        if (!membership || !['owner', 'editor', 'manager'].includes(membership.role)) {
+          return NextResponse.json({ error: 'You cannot edit this workout' }, { status: 403 });
+        }
+      } else if (!owns) {
+        return NextResponse.json({ error: 'You cannot edit this workout' }, { status: 403 });
+      }
+    }
+    const dayLabel = String(targetWorkout.day_label || days[0] || 'Mon');
+    days = normalizeDays([dayLabel]);
+    if (!dayTypes[dayLabel]) dayTypes[dayLabel] = String(targetWorkout.workout_type || 'Full Body');
+  }
+
   // Prefer the program's saved cycle length so Custom weeks (e.g. 1) are not replaced by the old 6-week default.
-  const weeks = generationWeeksOf(existingProgram, body?.weeks);
+  // Single-workout generate stays one day and does not rewrite the parent program.
+  let weeks = targetWorkout ? 1 : generationWeeksOf(existingProgram, body?.weeks);
 
   if (mode === 'team') {
     if (!teamId) return NextResponse.json({ error: 'teamId required for team programs' }, { status: 400 });
@@ -287,7 +331,17 @@ export async function POST(request: Request) {
   let programId: string | null = null;
   let persistError: string | null = null;
 
-  if (existingProgramId && existingProgram) {
+  if (targetWorkout) {
+    const persist = await persistExercisesOntoWorkout(
+      supabase,
+      targetWorkout.id,
+      plan,
+      builtinCatalog,
+      targetWorkout.day_label
+    );
+    programId = targetWorkout.program_id;
+    persistError = persist.error;
+  } else if (existingProgramId && existingProgram) {
     const { data: existingWorkouts } = await supabase
       .from('st_workouts')
       .select('id')
@@ -367,10 +421,11 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     programId,
+    workoutId: targetWorkout?.id || null,
     program_summary: plan.program_summary,
     coaching_notes: plan.coaching_notes || '',
     program_name: programName || plan.program_name || defaultProgramName,
-    workout_count: plan.workouts.length,
+    workout_count: targetWorkout ? 1 : plan.workouts.length,
     generation_method: generationMethod,
     science_version: SCIENCE_ENGINE_VERSION,
     volume_targets: scienceProgram.volumeTargets,

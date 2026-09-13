@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { excludeOnTheFlyPrograms } from '../programDesign/personalStrengthWorkout';
 import { isPublishedProgram, missingProgramColumnFromError } from './programStatus';
 
 const PROGRAM_INDEX_FIELD_LIST = [
@@ -57,7 +58,7 @@ export async function fetchProgramIndex(
   for (let attempt = 0; attempt < 8; attempt++) {
     const { data, error } = await programIndexQuery(supabase, fields, opts);
     if (!error) {
-      let list = ((data || []) as any[]);
+      let list = excludeOnTheFlyPrograms((data || []) as any[]);
       if (opts.publishedOnly) list = list.filter((p) => isPublishedProgram(p));
       return { data: list, error: null };
     }

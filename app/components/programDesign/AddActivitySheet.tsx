@@ -334,7 +334,8 @@ export default function AddActivitySheet({
 
         {type === 'strength' && !editingAny && (
           <p className="muted ai-wiz-coach" style={{ margin: '4px 0 8px', padding: '10px 12px', fontSize: '13px' }}>
-            After adding this strength day, you'll be able to import exercises from an existing program.
+            After you add this strength day, you can generate the workout with AI or build the exercises yourself. It
+            will be ready to Start on this date.
           </p>
         )}
 

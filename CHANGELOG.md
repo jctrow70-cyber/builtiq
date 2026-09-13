@@ -11,6 +11,80 @@ Branch:
 Status:
 ```
 
+## BIQ-0175 - Add Strength Workouts On the Fly
+
+Date: 2026-09-13  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Training **Add activity** still adds cardio, mobility, rest, and other calendar items as before. Choosing **Strength** now creates a real loggable workout on that date. After save, the user picks **Generate with AI** (one workout only) or **Create manually** (existing catalog editor). The followed program and completed history are not rewritten.
+
+### Purpose
+
+Strength calendar rows were titles without a Start button. Users needed to add a session on the selected day and then either generate exercises or build them by hand.
+
+### Changes
+
+- Add activity stays available in day, week, and month views, including an empty-day button
+- New strength activities create a workout on an automatic personal container program and link `st_user_calendar_activities.workout_id`
+- After save, a mobile-friendly sheet offers AI generate or manual create
+- Existing strength rows without a workout show **Set up**
+- `/api/programs/generate` accepts `targetWorkoutId` to fill one existing workout without deleting other program workouts
+- The personal container is hidden from Programs lists (`generation_method = on_the_fly`)
+- Occurrence-level this-day / series edits from BIQ-0172 are unchanged
+
+### Files Changed
+
+- `lib/programDesign/personalStrengthWorkout.ts`
+- `lib/programDesign/userCalendar.ts`
+- `lib/programDesign/programDesignApi.ts`
+- `lib/training/programFetch.ts`
+- `lib/training/aiProgramPlan.ts`
+- `app/api/programs/generate/route.ts`
+- `app/components/programDesign/AddActivitySheet.tsx`
+- `app/components/programDesign/StrengthWorkoutSetupSheet.tsx`
+- `app/components/training/TrainingExecution.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `scripts/test-personal-strength-activity.ts`
+- `scripts/test-calendar-recurrence.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None. Uses existing `st_user_calendar_activities.workout_id` and `st_workouts` / `st_programs` rows. No new table.
+
+### Testing Steps
+
+1. Training → pick a date in Day, Week, and Calendar views → **Add activity** is visible (header and empty-day button).
+2. Add a **cardio** activity. It should appear on that date with no Start button and no workout required.
+3. Add a **Strength** activity → **Create manually**. Add an exercise, save, go back to the calendar, and **Start** that date. Sets should log. Completed history should stay after you edit the workout later.
+4. Add another **Strength** activity → **Generate with AI** (optional note). Exercises should appear, then **Start** should open the logger. The followed program’s other days should be unchanged.
+5. If a program is already followed, adding personal strength on a date should not unfollow it or rewrite past `st_set_logs`.
+6. Mobile (~390px): Add activity, AI vs manual choices, and Start/View/Edit stay tappable.
+7. Error: generate with no session / failed generate should show an error and leave the empty workout in place so manual create still works.
+8. Recurring series Edit still offers This day only vs All days (BIQ-0172).
+9. `npx tsx scripts/test-personal-strength-activity.ts`
+10. `npx tsx scripts/test-calendar-recurrence.ts`
+
+### Known Issues
+
+- The automatic **Personal workouts** container is a draft program used only as a workout parent. It is hidden from Programs when `generation_method` is stored.
+- AI generate for one day still uses the full science-engine generate path constrained to that weekday; it is not a separate lightweight model.
+- Recurring weekly strength shares one workout template across the series.
+
+### Recommended Commit Message
+
+```text
+BIQ-0175 Let Training add a loggable strength workout on the fly
+```
+
+---
+
 ## BIQ-0174 - Group Members Can Read Active Program Templates
 
 Date: 2026-09-11  

@@ -32,6 +32,7 @@ type TrainingExecutionProps = {
   onOpenPrograms: () => void;
   onAddActivity?: (date: string) => void;
   onEditActivity?: (activityId: string, date: string) => void;
+  onSetupWorkout?: (activityId: string, date: string) => void;
   completedDates?: string[];
 };
 
@@ -43,15 +44,28 @@ function DayItems({
   onStart,
   onView,
   onEdit,
+  onSetup,
+  onAdd,
 }: {
   plan: TrainingDayPlan;
   completed: boolean;
   onStart: (workoutId: string | null) => void;
   onView?: (workoutId: string) => void;
   onEdit?: (activityId: string) => void;
+  onSetup?: (activityId: string) => void;
+  onAdd?: () => void;
 }) {
   if (!plan.items.length) {
-    return <p className="muted">No activities on this day. Add one anytime.</p>;
+    return (
+      <div className="te-empty">
+        <p className="muted">No activities on this day. Add one anytime.</p>
+        {onAdd && (
+          <button type="button" className="btn green" onClick={onAdd}>
+            Add activity
+          </button>
+        )}
+      </div>
+    );
   }
   return (
     <div className="te-day-items">
@@ -79,6 +93,11 @@ function DayItems({
             {!item.isRest && item.workoutId && (
               <button type="button" className={`btn ${idx === 0 ? 'green' : 'secondary'} small`} onClick={() => onStart(item.workoutId)}>
                 Start
+              </button>
+            )}
+            {!item.isRest && item.activityType === 'strength' && !item.workoutId && item.source === 'calendar' && item.activityId && onSetup && (
+              <button type="button" className="btn green small" onClick={() => onSetup(item.activityId!)}>
+                Set up
               </button>
             )}
             {item.source === 'calendar' && item.activityId && onEdit && (
@@ -118,6 +137,7 @@ export default function TrainingExecution({
   onOpenPrograms,
   onAddActivity,
   onEditActivity,
+  onSetupWorkout,
   completedDates = [],
 }: TrainingExecutionProps) {
   const viewingToday = !!today?.isToday;
@@ -129,7 +149,7 @@ export default function TrainingExecution({
         actions={
           <div className="actions">
             {onAddActivity && today && (
-              <button type="button" className="btn small green" onClick={() => onAddActivity(today.date)}>
+              <button type="button" className="btn green" onClick={() => onAddActivity(today.date)}>
                 Add activity
               </button>
             )}
@@ -175,6 +195,8 @@ export default function TrainingExecution({
               onStart={(workoutId) => onStartWorkout(workoutId, today.date)}
               onView={onViewWorkout ? (workoutId) => onViewWorkout(workoutId, today.date) : undefined}
               onEdit={onEditActivity ? (activityId) => onEditActivity(activityId, today.date) : undefined}
+              onSetup={onSetupWorkout ? (activityId) => onSetupWorkout(activityId, today.date) : undefined}
+              onAdd={onAddActivity ? () => onAddActivity(today.date) : undefined}
             />
           </section>
           {today.later.length > 0 && (
@@ -260,6 +282,8 @@ export default function TrainingExecution({
                 onStart={(workoutId) => onStartWorkout(workoutId, today.date)}
                 onView={onViewWorkout ? (workoutId) => onViewWorkout(workoutId, today.date) : undefined}
                 onEdit={onEditActivity ? (activityId) => onEditActivity(activityId, today.date) : undefined}
+                onSetup={onSetupWorkout ? (activityId) => onSetupWorkout(activityId, today.date) : undefined}
+                onAdd={onAddActivity ? () => onAddActivity(today.date) : undefined}
               />
             </section>
           )}
@@ -326,6 +350,8 @@ export default function TrainingExecution({
                 onStart={(workoutId) => onStartWorkout(workoutId, today.date)}
                 onView={onViewWorkout ? (workoutId) => onViewWorkout(workoutId, today.date) : undefined}
                 onEdit={onEditActivity ? (activityId) => onEditActivity(activityId, today.date) : undefined}
+                onSetup={onSetupWorkout ? (activityId) => onSetupWorkout(activityId, today.date) : undefined}
+                onAdd={onAddActivity ? () => onAddActivity(today.date) : undefined}
               />
             </section>
           )}
