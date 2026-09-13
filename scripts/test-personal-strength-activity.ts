@@ -9,20 +9,25 @@ import {
   isPersonalWorkoutContainer,
   ON_THE_FLY_GENERATION_METHOD,
   ON_THE_FLY_PROGRAM_NAME,
+  PERSONAL_CONTAINER_GENERATION_METHOD,
 } from '../lib/programDesign/personalStrengthWorkout';
 import { calendarItemsForDate, type UserCalendarActivity } from '../lib/programDesign/userCalendar';
 
+assert.equal(PERSONAL_CONTAINER_GENERATION_METHOD, 'manual');
 assert.equal(isOnTheFlyProgram({ generation_method: ON_THE_FLY_GENERATION_METHOD, name: 'Other' }), true);
-assert.equal(isOnTheFlyProgram({ generation_method: 'ai', name: ON_THE_FLY_PROGRAM_NAME }), false);
+assert.equal(isOnTheFlyProgram({ generation_method: 'ai', name: ON_THE_FLY_PROGRAM_NAME }), true);
+assert.equal(isOnTheFlyProgram({ generation_method: 'manual', name: 'Push / Pull' }), false);
 assert.equal(isPersonalWorkoutContainer({ name: ON_THE_FLY_PROGRAM_NAME }), true);
 assert.equal(isPersonalWorkoutContainer({ generation_method: ON_THE_FLY_GENERATION_METHOD }), true);
+assert.equal(isPersonalWorkoutContainer({ generation_method: PERSONAL_CONTAINER_GENERATION_METHOD, name: ON_THE_FLY_PROGRAM_NAME }), true);
 
 const visible = excludeOnTheFlyPrograms([
   { id: '1', name: 'Push / Pull', generation_method: 'science_ai' },
   { id: '2', name: ON_THE_FLY_PROGRAM_NAME, generation_method: ON_THE_FLY_GENERATION_METHOD },
-  { id: '3', name: ON_THE_FLY_PROGRAM_NAME, generation_method: null },
+  { id: '3', name: ON_THE_FLY_PROGRAM_NAME, generation_method: PERSONAL_CONTAINER_GENERATION_METHOD },
+  { id: '4', name: 'My manual plan', generation_method: 'manual' },
 ]);
-assert.deepEqual(visible.map((p) => p.id), ['1', '3']);
+assert.deepEqual(visible.map((p) => p.id), ['1', '4']);
 
 const strength: UserCalendarActivity = {
   id: 's1',

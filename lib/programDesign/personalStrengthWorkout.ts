@@ -2,7 +2,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { dayLabelFromYmd, mondayOfWeek, todayYmd } from '../training/programCalendar';
 import { insertProgramRecord } from '../training/programStatus';
 
+/** Legacy value from BIQ-0175. Live/test `st_programs_generation_method_check` only allows ai, template, manual. */
 export const ON_THE_FLY_GENERATION_METHOD = 'on_the_fly';
+/** Allowed check-constraint value used when creating the hidden personal container. */
+export const PERSONAL_CONTAINER_GENERATION_METHOD = 'manual';
 export const ON_THE_FLY_PROGRAM_NAME = 'Personal workouts';
 
 const DAY_ORDER = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -11,7 +14,7 @@ export function isOnTheFlyProgram(program: {
   generation_method?: string | null;
   name?: string | null;
 } | null | undefined): boolean {
-  return !!program && program.generation_method === ON_THE_FLY_GENERATION_METHOD;
+  return isPersonalWorkoutContainer(program);
 }
 
 export function isPersonalWorkoutContainer(program: {
@@ -19,14 +22,14 @@ export function isPersonalWorkoutContainer(program: {
   name?: string | null;
 } | null | undefined): boolean {
   if (!program) return false;
-  if (isOnTheFlyProgram(program)) return true;
+  if (program.generation_method === ON_THE_FLY_GENERATION_METHOD) return true;
   return String(program.name || '').trim() === ON_THE_FLY_PROGRAM_NAME;
 }
 
 export function excludeOnTheFlyPrograms<T extends { generation_method?: string | null; name?: string | null }>(
   programs: T[]
 ): T[] {
-  return programs.filter((program) => !isOnTheFlyProgram(program));
+  return programs.filter((program) => !isPersonalWorkoutContainer(program));
 }
 
 export async function ensurePersonalWorkoutProgram(
@@ -54,7 +57,7 @@ export async function ensurePersonalWorkoutProgram(
     start_date: mondayOfWeek(todayYmd()),
     status: 'draft',
     record_kind: 'instance',
-    generation_method: ON_THE_FLY_GENERATION_METHOD,
+    generation_method: PERSONAL_CONTAINER_GENERATION_METHOD,
     inclusive_plan: false,
   });
   if (createError || !created?.id) {

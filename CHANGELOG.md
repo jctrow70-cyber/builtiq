@@ -11,6 +11,58 @@ Branch:
 Status:
 ```
 
+## BIQ-0177 - Fix On-the-Fly Strength Program Insert
+
+Date: 2026-09-13  
+Branch: develop  
+Status: Completed
+
+### Summary
+
+Adding Strength on Training no longer fails with `st_programs_generation_method_check`. The hidden **Personal workouts** container is created with the allowed `generation_method` value `manual` and stays hidden from Programs by reserved name.
+
+### Purpose
+
+BIQ-0175 stored `on_the_fly`, which live/test Postgres rejects. Users were blocked before the AI vs manual sheet.
+
+### Changes
+
+- Personal container insert uses `manual` (allowed: `ai`, `template`, `manual`)
+- Programs lists hide the container by name **Personal workouts** (and leftover `on_the_fly` rows)
+- Follow-up note on BIQ-0175 Known Issues
+
+### Files Changed
+
+- `lib/programDesign/personalStrengthWorkout.ts`
+- `scripts/test-personal-strength-activity.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+
+### Database Changes
+
+None. No migration. `on_the_fly` is not added to the check constraint.
+
+### Testing Steps
+
+1. Training → **Add activity** → **Strength** → save. The activity should persist and the AI vs manual sheet should appear (no check-constraint error).
+2. Programs list should not show **Personal workouts**.
+3. Add Strength again on another date. It should reuse the same hidden container and still offer AI vs manual.
+4. Existing this-day / series edits (BIQ-0172) and Complete (BIQ-0176) still work.
+5. `npx tsx scripts/test-personal-strength-activity.ts`
+
+### Known Issues
+
+- A user-created personal program literally named **Personal workouts** would also be hidden. That name is reserved for the on-the-fly container.
+- Full-program AI generate still writes `science` / `science_ai` on other paths; that is outside this Strength-add flow.
+
+### Recommended Commit Message
+
+```text
+BIQ-0177 Use allowed generation_method for personal strength container
+```
+
+---
+
 ## BIQ-0176 - Complete Training Calendar Items
 
 Date: 2026-09-13  
@@ -99,7 +151,7 @@ Strength calendar rows were titles without a Start button. Users needed to add a
 - After save, a mobile-friendly sheet offers AI generate or manual create
 - Existing strength rows without a workout show **Set up**
 - `/api/programs/generate` accepts `targetWorkoutId` to fill one existing workout without deleting other program workouts
-- The personal container is hidden from Programs lists (`generation_method = on_the_fly`)
+- The personal container is hidden from Programs lists (reserved name **Personal workouts**; legacy `generation_method = on_the_fly` still matches)
 - Occurrence-level this-day / series edits from BIQ-0172 are unchanged
 
 ### Files Changed
@@ -140,7 +192,8 @@ None. Uses existing `st_user_calendar_activities.workout_id` and `st_workouts` /
 
 ### Known Issues
 
-- The automatic **Personal workouts** container is a draft program used only as a workout parent. It is hidden from Programs when `generation_method` is stored.
+- The automatic **Personal workouts** container is a draft program used only as a workout parent. It is hidden from Programs by reserved name (and leftover `on_the_fly` rows, if any).
+- **Fix (2026-09-13):** Creating the container with `generation_method = on_the_fly` failed on live/test (`st_programs_generation_method_check` allows only `ai`, `template`, `manual`). Insert now uses `manual`. No migration.
 - AI generate for one day still uses the full science-engine generate path constrained to that weekday; it is not a separate lightweight model.
 - Recurring weekly strength shares one workout template across the series.
 

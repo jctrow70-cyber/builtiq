@@ -1303,7 +1303,7 @@ Category: Training / Program Design
 
 ### Decision
 
-When a user adds a **Strength** activity on the Training calendar, BuildIQ creates a real `st_workouts` row and links it with `st_user_calendar_activities.workout_id`. Those workouts attach to an automatic personal container program (`generation_method = on_the_fly`, named **Personal workouts**) that the user owns. They do not attach to a followed group program or rewrite an existing plan. After save, the user chooses **Generate with AI** (single-workout generate via the existing `/api/programs/generate` `targetWorkoutId` path) or **Create manually** (the existing Training catalog editor). Cardio, mobility, rest, and other types stay calendar-only.
+When a user adds a **Strength** activity on the Training calendar, BuildIQ creates a real `st_workouts` row and links it with `st_user_calendar_activities.workout_id`. Those workouts attach to an automatic personal container program (named **Personal workouts**, `generation_method = manual` so it passes `st_programs_generation_method_check`) that the user owns. They do not attach to a followed group program or rewrite an existing plan. After save, the user chooses **Generate with AI** (single-workout generate via the existing `/api/programs/generate` `targetWorkoutId` path) or **Create manually** (the existing Training catalog editor). Cardio, mobility, rest, and other types stay calendar-only. Programs lists hide this container by reserved name (and leftover `on_the_fly` rows, if any).
 
 ### Reason
 
