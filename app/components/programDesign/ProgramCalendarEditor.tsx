@@ -11,6 +11,7 @@ import ProgramWorkoutPlan from './ProgramWorkoutPlan';
 import SegmentedControl from '../ui/SegmentedControl';
 import { cycleLengthOf, formatProgramRange, programDateRange } from '../../../lib/programDesign/cycle';
 import { lifecycleLabel, lifecycleStatusOf } from '../../../lib/programDesign/lifecycle';
+import { programEditAudience } from '../../../lib/programDesign/enrollment';
 import {
   activitiesFromLegacyWorkouts,
   copyWeekActivities,
@@ -37,10 +38,14 @@ type ProgramCalendarEditorProps = {
   programs: ProgramDesignRecord[];
   ownerUserId: string;
   canEdit: boolean;
+  /** Owner/editor of the live group template. Members can only pick Just me. */
+  canEditGroupTemplate?: boolean;
   isFollowing?: boolean;
   groups?: { id: string; name: string; my_role?: string | null }[];
   /** When set, owners/managers can push this program to group members. */
   pushTeamId?: string | null;
+  audienceBusy?: boolean;
+  onEditAudienceChange?: (next: 'group' | 'me') => Promise<void>;
   onBack: () => void;
   onProgramChange: (program: ProgramDesignRecord) => void;
   onFollow?: () => Promise<void>;
@@ -55,9 +60,12 @@ export default function ProgramCalendarEditor({
   programs,
   ownerUserId,
   canEdit,
+  canEditGroupTemplate = false,
   isFollowing,
   groups = [],
   pushTeamId = null,
+  audienceBusy = false,
+  onEditAudienceChange,
   onBack,
   onProgramChange,
   onFollow,
@@ -83,6 +91,7 @@ export default function ProgramCalendarEditor({
   const { start, end } = programDateRange(program);
   const status = lifecycleStatusOf(program);
   const inclusive = !!program.inclusive_plan;
+  const audience = programEditAudience(program);
 
   async function reload() {
     setLoading(true);
@@ -263,6 +272,32 @@ export default function ProgramCalendarEditor({
         actions={<span className="ui-badge">{lifecycleLabel(status)}</span>}
       />
 
+      {audience && onEditAudienceChange && (
+        <fieldset className="pd-scope">
+          <legend>These edits apply to</legend>
+          <SegmentedControl
+            ariaLabel="These edits apply to"
+            value={audience}
+            onChange={(v) => {
+              if (v === audience || audienceBusy) return;
+              void onEditAudienceChange(v).catch((e) => setError(e?.message || 'Could not switch who edits apply to'));
+            }}
+            options={[
+              { value: 'group', label: 'Whole group', disabled: !canEditGroupTemplate && audience !== 'group' },
+              { value: 'me', label: 'Just me' },
+            ]}
+            size="sm"
+          />
+          <p className="muted" style={{ marginTop: 8 }}>
+            {audienceBusy
+              ? 'Switching…'
+              : audience === 'group'
+                ? 'Changes update the live group plan for every member.'
+                : 'Changes stay on your private copy. Other members keep the group plan.'}
+          </p>
+        </fieldset>
+      )}
+
       <div className="pd-week-bar">
         <button type="button" className="btn small secondary" disabled={week <= 1} onClick={() => setWeek((w) => w - 1)}>
           Previous
@@ -362,10 +397,11 @@ export default function ProgramCalendarEditor({
         />
       ) : (
         <ProgramWorkoutPlan
+          key={program.id}
           supabase={supabase}
           programId={program.id}
           week={week}
-          canEdit={canEdit}
+          canEdit={canEdit && !audienceBusy}
           openWorkoutId={openWorkoutId}
           onOpenHandled={() => setOpenWorkoutId(null)}
           onLoaded={(info) => setHasExercises(info.hasExercises)}

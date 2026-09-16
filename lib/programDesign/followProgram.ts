@@ -6,6 +6,7 @@ import {
   findPersonalizedCopyOf,
   isAutoEnrolledMemberRole,
   isGroupSourcedProgram,
+  isLeftoverGroupSnapshot,
   isLiveGroupProgram,
   isPersonalizedGroupFollow,
   isPurePersonalProgram,
@@ -321,9 +322,57 @@ async function followAndLoadProgram(
   return { program: loaded.data as ProgramDesignRecord, error: null };
 }
 
+export function matchCopiedWorkout(
+  source: { week?: number | null; day_label?: string | null; day_order?: number | null } | null | undefined,
+  copy: { st_workouts?: Array<{ week?: number | null; day_label?: string | null; day_order?: number | null }> | null } | null | undefined
+): any | null {
+  const list = copy?.st_workouts || [];
+  if (!list.length) return null;
+  if (source) {
+    const byWeekDay = list.find(
+      (w) => Number(w.week) === Number(source.week) && String(w.day_label || '') === String(source.day_label || '')
+    );
+    if (byWeekDay) return byWeekDay;
+    const byOrder = list.find(
+      (w) => Number(w.week) === Number(source.week) && Number(w.day_order) === Number(source.day_order)
+    );
+    if (byOrder) return byOrder;
+  }
+  return list[0] || null;
+}
+
+async function adoptSnapshotAsJustMe(
+  supabase: SupabaseClient,
+  userId: string,
+  snapshot: ProgramDesignRecord
+): Promise<{ program: ProgramDesignRecord | null; error: string | null }> {
+  if (!snapshot?.id) return { program: null, error: 'Could not keep this copy just for you' };
+  const justMeName = personalizedFollowName(snapshot.name);
+  const patch: Record<string, unknown> = {
+    visibility: 'personal',
+    owner_user_id: userId,
+    team_id: null,
+    record_kind: 'instance',
+    status: 'published',
+    name: justMeName,
+    source_program_id: snapshot.source_program_id,
+  };
+  const { error: patchError } = await updateDesignProgram(supabase, snapshot.id, patch);
+  const loaded = await followAndLoadProgram(supabase, userId, snapshot.id);
+  if (loaded.error) return loaded;
+  if (!loaded.program || loaded.program.visibility !== 'personal' || !isPersonalizedGroupFollow(loaded.program)) {
+    return {
+      program: null,
+      error: patchError || 'Could not keep this copy just for you',
+    };
+  }
+  return loaded;
+}
+
 /**
  * Duplicate a live group program into a personal “(just me)” copy and follow it.
- * Training edits then hit only that copy. Idempotent if a published just-me copy already exists.
+ * Older leftover snapshots (no suffix) you are already following are adopted in place
+ * so a plan from before just-me still stays private. Idempotent if a published just-me copy exists.
  */
 export async function customizeFollowedProgramForMe(
   supabase: SupabaseClient,
@@ -332,6 +381,12 @@ export async function customizeFollowedProgramForMe(
 ): Promise<{ program: ProgramDesignRecord | null; error: string | null }> {
   if (!userId || !liveProgram?.id) {
     return { program: null, error: 'Sign in and follow a group plan first' };
+  }
+  if (isPersonalizedGroupFollow(liveProgram)) {
+    return followAndLoadProgram(supabase, userId, liveProgram.id);
+  }
+  if (isLeftoverGroupSnapshot(liveProgram)) {
+    return adoptSnapshotAsJustMe(supabase, userId, liveProgram);
   }
   if (!isLiveGroupProgram(liveProgram)) {
     return { program: null, error: 'Edit just for me is only for a group plan' };

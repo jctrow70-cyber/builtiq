@@ -11,7 +11,180 @@ Branch:
 Status:
 ```
 
+## BIQ-0185 - Training Just-Me Works on Plans Started Before Just-Me
+
+Date: 2026-09-16  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+Training **Edit just for me** now works on a group plan you were already following before just-me existed. Older personal snapshots (often named `(copy)`) are kept and stamped `(just me)` instead of being treated as “not a group plan.” The button no longer requires a workout to be selected first.
+
+### Purpose
+
+People with an in-progress plan from before BIQ-0181 could not keep Training edits private. Leftover snapshots skipped the copy path, and the calendar button failed with “Pick a workout first.”
+
+### Changes
+
+- `isLeftoverGroupSnapshot` / `needsJustMeCopy` detect pre-just-me copies
+- `customizeFollowedProgramForMe` adopts the snapshot you are already following
+- Training shows **Edit just for me** on leftover copies and live group plans
+- Copying the plan no longer requires a selected workout
+
+### Files Changed
+
+- `lib/programDesign/enrollment.ts`
+- `lib/programDesign/followProgram.ts`
+- `app/page.tsx`
+- `app/components/training/TrainingExecution.tsx`
+- `scripts/test-customize-for-me.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Follow an older personal copy of a group plan (name does not include `(just me)`). Open Training — **Edit just for me** should appear even if today has no workout.
+2. Tap **Edit just for me**. The name should become `{plan} (just me)`. Reload Training — you stay on that copy.
+3. Edit a workout from Training without tapping the button first — the copy should still be created/adopted, and other members should keep the group plan.
+4. On a live group plan with no workout selected today, **Edit just for me** should succeed.
+5. `npx tsx scripts/test-customize-for-me.ts`
+
+### Known Issues
+
+- Members who were already switched from a leftover snapshot onto the live template get a new copy of the **current** group plan, not the abandoned leftover.
+- Programs Whole group / Just me is unchanged (BIQ-0184).
+
+### Recommended Commit Message
+
+```text
+BIQ-0185 Let Training just-me work on plans started before just-me
+```
+
+---
+
+## BIQ-0184 - Programs Edits: Whole Group or Just Me
+
+Date: 2026-09-16  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+Opening a group plan under **Programs** still edits the live template for every member by default. A **These edits apply to** control lets you keep **Whole group** or switch to **Just me**, which opens (or creates) your personal `(just me)` copy. Training on-the-fly copies (BIQ-0183) are unchanged.
+
+### Purpose
+
+Group-plan edits from Programs should reach all members, with an explicit choice when someone wants a private copy instead.
+
+### Changes
+
+- Programs editor shows Whole group vs Just me on live group plans and just-me copies
+- Default is Whole group (live template)
+- Just me calls `customizeFollowedProgramForMe` and follows the private copy
+- Whole group (owners/editors) returns to the live template; members cannot switch that way
+- `programEditAudience` classifies the open program
+
+### Files Changed
+
+- `lib/programDesign/enrollment.ts`
+- `app/components/programDesign/ProgramCalendarEditor.tsx`
+- `app/components/programDesign/ProgramDesignHome.tsx`
+- `scripts/test-customize-for-me.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. As Owner/Editor, open a group plan from Programs. Confirm **Whole group** is selected and a workout edit appears for other members after reload.
+2. Switch to **Just me**. Program name should include `(just me)`. Edit a workout — other members still see the original group plan.
+3. Switch back to **Whole group**. Further edits apply to everyone again.
+4. As a Member, open the group plan. You can pick **Just me**; **Whole group** stays read-only for you.
+5. Training Start still copies only when you change the plan in a session (BIQ-0183).
+6. `npx tsx scripts/test-customize-for-me.ts`
+
+### Known Issues
+
+- After Just me, you no longer auto-follow later group-template changes until you switch back to Whole group or follow the group plan again.
+- Groups workspace (not Programs) still edits the shared template only.
+
+### Recommended Commit Message
+
+```text
+BIQ-0184 Let Programs edits apply to the whole group or just me
+```
+
+---
+
+## BIQ-0183 - On-the-Fly Training Edits Stay Personal
+
+Date: 2026-09-16  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+When you Start a group workout and then change exercises or planned sets, BuildIQ copies the live group plan into your personal `(just me)` program first. Logging sets never required a copy. Group template edits from Programs / Groups are unchanged.
+
+### Purpose
+
+On-the-fly session edits were mutating the live group template for owners/editors. Users asked for those Training-session changes to be just for them.
+
+### Changes
+
+- `ensurePersonalCopyForTrainingEdit` runs before plan mutations in a Training session
+- Edit-workout from Training auto-copies, then opens the private copy
+- Training-session mutations apply to **this workout only** (no rest-of-program fan-out)
+- Members can change the plan during a session; the copy is created on first edit
+- `matchCopiedWorkout` remaps the open session onto the copy
+
+### Files Changed
+
+- `lib/programDesign/followProgram.ts`
+- `app/page.tsx`
+- `scripts/test-customize-for-me.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Follow a live group plan as Owner/Editor. Start Workout and only log sets — other members still see the original plan.
+2. In that session, add or replace an exercise. Your program name should include `(just me)`. Other members still see the original.
+3. Reload Training — you stay on the just-me copy.
+4. View → Edit on a group workout — you land on the private copy, not the shared template.
+5. Groups / Program Setup still edits the shared plan for everyone.
+6. `npx tsx scripts/test-customize-for-me.ts`
+
+### Known Issues
+
+- After the first plan edit, you no longer auto-follow later group-template changes (same as BIQ-0181). Follow the group plan again from Programs to return.
+- Set logs stay on original workout ids from before the copy.
+
+### Recommended Commit Message
+
+```text
+BIQ-0183 Keep on-the-fly Training edits on a private copy
+```
+
+---
+
 ## BIQ-0182 - Move a Training Workout to Another Day
+
 
 Date: 2026-09-15  
 Branch: develop  

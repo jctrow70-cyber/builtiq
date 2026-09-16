@@ -224,10 +224,12 @@ export default function TrainingExecution({
           </p>
           {personalizedCopy ? (
             <p className="muted te-follow-hint">This copy is only yours. The group plan is unchanged.</p>
-          ) : followingGroupTemplate && onCustomizeForMe ? (
+          ) : onCustomizeForMe ? (
             <>
               <p className="muted te-follow-hint">
-                Edits to the group plan apply to everyone. Use Edit just for me to keep a private copy.
+                {followingGroupTemplate
+                  ? 'Edits to the group plan apply to everyone. Use Edit just for me to keep a private copy.'
+                  : 'This is the copy you were already following. Edit just for me keeps it private so group updates do not replace it.'}
               </p>
               <div className="te-follow-actions">
                 <button

@@ -14,19 +14,24 @@ import {
   isAutoEnrolledMemberRole,
   isGroupEnrollmentMarker,
   isGroupSourcedProgram,
+  isLiveGroupProgram,
+  liveTemplateId,
+  programEditAudience,
   shouldPromptUnfollowForPersonalCreate,
   suggestedNextGroupStart,
 } from '../../../lib/programDesign/enrollment';
 import { cycleLengthOf, formatCycleLength, formatProgramRange, generationWeeksOf, nextMondayFrom, programDateRange } from '../../../lib/programDesign/cycle';
 import {
   alreadyFollowing,
+  customizeFollowedProgramForMe,
   followProgram,
   shareProgramWithGroup,
   syncMemberGroupEnrollment,
   unfollowProgram,
 } from '../../../lib/programDesign/followProgram';
 import { groupProgramsByLifecycle, lifecycleLabel, lifecycleStatusOf } from '../../../lib/programDesign/lifecycle';
-import { createDesignProgram, createProgramActivity, fetchDesignPrograms } from '../../../lib/programDesign/programDesignApi';
+import { fetchDesignPrograms, createDesignProgram, createProgramActivity } from '../../../lib/programDesign/programDesignApi';
+import { fetchFullProgram } from '../../../lib/training/programFetch';
 import type {
   GroupOption,
   ProgramDesignRecord,
@@ -321,6 +326,66 @@ export default function ProgramDesignHome({
     return { error: null };
   }
 
+  async function handleEditAudience(next: 'group' | 'me') {
+    if (!editing) return;
+    const current = programEditAudience(editing);
+    if (current === next) return;
+    setFollowBusy(true);
+    setError('');
+    try {
+      if (next === 'me') {
+        if (!isLiveGroupProgram(editing)) return;
+        const { program: copy, error: copyError } = await customizeFollowedProgramForMe(supabase, userId, editing);
+        if (copyError || !copy) {
+          setError(copyError || 'Could not make a private copy');
+          return;
+        }
+        setEditing(copy);
+        setPersonalPrograms((prev) => [copy, ...prev.filter((p) => p.id !== copy.id)]);
+        setPrograms((prev) => [copy, ...prev.filter((p) => p.id !== copy.id)]);
+        onFollowed?.(copy.id, { openTraining: false });
+        setScope('personal');
+        return;
+      }
+      if (!canEditGroup) {
+        setError('Only owners and editors can change the group plan for everyone.');
+        return;
+      }
+      const liveId = liveTemplateId(editing);
+      if (!liveId) return;
+      let live =
+        liveGroupPrograms.find((p) => p.id === liveId) ||
+        programs.find((p) => p.id === liveId) ||
+        personalPrograms.find((p) => p.id === liveId) ||
+        null;
+      if (!live || !isLiveGroupProgram(live)) {
+        const loaded = await fetchFullProgram(supabase, liveId);
+        if (loaded.error || !loaded.data) {
+          setError(loaded.error || 'Could not open the group plan');
+          return;
+        }
+        live = loaded.data as ProgramDesignRecord;
+      }
+      const result = await followProgram(supabase, {
+        userId,
+        source: live,
+        personalPrograms,
+        followedProgramId,
+        editSource: true,
+      });
+      if (result.error || !result.programId) {
+        setError(result.error || 'Could not follow the group plan');
+        return;
+      }
+      setEditing(live);
+      setScope('group');
+      if (live.team_id) onSelectTeam(live.team_id);
+      onFollowed?.(result.programId, { openTraining: false });
+    } finally {
+      setFollowBusy(false);
+    }
+  }
+
   async function handleUnfollow() {
     const ok = window.confirm(
       followingGroupSourced
@@ -422,7 +487,8 @@ export default function ProgramDesignHome({
           program={editing}
           programs={programs}
           ownerUserId={userId}
-          canEdit={canEditProgramRecord(editing, editingRole)}
+          canEdit={!followBusy && canEditProgramRecord(editing, editingRole)}
+          canEditGroupTemplate={canEditGroup}
           isFollowing={followingThis}
           groups={teams}
           pushTeamId={
@@ -430,6 +496,8 @@ export default function ProgramDesignHome({
               ? editing.team_id || groupId
               : null
           }
+          audienceBusy={followBusy}
+          onEditAudienceChange={handleEditAudience}
           onBack={() => {
             setEditing(null);
             setBuildBanner(null);

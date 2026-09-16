@@ -19,7 +19,8 @@ export function canOptInToGroupProgram(role: string | null | undefined): boolean
 export const PERSONALIZED_FOLLOW_SUFFIX = '(just me)';
 
 export function personalizedFollowName(sourceName: string | null | undefined): string {
-  const name = String(sourceName || 'Program').trim() || 'Program';
+  let name = String(sourceName || 'Program').trim() || 'Program';
+  name = name.replace(/\s*\(copy\)\s*$/i, '').trim() || 'Program';
   if (/\(just me\)\s*$/i.test(name)) return name;
   return `${name} ${PERSONALIZED_FOLLOW_SUFFIX}`;
 }
@@ -78,6 +79,33 @@ export function isPersonalizedGroupFollow(program: ProgramDesignRecord | null | 
   if (!program.source_program_id) return false;
   if (isGroupEnrollmentMarker(program)) return false;
   return nameHasJustMeSuffix(program.name);
+}
+
+/**
+ * Pre-just-me personal snapshot of a group plan (often named “(copy)”).
+ * Enrollment still switches these to live unless they are adopted as just-me.
+ */
+export function isLeftoverGroupSnapshot(program: ProgramDesignRecord | null | undefined): boolean {
+  if (!program) return false;
+  if (program.visibility !== 'personal') return false;
+  if (!program.source_program_id) return false;
+  if (isGroupEnrollmentMarker(program)) return false;
+  if (isPersonalizedGroupFollow(program)) return false;
+  return true;
+}
+
+/** Training should offer / auto-create a private copy before plan edits. */
+export function needsJustMeCopy(program: ProgramDesignRecord | null | undefined): boolean {
+  return isLiveGroupProgram(program) || isLeftoverGroupSnapshot(program);
+}
+
+/** Who Programs edits apply to for a group-sourced plan. */
+export function programEditAudience(
+  program: ProgramDesignRecord | null | undefined
+): 'group' | 'me' | null {
+  if (isPersonalizedGroupFollow(program)) return 'me';
+  if (isLiveGroupProgram(program)) return 'group';
+  return null;
 }
 
 /** Keep Training on a just-me copy of this live group plan (do not auto-switch). */

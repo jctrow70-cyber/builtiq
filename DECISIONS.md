@@ -1218,7 +1218,7 @@ Category: Program Design / Groups
 
 Members train on the **live group program** (`visibility: team`), not a duplicated personal snapshot. Owner and editor template edits in Programs appear in every member's Training and Programs view on the next load. Members can log; they cannot edit the shared template. Unfollow still sticks: a leftover snapshot or an archived enrollment marker blocks silent re-enroll (BIQ-0150).
 
-**Exception (BIQ-0181):** **Edit just for me** creates a personal instance named `(just me)` and follows it. That copy is fully editable by its owner. Auto-enroll must not switch it back to the live template. Snapshots without the suffix still switch to live.
+**Exception (BIQ-0181 / BIQ-0183 / BIQ-0184 / BIQ-0185):** **Edit just for me** creates a personal instance named `(just me)` and follows it. Changing exercises or planned sets during a Training session does the same copy automatically. Logging sets does not. An older leftover snapshot you are still following (personal + `source_program_id`, no suffix) is adopted in place as just-me instead of rejected. On **Programs**, group-plan edits default to the live template (everyone). **Just me** there uses the same personal copy; **Whole group** (owners/editors) returns to the live template. That copy is fully editable by its owner. Auto-enroll must not switch it back to the live template. Snapshots without the suffix still switch to live until the user chooses just-me. Groups workspace template editors still change the shared plan.
 
 ### Reason
 
@@ -1431,6 +1431,10 @@ Enrollment keeps that follow (`personalized_copy`). Leftover BIQ-0168 snapshots 
 
 Owner/editor edits on the live team program still apply to all members. Members cannot edit the template; they personalize first. Completed `st_set_logs` are not rewritten onto the copy’s new workout ids.
 
+**Programs (BIQ-0184):** the editor offers **Whole group** (default, live template) or **Just me** (same personal copy). Training session edits stay auto-personal (BIQ-0183).
+
+**Training leftover plans (BIQ-0185):** a personal snapshot from before just-me that you are still following can be stamped `(just me)` so Training edits stay private. The calendar button does not require a selected workout.
+
 ### Reason
 
 Live follow (Decision 041) made group edits visible, but there was no way to change “only what I see.” A name marker distinguishes intentional copies from leftover snapshots without a new table or column.
@@ -1444,6 +1448,7 @@ Live follow (Decision 041) made group edits visible, but there was no way to cha
 ### Impact
 
 - `customizeFollowedProgramForMe` + Training **Edit just for me**
+- Programs **Whole group / Just me** (`programEditAudience`)
 - `shouldKeepPersonalizedFollow` / `isPersonalizedGroupFollow`
 - No database migration
 

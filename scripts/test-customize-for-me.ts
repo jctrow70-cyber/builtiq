@@ -5,12 +5,15 @@
 import assert from 'node:assert/strict';
 import {
   isGroupEnrollmentMarker,
+  isLeftoverGroupSnapshot,
   isPersonalizedGroupFollow,
   isPurePersonalProgram,
+  needsJustMeCopy,
   personalizedFollowName,
+  programEditAudience,
   shouldKeepPersonalizedFollow,
 } from '../lib/programDesign/enrollment';
-import { syncMemberGroupEnrollment } from '../lib/programDesign/followProgram';
+import { matchCopiedWorkout, syncMemberGroupEnrollment } from '../lib/programDesign/followProgram';
 import type { ProgramDesignRecord } from '../lib/programDesign/types';
 
 function prog(partial: Partial<ProgramDesignRecord> & { id: string; name: string }): ProgramDesignRecord {
@@ -64,6 +67,8 @@ assert.equal(shouldKeepPersonalizedFollow(justMe, 'group-live'), true);
 assert.equal(isPurePersonalProgram(justMe), false);
 
 assert.equal(isPersonalizedGroupFollow(leftoverSnapshot), false);
+assert.equal(isLeftoverGroupSnapshot(leftoverSnapshot), true);
+assert.equal(needsJustMeCopy(leftoverSnapshot), true);
 assert.equal(shouldKeepPersonalizedFollow(leftoverSnapshot, 'group-live'), false);
 
 assert.equal(isGroupEnrollmentMarker(unfollowMarker), true);
@@ -73,8 +78,18 @@ assert.equal(shouldKeepPersonalizedFollow(unfollowMarker, 'group-live'), false);
 assert.equal(isPersonalizedGroupFollow(liveTeam), false);
 assert.equal(shouldKeepPersonalizedFollow(liveTeam, 'group-live'), false);
 
+assert.equal(programEditAudience(liveTeam), 'group');
+assert.equal(programEditAudience(justMe), 'me');
+assert.equal(programEditAudience(leftoverSnapshot), null);
+assert.equal(programEditAudience(unfollowMarker), null);
+assert.equal(needsJustMeCopy(liveTeam), true);
+assert.equal(needsJustMeCopy(justMe), false);
+assert.equal(isLeftoverGroupSnapshot(justMe), false);
+assert.equal(isLeftoverGroupSnapshot(liveTeam), false);
+
 assert.equal(personalizedFollowName('Group Plan'), 'Group Plan (just me)');
 assert.equal(personalizedFollowName('Group Plan (just me)'), 'Group Plan (just me)');
+assert.equal(personalizedFollowName('Group Plan (copy)'), 'Group Plan (just me)');
 
 function profileClient(onFollow?: (id: string | null) => void) {
   const supabase: any = {
@@ -145,6 +160,14 @@ async function testLeftoverSnapshotStillSwitchesToLive() {
 async function main() {
   await testPersonalizedCopySkipsAutoSwitch();
   await testLeftoverSnapshotStillSwitchesToLive();
+  const copy = {
+    st_workouts: [
+      { id: 'new-wed', week: 1, day_label: 'Wed', day_order: 2 },
+      { id: 'new-fri', week: 1, day_label: 'Fri', day_order: 4 },
+    ],
+  };
+  assert.equal(matchCopiedWorkout({ week: 1, day_label: 'Wed', day_order: 2 }, copy)?.id, 'new-wed');
+  assert.equal(matchCopiedWorkout({ week: 1, day_label: 'Fri', day_order: 4 }, copy)?.id, 'new-fri');
   console.log('OK: customize-for-me checks passed');
 }
 
