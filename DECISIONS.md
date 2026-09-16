@@ -1448,3 +1448,33 @@ Live follow (Decision 041) made group edits visible, but there was no way to cha
 - No database migration
 
 ---
+
+## Decision 049 - Training Day Moves Are Personal This-Time Overlays
+
+Date: 2026-09-15  
+Status: Accepted  
+Category: Program Design / Training
+
+### Decision
+
+On-the-fly “I can’t train Wednesday, do it Thursday” is a **personal calendar overlay** for that occurrence. It does not change `st_workouts.day_label` or other members’ Training calendars.
+
+Moves are stored on the existing user completion-ledger row as `workout_day_moves`. Calendar one-off rows change `activity_date`. Weekly calendar series skip the old date and insert a one-off on the new date.
+
+### Reason
+
+The live group template (Decision 041) must stay stable. A one-week life conflict should not rewrite the program, and completed history stays tied to the original workout ids and log dates.
+
+### Alternatives Considered
+
+- Update `day_label` on `st_workouts` — rejected; that would move the day for every week and every group member
+- Auto-shift the rest of the week — rejected; the user may only need one or two days moved
+- New table — rejected; details JSON already holds personal calendar exceptions
+
+### Impact
+
+- Training **Move** on day items
+- `saveWorkoutDayMove` / `applyWorkoutDayMoves`
+- No database migration
+
+---

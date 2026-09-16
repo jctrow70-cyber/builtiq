@@ -55,6 +55,7 @@ import ProgramLibraryPanel from './components/training/ProgramLibraryPanel';
 import ProgramDesignHome from './components/programDesign/ProgramDesignHome';
 import TrainingExecution from './components/training/TrainingExecution';
 import WorkoutPlanSheet from './components/training/WorkoutPlanSheet';
+import MoveWorkoutSheet from './components/training/MoveWorkoutSheet';
 import { cycleLengthOf } from '../lib/programDesign/cycle';
 import { focusMusclesForSingleDayType, inferSessionMinutesFromPrompt, inferSingleDayTypeFromPrompt } from '../lib/programDesign/inferSchedule';
 import AddActivitySheet from './components/programDesign/AddActivitySheet';
@@ -87,6 +88,14 @@ import { isAutoEnrolledMemberRole, isLiveGroupProgram, isPersonalizedGroupFollow
 import { weekdayIndexFromYmd } from '../lib/programDesign/recurrence';
 import { customizeFollowedProgramForMe, syncMemberGroupEnrollment } from '../lib/programDesign/followProgram';
 import { mergeProgramActivities, monthCalendarCells, monthLabel, planForCalendarDate, shiftYearMonth, tomorrowDate, weekPlansForMonday, yearMonthOf } from '../lib/programDesign/trainingSchedule';
+import {
+  moveCalendarActivityToDate,
+  moveKeyForItem,
+  nativeDateForActivity,
+  nativeDateForWorkout,
+  saveWorkoutDayMove,
+  workoutDayMovesFromActivities,
+} from '../lib/programDesign/workoutDayMoves';
 import type { ProgramActivity } from '../lib/programDesign/types';
 import { formatMacro, macroProgress } from '../lib/nutrition/macros';
 import { canManageGroup, canLogWorkout, canEditGroupProgram, isGroupOwner, roleLabel, roleForDatabase, resolveAssignmentWorkout, assignedHasPersonalCopy, assignmentDisplayTitle, copyAssignmentToPersonal, classificationSlug, loadMemberPerformanceBundle, loadMemberRosterMeta, duplicateTeamProgram, customizeProgramForMember, leaveTeam, deleteTeam, type AssignedWorkoutRow, type GroupClassification, type MemberPerformanceBundle, type MemberRosterMeta } from '../lib/groups';
@@ -173,7 +182,18 @@ const emptyAddPanelFilters=()=>({muscle:'',equipment:'',exerciseType:'',guidesOn
 const getSupersetGroupsForSection=(w:any,section:string)=>{const exs=sectionExercises(w,section);const groups:any[]=[];const seen=new Set();exs.forEach((ex:any)=>{if(!ex.superset_group_id||seen.has(ex.superset_group_id))return;seen.add(ex.superset_group_id);const members=exs.filter((e:any)=>e.superset_group_id===ex.superset_group_id).sort((a:any,b:any)=>(a.superset_order||0)-(b.superset_order||0));if(members.length>=1)groups.push({id:ex.superset_group_id,label:ex.superset_label||members.map((e:any)=>e.name).join(' + '),count:members.length,sortOrder:Math.min(...members.map((m:any)=>m.sort_order||0))});});return groups.sort((a:any,b:any)=>(a.sortOrder||0)-(b.sortOrder||0));};
 const workoutStatusFor=(workoutRef:any,logMap:any)=>{if(!workoutRef)return 'none';let planned=0,done=0,started=0;(workoutRef.st_exercises||[]).forEach((e:any)=>(e.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).forEach((s:any)=>{planned++;const log=logMap[s.id];if(log?.completed)done++;else if(log&&logHasPerformance(log))started++;}));if(!planned)return 'none';if(done===planned)return 'completed';if(done>0||started>0)return 'in_progress';return 'not_started';};
 const statusLabel=(s:string)=>s==='completed'?'Completed':s==='in_progress'?'In progress':s==='not_started'?'Not started':'No workout';
-const workoutForDate=(p:any,dateYmd:string,fallbackWeek?:number)=>{if(!p)return null;const start=resolveProgramStartDate(p);const wk=weekForDate(start,dateYmd,p.weeks||6);const dayLabel=dayLabelFromYmd(dateYmd);return (p.st_workouts||[]).find((x:any)=>x.week===wk&&x.day_label===dayLabel)||(p.st_workouts||[]).filter((x:any)=>x.week===(fallbackWeek??wk)).sort((a:any,b:any)=>a.day_order-b.day_order)[0]||null;};
+const workoutForDate=(p:any,dateYmd:string,fallbackWeek?:number,moves?:Record<string,string>)=>{
+  if(!p)return null;
+  const start=resolveProgramStartDate(p);
+  const wk=weekForDate(start,dateYmd,p.weeks||6);
+  const dayLabel=dayLabelFromYmd(dateYmd);
+  const list=p.st_workouts||[];
+  const movedHere=moves?list.find((x:any)=>x.id&&moves[`w:${x.id}`]===dateYmd):null;
+  if(movedHere)return movedHere;
+  const native=list.find((x:any)=>x.week===wk&&x.day_label===dayLabel);
+  if(native&&moves&&moves[`w:${native.id}`]&&moves[`w:${native.id}`]!==dateYmd)return null;
+  return native||list.filter((x:any)=>x.week===(fallbackWeek??wk)).sort((a:any,b:any)=>a.day_order-b.day_order)[0]||null;
+};
 const plannedSetIdsForWorkout=(w:any)=>{const ids:string[]=[];(w?.st_exercises||[]).forEach((e:any)=>(e.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).forEach((s:any)=>ids.push(s.id)));return ids;};
 const findSetInProgram=(p:any,sid:string)=>{for(const w of p?.st_workouts||[]){for(const e of w.st_exercises||[]){const ps=(e.st_planned_sets||[]).find((s:any)=>s.id===sid&&!s.is_deleted);if(ps)return {workout:w,exercise:e,plannedSet:ps};}}return null;};
 
@@ -211,6 +231,8 @@ export default function Page(){
  const [userCalendarActivities,setUserCalendarActivities]=useState<UserCalendarActivity[]>([]);
  const [trainingAddActivityOpen,setTrainingAddActivityOpen]=useState(false);
  const [trainingEditActivity,setTrainingEditActivity]=useState<{id:string;date:string}|null>(null);
+ const [trainingMoveItem,setTrainingMoveItem]=useState<{item:TrainingDayItem;date:string}|null>(null);
+ const [trainingMoveBusy,setTrainingMoveBusy]=useState(false);
  const [calendarWorkouts,setCalendarWorkouts]=useState<any[]>([]);
  const [strengthSetup,setStrengthSetup]=useState<{activityId:string;workoutId:string;date:string;title:string}|null>(null);
  const [strengthSetupGenerating,setStrengthSetupGenerating]=useState(false);
@@ -339,9 +361,9 @@ export default function Page(){
  },[program?.id,program?.start_date,program?.created_at,program?.weeks,logDate,activeAssignedRecipient?.id,viewingMember?.user_id,draftEditProgramId]);
  useEffect(()=>{
   if(!program||syncingCalendarRef.current||activeAssignedRecipient||viewingMember||draftEditProgramId)return;
-  const match=workoutForDate(program,logDate,week);
+  const match=workoutForDate(program,logDate,week,workoutDayMovesFromActivities(userCalendarActivities));
   if(match&&match.id!==activeWorkout)setActiveWorkout(match.id);
- },[program?.id,program?.start_date,program?.created_at,program?.weeks,logDate,activeAssignedRecipient?.id,viewingMember?.user_id,draftEditProgramId]);
+ },[program?.id,program?.start_date,program?.created_at,program?.weeks,logDate,activeAssignedRecipient?.id,viewingMember?.user_id,draftEditProgramId,userCalendarActivities]);
  useEffect(()=>{if(appNav==='Training'&&!program&&trainingSubNav!=='setup')setShowProgramSetup(false);},[appNav,program,trainingSubNav]);
  useEffect(()=>{
   if(appNav!=='Training'||!session?.user?.id)return;
@@ -1463,7 +1485,7 @@ export default function Page(){
   ]);
   const by:any={};
   (linked||[]).forEach((l:any)=>{if(l?.planned_set_id)by[l.planned_set_id]=l;});
-  const workoutOnDay=workoutForDate(p,day);
+  const workoutOnDay=workoutForDate(p,day,undefined,workoutDayMovesFromActivities(userCalendarActivities));
   const overlaid=mapDateLogsToProgram(dateLogs||[],p,workoutOnDay);
   Object.keys(overlaid).forEach((sid)=>{if(!by[sid])by[sid]=overlaid[sid];});
   (dateLogs||[]).forEach((l:any)=>{if(l?.planned_set_id&&!by[l.planned_set_id])by[l.planned_set_id]=l;});
@@ -1637,7 +1659,7 @@ export default function Page(){
   if(!session?.user){setDashboardTodayLogs({});return;}
   const dashProgram=programOverride??dashboardProgram??program;
   if(!dashProgram){setDashboardTodayLogs({});return;}
-  const todayW=workoutForDate(dashProgram,today());
+  const todayW=workoutForDate(dashProgram,today(),undefined,workoutDayMovesFromActivities(userCalendarActivities));
   if(!todayW){setDashboardTodayLogs({});return;}
   const ids=plannedSetIdsForWorkout(todayW);
   if(!ids.length){setDashboardTodayLogs({});return;}
@@ -2319,6 +2341,64 @@ function onSelectTrainingDay(date:string){
   setCalendarWorkouts(workouts);
   return {activities,workouts};
  }
+ function nativeDateForTrainingItem(item:TrainingDayItem,fromDate:string){
+  if(item.source==='calendar'){
+   const activity=userCalendarActivities.find((a)=>a.id===item.activityId);
+   return activity?.activity_date||fromDate;
+  }
+  if(!program)return fromDate;
+  if(item.workoutId){
+   const workout=(program.st_workouts||[]).find((w:any)=>w.id===item.workoutId);
+   if(workout)return nativeDateForWorkout(program,workout);
+  }
+  const activity=trainingActivities.find((a)=>a.id===item.activityId||a.id===item.id||(item.workoutId&&a.workout_id===item.workoutId));
+  if(activity)return nativeDateForActivity(program,activity);
+  return fromDate;
+ }
+ async function moveTrainingItem(item:TrainingDayItem,fromDate:string,toDate:string){
+  if(!session?.user||!toDate||toDate===fromDate)return;
+  setTrainingMoveBusy(true);
+  try{
+   if(item.source==='calendar'&&item.activityId){
+    const activity=userCalendarActivities.find((a)=>a.id===item.activityId);
+    if(!activity)throw new Error('Could not find that activity.');
+    const{error}=await moveCalendarActivityToDate(supabase,activity,fromDate,toDate);
+    if(error)throw new Error(error);
+   }else{
+    const key=moveKeyForItem(item);
+    if(!key)throw new Error('This item cannot be moved.');
+    const native=nativeDateForTrainingItem(item,fromDate);
+    const{error}=await saveWorkoutDayMove(supabase,session.user.id,userCalendarActivities,key,toDate===native?null:toDate);
+    if(error)throw new Error(error);
+   }
+   await refreshCalendarForDate(toDate);
+   setLogDate(toDate);
+   setTrainingCalendarMonth(yearMonthOf(toDate));
+   if(program)setWeek(weekForDate(resolveProgramStartDate(program),toDate,program.weeks||weeks||6));
+   if(item.workoutId)setActiveWorkout(item.workoutId);
+   setTrainingMoveItem(null);
+  }finally{setTrainingMoveBusy(false);}
+ }
+ async function resetTrainingItemDay(item:TrainingDayItem,fromDate:string){
+  if(!session?.user)return;
+  const native=nativeDateForTrainingItem(item,fromDate);
+  if(item.source==='calendar'&&item.activityId){
+   await moveTrainingItem(item,fromDate,native);
+   return;
+  }
+  const key=moveKeyForItem(item);
+  if(!key)return;
+  setTrainingMoveBusy(true);
+  try{
+   const{error}=await saveWorkoutDayMove(supabase,session.user.id,userCalendarActivities,key,null);
+   if(error)throw new Error(error);
+   await refreshCalendarForDate(native);
+   setLogDate(native);
+   setTrainingCalendarMonth(yearMonthOf(native));
+   if(program)setWeek(weekForDate(resolveProgramStartDate(program),native,program.weeks||weeks||6));
+   setTrainingMoveItem(null);
+  }finally{setTrainingMoveBusy(false);}
+ }
  async function openStrengthSetup(activityId:string,dateYmd:string,workoutId:string,title:string){
   setStrengthSetupError('');
   setStrengthSetup({activityId,workoutId,date:dateYmd,title});
@@ -2480,10 +2560,11 @@ function matchingSet(targetExercise:any, sourceSet:any){
  const extraActiveWorkout=calendarWorkouts.find((w:any)=>w.id===activeWorkout)||null;
  const workout=extraActiveWorkout||weekWorkouts.find((w:any)=>w.id===activeWorkout)||weekWorkouts[0];
  const trainingCompletionWorkouts=[...(program?.st_workouts||[]),...calendarWorkouts];
- const trainingTodayPlan=decorateDayPlanCompletion(planForCalendarDate(program,trainingActivities,userCalendarActivities,logDate),{activities:userCalendarActivities,workouts:trainingCompletionWorkouts,progressLogs,sessionLogs:logs,selectedDate:logDate});
- const trainingTomorrowPlan=planForCalendarDate(program,trainingActivities,userCalendarActivities,tomorrowDate(logDate));
- const trainingWeekPlans=weekPlansForMonday(mondayOfWeek(logDate),program,trainingActivities,userCalendarActivities);
- const trainingMonthCells=monthCalendarCells(program,trainingActivities,trainingCalendarMonth,todayYmd(),userCalendarActivities);
+ const workoutDayMoves=workoutDayMovesFromActivities(userCalendarActivities);
+ const trainingTodayPlan=decorateDayPlanCompletion(planForCalendarDate(program,trainingActivities,userCalendarActivities,logDate,todayYmd(),workoutDayMoves),{activities:userCalendarActivities,workouts:trainingCompletionWorkouts,progressLogs,sessionLogs:logs,selectedDate:logDate});
+ const trainingTomorrowPlan=planForCalendarDate(program,trainingActivities,userCalendarActivities,tomorrowDate(logDate),todayYmd(),workoutDayMoves);
+ const trainingWeekPlans=weekPlansForMonday(mondayOfWeek(logDate),program,trainingActivities,userCalendarActivities,todayYmd(),workoutDayMoves);
+ const trainingMonthCells=monthCalendarCells(program,trainingActivities,trainingCalendarMonth,todayYmd(),userCalendarActivities,workoutDayMoves);
  const trainingCalendarEditing=trainingEditActivity?userCalendarActivities.find((a)=>a.id===trainingEditActivity.id)||null:null;
  const trainingMonthLabel=monthLabel(trainingCalendarMonth);
  const trainingCompletedDates=mergeTrainingCompletedDates(progressLogs.filter((row:any)=>row.completed).map((row:any)=>String(row.log_date||'').slice(0,10)),userCalendarActivities);
@@ -2713,6 +2794,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
       onEditActivity={(activityId,date)=>setTrainingEditActivity({id:activityId,date})}
       onSetupWorkout={(activityId,date)=>void setupExistingStrengthActivity(activityId,date)}
       onCompleteItem={(item,date)=>void toggleTrainingItemComplete(item,date)}
+      onMoveItem={(item,date)=>setTrainingMoveItem({item,date})}
       completingItemId={trainingCompleteBusy}
       completedDates={trainingCompletedDates}
     />}
@@ -2756,6 +2838,15 @@ function matchingSet(targetExercise:any, sourceSet:any){
       onClose={()=>setStrengthSetup(null)}
       onManual={()=>{const{workoutId,date}=strengthSetup;setStrengthSetup(null);startTrainingSession(workoutId,date,'edit');}}
       onGenerate={generateStrengthForSetup}
+    />}
+    {trainingMoveItem&&session?.user&&<MoveWorkoutSheet
+      title={trainingMoveItem.item.title}
+      fromDate={trainingMoveItem.date}
+      nativeDate={nativeDateForTrainingItem(trainingMoveItem.item,trainingMoveItem.date)}
+      busy={trainingMoveBusy}
+      onMove={(toDate)=>moveTrainingItem(trainingMoveItem.item,trainingMoveItem.date,toDate)}
+      onReset={()=>resetTrainingItemDay(trainingMoveItem.item,trainingMoveItem.date)}
+      onClose={()=>setTrainingMoveItem(null)}
     />}
     {trainingEditActivity&&trainingCalendarEditing&&session?.user&&<AddActivitySheet
       dayLabel={formatDisplayDate(trainingEditActivity.date)}

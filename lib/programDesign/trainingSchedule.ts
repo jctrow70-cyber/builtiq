@@ -4,6 +4,12 @@ import { activitiesFromLegacyWorkouts } from './programDesignApi';
 import { cycleLengthOf, dateForProgramDay, programDateRange, weekdayLabel } from './cycle';
 import type { ProgramActivity, ProgramDesignRecord } from './types';
 import { calendarItemsForDate, type UserCalendarActivity } from './userCalendar';
+import {
+  currentDateForMove,
+  moveKeyForActivity,
+  nativeDateForActivity,
+  type WorkoutDayMoves,
+} from './workoutDayMoves';
 
 export type TrainingDayItem = {
   id: string;
@@ -18,6 +24,8 @@ export type TrainingDayItem = {
   isRecurring?: boolean;
   occurrenceDate?: string;
   completed?: boolean;
+  /** Original program date when this item was moved onto another day. */
+  movedFrom?: string | null;
 };
 
 export type TrainingDayPlan = {
@@ -65,17 +73,7 @@ export function planForDate(
     .filter((a) => a.week_number === weekNumber && a.day_of_week === (dayOfWeek < 0 ? 0 : dayOfWeek))
     .sort((a, b) => a.sort_order - b.sort_order);
 
-  const items: TrainingDayItem[] = dayActs.map((a) => ({
-    id: a.id,
-    title: a.title || activityTypeShortLabel(a.activity_type),
-    typeLabel: activityTypeShortLabel(a.activity_type),
-    activityType: a.activity_type,
-    duration: formatDuration(a.duration_minutes),
-    workoutId: a.workout_id || (a.id.startsWith('legacy-') ? a.id.replace('legacy-', '') : null),
-    activityId: a.id.startsWith('legacy-') ? null : a.id,
-    isRest: a.activity_type === 'rest',
-    source: 'program',
-  }));
+  const items: TrainingDayItem[] = dayActs.map((a) => programItemFromActivity(a));
 
   const actionable = items.filter((i) => !i.isRest);
   return attachCalendarItems(
@@ -108,6 +106,65 @@ export function emptyDayPlan(dateYmd: string, today = todayYmd()): TrainingDayPl
   };
 }
 
+export function programItemFromActivity(activity: ProgramActivity): TrainingDayItem {
+  return {
+    id: activity.id,
+    title: activity.title || activityTypeShortLabel(activity.activity_type),
+    typeLabel: activityTypeShortLabel(activity.activity_type),
+    activityType: activity.activity_type,
+    duration: formatDuration(activity.duration_minutes),
+    workoutId: activity.workout_id || (activity.id.startsWith('legacy-') ? activity.id.replace('legacy-', '') : null),
+    activityId: activity.id.startsWith('legacy-') ? null : activity.id,
+    isRest: activity.activity_type === 'rest',
+    source: 'program',
+  };
+}
+
+function withPrimary(plan: TrainingDayPlan, items: TrainingDayItem[]): TrainingDayPlan {
+  const actionable = items.filter((i) => !i.isRest);
+  return {
+    ...plan,
+    items,
+    primary: actionable[0] || items[0] || null,
+    later: actionable.slice(1),
+  };
+}
+
+export function applyWorkoutDayMoves(
+  plan: TrainingDayPlan,
+  program: ProgramDesignRecord | null,
+  activities: ProgramActivity[],
+  moves: WorkoutDayMoves
+): TrainingDayPlan {
+  if (!program || !Object.keys(moves).length) return plan;
+  const kept = plan.items.filter((item) => {
+    if (item.source === 'calendar') return true;
+    const key = moveKeyForActivity({
+      id: item.activityId || item.id,
+      workout_id: item.workoutId,
+    });
+    if (!key) return true;
+    const dest = moves[key];
+    if (!dest) return true;
+    return dest === plan.date;
+  });
+  const incomingIds = new Set(kept.map((item) => item.id));
+  const incoming: TrainingDayItem[] = [];
+  for (const activity of activities) {
+    if (activity.activity_type === 'rest') continue;
+    const key = moveKeyForActivity(activity);
+    if (!key) continue;
+    const native = nativeDateForActivity(program, activity);
+    const current = currentDateForMove(moves, key, native);
+    if (current !== plan.date || native === plan.date) continue;
+    const item = { ...programItemFromActivity(activity), movedFrom: native };
+    if (incomingIds.has(item.id)) continue;
+    incomingIds.add(item.id);
+    incoming.push(item);
+  }
+  return withPrimary(plan, [...kept, ...incoming]);
+}
+
 export function attachCalendarItems(plan: TrainingDayPlan, calendarActivities: UserCalendarActivity[]): TrainingDayPlan {
   const extra = calendarItemsForDate(calendarActivities, plan.date);
   if (!extra.length) {
@@ -129,10 +186,12 @@ export function planForCalendarDate(
   activities: ProgramActivity[],
   calendarActivities: UserCalendarActivity[],
   dateYmd: string,
-  today = todayYmd()
+  today = todayYmd(),
+  moves: WorkoutDayMoves = {}
 ): TrainingDayPlan {
   const base = program ? planForDate(program, activities, dateYmd, today) : emptyDayPlan(dateYmd, today);
-  return attachCalendarItems(base, calendarActivities);
+  const relocated = applyWorkoutDayMoves(base, program, activities, moves);
+  return attachCalendarItems(relocated, calendarActivities);
 }
 
 export function weekPlansForMonday(
@@ -140,11 +199,12 @@ export function weekPlansForMonday(
   program: ProgramDesignRecord | null,
   activities: ProgramActivity[],
   calendarActivities: UserCalendarActivity[],
-  today = todayYmd()
+  today = todayYmd(),
+  moves: WorkoutDayMoves = {}
 ): TrainingDayPlan[] {
   return [0, 1, 2, 3, 4, 5, 6].map((dayOfWeek) => {
     const date = addDaysYmd(monday, dayOfWeek);
-    return planForCalendarDate(program, activities, calendarActivities, date, today);
+    return planForCalendarDate(program, activities, calendarActivities, date, today, moves);
   });
 }
 
@@ -189,7 +249,8 @@ export function monthCalendarCells(
   activities: ProgramActivity[],
   yearMonth: string,
   today = todayYmd(),
-  calendarActivities: UserCalendarActivity[] = []
+  calendarActivities: UserCalendarActivity[] = [],
+  moves: WorkoutDayMoves = {}
 ): TrainingMonthCell[] {
   const [y, m] = yearMonth.split('-').map(Number);
   const first = formatYmd(new Date(y || new Date().getFullYear(), (m || 1) - 1, 1));
@@ -206,7 +267,7 @@ export function monthCalendarCells(
       date: cursor,
       inMonth,
       inProgram,
-      plan: planForCalendarDate(program, activities, calendarActivities, cursor, today),
+      plan: planForCalendarDate(program, activities, calendarActivities, cursor, today, moves),
     });
     cursor = addDaysYmd(cursor, 1);
   }

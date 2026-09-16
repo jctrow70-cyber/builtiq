@@ -11,7 +11,75 @@ Branch:
 Status:
 ```
 
+## BIQ-0182 - Move a Training Workout to Another Day
+
+Date: 2026-09-15  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+Training calendar items have **Move**. You can shift this occurrence to another weekday or date (Wednesday → Thursday, then Friday → Saturday) on **your** calendar only. The shared group template is unchanged.
+
+### Purpose
+
+Life happens: a Wednesday session may need to land on Thursday, and Friday may need to slide to Saturday, without rewriting the program for other members.
+
+### Changes
+
+- Personal `workout_day_moves` map on the existing completion-ledger calendar row (`w:{workoutId}` or `a:{activityId}` → YYYY-MM-DD)
+- Program items hide on the original day and appear on the chosen day
+- Calendar one-offs change `activity_date`; weekly series skip the old date and add a one-off on the new date
+- Training **Move** sheet: this-week weekday chips plus a date picker; **Original day** restores the program day
+- `st_workouts.day_label` is not updated
+
+### Files Changed
+
+- `lib/programDesign/workoutDayMoves.ts`
+- `lib/programDesign/trainingSchedule.ts`
+- `lib/programDesign/userCalendar.ts`
+- `app/components/training/MoveWorkoutSheet.tsx`
+- `app/components/training/TrainingExecution.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `scripts/test-workout-day-moves.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None. Uses existing `st_user_calendar_activities.details` JSON.
+
+### Testing Steps
+
+1. Follow a program with Wednesday and Friday strength days.
+2. Training → Wednesday item → **Move** → Thursday. Wednesday should be empty; Thursday shows the Wednesday workout with “Moved from …”.
+3. Friday item → **Move** → Saturday. Friday empty; Saturday shows Friday’s workout.
+4. Start the Thursday session and log sets — logs use Thursday’s date.
+5. Reload Training — the moved days stay.
+6. **Original day** on the Thursday item restores Wednesday.
+7. As a group member on the live template, confirm other members still see Wed/Fri.
+8. Move a personal on-the-fly calendar activity to another date.
+9. `npx tsx scripts/test-workout-day-moves.ts`
+
+### Known Issues
+
+- Moves are **this time only**, not every remaining week.
+- Two items can land on the same day; they are not auto-swapped.
+- Set logs stay on the date they were saved. Moving after logging does not move those logs.
+- Next week’s Wednesday/Friday still follow the program template.
+
+### Recommended Commit Message
+
+```text
+BIQ-0182 Move a Training workout to another day without changing the group plan
+```
+
+---
+
 ## BIQ-0181 - Edit Just for Me on Followed Group Programs
+
 
 Date: 2026-09-15  
 Branch: develop  

@@ -11,6 +11,7 @@ const META_DETAIL_KEYS = new Set([
   'completed_dates',
   'completion_ledger',
   'program_completions',
+  'workout_day_moves',
 ]);
 
 export const COMPLETION_LEDGER_FLAG = 'completion_ledger';
@@ -399,6 +400,7 @@ export async function saveUserCalendarOccurrence(
     completed_dates: activity.details.completed_dates,
     completion_ledger: activity.details.completion_ledger,
     program_completions: activity.details.program_completions,
+    workout_day_moves: activity.details.workout_day_moves,
   };
   const details = withRecurrenceDetails(
     { ...occurrenceDetailsPayload(draft.details), ...kept },

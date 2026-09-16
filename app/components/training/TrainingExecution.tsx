@@ -39,6 +39,7 @@ type TrainingExecutionProps = {
   onEditActivity?: (activityId: string, date: string) => void;
   onSetupWorkout?: (activityId: string, date: string) => void;
   onCompleteItem?: (item: TrainingDayItem, date: string) => void;
+  onMoveItem?: (item: TrainingDayItem, date: string) => void;
   completingItemId?: string | null;
   completedDates?: string[];
 };
@@ -54,6 +55,7 @@ function DayItems({
   onComplete,
   completingItemId,
   onAdd,
+  onMove,
 }: {
   plan: TrainingDayPlan;
   onStart: (workoutId: string | null) => void;
@@ -63,6 +65,7 @@ function DayItems({
   onComplete?: (item: TrainingDayItem) => void;
   completingItemId?: string | null;
   onAdd?: () => void;
+  onMove?: (item: TrainingDayItem) => void;
 }) {
   if (!plan.items.length) {
     return (
@@ -95,6 +98,9 @@ function DayItems({
               <b>{item.title}</b>
             </button>
             {item.duration && <span className="muted">{item.duration}</span>}
+            {item.movedFrom && (
+              <span className="muted te-item-moved">Moved from {formatLongWeekday(item.movedFrom)}</span>
+            )}
             {item.completed && <span className="ui-badge">Done</span>}
           </div>
           <div className="actions te-item-actions">
@@ -127,6 +133,11 @@ function DayItems({
             {item.source === 'calendar' && item.activityId && onEdit && (
               <button type="button" className="btn small secondary" onClick={() => onEdit(item.activityId!)}>
                 Edit
+              </button>
+            )}
+            {!item.isRest && onMove && (
+              <button type="button" className="btn small secondary" onClick={() => onMove(item)}>
+                Move
               </button>
             )}
           </div>
@@ -170,8 +181,22 @@ export default function TrainingExecution({
   onCompleteItem,
   completingItemId = null,
   completedDates = [],
+  onMoveItem,
 }: TrainingExecutionProps) {
   const viewingToday = !!today?.isToday;
+  const dayItemHandlers = today
+    ? {
+        plan: today,
+        onStart: (workoutId: string | null) => onStartWorkout(workoutId, today.date),
+        onView: onViewWorkout ? (workoutId: string) => onViewWorkout(workoutId, today.date) : undefined,
+        onEdit: onEditActivity ? (activityId: string) => onEditActivity(activityId, today.date) : undefined,
+        onSetup: onSetupWorkout ? (activityId: string) => onSetupWorkout(activityId, today.date) : undefined,
+        onComplete: onCompleteItem ? (item: TrainingDayItem) => onCompleteItem(item, today.date) : undefined,
+        completingItemId,
+        onAdd: onAddActivity ? () => onAddActivity(today.date) : undefined,
+        onMove: onMoveItem ? (item: TrainingDayItem) => onMoveItem(item, today.date) : undefined,
+      }
+    : null;
   return (
     <div className="te-screen">
       <SectionHeader
@@ -241,16 +266,7 @@ export default function TrainingExecution({
         <>
           <section className="te-block">
             <h2>{viewingToday ? "Today's plan" : "This day's plan"}</h2>
-            <DayItems
-              plan={today}
-              onStart={(workoutId) => onStartWorkout(workoutId, today.date)}
-              onView={onViewWorkout ? (workoutId) => onViewWorkout(workoutId, today.date) : undefined}
-              onEdit={onEditActivity ? (activityId) => onEditActivity(activityId, today.date) : undefined}
-              onSetup={onSetupWorkout ? (activityId) => onSetupWorkout(activityId, today.date) : undefined}
-              onComplete={onCompleteItem ? (item) => onCompleteItem(item, today.date) : undefined}
-              completingItemId={completingItemId}
-              onAdd={onAddActivity ? () => onAddActivity(today.date) : undefined}
-            />
+            {dayItemHandlers && <DayItems {...dayItemHandlers} />}
           </section>
           {today.later.length > 0 && (
             <section className="te-block">
@@ -329,16 +345,7 @@ export default function TrainingExecution({
           {today && (
             <section className="te-block">
               <h2>{today.isToday ? "Today's plan" : formatLongWeekday(today.date)}</h2>
-              <DayItems
-                plan={today}
-                onStart={(workoutId) => onStartWorkout(workoutId, today.date)}
-                onView={onViewWorkout ? (workoutId) => onViewWorkout(workoutId, today.date) : undefined}
-                onEdit={onEditActivity ? (activityId) => onEditActivity(activityId, today.date) : undefined}
-                onSetup={onSetupWorkout ? (activityId) => onSetupWorkout(activityId, today.date) : undefined}
-                onComplete={onCompleteItem ? (item) => onCompleteItem(item, today.date) : undefined}
-                completingItemId={completingItemId}
-                onAdd={onAddActivity ? () => onAddActivity(today.date) : undefined}
-              />
+              {dayItemHandlers && <DayItems {...dayItemHandlers} />}
             </section>
           )}
         </>
@@ -398,16 +405,7 @@ export default function TrainingExecution({
           {today && (
             <section className="te-block">
               <h2>{today.isToday ? "Today's plan" : formatLongWeekday(today.date)}</h2>
-              <DayItems
-                plan={today}
-                onStart={(workoutId) => onStartWorkout(workoutId, today.date)}
-                onView={onViewWorkout ? (workoutId) => onViewWorkout(workoutId, today.date) : undefined}
-                onEdit={onEditActivity ? (activityId) => onEditActivity(activityId, today.date) : undefined}
-                onSetup={onSetupWorkout ? (activityId) => onSetupWorkout(activityId, today.date) : undefined}
-                onComplete={onCompleteItem ? (item) => onCompleteItem(item, today.date) : undefined}
-                completingItemId={completingItemId}
-                onAdd={onAddActivity ? () => onAddActivity(today.date) : undefined}
-              />
+              {dayItemHandlers && <DayItems {...dayItemHandlers} />}
             </section>
           )}
         </>
