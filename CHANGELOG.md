@@ -11,6 +11,52 @@ Branch:
 Status:
 ```
 
+## BIQ-0186 - Fix matchCopiedWorkout Type Error
+
+Date: 2026-09-16  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+Next.js production typecheck failed on `matchCopiedWorkout(source, copy)` because `ProgramDesignRecord` did not include nested `st_workouts`. Full program loads already return that tree; the type now matches.
+
+### Purpose
+
+Unblock Vercel `next build` on main after BIQ-0185.
+
+### Changes
+
+- Optional `st_workouts` on `ProgramDesignRecord`
+- `matchCopiedWorkout` accepts a full program record
+
+### Files Changed
+
+- `lib/programDesign/types.ts`
+- `lib/programDesign/followProgram.ts`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. `npx tsc --noEmit` or `npm run build` should pass the previous `app/page.tsx:1411` error.
+2. Training **Edit just for me** still remaps the open workout onto the copy.
+
+### Known Issues
+
+None.
+
+### Recommended Commit Message
+
+```text
+BIQ-0186 Fix ProgramDesignRecord type so Vercel build passes
+```
+
+---
+
 ## BIQ-0185 - Training Just-Me Works on Plans Started Before Just-Me
 
 Date: 2026-09-16  

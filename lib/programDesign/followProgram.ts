@@ -324,7 +324,7 @@ async function followAndLoadProgram(
 
 export function matchCopiedWorkout(
   source: { week?: number | null; day_label?: string | null; day_order?: number | null } | null | undefined,
-  copy: { st_workouts?: Array<{ week?: number | null; day_label?: string | null; day_order?: number | null }> | null } | null | undefined
+  copy: ProgramDesignRecord | { st_workouts?: Array<{ week?: number | null; day_label?: string | null; day_order?: number | null }> | null } | null | undefined
 ): any | null {
   const list = copy?.st_workouts || [];
   if (!list.length) return null;

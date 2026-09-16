@@ -49,6 +49,14 @@ export type ProgramDesignRecord = {
   record_kind?: string | null;
   source_program_id?: string | null;
   inclusive_plan?: boolean | null;
+  /** Present when the row is loaded with nested workouts (fetchFullProgram). */
+  st_workouts?: Array<{
+    id?: string;
+    week?: number | null;
+    day_label?: string | null;
+    day_order?: number | null;
+    [key: string]: unknown;
+  }> | null;
 };
 
 export type ProgramActivityDetails = {
