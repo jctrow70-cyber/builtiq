@@ -83,9 +83,9 @@ import {
   setProgramItemCompleted,
 } from '../lib/programDesign/activityCompletion';
 import type { TrainingDayItem } from '../lib/programDesign/trainingSchedule';
-import { isAutoEnrolledMemberRole } from '../lib/programDesign/enrollment';
+import { isAutoEnrolledMemberRole, isLiveGroupProgram, isPersonalizedGroupFollow } from '../lib/programDesign/enrollment';
 import { weekdayIndexFromYmd } from '../lib/programDesign/recurrence';
-import { syncMemberGroupEnrollment } from '../lib/programDesign/followProgram';
+import { customizeFollowedProgramForMe, syncMemberGroupEnrollment } from '../lib/programDesign/followProgram';
 import { mergeProgramActivities, monthCalendarCells, monthLabel, planForCalendarDate, shiftYearMonth, tomorrowDate, weekPlansForMonday, yearMonthOf } from '../lib/programDesign/trainingSchedule';
 import type { ProgramActivity } from '../lib/programDesign/types';
 import { formatMacro, macroProgress } from '../lib/nutrition/macros';
@@ -218,6 +218,7 @@ export default function Page(){
  const [trainingCompleteBusy,setTrainingCompleteBusy]=useState<string|null>(null);
  const [viewingWorkoutId,setViewingWorkoutId]=useState<string|null>(null);
  const [trainingSessionIntent,setTrainingSessionIntent]=useState<'log'|'edit'>('log');
+ const [customizeForMeBusy,setCustomizeForMeBusy]=useState(false);
  const [addExercisePanel,setAddExercisePanel]=useState<any>(null);
  const [exerciseNameSearch,setExerciseNameSearch]=useState<{exerciseId:string,query:string}|null>(null);
  const [exerciseGuide,setExerciseGuide]=useState<any>(null);
@@ -698,7 +699,7 @@ export default function Page(){
  function canLog(){if(!session?.user)return false; const uid=viewingMember?.user_id||session.user.id; return canLogWorkout(session.user.id,uid,activeTeam?.my_role);}
  function isPersonalCalendarWorkout(workoutId?:string|null){return !!workoutId&&calendarWorkouts.some((w:any)=>w.id===workoutId);}
  function findWorkoutAnywhere(workoutId?:string|null){if(!workoutId)return null;return findWorkoutInProgram(program,workoutId)||calendarWorkouts.find((w:any)=>w.id===workoutId)||null;}
- function canEdit(){if(!session?.user)return false; if(activeAssignedRecipient)return assignedHasPersonalCopy(activeAssignedRecipient); if(viewingMember&&viewingMember.user_id!==session.user.id)return false; if(isPersonalCalendarWorkout(activeWorkout))return true; if(program?.visibility==='team'){const team=teams.find((t:any)=>t.id===program.team_id)||activeTeam;return canEditGroupProgram(team?.my_role);} return mode==='personal'||canEditGroupProgram(activeTeam?.my_role);}
+ function canEdit(){if(!session?.user)return false; if(activeAssignedRecipient)return assignedHasPersonalCopy(activeAssignedRecipient); if(viewingMember&&viewingMember.user_id!==session.user.id)return false; if(isPersonalCalendarWorkout(activeWorkout))return true; if(program?.visibility==='personal'&&program.owner_user_id===session.user.id)return true; if(program?.visibility==='team'){const team=teams.find((t:any)=>t.id===program.team_id)||activeTeam;return canEditGroupProgram(team?.my_role);} return mode==='personal'||canEditGroupProgram(activeTeam?.my_role);}
  function isOwner(){return isGroupOwner(activeTeam?.my_role);}
  function logUserId(){return viewingMember?.user_id||session?.user?.id;}
  function activeProgramForLogging(){
@@ -734,13 +735,14 @@ export default function Page(){
   setActiveWorkout(w.id);
   queueMicrotask(()=>{syncingCalendarRef.current=false;});
  }
- async function loadPrograms(context:'training'|'setup'='training',options?:{assignmentsOverride?:Record<string,any>;editProgramId?:string|null;preserveWorkoutId?:string|null}){
+ async function loadPrograms(context:'training'|'setup'='training',options?:{assignmentsOverride?:Record<string,any>;editProgramId?:string|null;preserveWorkoutId?:string|null;followedProgramId?:string|null}){
   const editTargetId=options?.editProgramId??draftEditProgramId;
   if(editTargetId&&(trainingSubNav==='setup'||showProgramSetup||groupsProgramWizardOpen))context='setup';
   if(!session?.user)return;
   if(activeAssignedRecipient)return;
   if(viewingMember&&viewingMember.user_id!==session.user.id)return;
   let followedId=profile?.followed_program_id||null;
+  if(options&&Object.prototype.hasOwnProperty.call(options,'followedProgramId'))followedId=options.followedProgramId||null;
   // Members: auto-enroll in the date-active group plan (Training calendar follows plan dates).
   if(context==='training'&&teams.length){
    for(const team of teams){
@@ -816,7 +818,7 @@ export default function Page(){
     const start=resolveProgramStartDate(pickedFull);
     const alignedWeek=weekForDate(start,logDate,pickedFull.weeks||weeks||6);
     setWeek(alignedWeek);
-    const preserveId=options?.preserveWorkoutId||(trainingSessionOpen?activeWorkout:null);
+     const preserveId=options&&Object.prototype.hasOwnProperty.call(options,'preserveWorkoutId')?options.preserveWorkoutId||null:(trainingSessionOpen?activeWorkout:null);
     const dayLabel=dayLabelFromYmd(logDate);
     const match=(pickedFull.st_workouts||[]).find((w:any)=>w.week===alignedWeek&&w.day_label===dayLabel)
       ||(pickedFull.st_workouts||[]).filter((w:any)=>w.week===alignedWeek).sort((a:any,b:any)=>a.day_order-b.day_order)[0]
@@ -1337,6 +1339,22 @@ export default function Page(){
   if(error||!newId)return alert(error||'Could not duplicate program.');
   await loadPrograms('setup');
   alert('Program duplicated.');
+ }
+ async function customizeFollowedProgramForMeHandler(){
+  if(!session?.user||!program||!isLiveGroupProgram(program))return;
+  const wasEditing=trainingSessionOpen&&trainingSessionIntent==='edit';
+  setCustomizeForMeBusy(true);
+  try{
+    const{program:copy,error}=await customizeFollowedProgramForMe(supabase,session.user.id,program);
+    if(error||!copy){alert(error||'Could not make a private copy.');return;}
+    setProfile((p:any)=>p?{...p,followed_program_id:copy.id}:p);
+    setMode('personal');
+    setViewingWorkoutId(null);
+    setAppNav('Training');
+    setTrainingSubNav('personal');
+    await loadPrograms('training',{preserveWorkoutId:null,followedProgramId:copy.id});
+    if(wasEditing){setTrainingSessionIntent('edit');setTrainingSessionOpen(true);}
+  }finally{setCustomizeForMeBusy(false);}
  }
  async function deleteProgramHandler(programId:string){
   if(!programId||!canEdit())return;
@@ -2469,7 +2487,15 @@ function matchingSet(targetExercise:any, sourceSet:any){
  const trainingCalendarEditing=trainingEditActivity?userCalendarActivities.find((a)=>a.id===trainingEditActivity.id)||null:null;
  const trainingMonthLabel=monthLabel(trainingCalendarMonth);
  const trainingCompletedDates=mergeTrainingCompletedDates(progressLogs.filter((row:any)=>row.completed).map((row:any)=>String(row.log_date||'').slice(0,10)),userCalendarActivities);
- const followedFromGroup=program?.source_program_id?teams.find((t:any)=>t.id===program.team_id)?.name||null:null;
+ const followingGroupTemplate=isLiveGroupProgram(program);
+ const personalizedCopy=isPersonalizedGroupFollow(program);
+ const followedTeamId=program?.team_id
+  ||programs.find((p:any)=>p.id===program?.source_program_id)?.team_id
+  ||((personalizedCopy||followingGroupTemplate)&&(activeTeam?.id||null))
+  ||null;
+ const followedFromGroup=(program?.visibility==='team'||program?.source_program_id)
+  ?(teams.find((t:any)=>t.id===followedTeamId)?.name||activeTeam?.name||null)
+  :null;
  const planned=(workout?.st_exercises||[]).reduce((n:number,e:any)=>n+(e.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).length,0);
  const logged=Object.values(logs).filter((x:any)=>x.completed).length;
  const progressByDate=progressLogs.reduce((acc:any,row:any)=>{
@@ -2659,6 +2685,10 @@ function matchingSet(targetExercise:any, sourceSet:any){
     {trainingSubNav==='personal'&&!viewingMember&&!activeAssignedRecipient&&!trainingSessionOpen&&<TrainingExecution
       programName={program?.name||null}
       followedFromGroup={followedFromGroup}
+      followingGroupTemplate={followingGroupTemplate}
+      personalizedCopy={personalizedCopy}
+      onCustomizeForMe={followingGroupTemplate?()=>void customizeFollowedProgramForMeHandler():undefined}
+      customizeBusy={customizeForMeBusy}
       today={trainingTodayPlan}
       tomorrow={trainingTomorrowPlan}
       weekDays={trainingWeekPlans}
@@ -2694,7 +2724,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
       onStart={()=>startTrainingSession(viewingWorkoutId,logDate,'log')}
       onEdit={()=>startTrainingSession(viewingWorkoutId,logDate,'edit')}
     />}
-    {trainingSessionOpen&&trainingSessionIntent==='edit'&&!activeAssignedRecipient&&<div className="card program-draft-banner"><div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}><p className="muted">Editing the planned workout. Change exercises and sets here. Start Workout is only for logging.</p><button type="button" className="btn small green" onClick={()=>setTrainingSessionIntent('log')}>Start Workout</button></div></div>}
+    {trainingSessionOpen&&trainingSessionIntent==='edit'&&!activeAssignedRecipient&&<div className="card program-draft-banner"><div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}>{followingGroupTemplate?<div><p className="muted">You&apos;re editing the shared group plan. Changes apply to all members.</p><div className="actions" style={{marginTop:8}}><button type="button" className="btn small secondary" onClick={()=>void customizeFollowedProgramForMeHandler()} disabled={customizeForMeBusy}>{customizeForMeBusy?'Making your copy…':'Edit just for me'}</button><button type="button" className="btn small green" onClick={()=>setTrainingSessionIntent('log')}>Start Workout</button></div></div>:<><p className="muted">{personalizedCopy?'This copy is only yours. The group plan is unchanged. ':'Editing the planned workout. '}Change exercises and sets here. Start Workout is only for logging.</p><button type="button" className="btn small green" onClick={()=>setTrainingSessionIntent('log')}>Start Workout</button></>}</div></div>}
     {trainingAddActivityOpen&&session?.user&&<AddActivitySheet
       dayLabel={formatDisplayDate(logDate)}
       allowRecurrence

@@ -15,11 +15,30 @@ export function canOptInToGroupProgram(role: string | null | undefined): boolean
   return n === 'owner' || n === 'manager';
 }
 
+/** Suffix on Training copies created with “Edit just for me”. */
+export const PERSONALIZED_FOLLOW_SUFFIX = '(just me)';
+
+export function personalizedFollowName(sourceName: string | null | undefined): string {
+  const name = String(sourceName || 'Program').trim() || 'Program';
+  if (/\(just me\)\s*$/i.test(name)) return name;
+  return `${name} ${PERSONALIZED_FOLLOW_SUFFIX}`;
+}
+
+export function nameHasJustMeSuffix(name: string | null | undefined): boolean {
+  return /\(just me\)/i.test(String(name || ''));
+}
+
+export function isLiveGroupProgram(program: ProgramDesignRecord | null | undefined): boolean {
+  if (!program) return false;
+  const vis = String(program.visibility || '').toLowerCase();
+  return vis === 'team' || vis === 'group';
+}
+
 /** Personal copy that came from a group/shared program. */
 export function isGroupSourcedProgram(program: ProgramDesignRecord | null | undefined): boolean {
   if (!program) return false;
   if (program.source_program_id) return true;
-  return program.visibility === 'team';
+  return isLiveGroupProgram(program);
 }
 
 /** Group template id Training should follow (not a personal snapshot). */
@@ -46,6 +65,42 @@ export function isGroupEnrollmentMarker(program: ProgramDesignRecord | null | un
 export function isPurePersonalProgram(program: ProgramDesignRecord | null | undefined): boolean {
   if (!program) return false;
   return program.visibility === 'personal' && !program.source_program_id;
+}
+
+/**
+ * Intentional “Edit just for me” copy of a live group plan.
+ * Name suffix is the reliable flag so leftover BIQ-0168 snapshots
+ * (personal + source_program_id, no suffix) still switch to live.
+ */
+export function isPersonalizedGroupFollow(program: ProgramDesignRecord | null | undefined): boolean {
+  if (!program) return false;
+  if (program.visibility !== 'personal') return false;
+  if (!program.source_program_id) return false;
+  if (isGroupEnrollmentMarker(program)) return false;
+  return nameHasJustMeSuffix(program.name);
+}
+
+/** Keep Training on a just-me copy of this live group plan (do not auto-switch). */
+export function shouldKeepPersonalizedFollow(
+  followed: ProgramDesignRecord | null | undefined,
+  activeLiveId: string | null | undefined
+): boolean {
+  if (!followed || !activeLiveId) return false;
+  return isPersonalizedGroupFollow(followed) && followed.source_program_id === activeLiveId;
+}
+
+export function findPersonalizedCopyOf(
+  liveId: string,
+  personalPrograms: ProgramDesignRecord[]
+): ProgramDesignRecord | null {
+  return (
+    personalPrograms.find(
+      (p) =>
+        isPersonalizedGroupFollow(p) &&
+        p.source_program_id === liveId &&
+        String(p.status || '').toLowerCase() !== 'archived'
+    ) || null
+  );
 }
 
 /** Group programs that are live or scheduled for Training handoff (not drafts/archived). */

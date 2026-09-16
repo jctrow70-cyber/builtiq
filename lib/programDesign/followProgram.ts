@@ -1,14 +1,20 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { duplicateTeamProgram } from '../groups/teamProgramTools';
+import { fetchFullProgram } from '../training/programFetch';
 import { insertProgramRecord, missingProgramColumnFromError } from '../training/programStatus';
 import {
+  findPersonalizedCopyOf,
   isAutoEnrolledMemberRole,
   isGroupSourcedProgram,
+  isLiveGroupProgram,
+  isPersonalizedGroupFollow,
   isPurePersonalProgram,
   liveTemplateId,
+  personalizedFollowName,
   pickActiveGroupProgramByDate,
+  shouldKeepPersonalizedFollow,
 } from './enrollment';
-import { updateDesignProgram } from './programDesignApi';
+import { fetchDesignPrograms, updateDesignProgram } from './programDesignApi';
 import type { ProgramDesignRecord } from './types';
 
 export type FollowResult = {
@@ -117,7 +123,8 @@ export async function unfollowProgram(
 /**
  * Follow a program for Training.
  * Group / shared programs follow the live template so members see owner/editor
- * updates. Personal snapshots are not used for Training (Decision 031 / BIQ-0168).
+ * updates. Intentional “(just me)” copies stay personal. Leftover snapshots
+ * are not used for Training (Decision 031 / BIQ-0168 / BIQ-0181).
  */
 export async function followProgram(
   supabase: SupabaseClient,
@@ -135,7 +142,9 @@ export async function followProgram(
   let programId: string | null = null;
   let copied = false;
 
-  if (groupSourced) {
+  if (ownsPersonal && isPersonalizedGroupFollow(input.source)) {
+    programId = input.source.id;
+  } else if (groupSourced) {
     programId = liveTemplateId(input.source);
   } else if (ownsPersonal) {
     programId = input.source.id;
@@ -218,9 +227,28 @@ export async function syncMemberGroupEnrollment(
     return { programId: active.id, changed: false, skipped: false, reason: 'already_enrolled', error: null };
   }
 
+  if (shouldKeepPersonalizedFollow(followed, active.id)) {
+    return {
+      programId: followed.id,
+      changed: false,
+      skipped: true,
+      reason: 'personalized_copy',
+      error: null,
+    };
+  }
+
   // Snapshot copy of this live plan — switch Training onto the shared template.
   const already = alreadyFollowing(active, input.personalPrograms, input.followedProgramId);
   if (already && already.id === input.followedProgramId && already.source_program_id === active.id) {
+    if (shouldKeepPersonalizedFollow(already, active.id)) {
+      return {
+        programId: already.id,
+        changed: false,
+        skipped: true,
+        reason: 'personalized_copy',
+        error: null,
+      };
+    }
     const { error } = await setFollowedProgramId(supabase, input.userId, active.id);
     if (error) {
       return {
@@ -277,6 +305,86 @@ export async function syncMemberGroupEnrollment(
     reason: 'auto_enrolled',
     error: null,
   };
+}
+
+async function followAndLoadProgram(
+  supabase: SupabaseClient,
+  userId: string,
+  programId: string
+): Promise<{ program: ProgramDesignRecord | null; error: string | null }> {
+  const { error } = await setFollowedProgramId(supabase, userId, programId);
+  if (error) return { program: null, error };
+  const loaded = await fetchFullProgram(supabase, programId);
+  if (loaded.error || !loaded.data) {
+    return { program: null, error: loaded.error || 'Could not load your private copy' };
+  }
+  return { program: loaded.data as ProgramDesignRecord, error: null };
+}
+
+/**
+ * Duplicate a live group program into a personal “(just me)” copy and follow it.
+ * Training edits then hit only that copy. Idempotent if a published just-me copy already exists.
+ */
+export async function customizeFollowedProgramForMe(
+  supabase: SupabaseClient,
+  userId: string,
+  liveProgram: ProgramDesignRecord
+): Promise<{ program: ProgramDesignRecord | null; error: string | null }> {
+  if (!userId || !liveProgram?.id) {
+    return { program: null, error: 'Sign in and follow a group plan first' };
+  }
+  if (!isLiveGroupProgram(liveProgram)) {
+    return { program: null, error: 'Edit just for me is only for a group plan' };
+  }
+
+  const { data: personalPrograms, error: listError } = await fetchDesignPrograms(supabase, {
+    scope: 'personal',
+    ownerUserId: userId,
+  });
+  if (listError) return { program: null, error: listError };
+
+  const existing = findPersonalizedCopyOf(liveProgram.id, personalPrograms || []);
+  if (existing?.id) {
+    return followAndLoadProgram(supabase, userId, existing.id);
+  }
+
+  const justMeName = personalizedFollowName(liveProgram.name);
+  const { programId: copyId, error: copyError } = await duplicateTeamProgram(supabase, liveProgram.id, {
+    name: justMeName,
+    visibility: 'personal',
+    teamId: null,
+    ownerUserId: userId,
+  });
+  if (copyError || !copyId) {
+    return { program: null, error: copyError || 'Could not make a private copy of this group plan' };
+  }
+
+  // Keep team_id null (RPC already does for personal). A team_id on this row
+  // can make a private copy look group-owned in list/RLS queries.
+  const patch: Record<string, unknown> = {
+    visibility: 'personal',
+    owner_user_id: userId,
+    team_id: null,
+    record_kind: 'instance',
+    status: 'published',
+    name: justMeName,
+    source_program_id: liveProgram.id,
+  };
+  if (liveProgram.end_date) patch.end_date = liveProgram.end_date;
+  if (liveProgram.cycle_length_weeks) patch.cycle_length_weeks = liveProgram.cycle_length_weeks;
+  if (liveProgram.inclusive_plan != null) patch.inclusive_plan = liveProgram.inclusive_plan;
+
+  const { error: patchError } = await updateDesignProgram(supabase, copyId, patch);
+  const loaded = await followAndLoadProgram(supabase, userId, copyId);
+  if (loaded.error) return loaded;
+  if (!loaded.program || loaded.program.visibility !== 'personal' || !isPersonalizedGroupFollow(loaded.program)) {
+    await setFollowedProgramId(supabase, userId, liveProgram.id);
+    return {
+      program: null,
+      error: patchError || 'Could not save the copy as a personal program',
+    };
+  }
+  return loaded;
 }
 
 export async function shareProgramWithGroup(

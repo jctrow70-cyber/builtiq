@@ -11,6 +11,72 @@ Branch:
 Status:
 ```
 
+## BIQ-0181 - Edit Just for Me on Followed Group Programs
+
+Date: 2026-09-15  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+Training **Edit just for me** duplicates a followed live group program into a personal published copy named `{plan} (just me)`. After that, Training edits hit only that copy. Other members still follow the shared template. Leftover BIQ-0168 snapshots without the suffix still auto-switch to live.
+
+### Purpose
+
+Owners/editors who followed a live `visibility: team` plan were mutating the shared template. Members could not edit at all. Users asked for a change only they would see.
+
+### Changes
+
+- `isPersonalizedGroupFollow` / `shouldKeepPersonalizedFollow` — personal + `source_program_id` + `(just me)` name, not an archived unfollow marker
+- `syncMemberGroupEnrollment` skips with reason `personalized_copy` instead of `switched_to_live_template`
+- `customizeFollowedProgramForMe` duplicates via `st_duplicate_program`, patches personal/published/instance with `team_id` null, then follows only if the copy is a just-me personal program
+- Training header + edit-session banner: **Edit just for me**; just-me copies show “This copy is only yours”
+- Personal just-me copies are fully editable by the owner; live team templates still require Owner/Editor
+- `npx tsx scripts/test-customize-for-me.ts`
+
+### Files Changed
+
+- `lib/programDesign/enrollment.ts`
+- `lib/programDesign/followProgram.ts`
+- `app/components/training/TrainingExecution.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `scripts/test-customize-for-me.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None. Uses existing `st_programs` columns (`visibility`, `source_program_id`, `record_kind`, `status`, `name`) and RPC `st_duplicate_program`.
+
+### Testing Steps
+
+1. Follow a live group program in Training (member or owner/editor).
+2. Confirm the header shows **Edit just for me** and the helper about group edits applying to everyone.
+3. Tap **Edit just for me**. Stay on Training. Program name should include `(just me)`.
+4. Edit a workout on the copy. Other members still see the original group plan.
+5. Reload Training as the same user — they must stay on the just-me copy (`personalized_copy`), not snap back to live.
+6. Owner/editor who does **not** personalize: editing a workout still changes the shared plan; the edit-session banner says so.
+7. Members cannot edit the live template until they personalize.
+8. A leftover personal snapshot of the group plan **without** `(just me)` still switches to the live template on load.
+9. `npx tsx scripts/test-customize-for-me.ts`
+10. Personal on-the-fly Strength (`Personal workouts`) is unchanged.
+
+### Known Issues
+
+- After switching follow to the copy, completed `st_set_logs` stay on the original group workout ids. Today’s logs on the old ids may not appear on the new copy’s workout ids. Logs are not migrated.
+- Duplicate copies planned workouts; `st_program_activities` that were not part of the RPC copy may be missing on the personal instance.
+- Inclusive plan flags are copied in a follow-up patch when the column exists; the RPC itself does not copy `inclusive_plan`.
+
+### Recommended Commit Message
+
+```text
+BIQ-0181 Add Edit just for me so group Training edits stay private
+```
+
+---
+
 ## BIQ-0180 - Honor Glute Focus, Notes, Duration, and Variety
 
 Date: 2026-09-13  

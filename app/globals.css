@@ -957,6 +957,9 @@ label{color:var(--textSecondary)}
 .te-screen{display:grid;gap:14px;padding-bottom:20px}
 .te-following{margin:0}
 .te-following b{color:var(--textPrimary)}
+.te-follow-block{display:grid;gap:8px}
+.te-follow-hint{margin:0;font-size:13px;line-height:1.4}
+.te-follow-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .te-empty{padding:24px 8px;display:grid;gap:12px;justify-items:start}
 .te-block{padding:16px;border-radius:16px;background:var(--surfaceElevated);border:1px solid var(--borderSubtle)}
 .te-block h2{margin:0 0 10px;font-size:15px}

@@ -854,9 +854,9 @@ A user follows **one** program in Training at a time (personal or group-sourced 
 
 Role rules:
 
-1. **Member** — automatically enrolled in the group's date-active **live template** (same `st_programs` id owners/editors edit). Training shows later template edits without a Push. Members may log sets; they cannot change the shared template. Explicit unfollow clears Training and is respected until the member follows again or a *new* active group plan (no prior copy/marker) enrolls them. Leftover personal snapshots from before BIQ-0168 are not used for Training.
-2. **Editor (Manager)** — sees group programs as available; **not** auto-enrolled. May **Pull in & edit** the live group template so edits apply to the shared plan.
-3. **Owner** — may create multiple dated group plans. Suggested start for a new plan is after the latest existing plan ends so members hand off cleanly by calendar date.
+1. **Member** — automatically enrolled in the group's date-active **live template** (same `st_programs` id owners/editors edit). Training shows later template edits without a Push. Members may log sets; they cannot change the shared template. **Edit just for me** (BIQ-0181) is the explicit exception: Training follows a personal instance named `{plan} (just me)` and auto-enroll must not switch that copy back to live. Explicit unfollow clears Training and is respected until the member follows again or a *new* active group plan (no prior copy/marker) enrolls them. Leftover personal snapshots from before BIQ-0168 (no `(just me)` suffix) are not used for Training.
+2. **Editor (Manager)** — sees group programs as available; **not** auto-enrolled. May **Pull in & edit** the live group template so edits apply to the shared plan, or **Edit just for me** for a private copy.
+3. **Owner** — may create multiple dated group plans. Suggested start for a new plan is after the latest existing plan ends so members hand off cleanly by calendar date. Same live-edit vs just-me choice as editors when they follow the group plan.
 
 Creating a **personal** program while following a group-sourced plan requires an explicit unfollow prompt first.
 
@@ -881,6 +881,7 @@ Members should not hunt for Follow when the group schedule is the source of trut
 - Training `loadPrograms` syncs member enrollment by plan dates and honors null follow
 - No new database tables; uses `followed_program_id`, `start_date`, `end_date`, `source_program_id`
 - BIQ-0168: members follow the live group program id (not a duplicated snapshot) so owner/editor template edits appear in Training/Programs. Unfollow writes an archived personal marker so auto-enroll does not immediately reverse it.
+- BIQ-0181: an explicit **Edit just for me** action duplicates the live template into a personal `(just me)` instance. Enrollment skips those copies (`personalized_copy`); leftover snapshots without the suffix still switch to live.
 
 ---
 
@@ -1217,6 +1218,8 @@ Category: Program Design / Groups
 
 Members train on the **live group program** (`visibility: team`), not a duplicated personal snapshot. Owner and editor template edits in Programs appear in every member's Training and Programs view on the next load. Members can log; they cannot edit the shared template. Unfollow still sticks: a leftover snapshot or an archived enrollment marker blocks silent re-enroll (BIQ-0150).
 
+**Exception (BIQ-0181):** **Edit just for me** creates a personal instance named `(just me)` and follows it. That copy is fully editable by its owner. Auto-enroll must not switch it back to the live template. Snapshots without the suffix still switch to live.
+
 ### Reason
 
 Copy-on-follow made group edits invisible to members. The copy existed to protect the template from member edits. Read-only follow of the live template protects it without hiding updates.
@@ -1233,6 +1236,7 @@ Copy-on-follow made group edits invisible to members. The copy existed to protec
 - Members already on a snapshot are switched to the live template
 - Template edit UI is role-gated when `visibility` is `team`
 - BIQ-0174: RLS lets members read team programs in `published | scheduled | active | completed` (not only legacy `published`), so live template edits are actually loadable
+- BIQ-0181: optional personal `(just me)` follow so one person can edit without changing the shared template
 
 ---
 
@@ -1410,5 +1414,37 @@ Users selected glute focus, wrote the 2-per-day note, and set 60 minutes, then r
 
 - Science engine 1.3.4
 - `st_set_logs` history unchanged
+
+---
+
+## Decision 048 - Training Just-Me Copies Stay Personal
+
+Date: 2026-09-15  
+Status: Accepted  
+Category: Program Design / Groups / Training
+
+### Decision
+
+Training **Edit just for me** duplicates the live group program into a **personal instance** via `st_duplicate_program`. The copy is named `{source} (just me)` (no double suffix), `visibility: personal`, `team_id` null, `source_program_id` = live id, `record_kind: instance` when the column exists, and `status: published`. It is not an unfollow marker. The Training “from {group}” label is resolved from the source program or the user’s group, not by attaching the copy to the team.
+
+Enrollment keeps that follow (`personalized_copy`). Leftover BIQ-0168 snapshots (personal + `source_program_id`, **no** `(just me)` in the name) still switch to the live template. Pure personal programs remain those with no `source_program_id`.
+
+Owner/editor edits on the live team program still apply to all members. Members cannot edit the template; they personalize first. Completed `st_set_logs` are not rewritten onto the copy’s new workout ids.
+
+### Reason
+
+Live follow (Decision 041) made group edits visible, but there was no way to change “only what I see.” A name marker distinguishes intentional copies from leftover snapshots without a new table or column.
+
+### Alternatives Considered
+
+- Reuse leftover snapshots as the just-me copy — rejected; enrollment would still switch them to live
+- New `personalized` column or table — rejected; name + existing lineage columns are enough
+- Always duplicate on Follow — rejected; that hid owner/editor edits (BIQ-0168)
+
+### Impact
+
+- `customizeFollowedProgramForMe` + Training **Edit just for me**
+- `shouldKeepPersonalizedFollow` / `isPersonalizedGroupFollow`
+- No database migration
 
 ---

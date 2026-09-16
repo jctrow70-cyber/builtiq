@@ -11,6 +11,10 @@ type CalendarView = 'day' | 'week' | 'month';
 type TrainingExecutionProps = {
   programName: string | null;
   followedFromGroup?: string | null;
+  followingGroupTemplate?: boolean;
+  personalizedCopy?: boolean;
+  onCustomizeForMe?: () => void;
+  customizeBusy?: boolean;
   today: TrainingDayPlan | null;
   tomorrow: TrainingDayPlan | null;
   weekDays: TrainingDayPlan[];
@@ -136,6 +140,10 @@ function DayItems({
 export default function TrainingExecution({
   programName,
   followedFromGroup,
+  followingGroupTemplate = false,
+  personalizedCopy = false,
+  onCustomizeForMe,
+  customizeBusy = false,
   today,
   tomorrow,
   weekDays,
@@ -184,10 +192,31 @@ export default function TrainingExecution({
       />
 
       {programName && (
-        <p className="te-following muted">
-          Following <b>{programName}</b>
-          {followedFromGroup ? ` · from ${followedFromGroup}` : ''}
-        </p>
+        <div className="te-follow-block">
+          <p className="te-following muted">
+            Following <b>{programName}</b>
+            {followedFromGroup ? ` · from ${followedFromGroup}` : ''}
+          </p>
+          {personalizedCopy ? (
+            <p className="muted te-follow-hint">This copy is only yours. The group plan is unchanged.</p>
+          ) : followingGroupTemplate && onCustomizeForMe ? (
+            <>
+              <p className="muted te-follow-hint">
+                Edits to the group plan apply to everyone. Use Edit just for me to keep a private copy.
+              </p>
+              <div className="te-follow-actions">
+                <button
+                  type="button"
+                  className="btn small secondary"
+                  onClick={onCustomizeForMe}
+                  disabled={customizeBusy}
+                >
+                  {customizeBusy ? 'Making your copy…' : 'Edit just for me'}
+                </button>
+              </div>
+            </>
+          ) : null}
+        </div>
       )}
 
       <SegmentedControl
