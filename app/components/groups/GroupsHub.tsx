@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   buildTeamProgramRows,
   type GroupClassification,
@@ -18,7 +18,6 @@ import TeamProgramsTab from './TeamProgramsTab';
 import TeamSelector from './TeamSelector';
 import TeamSettingsTab from './TeamSettingsTab';
 import TeamWorkspaceTabs, { type TeamWorkspaceTab } from './TeamWorkspaceTabs';
-import type { ReactNode } from 'react';
 
 export type GroupsHubProps = {
   sessionUserId: string;
@@ -56,11 +55,7 @@ export type GroupsHubProps = {
   isOwner: boolean;
   logDate: string;
   week: number;
-  groupsProgramWizardOpen: boolean;
-  teamProgramSetupPanel: ReactNode | null;
   memberWorkoutPanel?: ReactNode | null;
-  memberProgramWizardUserId?: string | null;
-  memberProgramDraftEditId?: string | null;
   onWorkspaceTabChange?: (tab: TeamWorkspaceTab) => void;
   onSelectTeam: (teamId: string) => void;
   defaultTeamId?: string | null;
@@ -94,7 +89,6 @@ export type GroupsHubProps = {
   onToggleMemberClassification: (member: any, classificationId: string, active: boolean) => void;
   onSetModeTeam: () => void;
   onOpenGroupsProgramWizard: (mode: 'create' | 'generate') => void;
-  onCloseGroupsProgramWizard: () => void;
   onDuplicateProgram: (programId: string) => Promise<void>;
   onEditTeamProgram: (programId: string) => void;
   onPublishTeamProgram: (programId: string) => void;
@@ -150,11 +144,7 @@ export default function GroupsHub(props: GroupsHubProps) {
     isOwner,
     logDate,
     week,
-    groupsProgramWizardOpen,
-    teamProgramSetupPanel,
     memberWorkoutPanel = null,
-    memberProgramWizardUserId = null,
-    memberProgramDraftEditId = null,
     onWorkspaceTabChange,
     onSelectTeam,
     defaultTeamId = null,
@@ -178,7 +168,6 @@ export default function GroupsHub(props: GroupsHubProps) {
     onToggleMemberClassification,
     onSetModeTeam,
     onOpenGroupsProgramWizard,
-    onCloseGroupsProgramWizard,
     onDuplicateProgram,
     onEditTeamProgram,
     onPublishTeamProgram,

@@ -11,6 +11,109 @@ Branch:
 Status:
 ```
 
+## BIQ-0195 - Delete Unused Program Setup Helpers
+
+Date: 2026-09-17  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+Removed leftover Program Setup generate/schedule helpers from `page.tsx` after the wizard UI was deleted in BIQ-0194. AI and template program creation stay in Programs.
+
+### Purpose
+
+`generateWithAi`, `generate`, and schedule-step helpers still compiled after the wizard was unmounted, referenced deleted state, and could not typecheck.
+
+### Changes
+
+- Deleted unused `generateWithAi`, `generate`, `fetchScheduleSuggestions`, `applyScheduleOption`, and `goToReviewStep`
+- Removed the duplicate `submitBugReport` / `catalogPayloadFromItem` copies left from that cleanup
+- Training add-exercise, Groups assign/publish, and Programs create/generate are unchanged
+
+### Files Changed
+
+- `app/page.tsx`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Training: calendar, add a Strength activity and generate or create it, log a set, Open in Programs on a draft banner.
+2. Groups → Programs: Create or edit still opens Programs → For [group]. Assign / publish / duplicate / delete still work.
+3. Programs → For me / For [group]: Generate with AI and Use in Training still work.
+4. Report a bug still sends (no Program Setup error context).
+
+### Known Issues
+
+- Mixed Following / My plans list is still a later slice.
+- Browser verification was not run here (no local app session in this pass).
+
+### Recommended Commit Message
+
+```text
+BIQ-0195 Remove leftover Program Setup generate helpers
+```
+
+---
+
+## BIQ-0194 - Delete Unused Program Setup Markup
+
+Date: 2026-09-17  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+Removed the unused Training/Groups Program Setup wizard JSX from `page.tsx`. Planning stays in Programs; Groups still assigns from its roster list.
+
+### Purpose
+
+After BIQ-0190 / BIQ-0191 the Goals → Schedule → Create wizard was unmounted but still compiled in `page.tsx`, so Personal / Group program tabs could return by accident.
+
+### Changes
+
+- Deleted `programSetupPanel` and the GroupsHub props that only existed to host it
+- Training no longer has a hidden setup sub-nav path
+- Groups create/edit still opens Programs → For [group]
+- Leftover `generateWithAi` / `generate` helpers were unused after this markup removal (deleted in BIQ-0195)
+
+### Files Changed
+
+- `app/page.tsx`
+- `app/components/groups/GroupsHub.tsx`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Training: calendar, log a set, Open in Programs on a draft banner. No Program Setup card or Personal / Group program tabs.
+2. Groups → Programs: Create or edit in Programs still opens Programs → For [group]. Assign / publish / duplicate / delete still work. Member workout view still opens.
+3. Programs → For me / For [group]: create and Use in Training still work.
+4. Dashboard “Set up program” still goes to Programs.
+
+### Known Issues
+
+- Mixed Following / My plans list is still a later slice.
+
+### Recommended Commit Message
+
+```text
+BIQ-0194 Remove unused Program Setup markup from page.tsx
+```
+
+---
+
 ## BIQ-0193 - Cleaner Programs Cards (Use in Training)
 
 Date: 2026-09-17  
@@ -59,7 +162,6 @@ None.
 ### Known Issues
 
 - Mixed Following / My plans list is still a later slice.
-- Unused Groups wizard markup in `page.tsx` is still unmounted.
 
 ### Recommended Commit Message
 
@@ -166,8 +268,7 @@ None.
 
 ### Known Issues
 
-- The old Groups wizard code still exists in `page.tsx` (`programSetupPanel`) but is unmounted.
-- A mixed Following / My plans list is a later slice. Pull in & edit retired in BIQ-0193.
+- The old Groups wizard markup was deleted in BIQ-0194.
 
 ### Recommended Commit Message
 

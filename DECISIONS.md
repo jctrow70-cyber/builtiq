@@ -1500,6 +1500,8 @@ Category: Program Design / UX
 - Training Program Setup is removed. Entry points (Manage program, drafts, leftover generate landing) go to Programs.
 - Groups may keep a manager wizard this slice; it is not a second personal builder.
 - BIQ-0191: Groups wizard is removed. Create/edit group plans in Programs → For [group]. Groups is roster and assign.
+- BIQ-0194: leftover Program Setup markup in `page.tsx` is deleted.
+- BIQ-0195: leftover unused generate/schedule helpers in `page.tsx` are deleted. Program create/generate stays in Programs.
 
 ### Reason
 
@@ -1546,6 +1548,8 @@ A second builder in Groups duplicated Programs and made “who is this for?” u
 ### Impact
 
 - BIQ-0191
+- BIQ-0194 deleted leftover unmounted wizard markup
+- BIQ-0195 deleted leftover unused generate/schedule helpers in `page.tsx`
 - No database migration
 
 ---
