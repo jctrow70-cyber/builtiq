@@ -11,6 +11,55 @@ Branch:
 Status:
 ```
 
+## BIQ-0187 - Log Sets on Calendar-Added Strength Workouts
+
+Date: 2026-09-16  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+Strength workouts added from Training → calendar → Add activity live on the hidden **Personal workouts** container, not on the followed program. Set logging now looks up planned sets in those calendar workouts, so Start Workout can save weight/reps/Done.
+
+### Purpose
+
+Users who created an on-the-fly strength workout kept seeing “Could not save log for this set” because save only searched the followed program tree.
+
+### Changes
+
+- `findSetInProgram` also searches calendar / on-the-fly workouts
+- `loadLogs` includes those planned-set ids so saved logs reload
+- Logging still works if no followed program is open
+
+### Files Changed
+
+- `app/page.tsx`
+- `CHANGELOG.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Training calendar → Add activity → Strength. Build with AI or add exercises manually.
+2. Start Workout. Enter weight/reps and mark a set Done. No “Could not save log for this set” alert.
+3. Leave and reopen the same workout — the log should still be there.
+4. Repeat while a group plan is also followed; only this calendar workout should receive the log.
+
+### Known Issues
+
+- Dashboard “today’s workout” still prefers the followed program day, not a calendar-only strength item.
+
+### Recommended Commit Message
+
+```text
+BIQ-0187 Allow logging sets on calendar-added strength workouts
+```
+
+---
+
 ## BIQ-0186 - Fix matchCopiedWorkout Type Error
 
 Date: 2026-09-16  

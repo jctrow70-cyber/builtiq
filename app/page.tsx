@@ -195,7 +195,19 @@ const workoutForDate=(p:any,dateYmd:string,fallbackWeek?:number,moves?:Record<st
   return native||list.filter((x:any)=>x.week===(fallbackWeek??wk)).sort((a:any,b:any)=>a.day_order-b.day_order)[0]||null;
 };
 const plannedSetIdsForWorkout=(w:any)=>{const ids:string[]=[];(w?.st_exercises||[]).forEach((e:any)=>(e.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).forEach((s:any)=>ids.push(s.id)));return ids;};
-const findSetInProgram=(p:any,sid:string)=>{for(const w of p?.st_workouts||[]){for(const e of w.st_exercises||[]){const ps=(e.st_planned_sets||[]).find((s:any)=>s.id===sid&&!s.is_deleted);if(ps)return {workout:w,exercise:e,plannedSet:ps};}}return null;};
+const findSetInProgram=(p:any,sid:string,extraWorkouts?:any[])=>{
+  const seen=new Set<string>();
+  const trees=[...(p?.st_workouts||[]),...(extraWorkouts||[])];
+  for(const w of trees){
+    if(!w?.id||seen.has(w.id))continue;
+    seen.add(w.id);
+    for(const e of w.st_exercises||[]){
+      const ps=(e.st_planned_sets||[]).find((s:any)=>s.id===sid&&!s.is_deleted);
+      if(ps)return {workout:w,exercise:e,plannedSet:ps};
+    }
+  }
+  return null;
+};
 
 export default function Page(){
  const [session,setSession]=useState<any>(null),[authReady,setAuthReady]=useState(false),[profileLoading,setProfileLoading]=useState(false);
@@ -342,8 +354,8 @@ export default function Page(){
    loadLogs(memberWorkoutProgram,viewingMember.user_id,memberWorkoutLogDate);
    return;
   }
-  if(program&&session?.user&&!viewingMember) loadLogs(program,session.user.id,logDate);
- },[memberWorkoutProgram,memberWorkoutLogDate,program,logDate,viewingMember?.user_id,session?.user?.id]);
+  if(session?.user&&!viewingMember) loadLogs(program,session.user.id,logDate);
+ },[memberWorkoutProgram,memberWorkoutLogDate,program,logDate,viewingMember?.user_id,session?.user?.id,calendarWorkouts]);
  useEffect(()=>{
   if(viewingMember&&viewingMember.user_id!==session?.user?.id){
    if(memberWorkoutProgram&&session?.user) loadLiftHistory();
@@ -726,6 +738,18 @@ export default function Page(){
  function canEdit(){if(!session?.user)return false; if(activeAssignedRecipient)return assignedHasPersonalCopy(activeAssignedRecipient); if(viewingMember&&viewingMember.user_id!==session.user.id)return false; if(isPersonalCalendarWorkout(activeWorkout))return true; if(program?.visibility==='personal'&&program.owner_user_id===session.user.id)return true; if(isLiveGroupProgram(program)&&!isSharedTemplateEditor())return true; if(program?.visibility==='team'){const team=teams.find((t:any)=>t.id===program.team_id)||activeTeam;return canEditGroupProgram(team?.my_role);} return mode==='personal'||canEditGroupProgram(activeTeam?.my_role);}
  function isOwner(){return isGroupOwner(activeTeam?.my_role);}
  function logUserId(){return viewingMember?.user_id||session?.user?.id;}
+ function extraWorkoutsForLogging(){
+  if(viewingMember&&viewingMember.user_id!==session?.user?.id)return [];
+  const extras=[...calendarWorkouts];
+  const candidates=[findWorkoutAnywhere(activeWorkout),planEditRef.current?.workout].filter(Boolean);
+  for(const current of candidates){
+    const idx=extras.findIndex((w:any)=>w.id===current.id);
+    const currentCount=(current.st_exercises||[]).length;
+    if(idx<0) extras.push(current);
+    else if(currentCount>(extras[idx].st_exercises||[]).length) extras[idx]=current;
+  }
+  return extras;
+ }
  function activeProgramForLogging(){
   if(viewingMember&&viewingMember.user_id!==session?.user?.id&&memberWorkoutProgram)return memberWorkoutProgram;
   return program;
@@ -1511,9 +1535,15 @@ export default function Page(){
  async function loadLogs(p:any,userId?:string,dateOverride?:string){
   const uid=userId||session?.user?.id;
   const day=dateOverride||logDate;
-  if(!uid||!p){setLogs({});logsRef.current={};return;}
+  const extras=extraWorkoutsForLogging();
+  if(!uid||(!p&&!extras.length)){setLogs({});logsRef.current={};return;}
   const ids:any[]=[];
-  (p.st_workouts||[]).forEach((w:any)=>(w.st_exercises||[]).forEach((e:any)=>(e.st_planned_sets||[]).forEach((s:any)=>{if(!s.is_deleted)ids.push(s.id);})));
+  const seen=new Set<string>();
+  [...(p?.st_workouts||[]),...extras].forEach((w:any)=>{
+    if(!w?.id||seen.has(w.id))return;
+    seen.add(w.id);
+    (w.st_exercises||[]).forEach((e:any)=>(e.st_planned_sets||[]).forEach((s:any)=>{if(!s.is_deleted)ids.push(s.id);}));
+  });
   // Prefer exact planned_set links, then overlay same-date snapshot matches so a
   // regenerated group program still shows the last weeks of logging.
   const [{data:linked},{data:dateLogs}]=await Promise.all([
@@ -1524,8 +1554,8 @@ export default function Page(){
   ]);
   const by:any={};
   (linked||[]).forEach((l:any)=>{if(l?.planned_set_id)by[l.planned_set_id]=l;});
-  const workoutOnDay=workoutForDate(p,day,undefined,workoutDayMovesFromActivities(userCalendarActivities));
-  const overlaid=mapDateLogsToProgram(dateLogs||[],p,workoutOnDay);
+  const workoutOnDay=p?workoutForDate(p,day,undefined,workoutDayMovesFromActivities(userCalendarActivities)):null;
+  const overlaid=p?mapDateLogsToProgram(dateLogs||[],p,workoutOnDay):{};
   Object.keys(overlaid).forEach((sid)=>{if(!by[sid])by[sid]=overlaid[sid];});
   (dateLogs||[]).forEach((l:any)=>{if(l?.planned_set_id&&!by[l.planned_set_id])by[l.planned_set_id]=l;});
   logsRef.current=by;
@@ -2152,7 +2182,7 @@ export default function Page(){
   if(!canLog())return;
   const run=async()=>{
   const old=logsRef.current[sid]||{};
-  const located=findSetInProgram(activeProgramForLogging(),sid);
+  const located=findSetInProgram(activeProgramForLogging(),sid,extraWorkoutsForLogging());
   if(!located) {alert('Could not save log for this set.');return;}
   const {workout:workoutRef,exercise:ex,plannedSet:ps}=located;
   const catItem=catalog.find((c:any)=>c.id===ex.catalog_exercise_id);
