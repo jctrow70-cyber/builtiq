@@ -139,7 +139,7 @@ export default function ImportWorkoutsSheet({
 
         {!loading && programs.length === 0 && (
           <p className="muted">
-            No other programs with workouts found. Build a strength program in Training → Program Setup first,
+            No other programs with workouts found. Build a strength program in Programs first,
             then come back to import it.
           </p>
         )}

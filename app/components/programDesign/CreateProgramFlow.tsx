@@ -63,7 +63,9 @@ export default function CreateProgramFlow({
       <button type="button" className="pd-back" onClick={onCancel}>
         ← Back to programs
       </button>
-      <p className="pd-eyebrow">{scope === 'group' ? 'Group program' : 'Personal program'}</p>
+      <p className="pd-eyebrow">
+        {scope === 'group' ? (groupName ? `For ${groupName}` : 'For a group') : 'For me'}
+      </p>
       <h1>Create program</h1>
       <p className="muted pd-lead">
         {inclusivePlan

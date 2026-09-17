@@ -11,6 +11,69 @@ Branch:
 Status:
 ```
 
+## BIQ-0190 - Send Program Planning to Programs (For Me / For Group)
+
+Date: 2026-09-17  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+Training no longer hosts Program Setup. Planning lives in Programs, labeled **For me** / **For [group]**, with a **Training is using** card at the top so it is obvious which plan the calendar follows.
+
+### Purpose
+
+Personal vs group program setup was split between Training Program Setup and Programs, which made it unclear who a plan was for and where to edit it.
+
+### Changes
+
+- Training calendar is logging only; leftover Program Setup entry points open Programs
+- Draft banner on Training says Open in Programs (not Open draft in Program Setup)
+- Programs filter labels: For me / For [group name]
+- Create buttons: Create a plan for me / Create a plan for [group]
+- Top of Programs shows Training is using (or that Training has no plan yet)
+- Groups program wizard is unchanged this slice
+
+### Files Changed
+
+- `app/page.tsx`
+- `app/components/programDesign/ProgramDesignHome.tsx`
+- `app/components/training/TrainingExecution.tsx`
+- `app/components/groups/GroupAssignWorkoutPanel.tsx`
+- `app/components/programDesign/ImportWorkoutsSheet.tsx`
+- `app/components/programDesign/CreateProgramFlow.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Sign in. Open Training — there is no Program Setup tab or Manage program builder.
+2. Tap Programs (from Training header or primary nav). Confirm For me / For [group] and the Training is using card.
+3. Create a plan for me and confirm it appears under For me.
+4. If you have a group, switch to For [group] and confirm create copy names that group.
+5. Follow a plan, then open Training — the same name shows as Following / Training is using.
+6. Dashboard Set up program still opens Programs.
+7. Groups → generate/edit a group program still opens the Groups wizard (not Training setup).
+
+### Known Issues
+
+- Groups still has its own program wizard; collapsing that into Programs is a later slice.
+- `trainingSubNav` still has a leftover `setup` value for Groups wizard compatibility.
+
+### Recommended Commit Message
+
+```text
+BIQ-0190 Move program planning out of Training into Programs
+```
+
+---
+
 ## BIQ-0189 - Keep Find Food Results Above the Keyboard
 
 Date: 2026-09-16  

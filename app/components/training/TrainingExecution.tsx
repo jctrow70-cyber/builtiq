@@ -210,7 +210,7 @@ export default function TrainingExecution({
               </button>
             )}
             <button type="button" className="btn small secondary" onClick={onOpenPrograms}>
-              My programs
+              Programs
             </button>
           </div>
         }
@@ -259,9 +259,14 @@ export default function TrainingExecution({
       />
 
       {!programName && (
-        <p className="muted te-following">
-          No program on this calendar yet. Add activities here, or create a program with start and end dates.
-        </p>
+        <div className="te-follow-block">
+          <p className="muted te-following">
+            Training uses the plan you follow in Programs. Add a one-off activity here, or create a plan there.
+          </p>
+          <button type="button" className="btn small green" onClick={onOpenPrograms}>
+            Create a plan
+          </button>
+        </div>
       )}
 
       {calendarView === 'day' && today && (

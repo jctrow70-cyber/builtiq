@@ -142,7 +142,7 @@ export default function GroupAssignWorkoutPanel({
       <div className="card group-assign-workout">
         <h2>Assign workout</h2>
         <p className="muted">
-          Publish a group program in Groups → Programs (or Training → Program Setup) first. Assign workout
+          Publish a group program in Groups → Programs (or Programs → For a group) first. Assign workout
           sends a template day to members — it does not restore past logged sets. Use Progress → Restore
           history for that.
         </p>

@@ -15,6 +15,7 @@ import {
   isGroupEnrollmentMarker,
   isGroupSourcedProgram,
   isLiveGroupProgram,
+  isPersonalizedGroupFollow,
   liveTemplateId,
   programEditAudience,
   shouldPromptUnfollowForPersonalCreate,
@@ -240,6 +241,20 @@ export default function ProgramDesignHome({
     sharedPrograms.find((p) => p.id === followedProgramId) ||
     null;
   const followingGroupSourced = isGroupSourcedProgram(following);
+  const followingJustMe = isPersonalizedGroupFollow(following);
+  const groupFilterLabel = activeGroup?.name ? `For ${activeGroup.name}` : 'For a group';
+  const followingGroupName = following?.team_id
+    ? teams.find((t) => t.id === following.team_id)?.name
+    : undefined;
+  const followingExtra = !following
+    ? undefined
+    : followingJustMe
+      ? 'Just me copy · group plan unchanged'
+      : followingGroupSourced
+        ? followingGroupName
+          ? `Group plan · ${followingGroupName}`
+          : 'Group plan'
+        : 'For me';
 
   async function beginCreate() {
     setError('');
@@ -522,28 +537,34 @@ export default function ProgramDesignHome({
   return (
     <section className="pd-screen">
       <SectionHeader
-        title="Program Design"
+        title="Programs"
         subtitle={
           scope === 'group'
-            ? 'Design dated plans for your group. Members enroll automatically; editors pull in to edit.'
-            : 'Follow one program in Training — personal or group, not both.'
+            ? activeGroup?.name
+              ? `Plans for ${activeGroup.name}. Members see the live group plan.`
+              : 'Join or create a group to make a shared plan.'
+            : 'Plans you own. Training uses the one you follow.'
         }
         actions={
           canCreate ? (
             <button type="button" className="btn green" onClick={() => void beginCreate()}>
-              {scope === 'group' ? '+ Create Group Program' : '+ Create Program'}
+              {scope === 'group'
+                ? activeGroup?.name
+                  ? `Create a plan for ${activeGroup.name}`
+                  : 'Create a group plan'
+                : 'Create a plan for me'}
             </button>
           ) : undefined
         }
       />
 
       <SegmentedControl
-        ariaLabel="Program library"
+        ariaLabel="Who this program list is for"
         value={scope}
         onChange={(v) => setScope(v as ProgramScope)}
         options={[
-          { value: 'personal', label: 'Personal' },
-          { value: 'group', label: 'Groups' },
+          { value: 'personal', label: 'For me' },
+          { value: 'group', label: groupFilterLabel },
         ]}
       />
 
@@ -575,19 +596,13 @@ export default function ProgramDesignHome({
 
       {!loading && (
         <>
-          <div className="pd-section">
-            <h2>Following</h2>
+          <div className="pd-section pd-training-using">
+            <h2>Training is using</h2>
             {following ? (
               <ProgramRow
                 program={following}
-                badge={followingGroupSourced ? (memberAutoEnroll ? 'Enrolled' : 'Following') : 'Following'}
-                extra={
-                  followingGroupSourced
-                    ? memberAutoEnroll
-                      ? 'Live group plan · owner and editor updates show here'
-                      : 'Live group plan'
-                    : 'Personal'
-                }
+                badge="In Training"
+                extra={followingExtra}
                 onOpen={() => {
                   setEditing(following);
                   setView('editor');
@@ -596,10 +611,10 @@ export default function ProgramDesignHome({
               />
             ) : (
               <p className="muted pd-empty">
-                You are not following a program yet.
+                Training has no plan yet.
                 {memberAutoEnroll
                   ? ' As a member, you are enrolled automatically the first time a group plan is active. After you unfollow, Training stays clear until you follow again (or a new group plan enrolls you).'
-                  : ' Follow a personal plan or pull in a group plan (editors are not enrolled automatically).'}
+                  : ' Create a plan for you, or follow a group plan (editors are not enrolled automatically).'}
               </p>
             )}
           </div>

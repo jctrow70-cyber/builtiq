@@ -839,6 +839,7 @@ Training mixed program creation, group management, scheduling, and logging on on
 - Phase 1 ships the Program Design shell and calendar without changing Training logging
 - Phase 3 is when Training reads the **Active** program
 - Planned data stays on programs/activities/workouts; actual data stays on `st_set_logs` and future activity-completion rows
+- BIQ-0190: Training no longer hosts Program Setup. Users plan in **Programs** (For me / For [group]); Training only logs the followed plan. Groups wizard remains until a later slice.
 
 ---
 
@@ -1480,6 +1481,38 @@ The live group template (Decision 041) must stay stable. A one-week life conflic
 
 - Training **Move** on day items
 - `saveWorkoutDayMove` / `applyWorkoutDayMoves`
+- No database migration
+
+---
+
+## Decision 050 - Programs Owns Planning; Training Does Not Host Setup
+
+Date: 2026-09-17  
+Status: Accepted  
+Category: Program Design / UX
+
+### Decision
+
+**Programs** is the only place to create and switch plans. **Training** is for the calendar and logging.
+
+- The Programs library filter is **For me** / **For [group]**, not Personal / Groups.
+- The top of Programs shows **Training is using** so the followed plan is obvious.
+- Training Program Setup is removed. Entry points (Manage program, drafts, leftover generate landing) go to Programs.
+- Groups may keep a manager wizard this slice; it is not a second personal builder.
+
+### Reason
+
+Users were asked the same who-is-this-for question in Training setup and Programs, with different labels and two builders.
+
+### Alternatives Considered
+
+- Keep Training setup for drafts only — rejected; two planners stay confusing
+- Drop the For me / For group filter and mix all plans — rejected; group vs personal still matters
+- Move Groups wizard into Programs in the same change — deferred; first slice is Training → Programs only
+
+### Impact
+
+- BIQ-0190
 - No database migration
 
 ---

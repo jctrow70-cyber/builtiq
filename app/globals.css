@@ -874,6 +874,8 @@ label{color:var(--textSecondary)}
 .pd-back{border:0;background:transparent;color:var(--accentOnSoft);font-weight:800;padding:0;margin:0 0 10px;min-height:40px;text-align:left}
 .pd-section{margin-top:18px}
 .pd-section h2{margin:0 0 10px;font-size:15px;font-weight:800}
+.pd-training-using{padding:12px 14px;border-radius:16px;border:1px solid var(--borderSubtle);background:var(--surfaceElevated)}
+.pd-training-using h2{margin:0 0 10px}
 .pd-empty{margin:0;line-height:1.5}
 .pd-note{margin:8px 0 0;padding:10px 12px;border-radius:12px;background:var(--surfaceInset);border:1px solid var(--borderSubtle);font-size:13px;line-height:1.45}
 .pd-error{margin:10px 0 0;color:#fca5a5;font-size:13px;font-weight:700}
