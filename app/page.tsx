@@ -348,7 +348,7 @@ export default function Page(){
   setSelectedTeamId(null);setTeams([]);setMembers([]);setMode('personal');
   boot().finally(()=>setProfileLoading(false));
  },[session?.user?.id]);
- useEffect(()=>{if(profile&&!activeAssignedRecipient) loadPrograms(trainingSubNav==='setup'||showProgramSetup?'setup':'training')},[mode,selectedTeamId,teams,profile,viewingMember?.user_id,activeAssignedRecipient?.id,trainingSubNav,showProgramSetup,draftEditProgramId]);
+ useEffect(()=>{if(profile&&!activeAssignedRecipient) loadPrograms(appNav==='Groups'||trainingSubNav==='setup'||showProgramSetup?'setup':'training')},[mode,selectedTeamId,teams,profile,viewingMember?.user_id,activeAssignedRecipient?.id,trainingSubNav,showProgramSetup,draftEditProgramId,appNav]);
  useEffect(()=>{if(session?.user?.id) loadAssignedWorkouts()},[session?.user?.id]);
  useEffect(()=>{
   if(viewingMember&&viewingMember.user_id!==session?.user?.id&&memberWorkoutProgram&&session?.user){
@@ -775,7 +775,10 @@ export default function Page(){
   if(opts?.teamDefault)return null;
   return published[0]||null;
  }
- function programLoadContext():'training'|'setup'{return trainingSubNav==='setup'||showProgramSetup||draftEditProgramId?'setup':'training';}
+ function programLoadContext():'training'|'setup'{
+  if(appNav==='Groups'&&activeTeam)return 'setup';
+  return trainingSubNav==='setup'||showProgramSetup||draftEditProgramId||groupsProgramWizardOpen?'setup':'training';
+ }
  function findWorkoutInProgram(prog:any,workoutId:string){return (prog?.st_workouts||[]).find((w:any)=>w.id===workoutId)||null;}
  function defaultSetupWorkout(prog:any){return (prog?.st_workouts||[]).slice().sort((a:any,b:any)=>a.week-b.week||a.day_order-b.day_order)[0]||null;}
  function alignEditorCalendar(prog:any,workoutId:string){
@@ -791,6 +794,7 @@ export default function Page(){
  async function loadPrograms(context:'training'|'setup'='training',options?:{assignmentsOverride?:Record<string,any>;editProgramId?:string|null;preserveWorkoutId?:string|null;followedProgramId?:string|null}){
   const editTargetId=options?.editProgramId??draftEditProgramId;
   if(editTargetId&&(trainingSubNav==='setup'||showProgramSetup||groupsProgramWizardOpen))context='setup';
+  if(appNav==='Groups'&&activeTeam)context='setup';
   if(!session?.user)return;
   if(activeAssignedRecipient)return;
   if(viewingMember&&viewingMember.user_id!==session.user.id)return;
@@ -1472,7 +1476,7 @@ export default function Page(){
   } else if(program?.id===programId){
    setProgram(null);
   }
-  const reloadContext=groupsProgramWizardOpen||trainingSubNav==='setup'||showProgramSetup?'setup':'training';
+  const reloadContext=appNav==='Groups'||groupsProgramWizardOpen||trainingSubNav==='setup'||showProgramSetup?'setup':'training';
   await loadPrograms(reloadContext);
   await loadGroupProgramForAssign();
   await loadMemberAssignments();
@@ -2601,7 +2605,7 @@ function onSelectTrainingDay(date:string){
  function switchTrainingContext(next:'personal'|'group'){setMode(next==='group'?'team':'personal');if(next==='group'&&teams.length&&!selectedTeamId)setSelectedTeamId(teams[0].id);}
  function handleGroupsWorkspaceTabChange(tab:string){
   if(tab==='members')return;
-  if(tab==='programs'&&canManageGroupView())loadPrograms('setup');
+  if(tab==='programs')loadPrograms('setup');
   if(groupsProgramWizardOpen&&groupsAssignMemberUserId)closeGroupsProgramWizard();
   if(viewingMember&&viewingMember.user_id!==session?.user?.id)closeMemberView();
   else if(memberDashboard){setMemberDashboard(null);setMemberPerformance(null);}
@@ -2615,7 +2619,7 @@ function onSelectTrainingDay(date:string){
   if(n==='Progress'||n==='Dashboard'||n==='Training'){loadProgressLogs();if(n==='Dashboard'){void loadDashboardProgram();loadDashboardTodayNutrition();setBodyDashRefreshKey(k=>k+1);}}
   if(n==='Nutrition')loadDashboardTodayNutrition();
   if(n==='Settings'){loadCatalog(); loadGuidedImportStatus(); if(activeTeam)loadMembers();}
-  if(n==='Groups'){if(teams.length){if(!selectedTeamId)setSelectedTeamId(teams[0].id);setMode('team');} loadMembers(); loadMemberStats(); loadMemberAssignments(); loadGroupProgramForAssign(); loadClassifications(); loadPrograms(canManageGroupView()||groupsProgramWizardOpen?'setup':'training');}
+  if(n==='Groups'){if(teams.length){if(!selectedTeamId)setSelectedTeamId(teams[0].id);setMode('team');} loadMembers(); loadMemberStats(); loadMemberAssignments(); loadGroupProgramForAssign(); loadClassifications(); loadPrograms('setup');}
   if(n==='Dashboard'&&teams.length){loadMembers(); loadMemberStats();}
   if(n==='Training'){setTrainingSubNav('personal'); if(teams.length&&!selectedTeamId)setSelectedTeamId(teams[0].id); if(!draftEditProgramId&&!groupsProgramWizardOpen)loadPrograms('training');}
   if(n==='Programs'){if(teams.length&&!selectedTeamId)setSelectedTeamId(teams[0].id);}

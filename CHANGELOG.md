@@ -11,6 +11,54 @@ Branch:
 Status:
 ```
 
+## BIQ-0192 - Keep Group Programs Visible After Delete
+
+Date: 2026-09-17  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+Deleting a program on Groups → Programs no longer clears the rest of the group’s plan list.
+
+### Purpose
+
+After the Groups wizard was removed, delete reloaded Training’s personal follow list. The Groups tab then filtered to team programs and looked empty.
+
+### Changes
+
+- Groups always reloads the group program index (setup context), including after delete
+- Opening Groups or the Programs workspace tab loads the group list, not the Training follow list
+
+### Files Changed
+
+- `app/page.tsx`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Sign in as a group owner/manager with at least two group programs.
+2. Groups → Programs. Confirm both are listed.
+3. Delete one (not the team default). The other program(s) should still be listed.
+4. Refresh / leave Groups and come back — remaining programs still show.
+5. Training still shows only the followed plan.
+
+### Known Issues
+
+- Cannot delete the current team default until another default is set (existing rule).
+
+### Recommended Commit Message
+
+```text
+BIQ-0192 Keep group programs listed after deleting one
+```
+
+---
+
 ## BIQ-0191 - Groups Sends Plan Create/Edit to Programs
 
 Date: 2026-09-17  
