@@ -337,6 +337,16 @@ export function matchCopiedWorkout(
       (w) => Number(w.week) === Number(source.week) && Number(w.day_order) === Number(source.day_order)
     );
     if (byOrder) return byOrder;
+    const sourceDay = String(source.day_label || '');
+    if (sourceDay) {
+      const byDay = list.find((w) => String(w.day_label || '') === sourceDay);
+      if (byDay) return byDay;
+    }
+    if (source.day_order != null) {
+      const byDayOrder = list.find((w) => Number(w.day_order) === Number(source.day_order));
+      if (byDayOrder) return byDayOrder;
+    }
+    return null;
   }
   return list[0] || null;
 }

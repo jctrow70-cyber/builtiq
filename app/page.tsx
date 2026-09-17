@@ -374,9 +374,11 @@ export default function Page(){
  },[program?.id,program?.start_date,program?.created_at,program?.weeks,logDate,activeAssignedRecipient?.id,viewingMember?.user_id,draftEditProgramId]);
  useEffect(()=>{
   if(!program||syncingCalendarRef.current||activeAssignedRecipient||viewingMember||draftEditProgramId)return;
+  if(trainingSessionOpen)return;
+  if(isPersonalCalendarWorkout(activeWorkout))return;
   const match=workoutForDate(program,logDate,week,workoutDayMovesFromActivities(userCalendarActivities));
   if(match&&match.id!==activeWorkout)setActiveWorkout(match.id);
- },[program?.id,program?.start_date,program?.created_at,program?.weeks,logDate,activeAssignedRecipient?.id,viewingMember?.user_id,draftEditProgramId,userCalendarActivities]);
+ },[program?.id,program?.start_date,program?.created_at,program?.weeks,logDate,activeAssignedRecipient?.id,viewingMember?.user_id,draftEditProgramId,userCalendarActivities,trainingSessionOpen]);
  useEffect(()=>{if(appNav==='Training'&&!program&&trainingSubNav!=='setup')setShowProgramSetup(false);},[appNav,program,trainingSubNav]);
  useEffect(()=>{
   if(appNav!=='Training'||!session?.user?.id)return;
@@ -871,7 +873,8 @@ export default function Page(){
     const match=(pickedFull.st_workouts||[]).find((w:any)=>w.week===alignedWeek&&w.day_label===dayLabel)
       ||(pickedFull.st_workouts||[]).filter((w:any)=>w.week===alignedWeek).sort((a:any,b:any)=>a.day_order-b.day_order)[0]
       ||pickedFull.st_workouts?.sort((a:any,b:any)=>a.week-b.week||a.day_order-b.day_order)?.[0];
-    if(preserveId)setActiveWorkout(preserveId);
+    const preserveExists=!!preserveId&&(!!findWorkoutInProgram(pickedFull,preserveId)||calendarWorkouts.some((w:any)=>w.id===preserveId));
+    if(preserveExists)setActiveWorkout(preserveId);
     else if(match)setActiveWorkout(match.id);
     checkHistoryRestoreOffer(pickedFull);
     const planned=await fetchProgramActivities(supabase,pickedFull.id);
@@ -1431,12 +1434,12 @@ export default function Page(){
    setAppNav('Training');
    setTrainingSubNav('personal');
    setApplyScope('current');
-   await loadPrograms('training',{preserveWorkoutId:null,followedProgramId:copy.id});
    const mapped=matchCopiedWorkout(source,copy);
+   await loadPrograms('training',{preserveWorkoutId:mapped?.id||null,followedProgramId:copy.id});
    if(mapped?.id)setActiveWorkout(mapped.id);
    setLogDate(date);
    if(keepOpen){setTrainingSessionIntent(intent);setTrainingSessionOpen(true);}
-   const ctx={workout:mapped||source,program:copy};
+   const ctx={workout:mapped||findWorkoutInProgram(copy,mapped?.id)||source,program:copy};
    planEditRef.current=ctx;
    return ctx;
   }finally{setCustomizeForMeBusy(false);}
@@ -2395,9 +2398,14 @@ function onSelectTrainingDay(date:string){
   setWeeks(w);
  }
  async function reloadKeepDay(){
-  const keep = activeWorkout;
+  const keep = planEditRef.current?.workout?.id || activeWorkout;
   if(draftEditProgramId)await saveDraftProgramName(draftEditProgramId,{quiet:true});
-  await loadPrograms(programLoadContext(),{preserveWorkoutId:keep||null});
+  syncingCalendarRef.current=true;
+  try{
+   await loadPrograms(programLoadContext(),{preserveWorkoutId:keep||null});
+  }finally{
+   queueMicrotask(()=>{syncingCalendarRef.current=false;});
+  }
 }
  function openManageProgram(){setMemberDashboard(null);setViewingMember(null);setTrainingSessionOpen(false);setAppNav('Programs');}
  async function startTrainingSession(workoutId:string|null,dateYmd:string,intent:'log'|'edit'='log'){
@@ -2660,7 +2668,13 @@ function matchingSet(targetExercise:any, sourceSet:any){
 
  const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sort((a:any,b:any)=>a.day_order-b.day_order);
  const extraActiveWorkout=calendarWorkouts.find((w:any)=>w.id===activeWorkout)||null;
- const workout=extraActiveWorkout||weekWorkouts.find((w:any)=>w.id===activeWorkout)||weekWorkouts[0];
+ const sessionKeep=planEditRef.current?.workout;
+ const workout=extraActiveWorkout
+  ||findWorkoutInProgram(program,activeWorkout)
+  ||weekWorkouts.find((w:any)=>w.id===activeWorkout)
+  ||(sessionKeep&&(sessionKeep.id===activeWorkout||trainingSessionOpen)?sessionKeep:null)
+  ||(trainingSessionOpen?(program?.st_workouts||[]).find((w:any)=>w.week===week&&w.day_label===dayLabelFromYmd(logDate)):null)
+  ||(!trainingSessionOpen?weekWorkouts[0]:null);
  const trainingCompletionWorkouts=[...(program?.st_workouts||[]),...calendarWorkouts];
  const workoutDayMoves=workoutDayMovesFromActivities(userCalendarActivities);
  const trainingTodayPlan=decorateDayPlanCompletion(planForCalendarDate(program,trainingActivities,userCalendarActivities,logDate,todayYmd(),workoutDayMoves),{activities:userCalendarActivities,workouts:trainingCompletionWorkouts,progressLogs,sessionLogs:logs,selectedDate:logDate});

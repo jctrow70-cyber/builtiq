@@ -11,6 +11,56 @@ Branch:
 Status:
 ```
 
+## BIQ-0188 - Keep Thursday Workout After Training Exercise Edits
+
+Date: 2026-09-16  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+Adding or replacing an exercise on a Thursday (or any non-Monday) workout from Training no longer jumps you to Monday. Reload keeps the workout you were editing, including after a just-me copy, instead of falling back to the first day of the week.
+
+### Purpose
+
+After an exercise change, stale workout ids and a Monday fallback made the editor switch days.
+
+### Changes
+
+- Reload preserves `planEditRef` workout id and only keeps it if it still exists
+- Open Training sessions are not remapped to the calendar’s Monday fallback
+- `matchCopiedWorkout` matches by weekday when week numbers differ and does not default to the first workout
+
+### Files Changed
+
+- `app/page.tsx`
+- `lib/programDesign/followProgram.ts`
+- `scripts/test-customize-for-me.ts`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Open a Thursday workout from Training. Add an exercise. You should stay on Thursday.
+2. If you follow a group plan, add an exercise (this may create a just-me copy). You should still be on Thursday, not Monday.
+3. Replace an exercise on that Thursday workout — same result.
+4. Calendar-added Strength on Thursday should stay on that workout after adding a lift.
+
+### Known Issues
+
+None.
+
+### Recommended Commit Message
+
+```text
+BIQ-0188 Keep the open Training workout after adding an exercise
+```
+
+---
+
 ## BIQ-0187 - Log Sets on Calendar-Added Strength Workouts
 
 Date: 2026-09-16  

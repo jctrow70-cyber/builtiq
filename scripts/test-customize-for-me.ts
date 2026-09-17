@@ -168,6 +168,14 @@ async function main() {
   };
   assert.equal(matchCopiedWorkout({ week: 1, day_label: 'Wed', day_order: 2 }, copy)?.id, 'new-wed');
   assert.equal(matchCopiedWorkout({ week: 1, day_label: 'Fri', day_order: 4 }, copy)?.id, 'new-fri');
+  const weekCopy = {
+    st_workouts: [
+      { id: 'mon', week: 1, day_label: 'Mon', day_order: 0 },
+      { id: 'thu', week: 1, day_label: 'Thu', day_order: 3 },
+    ],
+  };
+  assert.equal(matchCopiedWorkout({ week: 2, day_label: 'Thu', day_order: 3 }, weekCopy)?.id, 'thu');
+  assert.equal(matchCopiedWorkout({ week: 9, day_label: 'Thu', day_order: 3 }, { st_workouts: [{ id: 'mon', week: 1, day_label: 'Mon', day_order: 0 }] }), null);
   console.log('OK: customize-for-me checks passed');
 }
 
