@@ -11,6 +11,64 @@ Branch:
 Status:
 ```
 
+## BIQ-0193 - Cleaner Programs Cards (Use in Training)
+
+Date: 2026-09-17  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+Programs cards have one extra action — **Use in Training** — instead of Follow / Pull in & edit. **Everyone in [group] / Just me** only appears when editing a live group plan, not on For me or just-me copies.
+
+### Purpose
+
+After planning moved to Programs, cards still mixed Follow, Pull in & edit, and Whole group / Just me on personal plans, which made it unclear what each button did.
+
+### Changes
+
+- List and editor follow actions are labeled **Use in Training**
+- Hidden when Training already uses that plan, and on drafts / archived plans
+- Title click still opens the plan
+- Audience chooser only on live group templates; label is **Everyone in [group]**
+- Opening a For me or `(just me)` plan no longer shows Whole group / Just me
+- Return to the group plan from Programs → For [group] → Open
+
+### Files Changed
+
+- `app/components/programDesign/ProgramDesignHome.tsx`
+- `app/components/programDesign/ProgramCalendarEditor.tsx`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Programs → For me. Open a personal plan. There is no Everyone / Just me control. Use in Training appears unless Training already uses it.
+2. Draft personal plan: Open only — no Use in Training.
+3. For [group], as owner/editor: Open a live group plan. Confirm **Everyone in [group]** vs **Just me**. Use in Training follows the live plan and stays in the editor (badge **In Training**).
+4. Switch Just me. The copy has no audience toggle. Training follows `{name} (just me)`.
+5. List: group/shared rows say Use in Training, not Pull in & edit or Follow.
+6. Training is using still shows Unfollow.
+7. Members still auto-enroll; they do not get Use in Training on the active group list row.
+
+### Known Issues
+
+- Mixed Following / My plans list is still a later slice.
+- Unused Groups wizard markup in `page.tsx` is still unmounted.
+
+### Recommended Commit Message
+
+```text
+BIQ-0193 Use in Training on Programs cards; hide audience on For me
+```
+
+---
+
 ## BIQ-0192 - Keep Group Programs Visible After Delete
 
 Date: 2026-09-17  
@@ -109,7 +167,7 @@ None.
 ### Known Issues
 
 - The old Groups wizard code still exists in `page.tsx` (`programSetupPanel`) but is unmounted.
-- Pull in & edit labels and a mixed Following / My plans list are later slices.
+- A mixed Following / My plans list is a later slice. Pull in & edit retired in BIQ-0193.
 
 ### Recommended Commit Message
 

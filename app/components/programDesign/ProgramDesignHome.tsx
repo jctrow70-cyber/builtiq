@@ -57,11 +57,19 @@ type View = 'home' | 'create' | 'ai-setup' | 'editor';
 
 const LIST_SECTIONS: ProgramLifecycleStatus[] = ['scheduled', 'draft', 'completed', 'archived'];
 
+function offerUseInTraining(
+  program: ProgramDesignRecord,
+  followedProgramId: string | null,
+): boolean {
+  if (followedProgramId === program.id) return false;
+  const life = lifecycleStatusOf(program);
+  return life !== 'draft' && life !== 'archived';
+}
+
 function ProgramRow({
   program,
   badge,
   extra,
-  followLabel,
   onOpen,
   onFollow,
   onUnfollow,
@@ -69,7 +77,6 @@ function ProgramRow({
   program: ProgramDesignRecord;
   badge?: string;
   extra?: string;
-  followLabel?: string;
   onOpen: () => void;
   onFollow?: () => void;
   onUnfollow?: () => void;
@@ -88,7 +95,7 @@ function ProgramRow({
         <span className="ui-badge">{badge || lifecycleLabel(lifecycleStatusOf(program))}</span>
         {onFollow && (
           <button type="button" className="btn small green" onClick={onFollow}>
-            {followLabel || 'Follow'}
+            Use in Training
           </button>
         )}
         {onUnfollow && (
@@ -475,7 +482,7 @@ export default function ProgramDesignHome({
       setError(shareError);
       return;
     }
-    alert('Shared with the group. Members are enrolled automatically when the plan is active; editors can pull it in.');
+    alert('Shared with the group. Members are enrolled automatically when the plan is active; editors can use it in Training.');
   }
 
   if (view === 'create') {
@@ -537,9 +544,9 @@ export default function ProgramDesignHome({
   }
 
   if (view === 'editor' && editing) {
-    const followingThis = !!alreadyFollowing(editing, personalPrograms, followedProgramId);
-    const editorPull = canEditGroup && editing.visibility === 'team';
+    const followingThis = followedProgramId === editing.id;
     const editingRole = teams.find((t) => t.id === editing.team_id)?.my_role || groupRole;
+    const showGroupAudience = programEditAudience(editing) === 'group';
     return (
       <section className="pd-screen">
         <ProgramCalendarEditor
@@ -557,7 +564,7 @@ export default function ProgramDesignHome({
               : null
           }
           audienceBusy={followBusy}
-          onEditAudienceChange={handleEditAudience}
+          onEditAudienceChange={showGroupAudience ? handleEditAudience : undefined}
           onBack={() => {
             setEditing(null);
             setBuildBanner(null);
@@ -569,7 +576,7 @@ export default function ProgramDesignHome({
             setPrograms((prev) => prev.map((p) => (p.id === next.id ? next : p)));
           }}
           onFollow={async () => {
-            await handleFollow(editing, { editSource: editorPull, openTraining: false });
+            await handleFollow(editing, { openTraining: false });
           }}
           onShareWithGroup={handleShareWithGroup}
           onBuildWorkouts={() => setView('ai-setup')}
@@ -667,7 +674,7 @@ export default function ProgramDesignHome({
                 Training has no plan yet.
                 {memberAutoEnroll
                   ? ' As a member, you are enrolled automatically the first time a group plan is active. After you unfollow, Training stays clear until you follow again (or a new group plan enrolls you).'
-                  : ' Create a plan for you, or follow a group plan (editors are not enrolled automatically).'}
+                  : ' Create a plan for you, or use a group plan in Training (editors are not enrolled automatically).'}
               </p>
             )}
           </div>
@@ -677,7 +684,7 @@ export default function ProgramDesignHome({
               <h2>{sharedPrograms.some((p) => canOptInToGroupProgram(p.groupRole)) ? 'Available from your groups' : 'Shared with you'}</h2>
               <p className="muted">
                 {sharedPrograms.some((p) => canOptInToGroupProgram(p.groupRole))
-                  ? 'Editors and owners can pull a group plan into Training. Members are enrolled automatically by plan dates.'
+                  ? 'Editors and owners can use a group plan in Training. Members are enrolled automatically by plan dates.'
                   : 'Programs from your groups. Training uses the live group plan, so owner and editor updates show up for everyone.'}
               </p>
               {sharedPrograms.map((program) => {
@@ -688,15 +695,14 @@ export default function ProgramDesignHome({
                     program={program}
                     extra={`${program.groupName || 'Group'}${program.groupRole ? ` · ${roleLabel(program.groupRole)}` : ''}`}
                     badge={optIn ? 'Available' : 'Shared'}
-                    followLabel={optIn && canEditGroupProgram(program.groupRole) ? 'Pull in & edit' : 'Follow'}
                     onOpen={() => {
                       setEditing(program);
                       setView('editor');
                     }}
-                    onFollow={() =>
-                      void handleFollow(program, {
-                        editSource: optIn && canEditGroupProgram(program.groupRole),
-                      })
+                    onFollow={
+                      offerUseInTraining(program, followedProgramId)
+                        ? () => void handleFollow(program)
+                        : undefined
                     }
                   />
                 );
@@ -737,14 +743,11 @@ export default function ProgramDesignHome({
                       setView('editor');
                     }}
                     onFollow={
-                      program.id !== followedProgramId && (scope === 'personal' || editorOptIn)
-                        ? () =>
-                            void handleFollow(program, {
-                              editSource: scope === 'group' && canEditGroup,
-                            })
+                      (scope === 'personal' || editorOptIn) &&
+                      offerUseInTraining(program, followedProgramId)
+                        ? () => void handleFollow(program)
                         : undefined
                     }
-                    followLabel={scope === 'group' && canEditGroup ? 'Pull in & edit' : 'Follow'}
                   />
                 ))}
               </div>
@@ -766,16 +769,15 @@ export default function ProgramDesignHome({
                     setView('editor');
                   }}
                   onFollow={
-                    editorOptIn
-                      ? () => void handleFollow(program, { editSource: canEditGroup })
+                    editorOptIn && offerUseInTraining(program, followedProgramId)
+                      ? () => void handleFollow(program)
                       : undefined
                   }
-                  followLabel={canEditGroup ? 'Pull in & edit' : 'Follow'}
                 />
               ))}
 
           {!programs.length && scope === 'personal' && !sharedPrograms.length && (
-            <p className="muted pd-empty">Create a program, or follow one your group shared.</p>
+            <p className="muted pd-empty">Create a program, or use one your group shared in Training.</p>
           )}
         </>
       )}

@@ -92,6 +92,7 @@ export default function ProgramCalendarEditor({
   const status = lifecycleStatusOf(program);
   const inclusive = !!program.inclusive_plan;
   const audience = programEditAudience(program);
+  const groupName = groups.find((g) => g.id === program.team_id)?.name;
 
   async function reload() {
     setLoading(true);
@@ -272,7 +273,7 @@ export default function ProgramCalendarEditor({
         actions={<span className="ui-badge">{lifecycleLabel(status)}</span>}
       />
 
-      {audience && onEditAudienceChange && (
+      {audience === 'group' && onEditAudienceChange && (
         <fieldset className="pd-scope">
           <legend>These edits apply to</legend>
           <SegmentedControl
@@ -283,7 +284,11 @@ export default function ProgramCalendarEditor({
               void onEditAudienceChange(v).catch((e) => setError(e?.message || 'Could not switch who edits apply to'));
             }}
             options={[
-              { value: 'group', label: 'Whole group', disabled: !canEditGroupTemplate && audience !== 'group' },
+              {
+                value: 'group',
+                label: groupName ? `Everyone in ${groupName}` : 'Everyone in the group',
+                disabled: !canEditGroupTemplate && audience !== 'group',
+              },
               { value: 'me', label: 'Just me' },
             ]}
             size="sm"
@@ -291,9 +296,7 @@ export default function ProgramCalendarEditor({
           <p className="muted" style={{ marginTop: 8 }}>
             {audienceBusy
               ? 'Switching…'
-              : audience === 'group'
-                ? 'Changes update the live group plan for every member.'
-                : 'Changes stay on your private copy. Other members keep the group plan.'}
+              : 'Changes update the live group plan for every member. Just me makes a private copy for Training.'}
           </p>
         </fieldset>
       )}
@@ -409,12 +412,12 @@ export default function ProgramCalendarEditor({
       )}
 
       <div className="pd-status-row">
-        {onFollow && !isFollowing && (
+        {onFollow && !isFollowing && status !== 'draft' && status !== 'archived' && (
           <button type="button" className="btn green" disabled={busy} onClick={() => void onFollow()}>
-            {canEdit && program.visibility === 'team' ? 'Pull in & edit' : 'Follow this program'}
+            Use in Training
           </button>
         )}
-        {isFollowing && <span className="ui-badge">{canEdit && program.visibility === 'team' ? 'Editing in Training' : 'Following'}</span>}
+        {isFollowing && <span className="ui-badge">In Training</span>}
         {canEdit && pushTeamId && (
           <button type="button" className="btn green" disabled={busy} onClick={() => setPushOpen(true)}>
             Push to members
