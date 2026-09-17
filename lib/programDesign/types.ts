@@ -34,6 +34,14 @@ export type WeekdayLabel = (typeof WEEKDAY_LABELS)[number];
 
 export type ProgramScope = 'personal' | 'group';
 
+/** Open Programs on a library, create, or edit handoff (e.g. from Groups). */
+export type ProgramsLaunchIntent = {
+  scope: ProgramScope;
+  action: 'library' | 'create' | 'edit';
+  programId?: string | null;
+  hint?: string | null;
+};
+
 export type ProgramDesignRecord = {
   id: string;
   name: string;

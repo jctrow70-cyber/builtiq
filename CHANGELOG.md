@@ -11,6 +11,66 @@ Branch:
 Status:
 ```
 
+## BIQ-0191 - Groups Sends Plan Create/Edit to Programs
+
+Date: 2026-09-17  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+Groups no longer hosts a program builder. Create, generate, and edit open Programs → For [group]. Groups keeps roster, publish, assign, duplicate, and delete.
+
+### Purpose
+
+After BIQ-0190, Groups still had a second Goals → Schedule → Generate wizard, so owners still had two places to make a group plan.
+
+### Changes
+
+- Groups Programs: Create or edit in Programs; row Edit in Programs
+- Member Generate program is Create a plan in Programs, then assign from Groups
+- Programs accepts a launch handoff (library / create / edit) for that group
+- Groups wizard panel is no longer shown
+
+### Files Changed
+
+- `app/page.tsx`
+- `app/components/programDesign/ProgramDesignHome.tsx`
+- `app/components/groups/GroupsHub.tsx`
+- `app/components/groups/TeamProgramsTab.tsx`
+- `app/components/groups/TeamMemberDetail.tsx`
+- `lib/programDesign/types.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Sign in as a group owner/manager. Open Groups → Programs. There is no Generate/Create wizard on that tab.
+2. Tap Create or edit in Programs. Programs opens on For [group] with that group selected.
+3. Create a group plan in Programs. Return to Groups → Programs and assign it to a member.
+4. Tap Edit in Programs on a listed plan. Programs opens that plan’s editor.
+5. Open a member → Assigned Program → Create a plan in Programs. Programs opens create with a hint to assign after.
+6. Groups members, invite, and assign still work without opening a builder.
+7. Training still has no Program Setup.
+
+### Known Issues
+
+- The old Groups wizard code still exists in `page.tsx` (`programSetupPanel`) but is unmounted.
+- Pull in & edit labels and a mixed Following / My plans list are later slices.
+
+### Recommended Commit Message
+
+```text
+BIQ-0191 Send Groups program create and edit to Programs
+```
+
+---
+
 ## BIQ-0190 - Send Program Planning to Programs (For Me / For Group)
 
 Date: 2026-09-17  
@@ -59,12 +119,12 @@ None.
 4. If you have a group, switch to For [group] and confirm create copy names that group.
 5. Follow a plan, then open Training — the same name shows as Following / Training is using.
 6. Dashboard Set up program still opens Programs.
-7. Groups → generate/edit a group program still opens the Groups wizard (not Training setup).
+7. Groups → generate/edit a group program still opens the Groups wizard (not Training setup). *(Superseded by BIQ-0191 — those actions now open Programs.)*
 
 ### Known Issues
 
-- Groups still has its own program wizard; collapsing that into Programs is a later slice.
-- `trainingSubNav` still has a leftover `setup` value for Groups wizard compatibility.
+- Groups wizard collapsed into Programs in BIQ-0191.
+- `trainingSubNav` still has a leftover `setup` value for leftover wizard code.
 
 ### Recommended Commit Message
 

@@ -1499,6 +1499,7 @@ Category: Program Design / UX
 - The top of Programs shows **Training is using** so the followed plan is obvious.
 - Training Program Setup is removed. Entry points (Manage program, drafts, leftover generate landing) go to Programs.
 - Groups may keep a manager wizard this slice; it is not a second personal builder.
+- BIQ-0191: Groups wizard is removed. Create/edit group plans in Programs → For [group]. Groups is roster and assign.
 
 ### Reason
 
@@ -1508,11 +1509,43 @@ Users were asked the same who-is-this-for question in Training setup and Program
 
 - Keep Training setup for drafts only — rejected; two planners stay confusing
 - Drop the For me / For group filter and mix all plans — rejected; group vs personal still matters
-- Move Groups wizard into Programs in the same change — deferred; first slice is Training → Programs only
+- Move Groups wizard into Programs in the same change — deferred to BIQ-0191 / Decision 051
 
 ### Impact
 
 - BIQ-0190
+- No database migration
+
+---
+
+## Decision 051 - Groups Is Roster and Assign, Not a Planner
+
+Date: 2026-09-17  
+Status: Accepted  
+Category: Program Design / Groups
+
+### Decision
+
+**Groups** is for people: roster, roles, dates, and which member uses which plan.
+
+**Programs → For [group]** is the only place to create or edit a group plan.
+
+- Groups Programs tab lists plans for publish / assign / duplicate / delete.
+- Create, generate, and edit workouts open Programs on that group.
+- Generating a plan for one member also starts in Programs; assign them after from Groups.
+
+### Reason
+
+A second builder in Groups duplicated Programs and made “who is this for?” unclear after Training Program Setup was removed (Decision 050).
+
+### Alternatives Considered
+
+- Keep Groups generate for per-member plans — rejected; that is still a second builder
+- Delete the Groups program list entirely — rejected; managers still need assign/publish in context of the roster
+
+### Impact
+
+- BIQ-0191
 - No database migration
 
 ---

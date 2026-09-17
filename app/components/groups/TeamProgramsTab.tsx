@@ -1,18 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import type { ReactNode } from 'react';
 import type { TeamProgramRow } from '../../../lib/groups/programRoster';
 
 type TeamProgramsTabProps = {
   canManage: boolean;
   programRows: TeamProgramRow[];
-  wizardOpen: boolean;
-  wizardMemberName?: string | null;
-  teamProgramSetupPanel: ReactNode | null;
-  onOpenCreateWizard: () => void;
-  onOpenGenerateWizard: () => void;
-  onCloseWizard: () => void;
+  groupName?: string | null;
+  onOpenPrograms: () => void;
   onDuplicate: (programId: string) => void;
   onEdit: (programId: string) => void;
   onPublish: (programId: string) => void;
@@ -60,7 +55,7 @@ function ProgramRowList({
                 </button>
               )}
               <button type="button" className="btn small secondary" onClick={() => onEdit(row.id)}>
-                {row.status === 'draft' ? 'Edit' : 'Edit workouts'}
+                Edit in Programs
               </button>
               <button type="button" className="btn small secondary" onClick={() => onDuplicate(row.id)}>
                 Duplicate
@@ -94,12 +89,8 @@ function ProgramRowList({
 export default function TeamProgramsTab({
   canManage,
   programRows,
-  wizardOpen,
-  wizardMemberName = null,
-  teamProgramSetupPanel,
-  onOpenCreateWizard,
-  onOpenGenerateWizard,
-  onCloseWizard,
+  groupName = null,
+  onOpenPrograms,
   onDuplicate,
   onEdit,
   onPublish,
@@ -112,45 +103,25 @@ export default function TeamProgramsTab({
   const publishedRows = programRows.filter((row) => row.status !== 'draft');
   const draftRows = programRows.filter((row) => row.status === 'draft');
   const visibleRows = programsView === 'drafts' ? draftRows : publishedRows;
-
-  if (wizardOpen && teamProgramSetupPanel) {
-    return (
-      <div className="card team-programs-wizard">
-        <div className="topline" style={{ justifyContent: 'space-between' }}>
-          <div>
-            <h2>Team program</h2>
-            {wizardMemberName && (
-              <p className="muted" style={{ marginTop: 4 }}>
-                Generating for <b>{wizardMemberName}</b> — publish when ready to assign.
-              </p>
-            )}
-          </div>
-          <button type="button" className="btn small secondary" onClick={onCloseWizard}>
-            Back to programs
-          </button>
-        </div>
-        {teamProgramSetupPanel}
-      </div>
-    );
-  }
+  const forGroup = groupName ? `For ${groupName}` : 'For a group';
 
   return (
     <div className="card team-programs-tab">
       <div className="topline" style={{ justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
         <div>
-          <h2>{programsView === 'drafts' ? 'Draft programs' : 'Programs'}</h2>
+          <h2>{programsView === 'drafts' ? 'Draft programs' : 'Assigned programs'}</h2>
           <p className="muted">
             {programsView === 'drafts'
-              ? 'Unpublished team plans — edit workouts, then publish when ready.'
-              : 'Create, generate, and assign team training plans.'}
+              ? 'Unpublished group plans. Open Programs to edit, then publish here when ready to assign.'
+              : `Assign published plans to members. Create and edit plans in Programs → ${forGroup}.`}
           </p>
         </div>
         {canManage && (
           <div className="actions team-programs-actions">
             {programsView === 'published' ? (
               <>
-                <button type="button" className="btn small green" onClick={onOpenGenerateWizard}>
-                  Generate
+                <button type="button" className="btn small green" onClick={onOpenPrograms}>
+                  Create or edit in Programs
                 </button>
                 <button
                   type="button"
@@ -158,9 +129,6 @@ export default function TeamProgramsTab({
                   onClick={() => setProgramsView('drafts')}
                 >
                   Drafts{draftRows.length > 0 ? ` (${draftRows.length})` : ''}
-                </button>
-                <button type="button" className="btn small secondary" onClick={onOpenCreateWizard}>
-                  Create
                 </button>
               </>
             ) : (
@@ -176,11 +144,11 @@ export default function TeamProgramsTab({
         <p className="muted" style={{ marginTop: 10 }}>
           {programsView === 'drafts'
             ? canManage
-              ? 'No draft programs yet. Use Generate or Create to start a draft, then return here to edit and publish.'
+              ? 'No draft programs yet. Create a plan in Programs, then return here to publish and assign.'
               : 'No draft programs.'
             : canManage
-              ? 'No published team programs yet. Generate or create one to get started.'
-              : 'No published team programs yet.'}
+              ? 'No published group programs yet. Create a plan in Programs, then assign it here.'
+              : 'No published group programs yet.'}
         </p>
       )}
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import SectionHeader from '../ui/SectionHeader';
 import SegmentedControl from '../ui/SegmentedControl';
@@ -38,6 +38,7 @@ import type {
   ProgramDesignRecord,
   ProgramLifecycleStatus,
   ProgramScope,
+  ProgramsLaunchIntent,
 } from '../../../lib/programDesign/types';
 
 type ProgramDesignHomeProps = {
@@ -48,6 +49,8 @@ type ProgramDesignHomeProps = {
   followedProgramId?: string | null;
   onSelectTeam: (id: string) => void;
   onFollowed?: (programId: string | null, opts?: { openTraining?: boolean }) => void;
+  launch?: ProgramsLaunchIntent | null;
+  onLaunchConsumed?: () => void;
 };
 
 type View = 'home' | 'create' | 'ai-setup' | 'editor';
@@ -106,8 +109,11 @@ export default function ProgramDesignHome({
   followedProgramId = null,
   onSelectTeam,
   onFollowed,
+  launch = null,
+  onLaunchConsumed,
 }: ProgramDesignHomeProps) {
-  const [scope, setScope] = useState<ProgramScope>('personal');
+  const [scope, setScope] = useState<ProgramScope>(launch?.scope || 'personal');
+  const [handoffHint, setHandoffHint] = useState<string | null>(launch?.hint || null);
   const [programs, setPrograms] = useState<ProgramDesignRecord[]>([]);
   const [sharedPrograms, setSharedPrograms] = useState<(ProgramDesignRecord & { groupName?: string; groupRole?: string | null })[]>([]);
   const [personalPrograms, setPersonalPrograms] = useState<ProgramDesignRecord[]>([]);
@@ -121,6 +127,7 @@ export default function ProgramDesignHome({
   const [sequencingHint, setSequencingHint] = useState<string | null>(null);
   const [buildBanner, setBuildBanner] = useState<string | null>(null);
   const [liveGroupPrograms, setLiveGroupPrograms] = useState<ProgramDesignRecord[]>([]);
+  const appliedLaunchKey = useRef('');
 
   const groupId = selectedTeamId || teams[0]?.id || null;
   const activeGroup = teams.find((t) => t.id === groupId) || null;
@@ -256,9 +263,10 @@ export default function ProgramDesignHome({
           : 'Group plan'
         : 'For me';
 
-  async function beginCreate() {
+  async function beginCreate(nextScope: ProgramScope = scope) {
     setError('');
-    if (scope === 'personal' && shouldPromptUnfollowForPersonalCreate(following)) {
+    if (nextScope !== scope) setScope(nextScope);
+    if (nextScope === 'personal' && shouldPromptUnfollowForPersonalCreate(following)) {
       const groupName =
         teams.find((t) => t.id === (following as any)?.team_id)?.name ||
         sharedPrograms.find((p) => p.id === following?.source_program_id)?.groupName ||
@@ -280,7 +288,7 @@ export default function ProgramDesignHome({
       onFollowed?.(null);
     }
 
-    if (scope === 'group') {
+    if (nextScope === 'group') {
       const start = suggestedNextGroupStart(programs);
       setCreateDefaultStart(start);
       setSequencingHint(
@@ -294,6 +302,42 @@ export default function ProgramDesignHome({
     }
     setView('create');
   }
+
+  async function openProgramById(programId: string) {
+    const loaded = await fetchFullProgram(supabase, programId);
+    if (!loaded.error && loaded.data) {
+      setEditing(loaded.data as ProgramDesignRecord);
+      setView('editor');
+      return;
+    }
+    const found =
+      programs.find((p) => p.id === programId) ||
+      liveGroupPrograms.find((p) => p.id === programId) ||
+      personalPrograms.find((p) => p.id === programId) ||
+      sharedPrograms.find((p) => p.id === programId) ||
+      null;
+    if (found) {
+      setEditing(found);
+      setView('editor');
+      return;
+    }
+    setError(loaded.error || 'Could not open that program');
+  }
+
+  const launchKey = launch
+    ? `${launch.scope}:${launch.action}:${launch.programId || ''}:${launch.hint || ''}`
+    : '';
+  useEffect(() => {
+    if (!launch || loading) return;
+    if (appliedLaunchKey.current === launchKey) return;
+    appliedLaunchKey.current = launchKey;
+    const next = launch;
+    onLaunchConsumed?.();
+    setScope(next.scope);
+    if (next.hint) setHandoffHint(next.hint);
+    if (next.action === 'create') void beginCreate(next.scope);
+    else if (next.action === 'edit' && next.programId) void openProgramById(next.programId);
+  }, [launchKey, loading]);
 
   async function handleCreate(input: { name: string; startDate: string; cycleWeeks: number; inclusivePlan: boolean }) {
     setCreating(true);
@@ -437,6 +481,7 @@ export default function ProgramDesignHome({
   if (view === 'create') {
     return (
       <section className="pd-screen">
+        {handoffHint && <p className="pd-note">{handoffHint}</p>}
         <CreateProgramFlow
           scope={scope}
           groupName={activeGroup?.name}
@@ -591,6 +636,14 @@ export default function ProgramDesignHome({
       )}
 
       {error && <p className="pd-error">{error}</p>}
+      {handoffHint && (
+        <p className="pd-note">
+          {handoffHint}{' '}
+          <button type="button" className="pd-back" style={{ margin: 0 }} onClick={() => setHandoffHint(null)}>
+            Dismiss
+          </button>
+        </p>
+      )}
       {loading && <p className="muted">Loading programs…</p>}
       {followBusy && <p className="muted">Updating the program you follow…</p>}
 

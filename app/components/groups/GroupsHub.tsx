@@ -255,11 +255,6 @@ export default function GroupsHub(props: GroupsHubProps) {
     onWorkspaceTabChange?.(tab);
   };
 
-  const memberInlineWizardOpen =
-    !!memberProgramWizardUserId &&
-    memberDashboard?.user_id === memberProgramWizardUserId &&
-    (groupsProgramWizardOpen || (!!memberProgramDraftEditId && memberProgramDraftEditId.length > 0));
-
   const renderWorkspaceContent = () => {
     if (workspaceTab === 'members') {
       if (memberWorkoutPanel) return memberWorkoutPanel;
@@ -285,11 +280,7 @@ export default function GroupsHub(props: GroupsHubProps) {
             onOpenWorkout={() => onOpenMemberWorkout(memberDashboard)}
             onApplyAssignment={onApplyAssignment}
             onCustomizeProgram={(sourceId) => onCustomizeProgramForMember(memberDashboard.user_id, sourceId)}
-            onGenerateForMember={() => onGenerateProgramForMember(memberDashboard.user_id)}
-            programWizardOpen={memberInlineWizardOpen}
-            programWizardPanel={memberInlineWizardOpen ? teamProgramSetupPanel : null}
-            memberDraftEditing={!!memberProgramDraftEditId && memberProgramDraftEditId.length > 0}
-            onCloseProgramWizard={onCloseGroupsProgramWizard}
+            onOpenProgramsToCreate={() => onGenerateProgramForMember(memberDashboard.user_id)}
             sectionExercises={sectionExercises}
             statusLabel={statusLabel}
             assignmentCompliance={memberPerformance?.assignmentCompliance}
@@ -361,11 +352,8 @@ export default function GroupsHub(props: GroupsHubProps) {
         <TeamProgramsTab
           canManage={canManage}
           programRows={programRows}
-          wizardOpen={groupsProgramWizardOpen && !memberProgramWizardUserId}
-          teamProgramSetupPanel={teamProgramSetupPanel}
-          onOpenCreateWizard={() => onOpenGroupsProgramWizard('create')}
-          onOpenGenerateWizard={() => onOpenGroupsProgramWizard('generate')}
-          onCloseWizard={onCloseGroupsProgramWizard}
+          groupName={activeTeam?.name}
+          onOpenPrograms={() => onOpenGroupsProgramWizard('create')}
           onDuplicate={(id) => onDuplicateProgram(id)}
           onEdit={onEditTeamProgram}
           onPublish={onPublishTeamProgram}
