@@ -1,6 +1,6 @@
 'use client';
 
-import { RefObject, useRef } from 'react';
+import { RefObject, useEffect, useRef } from 'react';
 import {
   formatMacroLine,
   MEAL_TYPE_LABELS,
@@ -163,6 +163,49 @@ export default function NutritionAddFoodPanel(props: NutritionAddFoodPanelProps)
 
   const labelInputRef = useRef<HTMLInputElement>(null);
   const mealPhotoInputRef = useRef<HTMLInputElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const findFoodResultsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (view !== 'find_food') return;
+    const root = document.documentElement;
+    const apply = () => {
+      const vv = window.visualViewport;
+      if (!vv) {
+        root.style.setProperty('--keyboard-inset', '0px');
+        return;
+      }
+      const inset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      root.style.setProperty('--keyboard-inset', `${Math.round(inset)}px`);
+    };
+    apply();
+    window.visualViewport?.addEventListener('resize', apply);
+    window.visualViewport?.addEventListener('scroll', apply);
+    window.addEventListener('resize', apply);
+    return () => {
+      window.visualViewport?.removeEventListener('resize', apply);
+      window.visualViewport?.removeEventListener('scroll', apply);
+      window.removeEventListener('resize', apply);
+      root.style.setProperty('--keyboard-inset', '0px');
+    };
+  }, [view]);
+
+  useEffect(() => {
+    if (view !== 'find_food') return;
+    const results = findFoodResultsRef.current;
+    if (!results) return;
+    const id = window.setTimeout(() => {
+      results.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }, 50);
+    return () => window.clearTimeout(id);
+  }, [view, estimateSearch, findFoodResults.length, estimateCatalogMatches.length]);
+
+  const keepFindFoodVisible = () => {
+    const search = searchInputRef.current?.closest('.nutrition-find-food-search');
+    window.setTimeout(() => {
+      search?.scrollIntoView({ block: 'start', inline: 'nearest' });
+    }, 250);
+  };
 
   const startBarcode = () => {
     onViewChange('barcode');
@@ -371,16 +414,25 @@ export default function NutritionAddFoodPanel(props: NutritionAddFoodPanelProps)
       )}
 
       {view === 'find_food' && (
-        <div className="nutrition-add-view">
-          <label htmlFor="estimate-search">Search saved foods and meal templates</label>
-          <input
-            id="estimate-search"
-            value={estimateSearch}
-            onChange={(e) => onEstimateSearchChange(e.target.value)}
-            placeholder="Search my foods, recent items, or saved meals…"
-            autoFocus
-          />
+        <div className="nutrition-add-view nutrition-find-food">
+          <div className="nutrition-find-food-search">
+            <label htmlFor="estimate-search">Search saved foods and meal templates</label>
+            <input
+              ref={searchInputRef}
+              id="estimate-search"
+              value={estimateSearch}
+              onChange={(e) => onEstimateSearchChange(e.target.value)}
+              onFocus={keepFindFoodVisible}
+              placeholder="Search my foods, recent items, or saved meals…"
+              inputMode="search"
+              enterKeyHint="search"
+              autoComplete="off"
+              autoCorrect="off"
+              autoFocus
+            />
+          </div>
 
+          <div className="nutrition-find-food-results" ref={findFoodResultsRef}>
           {addFoodLibraryLoading && !findFoodResults.length && (
             <p className="muted">Loading saved foods and meal templates…</p>
           )}
@@ -462,6 +514,7 @@ export default function NutritionAddFoodPanel(props: NutritionAddFoodPanelProps)
           {!estimateSearch.trim() && !findFoodResults.length && !addFoodLibraryLoading && (
             <p className="muted">Save foods to My foods or create meal templates to find them here quickly.</p>
           )}
+          </div>
         </div>
       )}
 

@@ -253,7 +253,7 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
  .team-member-chip{border:1px solid var(--line);background:#0b1119;color:#e5e7eb;border-radius:999px;padding:6px 10px;font-size:11px;font-weight:800}
  .team-member-chip.active{border-color:var(--purple);background:#1b1634}
  .section-add-row{margin:8px 0 4px}
- .panel-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:50;display:flex;align-items:flex-end;justify-content:center;padding:12px}
+ .panel-overlay{position:fixed;inset:0;bottom:var(--keyboard-inset,0px);background:rgba(0,0,0,.55);z-index:50;display:flex;align-items:flex-end;justify-content:center;padding:12px}
  .add-exercise-panel{width:100%;max-width:520px;max-height:85vh;overflow:auto;margin:0}
  .panel-results{position:static;max-height:min(50vh,360px);margin-top:8px;box-shadow:none}
  .catalog-search-input{width:100%}
@@ -598,6 +598,11 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .nutrition-label-upload{display:block;margin-top:10px;font-weight:600}
 .nutrition-scan-picker input[type=file]{margin-top:6px;font-size:13px;max-width:100%}
 .nutrition-add-panel{width:100%;max-width:560px;max-height:90vh;overflow:auto;margin:0}
+.nutrition-find-food{display:flex;flex-direction:column;min-height:0;flex:1}
+.nutrition-find-food-search{position:sticky;top:0;z-index:3;background:var(--surfaceElevated);padding:0 0 10px}
+.nutrition-find-food-results{min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}
+.nutrition-find-food-results .catalog-results{max-height:none;overflow:visible}
+.nutrition-add-card--search{display:flex;flex-direction:column;min-height:0}
 .nutrition-my-foods-panel{width:100%;max-width:560px;max-height:90vh;overflow:auto;margin:0}
 .nutrition-quick-add-picker{margin-bottom:10px}
 .nutrition-manual-entry{scroll-margin-top:8px}
@@ -628,6 +633,26 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 @media(display-mode:standalone){.install-app-banner{display:none}}
  @media(max-width:900px){.add-exercise-row{grid-template-columns:1fr auto auto}.catalog-edit-grid{grid-template-columns:1fr}.catalog-search-filters{grid-template-columns:1fr}.setgrid,.setgrid-edit{grid-template-columns:1fr 1fr 1fr}.exercise-add-row{grid-template-columns:1fr auto auto}.team-compliance-card .dash-metrics{grid-template-columns:1fr 1fr}.progress-trend-chart{grid-template-columns:repeat(4,minmax(0,1fr))}.progress-summary-metrics{grid-template-columns:1fr 1fr}.panel-overlay{align-items:flex-end;padding:0}.add-exercise-panel,.nutrition-add-panel,.nutrition-my-foods-panel,.exercise-history-panel{border-radius:18px 18px 0 0;max-height:90vh}.log-field-row:not(.log-field-row-compact){grid-template-columns:1fr}.log-dup-btn,.set-done-check{min-height:44px}.nutrition-totals-grid,.nutrition-date-row,.nutrition-weekly-metrics{grid-template-columns:1fr 1fr}.nutrition-date-row{margin:4px 0}.nutrition-date-row input{grid-column:span 2}.nutrition-macro-ring-wrap{max-width:118px}.nutrition-weekly-chart{grid-template-columns:repeat(4,minmax(0,1fr))}}
  @media(max-width:600px){.nutrition-totals-grid,.nutrition-date-row{grid-template-columns:1fr}.nutrition-food-chip,.nutrition-entry-row{grid-template-columns:1fr}}
+@media(max-width:900px){
+  .nutrition-add-panel.nutrition-add-card--search{
+    max-height:100%;
+    height:min(92dvh,100%);
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+    overflow:hidden;
+  }
+  .nutrition-add-card--search .nutrition-find-food{
+    flex:1;
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+  }
+  .nutrition-find-food-results{
+    flex:1;
+    min-height:120px;
+  }
+}
 
 /* BIQ-0060 — Design system v2 (Training prototype) */
 .brand span{color:var(--accent)}

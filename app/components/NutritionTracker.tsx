@@ -1645,7 +1645,7 @@ export default function NutritionTracker({
       {showAdd && (
         <div className="panel-overlay" onClick={closeAddFood}>
           <div
-            className="nutrition-add-panel card nutrition-add-card"
+            className={`nutrition-add-panel card nutrition-add-card${addFoodView === 'find_food' ? ' nutrition-add-card--search' : ''}`}
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"

@@ -11,6 +11,57 @@ Branch:
 Status:
 ```
 
+## BIQ-0189 - Keep Find Food Results Above the Keyboard
+
+Date: 2026-09-16  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+On Nutrition → Add food → Find food, search matches stay in a scrollable list above the on-screen keyboard instead of dropping to the bottom of the sheet and hiding behind it.
+
+### Purpose
+
+Typing a food name opened the keyboard and covered the narrowed results, so users could not tap a match.
+
+### Changes
+
+- Find food sheet shrinks with the visual viewport when the keyboard is open
+- Search field stays at the top; results scroll in the remaining space
+- Viewport `interactive-widget=resizes-content` so supporting browsers resize the layout
+
+### Files Changed
+
+- `app/components/nutrition/NutritionAddFoodPanel.tsx`
+- `app/components/NutritionTracker.tsx`
+- `app/layout.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. On a phone (or DevTools mobile + virtual keyboard), Nutrition → Add food → Find food.
+2. Tap the search field so the keyboard opens.
+3. Type until matches appear. The list should stay visible above the keyboard.
+4. Scroll the list and tap a food to add it.
+
+### Known Issues
+
+- iOS may still briefly jump while the keyboard animates; the list should settle above it.
+
+### Recommended Commit Message
+
+```text
+BIQ-0189 Keep Find food search results above the keyboard
+```
+
+---
+
 ## BIQ-0188 - Keep Thursday Workout After Training Exercise Edits
 
 Date: 2026-09-16  
