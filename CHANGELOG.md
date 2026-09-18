@@ -11,6 +11,53 @@ Branch:
 Status:
 ```
 
+## BIQ-0199 - Fix Bug Report aiGenError Type Error
+
+Date: 2026-09-17  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+Removed a leftover `aiGenError` reference in the Report a bug panel after Program Setup generate state was deleted. That name failed `next build` typecheck on Vercel.
+
+### Purpose
+
+Vercel `main` build failed: `Cannot find name 'aiGenError'` in `app/page.tsx`.
+
+### Changes
+
+- Bug report context line no longer mentions a last AI generate error
+- `submitBugReport` already omitted `aiGenError`; the panel JSX was the leftover
+
+### Files Changed
+
+- `app/page.tsx`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. `npm run build` typecheck should pass (no `aiGenError`).
+2. Open Report a bug, confirm context still shows current nav.
+3. Send a bug report while signed in.
+
+### Known Issues
+
+- Vercel deploys `main`. This fix needs to reach `main` to unblock that deploy.
+- Browser verification was not run here.
+
+### Recommended Commit Message
+
+```text
+BIQ-0199 Remove leftover aiGenError from bug report panel
+```
+
+---
+
 ## BIQ-0198 - Exercise Catalog Download for Overhaul
 
 Date: 2026-09-17  
