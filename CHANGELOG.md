@@ -11,6 +11,61 @@ Branch:
 Status:
 ```
 
+## BIQ-0200 - Dashboard Today’s Workout Honors Day Moves
+
+Date: 2026-09-18  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+Dashboard **Today’s Workout** now uses the same personal workout-day overlay as Training. Moving a session to Saturday no longer leaves the original weekday on the dashboard.
+
+### Purpose
+
+BIQ-0182 stored moves in the calendar ledger and Training respected them, but the dashboard matched `st_workouts` by week + native `day_label` and only loaded that ledger on the Training tab.
+
+### Changes
+
+- Dashboard fetches the user calendar (including the 1970-01-01 move ledger)
+- Today’s Workout uses `workoutAppearsOnDate` so a moved-away day shows empty and a moved-in day shows that workout
+- Today’s Workout prefers the same followed Training program the move was saved on
+- Title shows `moved from {original day}` when the session is not on its template weekday
+- Today logs reload after the move ledger loads
+
+### Files Changed
+
+- `app/page.tsx`
+- `scripts/test-workout-day-moves.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. On Training, move today’s workout to Saturday.
+2. Open Dashboard: Today’s Workout should not still list the original weekday session.
+3. On Saturday, Dashboard should show that moved workout (with “moved from …” in the title).
+4. Open Training on the original day: it should stay empty for that moved session.
+5. `npx tsx scripts/test-workout-day-moves.ts`
+
+### Known Issues
+
+- Groups member dashboard still matches template weekdays (other members’ personal moves are not loaded there).
+- Browser verification of the live dashboard card was not completed in this change.
+
+### Recommended Commit Message
+
+```text
+BIQ-0200 Honor personal workout-day moves on Dashboard Today’s Workout
+```
+
+---
+
 ## BIQ-0199 - Fix Bug Report aiGenError Type Error
 
 Date: 2026-09-17  

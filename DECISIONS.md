@@ -1481,6 +1481,7 @@ The live group template (Decision 041) must stay stable. A one-week life conflic
 
 - Training **Move** on day items
 - `saveWorkoutDayMove` / `applyWorkoutDayMoves`
+- Dashboard **Today’s Workout** uses the same overlay (BIQ-0200), not the template weekday
 - No database migration
 
 ---

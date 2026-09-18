@@ -8,6 +8,7 @@ import {
   detailsWithWorkoutDayMove,
   moveKeyForActivity,
   nativeDateForActivity,
+  workoutAppearsOnDate,
   workoutDayMovesFromDetails,
 } from '../lib/programDesign/workoutDayMoves';
 import { applyWorkoutDayMoves, mergeProgramActivities, planForDate } from '../lib/programDesign/trainingSchedule';
@@ -73,6 +74,10 @@ assert.equal(thu.items.some((i) => i.workoutId === 'w-wed'), true);
 assert.equal(thu.items.find((i) => i.workoutId === 'w-wed')?.movedFrom, '2026-09-16');
 assert.equal(friNative.items.some((i) => i.workoutId === 'w-fri'), false);
 assert.equal(sat.items.some((i) => i.workoutId === 'w-fri'), true);
+
+const movedFriWorkout = { id: 'w-fri', week: 1, day_label: 'Fri' };
+assert.equal(workoutAppearsOnDate(program, movedFriWorkout, '2026-09-18', moves), false);
+assert.equal(workoutAppearsOnDate(program, movedFriWorkout, '2026-09-19', moves), true);
 
 details = detailsWithWorkoutDayMove(details, 'w:w-wed', '2026-09-16');
 assert.equal(workoutDayMovesFromDetails(details)['w:w-wed'], '2026-09-16');
