@@ -17,6 +17,7 @@ import {
   isLiveGroupProgram,
   isPersonalizedGroupFollow,
   liveTemplateId,
+  personalLibraryBuckets,
   programEditAudience,
   shouldPromptUnfollowForPersonalCreate,
   suggestedNextGroupStart,
@@ -244,10 +245,7 @@ export default function ProgramDesignHome({
     void reload();
   }, [scope, groupId, userId, followedProgramId, teams.length]);
 
-  const grouped = useMemo(
-    () => groupProgramsByLifecycle(programs.filter((p) => !isGroupEnrollmentMarker(p))),
-    [programs]
-  );
+  const personalBuckets = useMemo(() => personalLibraryBuckets(programs), [programs]);
   const following =
     liveGroupPrograms.find((p) => p.id === followedProgramId) ||
     personalPrograms.find((p) => p.id === followedProgramId) ||
@@ -485,6 +483,67 @@ export default function ProgramDesignHome({
     alert('Shared with the group. Members are enrolled automatically when the plan is active; editors can use it in Training.');
   }
 
+  function openRow(program: ProgramDesignRecord) {
+    setEditing(program);
+    setView('editor');
+  }
+
+  function renderProgramRows(
+    rows: ProgramDesignRecord[],
+    opts?: {
+      extra?: (program: ProgramDesignRecord) => string | undefined;
+      badge?: (program: ProgramDesignRecord) => string | undefined;
+      offerFollow?: boolean;
+    }
+  ) {
+    return rows
+      .filter((program) => program.id !== following?.id)
+      .map((program) => (
+        <ProgramRow
+          key={program.id}
+          program={program}
+          extra={opts?.extra?.(program)}
+          badge={opts?.badge?.(program)}
+          onOpen={() => openRow(program)}
+          onFollow={
+            opts?.offerFollow && offerUseInTraining(program, followedProgramId)
+              ? () => void handleFollow(program)
+              : undefined
+          }
+        />
+      ));
+  }
+
+  function renderLifecycleBlocks(
+    source: ProgramDesignRecord[],
+    opts?: {
+      extra?: (program: ProgramDesignRecord) => string | undefined;
+      offerFollow?: boolean;
+      scheduledHint?: string | null;
+    }
+  ) {
+    const buckets = groupProgramsByLifecycle(source);
+    return LIST_SECTIONS.map((section) => {
+      const rows = buckets[section].filter((p) => p.id !== following?.id);
+      if (!rows.length) return null;
+      return (
+        <div key={section} className="pd-section">
+          <h2>
+            {section === 'draft'
+              ? 'Draft programs'
+              : section === 'scheduled'
+                ? 'Scheduled programs'
+                : section === 'completed'
+                  ? 'Completed programs'
+                  : 'Archived programs'}
+          </h2>
+          {section === 'scheduled' && opts?.scheduledHint ? <p className="muted">{opts.scheduledHint}</p> : null}
+          {renderProgramRows(rows, { extra: opts?.extra, offerFollow: opts?.offerFollow })}
+        </div>
+      );
+    });
+  }
+
   if (view === 'create') {
     return (
       <section className="pd-screen">
@@ -695,10 +754,7 @@ export default function ProgramDesignHome({
                     program={program}
                     extra={`${program.groupName || 'Group'}${program.groupRole ? ` · ${roleLabel(program.groupRole)}` : ''}`}
                     badge={optIn ? 'Available' : 'Shared'}
-                    onOpen={() => {
-                      setEditing(program);
-                      setView('editor');
-                    }}
+                    onOpen={() => openRow(program)}
                     onFollow={
                       offerUseInTraining(program, followedProgramId)
                         ? () => void handleFollow(program)
@@ -710,49 +766,47 @@ export default function ProgramDesignHome({
             </div>
           )}
 
-          {LIST_SECTIONS.map((section) => {
-            const rows = grouped[section].filter((p) => p.id !== following?.id);
-            if (!rows.length) return null;
-            return (
-              <div key={section} className="pd-section">
-                <h2>
-                  {section === 'draft'
-                    ? 'Draft programs'
-                    : section === 'scheduled'
-                      ? 'Scheduled programs'
-                      : section === 'completed'
-                        ? 'Completed programs'
-                        : 'Archived programs'}
-                </h2>
-                {section === 'scheduled' && scope === 'group' && isGroupOwner(groupRole) && (
-                  <p className="muted">
-                    Stack plans by start and end dates. When one ends, the next scheduled plan picks up for members.
-                  </p>
-                )}
-                {rows.map((program) => (
-                  <ProgramRow
-                    key={program.id}
-                    program={program}
-                    extra={
-                      program.source_program_id
-                        ? 'Personal snapshot — Training uses the live group plan'
-                        : undefined
-                    }
-                    onOpen={() => {
-                      setEditing(program);
-                      setView('editor');
-                    }}
-                    onFollow={
-                      (scope === 'personal' || editorOptIn) &&
-                      offerUseInTraining(program, followedProgramId)
-                        ? () => void handleFollow(program)
-                        : undefined
-                    }
-                  />
-                ))}
-              </div>
-            );
-          })}
+          {scope === 'personal' && personalBuckets.myPlans.filter((p) => p.id !== following?.id).length > 0 && (
+            <div className="pd-section">
+              <h2>My plans</h2>
+              <p className="muted">Programs you created for yourself.</p>
+              {renderLifecycleBlocks(personalBuckets.myPlans, { offerFollow: true })}
+            </div>
+          )}
+
+          {scope === 'personal' && personalBuckets.justMeCopies.filter((p) => p.id !== following?.id).length > 0 && (
+            <div className="pd-section">
+              <h2>Just me copies</h2>
+              <p className="muted">Private copies of a group plan. The group plan is unchanged.</p>
+              {renderProgramRows(personalBuckets.justMeCopies, {
+                extra: () => 'Just me · group plan unchanged',
+                offerFollow: true,
+              })}
+            </div>
+          )}
+
+          {scope === 'personal' && personalBuckets.leftoverCopies.filter((p) => p.id !== following?.id).length > 0 && (
+            <div className="pd-section">
+              <h2>Older group copies</h2>
+              <p className="muted">
+                Leftover snapshots from before Just me. Training uses the live group plan unless you already made a Just me copy.
+              </p>
+              {renderProgramRows(personalBuckets.leftoverCopies, {
+                extra: () => 'Personal snapshot — Training uses the live group plan',
+                offerFollow: false,
+              })}
+            </div>
+          )}
+
+          {scope === 'group' &&
+            renderLifecycleBlocks(programs.filter((p) => !isGroupEnrollmentMarker(p)), {
+              offerFollow: editorOptIn,
+              extra: (program) =>
+                program.source_program_id ? 'Personal snapshot — Training uses the live group plan' : undefined,
+              scheduledHint: isGroupOwner(groupRole)
+                ? 'Stack plans by start and end dates. When one ends, the next scheduled plan picks up for members.'
+                : null,
+            })}
 
           {scope === 'group' &&
             programs
@@ -764,10 +818,7 @@ export default function ProgramDesignHome({
                   program={program}
                   extra={activeGroup?.name}
                   badge={memberAutoEnroll ? 'Active for members' : 'Available'}
-                  onOpen={() => {
-                    setEditing(program);
-                    setView('editor');
-                  }}
+                  onOpen={() => openRow(program)}
                   onFollow={
                     editorOptIn && offerUseInTraining(program, followedProgramId)
                       ? () => void handleFollow(program)

@@ -13,6 +13,7 @@ import {
   INTAKE_PRIORITY_AREAS,
   INTAKE_SPLITS,
   defaultProgramIntake,
+  dayAddonLabel,
   experienceLabel,
   generateBodyFromIntake,
   goalLabel,
@@ -22,6 +23,7 @@ import {
   supersetLabel,
   trainingProfilePayload,
   varietyLabel,
+  type IntakeDayAddon,
   type IntakeExperience,
   type IntakeFeel,
   type IntakeLimitation,
@@ -240,6 +242,8 @@ export default function AIProgramSetupWizard({
       { label: 'Exercise variety', value: varietyLabel(intake.varietyPreference) },
       { label: 'Equipment', value: intake.equipment.includes('full_gym') || !intake.equipment.length ? 'Full gym' : intake.equipment.join(', ') },
       { label: 'Priorities', value: intake.priorityAreas.length ? intake.priorityAreas.join(', ') : 'No special priority' },
+      { label: 'Cardio day', value: dayAddonLabel(intake.includeCardioDay) },
+      { label: 'Mobility day', value: dayAddonLabel(intake.includeMobilityDay) },
     ],
     [intake, daysCount, weeks]
   );
@@ -294,6 +298,24 @@ export default function AIProgramSetupWizard({
             {SCHEDULE_DAY_LABELS.map((day) => (
               <Chip key={day} active={intake.preferredDays.includes(day)} onClick={() => toggleDay(day)}>
                 {day}
+              </Chip>
+            ))}
+          </div>
+          <h2 className="ai-wiz-sub">Dedicated cardio day?</h2>
+          <p className="muted ai-wiz-lead">Adds a conditioning day on a free weekday when possible. Lift days stay lift days.</p>
+          <div className="pd-cycle-grid">
+            {(['yes', 'no', 'ai_decide'] as IntakeDayAddon[]).map((id) => (
+              <Chip key={`cardio-${id}`} active={intake.includeCardioDay === id} onClick={() => patch({ includeCardioDay: id })}>
+                {dayAddonLabel(id)}
+              </Chip>
+            ))}
+          </div>
+          <h2 className="ai-wiz-sub">Dedicated mobility / recovery day?</h2>
+          <p className="muted ai-wiz-lead">Adds a stretch and movement-quality day. Not a lift day.</p>
+          <div className="pd-cycle-grid">
+            {(['yes', 'no', 'ai_decide'] as IntakeDayAddon[]).map((id) => (
+              <Chip key={`mobility-${id}`} active={intake.includeMobilityDay === id} onClick={() => patch({ includeMobilityDay: id })}>
+                {dayAddonLabel(id)}
               </Chip>
             ))}
           </div>

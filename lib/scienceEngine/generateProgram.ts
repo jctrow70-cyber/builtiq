@@ -9,7 +9,7 @@ import { prescribeExercise } from './prescription';
 import { generateWarmup } from './warmup';
 import { generatePotentiation } from './potentiation';
 import { benchRampExample, generateRampSets, isPrimaryLift } from './rampUp';
-import { maxStrengthMoves, trimForDuration } from './duration';
+import { maxStrengthMoves, trimForDuration, estimateWorkoutMinutes } from './duration';
 import { validateProgram } from './validator';
 import type {
   CatalogExercise,
@@ -165,6 +165,7 @@ function slotsForDay(type: SplitDay['workoutType'], variantIndex: number): DaySl
       { muscle: 'forearms', role: 'isolation', preferred: ['Wrist Curl', 'Hammer Curl'] },
     ];
   }
+  if (type === 'Cardio' || type === 'Mobility') return [];
   return [
     { muscle: 'quads', role: 'primary', pattern: 'squat', preferred: ['Back Squat', 'Goblet Squat'] },
     { muscle: 'chest', role: 'primary', pattern: 'horizontal_push', preferred: ['Barbell Bench Press', 'Bench Press'], preferPressRange: true },
@@ -262,6 +263,16 @@ function buildWorkout(opts: {
   alreadyThisWeek?: string[];
 }): ScienceWorkout {
   const { profile, catalog, day, index, split } = opts;
+  if (day.workoutType === 'Cardio' || day.workoutType === 'Mobility') {
+    return buildAddonWorkout({
+      profile,
+      catalog,
+      day,
+      index,
+      split,
+      kind: day.workoutType === 'Cardio' ? 'cardio' : 'mobility',
+    });
+  }
   const name = splitDayName(day.workoutType, index, split.map((d) => d.workoutType));
   const already: string[] = [...(opts.alreadyThisWeek || [])];
   const sessionNames: string[] = [];
@@ -611,6 +622,13 @@ function workingLoadFor(profile: TrainingProfile, name: string): number | undefi
 }
 
 function defaultCooldown(type: SplitDay['workoutType']) {
+  if (type === 'Cardio') {
+    return [
+      { name: 'Easy Walk', category: 'mobility' as const, reps: '3-5 min', sets: 1, muscleGroup: 'quads' },
+      { name: 'Hip Flexor Stretch', category: 'mobility' as const, reps: '30 sec/side', sets: 1, muscleGroup: 'hip_flexors' },
+    ];
+  }
+  if (type === 'Mobility') return [];
   if (type === 'Lower Body' || type === 'Legs') {
     return [
       { name: 'Hip Flexor Stretch', category: 'mobility' as const, reps: '30 sec/side', sets: 1, muscleGroup: 'hip_flexors' },
@@ -624,6 +642,8 @@ function defaultCooldown(type: SplitDay['workoutType']) {
 }
 
 function sessionEmphasis(type: SplitDay['workoutType'], variantIndex: number): string {
+  if (type === 'Cardio') return 'Conditioning — steady or interval work, not a lift day.';
+  if (type === 'Mobility') return 'Recovery and movement quality — stretches and easy range work.';
   if (type === 'Full Body') {
     return (
       [
@@ -648,6 +668,134 @@ function sessionEmphasis(type: SplitDay['workoutType'], variantIndex: number): s
 function programName(profile: TrainingProfile): string {
   const goal = profile.primaryGoal.replace(/_/g, ' ');
   return `${profile.trainingDaysPerWeek}-Day ${goal} program`;
+}
+
+const CARDIO_FALLBACK = [
+  { name: 'Jump Rope', muscle: 'calves' as const },
+  { name: 'Stationary Bike', muscle: 'quads' as const },
+  { name: 'Rowing Machine', muscle: 'lats' as const },
+  { name: 'Treadmill Walk', muscle: 'quads' as const },
+  { name: 'Elliptical', muscle: 'quads' as const },
+  { name: 'Mountain Climber', muscle: 'abs' as const },
+];
+
+const MOBILITY_FALLBACK = [
+  { name: 'Cat Cow', muscle: 'upper_back' as const },
+  { name: 'Worlds Greatest Stretch', muscle: 'hip_flexors' as const },
+  { name: 'Hip Flexor Stretch', muscle: 'hip_flexors' as const },
+  { name: 'Pigeon Stretch', muscle: 'glutes' as const },
+  { name: 'Thoracic Rotation', muscle: 'upper_back' as const },
+  { name: 'Hamstring Stretch', muscle: 'hamstrings' as const },
+  { name: 'Figure Four Stretch', muscle: 'glutes' as const },
+  { name: 'Doorway Stretch', muscle: 'chest' as const },
+];
+
+function catalogMatchesAddon(ex: CatalogExercise, kind: 'cardio' | 'mobility'): boolean {
+  const rawType = String(ex.raw?.exercise_type || '').toLowerCase();
+  const name = ex.name.toLowerCase();
+  if (kind === 'cardio') {
+    return rawType === 'cardio' || /bike|row|run|jog|jump rope|elliptical|stair|treadmill|climber|burpee|mountain climber|assault/.test(name);
+  }
+  return (
+    ex.warmupSuitable ||
+    rawType === 'mobility' ||
+    /stretch|mobility|pigeon|cat cow|foam|rotation|inchworm|world'?s?\s*greatest/.test(name)
+  );
+}
+
+function buildAddonWorkout(opts: {
+  profile: TrainingProfile;
+  catalog: CatalogExercise[];
+  day: SplitDay;
+  index: number;
+  split: SplitDay[];
+  kind: 'cardio' | 'mobility';
+}): ScienceWorkout {
+  const { profile, catalog, day, index, split, kind } = opts;
+  const name = splitDayName(day.workoutType, index, split.map((d) => d.workoutType));
+  const fallback = kind === 'cardio' ? CARDIO_FALLBACK : MOBILITY_FALLBACK;
+  const wanted = kind === 'cardio' ? 5 : 7;
+  const picked: CatalogExercise[] = [];
+  const used = new Set<string>();
+  catalog.forEach((ex) => {
+    if (picked.length >= wanted) return;
+    if (!catalogMatchesAddon(ex, kind)) return;
+    const key = ex.name.toLowerCase();
+    if (used.has(key)) return;
+    used.add(key);
+    picked.push(ex);
+  });
+  fallback.forEach((row) => {
+    if (picked.length >= wanted) return;
+    if (used.has(row.name.toLowerCase())) return;
+    const hit = findByName(catalog, row.name);
+    used.add(row.name.toLowerCase());
+    picked.push(
+      hit || {
+        name: row.name,
+        movementPattern: kind === 'cardio' ? 'other' : 'rotation',
+        exerciseType: 'isolation',
+        programRoles: kind === 'cardio' ? ['conditioning'] : ['warmup'],
+        equipment: ['bodyweight'],
+        primaryMuscles: [row.muscle],
+        secondaryMuscles: [],
+        stabilityRequirement: 'low',
+        fatigueCost: 'low',
+        skillRequirement: 'low',
+        suitableForBeginner: true,
+        unilateral: false,
+        defaultRepMin: kind === 'cardio' ? 12 : 1,
+        defaultRepMax: kind === 'cardio' ? 20 : 1,
+        warmupSuitable: kind === 'mobility',
+        planes: ['sagittal'],
+        warmupFatigue: 'low',
+        impactLevel: 'low',
+      } as CatalogExercise
+    );
+  });
+
+  const exercises: ExercisePrescription[] = picked.slice(0, wanted).map((ex) =>
+    prescribeExercise({
+      exercise: ex,
+      role: kind === 'cardio' ? 'conditioning' : 'warmup',
+      profile,
+      sets: kind === 'cardio' ? 3 : 1,
+      why: kind === 'cardio' ? 'Conditioning work for this dedicated cardio day.' : 'Mobility and recovery for this dedicated recovery day.',
+    })
+  );
+
+  const warmup =
+    kind === 'cardio'
+      ? [
+          { name: 'Easy March in Place', category: 'raise' as const, reps: '60 sec', sets: 1, muscleGroup: 'quads' },
+          { name: 'Arm Circles', category: 'mobility' as const, reps: '10/side', sets: 1, muscleGroup: 'front_delts' },
+          { name: 'Bodyweight Squat', category: 'activation' as const, reps: '8', sets: 1, muscleGroup: 'quads' },
+        ]
+      : [
+          { name: 'Easy Walk', category: 'raise' as const, reps: '2 min', sets: 1, muscleGroup: 'quads' },
+          { name: 'Cat Cow', category: 'mobility' as const, reps: '6', sets: 1, muscleGroup: 'upper_back' },
+          { name: 'Open Books', category: 'mobility' as const, reps: '5/side', sets: 1, muscleGroup: 'upper_back' },
+        ];
+
+  const built: ScienceWorkout = {
+    week: 1,
+    dayLabel: day.dayLabel,
+    workoutType: day.workoutType,
+    name,
+    emphasis: sessionEmphasis(day.workoutType, 0),
+    warmup,
+    potentiation: [],
+    rampSets: [],
+    exercises,
+    cooldown: defaultCooldown(day.workoutType),
+    estimatedMinutes: estimateWorkoutMinutes({
+      warmupItems: warmup,
+      potentiation: [],
+      rampCount: 0,
+      exercises,
+    }),
+  };
+  return built;
 }
 
 function buildSummary(profile: TrainingProfile, split: SplitDay[], volume: VolumeTarget[]): string {

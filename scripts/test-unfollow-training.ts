@@ -10,7 +10,7 @@ import {
   syncMemberGroupEnrollment,
   unfollowProgram,
 } from '../lib/programDesign/followProgram';
-import { isGroupEnrollmentMarker, liveTemplateId } from '../lib/programDesign/enrollment';
+import { isGroupEnrollmentMarker, liveTemplateId, personalLibraryBuckets } from '../lib/programDesign/enrollment';
 import type { ProgramDesignRecord } from '../lib/programDesign/types';
 
 function prog(partial: Partial<ProgramDesignRecord> & { id: string; name: string }): ProgramDesignRecord {
@@ -58,6 +58,18 @@ const purePersonal = prog({
   visibility: 'personal',
   source_program_id: null,
 });
+
+const justMeCopy = prog({
+  id: 'just-me-1',
+  name: 'Group Plan (just me)',
+  visibility: 'personal',
+  source_program_id: 'group-active',
+});
+
+const buckets = personalLibraryBuckets([purePersonal, justMeCopy, personalCopy, unfollowMarker]);
+assert.equal(buckets.myPlans.map((p) => p.id).join(','), 'personal-1');
+assert.equal(buckets.justMeCopies.map((p) => p.id).join(','), 'just-me-1');
+assert.equal(buckets.leftoverCopies.map((p) => p.id).join(','), 'copy-1');
 
 assert.equal(liveTemplateId(groupActive), 'group-active');
 assert.equal(liveTemplateId(personalCopy), 'group-active');

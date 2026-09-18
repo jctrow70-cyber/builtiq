@@ -508,6 +508,28 @@ function run() {
   ]);
   assert(recent[0]?.name === 'Back Squat' && recent[0].sessions === 2 && recent[0].best_weight === '190', 'Recent training summary should roll up logged lifts');
 
+  const cardioProfile = trainingProfileFromSources({
+    profile: { experience_level: 'intermediate', primary_goal: 'fat_loss' },
+    trainingProfile: {
+      warmup_style: 'dynamic',
+      warmup_duration: 'standard',
+      potentiation_preference: 'off',
+      preferred_session_minutes: 45,
+    },
+    config: {
+      days: ['Mon', 'Wed', 'Fri', 'Sat'],
+      dayTypes: { Mon: 'Full Body', Wed: 'Full Body', Fri: 'Full Body', Sat: 'Cardio' },
+      weeks: 1,
+      sessionMinutes: 45,
+    },
+  });
+  const cardioProgram = generateProgram(cardioProfile);
+  const cardioCheck = validateProgram(cardioProgram, cardioProfile);
+  assert(cardioCheck.ok, `Cardio-day program invalid: ${cardioCheck.issues.map((i) => i.message).join('; ')}`);
+  const sat = cardioProgram.workouts.find((w) => w.dayLabel === 'Sat' && w.week === 1);
+  assert(sat?.workoutType === 'Cardio', `Saturday should be Cardio, got ${sat?.workoutType}`);
+  assert((sat?.exercises.length || 0) >= 3, `Cardio day should have conditioning work, got ${sat?.exercises.map((e) => e.name).join(', ')}`);
+
   console.log('BIQ-0141 science engine acceptance checks passed.');
   console.log(`Bro split: ${broWeek1.map((w) => `${w.workoutType} (${w.exercises[0]?.name})`).join(' / ')}`);
   console.log(`Full body week: ${fbWeek1.map((w) => `${w.name} (${w.exercises[0]?.name})`).join(' / ')}`);

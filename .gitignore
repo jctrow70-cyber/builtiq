@@ -39,3 +39,4 @@ scripts/bug-reports-out.json
 
 # Downloaded exercise datasets (large; regenerate via convert script)
 scripts/import-exercises/data/
+docs/catalog-overhaul/exercises-raw.json

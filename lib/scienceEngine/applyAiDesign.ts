@@ -178,8 +178,10 @@ function workoutFromAi(seed: ScienceWorkout, row: any, catalog: CatalogExercise[
   exercises.length = 0;
   exercises.push(...kept);
 
-  if (exercises.length < 2) return null;
-  padThinSession(exercises, seed, profile);
+  const addonDay = seed.workoutType === 'Cardio' || seed.workoutType === 'Mobility';
+  if (!addonDay && exercises.length < 2) return null;
+  if (addonDay && exercises.length < 1) return null;
+  if (!addonDay) padThinSession(exercises, seed, profile);
 
   const primary = exercises.find((ex) => ex.role === 'primary') || exercises[0];
   const primaryCatalog = findByName(catalog, primary.name) || catalogStub(primary.name);

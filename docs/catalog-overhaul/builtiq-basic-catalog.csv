@@ -1,0 +1,47 @@
+name,external_source,external_id,exercise_type,category,muscle_group,equipment,movement_pattern
+Push-Up,builtiq_basic,basic_push_up,strength,strength,Chest,bodyweight,push_horizontal
+Dip,builtiq_basic,basic_dip,strength,strength,Chest,bodyweight,push_vertical
+Sit-Up,builtiq_basic,basic_sit_up,strength,strength,Core,bodyweight,isolation
+Crunch,builtiq_basic,basic_crunch,strength,strength,Core,bodyweight,isolation
+Russian Twist,builtiq_basic,basic_russian_twist,strength,strength,Core,bodyweight,rotation
+Leg Press,builtiq_basic,basic_leg_press,strength,strength,Quads,machine,squat
+Hack Squat,builtiq_basic,basic_hack_squat,strength,strength,Quads,machine,squat
+Smith Machine Squat,builtiq_basic,basic_smith_squat,strength,strength,Quads,machine,squat
+Calf Raise,builtiq_basic,basic_calf_raise,strength,strength,Calves,machine,isolation
+Standing Calf Raise,builtiq_basic,basic_standing_calf_raise,strength,strength,Calves,dumbbell,isolation
+Leg Press Calf Raise,builtiq_basic,basic_leg_press_calf,strength,strength,Calves,machine,isolation
+Pec Deck,builtiq_basic,basic_pec_deck,strength,strength,Chest,machine,isolation
+Cable Fly,builtiq_basic,basic_cable_fly,strength,strength,Chest,cable,isolation
+Dumbbell Fly,builtiq_basic,basic_db_fly,strength,strength,Chest,dumbbell,isolation
+Hammer Curl,builtiq_basic,basic_hammer_curl,strength,strength,Biceps,dumbbell,isolation
+Preacher Curl,builtiq_basic,basic_preacher_curl,strength,strength,Biceps,barbell,isolation
+Concentration Curl,builtiq_basic,basic_concentration_curl,strength,strength,Biceps,dumbbell,isolation
+Overhead Tricep Extension,builtiq_basic,basic_oh_tricep_ext,strength,strength,Triceps,dumbbell,isolation
+Tricep Kickback,builtiq_basic,basic_tricep_kickback,strength,strength,Triceps,dumbbell,isolation
+Shrugs,builtiq_basic,basic_shrugs,strength,strength,Traps,dumbbell,isolation
+Upright Row,builtiq_basic,basic_upright_row,strength,strength,Shoulders,barbell,pull_vertical
+Rear Delt Fly,builtiq_basic,basic_rear_delt_fly,strength,strength,Rear Delts,dumbbell,isolation
+Front Raise,builtiq_basic,basic_front_raise,strength,strength,Front Delts,dumbbell,isolation
+Arnold Press,builtiq_basic,basic_arnold_press,strength,strength,Shoulders,dumbbell,push_vertical
+T-Bar Row,builtiq_basic,basic_tbar_row,strength,strength,Mid Back,barbell,pull_horizontal
+Chest Supported Row,builtiq_basic,basic_chest_supported_row,strength,strength,Mid Back,machine,pull_horizontal
+Straight Arm Pulldown,builtiq_basic,basic_straight_arm_pulldown,strength,strength,Lats,cable,isolation
+Single Arm Row,builtiq_basic,basic_single_arm_row,strength,strength,Mid Back,dumbbell,pull_horizontal
+Step-Up,builtiq_basic,basic_step_up,strength,strength,Quads,dumbbell,lunge
+Reverse Lunge,builtiq_basic,basic_reverse_lunge,strength,strength,Quads,dumbbell,lunge
+Sumo Deadlift,builtiq_basic,basic_sumo_deadlift,strength,strength,Glutes,barbell,hinge
+Good Morning,builtiq_basic,basic_good_morning,strength,strength,Hamstrings,barbell,hinge
+Glute Ham Raise,builtiq_basic,basic_ghr,strength,strength,Hamstrings,machine,hinge
+Cable Pull-Through,builtiq_basic,basic_cable_pullthrough,strength,strength,Glutes,cable,hinge
+Ab Wheel Rollout,builtiq_basic,basic_ab_wheel,strength,strength,Core,bodyweight,isolation
+Hanging Leg Raise,builtiq_basic,basic_hanging_leg_raise,strength,strength,Core,bodyweight,isolation
+Mountain Climber,builtiq_basic,basic_mountain_climber,cardio,warmup,Full Body,bodyweight,cardio
+Jump Rope,builtiq_basic,basic_jump_rope,cardio,warmup,Cardio,bodyweight,cardio
+Treadmill Walk,builtiq_basic,basic_treadmill_walk,cardio,warmup,Cardio,machine,cardio
+Elliptical,builtiq_basic,basic_elliptical,cardio,warmup,Cardio,machine,cardio
+Stair Climber,builtiq_basic,basic_stair_climber,cardio,warmup,Cardio,machine,cardio
+Cat Cow,builtiq_basic,basic_cat_cow,mobility,warmup,Full Body,bodyweight,mobility
+Hip Flexor Stretch,builtiq_basic,basic_hip_flexor_stretch,mobility,cooldown,Hip Flexors,bodyweight,mobility
+Figure Four Stretch,builtiq_basic,basic_figure_four,mobility,cooldown,Glutes,bodyweight,mobility
+Doorway Stretch,builtiq_basic,basic_doorway_stretch,mobility,cooldown,Chest,bodyweight,mobility
+Cross-Body Shoulder Stretch,builtiq_basic,basic_cross_body_shoulder,mobility,cooldown,Shoulders,bodyweight,mobility

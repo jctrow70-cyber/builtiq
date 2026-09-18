@@ -11,6 +11,188 @@ Branch:
 Status:
 ```
 
+## BIQ-0198 - Exercise Catalog Download for Overhaul
+
+Date: 2026-09-17  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+Exported the Guided Library as a CSV for catalog overhaul, and added a Settings download of the live `st_exercise_catalog` for catalog admins.
+
+### Purpose
+
+Search, AI generation, and logging all depend on messy source names and body-part labels. A spreadsheet dump is the starting point for a catalog rewrite.
+
+### Changes
+
+- Added `docs/catalog-overhaul/exercise-catalog.csv` (1,324 Guided Library rows)
+- Added `docs/catalog-overhaul/builtiq-basic-catalog.csv` and README
+- Catalog admins can download the live database from Settings → Guided Exercise Library → Download CSV
+- `GET /api/catalog/export` returns system catalog rows as CSV
+
+### Files Changed
+
+- `docs/catalog-overhaul/exercise-catalog.csv`
+- `docs/catalog-overhaul/builtiq-basic-catalog.csv`
+- `docs/catalog-overhaul/README.md`
+- `app/api/catalog/export/route.ts`
+- `lib/training/catalogExport.ts`
+- `scripts/convert-catalog.cjs`
+- `scripts/export-guided-catalog-csv.ts`
+- `app/page.tsx`
+- `.gitignore`
+- `CHANGELOG.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None. This is an export of existing `st_exercise_catalog` / public Guided Library data. A later re-import will need its own change.
+
+### Testing Steps
+
+1. Open `docs/catalog-overhaul/exercise-catalog.csv` in Excel or Google Sheets. Confirm ~1,324 data rows plus a header.
+2. Catalog admin: Settings → Guided Exercise Library → Download CSV. Confirm a file downloads.
+3. Non-admin should get an error if they hit `/api/catalog/export`.
+
+### Known Issues
+
+- CSV `exercise_type` still often mirrors body part (`waist`, `upper legs`) — that is the overhaul work.
+- Live Settings download needs catalog-admin email allowlist.
+- Browser verification was not run here (no local app session in this pass).
+
+### Recommended Commit Message
+
+```text
+BIQ-0198 Add exercise catalog CSV export for overhaul
+```
+
+---
+
+## BIQ-0197 - Cardio and Mobility Days in AI Intake
+
+Date: 2026-09-17  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+Program AI intake can add a dedicated cardio day and/or mobility day. Lift days stay lift days when a weekday is free.
+
+### Purpose
+
+Cardio and mobility were only implied by notes and leftover Program Setup schedule options. Users could not ask for a real conditioning or recovery day.
+
+### Changes
+
+- Intake chips: Dedicated cardio day? Dedicated mobility / recovery day? (Yes / No / Let BuildIQ Decide)
+- Yes adds the day on an unused weekday. Seven selected lift days convert the last day(s).
+- Science engine builds Cardio and Mobility workouts instead of treating them as Full Body
+- Optional profile columns `include_cardio_day` and `include_mobility_day` (migration 049)
+
+### Files Changed
+
+- `lib/programDesign/intakePreferences.ts`
+- `app/components/programDesign/AIProgramSetupWizard.tsx`
+- `lib/scienceEngine/types.ts`
+- `lib/scienceEngine/split.ts`
+- `lib/scienceEngine/generateProgram.ts`
+- `lib/scienceEngine/validator.ts`
+- `lib/scienceEngine/applyAiDesign.ts`
+- `lib/scienceEngine/qualityCheck.ts`
+- `lib/scienceEngine/acceptanceCheck.ts`
+- `supabase/migrations/20250917_049_intake_cardio_mobility_days.sql`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+**Apply on Supabase before relying on saved intake chips across sessions:**
+
+`supabase/migrations/20250917_049_intake_cardio_mobility_days.sql`
+
+- Adds `st_training_profiles.include_cardio_day` (`yes` | `no` | `ai_decide`, default `ai_decide`)
+- Adds `st_training_profiles.include_mobility_day` (`yes` | `no` | `ai_decide`, default `ai_decide`)
+- Additive. Does not change programs, workouts, or set logs.
+- Generation still works from the in-memory intake if the columns are not applied yet.
+
+### Testing Steps
+
+1. Programs → Create a plan for me → Generate. On the schedule step, set cardio to Yes and mobility to No. Generate. Confirm an extra Cardio day on a free weekday and lift days still have lifts.
+2. Set both to No. Generate. Confirm no Cardio or Mobility days.
+3. Set Let BuildIQ Decide with fat-loss or endurance goal. Confirm a cardio day is recommended.
+4. Mobile: chips wrap and remain tappable.
+
+### Known Issues
+
+- Edit-an-existing-plan from a prompt is still later.
+- Chat updating structured intake fields is still later.
+- Browser verification was not run here.
+
+### Recommended Commit Message
+
+```text
+BIQ-0197 Add cardio and mobility days to program intake
+```
+
+---
+
+## BIQ-0196 - Programs For Me List Polish
+
+Date: 2026-09-17  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+For me no longer mixes personal plans, Just me copies, and leftover group snapshots in one lifecycle dump.
+
+### Purpose
+
+After just-me copies shipped, For me looked like one pile of programs. Users could not tell which plan was theirs vs a private group copy vs an old snapshot.
+
+### Changes
+
+- For me sections: Training is using, Shared with you, My plans, Just me copies, Older group copies
+- Older group copies no longer show Use in Training (Training should use the live group plan)
+- For [group] list is unchanged
+
+### Files Changed
+
+- `app/components/programDesign/ProgramDesignHome.tsx`
+- `lib/programDesign/enrollment.ts`
+- `scripts/test-unfollow-training.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Programs → For me: a plan you created appears under My plans.
+2. A `(just me)` copy appears under Just me copies, not mixed into My plans.
+3. An older `(copy)` snapshot appears under Older group copies with no Use in Training button.
+4. Training is using stays at the top. Shared group plans stay in Shared with you / Available from your groups.
+5. For [group] still lists group plans for assign/open.
+
+### Known Issues
+
+- For me / For [group] filter remains; this is sectioning, not one mixed library.
+- Browser verification was not run here.
+
+### Recommended Commit Message
+
+```text
+BIQ-0196 Split Programs For me into My plans and copies
+```
+
+---
+
 ## BIQ-0195 - Delete Unused Program Setup Helpers
 
 Date: 2026-09-17  
@@ -51,7 +233,6 @@ None.
 
 ### Known Issues
 
-- Mixed Following / My plans list is still a later slice.
 - Browser verification was not run here (no local app session in this pass).
 
 ### Recommended Commit Message
@@ -104,7 +285,7 @@ None.
 
 ### Known Issues
 
-- Mixed Following / My plans list is still a later slice.
+- For me list mixing was later sliced as BIQ-0196.
 
 ### Recommended Commit Message
 
@@ -161,7 +342,7 @@ None.
 
 ### Known Issues
 
-- Mixed Following / My plans list is still a later slice.
+- For me list mixing was later sliced as BIQ-0196.
 
 ### Recommended Commit Message
 

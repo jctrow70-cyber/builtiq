@@ -1581,6 +1581,38 @@ Follow vs Pull in & edit vs Whole group on personal plans made Programs feel lik
 ### Impact
 
 - BIQ-0193
+- BIQ-0196: For me is sectioned as My plans / Just me copies / Older group copies
 - No database migration
+
+---
+
+## Decision 053 - Dedicated Cardio and Mobility Days Are Intake Choices
+
+Date: 2026-09-17  
+Status: Accepted  
+Category: Program Design / AI Intake
+
+### Decision
+
+Users can ask for a **dedicated cardio day** and a **dedicated mobility / recovery day** during program intake.
+
+- Yes / No / Let BuildIQ Decide
+- Yes adds the day on a free weekday when possible so lift days stay lift days
+- Let BuildIQ Decide uses goal and style (fat loss, endurance, athletic, 5+ days, Mobility priority)
+- Cardio and Mobility are real workout types in the science engine, not Full Body with a note
+
+### Reason
+
+Notes and leftover schedule suggestions could not reliably produce a conditioning or recovery day.
+
+### Alternatives Considered
+
+- Keep cardio/mobility only as calendar activities outside the program — rejected; users asked for it in generate
+- Convert a lift day whenever cardio is requested — rejected unless all seven weekdays are already lift days
+
+### Impact
+
+- BIQ-0197
+- Optional migration 049 on `st_training_profiles`
 
 ---

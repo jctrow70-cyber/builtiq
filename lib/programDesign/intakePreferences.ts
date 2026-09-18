@@ -38,6 +38,8 @@ export type IntakeLimitation =
   | 'avoid_barbell_squats'
   | 'avoid_deadlifts';
 
+export type IntakeDayAddon = 'yes' | 'no' | 'ai_decide';
+
 export type ProgramIntake = {
   primaryGoal: IntakeGoal;
   trainingDaysPerWeek: number | 'ai_recommend';
@@ -51,6 +53,8 @@ export type ProgramIntake = {
   varietyPreference: IntakeVariety;
   trainingFeel: IntakeFeel[];
   limitations: IntakeLimitation[];
+  includeCardioDay: IntakeDayAddon;
+  includeMobilityDay: IntakeDayAddon;
   notes: string;
 };
 
@@ -132,8 +136,17 @@ export function defaultProgramIntake(): ProgramIntake {
     varietyPreference: 'balanced',
     trainingFeel: ['balanced'],
     limitations: [],
+    includeCardioDay: 'ai_decide',
+    includeMobilityDay: 'ai_decide',
     notes: '',
   };
+}
+
+function parseDayAddon(raw: unknown): IntakeDayAddon {
+  const v = String(raw || '').toLowerCase().trim();
+  if (v === 'yes' || v === 'true' || v === '1') return 'yes';
+  if (v === 'no' || v === 'false' || v === '0') return 'no';
+  return 'ai_decide';
 }
 
 export function intakeLooksSaved(intake: ProgramIntake): boolean {
@@ -215,6 +228,74 @@ export function dayTypesForIntake(intake: ProgramIntake, days: ScheduleDayLabel[
   return dayTypes;
 }
 
+export function dayAddonLabel(id: IntakeDayAddon): string {
+  if (id === 'yes') return 'Yes';
+  if (id === 'no') return 'No';
+  return 'Let BuildIQ Decide';
+}
+
+export function shouldRecommendCardioDay(intake: ProgramIntake): boolean {
+  if (intake.primaryGoal === 'fat_loss_support' || intake.primaryGoal === 'muscular_endurance' || intake.primaryGoal === 'athletic_performance') {
+    return true;
+  }
+  if (intake.priorityAreas.includes('Conditioning')) return true;
+  if (intake.trainingFeel.includes('athletic') || intake.trainingFeel.includes('fast_paced')) return true;
+  return false;
+}
+
+export function shouldRecommendMobilityDay(intake: ProgramIntake): boolean {
+  if (intake.primaryGoal === 'mobility') return true;
+  if (intake.priorityAreas.includes('Mobility')) return true;
+  return daysForIntake(intake).length >= 5;
+}
+
+export function resolveDayAddon(pref: IntakeDayAddon, recommend: boolean): boolean {
+  if (pref === 'yes') return true;
+  if (pref === 'no') return false;
+  return recommend;
+}
+
+function pickAddonDay(used: Set<string>, liftDays: ScheduleDayLabel[]): ScheduleDayLabel | null {
+  const free = SCHEDULE_DAY_LABELS.find((day) => !used.has(day));
+  if (free) return free;
+  if (liftDays.length >= 7) return liftDays[liftDays.length - 1];
+  return null;
+}
+
+export function extraDaysForIntake(intake: ProgramIntake, liftDays: ScheduleDayLabel[]): { day: ScheduleDayLabel; type: 'Cardio' | 'Mobility' }[] {
+  const extras: { day: ScheduleDayLabel; type: 'Cardio' | 'Mobility' }[] = [];
+  const used = new Set<string>(liftDays);
+  if (resolveDayAddon(intake.includeCardioDay, shouldRecommendCardioDay(intake))) {
+    const day = pickAddonDay(used, liftDays);
+    if (day) {
+      used.add(day);
+      extras.push({ day, type: 'Cardio' });
+    }
+  }
+  if (resolveDayAddon(intake.includeMobilityDay, shouldRecommendMobilityDay(intake))) {
+    const remainingLift = liftDays.filter((d) => extras.every((e) => e.day !== d));
+    const day = pickAddonDay(used, remainingLift.length ? remainingLift : liftDays);
+    if (day) {
+      used.add(day);
+      extras.push({ day, type: 'Mobility' });
+    }
+  }
+  return extras;
+}
+
+export function scheduleFromIntake(intake: ProgramIntake): { days: ScheduleDayLabel[]; dayTypes: Record<string, string> } {
+  const liftDays = daysForIntake(intake);
+  const dayTypes = intake.trainingSplit === 'ai_recommend' ? ({} as Record<string, string>) : dayTypesForIntake(intake, liftDays);
+  const extras = extraDaysForIntake(intake, liftDays);
+  const days = [...liftDays];
+  extras.forEach(({ day, type }) => {
+    if (!days.includes(day)) days.push(day);
+    dayTypes[day] = type;
+  });
+  days.sort((a, b) => SCHEDULE_DAY_LABELS.indexOf(a) - SCHEDULE_DAY_LABELS.indexOf(b));
+  return { days, dayTypes };
+}
+
 const LIMITATION_EXERCISES: Record<IntakeLimitation, string[]> = {
   avoid_high_impact: [],
   avoid_overhead: ['Overhead Press', 'Dumbbell Shoulder Press'],
@@ -258,6 +339,8 @@ export function buildIntakeNarrative(intake: ProgramIntake): string {
   ];
   if (intake.priorityAreas.length) parts.push(`Prioritize: ${intake.priorityAreas.join(', ')}.`);
   if (intake.trainingFeel.length) parts.push(`Feel: ${intake.trainingFeel.map((f) => INTAKE_FEEL_OPTIONS.find((o) => o.id === f)?.label || f).join(', ')}.`);
+  if (resolveDayAddon(intake.includeCardioDay, shouldRecommendCardioDay(intake))) parts.push('Include a dedicated cardio day.');
+  if (resolveDayAddon(intake.includeMobilityDay, shouldRecommendMobilityDay(intake))) parts.push('Include a dedicated mobility / recovery day.');
   if (intake.notes.trim()) parts.push(intake.notes.trim());
   return parts.join(' ');
 }
@@ -297,6 +380,8 @@ export function intakeFromProfileRow(row: any, profile?: any): ProgramIntake {
       : 'balanced') as IntakeVariety,
     trainingFeel: feel.filter((f: string) => INTAKE_FEEL_OPTIONS.some((o) => o.id === f)) as IntakeFeel[],
     limitations: Array.isArray(row?.intake_limitations) ? row.intake_limitations.filter((id: string) => INTAKE_LIMITATIONS.some((o) => o.id === id)) : [],
+    includeCardioDay: parseDayAddon(row?.include_cardio_day),
+    includeMobilityDay: parseDayAddon(row?.include_mobility_day),
     notes: String(row?.intake_notes || ''),
   };
 }
@@ -316,6 +401,8 @@ export function trainingProfilePayload(intake: ProgramIntake) {
     variety_preference: intake.varietyPreference,
     training_feel: intake.trainingFeel,
     intake_limitations: intake.limitations,
+    include_cardio_day: intake.includeCardioDay,
+    include_mobility_day: intake.includeMobilityDay,
     intake_notes: intake.notes.trim() || null,
     training_style_preference: intake.trainingFeel[0] || 'balanced',
     excluded_exercises: excludedExercisesFromIntake(intake),
@@ -325,8 +412,7 @@ export function trainingProfilePayload(intake: ProgramIntake) {
 }
 
 export function generateBodyFromIntake(intake: ProgramIntake, extra: { weeks: number; programName: string; programId?: string; startDate?: string | null }) {
-  const days = daysForIntake(intake);
-  const dayTypes = intake.trainingSplit === 'ai_recommend' ? {} : dayTypesForIntake(intake, days);
+  const { days, dayTypes } = scheduleFromIntake(intake);
   return {
     structuredIntake: true,
     prompt: buildIntakeNarrative(intake),
@@ -342,6 +428,9 @@ export function generateBodyFromIntake(intake: ProgramIntake, extra: { weeks: nu
     availableEquipment: intake.equipment,
     focusMuscles: intake.priorityAreas.filter((a) => !['Conditioning', 'Mobility'].includes(a)),
     trainingSplit: intake.trainingSplit,
+    includeCardio: resolveDayAddon(intake.includeCardioDay, shouldRecommendCardioDay(intake)),
+    includeMobility: resolveDayAddon(intake.includeMobilityDay, shouldRecommendMobilityDay(intake)),
+    includeMobilityDay: resolveDayAddon(intake.includeMobilityDay, shouldRecommendMobilityDay(intake)),
     supersetPreference: intake.supersetPreference,
     varietyPreference: intake.varietyPreference,
     trainingFeel: intake.trainingFeel,
@@ -367,5 +456,23 @@ export function assertIntakeScheduleExamples() {
   const ulTypes = dayTypesForIntake(ul, ulDays);
   if (ulTypes.Mon !== 'Upper Body' || ulTypes.Tue !== 'Lower Body') {
     throw new Error(`Upper/lower mapping failed: ${JSON.stringify(ulTypes)}`);
+  }
+  const withCardio: ProgramIntake = { ...three, includeCardioDay: 'yes', includeMobilityDay: 'no' };
+  const cardioSchedule = scheduleFromIntake(withCardio);
+  if (!cardioSchedule.days.includes('Tue') || cardioSchedule.dayTypes.Tue !== 'Cardio') {
+    throw new Error(`Expected cardio on an unused day, got ${JSON.stringify(cardioSchedule)}`);
+  }
+  if (cardioSchedule.dayTypes.Mon !== 'Full Body') {
+    throw new Error('Cardio addon should not replace lift days when a weekday is free');
+  }
+  const withMobility: ProgramIntake = { ...three, includeCardioDay: 'no', includeMobilityDay: 'yes' };
+  const mobilitySchedule = scheduleFromIntake(withMobility);
+  if (!Object.values(mobilitySchedule.dayTypes).includes('Mobility')) {
+    throw new Error(`Expected a Mobility day, got ${JSON.stringify(mobilitySchedule)}`);
+  }
+  const noAddons: ProgramIntake = { ...three, includeCardioDay: 'no', includeMobilityDay: 'no' };
+  const none = scheduleFromIntake(noAddons);
+  if (Object.values(none.dayTypes).some((t) => t === 'Cardio' || t === 'Mobility')) {
+    throw new Error('No addons should keep strength-only days');
   }
 }

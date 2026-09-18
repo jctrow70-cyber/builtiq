@@ -34,7 +34,9 @@ export type SplitDayType =
   | 'Chest'
   | 'Back'
   | 'Shoulders'
-  | 'Arms';
+  | 'Arms'
+  | 'Cardio'
+  | 'Mobility';
 export type SetKind = 'warmup' | 'working' | 'backoff' | 'dropset' | 'amrap';
 
 export type ProgressionDecision =

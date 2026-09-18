@@ -68,6 +68,16 @@ export function isPurePersonalProgram(program: ProgramDesignRecord | null | unde
   return program.visibility === 'personal' && !program.source_program_id;
 }
 
+/** For me library: keep just-me copies and leftover snapshots out of My plans. */
+export function personalLibraryBuckets(programs: ProgramDesignRecord[]) {
+  const visible = (programs || []).filter((p) => !isGroupEnrollmentMarker(p));
+  return {
+    myPlans: visible.filter(isPurePersonalProgram),
+    justMeCopies: visible.filter(isPersonalizedGroupFollow),
+    leftoverCopies: visible.filter(isLeftoverGroupSnapshot),
+  };
+}
+
 /**
  * Intentional “Edit just for me” copy of a live group plan.
  * Name suffix is the reliable flag so leftover BIQ-0168 snapshots

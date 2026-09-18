@@ -12,14 +12,15 @@ export function validateProgram(program: ScienceProgram, profile: TrainingProfil
   }
 
   week1.forEach((workout) => {
+    const addonDay = workout.workoutType === 'Cardio' || workout.workoutType === 'Mobility';
     if (!workout.exercises.length) issues.push(err('EMPTY_STRENGTH', `${workout.dayLabel} has no working exercises.`));
     if (workout.estimatedMinutes > (profile.preferredSessionMinutes || 60) + 15) {
       issues.push(warn('DURATION', `${workout.name} may exceed the ${profile.preferredSessionMinutes} minute cap.`));
     }
-    if (profile.warmupStyle !== 'minimal' && workout.warmup.length < 3) {
+    if (!addonDay && profile.warmupStyle !== 'minimal' && workout.warmup.length < 3) {
       issues.push(err('WARMUP', `${workout.name} warm-up is too thin for a dynamic preparation block.`));
     }
-    if (profile.potentiationPreference !== 'off' && workout.exercises.some((ex) => ex.role === 'primary') && !workout.potentiation.length) {
+    if (!addonDay && profile.potentiationPreference !== 'off' && workout.exercises.some((ex) => ex.role === 'primary') && !workout.potentiation.length) {
       issues.push(warn('PRIMER', `${workout.name} is missing a Power Primer.`));
     }
     const families = workout.exercises.map((ex) => pressFamily(ex.name)).filter(Boolean);
