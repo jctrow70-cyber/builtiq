@@ -133,11 +133,11 @@ export function loadMasterLibraryRecords(): MasterLibraryRecord[] {
     byId.set('79', {
       ...pullThrough,
       name: 'Pull-Through',
-      aliases: [...aliases].join('; '),
+      aliases: Array.from(aliases).join('; '),
     });
   }
 
-  return [...byId.values()].sort((a, b) => Number(a.id) - Number(b.id));
+  return Array.from(byId.values()).sort((a, b) => Number(a.id) - Number(b.id));
 }
 
 export function masterRecordToCatalogRow(record: MasterLibraryRecord): MappedCatalogRow {
