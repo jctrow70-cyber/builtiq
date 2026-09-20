@@ -12,6 +12,9 @@ const ADD_NAME_TO_ID: Record<string, string> = {
   'Power Clean': '249',
   Windmill: '250',
   'Side Bend': '251',
+  'Pull-Up Work': '252',
+  'Trunk Rotation': '253',
+  'Plate Front Raise': '254',
 };
 
 function splitCsvLine(line: string): string[] {

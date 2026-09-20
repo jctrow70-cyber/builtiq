@@ -1630,7 +1630,7 @@ The live system catalog is the curated **BuildIQ Master Library** (`external_sou
 
 Cutover rules:
 
-- Insert/upsert the master rows (248 from the spreadsheet plus Power Clean, Windmill, Side Bend)
+- Insert/upsert the master rows (248 from the spreadsheet plus Power Clean, Windmill, Side Bend, Pull-Up Work, Trunk Rotation, Plate Front Raise)
 - Remap current program `catalog_exercise_id` and log `snapshot_catalog_exercise_id` from the household mapping
 - Never rewrite `snapshot_exercise_name` or planned sets
 - Archive old system catalog rows; do not delete them

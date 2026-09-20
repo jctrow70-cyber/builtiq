@@ -72,7 +72,7 @@ Hyperextension,a117d9a8-1a5c-43bc-9c1c-8fbf996a346b,6,2,80,Back Extension,,auto,
 One-Arm Dumbbell Row,b4271b77-54ae-41cd-9ca2-da28e8273d82,6,2,14,One-Arm Row,,auto,same movement
 Rear delt dumbbell fly,1e2c31ba-98ee-4191-96ab-d4f128a63996,6,2,27,Reverse Fly,,auto,alias Rear Delt Fly
 Romanian Deadlift,a15b2fa0-3f61-4a30-a2af-166ebc095fe3,6,2,73,Romanian Deadlift,,auto,exact name
-Squat plate front raise,b36e5401-7c5a-48d1-97b6-d436d2a03d34,6,2,,,plate,unmatched,canvas: left unmapped
+Squat plate front raise,b36e5401-7c5a-48d1-97b6-d436d2a03d34,6,2,,Plate Front Raise,plate,add,canvas: add Plate Front Raise; squat plate is the implement
 Barbell Incline Bench Press,f98ff9d7-95c5-421f-a1d2-51c32229d732,5,1,2,Incline Press,,auto,same movement
 Cable Pushdown,647e3733-3f7b-43c0-be4f-736c03adce66,5,2,48,Triceps Pushdown,,auto,alias Cable Pushdown
 A1 Romanian deadlift,,4,2,73,Romanian Deadlift,,auto,stripped circuit prefix
@@ -81,7 +81,7 @@ Butterfly,4a0afed8-4a05-4246-9986-2def0d644008,4,2,144,Pec Deck,,auto,alias Mach
 Dumbbell Flyes,71fe5675-c294-477c-8fc5-028d6e678e22,4,2,4,Chest Fly,,auto,same as Dumbbell Fly
 Farmers Walk,4708e0ac-dc06-4f75-842a-c87d752608e9,4,2,110,Farmer Carry,,auto,alias Farmers Walk
 Lat Pulldown,47153a3d-cbd4-43c4-8b37-f68bc933c770,4,2,20,Lat Pulldown,,auto,second old catalog id for the same movement
-Pull up work,194f658c-9fc5-4e54-a4d8-b1e7772d4e61,4,2,,,bodyweight,unmatched,canvas: left unmapped
+Pull up work,194f658c-9fc5-4e54-a4d8-b1e7772d4e61,4,2,,Pull-Up Work,bodyweight,add,canvas: add Pull-Up Work as its own card
 Push-up,97556be0-dc89-494c-b405-2dbfa5e37bd3,4,2,6,Push-Up,,auto,exact name
 Reverse Machine Flyes,323baae3-804f-4898-a7d8-0e23489678c4,4,2,145,Reverse Pec Deck,,auto,alias Reverse Fly Machine
 Shoulder Press,,4,2,29,Overhead Press,,auto,alias Shoulder Press
@@ -91,7 +91,7 @@ Band Horizontal Pallof Press,e4a71b76-6ea6-4a29-af4f-f45d78eded18,3,1,98,Pallof 
 Band Pull Apart,86f06610-53ce-4c35-b443-e9eb84f157f1,3,2,124,Band Pull-Apart,,auto,exact name
 Bench Press - Powerlifting,84a5ab99-4cbb-4a7c-8de5-2760ece4e259,3,1,1,Bench Press,,auto,same movement
 Bodyweight Drop Jump Squat,d5964084-b8ff-43bb-b189-0a13c3a8846a,3,1,115,Squat Jump,bodyweight,approved,canvas: Squat Jump
-Cable Trunk Rotation,ac7d4508-1f48-4baa-a2f0-a7392c657fad,3,1,,,cable,unmatched,canvas: left unmapped
+Cable Trunk Rotation,ac7d4508-1f48-4baa-a2f0-a7392c657fad,3,1,,Trunk Rotation,cable,add,canvas: add Trunk Rotation; cable is the default implement
 Chin-Up,194f658c-9fc5-4e54-a4d8-b1e7772d4e61,3,1,24,Chin-Up,,auto,exact name
 Dips - Chest Version,9ec9d5d9-2ecd-4d45-ba8c-89e66e6faf5f,3,1,9,Dip,,auto,alias Chest Dip
 Dumbbell Bench Press,78342376-e596-48d8-8432-75ab0038a490,3,1,1,Bench Press,,auto,dumbbell is compatible equipment

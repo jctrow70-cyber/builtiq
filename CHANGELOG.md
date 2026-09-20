@@ -19,7 +19,7 @@ Status: Local / in progress
 
 ### Summary
 
-Admins can import the curated 251-move master library from Settings. Current workout plans keep their names, sets, and history. Household catalog links remap to the new cards. The old ~1,300 system exercises are archived, not deleted.
+Admins can import the curated 254-move master library from Settings. Current workout plans keep their names, sets, and history. Household catalog links remap to the new cards. The old ~1,300 system exercises are archived, not deleted.
 
 ### Purpose
 
@@ -27,7 +27,7 @@ The GIF dump is too large and inconsistently named. The household mapping review
 
 ### Changes
 
-- Master library seed (248 spreadsheet rows + Power Clean, Windmill, Side Bend)
+- Master library seed (248 spreadsheet rows + Power Clean, Windmill, Side Bend, Pull-Up Work, Trunk Rotation, Plate Front Raise)
 - Cable Pull-Through imported as **Pull-Through**
 - Settings → **Import Master Library** (catalog admin + service role)
 - Remap `st_exercises.catalog_exercise_id` and `st_set_logs.snapshot_catalog_exercise_id` by logged name
@@ -60,7 +60,7 @@ No new tables or columns.
 
 Data-only, when an admin clicks Import:
 
-1. Upsert ~251 `st_exercise_catalog` rows (`external_source = builtiq_master`)
+1. Upsert ~254 `st_exercise_catalog` rows (`external_source = builtiq_master`)
 2. Update catalog FKs on current plan exercises and log snapshots that match the household map
 3. Set `is_archived = true` on other system catalog rows
 4. Custom user exercises are unchanged
@@ -70,7 +70,7 @@ Data-only, when an admin clicks Import:
 
 1. Sign in as a catalog admin with `SUPABASE_SERVICE_ROLE_KEY` set.
 2. Settings → Import Master Library. Confirm the warning.
-3. Search Training for Incline Press, Bent-Over Row, Pull-Through, Power Clean, Windmill, Side Bend.
+3. Search Training for Incline Press, Bent-Over Row, Pull-Through, Power Clean, Windmill, Side Bend, Pull-Up Work, Trunk Rotation, Plate Front Raise.
 4. Open an existing program: exercise names and sets should look the same.
 5. Open Progress / history: old names such as Leverage Incline Chest Press should still appear.
 6. Old GIF-library names should not appear in Add Exercise search.
@@ -79,7 +79,6 @@ Data-only, when an admin clicks Import:
 ### Known Issues
 
 - Videos/posters are empty until uploaded later.
-- Three household names stay on archived cards: Pull up work, Cable Trunk Rotation, Squat plate front raise.
 - Browser verification of the live import was not completed in this change.
 
 ### Recommended Commit Message

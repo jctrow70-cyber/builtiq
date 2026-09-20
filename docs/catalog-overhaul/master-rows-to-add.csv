@@ -2,3 +2,6 @@ name,default_equipment,compatible_equipment,aliases,maps_from,notes
 Power Clean,Barbell,"Barbell; Dumbbell; Kettlebell","Clean; DB Clean; Dumbbell Clean",Dumbbell Clean,New movement. Keep Kettlebell Clean (174) for the KB rack path.
 Windmill,Kettlebell,"Kettlebell; Dumbbell","KB Windmill; Advanced Kettlebell Windmill",Advanced Kettlebell Windmill,Advanced is a difficulty label not a separate exercise.
 Side Bend,Bodyweight,"Bodyweight; Dumbbell; Kettlebell; 45° Back Extension","45° Side Bend; Roman Chair Side Bend",45° Side Bend,Lateral flexion. Do not merge with Back Extension (80).
+Pull-Up Work,Bodyweight,"Bodyweight; Band","Pull up work",Pull up work,Household card separate from Pull-Up and Chin-Up.
+Trunk Rotation,Cable,"Cable; Band; Landmine","Cable Trunk Rotation",Cable Trunk Rotation,Cable is the default implement.
+Plate Front Raise,Plate,"Plate; Dumbbell","Squat plate front raise",Squat plate front raise,Plate version stays its own card.
