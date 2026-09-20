@@ -1,0 +1,124 @@
+/** Bundled copy of docs/catalog-overhaul/used-exercises-mapped.csv for the master import. */
+export const HOUSEHOLD_MAP_CSV = `logged_name,current_catalog_id,set_rows,user_count,new_exercise_id,new_exercise_name,equipment_used,match_status,match_note
+Trap Bar Deadlift,fad7f615-f810-4630-aa7d-3a729e4f21b3,67,2,72,Trap Bar Deadlift,,auto,exact name
+Overhead Press,74bf2743-8d76-4763-be3c-be35b5f48df2,56,2,29,Overhead Press,,auto,exact name
+Deadlift,d1b24f14-8666-48ac-bb89-f5899dda38e7,44,3,71,Deadlift,,auto,exact name
+Front Barbell Squat,c5239bdc-4113-49dd-9fa7-8308217a7c00,42,2,55,Front Squat,,auto,same movement
+Leverage Incline Chest Press,be99a500-40c1-4bad-a685-6db64152721b,40,2,2,Incline Press,machine,approved,canvas: Incline Press with machine
+Dumbbell Lunges,469aa1d9-c453-4b97-9ffb-7425fd2c1067,38,2,62,Lunge,,auto,dumbbell is compatible equipment
+Pullups,7a85d3a8-3a45-4382-b6a5-dc00d95f8436,37,2,23,Pull-Up,,auto,alias Pullup
+Leg Press,bbb9c0b7-5630-42b1-8758-45f86cf07ff1,34,2,58,Leg Press,,auto,exact name
+Bulgarian Split Squat,8e52e739-bdeb-4562-823f-f5d8c2bf190b,32,3,61,Bulgarian Split Squat,,auto,exact name
+Incline DB Press,c11fddf6-f000-40a2-8007-77dbe234617c,28,2,2,Incline Press,,auto,dumbbell is compatible equipment
+B1 KB Swings,,27,2,113,Kettlebell Swing,,auto,stripped circuit prefix B1
+Dumbbell One Arm Bent-over Row,234420d2-b111-44e5-88ab-28786b806574,27,2,14,One-Arm Row,,auto,same movement
+Hanging Leg Raise,59ccfd55-1093-4a9a-ab64-d74dca22cc47,27,2,105,Hanging Leg Raise,,auto,exact name
+Seated Leg Curl,a9460a73-a9ee-47c4-b755-a65480f3df56,27,2,82,Leg Curl,machine,approved,canvas: Leg Curl; seated is equipment
+Barbell Full Squat,ae119c20-7b27-47b2-b37c-41c7caf7d260,24,3,54,Back Squat,barbell,approved,canvas: Back Squat with barbell
+Push Press,14837e1c-32d4-4f06-98c6-f33d3984c8ec,24,1,31,Push Press,,auto,exact name
+Hip Thrust,2d5759ad-6b84-45a2-a31b-26dbe6c63cd1,23,2,77,Hip Thrust,,auto,exact name
+Kettlebell Swing,8f62160f-efb7-46a8-a2db-1493bc03fda4,21,3,113,Kettlebell Swing,,auto,exact name
+Front Squat,42b71f10-9b43-4b5d-ad94-e0438e19ddee,20,2,55,Front Squat,,auto,exact name
+Plank,56f33292-1fab-4e04-9695-5a5eaa3663fe,20,2,94,Plank,,auto,exact name
+Tricep Pushdown,e659a393-8bb1-42a0-9dcf-5ef557aca9e6,20,3,48,Triceps Pushdown,,auto,same movement
+Good Morning,61198b81-af1b-4f4c-b6a6-ab4387e43e98,19,2,76,Good Morning,,auto,exact name
+Calf Press On The Leg Press Machine,c7107399-6add-46df-b833-252067cce783,18,2,211,Calf Press,,auto,alias Leg Press Calf Raise
+Diamond Push-up,1552463e-102c-4e3e-a885-68f1d15f1a2b,18,1,6,Push-Up,bodyweight,approved,canvas: Push-Up (close-grip variation)
+Dumbbell Fly,ae89d44d-fb7d-4c79-88b1-0b25d262499a,18,1,4,Chest Fly,,auto,alias Fly
+Face Pull,8e1c10d8-cb95-4e5c-a3c9-e8df859e8d9f,17,2,26,Face Pull,,auto,exact name
+Dumbbell Incline Row,c81f361a-b248-42ce-91cf-71d38b78f07c,16,2,15,Chest-Supported Row,dumbbell,approved,canvas: Chest-Supported Row with dumbbell
+Dumbbell Row,f02f2d58-6f7d-4c4c-b447-9fe6f7bea36b,16,2,14,One-Arm Row,dumbbell,approved,canvas: One-Arm Row with dumbbell
+Dumbbell Clean,34f7db1f-0250-4567-9f6a-ba34823b1dd7,15,2,,Power Clean,dumbbell,add,"canvas: add Power Clean (barbell default; dumbbell and kettlebell compatible)"
+Dumbbell Pullover,558c0ebd-6c80-49aa-a3fb-95c72bfe27c7,15,2,11,Pullover,,auto,alias Dumbbell Pullover
+Dumbbell Step-up,53987c01-8587-4120-bf86-be43954a48c0,15,2,66,Step-Up,,auto,same movement
+Barbell Curl,63cf2ed0-a03a-4103-9293-07990211b1de,13,2,39,Biceps Curl,,auto,barbell is compatible equipment
+Dumbbell Goblet Squat,acf95df8-8776-41c1-a324-e98da455fdb4,13,2,56,Goblet Squat,,auto,same movement
+Pushups,2a25c7ea-ec3c-4a26-8fa3-ea91a9741671,13,2,6,Push-Up,,auto,alias Pushup
+Bent Over Two-Arm Long Bar Row,b4ed867c-b3fc-4100-9366-a02d47098c3b,12,2,13,Bent-Over Row,barbell,approved,canvas: Bent-Over Row (same as Barbell Row) with barbell
+Cable Lateral Raise,8e149b3e-d94b-4410-8d22-5a1720c7a0a4,12,2,153,Cable Lateral Raise,,auto,exact name
+External Rotation,f3c1b363-d703-4dc2-b6ed-ad33a77649f5,12,2,36,External Rotation,,auto,exact name
+Romanian Deadlift from Deficit,5a0fd05b-ecdf-4057-b6de-d3230c770e6c,12,2,73,Romanian Deadlift,barbell,approved,canvas: RDL; deficit is setup
+Back Squat,144158eb-6813-4774-8558-20d3fa69931b,11,2,54,Back Squat,,auto,exact name
+Lat Pulldown,d401a7e7-f2d1-4831-9f98-3c8523d2ab5b,11,2,20,Lat Pulldown,,auto,exact name
+Dumbbell Side Lunge,e94507f5-3669-433c-a9d5-39d3abd7252e,10,2,65,Lateral Lunge,,auto,alias Side Lunge
+Incline Dumbbell Curl,b5a902b8-17f8-402f-92c5-59f099e1a2be,10,2,42,Incline Curl,,auto,alias Incline Dumbbell Curl
+45° Side Bend,9d7f0da8-b445-4337-9354-342f00ffc46d,9,2,,Side Bend,45-back-extension,add,"canvas: add Side Bend; 45° back extension is the implement"
+B2 KB Swings,,9,2,113,Kettlebell Swing,,auto,stripped circuit prefix B2
+Barbell Bench Squat,e3d91088-db72-4f74-9a34-d1ec1cbac71f,9,1,198,Box Squat,barbell,approved,canvas: Box Squat with barbell
+Bent Over Barbell Row,85d71483-841d-4ca9-9830-8c249835a0d3,9,1,13,Bent-Over Row,,auto,alias Barbell Row
+Chest Press,,9,2,140,Machine Chest Press,machine,approved,canvas: Machine Chest Press
+Dumbbell Alternate Biceps Curl,3847341f-a980-4cbb-943e-90e04a19db51,9,1,39,Biceps Curl,,auto,same movement
+Kettlebell V-Up,b179d51d-f07a-43b1-b885-3a8d4f6c7132,9,2,214,V-Up,,auto,same movement
+Machine bench press,1dee316c-a7f9-4f9d-befa-1c4e9b89967e,9,2,140,Machine Chest Press,,auto,same movement
+Scap Push-ups,4102523a-b36f-48e3-a335-83764cb2bb2f,9,2,126,Scapular Push-Up,,auto,same movement
+Standing Calf Raises,be663b1a-8250-478a-8c5f-49ab22d7b113,9,2,90,Standing Calf Raise,,auto,exact name
+Walking Dumbell Lunges,,9,2,64,Walking Lunge,,auto,same movement
+B2 Hanging Knee Raises,,8,2,104,Hanging Knee Raise,,auto,stripped circuit prefix
+Db Row,,8,2,14,One-Arm Row,dumbbell,approved,canvas: One-Arm Row with dumbbell
+Leg Press,,8,2,58,Leg Press,,auto,same as the other Leg Press row; different old catalog id
+Thoracic Rotations,fbf089d8-57ec-4d0d-ab99-1b7aae45b996,7,2,138,Thoracic Rotation,,auto,same movement
+A1 hamstring curl,,6,2,82,Leg Curl,,auto,stripped circuit prefix
+A2 Calf Raise,,6,2,90,Standing Calf Raise,unsure,approved,canvas: Standing Calf Raise; implement unsure
+Advanced Kettlebell Windmill,0995595e-6fb9-4955-89c2-30f85da775a2,6,2,,Windmill,kettlebell,add,"canvas: add Windmill (kettlebell default; dumbbell compatible)"
+Alternate Heel Touchers,ac4ceeb6-38bd-453e-b846-9244100be757,6,2,217,Heel Tap,,auto,alias Side Heel Touch
+Assisted Pull-up,759dabc6-53e8-466f-8f3b-fc7ba3dc2b98,6,1,146,Assisted Pull-Up,,auto,exact name
+Barbell Bench Press,a8199579-45b5-4261-a3c2-47f9f4ca9b89,6,2,1,Bench Press,,auto,same movement
+Cable Curl,6edb85a4-b848-410c-844a-baad46f9bb27,6,2,39,Biceps Curl,,auto,cable is compatible equipment
+Cable Tricep Pushdown,6b6483b9-6ce2-4207-af9d-0473d8185049,6,2,48,Triceps Pushdown,,auto,same movement
+Close-Grip Front Lat Pulldown,869e663a-f365-48a7-829b-5106355f413c,6,2,21,Close-Grip Pulldown,,auto,same movement
+Dumbbell Bent Over Row,591ba0b9-9cc9-452d-b483-54ae10a04e0c,6,2,14,One-Arm Row,dumbbell,approved,canvas: One-Arm Row with dumbbell
+Dumbbell Sumo Pull Through,ab99cac0-8cd9-4e6a-8ef8-5d92bd642c02,6,2,79,Cable Pull-Through,dumbbell,approved,"canvas: Pull-Through with dumbbell; rename master row to Pull-Through on import"
+Hammer Curls,115e99ec-ecc6-4dfd-b9fd-4d820ea72636,6,2,40,Hammer Curl,,auto,exact name
+Hyperextension,a117d9a8-1a5c-43bc-9c1c-8fbf996a346b,6,2,80,Back Extension,,auto,alias Hyperextension
+One-Arm Dumbbell Row,b4271b77-54ae-41cd-9ca2-da28e8273d82,6,2,14,One-Arm Row,,auto,same movement
+Rear delt dumbbell fly,1e2c31ba-98ee-4191-96ab-d4f128a63996,6,2,27,Reverse Fly,,auto,alias Rear Delt Fly
+Romanian Deadlift,a15b2fa0-3f61-4a30-a2af-166ebc095fe3,6,2,73,Romanian Deadlift,,auto,exact name
+Squat plate front raise,b36e5401-7c5a-48d1-97b6-d436d2a03d34,6,2,,,plate,unmatched,canvas: left unmapped
+Barbell Incline Bench Press,f98ff9d7-95c5-421f-a1d2-51c32229d732,5,1,2,Incline Press,,auto,same movement
+Cable Pushdown,647e3733-3f7b-43c0-be4f-736c03adce66,5,2,48,Triceps Pushdown,,auto,alias Cable Pushdown
+A1 Romanian deadlift,,4,2,73,Romanian Deadlift,,auto,stripped circuit prefix
+Barbell Lying Triceps Extension Skull Crusher,ea6fdd93-01a4-4122-8e03-9db66c280fa1,4,2,50,Skull Crusher,,auto,alias Lying Triceps Extension
+Butterfly,4a0afed8-4a05-4246-9986-2def0d644008,4,2,144,Pec Deck,,auto,alias Machine Fly
+Dumbbell Flyes,71fe5675-c294-477c-8fc5-028d6e678e22,4,2,4,Chest Fly,,auto,same as Dumbbell Fly
+Farmers Walk,4708e0ac-dc06-4f75-842a-c87d752608e9,4,2,110,Farmer Carry,,auto,alias Farmers Walk
+Lat Pulldown,47153a3d-cbd4-43c4-8b37-f68bc933c770,4,2,20,Lat Pulldown,,auto,second old catalog id for the same movement
+Pull up work,194f658c-9fc5-4e54-a4d8-b1e7772d4e61,4,2,,,bodyweight,unmatched,canvas: left unmapped
+Push-up,97556be0-dc89-494c-b405-2dbfa5e37bd3,4,2,6,Push-Up,,auto,exact name
+Reverse Machine Flyes,323baae3-804f-4898-a7d8-0e23489678c4,4,2,145,Reverse Pec Deck,,auto,alias Reverse Fly Machine
+Shoulder Press,,4,2,29,Overhead Press,,auto,alias Shoulder Press
+V-sit On Floor,725947bb-e913-4a35-898f-03ded8a22420,4,2,214,V-Up,,auto,alias V Sit-Up
+B1 Lat pull down,,3,2,20,Lat Pulldown,,auto,stripped circuit prefix
+Band Horizontal Pallof Press,e4a71b76-6ea6-4a29-af4f-f45d78eded18,3,1,98,Pallof Press,,auto,same movement
+Band Pull Apart,86f06610-53ce-4c35-b443-e9eb84f157f1,3,2,124,Band Pull-Apart,,auto,exact name
+Bench Press - Powerlifting,84a5ab99-4cbb-4a7c-8de5-2760ece4e259,3,1,1,Bench Press,,auto,same movement
+Bodyweight Drop Jump Squat,d5964084-b8ff-43bb-b189-0a13c3a8846a,3,1,115,Squat Jump,bodyweight,approved,canvas: Squat Jump
+Cable Trunk Rotation,ac7d4508-1f48-4baa-a2f0-a7392c657fad,3,1,,,cable,unmatched,canvas: left unmapped
+Chin-Up,194f658c-9fc5-4e54-a4d8-b1e7772d4e61,3,1,24,Chin-Up,,auto,exact name
+Dips - Chest Version,9ec9d5d9-2ecd-4d45-ba8c-89e66e6faf5f,3,1,9,Dip,,auto,alias Chest Dip
+Dumbbell Bench Press,78342376-e596-48d8-8432-75ab0038a490,3,1,1,Bench Press,,auto,dumbbell is compatible equipment
+Dumbbell Standing Overhead Press,cde8df27-fa91-49c5-a473-17d6e8eeaa5b,3,1,29,Overhead Press,,auto,dumbbell is compatible equipment
+Kettlebell Arnold Press,a3161eca-2ade-4a96-bae3-54814c603a9e,3,1,30,Arnold Press,,auto,same movement
+Landmine press,257fd808-2c16-4c16-9959-f43a9a6f60ad,3,1,167,Landmine Press,,auto,old catalog was wrongly linked to Landmine Row
+Landmine Row,257fd808-2c16-4c16-9959-f43a9a6f60ad,3,1,16,Landmine Row,,auto,exact name
+One-Legged Cable Kickback,46e9dadc-f310-4125-8b4f-6c820279bb5b,3,1,85,Glute Kickback,,auto,alias Cable Kickback
+Pull Up (neutral Grip),5c0637ad-deaa-4766-8223-7c3764cf105d,3,1,23,Pull-Up,bodyweight,approved,canvas: Pull-Up; neutral grip is a variant
+Side Lateral Raise,d312003f-59d5-4acc-b48f-838dda3f41de,3,1,32,Lateral Raise,,auto,alias Side Raise
+Standing Biceps Cable Curl,e666147d-acb5-4fa5-b580-b14176c9923b,3,2,39,Biceps Curl,,auto,cable is compatible equipment
+A2 1 minute plank,,2,1,94,Plank,,auto,stripped circuit prefix
+B2 Push ups,,2,1,6,Push-Up,,auto,stripped circuit prefix
+Bent Over Dumbbell Rear Delt Raise With Head On Bench,b761a3d1-6014-4960-994b-acdd4cf1872f,2,1,27,Reverse Fly,,auto,same movement
+Dumbbell Single Leg Deadlift,2089b715-e43c-4447-be55-043d1f57905c,2,1,75,Single-Leg Romanian Deadlift,,auto,same movement
+Full Range-Of-Motion Lat Pulldown,20b2e82b-9cf8-4854-8128-59cf82c49012,2,1,20,Lat Pulldown,,auto,same movement
+Seated Cable Rows,0a59a7cf-1723-43df-8e1a-9a880ba3e5f0,2,1,12,Row,,auto,alias Seated Row
+Shoulder Bands,005e66c6-0f51-4bc8-bcc2-3f3eae0b84fd,2,2,124,Band Pull-Apart,band,approved,canvas: Band Pull-Apart
+Skull Crusher,85bb9d32-8c32-484e-a019-729aa753d6d6,2,1,50,Skull Crusher,,auto,exact name
+Thoracic,,2,1,138,Thoracic Rotation,,auto,short name
+Back Pec Stretch,d94cf005-228d-4090-95b8-51fa1e7b312f,1,1,227,Doorway Pec Stretch,bodyweight,approved,canvas: Doorway Pec Stretch
+Barbell Squat,00a9c9ff-f0a9-4460-8177-b88ed42f6a13,1,1,54,Back Squat,,auto,same movement
+Calf Stretch With Hands Against Wall,1f611e2e-dbc0-4141-902e-8ffc13c3ca6b,1,1,133,Calf Stretch,,auto,same movement
+Chest And Front Of Shoulder Stretch,d599ea9d-56c6-457e-8dc2-021c16379efe,1,1,227,Doorway Pec Stretch,bodyweight,approved,canvas: Doorway Pec Stretch
+Child's Pose,cba62800-9d4c-42f5-83b6-fe360642c1c9,1,1,229,Child's Pose,,auto,exact name
+Dumbbell rear delt fly,53e99a31-b475-4b60-8189-05b70a0f8f3e,1,1,27,Reverse Fly,,auto,same as rear delt fly
+Hamstring Stretch,989bcac7-baf0-4107-b0c0-78e946ba1e8e,1,1,230,Hamstring Stretch,,auto,exact name
+Seated Glute Stretch,5870050b-38d2-4c75-a893-21b287b2fd80,1,1,231,Figure-Four Stretch,bodyweight,approved,canvas: Figure-Four Stretch
+`;

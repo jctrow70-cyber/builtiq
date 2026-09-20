@@ -36,16 +36,20 @@ export function exerciseMatchesEquipment(item: any, selected: string[]): boolean
   if (!list.length || list.includes('full_gym')) return true;
 
   const eq = String(item?.equipment || '').toLowerCase().trim();
-  if (isUniversalEquipment(eq)) return true;
+  const compatible = Array.isArray(item?.coaching_metadata?.compatible_equipment)
+    ? item.coaching_metadata.compatible_equipment.map((x: unknown) => String(x || '').toLowerCase())
+    : [];
+  const pool = [eq, ...compatible].filter(Boolean);
+  if (pool.some((value: string) => isUniversalEquipment(value))) return true;
 
   return list.some((sel) => {
     const s = sel.toLowerCase();
-    if (s === 'machine') return eq.includes('machine') || eq.includes('smith');
-    if (s === 'cable') return eq.includes('cable');
-    if (s === 'pull-up bar') return eq.includes('pull') || eq.includes('chin');
-    if (s === 'medicine ball') return eq.includes('medicine') || eq.includes('med ball');
-    if (s === 'bands') return eq.includes('band');
-    return eq.includes(s) || s.includes(eq);
+    if (s === 'machine') return pool.some((value: string) => value.includes('machine') || value.includes('smith'));
+    if (s === 'cable') return pool.some((value: string) => value.includes('cable'));
+    if (s === 'pull-up bar') return pool.some((value: string) => value.includes('pull') || value.includes('chin'));
+    if (s === 'medicine ball') return pool.some((value: string) => value.includes('medicine') || value.includes('med ball'));
+    if (s === 'bands') return pool.some((value: string) => value.includes('band'));
+    return pool.some((value: string) => value.includes(s) || s.includes(value));
   });
 }
 

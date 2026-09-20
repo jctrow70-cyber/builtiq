@@ -92,8 +92,12 @@ function activeItems(items: any[]) {
 }
 
 function haystack(item: any): string {
+  const aliases = Array.isArray(item?.coaching_metadata?.aliases)
+    ? item.coaching_metadata.aliases.join(' ')
+    : '';
   return [
     item?.name,
+    aliases,
     item?.muscle_group,
     item?.equipment,
     item?.category,

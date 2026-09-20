@@ -409,7 +409,7 @@ See `CHANGELOG.md` BIQ-0013 and BIQ-0024 for full scope.
 
 ### Planned — Platform admin and catalog operations
 
-**Current (shipped in PR #16):** Catalog import admin via `BUILDIQ_CATALOG_ADMIN_EMAILS` in Vercel / `.env.local`. Only allowlisted emails see **Settings → Guided Exercise Library** and can run `POST /api/catalog/import-guided`. Normal users get the unified exercise search with no import controls.
+**Current (BIQ-0201):** Catalog admins import the **BuildIQ Master Library** from Settings (`POST /api/catalog/import-master`). That upserts ~251 movement cards, remaps household plan/log catalog ids, and archives the old GIF dump. The legacy Guided Library import remains available but no longer un-archives rows already hidden. Normal users get unified search of active catalog rows.
 
 **Roadmap — proper admin model (not started):**
 

@@ -1617,3 +1617,39 @@ Notes and leftover schedule suggestions could not reliably produce a conditionin
 - Optional migration 049 on `st_training_profiles`
 
 ---
+
+## Decision 054 - Master Library Replaces the GIF Dump by Archive, Not Delete
+
+Date: 2026-09-20  
+Status: Accepted  
+Category: Exercise Catalog
+
+### Decision
+
+The live system catalog is the curated **BuildIQ Master Library** (`external_source = builtiq_master`): one card per movement, compatible equipment, optional later video + poster.
+
+Cutover rules:
+
+- Insert/upsert the master rows (248 from the spreadsheet plus Power Clean, Windmill, Side Bend)
+- Remap current program `catalog_exercise_id` and log `snapshot_catalog_exercise_id` from the household mapping
+- Never rewrite `snapshot_exercise_name` or planned sets
+- Archive old system catalog rows; do not delete them
+- Leave user custom exercises alone
+
+### Reason
+
+The 1,300+ GIF library is hard to search and train from. Household history must stay accurate. Deleting catalog rows would null FKs (`ON DELETE SET NULL`) and lose thumbs on old plans.
+
+### Alternatives Considered
+
+- Delete unused catalog rows — rejected; breaks FKs and any unmapped plans
+- Rewrite plan exercise names to the new master names — rejected for this cutover; names stay until the user edits
+- Wait until every Veo video exists — rejected; empty media is fine
+
+### Impact
+
+- BIQ-0201
+- Settings admin import
+- Search and AI use active master rows after import
+
+---

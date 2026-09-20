@@ -43,7 +43,9 @@ export function catalogExerciseFromRow(row: any): CatalogExercise | null {
     movementPattern: normalizeMovementPattern(row.movement_pattern),
     exerciseType: kind,
     programRoles: inferRoles(name, kind, warmupSuitable),
-    equipment: normalizeEquipmentList(row.equipment ? [row.equipment] : []),
+    equipment: normalizeEquipmentList(
+      [row.equipment, ...(Array.isArray(row.coaching_metadata?.compatible_equipment) ? row.coaching_metadata.compatible_equipment : [])].filter(Boolean)
+    ),
     primaryMuscles: primary,
     secondaryMuscles: secondary,
     stabilityRequirement: (row.stability_requirement || 'medium') as CatalogExercise['stabilityRequirement'],

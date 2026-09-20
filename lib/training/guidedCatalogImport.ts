@@ -119,9 +119,10 @@ export async function importGuidedCatalogToSupabase(
   }
 
   for (const { id, row } of toUpdate) {
+    const { is_archived: _archived, ...refresh } = row;
     const { error } = await supabase
       .from('st_exercise_catalog')
-      .update(row)
+      .update(refresh)
       .eq('id', id)
       .is('user_id', null)
       .eq('is_system', true);

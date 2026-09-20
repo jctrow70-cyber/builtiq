@@ -9,6 +9,14 @@ This folder is the working copy of the exercise database.
 
 Live database copy (what is actually in Supabase): Settings → Guided Exercise Library → **Download CSV** (catalog admin).
 
+Used exercises for mapping (household logs, not the full 1,324):
+
+- `used-exercises.sql` — run in Supabase SQL Editor, then Download CSV
+- `used-exercises-to-map.csv` — raw household log export
+- `used-exercises-mapped.csv` — household map onto the master library (canvas-approved; includes `equipment_used`)
+- `master-rows-to-add.csv` — new master movements added on import (Power Clean, Windmill, Side Bend)
+- Live cutover: Settings → **Import Master Library** (BIQ-0201). Archives old system rows; does not delete history.
+
 ## What is wrong today (why overhaul)
 
 Source fields are not BuildIQ fields yet. In `exercise-catalog.csv` you will see:

@@ -11,6 +11,85 @@ Branch:
 Status:
 ```
 
+## BIQ-0201 - BuildIQ Master Exercise Library Cutover
+
+Date: 2026-09-20  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+Admins can import the curated 251-move master library from Settings. Current workout plans keep their names, sets, and history. Household catalog links remap to the new cards. The old ~1,300 system exercises are archived, not deleted.
+
+### Purpose
+
+The GIF dump is too large and inconsistently named. The household mapping review is approved. We need a safe cutover that does not rewrite completed history.
+
+### Changes
+
+- Master library seed (248 spreadsheet rows + Power Clean, Windmill, Side Bend)
+- Cable Pull-Through imported as **Pull-Through**
+- Settings → **Import Master Library** (catalog admin + service role)
+- Remap `st_exercises.catalog_exercise_id` and `st_set_logs.snapshot_catalog_exercise_id` by logged name
+- Do not change `snapshot_exercise_name` or planned set prescriptions
+- Archive old system catalog rows (`is_archived = true`)
+- Search prefers `builtiq_master` and matches aliases / compatible equipment
+
+### Files Changed
+
+- `lib/training/data/builtiq-master-catalog.json`
+- `lib/training/masterCatalog.ts`
+- `lib/training/masterCatalogImport.ts`
+- `lib/training/householdExerciseMap.ts`
+- `lib/training/householdExerciseMapData.ts`
+- `lib/training/catalogSources.ts`
+- `lib/training/catalogSearch.ts`
+- `lib/training/equipmentFilter.ts`
+- `lib/training/guidedCatalogImport.ts`
+- `lib/scienceEngine/catalogAdapter.ts`
+- `app/api/catalog/import-master/route.ts`
+- `app/page.tsx`
+- `docs/catalog-overhaul/README.md`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+No new tables or columns.
+
+Data-only, when an admin clicks Import:
+
+1. Upsert ~251 `st_exercise_catalog` rows (`external_source = builtiq_master`)
+2. Update catalog FKs on current plan exercises and log snapshots that match the household map
+3. Set `is_archived = true` on other system catalog rows
+4. Custom user exercises are unchanged
+5. History names, weights, reps, and planned sets are unchanged
+
+### Testing Steps
+
+1. Sign in as a catalog admin with `SUPABASE_SERVICE_ROLE_KEY` set.
+2. Settings → Import Master Library. Confirm the warning.
+3. Search Training for Incline Press, Bent-Over Row, Pull-Through, Power Clean, Windmill, Side Bend.
+4. Open an existing program: exercise names and sets should look the same.
+5. Open Progress / history: old names such as Leverage Incline Chest Press should still appear.
+6. Old GIF-library names should not appear in Add Exercise search.
+7. Custom exercises in Settings → My Exercise Catalog should still be there.
+
+### Known Issues
+
+- Videos/posters are empty until uploaded later.
+- Three household names stay on archived cards: Pull up work, Cable Trunk Rotation, Squat plate front raise.
+- Browser verification of the live import was not completed in this change.
+
+### Recommended Commit Message
+
+```text
+BIQ-0201 Import the master exercise library without rewriting workout history
+```
+
+---
+
 ## BIQ-0200 - Dashboard Today’s Workout Honors Day Moves
 
 Date: 2026-09-18  

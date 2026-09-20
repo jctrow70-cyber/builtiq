@@ -1,6 +1,7 @@
 /** Exercise catalog source packs — users can enable multiple libraries in search. */
 
 export type CatalogSourceId =
+  | 'builtiq_master'
   | 'builtiq_essentials'
   | 'builtiq_basic'
   | 'exercisedb'
@@ -15,6 +16,13 @@ export type CatalogSourceMeta = {
 };
 
 export const CATALOG_SOURCES: CatalogSourceMeta[] = [
+  {
+    id: 'builtiq_master',
+    label: 'BuildIQ Master Library',
+    description: 'Curated movement library (one card per pattern, compatible equipment)',
+    defaultEnabled: true,
+    hasGuides: true,
+  },
   {
     id: 'exercisedb',
     label: 'Guided Library',
@@ -52,10 +60,11 @@ export const UNIFIED_CATALOG_SOURCES: CatalogSourceId[] = CATALOG_SOURCES.map((s
 
 /** Lower rank = preferred when the same exercise name exists in multiple libraries. */
 export const CATALOG_SOURCE_PREFERENCE: Record<CatalogSourceId, number> = {
-  exercisedb: 0,
-  builtiq_essentials: 1,
-  builtiq_basic: 2,
-  free_exercise_db: 3,
+  builtiq_master: 0,
+  exercisedb: 1,
+  builtiq_essentials: 2,
+  builtiq_basic: 3,
+  free_exercise_db: 4,
 };
 
 export function normalizeCatalogMatchKey(name: string): string {
@@ -98,6 +107,7 @@ export function normalizeCatalogSources(raw?: string[] | null): CatalogSourceId[
 /** Map a catalog row to its source pack for filtering. */
 export function catalogItemSource(item: any): CatalogSourceId {
   const ext = String(item?.external_source || '').trim().toLowerCase();
+  if (ext === 'builtiq_master') return 'builtiq_master';
   if (ext === 'exercisedb') return 'exercisedb';
   if (ext === 'free_exercise_db') return 'free_exercise_db';
   if (ext === 'builtiq_basic') return 'builtiq_basic';

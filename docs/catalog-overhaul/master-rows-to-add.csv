@@ -1,0 +1,4 @@
+name,default_equipment,compatible_equipment,aliases,maps_from,notes
+Power Clean,Barbell,"Barbell; Dumbbell; Kettlebell","Clean; DB Clean; Dumbbell Clean",Dumbbell Clean,New movement. Keep Kettlebell Clean (174) for the KB rack path.
+Windmill,Kettlebell,"Kettlebell; Dumbbell","KB Windmill; Advanced Kettlebell Windmill",Advanced Kettlebell Windmill,Advanced is a difficulty label not a separate exercise.
+Side Bend,Bodyweight,"Bodyweight; Dumbbell; Kettlebell; 45° Back Extension","45° Side Bend; Roman Chair Side Bend",45° Side Bend,Lateral flexion. Do not merge with Back Extension (80).
