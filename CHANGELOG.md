@@ -11,6 +11,75 @@ Branch:
 Status:
 ```
 
+## BIQ-0202 - Workout Equipment Picker and Faster Master Re-import
+
+Date: 2026-09-20  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+Training exercise cards can pick which compatible implement to use (barbell vs dumbbell vs kettlebell) without creating a second catalog card. Master Library re-import is faster and keeps existing posters/videos. The first re-import often failed because it updated every row one at a time and timed out.
+
+### Purpose
+
+One movement card can be used with several implements. The live import did not store that choice on the workout, and re-running Import Master Library failed.
+
+### Changes
+
+- `st_exercises.equipment` stores the chosen implement for that planned exercise
+- `st_set_logs.snapshot_equipment` stores the implement used when the set was logged
+- Training and program-design cards show a picker from the catalog compatible list
+- Master re-import updates in parallel, skips already-remapped rows, does not wipe `media_url` / `image_url`
+- Import errors and timeouts show a clearer message
+
+### Files Changed
+
+- `supabase/migrations/20250920_050_exercise_equipment.sql`
+- `lib/training/exerciseEquipment.ts`
+- `lib/training/masterCatalogImport.ts`
+- `lib/training/workoutTemplate.ts`
+- `lib/programDesign/importWorkouts.ts`
+- `app/api/catalog/import-master/route.ts`
+- `app/page.tsx`
+- `app/components/training/WorkoutTemplateEditor.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+Run `supabase/migrations/20250920_050_exercise_equipment.sql` on the **test and live** Supabase projects before relying on the picker:
+
+1. Add nullable `equipment` on `st_exercises`
+2. Add nullable `snapshot_equipment` on `st_set_logs`
+3. No history names, weights, or reps are changed
+4. Existing workouts stay on the catalog default until you pick an implement
+
+### Testing Steps
+
+1. Apply migration 050 in Supabase SQL Editor (live and test).
+2. Deploy this change, then Settings → Import Master Library. It should finish and show remap counts, not a generic Import failed.
+3. Search Training for Power Clean. The card should offer Barbell / Dumbbell / Kettlebell.
+4. Change Power Clean to Dumbbell, save a set, reopen history — the plan still says Power Clean; the new snapshot can store Dumbbell.
+5. Open an existing program: names and sets look the same.
+6. Mobile: the equipment dropdown sits next to the muscle field and wraps.
+
+### Known Issues
+
+- Program-copy SQL functions do not yet copy `equipment`; copies fall back to the catalog default.
+- AI-generated programs do not write `equipment` yet; the picker still works after generate.
+- Browser verification of the live import and picker was not completed in this change.
+
+### Recommended Commit Message
+
+```text
+BIQ-0202 Add workout equipment picker and stop master re-import timeouts
+```
+
+---
+
 ## BIQ-0201 - BuildIQ Master Exercise Library Cutover
 
 Date: 2026-09-20  
@@ -28,6 +97,7 @@ The GIF dump is too large and inconsistently named. The household mapping review
 ### Changes
 
 - Master library seed (248 spreadsheet rows + Power Clean, Windmill, Side Bend, Pull-Up Work, Trunk Rotation, Plate Front Raise)
+- Power Clean labeled **Full Body** (not Glutes), with glutes/quads/hamstrings/traps/shoulders as supporting muscles
 - Cable Pull-Through imported as **Pull-Through**
 - Settings → **Import Master Library** (catalog admin + service role)
 - Remap `st_exercises.catalog_exercise_id` and `st_set_logs.snapshot_catalog_exercise_id` by logged name

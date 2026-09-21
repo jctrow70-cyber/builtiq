@@ -1653,3 +1653,33 @@ The 1,300+ GIF library is hard to search and train from. Household history must 
 - Search and AI use active master rows after import
 
 ---
+
+## Decision 055 - Workout Equipment Lives on the Plan Row, Not a Second Catalog Card
+
+Date: 2026-09-20  
+Status: Accepted  
+Category: Exercise Catalog
+
+### Decision
+
+Keep one master card per movement. Store the chosen implement on `st_exercises.equipment` and snapshot it on `st_set_logs.snapshot_equipment` when a set is logged.
+
+The picker options come from `coaching_metadata.compatible_equipment`. History names stay as logged.
+
+### Reason
+
+Power Clean is the same movement with barbell, dumbbell, or kettlebell. Separate catalog cards would undo the master-library cutover. Profile available-equipment only filters search; it does not record what was used on a day.
+
+### Alternatives Considered
+
+- New catalog row per implement — rejected; search and mapping explode again
+- Store the implement only in `notes` — rejected; notes already mark warmup primers
+- Wait for videos per implement — rejected; one form video per movement is enough
+
+### Impact
+
+- BIQ-0202
+- Migration 050
+- Training and program-design exercise cards
+
+---

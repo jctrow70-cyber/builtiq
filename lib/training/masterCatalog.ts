@@ -27,8 +27,8 @@ const ADD_ON_ROWS: MasterLibraryRecord[] = [
     id: '249',
     name: 'Power Clean',
     aliases: 'Clean; DB Clean; Dumbbell Clean',
-    primary_muscle: 'Glutes',
-    secondary_muscles: 'Hamstrings; Traps; Shoulders',
+    primary_muscle: 'Full Body',
+    secondary_muscles: 'Glutes; Quads; Hamstrings; Traps; Shoulders',
     movement_pattern: 'Hinge/Power',
     category: 'Power',
     default_equipment: 'Barbell',
@@ -198,6 +198,21 @@ export function masterRecordToCatalogRow(record: MasterLibraryRecord): MappedCat
   const movement_pattern = mapMasterMovementPattern(record.movement_pattern);
   const exercise_type = inferExerciseType(name, primary, String(record.category || ''), '');
   const category = mapCatalogCategory(record.category || '', exercise_type);
+  const fullBody = /full\s*body/i.test(primary);
+  const muscle_targets = fullBody && secondaries.length
+    ? secondaries.map((muscle, i) => ({
+        muscle,
+        percentage: Math.max(1, Math.floor(100 / secondaries.length) + (i === 0 ? 100 % secondaries.length : 0)),
+        role: (i < 2 ? 'primary' : 'secondary') as 'primary' | 'secondary',
+      }))
+    : [
+        ...(primary ? [{ muscle: primary, percentage: 60, role: 'primary' as const }] : []),
+        ...secondaries.map((muscle, i) => ({
+          muscle,
+          percentage: Math.max(1, Math.floor(40 / secondaries.length) + (i === 0 ? 40 % secondaries.length : 0)),
+          role: 'secondary' as const,
+        })),
+      ];
 
   return {
     name,
@@ -214,16 +229,9 @@ export function masterRecordToCatalogRow(record: MasterLibraryRecord): MappedCat
     external_id: String(record.id),
     training_goal: category === 'mobility' ? 'mobility' : category === 'plyometric' ? 'power' : 'strength',
     progression_type: exercise_type === 'cardio' || exercise_type === 'timed' ? 'duration' : 'weight',
-    primary_muscle_percentage: primary ? 60 : null,
-    secondary_muscle_percentage: secondaries.length ? 40 : null,
-    muscle_targets: [
-      ...(primary ? [{ muscle: primary, percentage: 60, role: 'primary' as const }] : []),
-      ...secondaries.map((muscle, i) => ({
-        muscle,
-        percentage: Math.max(1, Math.floor(40 / secondaries.length) + (i === 0 ? 40 % secondaries.length : 0)),
-        role: 'secondary' as const,
-      })),
-    ],
+    primary_muscle_percentage: fullBody ? 100 : primary ? 60 : null,
+    secondary_muscle_percentage: fullBody ? null : secondaries.length ? 40 : null,
+    muscle_targets,
     coaching_metadata: {
       aliases,
       compatible_equipment: compatible.length ? compatible : defaultEquipment ? [defaultEquipment] : [],

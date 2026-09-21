@@ -7,6 +7,7 @@ import WarmupExerciseCard from './WarmupExerciseCard';
 import { fetchAllExerciseCatalog } from '../../../lib/training/catalogFetch';
 import { catalogResultMeta, searchCatalog, workoutSearchCatalogItems } from '../../../lib/training/catalogSearch';
 import { normalizeEquipmentList } from '../../../lib/training/equipmentFilter';
+import { compatibleEquipmentOptions, defaultCatalogEquipment, resolveExerciseEquipment } from '../../../lib/training/exerciseEquipment';
 import { getExerciseGuidePayload, getExerciseThumb, hasExerciseGuide, type ExerciseGuidePayload } from '../../../lib/training/exerciseMedia';
 import { exerciseTypeOf } from '../../../lib/training/exerciseTypes';
 import { SET_TYPES } from '../../../lib/training/setTypes';
@@ -103,11 +104,15 @@ export default function WorkoutTemplateEditor({
     if (!canEdit) return;
     setBusy(true);
     setError('');
-    const payload = catalogPayloadFromItem(item, exerciseSection(ex));
+    const payload = catalogPayloadFromItem(item, exerciseSection(ex), ex);
     for (const tw of targets) {
       const match = tw.id === workout.id ? ex : matchingExercise(tw, ex);
       if (!match) continue;
-      const { error: updateError } = await supabase.from('st_exercises').update(payload).eq('id', match.id);
+      let { error: updateError } = await supabase.from('st_exercises').update(payload).eq('id', match.id);
+      if (updateError && /equipment/i.test(updateError.message || '')) {
+        const { equipment: _eq, ...rest } = payload;
+        ({ error: updateError } = await supabase.from('st_exercises').update(rest).eq('id', match.id));
+      }
       if (updateError) return persistError(updateError.message);
     }
     setPanel(null);
@@ -191,22 +196,24 @@ export default function WorkoutTemplateEditor({
     setBusy(true);
     setError('');
     for (const tw of targets) {
-      const { data: ex, error: exError } = await supabase
-        .from('st_exercises')
-        .insert({
-          workout_id: tw.id,
-          section,
-          sort_order: sortOrder,
-          name: picked.name,
-          muscle_group: picked.muscle_group || '',
-          catalog_exercise_id: picked.id,
-          exercise_type: exType,
-          superset_group_id: groupId,
-          superset_label: supersetLabel,
-          superset_order: slotOrder,
-        })
-        .select()
-        .single();
+      const addPayload: Record<string, unknown> = {
+        workout_id: tw.id,
+        section,
+        sort_order: sortOrder,
+        name: picked.name,
+        muscle_group: picked.muscle_group || '',
+        equipment: defaultCatalogEquipment(picked),
+        catalog_exercise_id: picked.id,
+        exercise_type: exType,
+        superset_group_id: groupId,
+        superset_label: supersetLabel,
+        superset_order: slotOrder,
+      };
+      let { data: ex, error: exError } = await supabase.from('st_exercises').insert(addPayload).select().single();
+      if (exError && /equipment/i.test(exError.message || '')) {
+        delete addPayload.equipment;
+        ({ data: ex, error: exError } = await supabase.from('st_exercises').insert(addPayload).select().single());
+      }
       if (exError || !ex) return persistError(exError?.message || 'Could not add exercise');
       const rows = Array.from({ length: setCount }, (_, i) => ({
         exercise_id: ex.id,
@@ -319,6 +326,17 @@ export default function WorkoutTemplateEditor({
       const match = tw.id === workout.id ? ex : matchingExercise(tw, ex);
       if (!match) continue;
       await supabase.from('st_exercises').update({ muscle_group: muscle }).eq('id', match.id);
+    }
+    await onReload();
+  }
+
+  async function updateEquipment(ex: any, equipment: string) {
+    if (!canEdit) return;
+    for (const tw of targets) {
+      const match = tw.id === workout.id ? ex : matchingExercise(tw, ex);
+      if (!match) continue;
+      const { error } = await supabase.from('st_exercises').update({ equipment }).eq('id', match.id);
+      if (error) return persistError(error.message);
     }
     await onReload();
   }
@@ -536,6 +554,7 @@ export default function WorkoutTemplateEditor({
                             onRename={(name) => void renameExercise(ex, name)}
                             onPickCatalog={(item) => void replaceWithCatalog(ex, item)}
                             onMuscle={(v) => void updateMuscle(ex, v)}
+                            onEquipment={(v) => void updateEquipment(ex, v)}
                             onOpenGuide={setGuide}
                             onChange={() => setPanel(openReplacePanelState(ex))}
                             onMove={(dir) => void moveExercise(ex, dir)}
@@ -569,6 +588,7 @@ export default function WorkoutTemplateEditor({
                       onRename={(name) => void renameExercise(block.exercises[0], name)}
                       onPickCatalog={(item) => void replaceWithCatalog(block.exercises[0], item)}
                       onMuscle={(v) => void updateMuscle(block.exercises[0], v)}
+                      onEquipment={(v) => void updateEquipment(block.exercises[0], v)}
                       onOpenGuide={setGuide}
                       onChange={() => setPanel(openReplacePanelState(block.exercises[0]))}
                       onMove={(dir) => void moveExercise(block.exercises[0], dir)}
@@ -666,6 +686,7 @@ function TemplateExerciseCard({
   onRename,
   onPickCatalog,
   onMuscle,
+  onEquipment,
   onOpenGuide,
   onChange,
   onMove,
@@ -691,6 +712,7 @@ function TemplateExerciseCard({
   onRename: (name: string) => void;
   onPickCatalog: (item: any) => void;
   onMuscle: (value: string) => void;
+  onEquipment: (value: string) => void;
   onOpenGuide: (payload: ExerciseGuidePayload) => void;
   onChange: () => void;
   onMove: (dir: number) => void;
@@ -711,6 +733,8 @@ function TemplateExerciseCard({
     isEditingName && nameQuery.trim() ? searchCatalog(searchPool, { query: nameQuery, limit: 8 }) : [];
   const sets = plannedSets(ex);
   const cardKey = `${ex.id}:${ex.catalog_exercise_id || 'n'}:${ex.name}`;
+  const eqOptions = compatibleEquipmentOptions(catalogItem, ex.equipment);
+  const currentEq = resolveExerciseEquipment(ex, catalogItem);
 
   return (
     <div className={`card exercise-card${inSuperset ? ' in-superset' : ''}${collapsed ? ' exercise-collapsed' : ''}`} data-exercise-id={ex.id}>
@@ -791,12 +815,30 @@ function TemplateExerciseCard({
                     if ((e.target.value || '') !== (ex.muscle_group || '')) onMuscle(e.target.value);
                   }}
                 />
+                {eqOptions.length > 1 ? (
+                  <select
+                    className="exercise-equipment"
+                    key={`${cardKey}-eq`}
+                    value={currentEq}
+                    onChange={(e) => onEquipment(e.target.value)}
+                    aria-label="Equipment"
+                  >
+                    {eqOptions.map((eq) => (
+                      <option key={eq} value={eq}>
+                        {eq}
+                      </option>
+                    ))}
+                  </select>
+                ) : currentEq ? (
+                  <span className="badge exercise-equipment-badge">{currentEq}</span>
+                ) : null}
                 <span className="badge exercise-type-badge">{exType}</span>
               </div>
             ) : (
               <div className="exercise-title-row">
                 <h3 className="exercise-name-text">{ex.name}</h3>
                 <span className="badge exercise-muscle-badge">{ex.muscle_group || 'Muscle'}</span>
+                {currentEq ? <span className="badge exercise-equipment-badge">{currentEq}</span> : null}
                 <span className="badge exercise-type-badge">{exType}</span>
               </div>
             )}

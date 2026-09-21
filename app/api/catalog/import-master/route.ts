@@ -9,7 +9,7 @@ import {
 } from '../../../../lib/training/masterCatalogImport';
 
 export const runtime = 'nodejs';
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 export async function GET(request: Request) {
   const { supabase, token } = createSupabaseFromRequest(request);

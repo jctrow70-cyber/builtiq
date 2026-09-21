@@ -6,8 +6,10 @@ import {
   MASTER_CATALOG_SOURCE,
   masterRecordToCatalogRow,
 } from './masterCatalog';
+import type { MappedCatalogRow } from './catalogImportTypes';
 
 const BATCH = 40;
+const UPDATE_CONCURRENCY = 12;
 
 export type MasterImportStats = {
   totalFound: number;
@@ -31,6 +33,11 @@ function emptyStats(): MasterImportStats {
     errors: 0,
     errorMessages: [],
   };
+}
+
+function pushError(stats: MasterImportStats, message: string) {
+  stats.errors++;
+  if (stats.errorMessages.length < 12) stats.errorMessages.push(message);
 }
 
 export async function countMasterCatalogRows(supabase: SupabaseClient): Promise<number> {
@@ -62,6 +69,23 @@ async function loadMasterByExternal(supabase: SupabaseClient): Promise<Map<strin
   return byExternal;
 }
 
+/** Re-import must not wipe Veo posters/videos already stored on the card. */
+function catalogUpdatePayload(row: MappedCatalogRow) {
+  const { media_url: _media, image_url: _image, gif_url: _gif, ...rest } = row;
+  return rest;
+}
+
+async function countUpdate(
+  supabase: SupabaseClient,
+  table: 'st_exercises' | 'st_set_logs',
+  values: Record<string, unknown>,
+  apply: (query: any) => any
+) {
+  const query = apply(supabase.from(table).update(values));
+  const { count, error } = await query.select('id', { count: 'exact', head: true });
+  return { count: count || 0, error };
+}
+
 async function upsertMasterRows(supabase: SupabaseClient, stats: MasterImportStats, dryRun: boolean) {
   const records = loadMasterLibraryRecords().map(masterRecordToCatalogRow);
   stats.totalFound = records.length;
@@ -89,17 +113,22 @@ async function upsertMasterRows(supabase: SupabaseClient, stats: MasterImportSta
     } else stats.inserted += chunk.length;
   }
 
-  for (const { id, row } of toUpdate) {
-    const { error } = await supabase
-      .from('st_exercise_catalog')
-      .update(row)
-      .eq('id', id)
-      .eq('is_system', true)
-      .is('user_id', null);
-    if (error) {
-      stats.errors++;
-      stats.errorMessages.push(`${row.name}: ${error.message}`);
-    } else stats.updated++;
+  for (let i = 0; i < toUpdate.length; i += UPDATE_CONCURRENCY) {
+    const chunk = toUpdate.slice(i, i + UPDATE_CONCURRENCY);
+    const results = await Promise.all(
+      chunk.map(({ id, row }) =>
+        supabase
+          .from('st_exercise_catalog')
+          .update(catalogUpdatePayload(row))
+          .eq('id', id)
+          .eq('is_system', true)
+          .is('user_id', null)
+      )
+    );
+    results.forEach((result, index) => {
+      if (result.error) pushError(stats, `${chunk[index].row.name}: ${result.error.message}`);
+      else stats.updated++;
+    });
   }
 }
 
@@ -108,86 +137,96 @@ async function remapLinkedRows(supabase: SupabaseClient, stats: MasterImportStat
   const rows = householdRowsToRemap();
   const oldIdCounts = householdCatalogIdUseCount();
 
-  for (const row of rows) {
-    const newId = byExternal.get(row.new_exercise_id);
-    if (!newId) {
-      stats.errors++;
-      stats.errorMessages.push(`No master row ${row.new_exercise_id} for ${row.logged_name}`);
-      continue;
-    }
-    if (dryRun) {
-      stats.remappedExercises++;
-      stats.remappedLogs++;
-      continue;
-    }
+  for (let i = 0; i < rows.length; i += UPDATE_CONCURRENCY) {
+    const chunk = rows.slice(i, i + UPDATE_CONCURRENCY);
+    const results = await Promise.all(
+      chunk.map(async (row) => {
+        const newId = byExternal.get(row.new_exercise_id);
+        if (!newId) return { row, newId: '', error: `No master row ${row.new_exercise_id} for ${row.logged_name}` };
+        if (dryRun) return { row, newId, remappedExercises: 1, remappedLogs: 1 };
+        let remappedExercises = 0;
+        let remappedLogs = 0;
+        if (row.logged_name) {
+          const stillNeeds = `catalog_exercise_id.is.null,catalog_exercise_id.neq.${newId}`;
+          const ex = await countUpdate(
+            supabase,
+            'st_exercises',
+            { catalog_exercise_id: newId },
+            (query) => query.ilike('name', row.logged_name).or(stillNeeds)
+          );
+          if (ex.error) return { row, newId, error: `Remap exercises ${row.logged_name}: ${ex.error.message}` };
+          remappedExercises += ex.count;
 
-    if (row.logged_name) {
-      const { data: exRows, error: exErr } = await supabase
-        .from('st_exercises')
-        .update({ catalog_exercise_id: newId })
-        .ilike('name', row.logged_name)
-        .select('id');
-      if (exErr) {
-        stats.errors++;
-        stats.errorMessages.push(`Remap exercises ${row.logged_name}: ${exErr.message}`);
-      } else stats.remappedExercises += exRows?.length || 0;
+          const logNeeds = `snapshot_catalog_exercise_id.is.null,snapshot_catalog_exercise_id.neq.${newId}`;
+          const logs = await countUpdate(
+            supabase,
+            'st_set_logs',
+            { snapshot_catalog_exercise_id: newId },
+            (query) => query.ilike('snapshot_exercise_name', row.logged_name).or(logNeeds)
+          );
+          if (logs.error) return { row, newId, error: `Remap logs ${row.logged_name}: ${logs.error.message}` };
+          remappedLogs += logs.count;
+        }
+        return { row, newId, remappedExercises, remappedLogs };
+      })
+    );
 
-      const { data: logRows, error: logErr } = await supabase
-        .from('st_set_logs')
-        .update({ snapshot_catalog_exercise_id: newId })
-        .ilike('snapshot_exercise_name', row.logged_name)
-        .select('id');
-      if (logErr) {
-        stats.errors++;
-        stats.errorMessages.push(`Remap logs ${row.logged_name}: ${logErr.message}`);
-      } else stats.remappedLogs += logRows?.length || 0;
-    }
+    for (const result of results) {
+      if (result.error) {
+        pushError(stats, result.error);
+        continue;
+      }
+      stats.remappedExercises += result.remappedExercises || 0;
+      stats.remappedLogs += result.remappedLogs || 0;
+      const uniqueOld = result.row.current_catalog_id && oldIdCounts.get(result.row.current_catalog_id) === 1;
+      if (!uniqueOld || dryRun || !result.newId) continue;
 
-    const uniqueOld = row.current_catalog_id && oldIdCounts.get(row.current_catalog_id) === 1;
-    if (uniqueOld) {
-      const { error: leftoverEx } = await supabase
-        .from('st_exercises')
-        .update({ catalog_exercise_id: newId })
-        .eq('catalog_exercise_id', row.current_catalog_id);
-      if (leftoverEx) stats.errorMessages.push(`Leftover exercise remap ${row.logged_name}: ${leftoverEx.message}`);
+      const leftoverEx = await countUpdate(
+        supabase,
+        'st_exercises',
+        { catalog_exercise_id: result.newId },
+        (query) => query.eq('catalog_exercise_id', result.row.current_catalog_id)
+      );
+      if (leftoverEx.error) stats.errorMessages.push(`Leftover exercise remap ${result.row.logged_name}: ${leftoverEx.error.message}`);
+      else stats.remappedExercises += leftoverEx.count;
 
-      const { error: leftoverLog } = await supabase
-        .from('st_set_logs')
-        .update({ snapshot_catalog_exercise_id: newId })
-        .eq('snapshot_catalog_exercise_id', row.current_catalog_id);
-      if (leftoverLog) stats.errorMessages.push(`Leftover log remap ${row.logged_name}: ${leftoverLog.message}`);
+      const leftoverLog = await countUpdate(
+        supabase,
+        'st_set_logs',
+        { snapshot_catalog_exercise_id: result.newId },
+        (query) => query.eq('snapshot_catalog_exercise_id', result.row.current_catalog_id)
+      );
+      if (leftoverLog.error) stats.errorMessages.push(`Leftover log remap ${result.row.logged_name}: ${leftoverLog.error.message}`);
+      else stats.remappedLogs += leftoverLog.count;
     }
   }
 }
 
 async function archiveOldSystemCatalog(supabase: SupabaseClient, stats: MasterImportStats, dryRun: boolean) {
-  if (dryRun) {
-    const { count, error } = await supabase
-      .from('st_exercise_catalog')
-      .select('id', { count: 'exact', head: true })
+  const filter = (query: any) =>
+    query
       .eq('is_system', true)
       .is('user_id', null)
       .eq('is_archived', false)
       .or(`external_source.is.null,external_source.neq.${MASTER_CATALOG_SOURCE}`);
+
+  if (dryRun) {
+    const { count, error } = await filter(
+      supabase.from('st_exercise_catalog').select('id', { count: 'exact', head: true })
+    );
     if (error) throw new Error(error.message);
     stats.archivedOld = count || 0;
     return;
   }
 
-  const { data, error } = await supabase
-    .from('st_exercise_catalog')
-    .update({ is_archived: true })
-    .eq('is_system', true)
-    .is('user_id', null)
-    .eq('is_archived', false)
-    .or(`external_source.is.null,external_source.neq.${MASTER_CATALOG_SOURCE}`)
-    .select('id');
+  const { count, error } = await filter(
+    supabase.from('st_exercise_catalog').update({ is_archived: true })
+  ).select('id', { count: 'exact', head: true });
   if (error) {
-    stats.errors++;
-    stats.errorMessages.push(`Archive old catalog: ${error.message}`);
+    pushError(stats, `Archive old catalog: ${error.message}`);
     return;
   }
-  stats.archivedOld = data?.length || 0;
+  stats.archivedOld = count || 0;
 }
 
 export async function importMasterCatalogToSupabase(

@@ -409,7 +409,7 @@ See `CHANGELOG.md` BIQ-0013 and BIQ-0024 for full scope.
 
 ### Planned — Platform admin and catalog operations
 
-**Current (BIQ-0201):** Catalog admins import the **BuildIQ Master Library** from Settings (`POST /api/catalog/import-master`). That upserts ~254 movement cards, remaps household plan/log catalog ids, and archives the old GIF dump. The legacy Guided Library import remains available but no longer un-archives rows already hidden. Normal users get unified search of active catalog rows.
+**Current (BIQ-0201 / BIQ-0202):** Catalog admins import the **BuildIQ Master Library** from Settings (`POST /api/catalog/import-master`). That upserts ~254 movement cards, remaps household plan/log catalog ids, and archives the old GIF dump. Workout cards can pick a compatible implement (`st_exercises.equipment`) without a second catalog row. The legacy Guided Library import remains available but no longer un-archives rows already hidden. Normal users get unified search of active catalog rows.
 
 **Roadmap — proper admin model (not started):**
 

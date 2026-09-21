@@ -1,5 +1,6 @@
 import { inferExerciseType } from './exerciseTypes';
 import { exerciseSection, sectionExercises } from '../programDesign/workoutPreview';
+import { defaultCatalogEquipment } from './exerciseEquipment';
 
 export const WORKOUT_TEMPLATE_SECTIONS = [
   { id: 'warmup', label: 'Warm Up / Prep' },
@@ -133,12 +134,13 @@ export function getSupersetGroupsForSection(workout: any, section: string) {
   return groups.sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0));
 }
 
-export function catalogPayloadFromItem(catalogItem: any, section: string) {
+export function catalogPayloadFromItem(catalogItem: any, section: string, current?: any) {
   return {
     name: catalogItem.name,
     muscle_group: catalogItem.muscle_group || '',
     catalog_exercise_id: catalogItem.id,
     exercise_type: inferExerciseType(catalogItem.name, catalogItem.muscle_group, section, catalogItem.exercise_type),
+    equipment: defaultCatalogEquipment(catalogItem, current),
   };
 }
 

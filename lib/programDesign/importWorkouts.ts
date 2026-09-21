@@ -16,6 +16,7 @@ type SourceExercise = {
   section: string | null;
   sort_order: number;
   catalog_exercise_id: string | null;
+  equipment: string | null;
   exercise_type: string | null;
   superset_group_id: string | null;
   superset_label: string | null;
@@ -36,6 +37,7 @@ type SourcePlannedSet = {
 
 const EXERCISE_OPTIONAL_COLS = [
   'exercise_type',
+  'equipment',
   'superset_group_id',
   'superset_label',
   'superset_order',
@@ -121,6 +123,7 @@ export async function fetchSourceWorkouts(
         section: e.section || null,
         sort_order: e.sort_order || 0,
         catalog_exercise_id: e.catalog_exercise_id || null,
+        equipment: e.equipment || null,
         exercise_type: e.exercise_type || null,
         superset_group_id: e.superset_group_id || null,
         superset_label: e.superset_label || null,
@@ -232,6 +235,7 @@ export async function importWorkoutsIntoActivities(
       };
 
       if (ex.exercise_type) exercisePayload.exercise_type = ex.exercise_type;
+      if (ex.equipment) exercisePayload.equipment = ex.equipment;
       if (newSupersetGroupId) exercisePayload.superset_group_id = newSupersetGroupId;
       if (ex.superset_label) exercisePayload.superset_label = ex.superset_label;
       if (ex.superset_order != null) exercisePayload.superset_order = ex.superset_order;
