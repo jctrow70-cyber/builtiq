@@ -133,16 +133,22 @@ function QuickAddFoodsPanel({
   emptyMessage,
 }: QuickAddFoodsPanelProps) {
   return (
-    <>
-      <p className="muted nutrition-add-intro">
-        Search saved foods and items you&apos;ve logged before. Tap to add to today — macros are snapshotted when logged
-        so history stays accurate.
-      </p>
-      <input
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        placeholder="Search my foods and recent logs"
-      />
+    <div className="nutrition-find-food">
+      <div className="nutrition-find-food-search">
+        <p className="muted nutrition-add-intro">
+          Search saved foods and items you&apos;ve logged before. Tap to add to today — macros are snapshotted when logged
+          so history stays accurate.
+        </p>
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search my foods and recent logs"
+          inputMode="search"
+          enterKeyHint="search"
+          autoComplete="off"
+        />
+      </div>
+      <div className="nutrition-find-food-results">
       {items.length === 0 ? (
         <p className="muted">
           {emptyMessage ||
@@ -200,7 +206,8 @@ function QuickAddFoodsPanel({
           ))}
         </div>
       )}
-    </>
+      </div>
+    </div>
   );
 }
 

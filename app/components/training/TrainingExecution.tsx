@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import SegmentedControl from '../ui/SegmentedControl';
 import SectionHeader from '../ui/SectionHeader';
 import { formatLongWeekday, formatMediumDate } from '../../../lib/programDesign/cycle';
@@ -67,6 +68,16 @@ function DayItems({
   onAdd?: () => void;
   onMove?: (item: TrainingDayItem) => void;
 }) {
+  const [moreId, setMoreId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!moreId) return;
+    const close = () => setMoreId(null);
+    const timer = window.setTimeout(() => document.addEventListener('click', close), 0);
+    return () => {
+      window.clearTimeout(timer);
+      document.removeEventListener('click', close);
+    };
+  }, [moreId]);
   if (!plan.items.length) {
     return (
       <div className="te-empty">
@@ -85,15 +96,24 @@ function DayItems({
         const checkoff = itemAllowsCheckoff(item);
         const showComplete = !!onComplete && (checkoff || !!item.workoutId);
         const busy = completingItemId === item.id;
+        const canStart = !item.isRest && !!item.workoutId;
+        const canSetup = !item.isRest && item.activityType === 'strength' && !item.workoutId && item.source === 'calendar' && !!item.activityId && !!onSetup;
+        const showMove = !item.isRest && !!onMove;
+        const showEdit = item.source === 'calendar' && !!item.activityId && !!onEdit;
+        const hasMore = showComplete || showMove || showEdit;
+        const moreOpen = moreId === item.id;
         return (
         <div key={item.id} className={`te-item${item.completed ? ' te-item--done' : ''}`}>
-          <div>
+          <div className="te-item-main">
             <span className="te-item-type">{item.typeLabel}</span>
             <button
               type="button"
               className="te-item-title"
-              disabled={!item.workoutId || !onView}
-              onClick={() => item.workoutId && onView?.(item.workoutId)}
+              disabled={!item.workoutId || (!onView && !onStart)}
+              onClick={() => {
+                if (item.workoutId && onStart) onStart(item.workoutId);
+                else if (item.workoutId) onView?.(item.workoutId);
+              }}
             >
               <b>{item.title}</b>
             </button>
@@ -104,41 +124,72 @@ function DayItems({
             {item.completed && <span className="ui-badge">Done</span>}
           </div>
           <div className="actions te-item-actions">
-            {!item.isRest && item.workoutId && onView && (
-              <button type="button" className="btn small secondary" onClick={() => onView(item.workoutId!)}>
-                View
-              </button>
-            )}
-            {!item.isRest && item.workoutId && (
+            {canStart && (
               <button type="button" className={`btn ${idx === 0 ? 'green' : 'secondary'} small`} onClick={() => onStart(item.workoutId)}>
                 {item.completed ? 'Review' : 'Start'}
               </button>
             )}
-            {!item.isRest && item.activityType === 'strength' && !item.workoutId && item.source === 'calendar' && item.activityId && onSetup && (
-              <button type="button" className="btn green small" onClick={() => onSetup(item.activityId!)}>
+            {canSetup && (
+              <button type="button" className="btn green small" onClick={() => onSetup?.(item.activityId!)}>
                 Set up
               </button>
             )}
-            {showComplete && (
-              <button
-                type="button"
-                className={`btn te-complete-btn ${item.completed ? 'secondary' : 'green'}`}
-                disabled={busy || (item.completed && !!item.workoutId)}
-                aria-pressed={!!item.completed}
-                onClick={() => onComplete?.(item)}
-              >
-                {busy ? 'Saving…' : item.completed ? 'Completed' : 'Complete'}
-              </button>
-            )}
-            {item.source === 'calendar' && item.activityId && onEdit && (
-              <button type="button" className="btn small secondary" onClick={() => onEdit(item.activityId!)}>
-                Edit
-              </button>
-            )}
-            {!item.isRest && onMove && (
-              <button type="button" className="btn small secondary" onClick={() => onMove(item)}>
-                Move
-              </button>
+            {hasMore && (
+              <div className="te-item-more">
+                <button
+                  type="button"
+                  className="btn small secondary te-item-more-btn"
+                  aria-expanded={moreOpen}
+                  aria-haspopup="menu"
+                  onClick={() => setMoreId(moreOpen ? null : item.id)}
+                >
+                  More
+                </button>
+                {moreOpen && (
+                  <div className="te-item-menu" role="menu">
+                    {showComplete && (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="te-item-menu-btn"
+                        disabled={busy || (item.completed && !!item.workoutId)}
+                        onClick={() => {
+                          setMoreId(null);
+                          onComplete?.(item);
+                        }}
+                      >
+                        {busy ? 'Saving…' : item.completed ? 'Undo complete' : 'Mark complete'}
+                      </button>
+                    )}
+                    {showMove && (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="te-item-menu-btn"
+                        onClick={() => {
+                          setMoreId(null);
+                          onMove?.(item);
+                        }}
+                      >
+                        Move day
+                      </button>
+                    )}
+                    {showEdit && (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        className="te-item-menu-btn"
+                        onClick={() => {
+                          setMoreId(null);
+                          onEdit?.(item.activityId!);
+                        }}
+                      >
+                        Edit activity
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
@@ -284,9 +335,9 @@ export default function TrainingExecution({
                     <b>{item.title}</b>
                     {item.duration ? ` · ${item.duration}` : ''}
                   </p>
-                  {item.workoutId && onViewWorkout && (
-                    <button type="button" className="btn small secondary" onClick={() => onViewWorkout(item.workoutId!, today.date)}>
-                      View
+                  {item.workoutId && (
+                    <button type="button" className="btn small secondary" onClick={() => onStartWorkout(item.workoutId, today.date)}>
+                      Start
                     </button>
                   )}
                 </div>

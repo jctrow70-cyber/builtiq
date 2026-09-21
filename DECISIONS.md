@@ -1683,3 +1683,33 @@ Power Clean is the same movement with barbell, dumbbell, or kettlebell. Separate
 - Training and program-design exercise cards
 
 ---
+
+## Decision 056 - Exercise Swaps Ask This Week vs Remaining Weeks
+
+Date: 2026-09-21  
+Status: Accepted  
+Category: Training
+
+### Decision
+
+When a user replaces a planned exercise from Training (catalog pick or name typeahead), show a small overlay: **This week only** or **All remaining weeks**. The change still runs on the personal just-me copy when they are following a group plan. Logged set history is not rewritten.
+
+If only one remaining week of that weekday exists, skip the overlay and apply to that week.
+
+### Reason
+
+A swap in a live session used to update only the open workout. Users expected a choice: one session vs the rest of their plan. Group templates must stay unchanged unless a shared-template editor is editing the group plan on purpose.
+
+### Alternatives Considered
+
+- Always apply to all remaining weeks — rejected; a one-day swap (injury, missing equipment) would rewrite the rest of the cycle
+- Always this workout only — rejected; users would re-swap every week
+- Reuse the group-editor “Apply this change to” dropdown — rejected for Training; members should see a one-shot overlay at the moment of the swap
+
+### Impact
+
+- BIQ-0203
+- `targetWorkoutsFrom` honors an explicit current/future override from the overlay
+- Personal copy via `ensurePersonalCopyForTrainingEdit` is unchanged
+
+---

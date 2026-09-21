@@ -599,11 +599,29 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .nutrition-scan-picker input[type=file]{margin-top:6px;font-size:13px;max-width:100%}
 .nutrition-add-panel{width:100%;max-width:560px;max-height:90vh;overflow:auto;margin:0}
 .nutrition-find-food{display:flex;flex-direction:column;min-height:0;flex:1}
-.nutrition-find-food-search{position:sticky;top:0;z-index:3;background:var(--surfaceElevated);padding:0 0 10px}
-.nutrition-find-food-results{min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}
+.nutrition-find-food-search{flex-shrink:0;position:sticky;top:0;z-index:3;background:var(--surfaceElevated);padding:0 0 10px}
+.nutrition-find-food-results{min-height:0;flex:1;overflow:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}
 .nutrition-find-food-results .catalog-results{max-height:none;overflow:visible}
 .nutrition-add-card--search{display:flex;flex-direction:column;min-height:0}
 .nutrition-my-foods-panel{width:100%;max-width:560px;max-height:90vh;overflow:auto;margin:0}
+.nutrition-add-panel.nutrition-add-card--search,
+.nutrition-add-panel.nutrition-my-foods-panel{
+  height:min(92dvh,720px);
+  max-height:min(92dvh,720px);
+  display:flex;
+  flex-direction:column;
+  min-height:0;
+  overflow:hidden;
+}
+.nutrition-add-panel.nutrition-add-card--search .topline,
+.nutrition-add-panel.nutrition-my-foods-panel .topline{flex-shrink:0}
+.nutrition-add-card--search .nutrition-find-food,
+.nutrition-my-foods-panel .nutrition-find-food{
+  flex:1;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+}
 .nutrition-quick-add-picker{margin-bottom:10px}
 .nutrition-manual-entry{scroll-margin-top:8px}
 .nutrition-saved-badge{font-size:10px;font-weight:800;align-self:center;padding:0 4px}
@@ -634,15 +652,13 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
  @media(max-width:900px){.add-exercise-row{grid-template-columns:1fr auto auto}.catalog-edit-grid{grid-template-columns:1fr}.catalog-search-filters{grid-template-columns:1fr}.setgrid,.setgrid-edit{grid-template-columns:1fr 1fr 1fr}.exercise-add-row{grid-template-columns:1fr auto auto}.team-compliance-card .dash-metrics{grid-template-columns:1fr 1fr}.progress-trend-chart{grid-template-columns:repeat(4,minmax(0,1fr))}.progress-summary-metrics{grid-template-columns:1fr 1fr}.panel-overlay{align-items:flex-end;padding:0}.add-exercise-panel,.nutrition-add-panel,.nutrition-my-foods-panel,.exercise-history-panel{border-radius:18px 18px 0 0;max-height:90vh}.log-field-row:not(.log-field-row-compact){grid-template-columns:1fr}.log-dup-btn,.set-done-check{min-height:44px}.nutrition-totals-grid,.nutrition-date-row,.nutrition-weekly-metrics{grid-template-columns:1fr 1fr}.nutrition-date-row{margin:4px 0}.nutrition-date-row input{grid-column:span 2}.nutrition-macro-ring-wrap{max-width:118px}.nutrition-weekly-chart{grid-template-columns:repeat(4,minmax(0,1fr))}}
  @media(max-width:600px){.nutrition-totals-grid,.nutrition-date-row{grid-template-columns:1fr}.nutrition-food-chip,.nutrition-entry-row{grid-template-columns:1fr}}
 @media(max-width:900px){
-  .nutrition-add-panel.nutrition-add-card--search{
-    max-height:100%;
+  .nutrition-add-panel.nutrition-add-card--search,
+  .nutrition-add-panel.nutrition-my-foods-panel{
     height:min(92dvh,100%);
-    display:flex;
-    flex-direction:column;
-    min-height:0;
-    overflow:hidden;
+    max-height:100%;
   }
-  .nutrition-add-card--search .nutrition-find-food{
+  .nutrition-add-card--search .nutrition-find-food,
+  .nutrition-my-foods-panel .nutrition-find-food{
     flex:1;
     min-height:0;
     display:flex;
@@ -991,15 +1007,25 @@ label{color:var(--textSecondary)}
 .te-empty{padding:24px 8px;display:grid;gap:12px;justify-items:start}
 .te-block{padding:16px;border-radius:16px;background:var(--surfaceElevated);border:1px solid var(--borderSubtle)}
 .te-block h2{margin:0 0 10px;font-size:15px}
-.te-day-items{display:grid;gap:10px}
-.te-item{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
-.te-item > div{display:grid;gap:2px}
+.te-day-items{display:grid;gap:10px;overflow:visible}
+.te-item{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;overflow:visible}
+.te-item-main{display:grid;gap:2px;min-width:0}
+.te-item-type{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
 .te-item-moved{font-size:12px;line-height:1.3}
 .te-item-title{background:none;border:0;padding:0;color:inherit;font:inherit;text-align:left;cursor:pointer}
 .te-item-title:disabled{cursor:default}
 .te-item--done .te-item-title{text-decoration:line-through;opacity:.72}
-.te-item-actions{align-items:center}
-.te-complete-btn{min-height:44px;min-width:104px;padding:10px 16px;font-weight:800}
+.te-item-actions{align-items:center;flex-wrap:nowrap;gap:6px;margin:0}
+.te-item-more{position:relative}
+.te-item-more-btn{min-width:auto;padding-left:10px;padding-right:10px}
+.te-item-menu{position:absolute;right:0;top:calc(100% + 4px);z-index:8;min-width:168px;padding:6px;border:1px solid var(--line);border-radius:12px;background:var(--surfaceElevated,#101827);box-shadow:0 10px 24px rgba(0,0,0,.35);display:grid;gap:4px}
+.te-item-menu-btn{width:100%;text-align:left;border:0;background:transparent;color:var(--text);padding:8px 10px;border-radius:8px;font-size:13px;font-weight:700}
+.te-item-menu-btn:hover,.te-item-menu-btn:focus{background:var(--accentSoft)}
+.te-item-menu-btn:disabled{opacity:.5}
+.exercise-swap-overlay{z-index:60;align-items:center}
+.exercise-swap-sheet{width:100%;max-width:420px;margin:0 12px;padding:16px}
+.exercise-swap-sheet h2{margin:0 0 8px;font-size:18px}
+.exercise-swap-actions{display:grid;gap:8px;margin-top:14px}
 .te-plan-sheet{max-height:86vh;overflow:auto}
 .te-plan-section{margin:14px 0 0}
 .te-plan-section h3{margin:0 0 8px;font-size:13px;letter-spacing:.04em;text-transform:uppercase}

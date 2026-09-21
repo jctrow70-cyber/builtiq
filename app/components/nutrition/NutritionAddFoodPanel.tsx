@@ -164,7 +164,6 @@ export default function NutritionAddFoodPanel(props: NutritionAddFoodPanelProps)
   const labelInputRef = useRef<HTMLInputElement>(null);
   const mealPhotoInputRef = useRef<HTMLInputElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const findFoodResultsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (view !== 'find_food') return;
@@ -189,23 +188,6 @@ export default function NutritionAddFoodPanel(props: NutritionAddFoodPanelProps)
       root.style.setProperty('--keyboard-inset', '0px');
     };
   }, [view]);
-
-  useEffect(() => {
-    if (view !== 'find_food') return;
-    const results = findFoodResultsRef.current;
-    if (!results) return;
-    const id = window.setTimeout(() => {
-      results.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-    }, 50);
-    return () => window.clearTimeout(id);
-  }, [view, estimateSearch, findFoodResults.length, estimateCatalogMatches.length]);
-
-  const keepFindFoodVisible = () => {
-    const search = searchInputRef.current?.closest('.nutrition-find-food-search');
-    window.setTimeout(() => {
-      search?.scrollIntoView({ block: 'start', inline: 'nearest' });
-    }, 250);
-  };
 
   const startBarcode = () => {
     onViewChange('barcode');
@@ -422,7 +404,6 @@ export default function NutritionAddFoodPanel(props: NutritionAddFoodPanelProps)
               id="estimate-search"
               value={estimateSearch}
               onChange={(e) => onEstimateSearchChange(e.target.value)}
-              onFocus={keepFindFoodVisible}
               placeholder="Search my foods, recent items, or saved meals…"
               inputMode="search"
               enterKeyHint="search"
@@ -432,7 +413,7 @@ export default function NutritionAddFoodPanel(props: NutritionAddFoodPanelProps)
             />
           </div>
 
-          <div className="nutrition-find-food-results" ref={findFoodResultsRef}>
+          <div className="nutrition-find-food-results">
           {addFoodLibraryLoading && !findFoodResults.length && (
             <p className="muted">Loading saved foods and meal templates…</p>
           )}

@@ -11,6 +11,63 @@ Branch:
 Status:
 ```
 
+## BIQ-0203 - Training Calendar Default, Compact Plan Actions, and Exercise Swap Scope
+
+Date: 2026-09-21  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+Training opens on the Calendar tab. Strength plan rows use Start/Review plus a More menu instead of View, Start, Complete, and Move all at once. Swapping an exercise asks This week only vs All remaining weeks before it saves. My foods search stays pinned at the top of the sheet while results filter.
+
+### Purpose
+
+The four-button block wasted space. Exercise swaps from Training used to apply only to the open workout with no prompt, so later weeks stayed on the old movement. The My foods sheet shrank with the result list and dragged the search box down.
+
+### Changes
+
+- Training calendar default is month (labeled Calendar)
+- Day plan rows: title or Start/Review opens the session; Complete, Move, and Edit sit under More
+- Replacing an exercise shows This week only or All remaining weeks; history snapshots are unchanged
+- Training swaps still copy a group plan to a private just-me plan first
+- My foods / Find food sheets keep a fixed height; search stays at the top and results scroll
+
+### Files Changed
+
+- `app/page.tsx`
+- `app/components/training/TrainingExecution.tsx`
+- `app/components/nutrition/NutritionAddFoodPanel.tsx`
+- `app/components/NutritionTracker.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Nutrition → Add food → My foods. Type in search until few matches remain. The search box should stay at the top of the sheet; the list scrolls underneath.
+2. Open Training. The Calendar (month) tab should be selected first.
+3. Select a strength day. Confirm Start (or Review if done) plus More. Complete / Move / Edit are in More, not a second row of buttons.
+4. Open a workout, tap Change on an exercise, pick a catalog replacement. Choose This week only, then reopen a later week of the same day — that later week should still show the old exercise.
+5. Repeat a swap and choose All remaining weeks. This week and later unused weeks of that weekday should show the new exercise. Past logged history names should not change.
+6. Mobile: the plan row should stay one line of actions; the swap overlay should sit above the catalog sheet.
+
+### Known Issues
+
+- Sets, notes, and equipment edits still follow the existing Training this-workout vs rest-of-program rules; only catalog replacements use the new overlay.
+- If the day has only one remaining week, the overlay is skipped and the swap applies to that week.
+
+### Recommended Commit Message
+
+```text
+BIQ-0203 Default Training to calendar and prompt exercise swap week scope
+```
+
 ## BIQ-0202 - Workout Equipment Picker and Faster Master Re-import
 
 Date: 2026-09-20  
