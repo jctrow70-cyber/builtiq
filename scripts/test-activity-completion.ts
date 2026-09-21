@@ -99,6 +99,16 @@ assert.equal(isStrengthWorkoutCompleted(workout, { s1: { completed: true }, s2: 
 assert.equal(isStrengthWorkoutCompleted(workout, { s1: { completed: true }, s2: { completed: false } }), false);
 assert.equal(isStrengthWorkoutCompleted({ id: 'empty', st_exercises: [] }, {}), false);
 
+const workoutWithWarmup = {
+  id: 'w-wu',
+  st_exercises: [
+    { section: 'warmup', st_planned_sets: [{ id: 'wu1' }] },
+    { section: 'strength', st_planned_sets: [{ id: 'main1' }] },
+  ],
+};
+assert.equal(isStrengthWorkoutCompleted(workoutWithWarmup, { main1: { completed: true } }), true);
+assert.equal(isStrengthWorkoutCompleted(workoutWithWarmup, { wu1: { completed: true } }), false);
+
 assert.equal(itemAllowsCheckoff({ workoutId: null, activityType: 'cardio', source: 'calendar' }), true);
 assert.equal(itemAllowsCheckoff({ workoutId: null, activityType: 'rest', source: 'program' }), true);
 assert.equal(itemAllowsCheckoff({ workoutId: 'w1', activityType: 'strength', source: 'calendar' }), false);

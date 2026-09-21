@@ -1743,3 +1743,30 @@ A rolling last-7-days line is hard to compare week to week. Isolating one macro 
 - Progress-tab longer nutrition trends remain a later item
 
 ---
+
+## Decision 058 - Warm-up Sets Do Not Gate Workout Complete
+
+Date: 2026-09-21  
+Status: Accepted  
+Category: Training
+
+### Decision
+
+Strength workout complete (Training Done badge and Dashboard Completed) requires every **loggable** planned set to have `st_set_logs.completed`. Warm-up / prep exercises are excluded because the session UI is prescription-only.
+
+### Reason
+
+Users can finish every lift and still look incomplete. Warm-up rows have planned sets but no set logger, so those IDs can never be checked off.
+
+### Alternatives Considered
+
+- Add a Done checkbox on warm-up cards — rejected for this fix; warm-up is guidance, not logging
+- Also exclude cooldown — rejected for now; cooldown uses the normal logger
+- Treat entered weight/reps as complete without the Done checkbox — separate issue; Progress already shows those rows
+
+### Impact
+
+- BIQ-0205
+- Existing completed history is unchanged
+
+---

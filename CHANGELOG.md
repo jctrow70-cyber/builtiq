@@ -11,6 +11,57 @@ Branch:
 Status:
 ```
 
+## BIQ-0205 - Strength Workout Complete Ignores Warm-up Sets
+
+Date: 2026-09-21  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+A strength workout now shows Done / Completed when every **loggable** planned set is checked off. Warm-up / prep sets no longer block that status. Those cards are prescription-only and have no Done checkbox.
+
+### Purpose
+
+Users finished every lift and the day still looked unfinished. Completion required every planned set, including warm-up rows the logger never shows.
+
+### Changes
+
+- `isStrengthWorkoutCompleted` and Dashboard `workoutStatusFor` count strength and cooldown sets only
+- Training calendar uses the richest copy of the open workout when checking Done
+- Warm-up planned sets stay in history and the plan; they are just not required for complete
+
+### Files Changed
+
+- `lib/programDesign/activityCompletion.ts`
+- `app/page.tsx`
+- `scripts/test-activity-completion.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Open a strength workout that has Warm Up / Prep plus main lifts.
+2. Check Done on every strength (and cooldown) set. Do not log the warm-up cards.
+3. Training day row should show Done and Review. Dashboard Today’s Workout should say Completed.
+4. Leave one main set unchecked — status should stay In progress.
+5. Mobile: the Done badge should appear on the calendar day item without a second Mark complete tap.
+
+### Known Issues
+
+- Cooldown / stretch sets still require the Done checkbox if that section has planned sets.
+- Sets with weight/reps entered but Done unchecked still do not count as complete.
+
+### Recommended Commit Message
+
+```text
+BIQ-0205 Stop warmup sets from blocking workout complete
+```
+
 ## BIQ-0204 - Nutrition Weekly Trend History and Macro Filter
 
 Date: 2026-09-21  

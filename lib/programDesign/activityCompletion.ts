@@ -11,6 +11,7 @@ import type { TrainingDayItem, TrainingDayPlan } from './trainingSchedule';
 export type WorkoutLike = {
   id?: string;
   st_exercises?: Array<{
+    section?: string;
     st_planned_sets?: Array<{ id?: string; is_deleted?: boolean }>;
   }>;
 };
@@ -138,9 +139,22 @@ export function mergeTrainingCompletedDates(
   return uniqueDates([...progressLogDates.map((d) => normalizeYmd(d)), ...calendarCheckoffDates(activities)]);
 }
 
-export function plannedSetIdsForWorkout(workout: WorkoutLike | null | undefined): string[] {
+function exerciseSectionOf(exercise: { section?: string } | null | undefined): string {
+  return String(exercise?.section || 'strength');
+}
+
+/** Warm-up cards are prescription-only — there is no set logger, so those sets cannot block Done. */
+export function exerciseCountsTowardWorkoutCompletion(exercise: { section?: string } | null | undefined): boolean {
+  return exerciseSectionOf(exercise) !== 'warmup';
+}
+
+export function plannedSetIdsForWorkout(
+  workout: WorkoutLike | null | undefined,
+  opts?: { loggableOnly?: boolean }
+): string[] {
   const ids: string[] = [];
   (workout?.st_exercises || []).forEach((exercise) => {
+    if (opts?.loggableOnly && !exerciseCountsTowardWorkoutCompletion(exercise)) return;
     (exercise.st_planned_sets || [])
       .filter((set) => !set.is_deleted)
       .forEach((set) => {
@@ -150,12 +164,12 @@ export function plannedSetIdsForWorkout(workout: WorkoutLike | null | undefined)
   return ids;
 }
 
-/** Same rule as Training/Dashboard: every planned set has st_set_logs.completed = true for that date. */
+/** Same rule as Training/Dashboard: every loggable planned set has st_set_logs.completed = true for that date. */
 export function isStrengthWorkoutCompleted(
   workout: WorkoutLike | null | undefined,
   logMap: Record<string, SetLogLike | undefined>
 ): boolean {
-  const ids = plannedSetIdsForWorkout(workout);
+  const ids = plannedSetIdsForWorkout(workout, { loggableOnly: true });
   if (!ids.length) return false;
   return ids.every((id) => !!logMap[id]?.completed);
 }

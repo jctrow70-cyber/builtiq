@@ -74,6 +74,7 @@ import {
 } from '../lib/programDesign/userCalendar';
 import {
   decorateDayPlanCompletion,
+  exerciseCountsTowardWorkoutCompletion,
   isProgramItemCompletedOnDate,
   itemAllowsCheckoff,
   mergeTrainingCompletedDates,
@@ -145,7 +146,7 @@ const emptyAddPanelCustom=()=>({name:'',category:'strength',muscle_group:'',equi
 const resolveCatalogMovementPattern=(raw?:string):{value:string|null;error?:string}=>{const trimmed=String(raw||'').trim();if(!trimmed)return{value:null};const normalized=normalizeMovementPattern(trimmed);if(!normalized)return{value:null,error:`Invalid movement pattern. Choose one of: ${MOVEMENT_PATTERNS.join(', ')}.`};return{value:normalized};};
 const emptyAddPanelFilters=()=>({muscle:'',equipment:'',exerciseType:'',guidesOnly:false});
 const getSupersetGroupsForSection=(w:any,section:string)=>{const exs=sectionExercises(w,section);const groups:any[]=[];const seen=new Set();exs.forEach((ex:any)=>{if(!ex.superset_group_id||seen.has(ex.superset_group_id))return;seen.add(ex.superset_group_id);const members=exs.filter((e:any)=>e.superset_group_id===ex.superset_group_id).sort((a:any,b:any)=>(a.superset_order||0)-(b.superset_order||0));if(members.length>=1)groups.push({id:ex.superset_group_id,label:ex.superset_label||members.map((e:any)=>e.name).join(' + '),count:members.length,sortOrder:Math.min(...members.map((m:any)=>m.sort_order||0))});});return groups.sort((a:any,b:any)=>(a.sortOrder||0)-(b.sortOrder||0));};
-const workoutStatusFor=(workoutRef:any,logMap:any)=>{if(!workoutRef)return 'none';let planned=0,done=0,started=0;(workoutRef.st_exercises||[]).forEach((e:any)=>(e.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).forEach((s:any)=>{planned++;const log=logMap[s.id];if(log?.completed)done++;else if(log&&logHasPerformance(log))started++;}));if(!planned)return 'none';if(done===planned)return 'completed';if(done>0||started>0)return 'in_progress';return 'not_started';};
+const workoutStatusFor=(workoutRef:any,logMap:any)=>{if(!workoutRef)return 'none';let planned=0,done=0,started=0;(workoutRef.st_exercises||[]).forEach((e:any)=>{if(!exerciseCountsTowardWorkoutCompletion(e))return;(e.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).forEach((s:any)=>{planned++;const log=logMap[s.id];if(log?.completed)done++;else if(log&&logHasPerformance(log))started++;});});if(!planned)return 'none';if(done===planned)return 'completed';if(done>0||started>0)return 'in_progress';return 'not_started';};
 const statusLabel=(s:string)=>s==='completed'?'Completed':s==='in_progress'?'In progress':s==='not_started'?'Not started':'No workout';
 const workoutForDate=(p:any,dateYmd:string,fallbackWeek?:number,moves?:Record<string,string>)=>{
   if(!p)return null;
@@ -2475,7 +2476,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
   ||(sessionKeep&&(sessionKeep.id===activeWorkout||trainingSessionOpen)?sessionKeep:null)
   ||(trainingSessionOpen?(program?.st_workouts||[]).find((w:any)=>w.week===week&&w.day_label===dayLabelFromYmd(logDate)):null)
   ||(!trainingSessionOpen?weekWorkouts[0]:null);
- const trainingCompletionWorkouts=[...(program?.st_workouts||[]),...calendarWorkouts];
+ const trainingCompletionWorkouts=(()=>{const byId=new Map<string,any>();[...(program?.st_workouts||[]),...calendarWorkouts,workout].forEach((w:any)=>{if(!w?.id)return;const prev=byId.get(w.id);if(!prev||(w.st_exercises||[]).length>=(prev.st_exercises||[]).length)byId.set(w.id,w);});return Array.from(byId.values());})();
  const workoutDayMoves=workoutDayMovesFromActivities(userCalendarActivities);
  const trainingTodayPlan=decorateDayPlanCompletion(planForCalendarDate(program,trainingActivities,userCalendarActivities,logDate,todayYmd(),workoutDayMoves),{activities:userCalendarActivities,workouts:trainingCompletionWorkouts,progressLogs,sessionLogs:logs,selectedDate:logDate});
  const trainingTomorrowPlan=planForCalendarDate(program,trainingActivities,userCalendarActivities,tomorrowDate(logDate),todayYmd(),workoutDayMoves);
