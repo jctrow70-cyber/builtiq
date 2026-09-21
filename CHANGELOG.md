@@ -32,6 +32,7 @@ One movement card can be used with several implements. The live import did not s
 - Training and program-design cards show a picker from the catalog compatible list
 - Master re-import updates in parallel, skips already-remapped rows, does not wipe `media_url` / `image_url`
 - Import errors and timeouts show a clearer message
+- Pull-Through compatible equipment includes Cable, Dumbbell, and Band
 
 ### Files Changed
 
@@ -61,7 +62,7 @@ Run `supabase/migrations/20250920_050_exercise_equipment.sql` on the **test and 
 
 1. Apply migration 050 in Supabase SQL Editor (live and test).
 2. Deploy this change, then Settings → Import Master Library. It should finish and show remap counts, not a generic Import failed.
-3. Search Training for Power Clean. The card should offer Barbell / Dumbbell / Kettlebell.
+3. Search Training for Power Clean. The card should offer Barbell / Dumbbell / Kettlebell. Pull-Through should offer Cable / Dumbbell / Band.
 4. Change Power Clean to Dumbbell, save a set, reopen history — the plan still says Power Clean; the new snapshot can store Dumbbell.
 5. Open an existing program: names and sets look the same.
 6. Mobile: the equipment dropdown sits next to the muscle field and wraps.

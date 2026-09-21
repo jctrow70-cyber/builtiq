@@ -178,10 +178,18 @@ export function loadMasterLibraryRecords(): MasterLibraryRecord[] {
     const aliases = new Set(splitList(pullThrough.aliases));
     aliases.add('Cable Pull-Through');
     aliases.add('Pull Through');
+    aliases.add('Dumbbell Sumo Pull Through');
+    const compatible = new Set(splitList(pullThrough.compatible_equipment));
+    compatible.add(pullThrough.default_equipment || 'Cable');
+    compatible.add('Cable');
+    compatible.add('Dumbbell');
+    compatible.add('Band');
     byId.set('79', {
       ...pullThrough,
       name: 'Pull-Through',
       aliases: Array.from(aliases).join('; '),
+      default_equipment: pullThrough.default_equipment || 'Cable',
+      compatible_equipment: Array.from(compatible).join('; '),
     });
   }
 
