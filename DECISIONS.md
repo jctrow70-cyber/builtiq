@@ -1713,3 +1713,33 @@ A swap in a live session used to update only the open workout. Users expected a 
 - Personal copy via `ensurePersonalCopyForTrainingEdit` is unchanged
 
 ---
+
+## Decision 057 - Nutrition Trend Graph Is Calendar Weeks and Filterable
+
+Date: 2026-09-21  
+Status: Accepted  
+Category: Nutrition
+
+### Decision
+
+The Nutrition tab graph is a Monday–Sunday calendar week. Users can page to earlier weeks without changing the daily log date. They can show all macros as % of goal, or one macro in grams/calories with a week average and vs-prior-week delta.
+
+Tapping a day on the graph still opens that day’s log.
+
+### Reason
+
+A rolling last-7-days line is hard to compare week to week. Isolating one macro is the way to see whether protein (or another target) is trending.
+
+### Alternatives Considered
+
+- Keep a rolling 7 days ending on the selected date — rejected; “previous week” is unclear
+- Swiping the graph also changes the daily date — rejected; users asked to inspect history on the graph
+- A multi-month Progress chart instead of week paging — later; this change stays on the Nutrition tab
+
+### Impact
+
+- BIQ-0204
+- `buildWeeklyNutritionSummary` is the chart source again
+- Progress-tab longer nutrition trends remain a later item
+
+---

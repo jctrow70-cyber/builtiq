@@ -532,16 +532,20 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .nutrition-entry-main b{display:block;font-size:14px}
 .nutrition-entry-main .muted{display:block;font-size:11px;margin-top:2px}
 .nutrition-entry-actions{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.nutrition-weekly-card{touch-action:pan-y}
+.nutrition-weekly-card.is-refreshing{opacity:.75}
+.nutrition-weekly-head{align-items:center;gap:8px}
+.nutrition-weekly-subhead{display:flex;justify-content:flex-end;margin:-2px 0 4px}
 .nutrition-weekly-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0}
 .nutrition-weekly-metric-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
-.nutrition-weekly-metric-tab{flex:1;min-width:72px;min-height:40px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:#070a11;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer}
+.nutrition-weekly-metric-tab{flex:1;min-width:56px;min-height:40px;padding:8px 8px;border:1px solid var(--line);border-radius:10px;background:#070a11;color:var(--muted);font-size:12px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px}
 .nutrition-weekly-metric-tab.active{border-color:var(--accent);color:var(--text);background:var(--accentSoft)}
 .nutrition-weekly-legend{display:flex;flex-wrap:wrap;gap:10px 14px;margin:10px 0 4px}
 .nutrition-weekly-legend-item{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--text)}
 .nutrition-weekly-legend-swatch{width:10px;height:10px;border-radius:999px;flex-shrink:0}
 .nutrition-weekly-chart-note{margin:0 0 8px;font-size:11px}
 .nutrition-weekly-line-chart-wrap{width:100%;overflow:hidden;margin-top:4px}
-.nutrition-weekly-line-chart{display:block;width:100%;height:auto;touch-action:manipulation}
+.nutrition-weekly-line-chart{display:block;width:100%;height:auto;touch-action:pan-y}
 .nutrition-weekly-grid-line{stroke:var(--line);stroke-width:1;opacity:.55}
 .nutrition-weekly-axis-label{fill:var(--muted);font-size:10px;font-weight:700}
 .nutrition-weekly-x-label{fill:var(--muted);font-size:10px;font-weight:800;cursor:pointer}

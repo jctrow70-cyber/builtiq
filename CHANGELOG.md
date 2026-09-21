@@ -11,6 +11,62 @@ Branch:
 Status:
 ```
 
+## BIQ-0204 - Nutrition Weekly Trend History and Macro Filter
+
+Date: 2026-09-21  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+The Nutrition graph is a calendar week (Monday–Sunday). Users can swipe or tap arrows to earlier weeks, filter the line to one macro, and see that macro’s week average versus the prior week. The daily log at the top stays on the selected day unless they tap a day on the chart.
+
+### Purpose
+
+The graph only showed the last seven days ending on the selected date, with all four macros at once. There was no way to page through history or isolate protein, carbs, fat, or calories.
+
+### Changes
+
+- Weekly trend uses the Mon–Sun week, not a rolling 7-day window
+- Swipe left/right on the graph (same threshold as the daily rings) plus week arrows
+- Next week is disabled on the current week; Jump to this week appears on past weeks
+- All / Calories / Protein / Carbs / Fat filters; a single macro uses grams or calories on the axis
+- Selected-macro caption shows week average, % of goal, and change vs the previous week
+- Tapping a day still opens that day’s log
+
+### Files Changed
+
+- `app/components/NutritionWeeklyTrendChart.tsx`
+- `app/components/NutritionTracker.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Nutrition tab: the bottom graph should say Weekly trend and This week (or this week’s dates).
+2. Swipe left on the graph (or tap ‹). The daily rings should stay on today’s date; the graph should show the previous Monday–Sunday.
+3. Tap Protein. Only the protein line should show, in grams, with a week-average line of text. Swipe again and protein history for that earlier week should load.
+4. Tap All to restore the four % of-goal lines.
+5. Tap a weekday label on a past week. The daily log should jump to that date, and the graph should stay on that week.
+6. Next-week arrow should disable on the current week. Mobile: swipe should not change the day unless the gesture is clearly horizontal.
+
+### Known Issues
+
+- Week comparison uses the previous calendar week only, not a longer multi-month sparkline.
+- Browser verification of swipe was not completed if the local app was not running.
+
+### Recommended Commit Message
+
+```text
+BIQ-0204 Add nutrition week paging and per-macro trend history
+```
+
 ## BIQ-0203 - Training Calendar Default, Compact Plan Actions, and Exercise Swap Scope
 
 Date: 2026-09-21  

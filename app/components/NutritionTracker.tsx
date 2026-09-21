@@ -25,7 +25,7 @@ import {
   sumMacros,
   templateItemsFromEntries,
 } from '../../lib/nutrition/macros';
-import { buildSevenDayNutritionSummary } from '../../lib/nutrition/weeklySummary';
+import { buildWeeklyNutritionSummary } from '../../lib/nutrition/weeklySummary';
 import { mealCalorieTarget } from '../../lib/nutrition/mealDisplay';
 import {
   fetchFoodCatalogMatches,
@@ -66,7 +66,7 @@ import type { FoodDraft } from './nutrition/NutritionAddFoodTypes';
 import NutritionAddFoodPanel, { type AddFoodView } from './nutrition/NutritionAddFoodPanel';
 import NutritionCopyFoodPanel from './nutrition/NutritionCopyFoodPanel';
 import DateInput from './DateInput';
-import { addDaysYmd, formatDisplayDate, formatYmd, parseYmd, todayYmd } from '../../lib/training/programCalendar';
+import { addDaysYmd, formatDisplayDate, formatYmd, mondayOfWeek, parseYmd, todayYmd } from '../../lib/training/programCalendar';
 
 const RECENT_FOOD_HISTORY_DAYS = 30;
 const RECENT_FOOD_FETCH_LIMIT = 60;
@@ -368,6 +368,9 @@ export default function NutritionTracker({
   const hasLoadedRef = useRef(false);
   const addFoodLibraryLoadedRef = useRef(false);
   const daySwipeStart = useRef<{ x: number; y: number } | null>(null);
+  const [chartWeekMonday, setChartWeekMonday] = useState(() => mondayOfWeek(initialDate || todayYmd()));
+  const chartWeekMondayRef = useRef(chartWeekMonday);
+  chartWeekMondayRef.current = chartWeekMonday;
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [showAdd, setShowAdd] = useState(false);
@@ -411,9 +414,16 @@ export default function NutritionTracker({
   const totals = useMemo(() => sumMacros(entries), [entries]);
   const grouped = useMemo(() => groupEntriesByMeal(entries), [entries]);
   const weeklySummary = useMemo(
-    () => buildSevenDayNutritionSummary(weekEntries, goals, logDate),
-    [weekEntries, goals, logDate]
+    () => buildWeeklyNutritionSummary(weekEntries, goals, chartWeekMonday),
+    [weekEntries, goals, chartWeekMonday]
   );
+  const priorWeekSummary = useMemo(
+    () => buildWeeklyNutritionSummary(weekEntries, goals, addDaysYmd(chartWeekMonday, -7)),
+    [weekEntries, goals, chartWeekMonday]
+  );
+  const thisWeekMonday = mondayOfWeek(todayYmd());
+  const chartCanGoNext = chartWeekMonday < thisWeekMonday;
+  const chartIsCurrentWeek = chartWeekMonday === thisWeekMonday;
 
   const recentFoods = useMemo(() => buildRecentFoods(recentEntryHistory), [recentEntryHistory]);
 
@@ -472,38 +482,47 @@ export default function NutritionTracker({
     [logDate, onDateChange]
   );
 
+  const loadWeekEntries = useCallback(async (monday: string) => {
+    if (!userId) return;
+    const start = addDaysYmd(monday, -7);
+    const end = addDaysYmd(monday, 6);
+    try {
+      const { data, error } = await supabase
+        .from('st_meal_entries')
+        .select('log_date,calories,protein_g,carbs_g,fat_g')
+        .eq('user_id', userId)
+        .gte('log_date', start)
+        .lte('log_date', end);
+      if (error) throw error;
+      setWeekEntries(data || []);
+    } catch {
+      // Keep the last successful week snapshot so the daily log stays usable.
+    }
+  }, [userId]);
+
   const loadDayData = useCallback(async () => {
     if (!userId) return;
     const isInitial = !hasLoadedRef.current;
     if (isInitial) setLoading(true);
     else setDayRefreshing(true);
     setError('');
-    const weekEnd = logDate;
-    const weekStart = addDaysYmd(logDate, -6);
     try {
-      const [entriesRes, weekRes, goalsRes] = await Promise.all([
+      const [entriesRes, goalsRes] = await Promise.all([
         supabase
           .from('st_meal_entries')
           .select('*')
           .eq('user_id', userId)
           .eq('log_date', logDate)
           .order('created_at', { ascending: true }),
-        supabase
-          .from('st_meal_entries')
-          .select('log_date,calories,protein_g,carbs_g,fat_g')
-          .eq('user_id', userId)
-          .gte('log_date', weekStart)
-          .lte('log_date', weekEnd),
         supabase.from('st_nutrition_goals').select('*').eq('user_id', userId).maybeSingle(),
       ]);
 
       if (entriesRes.error) throw entriesRes.error;
-      if (weekRes.error) throw weekRes.error;
       if (goalsRes.error) throw goalsRes.error;
 
       setEntries((entriesRes.data || []) as MealEntry[]);
-      setWeekEntries(weekRes.data || []);
       setGoals(goalsFromRow(goalsRes.data));
+      await loadWeekEntries(chartWeekMondayRef.current);
     } catch (e: any) {
       setError(e?.message || 'Could not load nutrition data.');
     } finally {
@@ -511,7 +530,7 @@ export default function NutritionTracker({
       setLoading(false);
       setDayRefreshing(false);
     }
-  }, [userId, logDate]);
+  }, [userId, logDate, loadWeekEntries]);
 
   const loadAddFoodLibrary = useCallback(async () => {
     if (!userId || addFoodLibraryLoadedRef.current) return;
@@ -570,6 +589,17 @@ export default function NutritionTracker({
   useEffect(() => {
     loadDayData();
   }, [loadDayData]);
+
+  useEffect(() => {
+    const monday = mondayOfWeek(logDate);
+    setChartWeekMonday((current) =>
+      logDate >= current && logDate <= addDaysYmd(current, 6) ? current : monday
+    );
+  }, [logDate]);
+
+  useEffect(() => {
+    void loadWeekEntries(chartWeekMonday);
+  }, [chartWeekMonday, loadWeekEntries]);
 
   useEffect(() => {
     if (showAdd || showMyFoods) {
@@ -2059,8 +2089,17 @@ export default function NutritionTracker({
 
             <NutritionWeeklyTrendChart
               summary={weeklySummary}
+              priorSummary={priorWeekSummary}
               activeDate={logDate}
               onSelectDate={setDate}
+              onPrevWeek={() => setChartWeekMonday((monday) => addDaysYmd(monday, -7))}
+              onNextWeek={() => {
+                if (!chartCanGoNext) return;
+                setChartWeekMonday((monday) => addDaysYmd(monday, 7));
+              }}
+              onThisWeek={() => setChartWeekMonday(thisWeekMonday)}
+              canGoNext={chartCanGoNext}
+              isCurrentWeek={chartIsCurrentWeek}
             />
           </div>
       )}

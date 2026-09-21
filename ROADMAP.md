@@ -404,7 +404,7 @@ See `CHANGELOG.md` BIQ-0013 and BIQ-0024 for full scope.
 8. ~~iPhone PWA live barcode scanner~~ (BIQ-0042)
 9. AI Coach hook-up (consumes `coaching_metadata` + program + nutrition context)
 10. **Trust-first barcode + verified cache** (BIQ-0118 — label confirm, confidence UI, no paid API)
-11. Progress tab nutrition trends
+11. Progress tab nutrition trends — Nutrition tab now pages calendar weeks and isolates one macro (BIQ-0204); Progress still needs a longer multi-month view
 12. Split `page.tsx` into focused components
 
 ### Planned — Platform admin and catalog operations
