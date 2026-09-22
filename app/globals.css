@@ -791,18 +791,19 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 @media(max-width:600px){.training-plan-title{font-size:18px}}
 
 /* BIQ-0064 — Simplified warmup exercise cards */
-.warmup-exercise-card{padding:12px 14px;margin-bottom:8px}
-.warmup-exercise-main{display:flex;align-items:flex-start;gap:12px}
-.warmup-exercise-thumb-btn{display:block;padding:0;border:0;background:transparent;cursor:pointer;border-radius:12px;flex-shrink:0}
+.warmup-exercise-card{padding:10px 12px;margin-bottom:8px}
+.warmup-exercise-main{display:flex;align-items:center;gap:10px}
+.warmup-exercise-thumb-btn{display:block;padding:0;border:0;background:transparent;cursor:pointer;border-radius:8px;flex-shrink:0}
 .warmup-exercise-thumb-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.warmup-exercise-thumb,.warmup-exercise-thumb--static{display:block;width:72px;height:72px;border-radius:12px;object-fit:cover;border:1px solid var(--borderSubtle);background:var(--surfaceInset);flex-shrink:0}
-.warmup-exercise-body{flex:1;min-width:0;padding-top:2px}
-.warmup-exercise-name{margin:0 0 4px;font-size:17px;font-weight:900;line-height:1.25}
-.warmup-exercise-badge{display:inline-block;margin-right:8px;padding:2px 7px;border-radius:999px;background:var(--accentSoft);color:var(--accentOnSoft);font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;vertical-align:middle}
-.warmup-exercise-prescription{margin:0;font-size:14px;font-weight:700;color:var(--textSecondary);line-height:1.35}
-.warmup-exercise-guide-btn{flex-shrink:0;align-self:flex-start;margin-top:2px}
-.warmup-exercise-actions{margin-top:10px;padding-top:10px;border-top:1px solid var(--borderSubtle)}
-@media(max-width:600px){.warmup-exercise-main{flex-wrap:wrap}.warmup-exercise-guide-btn{width:100%}}
+.warmup-exercise-thumb,.warmup-exercise-thumb--static{display:block;width:40px;height:40px;border-radius:8px;object-fit:cover;border:1px solid var(--borderSubtle);background:var(--surfaceInset);flex-shrink:0}
+.warmup-exercise-body{flex:1;min-width:0}
+.warmup-exercise-name{margin:0 0 2px;font-size:15px;font-weight:800;line-height:1.25}
+.warmup-exercise-badge{display:inline-block;margin-right:6px;padding:1px 6px;border-radius:999px;background:var(--accentSoft);color:var(--accentOnSoft);font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;vertical-align:middle}
+.warmup-exercise-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.warmup-exercise-prescription{margin:0;font-size:13px;font-weight:700;color:var(--textSecondary);line-height:1.3}
+.warmup-exercise-form-btn{flex-shrink:0;min-height:26px;padding:2px 8px;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--textSecondary);font-size:11px;font-weight:800}
+.warmup-exercise-form-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.warmup-exercise-actions{margin-top:8px;padding-top:8px;border-top:1px solid var(--borderSubtle)}
 
 /* BIQ-0066 — Option D visual polish */
 .ui-segmented{background:var(--segmentedTrack)}

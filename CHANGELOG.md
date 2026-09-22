@@ -11,6 +11,54 @@ Branch:
 Status:
 ```
 
+## BIQ-0206 - Compact Warm-up Cards on Training
+
+Date: 2026-09-21  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+Warm-up / prep rows on Training use a smaller stock image. Form sits as a small chip to the right of the set prescription instead of a full-width button.
+
+### Purpose
+
+The warm-up block was taking too much vertical space. Form wrapping under the row on phones made it worse.
+
+### Changes
+
+- Thumbnail is 40px instead of 72px
+- Form is an inline chip next to the set line
+- The image still opens the form guide when a guide exists
+
+### Files Changed
+
+- `app/components/training/WarmupExerciseCard.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Training → open a workout with Warm Up / Prep.
+2. Confirm the poster is a small square on the left.
+3. Confirm Form sits beside the set count (e.g. `3 sets · 10` then Form).
+4. Tap Form and the thumbnail — both should open the guide.
+5. Mobile: Form should not stretch across the row.
+
+### Known Issues
+
+- Strength exercise cards are unchanged.
+
+### Recommended Commit Message
+
+```text
+BIQ-0206 Compact warmup cards and inline Form chip
+```
+
 ## BIQ-0205 - Strength Workout Complete Ignores Warm-up Sets
 
 Date: 2026-09-21  

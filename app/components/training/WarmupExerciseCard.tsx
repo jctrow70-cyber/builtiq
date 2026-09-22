@@ -97,13 +97,21 @@ export default function WarmupExerciseCard({
             {badge ? <span className="warmup-exercise-badge">{badge}</span> : null}
             {name}
           </h3>
-          <p className="warmup-exercise-prescription">{formatWarmupPrescription(sets)}</p>
+          <div className="warmup-exercise-meta">
+            <p className="warmup-exercise-prescription">{formatWarmupPrescription(sets)}</p>
+            {guideAction && (
+              <button
+                type="button"
+                className="warmup-exercise-form-btn"
+                onClick={onOpenGuide}
+                aria-label={guideLabel || 'Form guide'}
+                title={guideLabel || 'Form guide'}
+              >
+                Form
+              </button>
+            )}
+          </div>
         </div>
-        {guideAction && (
-          <button type="button" className="btn small secondary warmup-exercise-guide-btn" onClick={onOpenGuide}>
-            {guideLabel || 'Form guide'}
-          </button>
-        )}
       </div>
       {canEdit && (onChange || onMoveUp || onMoveDown || onAddSet || onRemove) && (
         <div className="warmup-exercise-actions actions">
