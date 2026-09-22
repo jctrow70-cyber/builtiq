@@ -304,7 +304,7 @@ function validatePatternCoverage(workouts: AiWorkoutPlan[], library: Map<string,
     const hit =
       patterns.has(need) ||
       (need === 'squat' && patterns.has('lunge')) ||
-      [...patterns].some((p) => p.includes(need.replace('_', '')));
+      Array.from(patterns).some((p) => p.includes(need.replace('_', '')));
     if (!hit) issues.push(warn('PATTERN_GAP', `The week is light on ${need.replace('_', ' ')} work.`));
   });
 }
