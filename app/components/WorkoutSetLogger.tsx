@@ -249,6 +249,7 @@ function FieldCard({
 
 function SetLogCard({
   set,
+  allSets,
   log,
   prev,
   layout,
@@ -268,6 +269,7 @@ function SetLogCard({
   showPreviousSets = true,
 }: {
   set: SetRow;
+  allSets: SetRow[];
   log: LogRow;
   prev: LogRow | null;
   layout: ReturnType<typeof logLayoutForType>;
@@ -386,7 +388,7 @@ function SetLogCard({
     <div className={`set-log-card${completed ? ' set-log-done' : ''}`}>
       <div className={`set-log-grid${hasChipRow ? ' has-chip-row' : ''}`}>
         <div className="set-log-head">
-          <span className="set-log-num">{setLabel(set, sets)}</span>
+          <span className="set-log-num">{setLabel(set, allSets)}</span>
           <SetTypePicker
             value={set.set_type}
             canEdit={canEdit}
@@ -558,6 +560,7 @@ export default function WorkoutSetLogger({
           <SetLogCard
             key={s.id}
             set={s}
+            allSets={sets}
             log={logs[s.id] || {}}
             prev={prevBySetId[s.id] || null}
             layout={layout}

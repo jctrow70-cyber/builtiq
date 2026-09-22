@@ -30,7 +30,7 @@ The previous science-first overlay cloned full-body days, remapped names (Push-U
 - New generation orchestrator: context → structured output → strict mapper → validator → max 2 repairs → science fallback
 - Context sends weekly set targets, frequency bands, duration/RIR/equipment/fatigue constraints — never science seed lifts
 - Validator: 3× identical primaries error unless justified; 2× different prescriptions allowed; heavy+heavy supersets error; thin sessions judged by stimulus
-- Warm-up, potentiation, and primary ramp sets stay separate; ramp rows label as Ramp N and do not count as working volume
+- Warm-up, potentiation, and primary ramp sets stay separate; ramp rows label as Ramp N and do not count as working volume (`SetLogCard` receives the full set list so the Vercel typecheck can resolve `setLabel`)
 - `st_generation_runs` observability table; API still returns `ai` / `ai_repaired` / `science_fallback`
 - Production model stays `gpt-4o-mini` until the OpenAI verification spike is accepted
 
