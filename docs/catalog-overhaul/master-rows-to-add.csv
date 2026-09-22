@@ -5,3 +5,9 @@ Side Bend,Bodyweight,"Bodyweight; Dumbbell; Kettlebell; 45° Back Extension","45
 Pull-Up Work,Bodyweight,"Bodyweight; Band","Pull up work",Pull up work,Household card separate from Pull-Up and Chin-Up.
 Trunk Rotation,Cable,"Cable; Band; Landmine","Cable Trunk Rotation",Cable Trunk Rotation,Cable is the default implement.
 Plate Front Raise,Plate,"Plate; Dumbbell","Squat plate front raise",Squat plate front raise,Plate version stays its own card.
+Snatch,Barbell,"Barbell; Dumbbell","Barbell Snatch; Squat Snatch; Full Snatch; Hang Snatch",,Full snatch. Keep Kettlebell Snatch (176) and Power Snatch separate.
+Clean & Jerk,Barbell,Barbell,"C&J; Clean and Jerk",,Competition pairing. Power Clean / jerks stay their own cards.
+Hang Clean,Barbell,"Barbell; Dumbbell","Hang Power Clean; DB Hang Clean",,Hang start only. Floor cleans stay on Power Clean.
+Power Snatch,Barbell,"Barbell; Dumbbell","DB Power Snatch",,Power receive. Full squat snatch is Snatch.
+Push Jerk,Barbell,"Barbell; Dumbbell","Power Jerk; DB Push Jerk",,Feet do not split.
+Split Jerk,Barbell,Barbell,"Jerk; Barbell Jerk",,Competition jerk footwork.

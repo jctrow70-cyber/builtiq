@@ -15,6 +15,12 @@ const ADD_NAME_TO_ID: Record<string, string> = {
   'Pull-Up Work': '252',
   'Trunk Rotation': '253',
   'Plate Front Raise': '254',
+  Snatch: '255',
+  'Clean & Jerk': '256',
+  'Hang Clean': '257',
+  'Power Snatch': '258',
+  'Push Jerk': '259',
+  'Split Jerk': '260',
 };
 
 function splitCsvLine(line: string): string[] {

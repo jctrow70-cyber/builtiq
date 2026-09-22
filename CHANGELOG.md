@@ -11,6 +11,59 @@ Branch:
 Status:
 ```
 
+## BIQ-0207 - Olympic Lift Cards in the Master Library
+
+Date: 2026-09-21  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+The master library now includes Snatch, Clean & Jerk, Hang Clean, Power Snatch, Push Jerk, and Split Jerk. Existing Power Clean, Kettlebell Clean, and Kettlebell Snatch cards stay as they are. History is not rewritten.
+
+### Purpose
+
+Training search only had Power Clean plus the two kettlebell Olympic cards. Users asked for the rest of the Olympic family.
+
+### Changes
+
+- Add-on catalog ids 255–260
+- Barbell is the default; Snatch, Hang Clean, Power Snatch, and Push Jerk also allow dumbbell
+- Hang Snatch is an alias on Snatch, not a seventh card
+- Import confirm copy says ~260 exercises
+
+### Files Changed
+
+- `lib/training/masterCatalog.ts`
+- `lib/training/householdExerciseMap.ts`
+- `docs/catalog-overhaul/master-rows-to-add.csv`
+- `app/page.tsx`
+- `CHANGELOG.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None in SQL. After deploy, run **Settings → Import Master Library** so the six cards appear in `st_exercise_catalog`. Existing plan names, sets, and `snapshot_exercise_name` values are not changed.
+
+### Testing Steps
+
+1. Deploy this change, then Settings → Import Master Library.
+2. Training search: Snatch, Clean & Jerk, Hang Clean, Power Snatch, Push Jerk, Split Jerk each appear as their own card.
+3. Search “Clean” still finds Power Clean. Search “KB Snatch” still finds Kettlebell Snatch.
+4. Power Snatch equipment picker offers Barbell / Dumbbell. Clean & Jerk stays barbell-only.
+5. Open an existing workout — names and history look the same.
+
+### Known Issues
+
+- Posters and videos are empty until you add them in Supabase, same as other new master cards.
+- Hang Snatch is only an alias on Snatch.
+
+### Recommended Commit Message
+
+```text
+BIQ-0207 Add Olympic lift cards to the master library
+```
+
 ## BIQ-0206 - Compact Warm-up Cards on Training
 
 Date: 2026-09-21  
