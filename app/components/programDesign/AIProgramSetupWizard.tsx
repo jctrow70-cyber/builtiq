@@ -214,7 +214,7 @@ export default function AIProgramSetupWizard({
       const summary = String(data.program_summary || data.coaching_notes || '').trim();
       const aiNote = String(data.ai_error || '').trim();
       const coachMessage =
-        method === 'science_ai'
+        method === 'science_ai' || method === 'ai' || method === 'ai_repaired'
           ? summary || 'Built with AI using your intake.'
           : [aiNote || 'Built from the science template. Your intake was applied to days, duration, and style.', summary]
               .filter(Boolean)

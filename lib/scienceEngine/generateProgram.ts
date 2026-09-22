@@ -366,6 +366,17 @@ function buildWorkout(opts: {
     estimatedMinutes: 0,
   };
   const trimmed = trimForDuration(built, profile);
+  fillMuscleQuotas({
+    profile,
+    catalog,
+    day,
+    variantIndex: Math.max(0, variantIndex),
+    exercises: trimmed.exercises,
+    sessionNames: trimmed.exercises.map((ex) => ex.name),
+    already,
+    remaining: opts.remaining,
+    maxMoves,
+  });
   trimmed.exercises = applyIntakeSupersets(trimmed.exercises, profile, day.dayLabel);
   return trimmed;
 }
@@ -542,6 +553,7 @@ function fillMuscleQuotas(opts: {
         preferredNames: slot.preferred,
       });
       if (!picked) break;
+      if (!isDedicatedForMuscle(picked, muscle)) continue;
       const prescribed = prescribeExercise({
         exercise: picked,
         role: slot.role,

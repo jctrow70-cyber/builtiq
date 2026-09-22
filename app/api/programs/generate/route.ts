@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
 import { createSupabaseFromRequest, requireAuthUser } from '../../../../lib/supabaseServer';
 import { persistAiProgramPlan, persistExercisesOntoWorkout, persistWorkoutsOntoProgram, type GenerationConfig } from '../../../../lib/training/aiProgramPlan';
 import { missingProgramColumnFromError } from '../../../../lib/training/programStatus';
@@ -12,16 +11,13 @@ import { normalizeEquipmentList } from '../../../../lib/training/equipmentFilter
 import { limitationExclusions, limitationNotesFromIds } from '../../../../lib/programDesign/intakePreferences';
 import {
   SCIENCE_ENGINE_VERSION,
-  applyAiWeekDesign,
-  buildProgramDesignerPrompt,
-  generateProgram,
   scienceProgramToAiPlan,
   summarizeRecentLogs,
   trainingProfileFromSources,
-  validateProgram,
-  validateProgramQuality,
 } from '../../../../lib/scienceEngine';
 import { adaptCatalog } from '../../../../lib/scienceEngine/catalogAdapter';
+import { runGenerationPipeline } from '../../../../lib/scienceEngine/generation';
+import { attachGenerationRunProgram } from '../../../../lib/scienceEngine/generation/log';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
@@ -241,23 +237,30 @@ export async function POST(request: Request) {
     },
   });
 
-  let scienceProgram;
+  const apiKey = process.env.OPENAI_API_KEY;
+  const canCallAi = Boolean(apiKey) && (structuredIntake || prompt.length >= 8 || Boolean(targetWorkout));
+  let pipeline;
   try {
-    scienceProgram = generateProgram(scienceProfile, catalog || []);
+    pipeline = await runGenerationPipeline({
+      profile: scienceProfile,
+      catalog: adaptCatalog(catalog || []),
+      userPrompt: prompt || scienceProfile.intakeNotes || 'Build a training week from the athlete constraints.',
+      programName: programName || defaultProgramName,
+      mode: targetWorkout ? 'single_session' : 'full_program',
+      recentTraining: await fetchRecentTrainingSummary(supabase, user.id),
+      apiKey: canCallAi ? apiKey : null,
+      supabase,
+      userId: user.id,
+    });
   } catch (err: any) {
     return NextResponse.json({ error: err?.message || 'Science engine failed to generate a program' }, { status: 500 });
   }
 
-  const validation = validateProgram(scienceProgram, scienceProfile);
-  if (!validation.ok) {
-    return NextResponse.json(
-      {
-        error: 'Science engine validation failed',
-        issues: validation.issues,
-      },
-      { status: 422 }
-    );
-  }
+  const scienceProgram = pipeline.program;
+  const persistMethod = persistableGenerationMethod(pipeline.method);
+  const qualityWarnings = pipeline.qualityWarnings;
+  const aiError = pipeline.aiError;
+  const replacedDays = pipeline.replacedDays;
 
   const config: GenerationConfig = {
     prompt: prompt || scienceProgram.summary,
@@ -271,69 +274,13 @@ export async function POST(request: Request) {
     includeCooldown,
     availableEquipment: scienceProfile.availableEquipment,
     startDate: startDateRaw || undefined,
-    generationMethod: 'science',
+    generationMethod: persistMethod,
     scienceVersion: SCIENCE_ENGINE_VERSION,
   };
 
   let plan = scienceProgramToAiPlan(scienceProgram, config);
-  let generationMethod: 'science' | 'science_ai' = 'science';
-  let qualityWarnings = validation.issues.filter((i) => i.severity === 'warning');
-  let aiError: string | null = null;
-  let replacedDays = 0;
-
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    aiError = 'AI is not configured; used the science template.';
-  } else if (structuredIntake || prompt.length >= 8) {
-    try {
-      const adapted = adaptCatalog(catalog || []);
-      const recentTraining = await fetchRecentTrainingSummary(supabase, user.id);
-      const { system, user: userContent } = buildProgramDesignerPrompt(
-        scienceProgram,
-        scienceProfile,
-        prompt,
-        adapted,
-        recentTraining
-      );
-      const openai = new OpenAI({ apiKey, timeout: 60_000 });
-      const completion = await openai.chat.completions.create({
-        model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
-        temperature: 0.5,
-        max_tokens: 8000,
-        response_format: { type: 'json_object' },
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: userContent },
-        ],
-      });
-      const raw = completion.choices[0]?.message?.content || '';
-      const parsed = parseAiJson(raw);
-      if (!parsed) {
-        aiError = 'AI returned unreadable JSON; used the science template.';
-      } else {
-        const applied = applyAiWeekDesign(scienceProgram, parsed, adapted, scienceProfile);
-        replacedDays = applied.replacedDays;
-        if (applied.applied) {
-          scienceProgram = applied.program;
-          const quality = validateProgramQuality(scienceProgram, scienceProfile.preferredSessionMinutes);
-          qualityWarnings = [...qualityWarnings, ...quality.issues.filter((i) => i.severity === 'warning')];
-          generationMethod = 'science_ai';
-        } else {
-          aiError = 'AI week could not be applied; used the science template.';
-        }
-        plan = scienceProgramToAiPlan(scienceProgram, config);
-        if (parsed.summary) plan.program_summary = String(parsed.summary);
-        if (parsed.coaching_notes || parsed.explanation) {
-          plan.coaching_notes = String(parsed.coaching_notes || parsed.explanation);
-        }
-      }
-    } catch (err: any) {
-      generationMethod = 'science';
-      aiError = err?.message ? `AI design failed (${err.message}); used the science template.` : 'AI design failed; used the science template.';
-    }
-  }
-
-  config.generationMethod = generationMethod;
+  if (pipeline.run.program?.summary) plan.program_summary = String(pipeline.run.program.summary);
+  if (pipeline.run.program?.coaching_notes) plan.coaching_notes = String(pipeline.run.program.coaching_notes);
   const builtinCatalog = builtinCatalogItems(catalog || []);
 
   let programId: string | null = null;
@@ -387,7 +334,7 @@ export async function POST(request: Request) {
         String(existingProgram.start_date || startDateRaw || new Date().toISOString().slice(0, 10)).slice(0, 10)
       ).startDate;
       await updateDesignProgram(supabase, programId, {
-        generation_method: generationMethod,
+        generation_method: persistMethod,
         science_version: SCIENCE_ENGINE_VERSION,
         program_summary: plan.program_summary,
         coaching_notes: plan.coaching_notes || null,
@@ -412,6 +359,7 @@ export async function POST(request: Request) {
   if (persistError || !programId) {
     return NextResponse.json({ error: persistError || 'Failed to save program' }, { status: 500 });
   }
+  await attachGenerationRunProgram(supabase, pipeline.generationRunId, programId);
 
   try {
     await supabase.from('st_muscle_weekly_targets').insert(
@@ -434,7 +382,8 @@ export async function POST(request: Request) {
     coaching_notes: plan.coaching_notes || '',
     program_name: programName || plan.program_name || defaultProgramName,
     workout_count: targetWorkout ? 1 : plan.workouts.length,
-    generation_method: generationMethod,
+    generation_method: pipeline.method,
+    generation_run_id: pipeline.generationRunId,
     science_version: SCIENCE_ENGINE_VERSION,
     volume_targets: scienceProgram.volumeTargets,
     validation_warnings: qualityWarnings,
@@ -443,32 +392,9 @@ export async function POST(request: Request) {
   });
 }
 
-function parseAiJson(raw: string): any | null {
-  const trimmed = String(raw || '').trim();
-  if (!trimmed) return null;
-  try {
-    return JSON.parse(trimmed);
-  } catch {
-    /* try fence / slice below */
-  }
-  const fence = trimmed.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fence?.[1]) {
-    try {
-      return JSON.parse(fence[1]);
-    } catch {
-      /* continue */
-    }
-  }
-  const start = trimmed.indexOf('{');
-  const end = trimmed.lastIndexOf('}');
-  if (start >= 0 && end > start) {
-    try {
-      return JSON.parse(trimmed.slice(start, end + 1));
-    } catch {
-      return null;
-    }
-  }
-  return null;
+function persistableGenerationMethod(method: string): GenerationConfig['generationMethod'] {
+  if (method === 'science_fallback') return 'template';
+  return 'ai';
 }
 
 async function programHasNoSetLogs(supabase: any, exerciseIds: string[]): Promise<boolean> {

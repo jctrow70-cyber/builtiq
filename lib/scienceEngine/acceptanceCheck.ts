@@ -13,6 +13,7 @@ import { findByName } from './exerciseSelection';
 import { summarizeRecentLogs } from './recentTraining';
 import { evaluateProgression } from './progression';
 import { validateProgram } from './validator';
+import { runPhase1GenerationChecks } from './generation/phase1Check';
 import type { TrainingProfile } from './types';
 
 function assert(cond: unknown, message: string) {
@@ -39,7 +40,7 @@ function acceptanceProfile(): TrainingProfile {
   });
 }
 
-function run() {
+async function run() {
   assertInferScheduleExamples();
   assertIntakeScheduleExamples();
   const profile = acceptanceProfile();
@@ -539,6 +540,10 @@ function run() {
   console.log(`Warm-up: ${upperA!.warmup.map((w) => w.name).join(', ')}`);
   console.log(`Power Primer: ${primer!.name} ${primer!.sets} x ${primer!.repMin}-${primer!.repMax}`);
   console.log(`Ramp: ${upperA!.rampSets.map((r) => `${r.weight || r.percent} x ${r.reps}`).join(', ')}`);
+  await runPhase1GenerationChecks();
 }
 
-run();
+run().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

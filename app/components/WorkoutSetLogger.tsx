@@ -54,6 +54,15 @@ function fieldSizeClass(field: LogFieldUI) {
   return 'log-field-card-normal';
 }
 
+function setLabel(set: SetRow, all: SetRow[]) {
+  if (String(set.set_type || 'working') === 'warmup') {
+    const n = all.filter((s) => String(s.set_type || 'working') === 'warmup' && s.set_number <= set.set_number).length;
+    return `Ramp ${n}`;
+  }
+  const n = all.filter((s) => String(s.set_type || 'working') !== 'warmup' && s.set_number <= set.set_number).length;
+  return `Set ${n || set.set_number}`;
+}
+
 function stripEmbeddedNotes(notes: string) {
   return notes.replace(/(?:^|\s)(assist|side):\s*[^\s·]+/gi, '').replace(/\s*·\s*/g, ' ').trim();
 }
@@ -377,7 +386,7 @@ function SetLogCard({
     <div className={`set-log-card${completed ? ' set-log-done' : ''}`}>
       <div className={`set-log-grid${hasChipRow ? ' has-chip-row' : ''}`}>
         <div className="set-log-head">
-          <span className="set-log-num">Set {set.set_number}</span>
+          <span className="set-log-num">{setLabel(set, sets)}</span>
           <SetTypePicker
             value={set.set_type}
             canEdit={canEdit}

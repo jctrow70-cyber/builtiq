@@ -12,7 +12,7 @@ export type WorkoutLike = {
   id?: string;
   st_exercises?: Array<{
     section?: string;
-    st_planned_sets?: Array<{ id?: string; is_deleted?: boolean }>;
+    st_planned_sets?: Array<{ id?: string; is_deleted?: boolean; set_type?: string }>;
   }>;
 };
 
@@ -158,6 +158,7 @@ export function plannedSetIdsForWorkout(
     (exercise.st_planned_sets || [])
       .filter((set) => !set.is_deleted)
       .forEach((set) => {
+        if (opts?.loggableOnly && String(set.set_type || 'working') === 'warmup') return;
         if (set.id) ids.push(String(set.id));
       });
   });

@@ -13,10 +13,8 @@ export function scienceProgramToAiPlan(program: ScienceProgram, config?: Partial
 }
 
 function toAiWorkout(workout: ScienceWorkout): AiWorkout {
-  const warmup: AiExercise[] = [
-    ...workout.warmup.map((item) => warmupToAi(item, 'Dynamic warm-up')),
-    ...workout.potentiation.map((item) => prescriptionToAi(item, 'POWER PRIMER')),
-  ];
+  const warmup = workout.warmup.map((item) => warmupToAi(item, 'Dynamic warm-up'));
+  const primer = workout.potentiation.map((item) => prescriptionToAi(item, 'POWER PRIMER'));
   const strength = strengthItems(workout);
   const cooldown = workout.cooldown.map((item) => warmupToAi(item, 'Cooldown'));
   return {
@@ -24,6 +22,7 @@ function toAiWorkout(workout: ScienceWorkout): AiWorkout {
     day_label: workout.dayLabel,
     workout_type: workout.name || workout.workoutType,
     warmup,
+    primer,
     strength: strength as any,
     cooldown,
   };
@@ -85,6 +84,7 @@ function warmupToAi(item: WarmupItem, note: string): AiExercise {
     reps: item.reps,
     rpe: '4-5',
     notes: note,
+    catalog_exercise_id: item.exerciseId,
   };
 }
 
@@ -98,6 +98,7 @@ function prescriptionToAi(ex: ExercisePrescription, note?: string): AiExercise {
     target_rir: ex.targetRir,
     rest_seconds: ex.restSeconds,
     notes: note || ex.coachingNote || ex.why,
+    catalog_exercise_id: ex.exerciseId,
   };
 }
 

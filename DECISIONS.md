@@ -1770,3 +1770,39 @@ Users can finish every lift and still look incomplete. Warm-up rows have planned
 - Existing completed history is unchanged
 
 ---
+
+## Decision 059 - AI Authors the Week; Science Calculates, Validates, and Falls Back
+
+Date: 2026-09-22  
+Status: Accepted  
+Category: Program Design
+
+### Decision
+
+Phase 1 of the generation redesign (BIQ-0208) inverts Decision 032's authorship. The science engine calculates weekly working-set targets, exposure ranges, duration, RIR, equipment, and fatigue constraints. It does not send a pre-selected exercise seed to the model.
+
+The model designs the whole week from those constraints and a filtered exercise-ID library. After a valid response, deterministic code may resolve exact IDs, compute metadata, validate, apply explicit progression rules, and add standard ramps only on eligible primaries. It may not pad with science-template lifts, replace warm-ups, auto-add potentiation, fuzzy-match names, or mix AI days with science days.
+
+Invalid programming goes through at most two AI repair attempts, then science fallback. The validator judges bad duplication, competing heavy supersets, and insufficient stimulus — it does not ban 2×/week frequency, every primary superset, or a low exercise count by itself.
+
+Production model stays `gpt-4o-mini` until the OpenAI verification spike is accepted. Phase 2 and Phase 3 are not started.
+
+### Reason
+
+The science-first overlay produced cloned full-body days and silently rewrote AI output (including Push-Up becoming 6/side). Users need complementary weekly programming, not slot-filling plus local mutation.
+
+### Alternatives Considered
+
+- Keep science as author with a stricter prompt — rejected; the overlay still cloned days
+- Auto-reject any repeated primary or any primary in a superset — rejected; frequency and low-fatigue pairings can be legitimate
+- Require a minimum exercise count — rejected; stimulus depends on goal, duration, sets, and coverage
+- Change the production model before the verification spike — rejected; keep gpt-4o-mini until Responses / Structured Outputs / reasoning / previous_response_id are confirmed for this key
+
+### Impact
+
+- `POST /api/programs/generate` uses `runGenerationPipeline`
+- Science version 1.4.0, designer prompt `designer@2.0`
+- New `st_generation_runs` observability table
+- Supersedes Decision 032 for generation authorship; Decisions 036–037 remain the constraint/no-seed rules
+
+---

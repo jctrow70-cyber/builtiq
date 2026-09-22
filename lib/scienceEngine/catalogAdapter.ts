@@ -121,6 +121,17 @@ export const FALLBACK_CATALOG: CatalogExercise[] = [
   fallback('Ankle Rocker', 'other', 'isolation', ['warmup'], ['calves'], [], ['bodyweight']),
 ];
 
+export function stableFallbackId(name: string): string {
+  let h = 2166136261;
+  for (let i = 0; i < name.length; i += 1) h = Math.imul(h ^ name.charCodeAt(i), 16777619);
+  const a = (h >>> 0).toString(16).padStart(8, '0');
+  let h2 = 2166136261;
+  const extra = `${name}#2`;
+  for (let i = 0; i < extra.length; i += 1) h2 = Math.imul(h2 ^ extra.charCodeAt(i), 16777619);
+  const b = (h2 >>> 0).toString(16).padStart(8, '0');
+  return `${a}-${b.slice(0, 4)}-4${b.slice(4, 7)}-8${a.slice(0, 3)}-${b}${a.slice(0, 4)}`.slice(0, 36);
+}
+
 function fallback(
   name: string,
   movementPattern: CatalogExercise['movementPattern'],
@@ -131,6 +142,7 @@ function fallback(
   equipment: string[]
 ): CatalogExercise {
   return {
+    id: stableFallbackId(name),
     name,
     movementPattern,
     exerciseType,
@@ -153,8 +165,25 @@ function fallback(
   };
 }
 
+function isAdaptedExercise(row: any): row is CatalogExercise {
+  return Boolean(
+    row &&
+      typeof row.name === 'string' &&
+      Array.isArray(row.primaryMuscles) &&
+      typeof row.movementPattern === 'string' &&
+      Array.isArray(row.programRoles)
+  );
+}
+
 export function adaptCatalog(rows: any[] | null | undefined): CatalogExercise[] {
-  const adapted = (rows || []).map(catalogExerciseFromRow).filter((row): row is CatalogExercise => !!row);
+  const adapted = (rows || [])
+    .map((row) => {
+      if (isAdaptedExercise(row)) {
+        return row.id ? row : { ...row, id: stableFallbackId(row.name) };
+      }
+      return catalogExerciseFromRow(row);
+    })
+    .filter((row): row is CatalogExercise => !!row);
   if (adapted.length >= 12) return adapted;
   const names = new Set(adapted.map((e) => e.name.toLowerCase()));
   FALLBACK_CATALOG.forEach((item) => {

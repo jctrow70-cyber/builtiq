@@ -11,6 +11,78 @@ Branch:
 Status:
 ```
 
+## BIQ-0208 - Phase 1 AI Week Generation Pipeline
+
+Date: 2026-09-22  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+Program generation now lets the model design the full week from science calculations and a filtered exercise-ID library. Deterministic code validates, maps exact IDs, and falls back to the science template after at most two repair attempts. Valid AI weeks are no longer padded, fuzzy-matched, or mixed with science-template days.
+
+### Purpose
+
+The previous science-first overlay cloned full-body days, remapped names (Push-Up → 6/side), replaced warm-ups, and silently rewrote valid AI programming. Phase 1 inverts authorship: science calculates constraints; the model solves the week; the validator judges bad duplication, heavy supersets, and insufficient stimulus rather than banning frequency or counting exercises.
+
+### Changes
+
+- New generation orchestrator: context → structured output → strict mapper → validator → max 2 repairs → science fallback
+- Context sends weekly set targets, frequency bands, duration/RIR/equipment/fatigue constraints — never science seed lifts
+- Validator: 3× identical primaries error unless justified; 2× different prescriptions allowed; heavy+heavy supersets error; thin sessions judged by stimulus
+- Warm-up, potentiation, and primary ramp sets stay separate; ramp rows label as Ramp N and do not count as working volume
+- `st_generation_runs` observability table; API still returns `ai` / `ai_repaired` / `science_fallback`
+- Production model stays `gpt-4o-mini` until the OpenAI verification spike is accepted
+
+### Files Changed
+
+- `lib/scienceEngine/generation/*` (new)
+- `lib/scienceEngine/catalogAdapter.ts`
+- `lib/scienceEngine/version.ts`
+- `lib/scienceEngine/toAiPlan.ts`
+- `lib/scienceEngine/acceptanceCheck.ts`
+- `lib/scienceEngine/index.ts`
+- `lib/training/aiProgramPlan.ts`
+- `app/api/programs/generate/route.ts`
+- `app/components/WorkoutSetLogger.tsx`
+- `app/components/programDesign/AIProgramSetupWizard.tsx`
+- `lib/programDesign/activityCompletion.ts`
+- `scripts/test-activity-completion.ts`
+- `scripts/verify-openai-program-api.ts`
+- `supabase/migrations/20260922_051_generation_runs.sql`
+- `.env.example`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+Additive migration `20260922_051_generation_runs.sql`:
+
+- New `st_generation_runs` table + RLS (own rows only)
+- Expands `st_programs.generation_method` check to include `ai_repaired` and `science_fallback`
+- No history rewrite. Persist path still writes `ai` or `template` until that constraint is applied in each environment.
+
+### Testing Steps
+
+1. `npm run test:science`
+2. `npx tsx scripts/test-activity-completion.ts`
+3. Generate Intermediate / Hypertrophy / 3× Mon-Wed-Fri / 60 min / Full Body / Balanced / Supersets sometimes
+4. Confirm A/B/C days, no Push-Up `/side`, ramps labeled separately, no science padding on a valid AI week
+5. Confirm failed AI repair falls back to the science template
+
+### Known Issues
+
+- Live OpenAI model list / Responses / reasoning spike may be blocked in constrained local shells. Production model is unchanged until that spike is reviewed.
+- Phase 2 (richer repair / previous_response_id) and Phase 3 (progression from logs) are not started.
+- `st_generation_runs` insert is best-effort; missing table does not fail generate.
+
+### Recommended Commit Message
+
+```text
+BIQ-0208 Add Phase 1 AI week generation pipeline
+```
+
 ## BIQ-0207 - Olympic Lift Cards in the Master Library
 
 Date: 2026-09-21  

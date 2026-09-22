@@ -18,6 +18,7 @@ export type AiExercise = {
   target_rir?: number;
   rest_seconds?: number;
   notes?: string;
+  catalog_exercise_id?: string;
   set_details?: { set_type?: string; weight?: string; reps?: string; rir?: number }[];
 };
 
@@ -28,6 +29,7 @@ export type AiWorkout = {
   day_label: string;
   workout_type: string;
   warmup?: AiWorkoutItem[];
+  primer?: AiWorkoutItem[];
   strength?: AiWorkoutItem[];
   cooldown?: AiWorkoutItem[];
 };
@@ -61,7 +63,7 @@ export type GenerationConfig = {
   supersetCount?: number | null;
   /** Exercises per superset (2–3); null = AI decides. */
   supersetSize?: number | null;
-  generationMethod?: 'ai' | 'template' | 'science' | 'science_ai';
+  generationMethod?: 'ai' | 'template' | 'science' | 'science_ai' | 'ai_repaired' | 'science_fallback';
   scienceVersion?: string;
 };
 
@@ -889,6 +891,15 @@ function tokenize(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean);
 }
 
+function resolveCatalogExercise(item: AiExercise, catalog: any[], catMap: Record<string, any>): any | null {
+  const id = String(item.catalog_exercise_id || '').trim();
+  if (id) {
+    const hit = (catalog || []).find((c) => String(c.id) === id);
+    if (hit && !hit.is_archived && !isUserCustomExercise(hit)) return hit;
+  }
+  return matchExerciseToCatalog(item.name, catalog, catMap);
+}
+
 export function matchExerciseToCatalog(name: string, catalog: any[], catMap: Record<string, any>): any | null {
   const lower = String(name || '').toLowerCase().trim();
   if (!lower) return null;
@@ -1024,7 +1035,7 @@ function collectSectionItems(
       let slot = 0;
       for (const exItem of item.superset) {
         slot++;
-        const hit = matchExerciseToCatalog(exItem.name, catalog, catMap);
+        const hit = resolveCatalogExercise(exItem, catalog, catMap);
         const exType = inferExerciseType(exItem.name, hit?.muscle_group || exItem.muscle_group, section, hit?.exercise_type);
         exercises.push({
           payload: {
@@ -1053,7 +1064,7 @@ function collectSectionItems(
       }
       sort++;
     } else if (isExerciseItem(item)) {
-      const hit = matchExerciseToCatalog(item.name, catalog, catMap);
+      const hit = resolveCatalogExercise(item, catalog, catMap);
       const exType = inferExerciseType(item.name, hit?.muscle_group || item.muscle_group, section, hit?.exercise_type);
       exercises.push({
         payload: {
@@ -1164,6 +1175,23 @@ async function workoutHasNoSetLogs(supabase: any, workoutId: string): Promise<bo
   return !count;
 }
 
+function collectPersistedSections(workoutId: string, tpl: AiWorkout, catalog: any[], catMap: Record<string, any>) {
+  const pending: PendingExerciseInsert[] = [];
+  const warmup = collectSectionItems(workoutId, 'warmup', tpl.warmup || [], SECTION_SORT_BASE.warmup, catalog, catMap);
+  pending.push(...warmup.exercises);
+  const primerStart = SECTION_SORT_BASE.warmup + Math.max(pending.length, 1);
+  const primer = collectSectionItems(workoutId, 'warmup', tpl.primer || [], primerStart, catalog, catMap);
+  primer.exercises.forEach((entry) => {
+    entry.payload.notes = entry.payload.notes || 'POWER PRIMER';
+  });
+  pending.push(...primer.exercises);
+  const strength = collectSectionItems(workoutId, 'strength', tpl.strength || [], SECTION_SORT_BASE.strength, catalog, catMap);
+  pending.push(...strength.exercises);
+  const cooldown = collectSectionItems(workoutId, 'cooldown', tpl.cooldown || [], SECTION_SORT_BASE.cooldown, catalog, catMap);
+  pending.push(...cooldown.exercises);
+  return pending;
+}
+
 /** Fill one existing workout from an AI/science plan. Does not create or delete other workouts. */
 export async function persistExercisesOntoWorkout(
   supabase: any,
@@ -1187,12 +1215,7 @@ export async function persistExercisesOntoWorkout(
 
   const catMap = catalogByName(catalog);
   const pendingExercises: PendingExerciseInsert[] = [];
-  for (const sec of ['warmup', 'strength', 'cooldown'] as const) {
-    const list = tpl[sec] || [];
-    if (!list.length) continue;
-    const { exercises } = collectSectionItems(workoutId, sec, list, SECTION_SORT_BASE[sec] ?? 0, catalog, catMap);
-    pendingExercises.push(...exercises);
-  }
+  pendingExercises.push(...collectPersistedSections(workoutId, tpl, catalog, catMap));
 
   if (tpl.workout_type) {
     await supabase.from('st_workouts').update({ workout_type: tpl.workout_type }).eq('id', workoutId);
@@ -1256,12 +1279,7 @@ async function persistWorkoutsForProgram(
     const tpl = planByKey.get(`${w.week}|${w.day_label}`);
     if (!tpl) continue;
 
-    for (const sec of ['warmup', 'strength', 'cooldown'] as const) {
-      const list = tpl[sec] || [];
-      if (!list.length) continue;
-      const { exercises } = collectSectionItems(w.id, sec, list, SECTION_SORT_BASE[sec] ?? 0, catalog, catMap);
-      pendingExercises.push(...exercises);
-    }
+    pendingExercises.push(...collectPersistedSections(w.id, tpl, catalog, catMap));
   }
 
   if (!pendingExercises.length) return { programId, error: null };
