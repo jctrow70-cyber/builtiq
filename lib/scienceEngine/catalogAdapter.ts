@@ -1,5 +1,6 @@
 import { parseCoachingMetadata, parseMuscleTargets } from '../training/exerciseIntelligence';
 import { normalizeEquipmentList } from '../training/equipmentFilter';
+import { inferFallbackFatigue } from './generation/qualityRules';
 import { normalizeMovementPattern, normalizeMuscleId, type MuscleId } from './taxonomy';
 import type { CatalogExercise, ExerciseTypeKind, ProgramRole } from './types';
 
@@ -119,6 +120,11 @@ export const FALLBACK_CATALOG: CatalogExercise[] = [
   fallback('Glute Bridge', 'hinge', 'isolation', ['isolation', 'secondary', 'warmup'], ['glutes'], ['hamstrings'], ['bodyweight']),
   fallback('Lateral Lunge', 'lunge', 'compound', ['warmup'], ['adductors'], ['quads'], ['bodyweight']),
   fallback('Ankle Rocker', 'other', 'isolation', ['warmup'], ['calves'], [], ['bodyweight']),
+  fallback('Doorway Pec Stretch', 'other', 'isolation', ['warmup'], ['chest'], ['front_delts'], ['bodyweight']),
+  fallback('Hamstring Stretch', 'other', 'isolation', ['warmup'], ['hamstrings'], [], ['bodyweight']),
+  fallback('Hip Flexor Stretch', 'other', 'isolation', ['warmup'], ['hip_flexors'], [], ['bodyweight']),
+  fallback('Lat Stretch', 'other', 'isolation', ['warmup'], ['lats'], [], ['bodyweight']),
+  fallback("Child's Pose", 'other', 'isolation', ['warmup'], ['lats'], ['abs'], ['bodyweight']),
 ];
 
 export function stableFallbackId(name: string): string {
@@ -151,7 +157,7 @@ function fallback(
     primaryMuscles,
     secondaryMuscles,
     stabilityRequirement: 'medium',
-    fatigueCost: programRoles.includes('power') ? 'low' : exerciseType === 'compound' ? 'high' : 'low',
+    fatigueCost: inferFallbackFatigue(name, exerciseType, programRoles),
     skillRequirement: 'medium',
     suitableForBeginner: true,
     unilateral: /lunge|row/.test(name.toLowerCase()) && !/barbell row/.test(name.toLowerCase()),

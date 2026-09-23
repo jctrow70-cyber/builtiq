@@ -1,8 +1,15 @@
 import { creditSets, contributionsForExercise } from '../contributions';
-import { estimateWorkoutMinutes } from '../duration';
+import { classifySessionDuration, estimateSessionFromAi } from '../duration';
+import { goalUsesHypertrophyBias } from '../rules';
 import type { CatalogExercise } from '../types';
 import type { MuscleId } from '../taxonomy';
 import { findDesignerById } from './matchById';
+import {
+  isWorkingIsolationAsCooldown,
+  muscleTier,
+  restBand,
+  whyAgreesWithExercise,
+} from './qualityRules';
 import type {
   AiStrengthExercise,
   AiWeekProgram,
@@ -26,15 +33,12 @@ export function validateAiProgram(
   }
 
   const library = new Map<string, DesignerExercise>();
-  [...context.candidate_library, ...context.warmup_library].forEach((ex) => library.set(ex.exercise_id, ex));
+  [...context.candidate_library, ...context.warmup_library, ...(context.cooldown_library || [])].forEach((ex) =>
+    library.set(ex.exercise_id, ex)
+  );
   const excludedNames = new Set(context.athlete.excluded_exercise_names.map((n) => n.toLowerCase()));
   const excludedIds = new Set(context.athlete.excluded_exercise_ids);
   const week1 = program.workouts;
-  const profileLike = {
-    primaryGoal: context.athlete.primary_goal,
-    preferredSessionMinutes: context.constraints.session_minutes,
-    experienceLevel: context.athlete.experience_level,
-  };
 
   week1.forEach((workout) => {
     validateWorkout(workout, context, library, catalogById, excludedNames, excludedIds, issues);
@@ -42,7 +46,8 @@ export function validateAiProgram(
 
   validatePrimaryFrequency(week1, library, context, issues);
   validateWeeklyVolume(week1, library, catalogById, context, issues);
-  validatePatternCoverage(week1, library, issues);
+  validatePatternCoverage(week1, library, context, issues);
+  validateSupersetPreference(week1, context, issues);
 
   return { ok: issues.every((i) => i.severity !== 'error'), issues };
 }
@@ -60,7 +65,7 @@ function validateWorkout(
   const strength = flattenStrength(workout);
   const used = new Set<string>();
 
-  const checkItem = (item: { exercise_id: string; prescription?: string }, kind: 'warmup' | 'potentiation' | 'cooldown' | 'strength') => {
+  const checkItem = (item: { exercise_id: string; prescription?: string; why?: string }, kind: 'warmup' | 'potentiation' | 'cooldown' | 'strength') => {
     const hit = findDesignerById(library, item.exercise_id);
     if (!hit) {
       issues.push(err('UNKNOWN_EXERCISE_ID', `Unknown exercise_id ${item.exercise_id}`, workout.day_label, item.exercise_id));
@@ -81,8 +86,28 @@ function validateWorkout(
     if (kind === 'potentiation' && !hit.power_eligible) {
       issues.push(err('PRIMER_NOT_ELIGIBLE', `${hit.name} is not power-eligible`, workout.day_label, hit.exercise_id));
     }
+    if (kind === 'cooldown' && (isWorkingIsolationAsCooldown(hit) || !hit.cooldown_eligible)) {
+      issues.push(
+        err(
+          'COOLDOWN_NOT_ELIGIBLE',
+          `${hit.name} is not a cooldown movement. Use a stretch or easy mobility drill.`,
+          workout.day_label,
+          hit.exercise_id
+        )
+      );
+    }
     if (item.prescription && /\/side/i.test(item.prescription) && hit.laterality === 'bilateral') {
       issues.push(err('LATERALITY_MISMATCH', `${hit.name} is bilateral and cannot be prescribed /side`, workout.day_label, hit.exercise_id));
+    }
+    if (item.why && !whyAgreesWithExercise(item.why, hit)) {
+      issues.push(
+        warn(
+          'WHY_MISMATCH',
+          `${hit.name} why ("${item.why}") does not match its muscles (${[...hit.primary_muscles, ...hit.secondary_muscles].join(', ') || 'none listed'}).`,
+          workout.day_label,
+          hit.exercise_id
+        )
+      );
     }
     used.add(hit.exercise_id);
     return hit;
@@ -91,6 +116,12 @@ function validateWorkout(
   workout.warmup.forEach((item) => checkItem(item, 'warmup'));
   workout.potentiation.forEach((item) => checkItem(item, 'potentiation'));
   workout.cooldown.forEach((item) => checkItem(item, 'cooldown'));
+
+  const supersetIds = new Set(
+    workout.strength
+      .filter((block) => block.type !== 'straight_sets' && block.exercises.length >= 2)
+      .flatMap((block) => block.exercises.map((ex) => ex.exercise_id))
+  );
 
   strength.forEach((ex) => {
     const hit = checkItem(ex, 'strength');
@@ -116,6 +147,17 @@ function validateWorkout(
     if (ex.ramp_sets.length && ex.role !== 'primary') {
       issues.push(warn('RAMP_ON_ACCESSORY', `Ramp sets on ${hit.name} are unusual`, workout.day_label, hit.exercise_id));
     }
+    if (ex.why && !whyAgreesWithExercise(ex.why, hit)) {
+      issues.push(
+        warn(
+          'WHY_MISMATCH',
+          `${hit.name} why ("${ex.why}") does not match its muscles.`,
+          workout.day_label,
+          hit.exercise_id
+        )
+      );
+    }
+    validateRest(ex, hit, context.athlete.primary_goal, supersetIds.has(ex.exercise_id), workout.day_label, issues);
   });
 
   workout.strength.forEach((block) => {
@@ -132,7 +174,128 @@ function validateWorkout(
     issues.push(warn('ORDER', `${workout.name} starts with isolation before a primary`, workout.day_label));
   }
 
-  if (!addon) validateStimulus(workout, strength, library, context, catalogById, issues);
+  validateRoles(workout, strength, library, context, issues);
+  validateSessionFatigue(workout, strength, library, issues);
+
+  if (!addon) validateStimulus(workout, strength, library, context, issues);
+}
+
+function validateRoles(
+  workout: AiWorkoutPlan,
+  strength: AiStrengthExercise[],
+  library: Map<string, DesignerExercise>,
+  context: GenerationContext,
+  issues: ValidationIssue[]
+) {
+  if (!strength.length) return;
+  const primaries = strength.filter((ex) => ex.role === 'primary');
+  const minutes = context.constraints.session_minutes;
+  if (strength.length >= 4 && primaries.length === strength.length) {
+    issues.push(
+      err(
+        'ROLE_ALL_PRIMARY',
+        `${workout.name} labels every working exercise primary. Roles must reflect session purpose.`,
+        workout.day_label
+      )
+    );
+  } else if (primaries.length >= 4 && minutes <= 75) {
+    issues.push(
+      warn(
+        'ROLE_TOO_MANY_PRIMARY',
+        `${workout.name} has ${primaries.length} primaries. A typical session has 1-2 main lifts.`,
+        workout.day_label
+      )
+    );
+  }
+
+  strength.forEach((ex) => {
+    const meta = library.get(ex.exercise_id);
+    if (!meta) return;
+    if (ex.role === 'primary' && meta.exercise_kind === 'isolation') {
+      issues.push(
+        warn(
+          'ROLE_ISOLATION_PRIMARY',
+          `${meta.name} is an isolation movement labeled primary.`,
+          workout.day_label,
+          ex.exercise_id
+        )
+      );
+    }
+    if (ex.role === 'isolation' && meta.exercise_kind === 'compound' && meta.fatigue_cost === 'high') {
+      issues.push(
+        warn(
+          'ROLE_COMPOUND_ISOLATION',
+          `${meta.name} is a high-fatigue compound labeled isolation.`,
+          workout.day_label,
+          ex.exercise_id
+        )
+      );
+    }
+  });
+}
+
+function validateRest(
+  ex: AiStrengthExercise,
+  meta: DesignerExercise,
+  goal: string,
+  inSuperset: boolean,
+  day: string,
+  issues: ValidationIssue[]
+) {
+  const band = restBand({
+    role: ex.role,
+    kind: meta.exercise_kind,
+    fatigue: meta.fatigue_cost,
+    repMax: ex.rep_max,
+    goal,
+    inSuperset,
+  });
+  if (ex.rest_seconds < band.compromiseBelow) {
+    issues.push(
+      err(
+        'REST_TOO_SHORT',
+        `${meta.name} rests ${ex.rest_seconds}s; ${ex.role} ${meta.fatigue_cost}-fatigue ${meta.exercise_kind} work is likely to lose performance below ${band.compromiseBelow}s.`,
+        day,
+        ex.exercise_id
+      )
+    );
+  } else if (ex.rest_seconds < band.min) {
+    issues.push(
+      warn(
+        'REST_TOO_SHORT',
+        `${meta.name} rests ${ex.rest_seconds}s; ${ex.role} ${meta.exercise_kind} work usually needs ${band.min}-${band.max}s.`,
+        day,
+        ex.exercise_id
+      )
+    );
+  }
+}
+
+function validateSessionFatigue(
+  workout: AiWorkoutPlan,
+  strength: AiStrengthExercise[],
+  library: Map<string, DesignerExercise>,
+  issues: ValidationIssue[]
+) {
+  if (strength.length < 4) return;
+  const high = strength.filter((ex) => library.get(ex.exercise_id)?.fatigue_cost === 'high');
+  if (high.length === strength.length) {
+    issues.push(
+      err(
+        'SESSION_FATIGUE',
+        `${workout.name} selects high-fatigue movements for every working exercise.`,
+        workout.day_label
+      )
+    );
+  } else if (high.length / strength.length >= 0.75) {
+    issues.push(
+      warn(
+        'SESSION_FATIGUE',
+        `${workout.name} is ${high.length}/${strength.length} high-fatigue selections.`,
+        workout.day_label
+      )
+    );
+  }
 }
 
 function validateSuperset(
@@ -175,20 +338,19 @@ function validateStimulus(
   strength: AiStrengthExercise[],
   library: Map<string, DesignerExercise>,
   context: GenerationContext,
-  catalogById: Map<string, CatalogExercise>,
   issues: ValidationIssue[]
 ) {
   const minutes = context.constraints.session_minutes;
   const workingSets = strength.reduce((sum, ex) => sum + ex.working_sets, 0);
   const patterns = new Set(strength.map((ex) => library.get(ex.exercise_id)?.movement_pattern).filter(Boolean));
-  const estimated = estimateFromPlan(workout, catalogById);
+  const estimated = estimateSessionFromAi(workout, library);
   const goal = context.athlete.primary_goal;
   const fullBody = requestedType(workout, context) === 'Full Body';
 
   const weakSets = workingSets < 6;
   const weakCoverage = fullBody && minutes >= 50 && patterns.size < 3;
-  const farUnderTime = minutes >= 55 && estimated > 0 && estimated < Math.max(28, minutes * 0.45);
   const noPrimary = !strength.some((ex) => ex.role === 'primary') && requestedType(workout, context) !== 'Mobility';
+  const durationFit = classifySessionDuration(estimated, minutes);
 
   if ((weakSets && strength.length < 3) || (weakCoverage && workingSets < 8) || noPrimary) {
     issues.push(
@@ -198,7 +360,7 @@ function validateStimulus(
         workout.day_label
       )
     );
-  } else if (farUnderTime || (minutes >= 55 && workingSets < 8 && fullBody)) {
+  } else if (minutes >= 55 && workingSets < 8 && fullBody) {
     issues.push(
       warn(
         'DURATION_UNDER',
@@ -207,8 +369,18 @@ function validateStimulus(
       )
     );
   }
-  if (estimated > minutes + 15) {
+  if (durationFit.over === 'error') {
     issues.push(err('DURATION_OVER', `${workout.name} is estimated at ${estimated} min vs ${minutes}`, workout.day_label));
+  } else if (durationFit.over === 'warning') {
+    issues.push(warn('DURATION_OVER', `${workout.name} is estimated at ${estimated} min vs ${minutes}`, workout.day_label));
+  } else if (durationFit.under === 'warning' && estimated > 0 && !weakSets) {
+    issues.push(
+      warn(
+        'DURATION_UNDER',
+        `${workout.name} is estimated at ${estimated} min vs ${minutes}. That can be fine if stimulus is enough; do not add filler.`,
+        workout.day_label
+      )
+    );
   }
 }
 
@@ -281,32 +453,112 @@ function validateWeeklyVolume(
     });
   });
 
+  const hypertrophy = goalUsesHypertrophyBias(context.athlete.primary_goal as any);
   context.weekly_volume_targets.forEach((target) => {
     const got = credits[target.muscle] || 0;
-    if (target.priority === 'high_priority' && got < 1) {
-      issues.push(err('VOLUME_OFF', `High-priority ${target.muscle} has no working-set credit.`));
+    const ratio = target.target_working_sets > 0 ? got / target.target_working_sets : 1;
+    const tier = muscleTier(target.muscle, target.priority);
+    const over = ratio > 1.6;
+
+    if (tier === 'major') {
+      if (got < 1) {
+        issues.push(err('VOLUME_OFF', `Major hypertrophy target ${target.muscle} has no meaningful working-set credit.`));
+      } else if (hypertrophy && ratio < 0.5) {
+        issues.push(err('VOLUME_OFF', `${target.muscle} working sets (${got}) are severely below the ${target.target_working_sets} target.`));
+      } else if (ratio < 0.7 || over) {
+        issues.push(warn('VOLUME_OFF', `${target.muscle} working sets (${got}) vs target ${target.target_working_sets}.`));
+      } else if (ratio < 0.85 || ratio > 1.25) {
+        issues.push(info('VOLUME_OFF', `${target.muscle} planned ${got} vs target ${target.target_working_sets}.`));
+      }
       return;
     }
-    if (target.priority === 'high_priority' && got < target.target_working_sets * 0.5) {
-      issues.push(warn('VOLUME_OFF', `${target.muscle} working sets (${got}) are well below the ${target.target_working_sets} target.`));
-    } else if (Math.abs(got - target.target_working_sets) > target.target_working_sets * 0.35 && target.priority !== 'maintenance') {
-      issues.push(info('VOLUME_OFF', `${target.muscle} planned ${got} vs target ${target.target_working_sets}.`));
+
+    if (tier === 'secondary') {
+      if (got < 1 && hypertrophy) {
+        issues.push(warn('VOLUME_OFF', `Secondary hypertrophy muscle ${target.muscle} has no direct/meaningful stimulus.`));
+      } else if (ratio < 0.4 && target.priority !== 'maintenance') {
+        issues.push(warn('VOLUME_OFF', `${target.muscle} working sets (${got}) are well below the ${target.target_working_sets} target.`));
+      } else if (ratio < 0.65 || over) {
+        issues.push(info('VOLUME_OFF', `${target.muscle} planned ${got} vs target ${target.target_working_sets}.`));
+      }
+      return;
+    }
+
+    if (target.priority === 'high_priority' && got < 1) {
+      issues.push(warn('VOLUME_OFF', `Priority ${target.muscle} has no working-set credit.`));
+    } else if (got < 1) {
+      issues.push(info('VOLUME_OFF', `Optional ${target.muscle} has no direct work; indirect stimulus may be enough.`));
     }
   });
 }
 
-function validatePatternCoverage(workouts: AiWorkoutPlan[], library: Map<string, DesignerExercise>, issues: ValidationIssue[]) {
+function validatePatternCoverage(
+  workouts: AiWorkoutPlan[],
+  library: Map<string, DesignerExercise>,
+  context: GenerationContext,
+  issues: ValidationIssue[]
+) {
   if (workouts.length < 3) return;
-  const patterns = new Set(
-    workouts.flatMap((w) => flattenStrength(w).map((ex) => library.get(ex.exercise_id)?.movement_pattern || ''))
-  );
-  ['squat', 'hinge', 'horizontal_push', 'horizontal_pull'].forEach((need) => {
-    const hit =
-      patterns.has(need) ||
-      (need === 'squat' && patterns.has('lunge')) ||
-      Array.from(patterns).some((p) => p.includes(need.replace('_', '')));
-    if (!hit) issues.push(warn('PATTERN_GAP', `The week is light on ${need.replace('_', ' ')} work.`));
+  const counts: Record<string, number> = {};
+  workouts.forEach((w) => {
+    flattenStrength(w).forEach((ex) => {
+      const pattern = library.get(ex.exercise_id)?.movement_pattern;
+      if (!pattern) return;
+      counts[pattern] = (counts[pattern] || 0) + 1;
+    });
   });
+  const squat = (counts.squat || 0) + (counts.lunge || 0);
+  const hinge = counts.hinge || 0;
+  // Hypertrophy pressing is contextual: horizontal/incline plus delt isolation can cover
+  // push without a vertical_push / overhead press. Do not checklist every pattern.
+  const push = (counts.horizontal_push || 0) + (counts.vertical_push || 0);
+  const pull = (counts.horizontal_pull || 0) + (counts.vertical_pull || 0);
+  const hypertrophy = goalUsesHypertrophyBias(context.athlete.primary_goal as any);
+  const fullBody = context.schedule.days.filter((d) => d.requested_type === 'Full Body').length >= 3;
+
+  if (hypertrophy && fullBody) {
+    if (!squat) issues.push(err('PATTERN_GAP', 'The week has no squat or lunge pattern.'));
+    if (!hinge) issues.push(err('PATTERN_GAP', 'The week has no hinge pattern.'));
+    if (!push) issues.push(err('PATTERN_GAP', 'The week has no push pattern.'));
+    if (!pull) issues.push(err('PATTERN_GAP', 'The week has no pull pattern.'));
+  } else {
+    ['squat', 'hinge', 'horizontal_push', 'horizontal_pull'].forEach((need) => {
+      const hit =
+        (counts[need] || 0) > 0 ||
+        (need === 'squat' && (counts.lunge || 0) > 0);
+      if (!hit) issues.push(warn('PATTERN_GAP', `The week is light on ${need.replace('_', ' ')} work.`));
+    });
+  }
+
+  if (push >= 3 && pull > 0 && push / pull >= 2.5) {
+    issues.push(warn('PATTERN_IMBALANCE', `Push exposures (${push}) far exceed pull exposures (${pull}).`));
+  }
+  if (pull >= 3 && push > 0 && pull / push >= 2.5) {
+    issues.push(warn('PATTERN_IMBALANCE', `Pull exposures (${pull}) far exceed push exposures (${push}).`));
+  }
+  Object.entries(counts).forEach(([pattern, count]) => {
+    if (count >= 4 && ['horizontal_push', 'horizontal_pull', 'squat', 'hinge'].includes(pattern)) {
+      issues.push(warn('PATTERN_REDUNDANCY', `${pattern.replace('_', ' ')} appears ${count} times; check whether that redundancy is intentional.`));
+    }
+  });
+}
+
+function validateSupersetPreference(workouts: AiWorkoutPlan[], context: GenerationContext, issues: ValidationIssue[]) {
+  const pref = String(context.athlete.superset_preference || '').toLowerCase();
+  const hasSuperset = workouts.some((w) =>
+    (w.strength || []).some((block) => block.type !== 'straight_sets' && (block.exercises || []).length >= 2)
+  );
+  if (/sometimes|often|always|yes/.test(pref) && !hasSuperset) {
+    issues.push(
+      warn(
+        'SUPERSET_PREF',
+        `Superset preference is "${context.athlete.superset_preference}" but the week contains no supersets.`
+      )
+    );
+  }
+  if (/never|none|^no$/.test(pref) && hasSuperset) {
+    issues.push(warn('SUPERSET_PREF', `Superset preference is "${context.athlete.superset_preference}" but the week includes supersets.`));
+  }
 }
 
 function flattenStrength(workout: AiWorkoutPlan): AiStrengthExercise[] {
@@ -365,40 +617,6 @@ function prescriptionsMatch(a: AiStrengthExercise, b: AiStrengthExercise): boole
 function justifiedFrequency(context: GenerationContext): boolean {
   const text = `${context.athlete.notes} ${context.athlete.primary_goal} ${context.request.user_request}`.toLowerCase();
   return /specializ|frequency|3x|three times|every session|every day|high frequency/.test(text);
-}
-
-function estimateFromPlan(workout: AiWorkoutPlan, catalogById: Map<string, CatalogExercise>): number {
-  const exercises = flattenStrength(workout).map((ex) => ({
-    name: catalogById.get(ex.exercise_id)?.name || ex.exercise_id,
-    sets: ex.working_sets,
-    restSeconds: ex.rest_seconds || 90,
-    role: ex.role,
-    muscleGroup: '',
-    primaryMuscles: [],
-    movementPattern: 'other',
-    repMin: ex.rep_min,
-    repMax: ex.rep_max,
-    targetRir: ex.target_rir,
-    loadIncrement: 5,
-  }));
-  return estimateWorkoutMinutes({
-    warmupItems: workout.warmup.map((w) => ({ name: w.exercise_id, category: 'activation', reps: w.prescription, sets: w.sets || 1 })),
-    potentiation: workout.potentiation.map((p) => ({
-      name: p.exercise_id,
-      sets: p.sets || 1,
-      restSeconds: 45,
-      role: 'power',
-      muscleGroup: '',
-      primaryMuscles: [],
-      movementPattern: 'other',
-      repMin: 3,
-      repMax: 5,
-      targetRir: 5,
-      loadIncrement: 0,
-    })),
-    rampCount: flattenStrength(workout).reduce((sum, ex) => sum + (ex.ramp_sets?.length || 0), 0),
-    exercises: exercises as any,
-  });
 }
 
 function err(code: string, message: string, day_label?: string, exercise_id?: string): ValidationIssue {

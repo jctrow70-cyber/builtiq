@@ -93,6 +93,7 @@ export function buildGenerationContext(opts: {
     recovery: null,
     candidate_library: libraries.candidate_library,
     warmup_library: libraries.warmup_library,
+    cooldown_library: libraries.cooldown_library,
   };
 
   return { context, catalogById: libraries.catalogById };

@@ -7,11 +7,11 @@ export function buildDesignerInstructions(context: GenerationContext): string {
 
 ${single ? 'Design ONE training session for the supplied day.' : 'Design ONE complete training WEEK. Sessions must complement each other. Reason about the week as a single program, not isolated days.'}
 
-Use only exercise_id values from candidate_library or warmup_library. Never invent IDs. Never rely on exercise names for identity.
+Use only exercise_id values from candidate_library, warmup_library, or cooldown_library. Never invent IDs. Never rely on exercise names for identity.
 
 Hard constraints:
 - Keep the supplied days and requested day types.
-- Stay within session_minutes.
+- Target about ${context.constraints.session_minutes} minutes. The engine recalculates duration; a ${context.constraints.session_minutes}-minute request should land near ${Math.round(context.constraints.session_minutes * 0.9)}-${Math.round(context.constraints.session_minutes * 1.1)} minutes. Do not pack to ${context.constraints.session_minutes + 15} minutes, and do not add filler just to consume leftover time.
 - RIR must be ${context.constraints.rir_min}-${context.constraints.rir_max}.
 - Working sets per exercise ${context.constraints.working_sets_per_exercise.min}-${context.constraints.working_sets_per_exercise.max}.
 - Honor excluded exercises, pain areas, and limitations. Do not diagnose injury.
@@ -20,17 +20,53 @@ Hard constraints:
 - Weekly working-set targets and preferred exposures are calculations to solve, not a seed workout.
 - Do not copy the same identical primary prescription onto every similar day. Frequency can be intentional when volume, reps, RIR, or emphasis differ.
 
+Role assignment (session purpose, not catalog eligibility):
+- primary: the session's main loaded movement(s). Usually 1-2. A 60-minute full-body day may have two if they are different patterns.
+- secondary: supporting compounds that add weekly volume.
+- accessory: extra compounds or mixed-support work that is not a main lift.
+- isolation: single-joint or isolation work.
+- Do not label every exercise primary.
+
+Weekly volume:
+- Hit major hypertrophy muscles (chest, upper back, lats, quads, hamstrings, glutes) with meaningful working-set credit.
+- Secondary muscles (delts, arms) should get some direct or clearly meaningful stimulus across the week.
+- Optional/minor muscles (calves, abs, adductors, hip flexors, forearms) may be trained indirectly. Do not force every listed muscle to its maximum target.
+- Zero working-set credit on a major hypertrophy target is a failure.
+
+Rest intervals:
+- High-fatigue primary compounds need enough rest to keep performance. Hypertrophy squat/hinge/press/row work is usually 150-240s, not 90s.
+- Isolation and low-fatigue accessories can rest 45-90s.
+- In a superset, rest after the pair should still protect the harder lift.
+
+Supersets:
+- Preference is "${context.athlete.superset_preference}".
+- "sometimes" does not require a superset in every workout, but ignoring the preference for the entire week is a miss.
+- Use supersets to save time on non-competing accessories or a primary + low-fatigue non-competing isolation.
+- Never pair two high-fatigue competing compounds.
+
+Potentiation:
+- Decide intentionally. Useful when the athlete is intermediate/advanced, the primary is a heavy compound, time allows, and fatigue cost stays low.
+- Omit it (empty array) when it would steal time or add fatigue. Omission is valid.
+
+Warm-up and cooldown:
+- Warm-up must come from warmup_library and prepare THAT day's lifts.
+- Cooldown must come from cooldown_library. Use stretches, easy mobility, or breathing. Do not use working isolations (leg extension, calf raise, kickback, triceps extension) as cooldown.
+- The why field must agree with the exercise's muscles and the session purpose. Do not say a row warms the chest.
+
+Ramps:
+- Leave ramp_sets empty. The engine adds preparation ramps from exercise metadata and session role. Do not invent warm-up load percentages.
+
+Progression:
+- Materialize week 1 only. Store progression.strategy and weekly_rules as intent for later coaching.
+- Do not pretend weeks 2-6 have already been progressed. The engine will copy the week-1 template.
+
 Programming you own:
 - session emphasis, exercise selection and order
 - weekly working-set distribution and fatigue placement
-- supersets only when they do not pair two heavy competing compounds
-- dynamic warm-up from warmup_library, chosen for THAT day's lifts
-- optional potentiation only when it helps; use an empty array when it does not
-- cooldown selection
-- progression strategy for later weeks (week 1 is the template)
-
-Keep dynamic warm-up, potentiation, and primary ramp sets separate.
-Ramp sets are optional. If used, they are exercise-specific and are not working volume.
+- movement-pattern balance appropriate to the goal
+- optional potentiation
+- cooldown from cooldown_library
+- progression intent for later weeks
 
 Return the structured program only.`;
 }

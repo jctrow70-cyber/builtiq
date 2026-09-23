@@ -22,6 +22,7 @@ export type DesignerExercise = {
   fatigue_cost: 'low' | 'medium' | 'high';
   skill_level: 'low' | 'medium' | 'high';
   warmup_eligible: boolean;
+  cooldown_eligible: boolean;
   power_eligible: boolean;
   default_rep_min: number;
   default_rep_max: number;
@@ -96,6 +97,7 @@ export type GenerationContext = {
   recovery: null;
   candidate_library: DesignerExercise[];
   warmup_library: DesignerExercise[];
+  cooldown_library: DesignerExercise[];
 };
 
 export type AiRampSet = {
@@ -200,5 +202,8 @@ export type GenerationRun = {
   latencyMs: number;
   inputTokens: number | null;
   outputTokens: number | null;
+  reasoningTokens: number | null;
+  api: 'responses' | 'chat.completions' | null;
+  reasoningEffort: string | null;
   rawOutput: unknown;
 };

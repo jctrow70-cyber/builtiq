@@ -11,6 +11,118 @@ Branch:
 Status:
 ```
 
+## BIQ-0210 - Phase 1.1 Duration Tolerance and Catalog Metadata Audit
+
+Date: 2026-09-22  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+Final Phase 1.1 cleanup: session duration validation is now proportional to the requested length (about 10% warning / 15% error, with floors for short sessions). Movement-pattern checks stay contextual and do not require vertical pressing. Production catalog metadata was audited only; no catalog rows were changed.
+
+### Purpose
+
+A requested 60-minute session should land near 54–66 minutes, not 75. Catalog enrichment is planned, not implemented.
+
+### Changes
+
+- Replaced the flat +15 minute duration allowance with `sessionDurationTolerance` / `classifySessionDuration`
+- Under-duration warns and does not force filler; over-duration errors above ~15%
+- Prompt clarifies the 90–110% landing band
+- Documented that hypertrophy push coverage can be horizontal/incline + delt work
+- Catalog metadata audit only (schema, adapter, import, CSV dump)
+
+### Files Changed
+
+- `lib/scienceEngine/duration.ts`
+- `lib/scienceEngine/generation/validateAiProgram.ts`
+- `lib/scienceEngine/generation/prompt.ts`
+- `lib/scienceEngine/generation/phase1Check.ts`
+- `lib/scienceEngine/version.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. `npm run test:science`
+2. Confirm 66 vs 60 is acceptable, 67 warns, 70 errors
+3. Confirm a week without overhead press still passes if horizontal/incline pressing exists
+
+### Known Issues
+
+- Live `st_exercise_catalog` completeness could not be queried from this environment earlier; audit uses schema/import/CSV sources
+- Catalog enrichment is not implemented
+- Phase 2 is not started
+
+### Recommended Commit Message
+
+`BIQ-0210 Tighten session duration tolerance and audit catalog metadata`
+
+---
+
+## BIQ-0209 - Phase 1.1 Programming Quality Pass
+
+Date: 2026-09-22  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+Phase 1 architecture is unchanged. Generation now uses a reasoning-capable OpenAI model when available, and the validator/prompt/mapper judge role, volume, rest, fatigue, movement balance, supersets, cooldown semantics, why-field agreement, metadata ramps, and realistic duration. Weeks 2–6 remain unprogressed copies of the week-1 template.
+
+### Purpose
+
+The first live Phase 1 week was structurally valid but programmed poorly: every lift labeled primary, 90s rest on squat/deadlift/bench, ignored “supersets sometimes,” isolation lifts as cooldown, name-hardcoded ramps, and a 39-minute engine estimate against a 60-minute claim.
+
+### Changes
+
+- Default model `gpt-5.4` via Responses API + `reasoning.effort=medium`, with fallbacks to `gpt-5` then Chat Completions / `gpt-4o-mini`
+- Session-role validation (all-primary is an error); smarter VOLUME_OFF severity by muscle tier
+- Rest, session-fatigue, movement-balance, and “supersets sometimes” findings
+- Cooldown must be a stretch/mobility drill; why text must match exercise muscles
+- Ramp eligibility from metadata + primary role, not `PRIMARY_RAMP_NAMES`
+- Deterministic duration estimator accounts for rest, ramps, supersets, unilateral work, warmup, potentiation, and cooldown
+- Progression option A: store rules as intent; copy week 1; do not apply fake weekly progression
+- FALLBACK_CATALOG fatigue is inferred more accurately; production catalog rows are not rewritten
+
+### Files Changed
+
+- `lib/scienceEngine/generation/*`
+- `lib/scienceEngine/catalogAdapter.ts`
+- `lib/scienceEngine/duration.ts`
+- `lib/scienceEngine/version.ts`
+- `.env.example`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None. Extra model/reasoning fields are stored on the existing generation-run JSON payload.
+
+### Testing Steps
+
+1. `npm run test:science`
+2. Re-run Intermediate / Hypertrophy / 3× Mon-Wed-Fri / 60 min / Full Body / Balanced / Supersets sometimes
+3. Confirm roles are mixed, rest on primary compounds is not 90s, cooldown is a stretch, at least one weekly superset finding if none appear, and duration is engine-calculated
+4. Confirm weeks 2–6 match week 1 and notes say they are unprogressed copies
+
+### Known Issues
+
+- Production `st_exercise_catalog.fatigue_cost` may still be missing or generic; report separately, do not rewrite blindly
+- Adaptive progression from logged performance is still Phase 2 / Phase 3 and is not started
+
+### Recommended Commit Message
+
+`BIQ-0209 Improve Phase 1 AI programming quality without starting adaptive coaching`
+
+---
+
 ## BIQ-0208 - Phase 1 AI Week Generation Pipeline
 
 Date: 2026-09-22  

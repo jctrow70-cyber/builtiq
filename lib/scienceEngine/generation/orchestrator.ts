@@ -109,8 +109,10 @@ export async function runGenerationPipeline(opts: {
       repairAttempts,
       latencyMs: Date.now() - started,
       raw: call.raw,
-      tokens: { in: call.inputTokens, out: call.outputTokens },
+      tokens: { in: call.inputTokens, out: call.outputTokens, reasoning: call.reasoningTokens },
       model: call.model,
+      api: call.api,
+      reasoningEffort: call.reasoningEffort,
       supabase: opts.supabase,
       userId: opts.userId,
     });
@@ -128,6 +130,8 @@ export async function runGenerationPipeline(opts: {
     raw: call.raw,
     tokens: { in: call.inputTokens, out: call.outputTokens },
     model: call.model,
+    api: call.api,
+    reasoningEffort: call.reasoningEffort,
     supabase: opts.supabase,
     userId: opts.userId,
   });
@@ -143,8 +147,10 @@ async function finish(opts: {
   repairAttempts: number;
   latencyMs: number;
   raw: unknown;
-  tokens?: { in: number | null; out: number | null };
+  tokens?: { in: number | null; out: number | null; reasoning?: number | null };
   model?: string;
+  api?: 'responses' | 'chat.completions' | null;
+  reasoningEffort?: string | null;
   supabase?: any;
   userId?: string | null;
 }): Promise<OrchestratorResult> {
@@ -161,6 +167,9 @@ async function finish(opts: {
     latencyMs: opts.latencyMs,
     inputTokens: opts.tokens?.in ?? null,
     outputTokens: opts.tokens?.out ?? null,
+    reasoningTokens: opts.tokens?.reasoning ?? null,
+    api: opts.api ?? null,
+    reasoningEffort: opts.reasoningEffort ?? null,
     rawOutput: opts.raw,
   };
   const generationRunId = await persistGenerationRun(opts.supabase, opts.userId || null, null, run);

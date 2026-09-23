@@ -1,3 +1,4 @@
+import { estimateSessionFromAi } from '../duration';
 import { prescribeExercise } from '../prescription';
 import type { CatalogExercise, ExercisePrescription, ScienceProgram, ScienceWorkout, TrainingProfile, WarmupItem } from '../types';
 import { findByExerciseId } from './matchById';
@@ -33,7 +34,11 @@ export function mapAiWeekToScience(
   return {
     ...seed,
     summary: ai.summary || seed.summary,
-    explanations: [ai.coaching_notes, ai.program_rationale?.weekly_idea, seed.explanations[0]].filter(Boolean) as string[],
+    explanations: [
+      ai.coaching_notes,
+      ai.program_rationale?.weekly_idea,
+      'Weeks after week 1 repeat this week-1 template. Logged-performance progression is not applied yet.',
+    ].filter(Boolean) as string[],
     workouts,
   };
 }
@@ -80,7 +85,7 @@ function workoutFromAi(
     rampSets: [],
     exercises,
     cooldown: (row.cooldown || []).map((item) => mapPrep(item, catalogById, 'mobility')).filter(Boolean) as WarmupItem[],
-    estimatedMinutes: row.estimated_minutes || 0,
+    estimatedMinutes: estimateSessionFromAi(row, library),
   };
 }
 
@@ -98,7 +103,7 @@ function mapStrength(
     role: raw.role,
     profile,
     sets: Math.max(1, Math.min(6, Number(raw.working_sets) || 3)),
-    why: raw.why || 'Selected as part of the weekly program design.',
+    why: raw.why && raw.why.trim() ? raw.why : `${raw.role} ${meta.movement_pattern} for ${meta.primary_muscles.join(', ') || meta.name}.`,
   });
   prescribed.exerciseId = catalog.id;
   prescribed.repMin = raw.rep_min;
@@ -107,7 +112,7 @@ function mapStrength(
   prescribed.restSeconds = raw.rest_seconds || prescribed.restSeconds;
   const ramps = raw.ramp_sets?.length
     ? raw.ramp_sets
-    : raw.role === 'primary' && isRampEligiblePrimary(meta)
+    : isRampEligiblePrimary(meta, raw.role, prescribed.repMax)
       ? standardRampSets(profile, prescribed.repMax)
       : [];
   if (ramps.length) {

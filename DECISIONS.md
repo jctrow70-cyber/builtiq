@@ -1785,7 +1785,7 @@ The model designs the whole week from those constraints and a filtered exercise-
 
 Invalid programming goes through at most two AI repair attempts, then science fallback. The validator judges bad duplication, competing heavy supersets, and insufficient stimulus — it does not ban 2×/week frequency, every primary superset, or a low exercise count by itself.
 
-Production model stays `gpt-4o-mini` until the OpenAI verification spike is accepted. Phase 2 and Phase 3 are not started.
+Production model stayed `gpt-4o-mini` until the OpenAI verification spike was accepted. Updated by Decision 060. Phase 2 and Phase 3 are not started.
 
 ### Reason
 
@@ -1801,8 +1801,72 @@ The science-first overlay produced cloned full-body days and silently rewrote AI
 ### Impact
 
 - `POST /api/programs/generate` uses `runGenerationPipeline`
-- Science version 1.4.0, designer prompt `designer@2.0`
+- Science version 1.4.0, designer prompt `designer@2.0` (see Decision 060 for 1.4.1 / designer@2.1)
 - New `st_generation_runs` observability table
 - Supersedes Decision 032 for generation authorship; Decisions 036–037 remain the constraint/no-seed rules
+
+---
+
+## Decision 060 - Phase 1.1 Quality Pass Without Adaptive Coaching
+
+Date: 2026-09-22  
+Status: Accepted  
+Category: Program Design
+
+### Decision
+
+Keep the Phase 1 architecture. Upgrade the program-generation client to a reasoning-capable model (`gpt-5.4` Responses API, `reasoning.effort=medium`) when the key supports it, with fallbacks. Tighten quality validation for roles, weekly volume severity, rest, fatigue composition, movement balance, superset preference, cooldown semantics, and why-field agreement.
+
+Ramp eligibility comes from structured metadata and session role, not exercise-name lists. Duration is calculated deterministically. For progression, use option A: persist week 1 plus progression intent, and copy that template to later weeks without pretending they were already progressed.
+
+Do not start Phase 2 adaptive coaching.
+
+### Reason
+
+The first live Phase 1 week passed the structural contract and still produced weak programming. The cheapest correct progression fix is honesty: week 1 is the template. Applying `weekly_rules` as fake load changes would look like coaching that has not been built.
+
+### Alternatives Considered
+
+- Stay on `gpt-4o-mini` — rejected after the verification spike showed Responses + reasoning models available
+- Option B: materialize simple deterministic weekly progression now — rejected as larger than Phase 1.1 and easy to confuse with adaptive coaching
+- Rewrite production catalog fatigue metadata — rejected until the live catalog is inspected; only FALLBACK inference was corrected
+- Force potentiation or a superset into every session — rejected; decide intentionally, flag a week that ignores “sometimes”
+
+### Impact
+
+- Science engine 1.4.1, designer prompt `designer@2.1`
+- Env: `OPENAI_PROGRAM_MODEL`, `OPENAI_PROGRAM_REASONING_EFFORT`
+- Phase 2 / Phase 3 remain unstarted
+
+---
+
+## Decision 061 - Proportional Session Duration and Contextual Patterns
+
+Date: 2026-09-22  
+Status: Accepted  
+Category: Program Design
+
+### Decision
+
+AI session duration is judged as a percentage of the requested length: about 10% warning, 15% error, with minimum 5 / 8 minute floors so short sessions are not crushed by percentage math. Being shorter than requested is a warning at most; the model must not add filler to consume leftover time.
+
+Movement-pattern validation stays contextual. Hypertrophy weeks are not required to include vertical pressing when horizontal/incline pressing and direct delt work already cover the goal.
+
+Catalog metadata will be enriched later after review. This change does not rewrite `st_exercise_catalog`.
+
+### Reason
+
+The +15 minute allowance let a 60-minute request pass at 75 minutes. Vertical press is a programming option, not a checklist item.
+
+### Alternatives Considered
+
+- Keep +15 minutes — rejected; too loose for 60-minute sessions
+- Error on any missing canonical pattern including vertical push — rejected; not required for hypertrophy
+- Enrich the catalog in the same change — rejected; review the audit first
+
+### Impact
+
+- Science engine 1.4.2, designer prompt `designer@2.1.1`
+- Phase 2 remains unstarted
 
 ---

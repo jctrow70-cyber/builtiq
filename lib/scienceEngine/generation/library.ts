@@ -1,10 +1,12 @@
 import { filterEligibleExercises } from '../exerciseSelection';
-import { stableFallbackId } from '../catalogAdapter';
+import { FALLBACK_CATALOG, stableFallbackId } from '../catalogAdapter';
 import type { CatalogExercise, TrainingProfile } from '../types';
+import { isCooldownEligible } from './qualityRules';
 import type { DesignerExercise, Laterality, MeasurementType } from './types';
 
 const STRENGTH_CAP = 140;
 const WARMUP_CAP = 36;
+const COOLDOWN_CAP = 24;
 
 export function lateralityOf(ex: CatalogExercise): Laterality {
   const n = ex.name.toLowerCase();
@@ -48,6 +50,12 @@ export function toDesignerExercise(ex: CatalogExercise): DesignerExercise {
     fatigue_cost: row.fatigueCost,
     skill_level: row.skillRequirement,
     warmup_eligible: !!row.warmupSuitable,
+    cooldown_eligible: isCooldownEligible({
+      name: row.name,
+      program_roles: row.programRoles,
+      warmup_eligible: !!row.warmupSuitable,
+      rawCategory: String(row.raw?.category || row.warmupCategory || ''),
+    }),
     power_eligible: row.programRoles.includes('power'),
     default_rep_min: row.defaultRepMin,
     default_rep_max: row.defaultRepMax,
@@ -76,14 +84,19 @@ export function buildDesignerLibraries(catalog: CatalogExercise[], profile: Trai
 
   const strength: CatalogExercise[] = [];
   const warmup: CatalogExercise[] = [];
+  const cooldown: CatalogExercise[] = [];
   const seen = new Set<string>();
 
   for (const { ex } of ranked) {
     const id = String(ex.id);
     if (seen.has(id)) continue;
+    const designed = toDesignerExercise(ex);
     const warmupOnly = ex.warmupSuitable && !ex.programRoles.some((r) => r !== 'warmup' && r !== 'power');
     if (ex.warmupSuitable && warmup.length < WARMUP_CAP) {
       warmup.push(ex);
+    }
+    if (designed.cooldown_eligible && cooldown.length < COOLDOWN_CAP) {
+      cooldown.push(ex);
     }
     if (!warmupOnly && strength.length < STRENGTH_CAP) {
       strength.push(ex);
@@ -93,15 +106,38 @@ export function buildDesignerLibraries(catalog: CatalogExercise[], profile: Trai
     }
   }
 
+  if (cooldown.length < 4) {
+    FALLBACK_CATALOG.forEach((item) => {
+      if (cooldown.length >= COOLDOWN_CAP) return;
+      const designed = toDesignerExercise(item);
+      if (!designed.cooldown_eligible) return;
+      if (cooldown.some((ex) => ex.name.toLowerCase() === item.name.toLowerCase())) return;
+      cooldown.push(withLibraryId(item));
+    });
+  }
+
+  const catalogById = new Map(eligible.map((ex) => [String(ex.id), ex]));
+  cooldown.forEach((ex) => {
+    const row = withLibraryId(ex);
+    if (row.id && !catalogById.has(String(row.id))) catalogById.set(String(row.id), row);
+  });
+
   return {
-    catalogById: new Map(eligible.map((ex) => [String(ex.id), ex])),
+    catalogById,
     candidate_library: strength.map(toDesignerExercise),
     warmup_library: warmup.map(toDesignerExercise),
+    cooldown_library: cooldown.map(toDesignerExercise),
   };
 }
 
-export function libraryById(libraries: { candidate_library: DesignerExercise[]; warmup_library: DesignerExercise[] }) {
+export function libraryById(libraries: {
+  candidate_library: DesignerExercise[];
+  warmup_library: DesignerExercise[];
+  cooldown_library?: DesignerExercise[];
+}) {
   const map = new Map<string, DesignerExercise>();
-  [...libraries.candidate_library, ...libraries.warmup_library].forEach((ex) => map.set(ex.exercise_id, ex));
+  [...libraries.candidate_library, ...libraries.warmup_library, ...(libraries.cooldown_library || [])].forEach((ex) =>
+    map.set(ex.exercise_id, ex)
+  );
   return map;
 }

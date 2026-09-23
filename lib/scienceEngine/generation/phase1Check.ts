@@ -1,8 +1,9 @@
 /**
- * BIQ-0208 Phase 1 generation checks.
+ * BIQ-0208 / BIQ-0209 Phase 1 and Phase 1.1 generation checks.
  * Imported from lib/scienceEngine/acceptanceCheck.ts
  */
 import { FALLBACK_CATALOG } from '../catalogAdapter';
+import { classifySessionDuration, sessionDurationTolerance } from '../duration';
 import { generateProgram } from '../generateProgram';
 import { trainingProfileFromSources } from '../profile';
 import { scienceProgramToAiPlan } from '../toAiPlan';
@@ -73,13 +74,13 @@ function day(label: string, name: string, emphasis: string, strength: AiWorkoutP
     emphasis,
     estimated_minutes: 58,
     warmup: [
-      { exercise_id: idOf('Goblet Squat'), sets: 1, prescription: '8', why: 'Raise' },
+      { exercise_id: idOf('Goblet Squat'), sets: 1, prescription: '8', why: 'Squat pattern prep' },
       { exercise_id: idOf('Band Row'), sets: 1, prescription: '12', why: 'Pull prep' },
       { exercise_id: idOf('Scapular Push-Up'), sets: 1, prescription: '8', why: 'Scap prep' },
     ],
     potentiation: [],
     strength,
-    cooldown: [{ exercise_id: idOf('Face Pull'), sets: 1, prescription: '12', why: 'Upper-back cooldown' }],
+    cooldown: [{ exercise_id: idOf('Hamstring Stretch'), sets: 1, prescription: '30 sec', why: 'Ease hamstrings after lower work' }],
   };
 }
 
@@ -178,6 +179,15 @@ export async function runPhase1GenerationChecks() {
   assert(mon!.potentiation.length === 0, 'Mapper must not auto-add potentiation');
   assert((mon!.exercises[0].setDetails || []).some((s) => s.setType === 'warmup'), 'Primary should keep ramp sets');
   assert((mon!.exercises[0].setDetails || []).filter((s) => s.setType === 'working').length === 3, 'Ramps must not become extra working sets');
+  assert((fri!.exercises[0].setDetails || []).some((s) => s.setType === 'warmup'), 'Ramp eligibility must come from metadata/role, not a name list');
+  assert(mapped.explanations.some((line) => /week-1 template/i.test(line)), 'Later weeks must be described as unprogressed week-1 copies');
+  assert(mon!.estimatedMinutes > 45 && mon!.estimatedMinutes < 75, `Deterministic Monday duration should be realistic, got ${mon!.estimatedMinutes}`);
+  const sixty = sessionDurationTolerance(60);
+  assert(sixty.warnDelta === 6 && sixty.errorDelta === 9, `60-minute bands should be ±6 / ±9, got ${sixty.warnDelta}/${sixty.errorDelta}`);
+  assert(classifySessionDuration(66, 60).over === 'ok', '66 vs 60 should be acceptable');
+  assert(classifySessionDuration(67, 60).over === 'warning', '67 vs 60 should warn');
+  assert(classifySessionDuration(70, 60).over === 'error', '70 vs 60 should error');
+  assert(classifySessionDuration(38, 30).over !== 'error', 'Short sessions must not use a 3-minute error band');
 
   const credits = workingSetCreditsForTests(week, catalogById);
   const squatWorking = week.workouts[0].strength[0].exercises[0].working_sets;
@@ -372,9 +382,12 @@ export async function runPhase1GenerationChecks() {
           ),
         },
         raw: null,
-        model: 'gpt-4o-mini',
+        model: 'gpt-5.4',
+        api: 'responses',
+        reasoningEffort: 'medium',
         inputTokens: null,
         outputTokens: null,
+        reasoningTokens: null,
         error: null,
       };
     },
@@ -404,9 +417,12 @@ export async function runPhase1GenerationChecks() {
             }
           : week,
         raw: null,
-        model: 'gpt-4o-mini',
+        model: 'gpt-5.4',
+        api: 'responses',
+        reasoningEffort: 'medium',
         inputTokens: null,
         outputTokens: null,
+        reasoningTokens: null,
         error: null,
       };
     },
@@ -423,9 +439,12 @@ export async function runPhase1GenerationChecks() {
     requestFn: async () => ({
       program: week,
       raw: null,
-      model: 'gpt-4o-mini',
+      model: 'gpt-5.4',
+      api: 'responses',
+      reasoningEffort: 'medium',
       inputTokens: null,
       outputTokens: null,
+      reasoningTokens: null,
       error: null,
     }),
   });
@@ -441,7 +460,149 @@ export async function runPhase1GenerationChecks() {
     'Science-template lifts must not be mixed into a valid AI day'
   );
 
-  console.log('BIQ-0208 Phase 1 generation checks passed.');
+  const allPrimary = {
+    ...week,
+    workouts: week.workouts.map((w) => ({
+      ...w,
+      strength: w.strength.map((block) => ({
+        ...block,
+        exercises: block.exercises.map((ex) => ({ ...ex, role: 'primary' as const })),
+      })),
+    })),
+  };
+  const roleCheck = validateAiProgram(allPrimary, context, catalogById);
+  assert(roleCheck.issues.some((i) => i.code === 'ROLE_ALL_PRIMARY' && i.severity === 'error'), 'All-primary week must ERROR');
+
+  const shortRest = {
+    ...week,
+    workouts: [
+      {
+        ...week.workouts[0],
+        strength: [
+          { type: 'straight_sets' as const, exercises: [lift('Back Squat', 'primary', { rest_seconds: 90 })] },
+          ...week.workouts[0].strength.slice(1),
+        ],
+      },
+      week.workouts[1],
+      week.workouts[2],
+    ],
+  };
+  const restCheck = validateAiProgram(shortRest, context, catalogById);
+  assert(restCheck.issues.some((i) => i.code === 'REST_TOO_SHORT'), '90s rest on a high-fatigue primary squat must be flagged');
+
+  const noSuperset = {
+    ...week,
+    workouts: week.workouts.map((w) => ({
+      ...w,
+      strength: w.strength.map((block) => ({ ...block, type: 'straight_sets' as const })),
+    })),
+  };
+  const supersetPref = validateAiProgram(noSuperset, context, catalogById);
+  assert(supersetPref.issues.some((i) => i.code === 'SUPERSET_PREF' && i.severity === 'warning'), '"sometimes" with zero supersets must warn');
+
+  const badCooldown = {
+    ...week,
+    workouts: [{ ...week.workouts[0], cooldown: [{ exercise_id: idOf('Leg Extension'), sets: 1, prescription: '12', why: 'Cooldown' }] }, week.workouts[1], week.workouts[2]],
+  };
+  const cooldownCheck = validateAiProgram(badCooldown, context, catalogById);
+  assert(cooldownCheck.issues.some((i) => i.code === 'COOLDOWN_NOT_ELIGIBLE' && i.severity === 'error'), 'Working isolations must not count as cooldown');
+
+  const whyDrift = {
+    ...week,
+    workouts: [
+      {
+        ...week.workouts[0],
+        warmup: [{ exercise_id: idOf('Band Row'), sets: 1, prescription: '12', why: 'Warms up chest and triceps' }],
+      },
+      week.workouts[1],
+      week.workouts[2],
+    ],
+  };
+  const whyCheck = validateAiProgram(whyDrift, context, catalogById);
+  assert(whyCheck.issues.some((i) => i.code === 'WHY_MISMATCH'), 'Why-field muscle drift must be flagged');
+  const whyOk = {
+    ...week,
+    workouts: [
+      {
+        ...week.workouts[0],
+        warmup: [{ exercise_id: idOf('Ankle Rocker'), sets: 1, prescription: '12', why: 'Improves ankle motion for more stable squat positions' }],
+      },
+      week.workouts[1],
+      week.workouts[2],
+    ],
+  };
+  const whyOkCheck = validateAiProgram(whyOk, context, catalogById);
+  assert(
+    !whyOkCheck.issues.some((i) => i.code === 'WHY_MISMATCH' && i.exercise_id === idOf('Ankle Rocker')),
+    'Why matching must not treat "ab" inside "stable" as abs'
+  );
+
+  const thinHams = {
+    ...week,
+    workouts: week.workouts.map((w) => ({
+      ...w,
+      strength: w.strength.map((block) => ({
+        ...block,
+        exercises: block.exercises.filter((ex) => {
+          const name = FALLBACK_CATALOG.find((row) => String(row.id) === ex.exercise_id)?.name || '';
+          return !/deadlift|rdl|leg curl|hip thrust/i.test(name);
+        }),
+      })),
+    })),
+  };
+  const noOverhead = {
+    ...week,
+    workouts: [
+      week.workouts[0],
+      {
+        ...week.workouts[1],
+        strength: week.workouts[1].strength.map((block) => ({
+          ...block,
+          exercises: block.exercises.map((ex) =>
+            ex.exercise_id === idOf('Overhead Press') ? lift('Incline Dumbbell Press', 'secondary') : ex
+          ),
+        })),
+      },
+      week.workouts[2],
+    ],
+  };
+  const noOhpCheck = validateAiProgram(noOverhead, context, catalogById);
+  assert(
+    !noOhpCheck.issues.some((i) => /vertical push|overhead press/i.test(i.message)),
+    `Missing overhead press should not be a pattern checklist miss: ${noOhpCheck.issues.map((i) => i.message).join('; ')}`
+  );
+  assert(
+    !noOhpCheck.issues.some((i) => i.code === 'PATTERN_GAP' && i.severity === 'error' && /push/i.test(i.message)),
+    'Horizontal/incline pressing should satisfy push coverage'
+  );
+
+  const longRest = {
+    ...week,
+    workouts: [
+      {
+        ...week.workouts[0],
+        strength: week.workouts[0].strength.map((block) => ({
+          ...block,
+          exercises: block.exercises.map((ex) => ({ ...ex, working_sets: 5, rest_seconds: 300 })),
+        })),
+      },
+      week.workouts[1],
+      week.workouts[2],
+    ],
+  };
+  const longCheck = validateAiProgram(longRest, context, catalogById);
+  assert(
+    longCheck.issues.some((i) => i.code === 'DURATION_OVER' && i.severity === 'error'),
+    `A packed 60-minute day must ERROR when engine duration is well over 69 minutes: ${longCheck.issues.map((i) => `${i.severity}:${i.code}`).join(', ')}`
+  );
+
+  const volumeCheck = validateAiProgram(thinHams, context, catalogById);
+  assert(
+    volumeCheck.issues.some((i) => i.code === 'VOLUME_OFF' && i.severity === 'error' && /hamstring/i.test(i.message)),
+    `Zero/severe hamstring stimulus should ERROR for hypertrophy: ${volumeCheck.issues.map((i) => `${i.severity}:${i.message}`).join('; ')}`
+  );
+
+  console.log('BIQ-0209 Phase 1.1 generation checks passed.');
   console.log(
     `Sample 3-day Full Body (AI fixture, not science fallback): ${mapped.workouts
       .filter((w) => w.week === 1)
