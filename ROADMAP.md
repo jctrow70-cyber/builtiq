@@ -210,7 +210,7 @@ Goal: Prepare BuildIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
-**BIQ-0217 Phase 2A.1** data foundation is implemented locally and **not applied** to the database yet. Review the migration, then apply `20260923_052_phase2a1_training_foundation.sql`. Do not start Phase 2A.2 automatic progression until that review lands.
+**BIQ-0217 Phase 2A.1** data foundation is applied and live-verified. Do not start Phase 2A.2 automatic load/rep progression until that work is explicitly approved.
 
 ### Recently completed
 

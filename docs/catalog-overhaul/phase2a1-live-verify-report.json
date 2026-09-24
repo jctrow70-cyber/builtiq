@@ -1,48 +1,325 @@
 {
-  "generated_at": "2026-09-24T00:53:59.530Z",
+  "generated_at": "2026-09-24T12:48:15.332Z",
   "phase_2a2": "not_started",
   "migration": {
     "apply": {
-      "attempted": true,
-      "ok": false,
-      "via": null,
-      "error": "No Supabase Management API token accepted. Service-role cannot run DDL via PostgREST."
-    }
+      "attempted": false,
+      "skipped": "User already applied 052 in the SQL Editor. This script does not reapply it."
+    },
+    "schema_visible": true
   },
   "schema": {
     "before": {
       "exercise_meta": {
-        "ok": false,
-        "error": "column st_exercises.program_role does not exist"
+        "ok": true
       },
       "set_log_meta": {
-        "ok": false,
-        "error": "column st_set_logs.snapshot_target_rir does not exist"
+        "ok": true
       },
       "week_status": {
-        "ok": false,
-        "error": "column st_workouts.week_status does not exist"
+        "ok": true
       },
       "feedback": {
-        "ok": false,
-        "error": "column st_workout_feedback.workout_feel does not exist"
+        "ok": true
       },
       "sessions": {
-        "ok": false,
-        "error": "Could not find the table 'public.st_workout_sessions' in the schema cache"
+        "ok": true
       },
       "exercise_sessions": {
-        "ok": false,
-        "error": "Could not find the table 'public.st_exercise_sessions' in the schema cache"
+        "ok": true
       },
       "ledger": {
-        "ok": false,
-        "error": "Could not find the table 'public.st_adaptation_events' in the schema cache"
+        "ok": true
+      }
+    },
+    "inspect": {
+      "error": "No Supabase Management API token accepted. Service-role cannot run DDL via PostgREST."
+    },
+    "after_probe": {
+      "exercise_meta": {
+        "ok": true
+      },
+      "set_log_meta": {
+        "ok": true
+      },
+      "week_status": {
+        "ok": true
+      },
+      "feedback": {
+        "ok": true
+      },
+      "sessions": {
+        "ok": true
+      },
+      "exercise_sessions": {
+        "ok": true
+      },
+      "ledger": {
+        "ok": true
       }
     }
   },
-  "week_status": {},
-  "live": {},
+  "week_status": {
+    "counts": {
+      "activated": 412,
+      "in_progress": 93,
+      "template": 129,
+      "completed": 9
+    },
+    "by_week": {
+      "1": {
+        "activated": 103,
+        "in_progress": 29,
+        "completed": 5
+      },
+      "2": {
+        "in_progress": 16,
+        "activated": 86,
+        "template": 4,
+        "completed": 3
+      },
+      "3": {
+        "in_progress": 20,
+        "activated": 65,
+        "template": 24
+      },
+      "4": {
+        "activated": 67,
+        "in_progress": 9,
+        "template": 30,
+        "completed": 1
+      },
+      "5": {
+        "activated": 44,
+        "in_progress": 13,
+        "template": 34
+      },
+      "6": {
+        "activated": 47,
+        "in_progress": 6,
+        "template": 37
+      }
+    },
+    "total": 643,
+    "anomalies": [],
+    "anomaly_counts": {}
+  },
+  "live": {
+    "catalog": {
+      "total": 2507,
+      "eligible": 260,
+      "adapted": 260,
+      "policy_260": true
+    },
+    "persist": {
+      "programId": "0d6ebda7-6cde-43c6-88ce-86434ba82148",
+      "error": null
+    },
+    "prescription": {
+      "exercise_count": 78,
+      "with_any_meta": 78,
+      "sample": [
+        {
+          "name": "Goblet Squat",
+          "program_role": "warmup",
+          "measurement_type": "reps",
+          "laterality": "bilateral"
+        },
+        {
+          "name": "Lateral Lunge",
+          "program_role": "warmup",
+          "measurement_type": "reps",
+          "laterality": "unilateral"
+        },
+        {
+          "name": "Push-Up",
+          "program_role": "warmup",
+          "measurement_type": "reps",
+          "laterality": "bilateral"
+        },
+        {
+          "name": "Scapular Push-Up",
+          "program_role": "warmup",
+          "measurement_type": "reps",
+          "laterality": "bilateral"
+        },
+        {
+          "name": "Row",
+          "program_role": "warmup",
+          "measurement_type": "reps",
+          "laterality": "bilateral"
+        },
+        {
+          "name": "Plate Front Raise",
+          "program_role": "power",
+          "measurement_type": "reps",
+          "laterality": "bilateral"
+        }
+      ]
+    },
+    "snapshot": {
+      "log": {
+        "planned_set_id": "f98315cd-7b1d-47d7-98f8-7b6d71589905",
+        "exercise_id": "4ad345a0-09e3-4272-99b4-7dbca44e45c7",
+        "snapshot_target_rir": 2,
+        "snapshot_rep_min": 5,
+        "snapshot_rep_max": 10,
+        "snapshot_program_role": "primary",
+        "snapshot_rest_seconds": 180,
+        "actual_weight": "185",
+        "actual_reps": "10",
+        "is_extra_set": false
+      },
+      "planned_unchanged": true
+    },
+    "trigger": {
+      "rewrite_logged": {
+        "blocked": true,
+        "error": "Cannot rewrite a planned prescription after that set has been logged.",
+        "rows": 0
+      },
+      "edit_unlogged": {
+        "ok": true,
+        "error": null
+      },
+      "add_planned_set": {
+        "ok": true,
+        "error": null
+      }
+    },
+    "extra": {
+      "insert_ok": true,
+      "error": null,
+      "row": {
+        "table": "st_set_logs",
+        "planned_set_id": null,
+        "exercise_id": "4ad345a0-09e3-4272-99b4-7dbca44e45c7",
+        "is_extra_set": true,
+        "extra_set_number": 1
+      },
+      "not_planned": true,
+      "counts_toward_progression": false,
+      "history_count": 1,
+      "planned_set_count_before": 6,
+      "planned_set_count_after": 7,
+      "unique_blocked": true,
+      "unique_error": "duplicate key value violates unique constraint \"st_set_logs_extra_unique\"",
+      "completes_workout": false
+    },
+    "outcomes": {
+      "empty_logs_status": "not_started",
+      "empty_is_not_skipped": true,
+      "sessions": {
+        "not_started": {
+          "ok": true,
+          "error": null,
+          "pending": false,
+          "data_status": "not_started"
+        },
+        "in_progress": {
+          "ok": true,
+          "error": null,
+          "pending": false,
+          "data_status": "in_progress"
+        },
+        "completed": {
+          "ok": true,
+          "error": null,
+          "pending": false,
+          "data_status": "completed"
+        },
+        "partial": {
+          "ok": true,
+          "error": null,
+          "pending": false,
+          "data_status": "partial"
+        },
+        "skipped": {
+          "ok": true,
+          "error": null,
+          "pending": false,
+          "data_status": "skipped"
+        }
+      },
+      "exercise": {
+        "skipped_did_not_perform": {
+          "ok": true,
+          "error": null
+        },
+        "partial_could_not_complete": {
+          "ok": true,
+          "error": null
+        },
+        "completed": {
+          "ok": true,
+          "error": null
+        }
+      }
+    },
+    "feedback": {
+      "unanswered_write": {
+        "ok": true,
+        "id": "8a11b440-a3b9-41fe-8efc-e756d202a9bb",
+        "pending": false
+      },
+      "explicit_none_write": {
+        "ok": true,
+        "id": "629e47eb-a5bc-4338-8da3-4962e1dd6c61"
+      },
+      "normalize_empty": null,
+      "normalize_none": "none",
+      "rows": [
+        {
+          "id": "629e47eb-a5bc-4338-8da3-4962e1dd6c61",
+          "workout_feel": "easy",
+          "pain_flag": "none",
+          "notes": "verify explicit none"
+        },
+        {
+          "id": "8a11b440-a3b9-41fe-8efc-e756d202a9bb",
+          "workout_feel": "good",
+          "pain_flag": null,
+          "notes": "verify unanswered pain"
+        }
+      ]
+    },
+    "rls": {
+      "owner_session": {
+        "ok": true,
+        "error": null,
+        "pending": false,
+        "data_status": "completed"
+      },
+      "owner_extra": true,
+      "owner_feedback": true,
+      "owner_exercise": true,
+      "owner_ledger_read": {
+        "ok": true,
+        "error": null
+      },
+      "owner_ledger_insert": {
+        "ok": true,
+        "error": null
+      },
+      "other_cannot_read_sessions": true,
+      "other_cannot_read_extras": true,
+      "other_cannot_read_feedback": true,
+      "other_cannot_read_ledger": true,
+      "other_cannot_write_session": true,
+      "other_errors": {
+        "sessions": null,
+        "extras": null,
+        "write": "new row violates row-level security policy for table \"st_workout_sessions\""
+      }
+    },
+    "cleanup": {
+      "programId": "0d6ebda7-6cde-43c6-88ce-86434ba82148",
+      "users_deleted": [
+        "biq0217.verify.1790254107038@builtiq.test",
+        "biq0217.other.1790254107038@builtiq.test"
+      ]
+    }
+  },
   "issues": [],
-  "operationally_verified": false
+  "operationally_verified": true
 }

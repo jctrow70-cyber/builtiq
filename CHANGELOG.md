@@ -15,7 +15,7 @@ Status:
 
 Date: 2026-09-23
 Branch: develop
-Status: Local / migration not applied
+Status: Applied / live-verified. Phase 2A.2 not started.
 
 ### Summary
 
@@ -68,23 +68,24 @@ Logging must record prescription metadata, session/exercise outcomes, extra sets
 
 ### Database Changes
 
-Additive migration created, **not applied**: new columns on `st_exercises`, `st_set_logs`, `st_workouts`, `st_workout_feedback`; new tables `st_workout_sessions`, `st_exercise_sessions`, `st_adaptation_events`; planned-set-specific rewrite trigger. Extra sets are rows on `st_set_logs`, not a separate table.
+Additive migration `20260923_052_phase2a1_training_foundation.sql` was applied in the Supabase SQL Editor. Live verification on 2026-09-24 confirmed the new columns on `st_exercises`, `st_set_logs`, `st_workouts`, `st_workout_feedback`; new tables `st_workout_sessions`, `st_exercise_sessions`, `st_adaptation_events`; planned-set-specific rewrite trigger; extra sets on `st_set_logs` (no `st_extra_set_logs` table). No progression writes.
 
 ### Testing Steps
 
-1. `npm run test:science` includes Phase 1 checks plus 2A.1 foundation checks
-2. Confirm generation still copies week 1 and excludes customs
-3. After the migration is approved and applied: log a workout, add an extra set, skip an exercise, mark session skipped vs completed
+1. `npm run test:science` includes Phase 1 checks plus 2A.1 foundation checks — passed after apply
+2. `scripts/verify-phase2a1-live.ts` — passed; report in `docs/catalog-overhaul/phase2a1-live-verify-report.json`
+3. Confirm generation still copies week 1 and excludes customs
+4. In Training: log a workout, add an extra set, skip an exercise, mark session skipped vs completed
 
 ### Known Issues
 
-- Session/extra-set/skip writes fail until the migration is applied (UI reports that)
-- Automatic progression is Phase 2A.2
+- Automatic progression is Phase 2A.2 and was not started
 - Historical logs keep null snapshot fields
+- Management API catalog inspect is still unavailable from this machine; schema was confirmed via PostgREST column probes plus live trigger/index/RLS behavior
 
 ### Recommended Commit Message
 
-`BIQ-0217 Add Phase 2A.1 training data foundation without applying the migration`
+`BIQ-0217 Add Phase 2A.1 training data foundation and live-verify after 052`
 
 ## BIQ-0216 - Canonical AI Generation Catalog Policy
 

@@ -1,6 +1,7 @@
 /**
- * Apply 052 (if a SQL path exists) and live-verify BIQ-0217 Phase 2A.1.
- * Does not start Phase 2A.2. Cleans only disposable verification rows.
+ * Live-verify BIQ-0217 Phase 2A.1 after 052 has already been applied.
+ * Does not reapply the migration. Does not start Phase 2A.2.
+ * Cleans only disposable verification rows.
  */
 import fs from 'fs';
 import path from 'path';
@@ -18,7 +19,6 @@ import { snapshotForLog } from '../lib/training/setLogSnapshots';
 import { SCIENCE_ENGINE_VERSION } from '../lib/scienceEngine/version';
 
 const REPORT = path.join(process.cwd(), 'docs/catalog-overhaul/phase2a1-live-verify-report.json');
-const MIGRATION = path.join(process.cwd(), 'supabase/migrations/20260923_052_phase2a1_training_foundation.sql');
 const MARKER = 'BIQ-0217-VERIFY';
 
 function loadEnvLocal() {
@@ -134,25 +134,18 @@ async function main() {
   const admin = createClient(url, serviceKey, { auth: { persistSession: false } });
   const before = await probeSchema(admin);
   (report.schema as any).before = before;
-
-  const sql = fs.readFileSync(MIGRATION, 'utf8');
-  const apply = await runSql(sql);
   (report.migration as any).apply = {
-    attempted: true,
-    ok: apply.ok,
-    via: apply.via || null,
-    error: apply.error || null,
+    attempted: false,
+    skipped: 'User already applied 052 in the SQL Editor. This script does not reapply it.',
   };
 
-  if (!apply.ok) {
-    const already = (before as any).exercise_meta?.ok && (before as any).set_log_meta?.ok && (before as any).week_status?.ok && (before as any).sessions?.ok;
-    if (!already) {
-      writeReport(report);
-      console.error(JSON.stringify({ status: 'blocked', reason: apply.error, report: REPORT }, null, 2));
-      process.exit(2);
-    }
-    (report.migration as any).note = 'SQL apply path unavailable, but schema probes already show 2A.1 columns/tables present.';
+  const already = (before as any).exercise_meta?.ok && (before as any).set_log_meta?.ok && (before as any).week_status?.ok && (before as any).sessions?.ok && (before as any).exercise_sessions?.ok && (before as any).ledger?.ok && (before as any).feedback?.ok;
+  if (!already) {
+    writeReport(report);
+    console.error(JSON.stringify({ status: 'blocked', reason: '052 objects are not visible via PostgREST yet', schema: before, report: REPORT }, null, 2));
+    process.exit(2);
   }
+  (report.migration as any).schema_visible = true;
 
   const inspect = await runSql(`
     select
