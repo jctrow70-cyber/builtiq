@@ -11,6 +11,56 @@ Branch:
 Status:
 ```
 
+## BIQ-0224 - Group Training-Only Create Opens the Builder
+
+Date: 2026-09-24
+Branch: develop
+Status: Local
+
+### Summary
+
+Creating a group plan as Training only now opens the workout builder. Errors stay on the create screen instead of failing silently. Generate writes workouts onto that group plan, not a new personal program.
+
+### Purpose
+
+Create and build workouts under For a group did nothing visible after Training only was selected.
+
+### Changes
+
+- Create form submits as a real form and surfaces create errors
+- Group create requires a selected group and always opens AI setup after insert
+- Generate sends team mode / team id and infers them from an existing team program
+
+### Files Changed
+
+- `app/components/programDesign/CreateProgramFlow.tsx`
+- `app/components/programDesign/ProgramDesignHome.tsx`
+- `app/components/programDesign/AIProgramSetupWizard.tsx`
+- `lib/programDesign/intakePreferences.ts`
+- `app/api/programs/generate/route.ts`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Programs → For a group → Create a plan for [group]
+2. Keep Training only selected, name the plan, click Create and build workouts
+3. Confirm the intake / generate screen opens (not a silent stay on the form)
+4. Generate program — workouts appear on that group plan
+5. If create cannot run (no group selected), an error message appears
+6. Mobile: the create button still submits
+
+### Known Issues
+
+- Signed-in browser flow was not verified in this session
+
+### Recommended Commit Message
+
+`BIQ-0224 Fix group Training-only create so the builder opens`
+
 ## BIQ-0223 - Create a For Me Plan Without Unfollowing
 
 Date: 2026-09-24

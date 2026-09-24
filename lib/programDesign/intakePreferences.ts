@@ -411,7 +411,17 @@ export function trainingProfilePayload(intake: ProgramIntake) {
   };
 }
 
-export function generateBodyFromIntake(intake: ProgramIntake, extra: { weeks: number; programName: string; programId?: string; startDate?: string | null }) {
+export function generateBodyFromIntake(
+  intake: ProgramIntake,
+  extra: {
+    weeks: number;
+    programName: string;
+    programId?: string;
+    startDate?: string | null;
+    teamId?: string | null;
+    mode?: 'personal' | 'team';
+  }
+) {
   const { days, dayTypes } = scheduleFromIntake(intake);
   return {
     structuredIntake: true,
@@ -422,6 +432,8 @@ export function generateBodyFromIntake(intake: ProgramIntake, extra: { weeks: nu
     programName: extra.programName,
     existingProgramId: extra.programId,
     startDate: extra.startDate || undefined,
+    mode: extra.mode || (extra.teamId ? 'team' : 'personal'),
+    teamId: extra.teamId || undefined,
     primaryGoal: resolveGoal(intake.primaryGoal),
     experienceLevel: resolveExperience(intake.experienceLevel),
     sessionMinutes: intake.sessionMinutes,

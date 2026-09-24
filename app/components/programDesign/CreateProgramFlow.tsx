@@ -20,7 +20,13 @@ type CreateProgramFlowProps = {
   /** Shown for group owners sequencing multiple dated plans. */
   sequencingHint?: string | null;
   onCancel: () => void;
-  onCreate: (input: { name: string; startDate: string; cycleWeeks: number; inclusivePlan: boolean }) => Promise<void>;
+  onCreate: (input: {
+    name: string;
+    startDate: string;
+    cycleWeeks: number;
+    inclusivePlan: boolean;
+    scope: ProgramScope;
+  }) => Promise<void>;
 };
 
 export default function CreateProgramFlow({
@@ -38,6 +44,7 @@ export default function CreateProgramFlow({
   const [preset, setPreset] = useState<number | 'custom'>(6);
   const [customWeeks, setCustomWeeks] = useState(1);
   const [inclusivePlan, setInclusivePlan] = useState(false);
+  const [localError, setLocalError] = useState('');
 
   useEffect(() => {
     setStartDate(defaultStart);
@@ -48,9 +55,21 @@ export default function CreateProgramFlow({
   const endDate = cycleEndDate(snapped.startDate, cycleWeeks);
   const startAdjusted = snapped.adjusted || !isMonday(startDate);
 
-  async function handleSubmit() {
-    if (!name.trim()) return;
-    await onCreate({ name: name.trim(), startDate: snapped.startDate, cycleWeeks, inclusivePlan });
+  async function handleSubmit(e?: { preventDefault?: () => void }) {
+    e?.preventDefault?.();
+    if (!name.trim() || saving) return;
+    setLocalError('');
+    try {
+      await onCreate({
+        name: name.trim(),
+        startDate: snapped.startDate,
+        cycleWeeks,
+        inclusivePlan,
+        scope,
+      });
+    } catch (err: unknown) {
+      setLocalError(err instanceof Error ? err.message : 'Could not create program');
+    }
   }
 
   function chooseCustom() {
@@ -58,8 +77,10 @@ export default function CreateProgramFlow({
     setPreset('custom');
   }
 
+  const shownError = error || localError;
+
   return (
-    <div className="pd-create">
+    <form className="pd-create" onSubmit={(e) => void handleSubmit(e)}>
       <button type="button" className="pd-back" onClick={onCancel}>
         ← Back to programs
       </button>
@@ -171,16 +192,16 @@ export default function CreateProgramFlow({
           : 'Programs use complete Monday–Sunday weeks. Only this training cycle is scheduled — not an open-ended calendar.'}
       </p>
 
-      {error && <p className="pd-error">{error}</p>}
+      {shownError && <p className="pd-error">{shownError}</p>}
 
       <div className="actions" style={{ marginTop: 16 }}>
-        <button type="button" className="btn green" disabled={saving || !name.trim()} onClick={() => void handleSubmit()}>
+        <button type="submit" className="btn green" disabled={saving || !name.trim()}>
           {saving ? 'Creating…' : 'Create and build workouts'}
         </button>
         <button type="button" className="btn secondary" onClick={onCancel} disabled={saving}>
           Cancel
         </button>
       </div>
-    </div>
+    </form>
   );
 }

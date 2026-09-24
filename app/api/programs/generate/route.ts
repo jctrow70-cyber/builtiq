@@ -66,8 +66,8 @@ export async function POST(request: Request) {
     : promptSchedule.named
       ? normalizeDays(promptSchedule.days)
       : normalizeDays(body?.days);
-  const mode = body?.mode === 'team' ? 'team' : 'personal';
-  const teamId = body?.teamId ? String(body.teamId) : null;
+  let mode: 'personal' | 'team' = body?.mode === 'team' ? 'team' : 'personal';
+  let teamId = body?.teamId ? String(body.teamId) : null;
   let focusMuscles = Array.isArray(body?.focusMuscles) ? body.focusMuscles.map(String) : [];
   const programName = body?.programName ? String(body.programName).trim() : '';
   const defaultProgramName = 'BuiltIQ Training Program';
@@ -127,6 +127,10 @@ export async function POST(request: Request) {
       }
     } else if (!owns) {
       return NextResponse.json({ error: 'You cannot edit this program' }, { status: 403 });
+    }
+    if (existingProgram.visibility === 'team' && existingProgram.team_id) {
+      mode = 'team';
+      teamId = String(existingProgram.team_id);
     }
   }
 

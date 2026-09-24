@@ -47,6 +47,8 @@ type AIProgramSetupWizardProps = {
   programId?: string;
   weeks?: number;
   startDate?: string | null;
+  teamId?: string | null;
+  mode?: 'personal' | 'team';
   isFollowing?: boolean;
   onComplete: (
     weekPlan: DayPlan[],
@@ -78,6 +80,8 @@ export default function AIProgramSetupWizard({
   programId,
   weeks = 6,
   startDate = null,
+  teamId = null,
+  mode = 'personal',
   isFollowing = false,
   onComplete,
   onCancel,
@@ -194,7 +198,14 @@ export default function AIProgramSetupWizard({
         return;
       }
       await persistIntake(session.user.id);
-      const body = generateBodyFromIntake(intake, { weeks, programName, programId, startDate });
+      const body = generateBodyFromIntake(intake, {
+        weeks,
+        programName,
+        programId,
+        startDate,
+        teamId,
+        mode,
+      });
       const res = await fetch('/api/programs/generate', {
         method: 'POST',
         headers: {

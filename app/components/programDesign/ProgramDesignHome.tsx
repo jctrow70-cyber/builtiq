@@ -343,29 +343,47 @@ export default function ProgramDesignHome({
     else if (next.action === 'edit' && next.programId) void openProgramById(next.programId);
   }, [launchKey, loading]);
 
-  async function handleCreate(input: { name: string; startDate: string; cycleWeeks: number; inclusivePlan: boolean }) {
+  async function handleCreate(input: {
+    name: string;
+    startDate: string;
+    cycleWeeks: number;
+    inclusivePlan: boolean;
+    scope?: ProgramScope;
+  }) {
+    const createScope = input.scope || scope;
     setCreating(true);
     setError('');
-    const { data, error: createError } = await createDesignProgram(supabase, {
-      ownerUserId: userId,
-      name: input.name,
-      startDate: input.startDate,
-      cycleWeeks: input.cycleWeeks,
-      scope,
-      teamId: groupId,
-      inclusivePlan: input.inclusivePlan,
-    });
-    setCreating(false);
-    if (createError || !data) {
-      setError(createError || 'Could not create program');
-      return;
+    try {
+      if (createScope === 'group' && !groupId) {
+        setError('Select a group before creating a group plan.');
+        return;
+      }
+      const { data, error: createError } = await createDesignProgram(supabase, {
+        ownerUserId: userId,
+        name: input.name,
+        startDate: input.startDate,
+        cycleWeeks: input.cycleWeeks,
+        scope: createScope,
+        teamId: createScope === 'group' ? groupId : null,
+        inclusivePlan: input.inclusivePlan,
+      });
+      if (createError || !data?.id) {
+        setError(createError || 'Could not create program');
+        return;
+      }
+      setPrograms((prev) => [data, ...prev]);
+      if (createScope === 'personal') {
+        setPersonalPrograms((prev) => [data, ...prev]);
+      } else {
+        setLiveGroupPrograms((prev) => [data, ...prev.filter((p) => p.id !== data.id)]);
+      }
+      setEditing(data);
+      setView('ai-setup');
+    } catch (e: any) {
+      setError(e?.message || 'Could not create program');
+    } finally {
+      setCreating(false);
     }
-    setPrograms((prev) => [data, ...prev]);
-    if (scope === 'personal') {
-      setPersonalPrograms((prev) => [data, ...prev]);
-    }
-    setEditing(data);
-    setView('ai-setup');
   }
 
   async function handleFollow(source: ProgramDesignRecord, opts?: { editSource?: boolean; openTraining?: boolean }): Promise<{ error: string | null }> {
@@ -622,6 +640,8 @@ export default function ProgramDesignHome({
           programId={editing.id}
           weeks={generationWeeksOf(editing)}
           startDate={editing.start_date}
+          teamId={editing.team_id || (scope === 'group' ? groupId : null)}
+          mode={editing.visibility === 'team' || scope === 'group' ? 'team' : 'personal'}
           isFollowing={!!alreadyFollowing(editing, personalPrograms, followedProgramId)}
           onComplete={async (weekPlan, result) => {
             setError('');
