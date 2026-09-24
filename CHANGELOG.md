@@ -11,6 +11,55 @@ Branch:
 Status:
 ```
 
+## BIQ-0222 - Remove Draft or Active Programs From the List
+
+Date: 2026-09-24
+Branch: develop
+Status: Local
+
+### Summary
+
+Programs list rows now have Remove. Draft and active plans can be deleted from For me / For [group] without opening the editor. The plan Training is using can also be removed from that card.
+
+### Purpose
+
+Users were opening a program just to get rid of it. Archive lived inside the editor, and the list hid active plans that were not the followed one.
+
+### Changes
+
+- Remove on program cards the user owns or can edit
+- Active programs appear in the list (not only Training is using)
+- Confirm copy keeps workout history; Training unfollow happens if that plan was in use
+- Group default plan still cannot be removed until another plan is assigned
+
+### Files Changed
+
+- `app/components/programDesign/ProgramDesignHome.tsx`
+- `app/page.tsx`
+- `lib/programDesign/types.ts`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Programs → For me — Confirm a draft shows Remove and does not open the editor when Remove is tapped
+2. Confirm an active / in-Training plan can be removed from the card; Training is using clears
+3. Confirm a group member does not see Remove on a shared group plan
+4. Confirm a group owner/editor can remove a group draft or active plan that is not the group default
+5. Mobile: Remove stays tappable beside Use in Training / Unfollow
+6. Confirm completed workout history still appears on Progress after remove
+
+### Known Issues
+
+- Browser Training/Programs flow was not signed-in verified in this session
+
+### Recommended Commit Message
+
+`BIQ-0222 Allow removing draft and active programs from the list`
+
 ## BIQ-0221 - Phase 2A.3 Live Verification After 053
 
 Date: 2026-09-24

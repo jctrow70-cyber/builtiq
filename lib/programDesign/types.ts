@@ -111,4 +111,5 @@ export type GroupOption = {
   id: string;
   name: string;
   my_role?: string | null;
+  default_program_id?: string | null;
 };

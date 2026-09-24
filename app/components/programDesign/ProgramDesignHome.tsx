@@ -34,6 +34,7 @@ import {
 import { groupProgramsByLifecycle, lifecycleLabel, lifecycleStatusOf } from '../../../lib/programDesign/lifecycle';
 import { fetchDesignPrograms, createDesignProgram, createProgramActivity } from '../../../lib/programDesign/programDesignApi';
 import { fetchFullProgram } from '../../../lib/training/programFetch';
+import { deleteProgramRecord } from '../../../lib/training/programStatus';
 import type {
   GroupOption,
   ProgramDesignRecord,
@@ -56,7 +57,7 @@ type ProgramDesignHomeProps = {
 
 type View = 'home' | 'create' | 'ai-setup' | 'editor';
 
-const LIST_SECTIONS: ProgramLifecycleStatus[] = ['scheduled', 'draft', 'completed', 'archived'];
+const LIST_SECTIONS: ProgramLifecycleStatus[] = ['active', 'scheduled', 'draft', 'completed', 'archived'];
 
 function offerUseInTraining(
   program: ProgramDesignRecord,
@@ -74,6 +75,7 @@ function ProgramRow({
   onOpen,
   onFollow,
   onUnfollow,
+  onRemove,
 }: {
   program: ProgramDesignRecord;
   badge?: string;
@@ -81,6 +83,7 @@ function ProgramRow({
   onOpen: () => void;
   onFollow?: () => void;
   onUnfollow?: () => void;
+  onRemove?: () => void;
 }) {
   const { start, end } = programDateRange(program);
   return (
@@ -102,6 +105,11 @@ function ProgramRow({
         {onUnfollow && (
           <button type="button" className="btn small secondary" onClick={onUnfollow}>
             Unfollow
+          </button>
+        )}
+        {onRemove && (
+          <button type="button" className="btn small secondary" onClick={onRemove}>
+            Remove
           </button>
         )}
       </div>
@@ -131,6 +139,7 @@ export default function ProgramDesignHome({
   const [editing, setEditing] = useState<ProgramDesignRecord | null>(null);
   const [creating, setCreating] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
+  const [removeBusy, setRemoveBusy] = useState(false);
   const [createDefaultStart, setCreateDefaultStart] = useState(nextMondayFrom());
   const [sequencingHint, setSequencingHint] = useState<string | null>(null);
   const [buildBanner, setBuildBanner] = useState<string | null>(null);
@@ -450,6 +459,48 @@ export default function ProgramDesignHome({
     }
   }
 
+  function canRemoveProgram(program: ProgramDesignRecord): boolean {
+    if (removeBusy || followBusy) return false;
+    if (program.visibility === 'team' || program.visibility === 'group') {
+      const team = teams.find((t) => t.id === program.team_id) || activeGroup;
+      return canEditGroupProgram(team?.my_role);
+    }
+    return !program.owner_user_id || program.owner_user_id === userId;
+  }
+
+  async function handleRemove(program: ProgramDesignRecord) {
+    if (!canRemoveProgram(program)) return;
+    const team = teams.find((t) => t.id === program.team_id);
+    if (team?.default_program_id && team.default_program_id === program.id) {
+      setError('This is the group active program. Assign a different group plan before removing it.');
+      return;
+    }
+    const life = lifecycleStatusOf(program);
+    const inTraining = followedProgramId === program.id;
+    const label = program.name || 'Program';
+    const msg =
+      life === 'draft'
+        ? `Remove draft “${label}”? This cannot be undone.`
+        : inTraining
+          ? `Remove “${label}”? Training will stop using this plan. Completed workout history is kept.`
+          : `Remove “${label}”? Completed workout history is kept, but the program template will be removed.`;
+    if (!window.confirm(msg)) return;
+    setRemoveBusy(true);
+    setError('');
+    const { error: removeError } = await deleteProgramRecord(supabase, program.id);
+    setRemoveBusy(false);
+    if (removeError) {
+      setError(removeError);
+      return;
+    }
+    if (inTraining) onFollowed?.(null);
+    if (editing?.id === program.id) {
+      setEditing(null);
+      setView('home');
+    }
+    await reload();
+  }
+
   async function handleUnfollow() {
     const ok = window.confirm(
       followingGroupSourced
@@ -510,6 +561,7 @@ export default function ProgramDesignHome({
               ? () => void handleFollow(program)
               : undefined
           }
+          onRemove={canRemoveProgram(program) ? () => void handleRemove(program) : undefined}
         />
       ));
   }
@@ -529,7 +581,9 @@ export default function ProgramDesignHome({
       return (
         <div key={section} className="pd-section">
           <h2>
-            {section === 'draft'
+            {section === 'active'
+              ? 'Active programs'
+              : section === 'draft'
               ? 'Draft programs'
               : section === 'scheduled'
                 ? 'Scheduled programs'
@@ -712,6 +766,7 @@ export default function ProgramDesignHome({
       )}
       {loading && <p className="muted">Loading programs…</p>}
       {followBusy && <p className="muted">Updating the program you follow…</p>}
+      {removeBusy && <p className="muted">Removing program…</p>}
 
       {!loading && (
         <>
@@ -727,6 +782,7 @@ export default function ProgramDesignHome({
                   setView('editor');
                 }}
                 onUnfollow={() => void handleUnfollow()}
+                onRemove={canRemoveProgram(following) ? () => void handleRemove(following) : undefined}
               />
             ) : (
               <p className="muted pd-empty">
@@ -760,6 +816,7 @@ export default function ProgramDesignHome({
                         ? () => void handleFollow(program)
                         : undefined
                     }
+                    onRemove={canRemoveProgram(program) ? () => void handleRemove(program) : undefined}
                   />
                 );
               })}
@@ -824,6 +881,7 @@ export default function ProgramDesignHome({
                       ? () => void handleFollow(program)
                       : undefined
                   }
+                  onRemove={canRemoveProgram(program) ? () => void handleRemove(program) : undefined}
                 />
               ))}
 
