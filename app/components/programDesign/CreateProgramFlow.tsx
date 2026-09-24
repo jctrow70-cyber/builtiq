@@ -7,9 +7,15 @@ import {
   formatCycleLength,
   formatLongWeekday,
   isMonday,
+  nextMondayFrom,
   snapStartToMonday,
 } from '../../../lib/programDesign/cycle';
 import { CYCLE_LENGTH_PRESETS, type ProgramScope } from '../../../lib/programDesign/types';
+
+function safeStartDate(ymd?: string | null): string {
+  const snapped = snapStartToMonday(String(ymd || '').trim() || nextMondayFrom()).startDate;
+  return /^\d{4}-\d{2}-\d{2}$/.test(snapped) ? snapped : nextMondayFrom();
+}
 
 type CreateProgramFlowProps = {
   scope: ProgramScope;
@@ -40,14 +46,14 @@ export default function CreateProgramFlow({
   onCreate,
 }: CreateProgramFlowProps) {
   const [name, setName] = useState('');
-  const [startDate, setStartDate] = useState(defaultStart);
+  const [startDate, setStartDate] = useState(() => safeStartDate(defaultStart));
   const [preset, setPreset] = useState<number | 'custom'>(6);
   const [customWeeks, setCustomWeeks] = useState(1);
   const [inclusivePlan, setInclusivePlan] = useState(false);
   const [localError, setLocalError] = useState('');
 
   useEffect(() => {
-    setStartDate(defaultStart);
+    setStartDate(safeStartDate(defaultStart));
   }, [defaultStart]);
 
   const snapped = useMemo(() => snapStartToMonday(startDate), [startDate]);
@@ -80,7 +86,7 @@ export default function CreateProgramFlow({
   const shownError = error || localError;
 
   return (
-    <form className="pd-create" onSubmit={(e) => void handleSubmit(e)}>
+    <form className="pd-create" noValidate onSubmit={(e) => void handleSubmit(e)}>
       <button type="button" className="pd-back" onClick={onCancel}>
         ← Back to programs
       </button>

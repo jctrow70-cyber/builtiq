@@ -11,6 +11,13 @@ type DateInputProps = {
   'aria-label'?: string;
 };
 
+function toDateInputValue(value: string | null | undefined): string {
+  const match = String(value || '')
+    .trim()
+    .match(/^(\d{4}-\d{2}-\d{2})/);
+  return match ? match[1] : '';
+}
+
 /** Native calendar date picker. Value is YYYY-MM-DD. */
 const DateInput = forwardRef<HTMLInputElement, DateInputProps>(function DateInput(
   { value, onChange, disabled, id, className, 'aria-label': ariaLabel },
@@ -22,11 +29,11 @@ const DateInput = forwardRef<HTMLInputElement, DateInputProps>(function DateInpu
       id={id}
       type="date"
       className={className}
-      value={value || ''}
+      value={toDateInputValue(value)}
       disabled={disabled}
       aria-label={ariaLabel}
       onChange={(e) => {
-        const next = e.target.value;
+        const next = toDateInputValue(e.target.value);
         if (next) onChange(next);
       }}
     />

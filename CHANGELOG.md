@@ -11,6 +11,50 @@ Branch:
 Status:
 ```
 
+## BIQ-0225 - Create Plan Date No Longer Fails Pattern Check
+
+Date: 2026-09-24
+Branch: develop
+Status: Local
+
+### Summary
+
+Create and build workouts no longer dies on a browser “string did not match the expected pattern” check. The start date is forced to YYYY-MM-DD, and the create form skips native pattern validation.
+
+### Purpose
+
+Wrapping create in a real form made the date field block submit when its value was not a strict date input string.
+
+### Changes
+
+- `noValidate` on the create form
+- Date inputs only accept YYYY-MM-DD
+
+### Files Changed
+
+- `app/components/programDesign/CreateProgramFlow.tsx`
+- `app/components/DateInput.tsx`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Programs → For a group → Create a plan
+2. Training only → name the plan → Create and build workouts
+3. Confirm the builder opens with no pattern error
+4. Repeat under For me
+
+### Known Issues
+
+- Signed-in browser flow was not verified in this session
+
+### Recommended Commit Message
+
+`BIQ-0225 Fix create-plan date pattern validation`
+
 ## BIQ-0224 - Group Training-Only Create Opens the Builder
 
 Date: 2026-09-24
