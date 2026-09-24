@@ -16,6 +16,7 @@ import { validateProgram } from './validator';
 import { runPhase1GenerationChecks } from './generation/phase1Check';
 import { runGenerationCatalogPolicyChecks } from './generation/catalogEligibilityCheck';
 import { runPhase2a1FoundationChecks } from './adaptation/phase2a1Check';
+import { runPhase2a2DecisionChecks } from './adaptation/phase2a2Check';
 import type { TrainingProfile } from './types';
 
 function assert(cond: unknown, message: string) {
@@ -545,6 +546,7 @@ async function run() {
   runGenerationCatalogPolicyChecks();
   await runPhase1GenerationChecks();
   runPhase2a1FoundationChecks();
+  runPhase2a2DecisionChecks();
 }
 
 run().catch((err) => {

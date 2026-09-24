@@ -9,6 +9,8 @@ export { generateWarmup } from './warmup';
 export { generatePotentiation } from './potentiation';
 export { generateRampSets, benchRampExample } from './rampUp';
 export { evaluateProgression, estimated1Rm, setsFromLogs } from './progression';
+export { evaluateProgressionDecision, adaptationDraftFromDecision } from './adaptation';
+export { ADAPTATION_ENGINE_VERSION } from './adaptation/types';
 export { reviewTrainingWeek } from './weeklyReview';
 export { validateProgram, validateAIResponse } from './validator';
 export { scienceProgramToAiPlan } from './toAiPlan';

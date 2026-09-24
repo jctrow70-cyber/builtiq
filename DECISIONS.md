@@ -1840,6 +1840,38 @@ The first live Phase 1 week passed the structural contract and still produced we
 
 ---
 
+## Decision 066 - Phase 2A.2 Recommends Progression, 2A.3 Applies It
+
+Date: 2026-09-24  
+Status: Accepted  
+Category: Program Design
+
+### Decision
+
+Phase 2A.2 is a pure deterministic decision engine. It may analyze completed performance and produce a typed next-exposure recommendation with reason codes. It must not mutate future `st_planned_sets`, activate or adapt future weeks, or insert adaptation-ledger rows until 2A.3 solves idempotency.
+
+Missing RIR is never invented. High-confidence load progress requires top-of-range sets and actual RIR within 0.5 of target. Missing-RIR top-of-range work holds once and may progress after a second consecutive comparable exposure at the same load. One poor workout holds; two consecutive below-range exposures may reduce; extras/warmups/ramps never qualify. Unanswered pain is unknown, not “no pain.”
+
+### Reason
+
+Applying un-reviewed load changes to future weeks would rewrite prescriptions before the decision rules are trusted. A recommendation with an audit draft is enough to verify the rules.
+
+### Alternatives Considered
+
+- Write ledger events on every evaluation — rejected; viewing history would duplicate rows
+- Apply decisions to next week in the same change — rejected; that is 2A.3
+- Treat missing RIR as target RIR 2 — rejected; Decision 065
+- Universal +5 lb — rejected; equipment-aware increments with user/gym override hooks
+
+### Impact
+
+- Science engine generation version stays 1.4.4
+- Adaptation engine version is `2a2.0.0`
+- Phase 1 / 1.1 / 2A.1 remain frozen
+- Phase 2A.3 is unstarted
+
+---
+
 ## Decision 065 - Phase 2A.1 Data Foundation Before Progression
 
 Date: 2026-09-23  

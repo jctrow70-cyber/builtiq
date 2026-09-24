@@ -11,6 +11,68 @@ Branch:
 Status:
 ```
 
+## BIQ-0218 - Phase 2A.2 Deterministic Progression Decisions
+
+Date: 2026-09-24
+Branch: develop
+Status: Local / decision engine only. Phase 2A.3 not started.
+
+### Summary
+
+Phase 2A.2 analyzes completed working-set performance and returns a typed next-exposure recommendation. It does not change future `st_planned_sets`, week status, or the live program. No GPT call is required for ordinary progression.
+
+### Purpose
+
+BuiltIQ can now say whether the next comparable exposure should progress load, build reps, hold, reduce, or wait on adherence/pain — with stable reason codes and an audit draft for 2A.3.
+
+### Changes
+
+- `evaluateProgressionDecision()` produces `progress_load` / `build_reps` / `hold` / `reduce_load` / `insufficient_data` / `review_required` / `pain_hold`
+- Counted sets exclude extras, warmups, ramps, skipped, and empty logs
+- High-confidence RIR path vs two consecutive no-RIR top-range confirmations
+- Manual load increases with an in-range reset are successful steps, not regressions
+- Equipment-aware increments include rounding and future user/gym override hooks
+- Bodyweight, unilateral, and time/distance have conservative specialized rules
+- Adaptation ledger writes are deferred to 2A.3 (pure evaluation; draft helper only)
+
+### Files Changed
+
+- `lib/scienceEngine/adaptation/decision.ts`
+- `lib/scienceEngine/adaptation/inputs.ts`
+- `lib/scienceEngine/adaptation/countedSets.ts`
+- `lib/scienceEngine/adaptation/comparable.ts`
+- `lib/scienceEngine/adaptation/reasonCodes.ts`
+- `lib/scienceEngine/adaptation/phase2a2Check.ts`
+- `lib/scienceEngine/adaptation/types.ts`
+- `lib/scienceEngine/adaptation/increments.ts`
+- `lib/scienceEngine/adaptation/index.ts`
+- `lib/scienceEngine/acceptanceCheck.ts`
+- `lib/scienceEngine/index.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None. No migration. No prescription writes. No ledger inserts.
+
+### Testing Steps
+
+1. `npm run test:science` — Phase 1, 260-card policy, 2A.1 foundation, and 2A.2 A–T matrix
+2. Confirm generate / Program Design / Training logging code paths were not edited
+3. Confirm `applied` is always false on decision results
+
+### Known Issues
+
+- Side-specific unilateral logs are not stored; weaker-side gating only works when `side` is passed in
+- Time/distance/carries hold; no specialized load rules yet
+- Decisions are not shown in Training UI and are not applied to next week
+- Idempotent ledger persistence is Phase 2A.3
+
+### Recommended Commit Message
+
+`BIQ-0218 Add Phase 2A.2 progression decisions without applying them`
+
 ## BIQ-0217 - Phase 2A.1 Training Data Foundation
 
 Date: 2026-09-23

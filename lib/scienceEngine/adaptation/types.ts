@@ -1,6 +1,8 @@
 /**
- * Phase 2A types. 2A.1 persists the data foundation only.
- * Automatic progression is 2A.2 and must not be wired yet.
+ * Phase 2A types.
+ * 2A.1 persists the data foundation.
+ * 2A.2 produces deterministic next-exposure decisions and does not write prescriptions.
+ * 2A.3 applies those decisions to future planned sets.
  */
 
 export type WeekStatus = 'template' | 'activated' | 'in_progress' | 'completed' | 'locked';
@@ -22,6 +24,29 @@ export type AdaptationActor = 'engine' | 'ai' | 'user';
 export type ProgressionConfidence = 'high' | 'performance_only' | 'hold';
 
 export type IncrementSource = 'user' | 'gym' | 'equipment_default';
+
+export type IncrementRounding = 'nearest_increment' | 'none';
+
+export const ADAPTATION_ENGINE_VERSION = '2a2.0.0';
+
+export type ProgressionDecisionKind =
+  | 'progress_load'
+  | 'build_reps'
+  | 'hold'
+  | 'reduce_load'
+  | 'insufficient_data'
+  | 'review_required'
+  | 'pain_hold';
+
+export type DecisionConfidence = ProgressionConfidence | 'insufficient' | 'review';
+
+export type LoadMode = 'external' | 'bodyweight' | 'weighted_bodyweight' | 'assisted';
+
+export type MeasurementType = 'reps' | 'time' | 'distance' | 'calories' | string;
+
+export type Laterality = 'bilateral' | 'unilateral' | string;
+
+export type SetSide = 'left' | 'right' | 'both' | null;
 
 export const WEEK_STATUSES: WeekStatus[] = ['template', 'activated', 'in_progress', 'completed', 'locked'];
 export const SESSION_STATUSES: SessionStatus[] = ['not_started', 'in_progress', 'completed', 'partial', 'skipped'];
