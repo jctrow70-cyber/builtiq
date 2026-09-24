@@ -46,10 +46,15 @@ export const MOVEMENT_PATTERNS = [
   'core_flexion',
   'core_anti_extension',
   'core_anti_rotation',
+  'core_rotation',
+  'core_lateral_flexion',
+  'core_anti_lateral_flexion',
   'rotation',
   'carry',
   'jump',
   'throw',
+  'olympic',
+  'power',
   'other',
 ] as const;
 
@@ -153,6 +158,13 @@ export const PATTERN_ALIASES: Record<string, MovementPatternId> = {
   isolation: 'other',
   jump: 'jump',
   throw: 'throw',
+  olympic: 'olympic',
+  power: 'power',
+  cardio: 'other',
+  mobility: 'other',
+  core_rotation: 'core_rotation',
+  core_lateral_flexion: 'core_lateral_flexion',
+  core_anti_lateral_flexion: 'core_anti_lateral_flexion',
 };
 
 export const UI_MUSCLE_GROUPS: Record<string, MuscleId[]> = {

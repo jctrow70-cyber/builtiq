@@ -57,6 +57,18 @@ export function contributionsForExercise(
       .filter((row): row is MuscleContribution => !!row);
   }
 
+  const credits = exercise.raw?.coaching_metadata?.hypertrophy_volume_credits;
+  if (Array.isArray(credits)) {
+    return dedupeContributions(
+      credits
+        .map((row: any) => {
+          const muscle = normalizeMuscleId(row.muscle);
+          return muscle ? { muscle, contribution: Number(row.credit) || 0 } : null;
+        })
+        .filter((row): row is MuscleContribution => !!row)
+    );
+  }
+
   const targets = exercise.raw?.muscle_targets;
   if (Array.isArray(targets) && targets.length) {
     const fromTargets = targets

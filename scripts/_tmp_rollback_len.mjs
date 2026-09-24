@@ -1,0 +1,10 @@
+import fs from "fs";
+const p = "docs/catalog-overhaul/active-catalog-enrichment-rollback.json";
+if (!fs.existsSync(p)) process.exit(2);
+const j = JSON.parse(fs.readFileSync(p, "utf8"));
+const rows = j.rows || j.rollback || j.data || [];
+const n = Array.isArray(rows) ? rows.length : -1;
+const keys = Object.keys(j);
+fs.writeFileSync("docs/catalog-overhaul/_tmp_rollback_meta.txt", keys.join(",") + "|" + n);
+if (n < 0) process.exit(3);
+process.exit(n === 0 ? 4 : (n === 254 ? 54 : (n === 260 ? 60 : 10)));

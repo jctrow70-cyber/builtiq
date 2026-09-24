@@ -208,10 +208,17 @@ export default function WorkoutTemplateEditor({
         superset_group_id: groupId,
         superset_label: supersetLabel,
         superset_order: slotOrder,
+        ...catalogPayloadFromItem(picked, section),
       };
       let { data: ex, error: exError } = await supabase.from('st_exercises').insert(addPayload).select().single();
       if (exError && /equipment/i.test(exError.message || '')) {
         delete addPayload.equipment;
+        ({ data: ex, error: exError } = await supabase.from('st_exercises').insert(addPayload).select().single());
+      }
+      if (exError && /program_role|measurement_type|laterality/i.test(exError.message || '')) {
+        delete addPayload.program_role;
+        delete addPayload.measurement_type;
+        delete addPayload.laterality;
         ({ data: ex, error: exError } = await supabase.from('st_exercises').insert(addPayload).select().single());
       }
       if (exError || !ex) return persistError(exError?.message || 'Could not add exercise');

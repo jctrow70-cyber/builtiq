@@ -1,5 +1,6 @@
 import { filterEligibleExercises } from '../exerciseSelection';
 import { FALLBACK_CATALOG, stableFallbackId } from '../catalogAdapter';
+import { MASTER_CATALOG_SOURCE, selectAiGenerationCatalogRows } from './catalogEligibility';
 import type { CatalogExercise, TrainingProfile } from '../types';
 import { isCooldownEligible } from './qualityRules';
 import type { DesignerExercise, Laterality, MeasurementType } from './types';
@@ -9,6 +10,8 @@ const WARMUP_CAP = 36;
 const COOLDOWN_CAP = 24;
 
 export function lateralityOf(ex: CatalogExercise): Laterality {
+  const stored = String(ex.raw?.coaching_metadata?.laterality || '').toLowerCase();
+  if (stored === 'bilateral' || stored === 'unilateral' || stored === 'alternating') return stored;
   const n = ex.name.toLowerCase();
   if (ex.unilateral || /single|one-arm|one arm|split squat|lunge|bulgarian|alternating/.test(n)) {
     if (/alternating/.test(n)) return 'alternating';
@@ -18,6 +21,8 @@ export function lateralityOf(ex: CatalogExercise): Laterality {
 }
 
 export function measurementTypeOf(ex: CatalogExercise): MeasurementType {
+  const stored = String(ex.raw?.coaching_metadata?.measurement_type || '').toLowerCase();
+  if (stored === 'reps' || stored === 'time' || stored === 'distance') return stored;
   const rawType = String(ex.raw?.exercise_type || ex.raw?.progression_type || '').toLowerCase();
   const n = ex.name.toLowerCase();
   if (rawType === 'distance') return 'distance';
@@ -50,13 +55,17 @@ export function toDesignerExercise(ex: CatalogExercise): DesignerExercise {
     fatigue_cost: row.fatigueCost,
     skill_level: row.skillRequirement,
     warmup_eligible: !!row.warmupSuitable,
-    cooldown_eligible: isCooldownEligible({
-      name: row.name,
-      program_roles: row.programRoles,
-      warmup_eligible: !!row.warmupSuitable,
-      rawCategory: String(row.raw?.category || row.warmupCategory || ''),
-    }),
-    power_eligible: row.programRoles.includes('power'),
+    cooldown_eligible:
+      typeof row.raw?.coaching_metadata?.cooldown_eligible === 'boolean'
+        ? row.raw.coaching_metadata.cooldown_eligible
+        : isCooldownEligible({
+            name: row.name,
+            program_roles: row.programRoles,
+            warmup_eligible: !!row.warmupSuitable,
+            rawCategory: String(row.raw?.category || row.warmupCategory || ''),
+          }),
+    power_eligible: row.programRoles.includes('power') || row.raw?.coaching_metadata?.power_eligible === true,
+    ramp_eligible: typeof row.raw?.coaching_metadata?.ramp_eligible === 'boolean' ? row.raw.coaching_metadata.ramp_eligible : undefined,
     default_rep_min: row.defaultRepMin,
     default_rep_max: row.defaultRepMax,
     contraindications,
@@ -77,7 +86,12 @@ function scoreCandidate(ex: CatalogExercise, profile: TrainingProfile): number {
 }
 
 export function buildDesignerLibraries(catalog: CatalogExercise[], profile: TrainingProfile) {
-  const eligible = filterEligibleExercises(catalog.map(withLibraryId), profile).filter((ex) => ex.id);
+  const eligible = filterEligibleExercises(selectAiGenerationCatalogRows(catalog.map(withLibraryId)), profile).filter(
+    (ex) => ex.id
+  );
+  const hasMasterCatalog = catalog.some(
+    (ex) => String(ex.raw?.external_source || '') === MASTER_CATALOG_SOURCE
+  );
   const ranked = eligible
     .map((ex) => ({ ex, score: scoreCandidate(ex, profile) }))
     .sort((a, b) => b.score - a.score || a.ex.name.localeCompare(b.ex.name));
@@ -106,7 +120,7 @@ export function buildDesignerLibraries(catalog: CatalogExercise[], profile: Trai
     }
   }
 
-  if (cooldown.length < 4) {
+  if (cooldown.length < 4 && !hasMasterCatalog) {
     FALLBACK_CATALOG.forEach((item) => {
       if (cooldown.length >= COOLDOWN_CAP) return;
       const designed = toDesignerExercise(item);

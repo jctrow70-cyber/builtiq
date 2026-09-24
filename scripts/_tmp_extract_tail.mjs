@@ -1,0 +1,12 @@
+import fs from "fs";
+const p = "C:/Users/JesseTrowbridge/.cursor/projects/c-Users-JesseTrowbridge-OneDrive-Tegria-Documents-GitHub-builtiq/agent-tools/501466bb-6fab-41c2-bb75-57a64537a4cf.txt";
+const t = fs.readFileSync(p, "utf8");
+const lines = t.split(/\n/);
+const last = lines.slice(-8);
+fs.writeFileSync("docs/catalog-overhaul/_tmp_agent_tail.txt", last.join("\n"));
+const hits = lines.filter(function(l) { return l.indexOf("FLAT_LINES") >= 0 || l.indexOf("STATUS=") >= 0 || l.indexOf("WROTE") >= 0; });
+fs.writeFileSync("docs/catalog-overhaul/_tmp_agent_hits.txt", hits.join("\n"));
+const flat = fs.existsSync("docs/catalog-overhaul/_tmp_report_fullflat.txt") ? fs.readFileSync("docs/catalog-overhaul/_tmp_report_fullflat.txt", "utf8") : "NOFLAT";
+fs.writeFileSync("docs/catalog-overhaul/_tmp_flat_copy.txt", flat);
+console.log("HITS=" + hits.length);
+console.log("FLATCHARS=" + flat.length);

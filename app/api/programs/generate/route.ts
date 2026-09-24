@@ -15,7 +15,7 @@ import {
   summarizeRecentLogs,
   trainingProfileFromSources,
 } from '../../../../lib/scienceEngine';
-import { adaptCatalog } from '../../../../lib/scienceEngine/catalogAdapter';
+import { adaptGenerationCatalog } from '../../../../lib/scienceEngine/generation/catalogEligibility';
 import { runGenerationPipeline } from '../../../../lib/scienceEngine/generation';
 import { attachGenerationRunProgram } from '../../../../lib/scienceEngine/generation/log';
 
@@ -243,7 +243,7 @@ export async function POST(request: Request) {
   try {
     pipeline = await runGenerationPipeline({
       profile: scienceProfile,
-      catalog: adaptCatalog(catalog || []),
+      catalog: adaptGenerationCatalog(catalog),
       userPrompt: prompt || scienceProfile.intakeNotes || 'Build a training week from the athlete constraints.',
       programName: programName || defaultProgramName,
       mode: targetWorkout ? 'single_session' : 'full_program',

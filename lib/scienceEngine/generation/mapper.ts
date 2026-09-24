@@ -2,6 +2,7 @@ import { estimateSessionFromAi } from '../duration';
 import { prescribeExercise } from '../prescription';
 import type { CatalogExercise, ExercisePrescription, ScienceProgram, ScienceWorkout, TrainingProfile, WarmupItem } from '../types';
 import { findByExerciseId } from './matchById';
+import { lateralityOf, measurementTypeOf } from './library';
 import { isRampEligiblePrimary, standardRampSets } from './ramps';
 import type { AiPrepItem, AiStrengthExercise, AiWeekProgram, AiWorkoutPlan, DesignerExercise } from './types';
 
@@ -110,6 +111,8 @@ function mapStrength(
   prescribed.repMax = Math.max(raw.rep_min, raw.rep_max);
   prescribed.targetRir = raw.target_rir;
   prescribed.restSeconds = raw.rest_seconds || prescribed.restSeconds;
+  prescribed.laterality = meta.laterality;
+  prescribed.measurementType = meta.measurement_type;
   const ramps = raw.ramp_sets?.length
     ? raw.ramp_sets
     : isRampEligiblePrimary(meta, raw.role, prescribed.repMax)
@@ -151,6 +154,9 @@ function mapPrep(item: AiPrepItem, catalogById: Map<string, CatalogExercise>, ca
     exerciseId: catalog.id,
     muscleGroup: catalog.primaryMuscles[0],
     why: item.why,
+    role: 'warmup',
+    laterality: lateralityOf(catalog),
+    measurementType: measurementTypeOf(catalog),
   };
 }
 
@@ -165,6 +171,8 @@ function mapPrimer(item: AiPrepItem, profile: TrainingProfile, catalogById: Map<
     why: item.why || 'Optional potentiation for this session.',
   });
   prescribed.exerciseId = catalog.id;
+  prescribed.laterality = lateralityOf(catalog);
+  prescribed.measurementType = measurementTypeOf(catalog);
   return prescribed;
 }
 

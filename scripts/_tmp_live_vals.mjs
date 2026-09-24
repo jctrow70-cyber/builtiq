@@ -1,0 +1,11 @@
+import fs from "fs";
+const brief = fs.readFileSync("docs/catalog-overhaul/_tmp_live_brief.txt", "utf8");
+const week = fs.readFileSync("docs/catalog-overhaul/_tmp_live_week.txt", "utf8");
+const science = fs.existsSync("docs/catalog-overhaul/_tmp_science_hits.txt") ? fs.readFileSync("docs/catalog-overhaul/_tmp_science_hits.txt", "utf8") : "";
+const apply = fs.existsSync("docs/catalog-overhaul/_tmp_apply_brief.txt") ? fs.readFileSync("docs/catalog-overhaul/_tmp_apply_brief.txt", "utf8") : "";
+fs.writeFileSync("docs/catalog-overhaul/_tmp_all_extract.txt", ["===APPLY===", apply, "===SCIENCE===", science, "===LIVE===", brief, "===WEEK===", week].join("\n"));
+const lines = brief.split(/\n/);
+lines.forEach(function(l, i) { fs.writeFileSync("docs/catalog-overhaul/_tmp_lb_" + i + ".txt", l); });
+const wlines = week.split(/\n/);
+wlines.forEach(function(l, i) { fs.writeFileSync("docs/catalog-overhaul/_tmp_wk_" + i + ".txt", l); });
+process.exit(10 + wlines.length);

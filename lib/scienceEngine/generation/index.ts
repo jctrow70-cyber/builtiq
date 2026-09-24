@@ -1,3 +1,4 @@
+export { adaptGenerationCatalog, selectAiGenerationCatalogRows } from './catalogEligibility';
 export { runGenerationPipeline } from './orchestrator';
 export { buildGenerationContext } from './context';
 export { buildDesignerLibraries, libraryById, toDesignerExercise } from './library';

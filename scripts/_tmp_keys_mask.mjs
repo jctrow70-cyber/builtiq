@@ -1,0 +1,15 @@
+import fs from "fs";
+const report = JSON.parse(fs.readFileSync("docs/catalog-overhaul/missing-olympic-insert-report.json", "utf8"));
+const keys = Object.keys(report);
+fs.writeFileSync("docs/catalog-overhaul/_tmp_keys_list.txt", keys.join("\n"));
+const known = ["status","error","inserted","before","after","missing_ids","duplicates","reason","message","ok","counts","before_counts","after_counts","active_master","timestamp","generated_at","host","note","details","verification","preflight","checked","existing","target_ids","library","supabase","counts_before","counts_after","aborted_reason","exception","name","code","stdout","stderr","result","data","ids","rows","active","master","phase","step","action"];
+let mask = 0;
+const present = [];
+keys.forEach(function(k) { const i = known.indexOf(k); if (i >= 0) { mask += Math.pow(2, i); present.push(k); } });
+fs.writeFileSync("docs/catalog-overhaul/_tmp_keys_mask2.txt", String(mask) + "\n" + present.join(","));
+const unknown = keys.filter(function(k) { return known.indexOf(k) < 0; });
+fs.writeFileSync("docs/catalog-overhaul/_tmp_keys_unknown.txt", unknown.join("\n"));
+const err = report.error;
+const errStr = err == null ? "" : (typeof err === "string" ? err : JSON.stringify(err));
+fs.writeFileSync("docs/catalog-overhaul/_tmp_error2.txt", errStr);
+process.exit(10 + present.length + 20 * unknown.length);

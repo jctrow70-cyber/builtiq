@@ -1,5 +1,7 @@
 /** BIQ-0014: AI-driven program generation — prompt, validation, catalog matching */
 
+import { weekStatusForNewWorkout } from '../scienceEngine/adaptation/weekStatus';
+import { prescriptionColumnsFromSources } from './prescriptionMeta';
 import { inferExerciseType } from './exerciseTypes';
 import { hasExerciseGuide } from './exerciseMedia';
 import { filterCatalogByEquipment, hasEquipmentFilter, normalizeEquipmentList } from './equipmentFilter';
@@ -19,6 +21,9 @@ export type AiExercise = {
   rest_seconds?: number;
   notes?: string;
   catalog_exercise_id?: string;
+  program_role?: string;
+  measurement_type?: string;
+  laterality?: string;
   set_details?: { set_type?: string; weight?: string; reps?: string; rir?: number }[];
 };
 
@@ -1037,6 +1042,7 @@ function collectSectionItems(
         slot++;
         const hit = resolveCatalogExercise(exItem, catalog, catMap);
         const exType = inferExerciseType(exItem.name, hit?.muscle_group || exItem.muscle_group, section, hit?.exercise_type);
+        const meta = prescriptionColumnsFromSources({ item: exItem, catalogItem: hit, section, role: exItem.program_role });
         exercises.push({
           payload: {
             workout_id: workoutId,
@@ -1050,6 +1056,9 @@ function collectSectionItems(
             superset_group_id: groupId,
             superset_label: label,
             superset_order: slot,
+            program_role: meta.program_role,
+            measurement_type: meta.measurement_type,
+            laterality: meta.laterality,
           },
           planned: {
             sets: exItem.sets || 3,
@@ -1066,6 +1075,7 @@ function collectSectionItems(
     } else if (isExerciseItem(item)) {
       const hit = resolveCatalogExercise(item, catalog, catMap);
       const exType = inferExerciseType(item.name, hit?.muscle_group || item.muscle_group, section, hit?.exercise_type);
+      const meta = prescriptionColumnsFromSources({ item, catalogItem: hit, section, role: item.program_role });
       exercises.push({
         payload: {
           workout_id: workoutId,
@@ -1077,6 +1087,9 @@ function collectSectionItems(
           exercise_type: exType,
           notes: item.notes || null,
           superset_group_id: null,
+          program_role: meta.program_role,
+          measurement_type: meta.measurement_type,
+          laterality: meta.laterality,
         },
         planned: {
           sets: item.sets || 3,
@@ -1093,6 +1106,30 @@ function collectSectionItems(
   }
 
   return { exercises, error: null };
+}
+
+const EXERCISE_OPTIONAL_COLS = ['program_role', 'measurement_type', 'laterality', 'equipment'];
+
+export async function insertExerciseRows(
+  supabase: any,
+  rows: Record<string, unknown>[]
+): Promise<{ rows: { id: string }[]; error: string | null }> {
+  if (!rows.length) return { rows: [], error: null };
+  const stripped = new Set<string>();
+  let attempt = rows.map((row) => ({ ...row }));
+  for (let i = 0; i < EXERCISE_OPTIONAL_COLS.length + 1; i += 1) {
+    const { data, error } = await supabase.from('st_exercises').insert(attempt).select('id');
+    if (!error && data?.length) return { rows: data, error: null };
+    const missing = EXERCISE_OPTIONAL_COLS.find((col) => !stripped.has(col) && new RegExp(col, 'i').test(error?.message || ''));
+    if (!missing) return { rows: [], error: error?.message || 'Failed to create exercises' };
+    stripped.add(missing);
+    attempt = attempt.map((row) => {
+      const next = { ...row };
+      delete next[missing];
+      return next;
+    });
+  }
+  return { rows: [], error: 'Failed to create exercises' };
 }
 
 async function insertPlannedSetRows(supabase: any, rows: any[]): Promise<{ error: string | null }> {
@@ -1165,6 +1202,11 @@ async function workoutHasNoSetLogs(supabase: any, workoutId: string): Promise<bo
   const { data: exercises } = await supabase.from('st_exercises').select('id').eq('workout_id', workoutId);
   const exerciseIds = (exercises || []).map((row: { id: string }) => row.id);
   if (!exerciseIds.length) return true;
+  const { count: extraCount, error: extraErr } = await supabase
+    .from('st_extra_set_logs')
+    .select('id', { count: 'exact', head: true })
+    .eq('workout_id', workoutId);
+  if (!extraErr && extraCount) return false;
   const { data: planned } = await supabase.from('st_planned_sets').select('id').in('exercise_id', exerciseIds);
   const plannedIds = (planned || []).map((row: { id: string }) => row.id);
   if (!plannedIds.length) return true;
@@ -1183,6 +1225,7 @@ function collectPersistedSections(workoutId: string, tpl: AiWorkout, catalog: an
   const primer = collectSectionItems(workoutId, 'warmup', tpl.primer || [], primerStart, catalog, catMap);
   primer.exercises.forEach((entry) => {
     entry.payload.notes = entry.payload.notes || 'POWER PRIMER';
+    entry.payload.program_role = 'power';
   });
   pending.push(...primer.exercises);
   const strength = collectSectionItems(workoutId, 'strength', tpl.strength || [], SECTION_SORT_BASE.strength, catalog, catMap);
@@ -1223,19 +1266,15 @@ export async function persistExercisesOntoWorkout(
 
   if (!pendingExercises.length) return { workoutId, error: null };
 
-  const { data: insertedExercises, error: exErr } = await supabase
-    .from('st_exercises')
-    .insert(pendingExercises.map((entry) => entry.payload))
-    .select('id');
-
-  if (exErr || !insertedExercises?.length) {
-    return { workoutId: null, error: exErr?.message || 'Failed to create exercises' };
+  const insertedExercises = await insertExerciseRows(supabase, pendingExercises.map((entry) => entry.payload));
+  if (!insertedExercises.rows.length) {
+    return { workoutId: null, error: insertedExercises.error || 'Failed to create exercises' };
   }
-  if (insertedExercises.length !== pendingExercises.length) {
+  if (insertedExercises.rows.length !== pendingExercises.length) {
     return { workoutId: null, error: 'Failed to create all exercises for this workout' };
   }
 
-  const plannedSetRows = insertedExercises.flatMap((row: { id: string }, index: number) => {
+  const plannedSetRows = insertedExercises.rows.flatMap((row: { id: string }, index: number) => {
     const meta = pendingExercises[index].planned;
     return buildPlannedSetRows(meta.sets, meta).map((r) => ({
       ...r,
@@ -1265,9 +1304,16 @@ async function persistWorkoutsForProgram(
     day_order: DAY_ORDER.indexOf(w.day_label),
     day_label: w.day_label,
     workout_type: w.workout_type,
+    week_status: weekStatusForNewWorkout(w.week),
   }));
 
-  const { data: insertedWorkouts, error: wErr } = await supabase.from('st_workouts').insert(workoutRows).select();
+  let insertedWorkouts: any[] | null = null;
+  let wErr: { message?: string } | null = null;
+  ({ data: insertedWorkouts, error: wErr } = await supabase.from('st_workouts').insert(workoutRows).select());
+  if (wErr && /week_status/i.test(wErr.message || '')) {
+    const withoutStatus = workoutRows.map(({ week_status: _ws, ...row }) => row);
+    ({ data: insertedWorkouts, error: wErr } = await supabase.from('st_workouts').insert(withoutStatus).select());
+  }
   if (wErr || !insertedWorkouts?.length) {
     return { programId: null, error: wErr?.message || 'Failed to create workouts' };
   }
@@ -1284,19 +1330,15 @@ async function persistWorkoutsForProgram(
 
   if (!pendingExercises.length) return { programId, error: null };
 
-  const { data: insertedExercises, error: exErr } = await supabase
-    .from('st_exercises')
-    .insert(pendingExercises.map((entry) => entry.payload))
-    .select('id');
-
-  if (exErr || !insertedExercises?.length) {
-    return { programId: null, error: exErr?.message || 'Failed to create exercises' };
+  const insertedExercises = await insertExerciseRows(supabase, pendingExercises.map((entry) => entry.payload));
+  if (!insertedExercises.rows.length) {
+    return { programId: null, error: insertedExercises.error || 'Failed to create exercises' };
   }
-  if (insertedExercises.length !== pendingExercises.length) {
+  if (insertedExercises.rows.length !== pendingExercises.length) {
     return { programId: null, error: 'Failed to create all exercises for the AI program' };
   }
 
-  const plannedSetRows = insertedExercises.flatMap((row: { id: string }, index: number) => {
+  const plannedSetRows = insertedExercises.rows.flatMap((row: { id: string }, index: number) => {
     const meta = pendingExercises[index].planned;
     return buildPlannedSetRows(meta.sets, meta).map((r) => ({
       ...r,

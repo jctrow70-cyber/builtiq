@@ -24,6 +24,7 @@ export type DesignerExercise = {
   warmup_eligible: boolean;
   cooldown_eligible: boolean;
   power_eligible: boolean;
+  ramp_eligible?: boolean;
   default_rep_min: number;
   default_rep_max: number;
   contraindications: string[];

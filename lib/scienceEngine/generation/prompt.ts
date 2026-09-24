@@ -1,6 +1,12 @@
 import { DESIGNER_PROMPT_VERSION, SCIENCE_ENGINE_VERSION } from '../version';
 import type { GenerationContext } from './types';
 
+function durationTargetGuidance(minutes: number) {
+  const requested = Math.max(1, Number(minutes) || 60);
+  const targetLow = Math.max(15, requested - 5);
+  return `The requested ${requested} minutes is a ceiling for comfortable training content, not a fill-to-the-line goal. Design so the engine's realistic calculated duration lands around ${targetLow}-${requested} minutes, leaving room for transitions and setup. Do not pack toward the warning/error band. Do not add filler just to consume leftover time, and do not cut useful primary/secondary volume just to go shorter.`;
+}
+
 export function buildDesignerInstructions(context: GenerationContext): string {
   const single = context.request.mode === 'single_session';
   return `You are the program designer for BuiltIQ Health (science ${SCIENCE_ENGINE_VERSION}, ${DESIGNER_PROMPT_VERSION}).
@@ -11,7 +17,7 @@ Use only exercise_id values from candidate_library, warmup_library, or cooldown_
 
 Hard constraints:
 - Keep the supplied days and requested day types.
-- Target about ${context.constraints.session_minutes} minutes. The engine recalculates duration; a ${context.constraints.session_minutes}-minute request should land near ${Math.round(context.constraints.session_minutes * 0.9)}-${Math.round(context.constraints.session_minutes * 1.1)} minutes. Do not pack to ${context.constraints.session_minutes + 15} minutes, and do not add filler just to consume leftover time.
+- ${durationTargetGuidance(context.constraints.session_minutes)}
 - RIR must be ${context.constraints.rir_min}-${context.constraints.rir_max}.
 - Working sets per exercise ${context.constraints.working_sets_per_exercise.min}-${context.constraints.working_sets_per_exercise.max}.
 - Honor excluded exercises, pain areas, and limitations. Do not diagnose injury.

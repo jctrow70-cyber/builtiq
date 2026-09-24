@@ -46,6 +46,12 @@ type Props = {
   registerInputRef?: (el: HTMLInputElement | null) => void;
   onInputKeyDown?: (e: React.KeyboardEvent) => void;
   onFocusNextInput?: (el: HTMLInputElement | null) => void;
+  extraSets?: SetRow[];
+  extraLogs?: Record<string, LogRow>;
+  onAddExtraSet?: () => void;
+  onSaveExtraField?: (extraId: string, field: string, value: string, opts?: { completed?: boolean }) => void | Promise<void>;
+  onSkipExercise?: () => void;
+  exerciseSkipped?: boolean;
 };
 
 function fieldSizeClass(field: LogFieldUI) {
@@ -463,6 +469,12 @@ export default function WorkoutSetLogger({
   onInputKeyDown,
   onFocusNextInput,
   showPreviousSets = true,
+  extraSets = [],
+  extraLogs = {},
+  onAddExtraSet,
+  onSaveExtraField,
+  onSkipExercise,
+  exerciseSkipped = false,
 }: Props) {
   const layout = useMemo(() => logLayoutForType(exType), [exType]);
   const showDistToggle = allLogFieldsFlat(exType).some((f) => f.unitGroup === 'distance');
@@ -580,7 +592,45 @@ export default function WorkoutSetLogger({
             showPreviousSets={showPreviousSets}
           />
         ))}
+        {extraSets.map((s) => (
+          <SetLogCard
+            key={s.id}
+            set={s}
+            allSets={[...sets, ...extraSets]}
+            log={extraLogs[s.id] || {}}
+            prev={null}
+            layout={layout}
+            weightUnit={weightUnit}
+            distanceUnit={distanceUnit}
+            canEdit={false}
+            canLog={canLog}
+            onEditSet={() => {}}
+            onRemoveSet={() => {}}
+            onSaveField={(id, field, value, opts) => onSaveExtraField?.(id, field, value, opts)}
+            onDuplicateSet={() => {}}
+            registerInputRef={registerInputRef}
+            onInputKeyDown={onInputKeyDown}
+            onFocusNextInput={onFocusNextInput}
+            scheduleSave={scheduleSave}
+            flushSaves={flushSaves}
+            showPreviousSets={false}
+          />
+        ))}
       </div>
+      {(onAddExtraSet || onSkipExercise) && (
+        <div className="actions extra-set-actions">
+          {onAddExtraSet && canLog && (
+            <button type="button" className="btn small secondary" onClick={onAddExtraSet}>
+              Add extra set
+            </button>
+          )}
+          {onSkipExercise && canLog && (
+            <button type="button" className="btn small secondary" onClick={onSkipExercise}>
+              {exerciseSkipped ? 'Exercise skipped' : 'Skip exercise'}
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

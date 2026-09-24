@@ -66,7 +66,8 @@ export function isWorkingIsolationAsCooldown(ex: DesignerExercise): boolean {
 
 export function isRampEligible(ex: DesignerExercise, role: StrengthRole, repMax?: number): boolean {
   if (role !== 'primary') return false;
-  if (ex.exercise_kind !== 'compound') return false;
+  if (ex.ramp_eligible === false) return false;
+  if (ex.exercise_kind !== 'compound' && ex.ramp_eligible !== true) return false;
   const warmupOnly = ex.warmup_eligible && ex.program_roles.every((r) => r === 'warmup' || r === 'power');
   if (warmupOnly) return false;
   const technical = ex.skill_level === 'medium' || ex.skill_level === 'high';

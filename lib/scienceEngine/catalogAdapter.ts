@@ -5,12 +5,18 @@ import { normalizeMovementPattern, normalizeMuscleId, type MuscleId } from './ta
 import type { CatalogExercise, ExerciseTypeKind, ProgramRole } from './types';
 
 function inferKind(name: string, raw?: any): ExerciseTypeKind {
+  const stored = String(raw?.coaching_metadata?.exercise_kind || '').toLowerCase();
+  if (stored === 'isolation' || stored === 'compound') return stored;
   const mechanic = String(raw?.coaching_metadata?.mechanic || raw?.category || '').toLowerCase();
   if (mechanic === 'isolation' || /curl|raise|fly|extension|pushdown|kickback|shrug/.test(name)) return 'isolation';
   return 'compound';
 }
 
-function inferRoles(name: string, kind: ExerciseTypeKind, warmupSuitable: boolean): ProgramRole[] {
+function inferRoles(name: string, kind: ExerciseTypeKind, warmupSuitable: boolean, raw?: any): ProgramRole[] {
+  const stored = raw?.coaching_metadata?.program_roles;
+  if (Array.isArray(stored) && stored.length) {
+    return stored.map(String).filter(Boolean) as ProgramRole[];
+  }
   const n = name.toLowerCase();
   const roles: ProgramRole[] = [];
   if (warmupSuitable) roles.push('warmup');
@@ -22,6 +28,14 @@ function inferRoles(name: string, kind: ExerciseTypeKind, warmupSuitable: boolea
 }
 
 function musclesFromRaw(raw: any): { primary: MuscleId[]; secondary: MuscleId[] } {
+  const coaching = raw?.coaching_metadata || {};
+  if (Array.isArray(coaching.primary_muscles) || Array.isArray(coaching.secondary_muscles)) {
+    const primary = (coaching.primary_muscles || []).map((m: string) => normalizeMuscleId(m)).filter((m): m is MuscleId => !!m);
+    const secondary = (coaching.secondary_muscles || [])
+      .map((m: string) => normalizeMuscleId(m))
+      .filter((m): m is MuscleId => !!m && !primary.includes(m));
+    return { primary, secondary };
+  }
   const targets = parseMuscleTargets(raw?.muscle_targets);
   const primary = targets.filter((t) => t.role === 'primary').map((t) => normalizeMuscleId(t.muscle)).filter((m): m is MuscleId => !!m);
   const secondary = targets.filter((t) => t.role === 'secondary').map((t) => normalizeMuscleId(t.muscle)).filter((m): m is MuscleId => !!m);
@@ -34,16 +48,22 @@ export function catalogExerciseFromRow(row: any): CatalogExercise | null {
   if (!row || row.is_archived) return null;
   const name = String(row.name || '').trim();
   if (!name) return null;
-  const coaching = parseCoachingMetadata(row.coaching_metadata);
+  const coaching = parseCoachingMetadata(row.coaching_metadata) as any;
   const kind = inferKind(name, row);
   const { primary, secondary } = musclesFromRaw(row);
-  const warmupSuitable = Boolean(row.warmup_suitable || coaching.programming_role === 'warmup' || /warmup|mobility|stretch/.test(String(row.category || '')));
+  const warmupSuitable = Boolean(
+    coaching.warmup_eligible === true ||
+      row.warmup_suitable ||
+      coaching.programming_role === 'warmup' ||
+      (coaching.warmup_eligible !== false && /warmup|mobility|stretch/.test(String(row.category || '')))
+  );
+  const laterality = String(coaching.laterality || '');
   return {
     id: row.id ? String(row.id) : undefined,
     name,
-    movementPattern: normalizeMovementPattern(row.movement_pattern),
+    movementPattern: normalizeMovementPattern(coaching.movement_pattern || row.movement_pattern),
     exerciseType: kind,
-    programRoles: inferRoles(name, kind, warmupSuitable),
+    programRoles: inferRoles(name, kind, warmupSuitable, row),
     equipment: normalizeEquipmentList(
       [row.equipment, ...(Array.isArray(row.coaching_metadata?.compatible_equipment) ? row.coaching_metadata.compatible_equipment : [])].filter(Boolean)
     ),
@@ -53,9 +73,9 @@ export function catalogExerciseFromRow(row: any): CatalogExercise | null {
     fatigueCost: (coaching.fatigue_cost === 'moderate' ? 'medium' : coaching.fatigue_cost) || 'medium',
     skillRequirement: (coaching.skill_demand === 'moderate' ? 'medium' : coaching.skill_demand) || 'medium',
     suitableForBeginner: row.suitable_for_beginner !== false && String(row.training_goal || '') !== 'power',
-    unilateral: /single|one-arm|split|lunge|bulgarian/.test(name.toLowerCase()),
-    defaultRepMin: Number(row.default_rep_min) || (kind === 'isolation' ? 8 : 5),
-    defaultRepMax: Number(row.default_rep_max) || (kind === 'isolation' ? 15 : 10),
+    unilateral: laterality === 'unilateral' || laterality === 'alternating' || /single|one-arm|split|lunge|bulgarian/.test(name.toLowerCase()),
+    defaultRepMin: Number(coaching.default_rep_min || row.default_rep_min) || (kind === 'isolation' ? 8 : 5),
+    defaultRepMax: Number(coaching.default_rep_max || row.default_rep_max) || (kind === 'isolation' ? 15 : 10),
     videoUrl: row.video_url || row.gif_url || row.media_url || null,
     warmupSuitable,
     warmupCategory: row.warmup_category || null,
@@ -181,7 +201,7 @@ function isAdaptedExercise(row: any): row is CatalogExercise {
   );
 }
 
-export function adaptCatalog(rows: any[] | null | undefined): CatalogExercise[] {
+export function adaptCatalog(rows: any[] | null | undefined, opts?: { allowFallback?: boolean }): CatalogExercise[] {
   const adapted = (rows || [])
     .map((row) => {
       if (isAdaptedExercise(row)) {
@@ -190,6 +210,7 @@ export function adaptCatalog(rows: any[] | null | undefined): CatalogExercise[] 
       return catalogExerciseFromRow(row);
     })
     .filter((row): row is CatalogExercise => !!row);
+  if (opts?.allowFallback === false) return adapted;
   if (adapted.length >= 12) return adapted;
   const names = new Set(adapted.map((e) => e.name.toLowerCase()));
   FALLBACK_CATALOG.forEach((item) => {

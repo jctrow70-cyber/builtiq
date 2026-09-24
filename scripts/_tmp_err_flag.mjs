@@ -1,0 +1,11 @@
+import fs from "fs";
+const meta = fs.readFileSync("docs/catalog-overhaul/_tmp_error_meta.txt", "utf8");
+const parts = meta.split("|");
+const len = Number(parts[0] || 0);
+const preview = parts[1] || "";
+fs.writeFileSync("docs/catalog-overhaul/_tmp_error_preview.txt", preview);
+let code = 10;
+if (parts[2] === "true") code += 1;
+if (parts[3] === "true") code += 2;
+if (parts[4] === "true") code += 4;
+process.exit(code);

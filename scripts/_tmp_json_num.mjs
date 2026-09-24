@@ -1,0 +1,11 @@
+import fs from "fs";
+const report = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
+let v = report;
+process.argv.slice(3).forEach(function(k) { v = v == null ? undefined : v[k]; });
+if (typeof v === "boolean") process.exit(v ? 8 : 7);
+if (Array.isArray(v)) process.exit(20 + Math.min(40, v.length));
+if (typeof v !== "number") process.exit(1);
+if (v === 254) process.exit(54);
+if (v === 260) process.exit(60);
+if (v === 0) process.exit(2);
+process.exit(Math.min(180, v));

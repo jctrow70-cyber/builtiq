@@ -163,6 +163,8 @@ export type ExercisePrescription = {
   supersetGroupId?: string | null;
   supersetLabel?: string | null;
   supersetOrder?: number | null;
+  laterality?: 'bilateral' | 'unilateral' | 'alternating';
+  measurementType?: 'reps' | 'time' | 'distance';
 };
 
 export type WarmupItem = {
@@ -173,6 +175,9 @@ export type WarmupItem = {
   exerciseId?: string;
   muscleGroup?: string;
   why?: string;
+  role?: ProgramRole;
+  laterality?: 'bilateral' | 'unilateral' | 'alternating';
+  measurementType?: 'reps' | 'time' | 'distance';
 };
 
 export type RampSet = {

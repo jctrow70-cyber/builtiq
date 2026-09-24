@@ -3,6 +3,7 @@ import { validateProgram } from '../validator';
 import { DESIGNER_PROMPT_VERSION, SCIENCE_ENGINE_VERSION } from '../version';
 import type { CatalogExercise, ScienceProgram, TrainingProfile } from '../types';
 import type { RecentLiftSummary } from '../recentTraining';
+import { adaptGenerationCatalog } from './catalogEligibility';
 import { buildGenerationContext } from './context';
 import { libraryById } from './library';
 import { persistGenerationRun } from './log';
@@ -39,7 +40,8 @@ export async function runGenerationPipeline(opts: {
 }): Promise<OrchestratorResult> {
   const started = Date.now();
   const mode = opts.mode || 'full_program';
-  const science = generateProgram(opts.profile, opts.catalog);
+  const catalog = adaptGenerationCatalog(opts.catalog);
+  const science = generateProgram(opts.profile, catalog);
   const scienceCheck = validateProgram(science, opts.profile);
   if (!scienceCheck.ok) {
     throw new Error(scienceCheck.issues.map((i) => i.message).join('; ') || 'Science engine validation failed');
@@ -48,7 +50,7 @@ export async function runGenerationPipeline(opts: {
   const { context, catalogById } = buildGenerationContext({
     profile: opts.profile,
     program: science,
-    catalog: opts.catalog,
+    catalog,
     userPrompt: opts.userPrompt,
     programName: opts.programName,
     mode,

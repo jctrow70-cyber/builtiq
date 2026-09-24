@@ -14,6 +14,8 @@ import { summarizeRecentLogs } from './recentTraining';
 import { evaluateProgression } from './progression';
 import { validateProgram } from './validator';
 import { runPhase1GenerationChecks } from './generation/phase1Check';
+import { runGenerationCatalogPolicyChecks } from './generation/catalogEligibilityCheck';
+import { runPhase2a1FoundationChecks } from './adaptation/phase2a1Check';
 import type { TrainingProfile } from './types';
 
 function assert(cond: unknown, message: string) {
@@ -540,7 +542,9 @@ async function run() {
   console.log(`Warm-up: ${upperA!.warmup.map((w) => w.name).join(', ')}`);
   console.log(`Power Primer: ${primer!.name} ${primer!.sets} x ${primer!.repMin}-${primer!.repMax}`);
   console.log(`Ramp: ${upperA!.rampSets.map((r) => `${r.weight || r.percent} x ${r.reps}`).join(', ')}`);
+  runGenerationCatalogPolicyChecks();
   await runPhase1GenerationChecks();
+  runPhase2a1FoundationChecks();
 }
 
 run().catch((err) => {

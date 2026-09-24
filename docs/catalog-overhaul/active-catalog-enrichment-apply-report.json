@@ -1,0 +1,23 @@
+{
+  "generated_at": "2026-09-23T21:15:16.288Z",
+  "enrichment_version": "BIQ-0213",
+  "status": "applied",
+  "phase_2": "not_started",
+  "live_total_rows": 2507,
+  "live_active_master": 260,
+  "live_archived": 2228,
+  "supabase_host": "qruiwfzzrylrirlxzdqx.supabase.co",
+  "rollback_path": "C:\\Users\\JesseTrowbridge\\OneDrive - Tegria\\Documents\\GitHub\\builtiq\\docs\\catalog-overhaul\\active-catalog-enrichment-rollback.json",
+  "rollback_rows": 260,
+  "active_rows_updated": 260,
+  "archived_rows_modified": 0,
+  "after_active_master": 260,
+  "validation": {
+    "ok": true,
+    "errors": []
+  },
+  "persistence": {
+    "ok": true,
+    "errors": []
+  }
+}

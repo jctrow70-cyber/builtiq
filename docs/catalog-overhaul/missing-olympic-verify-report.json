@@ -1,0 +1,134 @@
+{
+  "generated_at": "2026-09-23T21:08:09.189Z",
+  "status": "ok",
+  "supabase_host": "qruiwfzzrylrirlxzdqx.supabase.co",
+  "totals": {
+    "all_rows": 2507,
+    "archived": 2228,
+    "user_or_custom": 21,
+    "active_master": 260,
+    "active_non_master_system": 0,
+    "enriched_biq0213": 0
+  },
+  "missing_ids": [],
+  "extra_ids": [],
+  "duplicate_active_master_names": [],
+  "six": [
+    {
+      "external_id": "255",
+      "expected_name": "Snatch",
+      "live_id": "9bffdf02-8b76-4324-b3e6-c0760cfa739d",
+      "live_name": "Snatch",
+      "live_source": "builtiq_master",
+      "live_archived": false,
+      "matches_name": true,
+      "matches_pattern": true,
+      "matches_equipment": true,
+      "enrichment_version": null,
+      "archived_same_name": [
+        {
+          "id": "363dc0c5-b43d-4d39-8c13-ca39ca9e40d9",
+          "source": "free_exercise_db",
+          "external_id": "Snatch"
+        }
+      ],
+      "other_active_same_name": []
+    },
+    {
+      "external_id": "256",
+      "expected_name": "Clean & Jerk",
+      "live_id": "acdefa0f-0350-4f53-86bf-02c2357618b8",
+      "live_name": "Clean & Jerk",
+      "live_source": "builtiq_master",
+      "live_archived": false,
+      "matches_name": true,
+      "matches_pattern": true,
+      "matches_equipment": true,
+      "enrichment_version": null,
+      "archived_same_name": [
+        {
+          "id": "b85823b7-5523-4b1e-9dbd-300d271e88a1",
+          "source": "free_exercise_db",
+          "external_id": "Clean_and_Jerk"
+        }
+      ],
+      "other_active_same_name": []
+    },
+    {
+      "external_id": "257",
+      "expected_name": "Hang Clean",
+      "live_id": "14d11e1a-958e-40b7-a23b-6c548b987376",
+      "live_name": "Hang Clean",
+      "live_source": "builtiq_master",
+      "live_archived": false,
+      "matches_name": true,
+      "matches_pattern": true,
+      "matches_equipment": true,
+      "enrichment_version": null,
+      "archived_same_name": [
+        {
+          "id": "e701f35c-6708-4de2-8b8b-aa494a4cb816",
+          "source": "free_exercise_db",
+          "external_id": "Hang_Clean"
+        }
+      ],
+      "other_active_same_name": []
+    },
+    {
+      "external_id": "258",
+      "expected_name": "Power Snatch",
+      "live_id": "721c359f-ba79-4862-a99f-072f99bdad9c",
+      "live_name": "Power Snatch",
+      "live_source": "builtiq_master",
+      "live_archived": false,
+      "matches_name": true,
+      "matches_pattern": true,
+      "matches_equipment": true,
+      "enrichment_version": null,
+      "archived_same_name": [
+        {
+          "id": "e4a9489f-efe6-4de8-9543-bdac85e671c2",
+          "source": "free_exercise_db",
+          "external_id": "Power_Snatch"
+        }
+      ],
+      "other_active_same_name": []
+    },
+    {
+      "external_id": "259",
+      "expected_name": "Push Jerk",
+      "live_id": "12c93f38-2ae4-4e0d-8a56-97856720e0ba",
+      "live_name": "Push Jerk",
+      "live_source": "builtiq_master",
+      "live_archived": false,
+      "matches_name": true,
+      "matches_pattern": true,
+      "matches_equipment": true,
+      "enrichment_version": null,
+      "archived_same_name": [],
+      "other_active_same_name": []
+    },
+    {
+      "external_id": "260",
+      "expected_name": "Split Jerk",
+      "live_id": "9308dd1a-e3db-4fda-a234-b697c8b0cbe3",
+      "live_name": "Split Jerk",
+      "live_source": "builtiq_master",
+      "live_archived": false,
+      "matches_name": true,
+      "matches_pattern": true,
+      "matches_equipment": true,
+      "enrichment_version": null,
+      "archived_same_name": [
+        {
+          "id": "c15b6bdc-9d26-4b73-9186-652956c04326",
+          "source": "free_exercise_db",
+          "external_id": "Split_Jerk"
+        }
+      ],
+      "other_active_same_name": []
+    }
+  ],
+  "archived_same_name_count": 5,
+  "errors": []
+}

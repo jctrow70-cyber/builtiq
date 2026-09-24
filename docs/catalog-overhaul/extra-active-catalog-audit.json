@@ -1,0 +1,757 @@
+{
+  "generated_at": "2026-09-23T21:52:30.463Z",
+  "read_only": true,
+  "supabase_host": "qruiwfzzrylrirlxzdqx.supabase.co",
+  "totals": {
+    "all_rows": 2507,
+    "active": 279,
+    "active_master": 260,
+    "extra_active": 19,
+    "extra_user_or_custom": 19,
+    "extra_system_non_master": 0,
+    "enriched_master": 260
+  },
+  "extras": [
+    {
+      "exercise_id": "43216be3-1e81-41b2-a743-2c7a8e28ec1a",
+      "name": "Band rotation",
+      "source": null,
+      "external_id": null,
+      "is_archived": false,
+      "is_system": false,
+      "user_id": "79504c31-d63d-453d-a1b8-01ad7ac7abab",
+      "ownership": "user_or_custom",
+      "movement_pattern": null,
+      "equipment": null,
+      "category": "strength",
+      "enrichment_version": null,
+      "created_at": "2026-09-02T22:36:27.450149+00:00",
+      "updated_at": "2026-09-02T22:36:27.450149+00:00",
+      "exact_master_matches": [],
+      "likely_master_matches": [
+        {
+          "id": "ffcb01e4-b775-426f-8513-c96eb96b0d1d",
+          "name": "90/90 Hip Rotation",
+          "external_id": "135",
+          "score": 0.5
+        },
+        {
+          "id": "51596dc7-cbef-46c7-89b4-577fc7bacb38",
+          "name": "External Rotation",
+          "external_id": "36",
+          "score": 0.5
+        },
+        {
+          "id": "378285d4-0463-4fb3-881a-79901482bf1a",
+          "name": "Internal Rotation",
+          "external_id": "37",
+          "score": 0.5
+        }
+      ],
+      "match_kind": "possible_semantic_overlap",
+      "focus_row": false
+    },
+    {
+      "exercise_id": "6edb85a4-b848-410c-844a-baad46f9bb27",
+      "name": "Cable Curl",
+      "source": null,
+      "external_id": null,
+      "is_archived": false,
+      "is_system": false,
+      "user_id": "79504c31-d63d-453d-a1b8-01ad7ac7abab",
+      "ownership": "user_or_custom",
+      "movement_pattern": null,
+      "equipment": "Cable Machine",
+      "category": "strength",
+      "enrichment_version": null,
+      "created_at": "2026-08-04T20:22:53.34579+00:00",
+      "updated_at": "2026-08-04T20:23:18.811866+00:00",
+      "exact_master_matches": [],
+      "likely_master_matches": [
+        {
+          "id": "d6d0f616-9394-4417-a9d2-62b3eb72c455",
+          "name": "Cable Leg Curl",
+          "external_id": "163",
+          "score": 0.6666666666666666
+        },
+        {
+          "id": "b9b99181-1d59-4c92-9992-65c8a13383f2",
+          "name": "Biceps Curl",
+          "external_id": "39",
+          "score": 0.5
+        },
+        {
+          "id": "f8919cc1-30db-4ef0-b7d9-fb8e3f22d13a",
+          "name": "Cable Chop",
+          "external_id": "99",
+          "score": 0.5
+        }
+      ],
+      "match_kind": "possible_semantic_overlap",
+      "focus_row": true
+    },
+    {
+      "exercise_id": "6b6483b9-6ce2-4207-af9d-0473d8185049",
+      "name": "Cable Tricep Pushdown",
+      "source": null,
+      "external_id": null,
+      "is_archived": false,
+      "is_system": false,
+      "user_id": "79504c31-d63d-453d-a1b8-01ad7ac7abab",
+      "ownership": "user_or_custom",
+      "movement_pattern": null,
+      "equipment": "Cable Machine",
+      "category": "strength",
+      "enrichment_version": null,
+      "created_at": "2026-08-04T20:22:14.27024+00:00",
+      "updated_at": "2026-08-04T20:23:08.466445+00:00",
+      "exact_master_matches": [],
+      "likely_master_matches": [],
+      "match_kind": "unique",
+      "focus_row": true
+    },
+    {
+      "exercise_id": "ac7d4508-1f48-4baa-a2f0-a7392c657fad",
+      "name": "Cable Trunk Rotation",
+      "source": null,
+      "external_id": null,
+      "is_archived": false,
+      "is_system": false,
+      "user_id": "79504c31-d63d-453d-a1b8-01ad7ac7abab",
+      "ownership": "user_or_custom",
+      "movement_pattern": null,
+      "equipment": "Cable machine",
+      "category": "strength",
+      "enrichment_version": null,
+      "created_at": "2026-09-16T16:14:35.186971+00:00",
+      "updated_at": "2026-09-16T16:14:35.186971+00:00",
+      "exact_master_matches": [],
+      "likely_master_matches": [
+        {
+          "id": "687b1faf-8975-4305-84f8-8be0a27ce797",
+          "name": "Cable External Rotation",
+          "external_id": "158",
+          "score": 0.6666666666666666
+        },
+        {
+          "id": "e3ac98c4-9ff1-4c2e-bfdb-f724fb253489",
+          "name": "Cable Internal Rotation",
+          "external_id": "159",
+          "score": 0.6666666666666666
+        },
+        {
+          "id": "3c65d8ec-6334-4a5d-9384-879e0f18a01e",
+          "name": "Trunk Rotation",
+          "external_id": "253",
+          "score": 0.6666666666666666
+        }
+      ],
+      "match_kind": "possible_semantic_overlap",
+      "focus_row": false
+    },
+    {
+      "exercise_id": "53e99a31-b475-4b60-8189-05b70a0f8f3e",
+      "name": "Dumbbell rear delt fly",
+      "source": null,
+      "external_id": null,
+      "is_archived": false,
+      "is_system": false,
+      "user_id": "79504c31-d63d-453d-a1b8-01ad7ac7abab",
+      "ownership": "user_or_custom",
+      "movement_pattern": null,
+      "equipment": null,
+      "category": "strength",
+      "enrichment_version": null,
+      "created_at": "2026-08-12T13:31:51.097152+00:00",
+      "updated_at": "2026-08-12T13:31:51.097152+00:00",
+      "exact_master_matches": [],
+      "likely_master_matches": [
+        {
+          "id": "12b1ada8-ad85-4acc-bb9b-590c1043c8ac",
+          "name": "Rear Delt Row",
+          "external_id": "34",
+          "score": 0.5
+        }
+      ],
+      "match_kind": "possible_semantic_overlap",
+      "focus_row": false
+    },
+    {
+      "exercise_id": "e94507f5-3669-433c-a9d5-39d3abd7252e",
+      "name": "Dumbbell Side Lunge",
+      "source": null,
+      "external_id": null,
+      "is_archived": false,
+      "is_system": false,
+      "user_id": "79504c31-d63d-453d-a1b8-01ad7ac7abab",
+      "ownership": "user_or_custom",
+      "movement_pattern": "squat",
+      "equipment": "Dumbbell",
+      "category": "strength",
+      "enrichment_version": null,
+      "created_at": "2026-08-09T18:55:35.642754+00:00",
+      "updated_at": "2026-08-09T18:56:19.715523+00:00",
+      "exact_master_matches": [],
+      "likely_master_matches": [],
+      "match_kind": "unique",
+      "focus_row": false
+    },
+    {
+      "exercise_id": "f3c1b363-d703-4dc2-b6ed-ad33a77649f5",
+      "name": "External Rotation",
+      "source": null,
+      "external_id": null,
+      "is_archived": false,
+      "is_system": false,
+      "user_id": "79504c31-d63d-453d-a1b8-01ad7ac7abab",
+      "ownership": "user_or_custom",
+      "movement_pattern": null,
+      "equipment": null,
+      "category": "warmup",
+      "enrichment_version": null,
+      "created_at": "2026-07-07T21:36:40.480338+00:00",
+      "updated_at": "2026-07-22T01:28:50.148711+00:00",
+      "exact_master_matches": [
+        {
+          "id": "51596dc7-cbef-46c7-89b4-577fc7bacb38",
+          "name": "External Rotation",
+          "external_id": "36"
+        }
+      ],
+      "likely_master_matches": [
+        {
+          "id": "687b1faf-8975-4305-84f8-8be0a27ce797",
+          "name": "Cable External Rotation",
+          "external_id": "158",
+          "score": 0.6666666666666666
+        },
+        {
+          "id": "ffcb01e4-b775-426f-8513-c96eb96b0d1d",
+          "name": "90/90 Hip Rotation",
+          "external_id": "135",
+          "score": 0.5
+        },
+        {
+          "id": "378285d4-0463-4fb3-881a-79901482bf1a",
+          "name": "Internal Rotation",
+          "external_id": "37",
+          "score": 0.5
+        }
+      ],
+      "match_kind": "exact_duplicate",
+      "focus_row": false
+    },
+    {
+      "exercise_id": "2d5759ad-6b84-45a2-a31b-26dbe6c63cd1",
+      "name": "Hip Thrust",
+      "source": null,
+      "external_id": null,
+      "is_archived": false,
+      "is_system": false,
+      "user_id": "79504c31-d63d-453d-a1b8-01ad7ac7abab",
+      "ownership": "user_or_custom",
+      "movement_pattern": null,
+      "equipment": "Machine",
+      "category": "strength",
+      "enrichment_version": null,
+      "created_at": "2026-08-13T17:26:10.051922+00:00",
+      "updated_at": "2026-08-13T17:26:10.051922+00:00",
+      "exact_master_matches": [
+        {
+          "id": "f036f8c8-1819-49ae-875c-a91a2c8dc6c2",
+          "name": "Hip Thrust",
+          "external_id": "77"
+        }
+      ],
+      "likely_master_matches": [
+        {
+          "id": "5fd1e9e5-7147-4fc5-a22a-b6b8065d8db6",
+          "name": "B-Stance Hip Thrust",
+          "external_id": "209",
+          "score": 0.6666666666666666
+        },
+        {
+          "id": "ffcb01e4-b775-426f-8513-c96eb96b0d1d",
+          "name": "90/90 Hip Rotation",
+          "external_id": "135",
+          "score": 0.5
+        },
+        {
+          "id": "64dc3589-7f21-4abd-8467-5a1c0eb6899e",
+          "name": "Hip Abduction",
+          "external_id": "86",
+          "score": 0.5
+        }
+      ],
+      "match_kind": "exact_duplicate",
+      "focus_row": true
+    },
+    {
+      "exercise_id": "d94bfc38-f91e-42e2-9593-874b8064ac5a",
+      "name": "Hip thrust machine",
+      "source": null,
+      "external_id": null,
+      "is_archived": false,
+      "is_system": false,
+      "user_id": "79504c31-d63d-453d-a1b8-01ad7ac7abab",
+      "ownership": "user_or_custom",
+      "movement_pattern": "hinge",
+      "equipment": null,
+      "category": "strength",
+      "enrichment_version": null,
+      "created_at": "2026-09-13T22:44:19.278416+00:00",
+      "updated_at": "2026-09-13T22:44:19.278416+00:00",
+      "exact_master_matches": [],
+      "likely_master_matches": [
+        {
+          "id": "5fd1e9e5-7147-4fc5-a22a-b6b8065d8db6",
+          "name": "B-Stance Hip Thrust",
+          "external_id": "209",
+          "score": 0.6666666666666666
+        },
+        {
+          "id": "f036f8c8-1819-49ae-875c-a91a2c8dc6c2",
+          "name": "Hip Thrust",
+          "external_id": "77",
+          "score": 0.6666666666666666
+        },
+        {
+          "id": "cc07a43f-16cf-4aa9-9662-c07e8fa2fe50",
+          "name": "Single-Leg Hip Thrust",
+          "external_id": "206",
+          "score": 0.5
+        }
+      ],
+      "match_kind": "possible_semantic_overlap",
+      "focus_row": false
+    },
+    {
+      "exercise_id": "8dee00d6-a486-4fb6-9c7b-814ff62f0d36",
+      "name": "Kettle bell v-up",
+      "source": null,
+      "external_id": null,
+      "is_archived": false,
+      "is_system": false,
+      "user_id": "79504c31-d63d-453d-a1b8-01ad7ac7abab",
+      "ownership": "user_or_custom",
+      "movement_pattern": null,
+      "equipment": null,
+      "category": "strength",
+      "enrichment_version": null,
+      "created_at": "2026-09-18T02:42:41.946149+00:00",
+      "updated_at": "2026-09-18T02:42:41.946149+00:00",
+      "exact_master_matches": [],
+      "likely_master_matches": [],
+      "match_kind": "unique",
+      "focus_row": false
+    },
+    {
+      "exercise_id": "b179d51d-f07a-43b1-b885-3a8d4f6c7132",
+      "name": "Kettlebell V-Up",
+      "source": null,
+      "external_id": null,
+      "is_archived": false,
+      "is_system": false,
+      "user_id": "79504c31-d63d-453d-a1b8-01ad7ac7abab",
+      "ownership": "user_or_custom",
+      "movement_pattern": null,
+      "equipment": "Kettlebell",
+      "category": "strength",
+      "enrichment_version": null,
+      "created_at": "2026-08-13T17:44:00.425003+00:00",
+      "updated_at": "2026-08-13T17:44:00.425003+00:00",
+      "exact_master_matches": [],
+      "likely_master_matches": [
+        {
+          "id": "505e4736-4b22-4533-9861-d23a93483991",
+          "name": "Kettlebell Clean",
+          "external_id": "174",
+          "score": 0.5
+        },
+        {
+          "id": "0e91cd3a-7373-4eff-8abe-83d20ce097d2",
+          "name": "Kettlebell Deadlift",
+          "external_id": "173",
+          "score": 0.5
+        },
+        {
+          "id": "8c53e946-15e0-4bfa-a6ef-94d1290ac41b",
+          "name": "Kettlebell Press",
+          "external_id": "175",
+          "score": 0.5
+        }
+      ],
+      "match_kind": "possible_semantic_overlap",
+      "focus_row": false
+    },
+    {
+      "exercise_id": "257fd808-2c16-4c16-9959-f43a9a6f60ad",
+      "name": "Landmine Row",
+      "source": null,
+      "external_id": null,
+      "is_archived": false,
+      "is_system": false,
+      "user_id": "79504c31-d63d-453d-a1b8-01ad7ac7abab",
+      "ownership": "user_or_custom",
+      "movement_pattern": null,
+      "equipment": null,
+      "category": "strength",
+      "enrichment_version": null,
+      "created_at": "2026-07-08T02:37:24.018215+00:00",
+      "updated_at": "2026-07-22T11:50:38.571339+00:00",
+      "exact_master_matches": [
+        {
+          "id": "37f7bb9d-c406-4a2f-bdb0-3ed72e37fbe2",
+          "name": "Landmine Row",
+          "external_id": "16"
+        }
+      ],
+      "likely_master_matches": [
+        {
+          "id": "208acbf7-5c7f-452b-9c65-e328d46948ef",
+          "name": "High Row",
+          "external_id": "18",
+          "score": 0.5
+        },
+        {
+          "id": "3f2f0d01-ee39-4529-82fb-39a4ecee6c2f",
+          "name": "Inverted Row",
+          "external_id": "25",
+          "score": 0.5
+        },
+        {
+          "id": "817baa77-5dd9-4233-9a9d-f0033267e16a",
+          "name": "Landmine Press",
+          "external_id": "167",
+          "score": 0.5
+        }
+      ],
+      "match_kind": "exact_duplicate",
+      "focus_row": false
+    },
+    {
+      "exercise_id": "47153a3d-cbd4-43c4-8b37-f68bc933c770",
+      "name": "Lat Pulldown",
+      "source": null,
+      "external_id": null,
+      "is_archived": false,
+      "is_system": false,
+      "user_id": "79504c31-d63d-453d-a1b8-01ad7ac7abab",
+      "ownership": "user_or_custom",
+      "movement_pattern": null,
+      "equipment": "Cable Machine",
+      "category": "strength",
+      "enrichment_version": null,
+      "created_at": "2026-08-06T14:34:07.285441+00:00",
+      "updated_at": "2026-08-06T14:34:07.285441+00:00",
+      "exact_master_matches": [
+        {
+          "id": "98072829-5982-4634-a2cc-d9b0407a68a9",
+          "name": "Lat Pulldown",
+          "external_id": "20"
+        }
+      ],
+      "likely_master_matches": [
+        {
+          "id": "a3ca1ad2-8b2d-4e61-9732-e3b6ae09e25d",
+          "name": "Lat Stretch",
+          "external_id": "228",
+          "score": 0.5
+        },
+        {
+          "id": "252b6022-8632-489b-9687-5b75113f2c07",
+          "name": "Machine Pulldown",
+          "external_id": "143",
+          "score": 0.5
+        }
+      ],
+      "match_kind": "exact_duplicate",
+      "focus_row": false
+    },
+    {
+      "exercise_id": "1dee316c-a7f9-4f9d-befa-1c4e9b89967e",
+      "name": "Machine bench press",
+      "source": null,
+      "external_id": null,
+      "is_archived": false,
+      "is_system": false,
+      "user_id": "79504c31-d63d-453d-a1b8-01ad7ac7abab",
+      "ownership": "user_or_custom",
+      "movement_pattern": null,
+      "equipment": "Bench press Machine",
+      "category": "strength",
+      "enrichment_version": null,
+      "created_at": "2026-08-11T16:03:59.267659+00:00",
+      "updated_at": "2026-08-11T16:03:59.267659+00:00",
+      "exact_master_matches": [],
+      "likely_master_matches": [
+        {
+          "id": "811272d6-06df-435f-a9bc-ceacea7dbfb9",
+          "name": "Bench Press",
+          "external_id": "1",
+          "score": 0.6666666666666666
+        },
+        {
+          "id": "cee25b69-fa62-4029-9e99-7bd862979a5d",
+          "name": "Machine Chest Press",
+          "external_id": "140",
+          "score": 0.6666666666666666
+        },
+        {
+          "id": "a2abfce3-f870-46ae-9613-738ae8361b57",
+          "name": "Machine Shoulder Press",
+          "external_id": "141",
+          "score": 0.6666666666666666
+        }
+      ],
+      "match_kind": "possible_semantic_overlap",
+      "focus_row": false
+    },
+    {
+      "exercise_id": "299297a6-690e-4db8-af26-71a2b52a8e35",
+      "name": "Monkey Rows",
+      "source": null,
+      "external_id": null,
+      "is_archived": false,
+      "is_system": false,
+      "user_id": "79504c31-d63d-453d-a1b8-01ad7ac7abab",
+      "ownership": "user_or_custom",
+      "movement_pattern": null,
+      "equipment": null,
+      "category": "strength",
+      "enrichment_version": null,
+      "created_at": "2026-08-11T16:19:08.458694+00:00",
+      "updated_at": "2026-08-11T16:19:08.458694+00:00",
+      "exact_master_matches": [],
+      "likely_master_matches": [],
+      "match_kind": "unique",
+      "focus_row": false
+    },
+    {
+      "exercise_id": "cdac37a2-a6aa-4250-be10-cb41cdceda92",
+      "name": "Push-up to pike to toe touch",
+      "source": null,
+      "external_id": null,
+      "is_archived": false,
+      "is_system": false,
+      "user_id": "79504c31-d63d-453d-a1b8-01ad7ac7abab",
+      "ownership": "user_or_custom",
+      "movement_pattern": null,
+      "equipment": null,
+      "category": "warmup",
+      "enrichment_version": null,
+      "created_at": "2026-08-11T16:14:22.752505+00:00",
+      "updated_at": "2026-08-11T16:14:22.752505+00:00",
+      "exact_master_matches": [],
+      "likely_master_matches": [
+        {
+          "id": "2a77cb14-e340-4fcd-9760-a70c86300370",
+          "name": "Pike Push-Up",
+          "external_id": "187",
+          "score": 0.5
+        }
+      ],
+      "match_kind": "possible_semantic_overlap",
+      "focus_row": false
+    },
+    {
+      "exercise_id": "1e2c31ba-98ee-4191-96ab-d4f128a63996",
+      "name": "Rear delt dumbbell fly",
+      "source": null,
+      "external_id": null,
+      "is_archived": false,
+      "is_system": false,
+      "user_id": "79504c31-d63d-453d-a1b8-01ad7ac7abab",
+      "ownership": "user_or_custom",
+      "movement_pattern": null,
+      "equipment": null,
+      "category": "strength",
+      "enrichment_version": null,
+      "created_at": "2026-09-13T22:41:51.01017+00:00",
+      "updated_at": "2026-09-13T22:41:51.01017+00:00",
+      "exact_master_matches": [],
+      "likely_master_matches": [
+        {
+          "id": "12b1ada8-ad85-4acc-bb9b-590c1043c8ac",
+          "name": "Rear Delt Row",
+          "external_id": "34",
+          "score": 0.5
+        }
+      ],
+      "match_kind": "possible_semantic_overlap",
+      "focus_row": false
+    },
+    {
+      "exercise_id": "b36e5401-7c5a-48d1-97b6-d436d2a03d34",
+      "name": "Squat plate front raise",
+      "source": null,
+      "external_id": null,
+      "is_archived": false,
+      "is_system": false,
+      "user_id": "79504c31-d63d-453d-a1b8-01ad7ac7abab",
+      "ownership": "user_or_custom",
+      "movement_pattern": null,
+      "equipment": null,
+      "category": "strength",
+      "enrichment_version": null,
+      "created_at": "2026-09-14T00:27:34.296547+00:00",
+      "updated_at": "2026-09-14T00:27:34.296547+00:00",
+      "exact_master_matches": [],
+      "likely_master_matches": [
+        {
+          "id": "547bcda4-781b-4bab-b644-eaff020e8e08",
+          "name": "Plate Front Raise",
+          "external_id": "254",
+          "score": 0.75
+        },
+        {
+          "id": "be07af7a-5ab8-4a0c-8838-bed99a6aecc6",
+          "name": "Cable Front Raise",
+          "external_id": "154",
+          "score": 0.5
+        },
+        {
+          "id": "837dbd51-5947-4e76-a075-ece3743f9e43",
+          "name": "Front Raise",
+          "external_id": "33",
+          "score": 0.5
+        }
+      ],
+      "match_kind": "likely_semantic_duplicate",
+      "focus_row": false
+    },
+    {
+      "exercise_id": "fbf089d8-57ec-4d0d-ab99-1b7aae45b996",
+      "name": "Thoracic Rotations",
+      "source": null,
+      "external_id": null,
+      "is_archived": false,
+      "is_system": false,
+      "user_id": "79504c31-d63d-453d-a1b8-01ad7ac7abab",
+      "ownership": "user_or_custom",
+      "movement_pattern": null,
+      "equipment": null,
+      "category": "warmup",
+      "enrichment_version": null,
+      "created_at": "2026-07-07T21:35:59.045926+00:00",
+      "updated_at": "2026-07-22T01:28:58.605422+00:00",
+      "exact_master_matches": [],
+      "likely_master_matches": [
+        {
+          "id": "78835aa5-aaa9-408a-ba29-92d4abb0906a",
+          "name": "Thoracic Rotation",
+          "external_id": "138",
+          "score": 0.5
+        }
+      ],
+      "match_kind": "possible_semantic_overlap",
+      "focus_row": false
+    }
+  ],
+  "focus": [
+    {
+      "exercise_id": "6edb85a4-b848-410c-844a-baad46f9bb27",
+      "name": "Cable Curl",
+      "source": null,
+      "external_id": null,
+      "is_archived": false,
+      "is_system": false,
+      "user_id": "79504c31-d63d-453d-a1b8-01ad7ac7abab",
+      "ownership": "user_or_custom",
+      "movement_pattern": null,
+      "equipment": "Cable Machine",
+      "category": "strength",
+      "enrichment_version": null,
+      "created_at": "2026-08-04T20:22:53.34579+00:00",
+      "updated_at": "2026-08-04T20:23:18.811866+00:00",
+      "exact_master_matches": [],
+      "likely_master_matches": [
+        {
+          "id": "d6d0f616-9394-4417-a9d2-62b3eb72c455",
+          "name": "Cable Leg Curl",
+          "external_id": "163",
+          "score": 0.6666666666666666
+        },
+        {
+          "id": "b9b99181-1d59-4c92-9992-65c8a13383f2",
+          "name": "Biceps Curl",
+          "external_id": "39",
+          "score": 0.5
+        },
+        {
+          "id": "f8919cc1-30db-4ef0-b7d9-fb8e3f22d13a",
+          "name": "Cable Chop",
+          "external_id": "99",
+          "score": 0.5
+        }
+      ],
+      "match_kind": "possible_semantic_overlap",
+      "focus_row": true
+    },
+    {
+      "exercise_id": "6b6483b9-6ce2-4207-af9d-0473d8185049",
+      "name": "Cable Tricep Pushdown",
+      "source": null,
+      "external_id": null,
+      "is_archived": false,
+      "is_system": false,
+      "user_id": "79504c31-d63d-453d-a1b8-01ad7ac7abab",
+      "ownership": "user_or_custom",
+      "movement_pattern": null,
+      "equipment": "Cable Machine",
+      "category": "strength",
+      "enrichment_version": null,
+      "created_at": "2026-08-04T20:22:14.27024+00:00",
+      "updated_at": "2026-08-04T20:23:08.466445+00:00",
+      "exact_master_matches": [],
+      "likely_master_matches": [],
+      "match_kind": "unique",
+      "focus_row": true
+    },
+    {
+      "exercise_id": "2d5759ad-6b84-45a2-a31b-26dbe6c63cd1",
+      "name": "Hip Thrust",
+      "source": null,
+      "external_id": null,
+      "is_archived": false,
+      "is_system": false,
+      "user_id": "79504c31-d63d-453d-a1b8-01ad7ac7abab",
+      "ownership": "user_or_custom",
+      "movement_pattern": null,
+      "equipment": "Machine",
+      "category": "strength",
+      "enrichment_version": null,
+      "created_at": "2026-08-13T17:26:10.051922+00:00",
+      "updated_at": "2026-08-13T17:26:10.051922+00:00",
+      "exact_master_matches": [
+        {
+          "id": "f036f8c8-1819-49ae-875c-a91a2c8dc6c2",
+          "name": "Hip Thrust",
+          "external_id": "77"
+        }
+      ],
+      "likely_master_matches": [
+        {
+          "id": "5fd1e9e5-7147-4fc5-a22a-b6b8065d8db6",
+          "name": "B-Stance Hip Thrust",
+          "external_id": "209",
+          "score": 0.6666666666666666
+        },
+        {
+          "id": "ffcb01e4-b775-426f-8513-c96eb96b0d1d",
+          "name": "90/90 Hip Rotation",
+          "external_id": "135",
+          "score": 0.5
+        },
+        {
+          "id": "64dc3589-7f21-4abd-8467-5a1c0eb6899e",
+          "name": "Hip Abduction",
+          "external_id": "86",
+          "score": 0.5
+        }
+      ],
+      "match_kind": "exact_duplicate",
+      "focus_row": true
+    }
+  ]
+}

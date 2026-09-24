@@ -3,7 +3,7 @@ import { getScienceRules } from './rules';
 import { creditSets, contributionsForExercise } from './contributions';
 import { allocateSessionSets, calculateWeeklyVolume } from './volume';
 import { generateTrainingSplit, splitDayName } from './split';
-import { adaptCatalog } from './catalogAdapter';
+import { adaptGenerationCatalog } from './generation/catalogEligibility';
 import { filterEligibleExercises, findByName, pickExercise } from './exerciseSelection';
 import { prescribeExercise } from './prescription';
 import { generateWarmup } from './warmup';
@@ -179,7 +179,7 @@ function slotsForDay(type: SplitDay['workoutType'], variantIndex: number): DaySl
 
 export function generateProgram(profile: TrainingProfile, catalogRows?: any[]): ScienceProgram {
   const rules = getScienceRules();
-  const catalog = filterEligibleExercises(adaptCatalog(catalogRows), profile);
+  const catalog = filterEligibleExercises(adaptGenerationCatalog(catalogRows), profile);
   const volumeTargets = calculateWeeklyVolume(profile);
   const split = generateTrainingSplit(profile, volumeTargets);
   const remaining: Record<string, number> = {};

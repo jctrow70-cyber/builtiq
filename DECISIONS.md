@@ -1840,6 +1840,130 @@ The first live Phase 1 week passed the structural contract and still produced we
 
 ---
 
+## Decision 065 - Phase 2A.1 Data Foundation Before Progression
+
+Date: 2026-09-23  
+Status: Accepted  
+Category: Program Design
+
+### Decision
+
+Start Phase 2A.1 only. Persist the data the future deterministic engine needs: exercise `program_role` / `measurement_type` / `laterality`, planned-vs-performed snapshots on new logs, explicit session and exercise outcomes, extra sets outside `st_planned_sets`, week status, minimal workout feel + pain feedback, and an append-only `st_adaptation_events` ledger.
+
+Missing RIR is never treated as RIR 2. Load progression eligibility uses two confidence paths (high-confidence RIR vs two consecutive top-range performance-only exposures). Those rules are specified now and not applied to programs yet.
+
+Do not apply the migration until reviewed. Do not start Phase 2A.2 automatic progression. Do not change Phase 1 week generation.
+
+### Reason
+
+BuiltIQ cannot learn from performed training until planned and performed data are distinguishable, skipped work is explicit, and logged workouts cannot have their prescriptions rewritten.
+
+### Alternatives Considered
+
+- Implement automatic double progression in the same change — rejected; 2A.1 is capture-only
+- Infer skipped from empty logs — rejected; empty means not_started
+- Store extra sets as additional planned rows — rejected; extras must not become the prescription
+- Permanent HOLD on missing RIR — rejected; two comparable top-range exposures may progress
+
+### Impact
+
+- Migration `20260923_052_phase2a1_training_foundation.sql` is review-only until applied
+- Phase 1 / 1.1 generation remains frozen
+- Science engine version stays 1.4.4
+
+---
+
+## Decision 064 - AI Generation Uses Only Active BuiltIQ Master Exercises
+
+Date: 2026-09-23  
+Status: Accepted  
+Category: Program Design
+
+### Decision
+
+Automatic AI program generation may use only active `builtiq_master` system exercises. User-created exercises remain in the catalog for the owner's manual workout creation, history, and logging, but they are not AI-eligible yet. The filter is enforced in the generation pipeline so a service-role catalog dump cannot put User A's custom into User B's candidate library.
+
+Do not start Phase 2 in this change.
+
+### Reason
+
+`is_archived = false` is a Training/history flag, not a generation-eligibility flag. The live 279-row catalog included 19 owner customs, and two of them were selected into a generated week.
+
+### Alternatives Considered
+
+- Allow the requesting user's customs automatically — rejected until explicit AI eligibility exists
+- Rely on RLS / frontend filtering only — rejected; service-role live generation bypassed that
+- Archive the 19 customs — rejected; they are still needed for logging and history
+
+### Impact
+
+- Science engine 1.4.4
+- Phase 1 / Phase 1.1 generation foundation is complete
+- Phase 2 remains unstarted
+
+---
+
+## Decision 063 - Apply Approved Enrichment To Active Master Rows Only
+
+Date: 2026-09-23  
+Status: Accepted  
+Category: Program Design
+
+### Decision
+
+Apply the approved 260-row enrichment to active BuiltIQ master catalog rows only. Keep first-class columns within the existing movement-pattern constraint and store rich programming intelligence in `coaching_metadata`. Preserve unrelated metadata. Write a rollback snapshot first and abort the whole operation if validation or persistence checks fail.
+
+The six review rows are applied with the approved overrides (Y-raise rep ranges, Copenhagen cooldown false, Jefferson Curl descriptive `loaded_spinal_flexion` demand, Overhead Carry unilateral/distance, Upright Row as shoulder abduction). Do not start Phase 2.
+
+### Reason
+
+The quality-pass artifact is now good enough for the programming engine, but only if generation actually reads the stored metadata.
+
+### Alternatives Considered
+
+- Expand the first-class movement-pattern check constraint now — rejected; store rich patterns in metadata until a later schema change
+- Treat Jefferson Curl as a medical contraindication — rejected; descriptive demand characteristic only
+- Apply to archived rows — rejected
+
+### Impact
+
+- Science engine 1.4.3
+- Active master rows gain enrichment_version `BIQ-0213`
+- First-class `movement_pattern` must stay inside `st_exercise_catalog_movement_pattern_check` (`squat`, `hinge`, `push_horizontal`, `push_vertical`, `pull_horizontal`, `pull_vertical`, `carry`, `rotation`, `isolation`, `cardio`). Rich patterns remain in `coaching_metadata.movement_pattern`.
+- Phase 2 remains unstarted
+
+---
+
+## Decision 062 - Catalog Enrichment Quality Pass Is Review-Only
+
+Date: 2026-09-23  
+Status: Accepted  
+Category: Program Design
+
+### Decision
+
+Keep catalog enrichment as a review artifact. Rewrite the deterministic classifier before any production write: exact/contextual mappings instead of ambiguous substrings; laterality that does not assume bilateral from a missing "single"; measurement types beyond reps; ramp eligibility for loaded/technical work only; fatigue as programming cost; primary-muscle assignment when one can reasonably be made; and a split between muscle involvement and conservative hypertrophy volume credit.
+
+`review_required` means genuine ambiguity or programming risk. Missing old-database fatigue/skill fields are not a review reason. Do not apply accepted values to `st_exercise_catalog` in this change. Do not start Phase 2.
+
+### Reason
+
+The first 260-row artifact was useful and still wrong in the places that matter for programming: Jefferson Curl as elbow flexion, Nordic as a low-fatigue curl, jumps as squats, Side/Copenhagen Plank as anti-extension, Suitcase Carry as rotation, and every row flagged for review.
+
+### Alternatives Considered
+
+- Apply the first artifact to production and clean up later — rejected; classification errors would enter the programming engine
+- Keep automatic 0.5 hypertrophy credit for every secondary muscle — rejected; involvement is not volume
+- Start Phase 2 while enrichment is unfinished — rejected
+
+### Impact
+
+- Review CSV/JSON/MD regenerated from `qualityPass`
+- Production generation still uses current catalog/adapter behavior
+- Phase 2 remains unstarted
+
+---
+
 ## Decision 061 - Proportional Session Duration and Contextual Patterns
 
 Date: 2026-09-22  

@@ -1,3 +1,4 @@
+import { lateralityOf, measurementTypeOf } from './generation/library';
 import { getScienceRules, goalUsesStrengthBias } from './rules';
 import type { CatalogExercise, ExercisePrescription, PrimaryGoal, ProgramRole, TrainingProfile } from './types';
 
@@ -85,6 +86,8 @@ export function prescribeExercise(opts: {
     restSeconds: restSecondsFor(role, profile, exercise),
     loadIncrement: loadIncrementFor(exercise),
     why,
+    laterality: lateralityOf(exercise),
+    measurementType: measurementTypeOf(exercise),
   };
 }
 

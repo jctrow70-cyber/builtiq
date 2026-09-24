@@ -404,6 +404,8 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .progress-trend-meta{font-size:9px;text-align:center;line-height:1.2}
 /* BIQ-0047 — Compact workout set logging UI */
 .workout-set-logger{max-width:100%;margin:8px 0 0}
+.session-outcome-card{margin:0 0 12px}
+.extra-set-actions{margin-top:8px;gap:8px}
 .log-pref-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;padding:6px 10px;border-radius:12px;background:#0f1422;border:1px solid var(--line)}
 .exercise-notes-section{margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid rgba(51,65,85,.5)}
 .set-log-list{display:flex;flex-direction:column;gap:8px}

@@ -85,6 +85,9 @@ function warmupToAi(item: WarmupItem, note: string): AiExercise {
     rpe: '4-5',
     notes: note,
     catalog_exercise_id: item.exerciseId,
+    program_role: item.role || 'warmup',
+    measurement_type: item.measurementType,
+    laterality: item.laterality,
   };
 }
 
@@ -99,6 +102,9 @@ function prescriptionToAi(ex: ExercisePrescription, note?: string): AiExercise {
     rest_seconds: ex.restSeconds,
     notes: note || ex.coachingNote || ex.why,
     catalog_exercise_id: ex.exerciseId,
+    program_role: ex.role,
+    measurement_type: ex.measurementType,
+    laterality: ex.laterality,
   };
 }
 

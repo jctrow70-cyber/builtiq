@@ -1,0 +1,11 @@
+BIQ-0213 active catalog enrichment apply — ABORTED
+Date: 2026-09-23T20:15:35.882Z
+Exit code: 2
+Status: aborted
+Phase 2: not_started
+
+Reason:
+Supabase catalog fetch failed: TypeError: fetch failed.
+Approved enrichment was not written. Live generation was not started.
+
+Source: docs/catalog-overhaul/active-catalog-enrichment-apply-report.json

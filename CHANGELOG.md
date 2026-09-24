@@ -11,6 +11,457 @@ Branch:
 Status:
 ```
 
+## BIQ-0217 - Phase 2A.1 Training Data Foundation
+
+Date: 2026-09-23
+Branch: develop
+Status: Local / migration not applied
+
+### Summary
+
+Phase 2A.1 captures the planned-vs-performed data the future progression engine needs. Phase 1 generation is unchanged. Automatic load/rep progression is not implemented.
+
+### Purpose
+
+Logging must record prescription metadata, session/exercise outcomes, extra sets, and week status without rewriting history.
+
+### Changes
+
+- Persist `program_role`, `measurement_type`, and `laterality` from the science prescription
+- Snapshot planned RIR / rep range / role / rest onto new set logs
+- First-class workout and exercise outcomes; skipped is never inferred from empty logs
+- Extra sets live in `st_extra_set_logs`, not `st_planned_sets`
+- Week status: week 1 activated, later copied weeks template
+- Guard blocks planned-set mutation after performance logs
+- Append-only `st_adaptation_events` created; no progression writes yet
+- Minimal session UI: feel, pain, optional note
+- Confidence and increment resolvers are specified only
+
+### Files Changed
+
+- `supabase/migrations/20260923_052_phase2a1_training_foundation.sql`
+- `lib/scienceEngine/adaptation/*`
+- `lib/scienceEngine/toAiPlan.ts`
+- `lib/scienceEngine/generation/mapper.ts`
+- `lib/scienceEngine/prescription.ts`
+- `lib/scienceEngine/types.ts`
+- `lib/scienceEngine/acceptanceCheck.ts`
+- `lib/training/aiProgramPlan.ts`
+- `lib/training/prescriptionMeta.ts`
+- `lib/training/setLogSnapshots.ts`
+- `lib/training/plannedSetGuard.ts`
+- `lib/training/sessionOutcome.ts`
+- `lib/training/exerciseOutcome.ts`
+- `lib/training/extraSets.ts`
+- `lib/training/workoutSessions.ts`
+- `lib/training/workoutTemplate.ts`
+- `app/page.tsx`
+- `app/components/WorkoutSetLogger.tsx`
+- `app/components/training/SessionOutcomeCard.tsx`
+- `app/components/training/WorkoutTemplateEditor.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+Additive migration created, **not applied**: new columns on `st_exercises`, `st_set_logs`, `st_workouts`, `st_workout_feedback`; new tables `st_workout_sessions`, `st_exercise_sessions`, `st_extra_set_logs`, `st_adaptation_events`; planned-set mutation trigger.
+
+### Testing Steps
+
+1. `npm run test:science` includes Phase 1 checks plus 2A.1 foundation checks
+2. Confirm generation still copies week 1 and excludes customs
+3. After the migration is approved and applied: log a workout, add an extra set, skip an exercise, mark session skipped vs completed
+
+### Known Issues
+
+- Session/extra-set/skip writes fail until the migration is applied (UI reports that)
+- Automatic progression is Phase 2A.2
+- Historical logs keep null snapshot fields
+
+### Recommended Commit Message
+
+`BIQ-0217 Add Phase 2A.1 training data foundation without applying the migration`
+
+## BIQ-0216 - Canonical AI Generation Catalog Policy
+
+Date: 2026-09-23
+Branch: develop
+Status: Local / applied
+
+### Summary
+
+AI program generation now uses only the 260 active BuiltIQ master exercises. User-custom rows stay in the catalog for manual workouts, history, and logging, but they cannot enter the AI candidate library, even when a service-role fetch returns them.
+
+### Purpose
+
+A user's generated program must never contain another user's custom exercises. `is_archived = false` is not enough to make a row AI-eligible.
+
+### Changes
+
+- Explicit generation-eligibility filter: active + `builtiq_master` + system + not archived + no `user_id`
+- Generate route, science generate path, and the generation pipeline all apply the filter
+- FALLBACK_CATALOG still injects only when fewer than 12 eligible masters exist
+- Training catalog fetch/search is unchanged
+
+### Files Changed
+
+- `lib/scienceEngine/generation/catalogEligibility.ts`
+- `lib/scienceEngine/generation/catalogEligibilityCheck.ts`
+- `lib/scienceEngine/generation/orchestrator.ts`
+- `lib/scienceEngine/generation/library.ts`
+- `lib/scienceEngine/generation/index.ts`
+- `lib/scienceEngine/generateProgram.ts`
+- `lib/scienceEngine/acceptanceCheck.ts`
+- `lib/scienceEngine/version.ts`
+- `app/api/programs/generate/route.ts`
+- `scripts/live-enriched-catalog-generation.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None. The 19 user-custom rows were not archived or modified.
+
+### Testing Steps
+
+1. `npm run test:science` includes the new eligibility checks
+2. Live generation: 279 actives → 260 AI candidates, 0 customs, no FALLBACK
+3. Confirm a custom exercise still appears in Training add/search for its owner
+
+### Known Issues
+
+- User-custom AI eligibility is deferred
+- Phase 2 remains unstarted
+
+### Recommended Commit Message
+
+`BIQ-0216 Restrict AI generation to the 260 active master exercises`
+
+## BIQ-0215 - Phase 1 Generation Duration Targeting
+
+Date: 2026-09-23
+Branch: develop
+Status: Local / applied
+
+### Summary
+
+AI week generation now aims a requested session length as a ceiling (about 55–60 minutes for a 60-minute request) instead of filling to the 0.9–1.1 band. The deterministic duration validator is unchanged. The 19 extra active catalog rows were audited only; none were archived or edited.
+
+### Purpose
+
+The live enriched-catalog week passed, but Monday landed at 67 minutes because the designer was told 54–66 was an acceptable landing zone. Useful volume should stay; leftover transition time should not be packed with extra work.
+
+### Changes
+
+- Designer prompt `designer@2.1.2` targets requested minutes minus 5 through requested minutes
+- Read-only audit of the 19 extra active rows (all user-owned customs)
+
+### Files Changed
+
+- `lib/scienceEngine/generation/prompt.ts`
+- `lib/scienceEngine/version.ts`
+- `scripts/audit-extra-active-catalog.ts`
+- `docs/catalog-overhaul/extra-active-catalog-audit.json`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None. No catalog rows were archived, deleted, or updated.
+
+### Testing Steps
+
+1. Confirm `classifySessionDuration(66, 60)` is still ok and `67` is still a warning
+2. Confirm a 60-minute designer prompt says 55–60, not 54–66
+3. Review the 19-row audit before any eligibility filter
+
+### Known Issues
+
+- Generate still adapts every non-archived row, including user customs. Eligibility policy is recommended, not implemented.
+- Phase 2 remains unstarted
+
+### Recommended Commit Message
+
+`BIQ-0215 Aim AI sessions under the duration ceiling without catalog changes`
+
+
+All meaningful product, code, database, design, and documentation changes should be tracked here.
+
+Use the format:
+
+```text
+BIQ-0001 - Change Title
+Date:
+Branch:
+Status:
+```
+
+## BIQ-0215 - Phase 1 Generation Duration Targeting
+
+Date: 2026-09-23
+Branch: develop
+Status: Local / applied
+
+### Summary
+
+AI week generation now aims a requested session length as a ceiling (about 55–60 minutes for a 60-minute request) instead of filling to the 0.9–1.1 band. The deterministic duration validator is unchanged. The 19 extra active catalog rows were audited only; none were archived or edited.
+
+### Purpose
+
+The live enriched-catalog week passed, but Monday landed at 67 minutes because the designer was told 54–66 was an acceptable landing zone. Useful volume should stay; leftover transition time should not be packed with extra work.
+
+### Changes
+
+- Designer prompt `designer@2.1.2` targets requested minutes minus 5 through requested minutes
+- Read-only audit of the 19 extra active rows (all user-owned customs)
+
+### Files Changed
+
+- `lib/scienceEngine/generation/prompt.ts`
+- `lib/scienceEngine/version.ts`
+- `scripts/audit-extra-active-catalog.ts`
+- `docs/catalog-overhaul/extra-active-catalog-audit.json`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None. No catalog rows were archived, deleted, or updated.
+
+### Testing Steps
+
+1. Confirm `classifySessionDuration(66, 60)` is still ok and `67` is still a warning
+2. Confirm a 60-minute designer prompt says 55–60, not 54–66
+3. Review the 19-row audit before any eligibility filter
+
+### Known Issues
+
+- Generate still adapts every non-archived row, including user customs. Eligibility policy is recommended, not implemented.
+- Phase 2 remains unstarted
+
+### Recommended Commit Message
+
+`BIQ-0215 Aim AI sessions under the duration ceiling without catalog changes`
+
+## BIQ-0214 - Insert Missing Olympic Master Cards Only
+
+Date: 2026-09-23
+Branch: develop
+Status: Local / applied
+
+### Summary
+
+The six missing BuiltIQ master Olympic cards (255–260) are now in the live active catalog. The existing 254 master rows were not re-imported or replaced. Archived legacy rows and user-created exercises were left alone.
+
+### Purpose
+
+The approved enrichment apply requires all 260 canonical master IDs. A full master re-import would have rewritten the existing 254 cards.
+
+### Changes
+
+- Verify IDs 255–260 are absent as active duplicates, then insert only those six from local master-library source data
+- Confirm active `builtiq_master` count = 260, IDs 1–260 present, no duplicate active master names
+- Keep archived `free_exercise_db` same-name rows archived
+
+### Files Changed
+
+- `scripts/insert-missing-olympic-master.ts`
+- `scripts/verify-olympic-master-six.ts`
+- `docs/catalog-overhaul/missing-olympic-insert-report.json`
+- `docs/catalog-overhaul/missing-olympic-verify-report.json`
+- `CHANGELOG.md`
+
+### Database Changes
+
+Inserted 6 `st_exercise_catalog` rows (`external_source=builtiq_master`, IDs 255–260). No schema migration. No updates to the existing 254 during this insert. Archived count stayed 2228.
+
+### Testing Steps
+
+1. Confirm the six names exist as active `builtiq_master` IDs 255–260
+2. Confirm no other active same-name cards
+3. Confirm archived legacy Snatch / Clean & Jerk / Hang Clean / Power Snatch / Split Jerk rows remain archived
+4. Confirm user-created rows were not changed
+
+### Known Issues
+
+- The six cards were already present when this session’s insert script ran (catalog 2501 → 2507). The script aborted the second insert and verified the live rows instead.
+- Phase 2 remains unstarted
+
+### Recommended Commit Message
+
+`BIQ-0214 Insert only the six missing Olympic master cards`
+
+## BIQ-0213 - Apply Approved Active Catalog Enrichment
+
+Date: 2026-09-23
+Branch: develop
+Status: Local / applied
+
+### Summary
+
+The approved 260-row active-catalog enrichment, including the six manual review overrides, is applied only to active BuiltIQ master exercises. A rollback snapshot is written first. Archived rows are not modified. Phase 2 was not started.
+
+### Purpose
+
+Programming generation should read laterality, measurement, fatigue, ramp eligibility, and conservative hypertrophy credits from the live catalog instead of weak name heuristics.
+
+### Changes
+
+- Merge approved proposals into first-class `movement_pattern` / `muscle_targets` / `progression_type` plus `coaching_metadata`
+- Manual overrides: Y-raise / Cable Y Raise 10–20 reps; Copenhagen cooldown false; Jefferson Curl 5–10 with `loaded_spinal_flexion` demand characteristic; Overhead Carry unilateral/distance; Upright Row stays `shoulder_abduction`
+- Adapter, laterality, measurement, ramp, cooldown, and volume credit now prefer stored metadata
+- Generate path refuses FALLBACK_CATALOG when 12+ active rows exist
+- First-class `movement_pattern` now writes only the live check-constraint values (`mobility` → `rotation`, `lunge`/`jump` → `squat`, olympic/power keep the existing first-class bucket or `hinge`)
+
+### Files Changed
+
+- `lib/scienceEngine/catalogEnrichment/storage.ts`
+- `lib/scienceEngine/catalogAdapter.ts`
+- `lib/scienceEngine/generation/library.ts`
+- `lib/scienceEngine/generation/qualityRules.ts`
+- `lib/scienceEngine/contributions.ts`
+- `lib/scienceEngine/taxonomy.ts`
+- `app/api/programs/generate/route.ts`
+- `scripts/apply-active-catalog-enrichment.ts`
+- `scripts/live-enriched-catalog-generation.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+Updates `st_exercise_catalog` for the 260 active `builtiq_master` rows only. No schema migration. No archived-row writes.
+
+### Testing Steps
+
+1. Confirm rollback artifact exists before/after write
+2. Re-read 260 rows and confirm persisted metadata
+3. Confirm archived row count/content unchanged
+4. `npm run test:science`
+5. Live 3-day full-body generation uses enriched catalog, not FALLBACK_CATALOG
+
+### Known Issues
+
+- Live write requires `SUPABASE_SERVICE_ROLE_KEY`. If Supabase is unreachable, the apply script aborts and does not simulate success.
+- Three program picks (Cable Curl, Cable Tricep Pushdown, Hip Thrust) came from active non-enriched rows in the 279-row adapted catalog. The 260 master rows themselves persisted `BIQ-0213`.
+- Phase 2 remains unstarted
+
+### Recommended Commit Message
+
+`BIQ-0213 Apply approved active-catalog enrichment with review overrides`
+
+---
+
+## BIQ-0212 - Catalog Enrichment Quality Pass
+
+Date: 2026-09-23
+Branch: develop
+Status: Local / in progress
+
+### Summary
+
+The active-catalog enrichment classifier was rewritten so token/name heuristics, laterality, measurement, ramp eligibility, fatigue, primary muscles, and hypertrophy volume credit are programming-aware. The review CSV was regenerated. Production catalog rows were not written. Phase 2 was not started.
+
+### Purpose
+
+The first enrichment artifact marked all 260 rows `review_required` and misclassified several movements from ambiguous substrings (`curl`, `plank`, `jump`, `row`). Human review should be reserved for genuine ambiguity or programming risk.
+
+### Changes
+
+- Exact mappings and contextual rules replace broad substring classification
+- Laterality is `bilateral` / `unilateral` / `alternating` and is not inferred from the absence of "single"
+- Measurement supports `reps`, `time`, and `distance`
+- Ramp eligibility is for loaded/technical working movements, not every compound
+- Fatigue represents programming/recovery cost
+- Muscle involvement is separate from conservative hypertrophy volume credit
+- Core and power/plyometric taxonomies were expanded in the review artifact
+- `review_required` no longer fires merely because the old database lacked fatigue/skill fields
+
+### Files Changed
+
+- `lib/scienceEngine/catalogEnrichment/qualityPass.ts`
+- `scripts/build-active-catalog-enrichment.ts`
+- `scripts/export-active-catalog-review-csv.ts`
+- `docs/catalog-overhaul/active-catalog-enrichment.json`
+- `docs/catalog-overhaul/active-catalog-enrichment-audit.md`
+- `docs/catalog-overhaul/active-catalog-enrichment-review.csv`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None. Review artifact only.
+
+### Testing Steps
+
+1. Confirm `active-catalog-enrichment-review.csv` regenerated and is not all `review_required=true`
+2. Confirm the named correction rows (Jefferson Curl, Nordic, Side Plank, Copenhagen, carries, jumps, Push Press, Upright Row, T-Bar Row, calf/tibialis, Overhead Press, Ab Wheel, Front Raise)
+3. Confirm no Supabase writes were attempted as part of applying enrichment
+4. Confirm generation/production catalog code was not switched onto these proposed values
+
+### Known Issues
+
+- Proposed patterns `core_rotation`, `core_lateral_flexion`, `core_anti_lateral_flexion`, `olympic`, `power`, and muscle id `tibialis` extend the current engine enums and are review-artifact only
+- Live Supabase catalog was not required; artifact is generated from the local master library when live fetch fails
+
+### Recommended Commit Message
+
+`BIQ-0212 Quality-pass catalog enrichment artifact without writing production`
+
+---
+
+## BIQ-0211 - Active Catalog Enrichment Review Artifact
+
+Date: 2026-09-23  
+Branch: develop  
+Status: Local / in progress
+
+### Summary
+
+Programming-metadata enrichment is scoped to ACTIVE catalog rows only. A review artifact was generated for the intended BuiltIQ library. Inactive/legacy imports were not enriched and were not modified. Production catalog rows were not written.
+
+### Purpose
+
+The catalog was reset to a curated active library (~300). The old imported set is archived. Enrichment must not treat ~1,100 inactive rows as the programming library.
+
+### Changes
+
+- Generate path now explicitly drops `is_archived` rows before adapt (adapter already returned null for archived)
+- `scripts/build-active-catalog-enrichment.ts` builds a review-only JSON/MD artifact for active exercises
+- Artifact includes proposed programming metadata and inherited-mapping flags
+
+### Files Changed
+
+- `app/api/programs/generate/route.ts`
+- `scripts/build-active-catalog-enrichment.ts`
+- `docs/catalog-overhaul/active-catalog-enrichment.json`
+- `docs/catalog-overhaul/active-catalog-enrichment-audit.md`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None. No production catalog writes.
+
+### Testing Steps
+
+1. Run `npx tsx scripts/build-active-catalog-enrichment.ts`
+2. Confirm counts: active vs inactive, AI-eligible, warmup/mobility/stretch
+3. Confirm inactive names are absent from the enrichment JSON
+4. Confirm generate still works and does not include archived GIF-library names
+
+### Known Issues
+
+- Live DB may be unreachable from some Cursor shells; artifact then uses the local master library
+- Proposed fields are not applied yet
+
+### Recommended Commit Message
+
+`BIQ-0211 Review active-catalog programming metadata without writing production`
+
+---
+
 ## BIQ-0210 - Phase 1.1 Duration Tolerance and Catalog Metadata Audit
 
 Date: 2026-09-22  

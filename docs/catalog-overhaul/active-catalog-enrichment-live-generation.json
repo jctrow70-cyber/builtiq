@@ -1,0 +1,1561 @@
+{
+  "generated_at": "2026-09-23T22:11:33.600Z",
+  "catalog_source": "enriched_active_production",
+  "supabase_active_rows": 279,
+  "ai_candidate_rows": 260,
+  "enriched_master_rows": 260,
+  "custom_candidate_rows": 0,
+  "custom_ids_in_program": [],
+  "adapted_active": 260,
+  "enriched_rows_in_library": 260,
+  "method": "ai_repaired",
+  "model": "gpt-5.4-2026-03-05",
+  "api": "responses",
+  "reasoning_effort": "medium",
+  "latency_ms": 118040,
+  "input_tokens": 4752,
+  "output_tokens": 4783,
+  "reasoning_tokens": 851,
+  "repairs": 1,
+  "ai_error": null,
+  "validation": {
+    "ok": true,
+    "issues": [
+      {
+        "code": "REST_TOO_SHORT",
+        "severity": "warning",
+        "message": "Overhead Press rests 90s; accessory compound work usually needs 120-210s.",
+        "day_label": "Mon",
+        "exercise_id": "c4eafc32-a802-4706-9fcf-07ef8be13710"
+      },
+      {
+        "code": "SESSION_FATIGUE",
+        "severity": "warning",
+        "message": "Full Body A is 4/5 high-fatigue selections.",
+        "day_label": "Mon"
+      },
+      {
+        "code": "DURATION_OVER",
+        "severity": "warning",
+        "message": "Full Body A is estimated at 69 min vs 60",
+        "day_label": "Mon"
+      },
+      {
+        "code": "REST_TOO_SHORT",
+        "severity": "warning",
+        "message": "Bulgarian Split Squat rests 90s; accessory compound work usually needs 120-210s.",
+        "day_label": "Wed",
+        "exercise_id": "26781050-0c19-43f3-b026-d26fa79c5630"
+      },
+      {
+        "code": "VOLUME_OFF",
+        "severity": "info",
+        "message": "upper_back planned 7 vs target 10."
+      },
+      {
+        "code": "VOLUME_OFF",
+        "severity": "info",
+        "message": "front_delts planned 11 vs target 6."
+      },
+      {
+        "code": "VOLUME_OFF",
+        "severity": "warning",
+        "message": "Secondary hypertrophy muscle side_delts has no direct/meaningful stimulus."
+      },
+      {
+        "code": "VOLUME_OFF",
+        "severity": "info",
+        "message": "rear_delts planned 3 vs target 6."
+      },
+      {
+        "code": "VOLUME_OFF",
+        "severity": "info",
+        "message": "Optional forearms has no direct work; indirect stimulus may be enough."
+      },
+      {
+        "code": "VOLUME_OFF",
+        "severity": "info",
+        "message": "hamstrings planned 8 vs target 10."
+      },
+      {
+        "code": "VOLUME_OFF",
+        "severity": "info",
+        "message": "Optional calves has no direct work; indirect stimulus may be enough."
+      },
+      {
+        "code": "VOLUME_OFF",
+        "severity": "info",
+        "message": "Optional adductors has no direct work; indirect stimulus may be enough."
+      },
+      {
+        "code": "VOLUME_OFF",
+        "severity": "info",
+        "message": "Optional hip_flexors has no direct work; indirect stimulus may be enough."
+      },
+      {
+        "code": "VOLUME_OFF",
+        "severity": "info",
+        "message": "Optional abs has no direct work; indirect stimulus may be enough."
+      },
+      {
+        "code": "VOLUME_OFF",
+        "severity": "info",
+        "message": "Optional obliques has no direct work; indirect stimulus may be enough."
+      },
+      {
+        "code": "VOLUME_OFF",
+        "severity": "info",
+        "message": "Optional spinal_erectors has no direct work; indirect stimulus may be enough."
+      },
+      {
+        "code": "PATTERN_REDUNDANCY",
+        "severity": "warning",
+        "message": "horizontal pull appears 4 times; check whether that redundancy is intentional."
+      }
+    ]
+  },
+  "quality_warnings": [
+    {
+      "code": "REST_TOO_SHORT",
+      "severity": "warning",
+      "message": "Overhead Press rests 90s; accessory compound work usually needs 120-210s.",
+      "day_label": "Mon",
+      "exercise_id": "c4eafc32-a802-4706-9fcf-07ef8be13710"
+    },
+    {
+      "code": "SESSION_FATIGUE",
+      "severity": "warning",
+      "message": "Full Body A is 4/5 high-fatigue selections.",
+      "day_label": "Mon"
+    },
+    {
+      "code": "DURATION_OVER",
+      "severity": "warning",
+      "message": "Full Body A is estimated at 69 min vs 60",
+      "day_label": "Mon"
+    },
+    {
+      "code": "REST_TOO_SHORT",
+      "severity": "warning",
+      "message": "Bulgarian Split Squat rests 90s; accessory compound work usually needs 120-210s.",
+      "day_label": "Wed",
+      "exercise_id": "26781050-0c19-43f3-b026-d26fa79c5630"
+    },
+    {
+      "code": "VOLUME_OFF",
+      "severity": "info",
+      "message": "upper_back planned 7 vs target 10."
+    },
+    {
+      "code": "VOLUME_OFF",
+      "severity": "info",
+      "message": "front_delts planned 11 vs target 6."
+    },
+    {
+      "code": "VOLUME_OFF",
+      "severity": "warning",
+      "message": "Secondary hypertrophy muscle side_delts has no direct/meaningful stimulus."
+    },
+    {
+      "code": "VOLUME_OFF",
+      "severity": "info",
+      "message": "rear_delts planned 3 vs target 6."
+    },
+    {
+      "code": "VOLUME_OFF",
+      "severity": "info",
+      "message": "Optional forearms has no direct work; indirect stimulus may be enough."
+    },
+    {
+      "code": "VOLUME_OFF",
+      "severity": "info",
+      "message": "hamstrings planned 8 vs target 10."
+    },
+    {
+      "code": "VOLUME_OFF",
+      "severity": "info",
+      "message": "Optional calves has no direct work; indirect stimulus may be enough."
+    },
+    {
+      "code": "VOLUME_OFF",
+      "severity": "info",
+      "message": "Optional adductors has no direct work; indirect stimulus may be enough."
+    },
+    {
+      "code": "VOLUME_OFF",
+      "severity": "info",
+      "message": "Optional hip_flexors has no direct work; indirect stimulus may be enough."
+    },
+    {
+      "code": "VOLUME_OFF",
+      "severity": "info",
+      "message": "Optional abs has no direct work; indirect stimulus may be enough."
+    },
+    {
+      "code": "VOLUME_OFF",
+      "severity": "info",
+      "message": "Optional obliques has no direct work; indirect stimulus may be enough."
+    },
+    {
+      "code": "VOLUME_OFF",
+      "severity": "info",
+      "message": "Optional spinal_erectors has no direct work; indirect stimulus may be enough."
+    },
+    {
+      "code": "PATTERN_REDUNDANCY",
+      "severity": "warning",
+      "message": "horizontal pull appears 4 times; check whether that redundancy is intentional."
+    }
+  ],
+  "program": {
+    "schema_version": "2.0",
+    "summary": "3 full-body hypertrophy sessions with complementary emphases: Monday biases squat + horizontal press, Wednesday biases vertical pull + quad volume, Friday biases glute/hinge + overhead press. Weekly set distribution is built to cover all major hypertrophy muscles meaningfully while using supersets selectively to save time without compromising the main lifts.",
+    "coaching_notes": "Keep the main compound lifts 1-2 reps shy of failure in week 1 and let rep quality drive progression. Use controlled eccentrics on all hypertrophy work, especially rows, split squats, and Nordic curls. If time runs tight, keep the primary and secondary compounds exactly as written and trim only transitions, not the main work.",
+    "program_rationale": {
+      "weekly_idea": "Each day has a distinct emphasis so the week feels varied while still repeating the big patterns enough for hypertrophy: squat + bench early week, pull + unilateral quad midweek, hinge/glute + overhead press late week.",
+      "fatigue_plan": "High-fatigue compounds are spread across the week and generally limited to 1-2 main lifts per session, with enough rest to preserve output. Lower-cost accessories and a small number of supersets are used later in sessions to add volume efficiently.",
+      "consistency_plan": "Exercise selection is stable and intermediate-friendly, with simple rep ranges and repeatable effort targets. Progression is driven by hitting the top of the rep range at the prescribed RIR before adding load."
+    },
+    "weekly_targets": [
+      {
+        "muscle": "chest",
+        "planned_working_sets": 10
+      },
+      {
+        "muscle": "upper_back",
+        "planned_working_sets": 10
+      },
+      {
+        "muscle": "lats",
+        "planned_working_sets": 10
+      },
+      {
+        "muscle": "quads",
+        "planned_working_sets": 10
+      },
+      {
+        "muscle": "hamstrings",
+        "planned_working_sets": 10
+      },
+      {
+        "muscle": "glutes",
+        "planned_working_sets": 12
+      },
+      {
+        "muscle": "front_delts",
+        "planned_working_sets": 8
+      },
+      {
+        "muscle": "side_delts",
+        "planned_working_sets": 6
+      },
+      {
+        "muscle": "rear_delts",
+        "planned_working_sets": 6
+      },
+      {
+        "muscle": "biceps",
+        "planned_working_sets": 6
+      },
+      {
+        "muscle": "triceps",
+        "planned_working_sets": 6
+      },
+      {
+        "muscle": "forearms",
+        "planned_working_sets": 6
+      },
+      {
+        "muscle": "abs",
+        "planned_working_sets": 6
+      },
+      {
+        "muscle": "spinal_erectors",
+        "planned_working_sets": 3
+      }
+    ],
+    "workouts": [
+      {
+        "day_label": "Mon",
+        "name": "Full Body A",
+        "emphasis": "Squat and horizontal press emphasis with upper-back support and posterior-chain volume.",
+        "estimated_minutes": 56,
+        "warmup": [
+          {
+            "exercise_id": "ffcb01e4-b775-426f-8513-c96eb96b0d1d",
+            "sets": 1,
+            "prescription": "6 controlled reps total",
+            "why": "Opens the hips for squatting and hinging while easing into full-body training."
+          },
+          {
+            "exercise_id": "4e46599f-1f19-4a8c-ad23-6c4da41a7f56",
+            "sets": 2,
+            "prescription": "20-30 seconds",
+            "why": "Prepares the ankles, knees, hips, and torso positions needed for squats."
+          },
+          {
+            "exercise_id": "11b1ea29-fd8c-4002-9d21-50c8ec0802c8",
+            "sets": 2,
+            "prescription": "12-15 smooth reps",
+            "why": "Activates upper back and rear shoulder musculature to support pressing and rowing mechanics."
+          }
+        ],
+        "potentiation": [],
+        "strength": [
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "exercise_id": "4b3ca64d-8aeb-4bc6-8b1f-3ca6116ecdc4",
+                "role": "primary",
+                "working_sets": 4,
+                "rep_min": 6,
+                "rep_max": 8,
+                "target_rir": 2,
+                "rest_seconds": 180,
+                "reps_per_side": false,
+                "measurement_type": "reps",
+                "ramp_sets": [],
+                "why": "Primary quad-focused lift for the week, giving the session its main lower-body hypertrophy stimulus."
+              }
+            ]
+          },
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "exercise_id": "811272d6-06df-435f-a9bc-ceacea7dbfb9",
+                "role": "primary",
+                "working_sets": 4,
+                "rep_min": 6,
+                "rep_max": 8,
+                "target_rir": 2,
+                "rest_seconds": 180,
+                "reps_per_side": false,
+                "measurement_type": "reps",
+                "ramp_sets": [],
+                "why": "Primary chest movement with strong triceps and front-delt carryover to anchor weekly pressing volume."
+              }
+            ]
+          },
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "exercise_id": "1695e444-3146-42aa-af3b-ebc2e9b110f4",
+                "role": "secondary",
+                "working_sets": 4,
+                "rep_min": 8,
+                "rep_max": 10,
+                "target_rir": 2,
+                "rest_seconds": 120,
+                "reps_per_side": false,
+                "measurement_type": "reps",
+                "ramp_sets": [],
+                "why": "Adds substantial upper-back volume with lower spinal fatigue than a free-standing row after squats."
+              }
+            ]
+          },
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "exercise_id": "2134cfe4-b564-4270-a02e-2d4882d6d9a5",
+                "role": "secondary",
+                "working_sets": 3,
+                "rep_min": 8,
+                "rep_max": 10,
+                "target_rir": 2,
+                "rest_seconds": 150,
+                "reps_per_side": false,
+                "measurement_type": "reps",
+                "ramp_sets": [],
+                "why": "Direct hamstring-focused hinge work to start accumulating weekly posterior-chain volume."
+              }
+            ]
+          },
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "exercise_id": "c4eafc32-a802-4706-9fcf-07ef8be13710",
+                "role": "accessory",
+                "working_sets": 3,
+                "rep_min": 8,
+                "rep_max": 10,
+                "target_rir": 2,
+                "rest_seconds": 90,
+                "reps_per_side": false,
+                "measurement_type": "reps",
+                "ramp_sets": [],
+                "why": "Provides direct delt work, especially side-delt contribution, while still fitting the hypertrophy goal."
+              }
+            ]
+          }
+        ],
+        "cooldown": [
+          {
+            "exercise_id": "56be6acd-3d0b-4e7b-8d99-90b946cc4f93",
+            "sets": 1,
+            "prescription": "5-6 slow breaths",
+            "why": "Brings the session down while opening lats and trunk after pressing, rowing, and squatting."
+          },
+          {
+            "exercise_id": "39ff2afd-a879-4e24-976e-66f8f18a1504",
+            "sets": 1,
+            "prescription": "30-40 seconds per position",
+            "why": "Reduces tension around the glutes and hips after squats and Romanian deadlifts."
+          }
+        ]
+      },
+      {
+        "day_label": "Wed",
+        "name": "Full Body B",
+        "emphasis": "Vertical pull and quad emphasis with additional chest, lats, rear-delt, and unilateral leg work.",
+        "estimated_minutes": 58,
+        "warmup": [
+          {
+            "exercise_id": "f234ffb5-5cca-449f-9cae-00d82f359a25",
+            "sets": 2,
+            "prescription": "20-30 seconds",
+            "why": "Prepares grip, shoulders, lats, and upper back for vertical pulling."
+          },
+          {
+            "exercise_id": "b8fbf23f-6532-40b8-b638-c8d915aa6ad0",
+            "sets": 1,
+            "prescription": "6 controlled reps total",
+            "why": "Opens the groin and hips for front squats and split-squat positioning."
+          },
+          {
+            "exercise_id": "aa95b5b4-26ee-4511-849f-5bfe20987760",
+            "sets": 1,
+            "prescription": "6-8 controlled reps",
+            "why": "Grooves scapular depression and upward control before pull-ups."
+          }
+        ],
+        "potentiation": [],
+        "strength": [
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "exercise_id": "20d8dac5-7bc1-410c-bfe6-1ee8c5dac75d",
+                "role": "primary",
+                "working_sets": 4,
+                "rep_min": 6,
+                "rep_max": 8,
+                "target_rir": 2,
+                "rest_seconds": 180,
+                "reps_per_side": false,
+                "measurement_type": "reps",
+                "ramp_sets": [],
+                "why": "Primary lat-focused lift of the day, giving a strong vertical-pull exposure and meaningful biceps stimulus."
+              }
+            ]
+          },
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "exercise_id": "c28f3288-bff5-47c0-9390-209bbd2d585e",
+                "role": "primary",
+                "working_sets": 3,
+                "rep_min": 6,
+                "rep_max": 8,
+                "target_rir": 2,
+                "rest_seconds": 180,
+                "reps_per_side": false,
+                "measurement_type": "reps",
+                "ramp_sets": [],
+                "why": "A second squat exposure for the week that shifts demand toward quads and upright torso control."
+              }
+            ]
+          },
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "exercise_id": "581ba89b-76c0-4929-a143-2aac2cf14192",
+                "role": "secondary",
+                "working_sets": 3,
+                "rep_min": 8,
+                "rep_max": 10,
+                "target_rir": 2,
+                "rest_seconds": 120,
+                "reps_per_side": false,
+                "measurement_type": "reps",
+                "ramp_sets": [],
+                "why": "Adds chest volume in a slightly different pressing angle than Monday for balanced hypertrophy."
+              }
+            ]
+          },
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "exercise_id": "0d1ab3b6-39b9-4f03-9c4f-7b8dd080cd66",
+                "role": "secondary",
+                "working_sets": 3,
+                "rep_min": 8,
+                "rep_max": 10,
+                "target_rir": 2,
+                "rest_seconds": 120,
+                "reps_per_side": false,
+                "measurement_type": "reps",
+                "ramp_sets": [],
+                "why": "Builds direct lat volume through a stable horizontal pull to complement the vertical pulling earlier in the session."
+              }
+            ]
+          },
+          {
+            "type": "superset",
+            "exercises": [
+              {
+                "exercise_id": "26781050-0c19-43f3-b026-d26fa79c5630",
+                "role": "accessory",
+                "working_sets": 3,
+                "rep_min": 8,
+                "rep_max": 10,
+                "target_rir": 2,
+                "rest_seconds": 90,
+                "reps_per_side": true,
+                "measurement_type": "reps",
+                "ramp_sets": [],
+                "why": "Adds unilateral quad and glute work to round out lower-body hypertrophy with a different stimulus than bilateral squatting."
+              },
+              {
+                "exercise_id": "23ace7e2-2bfa-4c5c-93b5-9fff98eb0afb",
+                "role": "accessory",
+                "working_sets": 3,
+                "rep_min": 8,
+                "rep_max": 10,
+                "target_rir": 2,
+                "rest_seconds": 75,
+                "reps_per_side": false,
+                "measurement_type": "reps",
+                "ramp_sets": [],
+                "why": "Adds rear-delt and upper-back volume with low interference to the split squat, saving time efficiently."
+              }
+            ]
+          }
+        ],
+        "cooldown": [
+          {
+            "exercise_id": "a3ca1ad2-8b2d-4e61-9732-e3b6ae09e25d",
+            "sets": 1,
+            "prescription": "30-40 seconds",
+            "why": "Helps unload the lats after pull-ups and rows."
+          },
+          {
+            "exercise_id": "6dc4e24b-b5ca-4e5e-8322-a467ae9b5faf",
+            "sets": 1,
+            "prescription": "30-40 seconds",
+            "why": "Opens the front of the hips and quads after front squats and split squats."
+          }
+        ]
+      },
+      {
+        "day_label": "Fri",
+        "name": "Full Body C",
+        "emphasis": "Glute-dominant hinge and overhead press emphasis with chest support, unilateral rowing, and hamstring finishing work.",
+        "estimated_minutes": 57,
+        "warmup": [
+          {
+            "exercise_id": "ffcb01e4-b775-426f-8513-c96eb96b0d1d",
+            "sets": 1,
+            "prescription": "6 controlled reps total",
+            "why": "Prepares hips for thrusting and general lower-body loading."
+          },
+          {
+            "exercise_id": "a4c231d9-fb2e-44a2-9ed0-4c276448b5d5",
+            "sets": 1,
+            "prescription": "10-12 walking reps total",
+            "why": "Builds dynamic hip mobility and balance before hinging and standing presses."
+          },
+          {
+            "exercise_id": "11b1ea29-fd8c-4002-9d21-50c8ec0802c8",
+            "sets": 2,
+            "prescription": "12-15 smooth reps",
+            "why": "Activates the upper back and rear shoulder to support overhead pressing and rowing."
+          }
+        ],
+        "potentiation": [],
+        "strength": [
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "exercise_id": "f036f8c8-1819-49ae-875c-a91a2c8dc6c2",
+                "role": "primary",
+                "working_sets": 4,
+                "rep_min": 8,
+                "rep_max": 10,
+                "target_rir": 1,
+                "rest_seconds": 150,
+                "reps_per_side": false,
+                "measurement_type": "reps",
+                "ramp_sets": [],
+                "why": "Primary glute-focused lift to close the week with a high-output but hypertrophy-friendly hinge pattern."
+              }
+            ]
+          },
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "exercise_id": "c4eafc32-a802-4706-9fcf-07ef8be13710",
+                "role": "primary",
+                "working_sets": 3,
+                "rep_min": 6,
+                "rep_max": 8,
+                "target_rir": 2,
+                "rest_seconds": 150,
+                "reps_per_side": false,
+                "measurement_type": "reps",
+                "ramp_sets": [],
+                "why": "Provides the week's dedicated vertical press exposure and completes direct side/front-delt volume."
+              }
+            ]
+          },
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "exercise_id": "cee25b69-fa62-4029-9e99-7bd862979a5d",
+                "role": "secondary",
+                "working_sets": 3,
+                "rep_min": 8,
+                "rep_max": 10,
+                "target_rir": 2,
+                "rest_seconds": 120,
+                "reps_per_side": false,
+                "measurement_type": "reps",
+                "ramp_sets": [],
+                "why": "Adds stable chest volume late in the week without the setup cost of another barbell press."
+              }
+            ]
+          },
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "exercise_id": "103403c0-4e2e-4aa6-a2b6-4e2002746e78",
+                "role": "secondary",
+                "working_sets": 3,
+                "rep_min": 8,
+                "rep_max": 10,
+                "target_rir": 2,
+                "rest_seconds": 90,
+                "reps_per_side": true,
+                "measurement_type": "reps",
+                "ramp_sets": [],
+                "why": "Finishes direct lat and upper-back work with a unilateral row that also supports arm development."
+              }
+            ]
+          },
+          {
+            "type": "superset",
+            "exercises": [
+              {
+                "exercise_id": "f900c996-1150-4caa-8d67-17ffa42f0ae7",
+                "role": "isolation",
+                "working_sets": 3,
+                "rep_min": 4,
+                "rep_max": 6,
+                "target_rir": 2,
+                "rest_seconds": 90,
+                "reps_per_side": false,
+                "measurement_type": "reps",
+                "ramp_sets": [],
+                "why": "Direct knee-flexion hamstring work rounds out the week's posterior-chain stimulus."
+              },
+              {
+                "exercise_id": "eeecddd9-6e4c-49ac-8fd4-369cceee4662",
+                "role": "accessory",
+                "working_sets": 3,
+                "rep_min": 20,
+                "rep_max": 40,
+                "target_rir": 2,
+                "rest_seconds": 60,
+                "reps_per_side": false,
+                "measurement_type": "distance",
+                "ramp_sets": [],
+                "why": "Adds forearm, upper-back, trunk, and bracing work with minimal technical demand at the end of the week."
+              }
+            ]
+          }
+        ],
+        "cooldown": [
+          {
+            "exercise_id": "5820865f-94d7-4577-a3f0-b13912bf3ad1",
+            "sets": 1,
+            "prescription": "30-40 seconds",
+            "why": "Helps relax the posterior chain after hip thrusts, rows, and Nordic curls."
+          },
+          {
+            "exercise_id": "768c593d-c352-45ca-9eee-2b724164294f",
+            "sets": 1,
+            "prescription": "30-40 seconds",
+            "why": "Opens the chest and front shoulder after machine pressing and overhead pressing."
+          }
+        ]
+      }
+    ],
+    "progression": {
+      "strategy": "Use double progression on all loaded movements: keep the same load until all working sets reach the top of the rep range at the target RIR, then increase load modestly next exposure. Maintain exercise selection for at least 3 hard weeks before considering accessory swaps.",
+      "primary_exercise_ids": [
+        "4b3ca64d-8aeb-4bc6-8b1f-3ca6116ecdc4",
+        "811272d6-06df-435f-a9bc-ceacea7dbfb9",
+        "20d8dac5-7bc1-410c-bfe6-1ee8c5dac75d",
+        "c28f3288-bff5-47c0-9390-209bbd2d585e",
+        "f036f8c8-1819-49ae-875c-a91a2c8dc6c2",
+        "c4eafc32-a802-4706-9fcf-07ef8be13710"
+      ],
+      "accessory_rotation_allowed": true,
+      "weekly_rules": [
+        {
+          "week": 1,
+          "load_change": "Start with conservative loads that leave the prescribed RIR while establishing clean rep execution.",
+          "set_change": 0,
+          "rir_change": 0,
+          "is_deload": false,
+          "notes": "Week 1 is the baseline week. Do not force progress before all sets are stable."
+        },
+        {
+          "week": 2,
+          "load_change": "Add 2.5-5% only on lifts that reached the top of the rep range on all sets at target RIR; otherwise keep load and add reps.",
+          "set_change": 0,
+          "rir_change": 0,
+          "is_deload": false,
+          "notes": "Progress primarily through reps before load on accessories."
+        },
+        {
+          "week": 3,
+          "load_change": "Add another small load increase where earned, or keep load and aim to beat week 2 by 1 total rep per exercise.",
+          "set_change": 0,
+          "rir_change": -1,
+          "is_deload": false,
+          "notes": "Allow compounds to drift slightly closer to failure, but keep technique intact."
+        },
+        {
+          "week": 4,
+          "load_change": "Reduce load by 10-15% and keep movements the same.",
+          "set_change": -1,
+          "rir_change": 2,
+          "is_deload": true,
+          "notes": "Deload by trimming one working set from each exercise and stopping farther from failure."
+        }
+      ]
+    },
+    "quality_review": {
+      "passed": true,
+      "notes": "The week distributes squat, hinge, horizontal push, vertical pull, row, and overhead press across complementary sessions; includes selective supersets only on lower-interference accessories; and provides meaningful weekly volume to all major hypertrophy targets within the session-time ceiling.",
+      "self_check": {
+        "days_complementary": true,
+        "primaries_not_cloned": true,
+        "warmup_matches_session": true,
+        "fits_session_minutes": true
+      }
+    }
+  },
+  "science_week": [
+    {
+      "week": 1,
+      "dayLabel": "Mon",
+      "workoutType": "Full Body",
+      "name": "Full Body A",
+      "emphasis": "Squat and horizontal press emphasis with upper-back support and posterior-chain volume.",
+      "warmup": [
+        {
+          "name": "90/90 Hip Rotation",
+          "category": "activation",
+          "reps": "6 controlled reps total",
+          "sets": 1,
+          "exerciseId": "ffcb01e4-b775-426f-8513-c96eb96b0d1d",
+          "why": "Opens the hips for squatting and hinging while easing into full-body training."
+        },
+        {
+          "name": "Deep Squat Hold",
+          "category": "activation",
+          "reps": "20-30 seconds",
+          "sets": 2,
+          "exerciseId": "4e46599f-1f19-4a8c-ad23-6c4da41a7f56",
+          "why": "Prepares the ankles, knees, hips, and torso positions needed for squats."
+        },
+        {
+          "name": "Band Pull-Apart",
+          "category": "activation",
+          "reps": "12-15 smooth reps",
+          "sets": 2,
+          "exerciseId": "11b1ea29-fd8c-4002-9d21-50c8ec0802c8",
+          "why": "Activates upper back and rear shoulder musculature to support pressing and rowing mechanics."
+        }
+      ],
+      "potentiation": [],
+      "rampFor": "Back Squat",
+      "rampSets": [],
+      "exercises": [
+        {
+          "exerciseId": "4b3ca64d-8aeb-4bc6-8b1f-3ca6116ecdc4",
+          "name": "Back Squat",
+          "role": "primary",
+          "muscleGroup": "quads",
+          "primaryMuscles": [
+            "quads"
+          ],
+          "movementPattern": "squat",
+          "sets": 4,
+          "repMin": 6,
+          "repMax": 8,
+          "targetRir": 2,
+          "restSeconds": 180,
+          "loadIncrement": 5,
+          "why": "Primary quad-focused lift for the week, giving the session its main lower-body hypertrophy stimulus.",
+          "setDetails": [
+            {
+              "setNumber": 1,
+              "setType": "warmup",
+              "reps": "8"
+            },
+            {
+              "setNumber": 2,
+              "setType": "warmup",
+              "reps": "5"
+            },
+            {
+              "setNumber": 3,
+              "setType": "warmup",
+              "reps": "3"
+            },
+            {
+              "setNumber": 4,
+              "setType": "working",
+              "reps": "6-8",
+              "rir": 2
+            },
+            {
+              "setNumber": 5,
+              "setType": "working",
+              "reps": "6-8",
+              "rir": 2
+            },
+            {
+              "setNumber": 6,
+              "setType": "working",
+              "reps": "6-8",
+              "rir": 2
+            },
+            {
+              "setNumber": 7,
+              "setType": "working",
+              "reps": "6-8",
+              "rir": 2
+            }
+          ]
+        },
+        {
+          "exerciseId": "811272d6-06df-435f-a9bc-ceacea7dbfb9",
+          "name": "Bench Press",
+          "role": "primary",
+          "muscleGroup": "chest",
+          "primaryMuscles": [
+            "chest"
+          ],
+          "movementPattern": "horizontal_push",
+          "sets": 4,
+          "repMin": 6,
+          "repMax": 8,
+          "targetRir": 2,
+          "restSeconds": 180,
+          "loadIncrement": 5,
+          "why": "Primary chest movement with strong triceps and front-delt carryover to anchor weekly pressing volume.",
+          "setDetails": [
+            {
+              "setNumber": 1,
+              "setType": "warmup",
+              "reps": "8"
+            },
+            {
+              "setNumber": 2,
+              "setType": "warmup",
+              "reps": "5"
+            },
+            {
+              "setNumber": 3,
+              "setType": "warmup",
+              "reps": "3"
+            },
+            {
+              "setNumber": 4,
+              "setType": "working",
+              "reps": "6-8",
+              "rir": 2
+            },
+            {
+              "setNumber": 5,
+              "setType": "working",
+              "reps": "6-8",
+              "rir": 2
+            },
+            {
+              "setNumber": 6,
+              "setType": "working",
+              "reps": "6-8",
+              "rir": 2
+            },
+            {
+              "setNumber": 7,
+              "setType": "working",
+              "reps": "6-8",
+              "rir": 2
+            }
+          ]
+        },
+        {
+          "exerciseId": "1695e444-3146-42aa-af3b-ebc2e9b110f4",
+          "name": "Chest-Supported Row",
+          "role": "secondary",
+          "muscleGroup": "upper_back",
+          "primaryMuscles": [
+            "upper_back"
+          ],
+          "movementPattern": "horizontal_pull",
+          "sets": 4,
+          "repMin": 8,
+          "repMax": 10,
+          "targetRir": 2,
+          "restSeconds": 120,
+          "loadIncrement": 5,
+          "why": "Adds substantial upper-back volume with lower spinal fatigue than a free-standing row after squats."
+        },
+        {
+          "exerciseId": "2134cfe4-b564-4270-a02e-2d4882d6d9a5",
+          "name": "Romanian Deadlift",
+          "role": "secondary",
+          "muscleGroup": "hamstrings",
+          "primaryMuscles": [
+            "hamstrings"
+          ],
+          "movementPattern": "hinge",
+          "sets": 3,
+          "repMin": 8,
+          "repMax": 10,
+          "targetRir": 2,
+          "restSeconds": 150,
+          "loadIncrement": 5,
+          "why": "Direct hamstring-focused hinge work to start accumulating weekly posterior-chain volume."
+        },
+        {
+          "exerciseId": "c4eafc32-a802-4706-9fcf-07ef8be13710",
+          "name": "Overhead Press",
+          "role": "accessory",
+          "muscleGroup": "front_delts",
+          "primaryMuscles": [
+            "front_delts"
+          ],
+          "movementPattern": "vertical_push",
+          "sets": 3,
+          "repMin": 8,
+          "repMax": 10,
+          "targetRir": 2,
+          "restSeconds": 90,
+          "loadIncrement": 5,
+          "why": "Provides direct delt work, especially side-delt contribution, while still fitting the hypertrophy goal."
+        }
+      ],
+      "cooldown": [
+        {
+          "name": "Child's Pose",
+          "category": "mobility",
+          "reps": "5-6 slow breaths",
+          "sets": 1,
+          "exerciseId": "56be6acd-3d0b-4e7b-8d99-90b946cc4f93",
+          "why": "Brings the session down while opening lats and trunk after pressing, rowing, and squatting."
+        },
+        {
+          "name": "Figure-Four Stretch",
+          "category": "mobility",
+          "reps": "30-40 seconds per position",
+          "sets": 1,
+          "exerciseId": "39ff2afd-a879-4e24-976e-66f8f18a1504",
+          "why": "Reduces tension around the glutes and hips after squats and Romanian deadlifts."
+        }
+      ],
+      "estimatedMinutes": 69
+    },
+    {
+      "week": 1,
+      "dayLabel": "Wed",
+      "workoutType": "Full Body",
+      "name": "Full Body B",
+      "emphasis": "Vertical pull and quad emphasis with additional chest, lats, rear-delt, and unilateral leg work.",
+      "warmup": [
+        {
+          "name": "Active Hang",
+          "category": "activation",
+          "reps": "20-30 seconds",
+          "sets": 2,
+          "exerciseId": "f234ffb5-5cca-449f-9cae-00d82f359a25",
+          "why": "Prepares grip, shoulders, lats, and upper back for vertical pulling."
+        },
+        {
+          "name": "Adductor Rockback",
+          "category": "activation",
+          "reps": "6 controlled reps total",
+          "sets": 1,
+          "exerciseId": "b8fbf23f-6532-40b8-b638-c8d915aa6ad0",
+          "why": "Opens the groin and hips for front squats and split-squat positioning."
+        },
+        {
+          "name": "Scapular Pull-Up",
+          "category": "activation",
+          "reps": "6-8 controlled reps",
+          "sets": 1,
+          "exerciseId": "aa95b5b4-26ee-4511-849f-5bfe20987760",
+          "why": "Grooves scapular depression and upward control before pull-ups."
+        }
+      ],
+      "potentiation": [],
+      "rampFor": "Pull-Up",
+      "rampSets": [],
+      "exercises": [
+        {
+          "exerciseId": "20d8dac5-7bc1-410c-bfe6-1ee8c5dac75d",
+          "name": "Pull-Up",
+          "role": "primary",
+          "muscleGroup": "lats",
+          "primaryMuscles": [
+            "lats"
+          ],
+          "movementPattern": "vertical_pull",
+          "sets": 4,
+          "repMin": 6,
+          "repMax": 8,
+          "targetRir": 2,
+          "restSeconds": 180,
+          "loadIncrement": 5,
+          "why": "Primary lat-focused lift of the day, giving a strong vertical-pull exposure and meaningful biceps stimulus.",
+          "setDetails": [
+            {
+              "setNumber": 1,
+              "setType": "warmup",
+              "reps": "8"
+            },
+            {
+              "setNumber": 2,
+              "setType": "warmup",
+              "reps": "5"
+            },
+            {
+              "setNumber": 3,
+              "setType": "warmup",
+              "reps": "3"
+            },
+            {
+              "setNumber": 4,
+              "setType": "working",
+              "reps": "6-8",
+              "rir": 2
+            },
+            {
+              "setNumber": 5,
+              "setType": "working",
+              "reps": "6-8",
+              "rir": 2
+            },
+            {
+              "setNumber": 6,
+              "setType": "working",
+              "reps": "6-8",
+              "rir": 2
+            },
+            {
+              "setNumber": 7,
+              "setType": "working",
+              "reps": "6-8",
+              "rir": 2
+            }
+          ]
+        },
+        {
+          "exerciseId": "c28f3288-bff5-47c0-9390-209bbd2d585e",
+          "name": "Front Squat",
+          "role": "primary",
+          "muscleGroup": "quads",
+          "primaryMuscles": [
+            "quads"
+          ],
+          "movementPattern": "squat",
+          "sets": 3,
+          "repMin": 6,
+          "repMax": 8,
+          "targetRir": 2,
+          "restSeconds": 180,
+          "loadIncrement": 5,
+          "why": "A second squat exposure for the week that shifts demand toward quads and upright torso control.",
+          "setDetails": [
+            {
+              "setNumber": 1,
+              "setType": "warmup",
+              "reps": "8"
+            },
+            {
+              "setNumber": 2,
+              "setType": "warmup",
+              "reps": "5"
+            },
+            {
+              "setNumber": 3,
+              "setType": "warmup",
+              "reps": "3"
+            },
+            {
+              "setNumber": 4,
+              "setType": "working",
+              "reps": "6-8",
+              "rir": 2
+            },
+            {
+              "setNumber": 5,
+              "setType": "working",
+              "reps": "6-8",
+              "rir": 2
+            },
+            {
+              "setNumber": 6,
+              "setType": "working",
+              "reps": "6-8",
+              "rir": 2
+            }
+          ]
+        },
+        {
+          "exerciseId": "581ba89b-76c0-4929-a143-2aac2cf14192",
+          "name": "Incline Press",
+          "role": "secondary",
+          "muscleGroup": "chest",
+          "primaryMuscles": [
+            "chest"
+          ],
+          "movementPattern": "horizontal_push",
+          "sets": 3,
+          "repMin": 8,
+          "repMax": 10,
+          "targetRir": 2,
+          "restSeconds": 120,
+          "loadIncrement": 5,
+          "why": "Adds chest volume in a slightly different pressing angle than Monday for balanced hypertrophy."
+        },
+        {
+          "exerciseId": "0d1ab3b6-39b9-4f03-9c4f-7b8dd080cd66",
+          "name": "Low Row",
+          "role": "secondary",
+          "muscleGroup": "lats",
+          "primaryMuscles": [
+            "lats"
+          ],
+          "movementPattern": "horizontal_pull",
+          "sets": 3,
+          "repMin": 8,
+          "repMax": 10,
+          "targetRir": 2,
+          "restSeconds": 120,
+          "loadIncrement": 5,
+          "why": "Builds direct lat volume through a stable horizontal pull to complement the vertical pulling earlier in the session."
+        },
+        {
+          "exerciseId": "26781050-0c19-43f3-b026-d26fa79c5630",
+          "name": "Bulgarian Split Squat",
+          "role": "accessory",
+          "muscleGroup": "quads",
+          "primaryMuscles": [
+            "quads"
+          ],
+          "movementPattern": "lunge",
+          "sets": 3,
+          "repMin": 8,
+          "repMax": 10,
+          "targetRir": 2,
+          "restSeconds": 90,
+          "loadIncrement": 5,
+          "why": "Adds unilateral quad and glute work to round out lower-body hypertrophy with a different stimulus than bilateral squatting.",
+          "setDetails": [
+            {
+              "setNumber": 1,
+              "setType": "working",
+              "reps": "8-10/side",
+              "rir": 2
+            },
+            {
+              "setNumber": 2,
+              "setType": "working",
+              "reps": "8-10/side",
+              "rir": 2
+            },
+            {
+              "setNumber": 3,
+              "setType": "working",
+              "reps": "8-10/side",
+              "rir": 2
+            }
+          ],
+          "supersetGroupId": "ai-Wed-1",
+          "supersetLabel": "Superset A",
+          "supersetOrder": 1
+        },
+        {
+          "exerciseId": "23ace7e2-2bfa-4c5c-93b5-9fff98eb0afb",
+          "name": "Face Pull",
+          "role": "accessory",
+          "muscleGroup": "rear_delts",
+          "primaryMuscles": [
+            "rear_delts"
+          ],
+          "movementPattern": "horizontal_pull",
+          "sets": 3,
+          "repMin": 8,
+          "repMax": 10,
+          "targetRir": 2,
+          "restSeconds": 75,
+          "loadIncrement": 5,
+          "why": "Adds rear-delt and upper-back volume with low interference to the split squat, saving time efficiently.",
+          "supersetGroupId": "ai-Wed-1",
+          "supersetLabel": "Superset A",
+          "supersetOrder": 2
+        }
+      ],
+      "cooldown": [
+        {
+          "name": "Lat Stretch",
+          "category": "mobility",
+          "reps": "30-40 seconds",
+          "sets": 1,
+          "exerciseId": "a3ca1ad2-8b2d-4e61-9732-e3b6ae09e25d",
+          "why": "Helps unload the lats after pull-ups and rows."
+        },
+        {
+          "name": "Hip Flexor Stretch",
+          "category": "mobility",
+          "reps": "30-40 seconds",
+          "sets": 1,
+          "exerciseId": "6dc4e24b-b5ca-4e5e-8322-a467ae9b5faf",
+          "why": "Opens the front of the hips and quads after front squats and split squats."
+        }
+      ],
+      "estimatedMinutes": 65
+    },
+    {
+      "week": 1,
+      "dayLabel": "Fri",
+      "workoutType": "Full Body",
+      "name": "Full Body C",
+      "emphasis": "Glute-dominant hinge and overhead press emphasis with chest support, unilateral rowing, and hamstring finishing work.",
+      "warmup": [
+        {
+          "name": "90/90 Hip Rotation",
+          "category": "activation",
+          "reps": "6 controlled reps total",
+          "sets": 1,
+          "exerciseId": "ffcb01e4-b775-426f-8513-c96eb96b0d1d",
+          "why": "Prepares hips for thrusting and general lower-body loading."
+        },
+        {
+          "name": "Walking Knee Hug",
+          "category": "activation",
+          "reps": "10-12 walking reps total",
+          "sets": 1,
+          "exerciseId": "a4c231d9-fb2e-44a2-9ed0-4c276448b5d5",
+          "why": "Builds dynamic hip mobility and balance before hinging and standing presses."
+        },
+        {
+          "name": "Band Pull-Apart",
+          "category": "activation",
+          "reps": "12-15 smooth reps",
+          "sets": 2,
+          "exerciseId": "11b1ea29-fd8c-4002-9d21-50c8ec0802c8",
+          "why": "Activates the upper back and rear shoulder to support overhead pressing and rowing."
+        }
+      ],
+      "potentiation": [],
+      "rampFor": "Hip Thrust",
+      "rampSets": [],
+      "exercises": [
+        {
+          "exerciseId": "f036f8c8-1819-49ae-875c-a91a2c8dc6c2",
+          "name": "Hip Thrust",
+          "role": "primary",
+          "muscleGroup": "glutes",
+          "primaryMuscles": [
+            "glutes"
+          ],
+          "movementPattern": "hinge",
+          "sets": 4,
+          "repMin": 8,
+          "repMax": 10,
+          "targetRir": 1,
+          "restSeconds": 150,
+          "loadIncrement": 5,
+          "why": "Primary glute-focused lift to close the week with a high-output but hypertrophy-friendly hinge pattern.",
+          "setDetails": [
+            {
+              "setNumber": 1,
+              "setType": "warmup",
+              "reps": "8"
+            },
+            {
+              "setNumber": 2,
+              "setType": "warmup",
+              "reps": "5"
+            },
+            {
+              "setNumber": 3,
+              "setType": "warmup",
+              "reps": "3"
+            },
+            {
+              "setNumber": 4,
+              "setType": "working",
+              "reps": "8-10",
+              "rir": 1
+            },
+            {
+              "setNumber": 5,
+              "setType": "working",
+              "reps": "8-10",
+              "rir": 1
+            },
+            {
+              "setNumber": 6,
+              "setType": "working",
+              "reps": "8-10",
+              "rir": 1
+            },
+            {
+              "setNumber": 7,
+              "setType": "working",
+              "reps": "8-10",
+              "rir": 1
+            }
+          ]
+        },
+        {
+          "exerciseId": "c4eafc32-a802-4706-9fcf-07ef8be13710",
+          "name": "Overhead Press",
+          "role": "primary",
+          "muscleGroup": "front_delts",
+          "primaryMuscles": [
+            "front_delts"
+          ],
+          "movementPattern": "vertical_push",
+          "sets": 3,
+          "repMin": 6,
+          "repMax": 8,
+          "targetRir": 2,
+          "restSeconds": 150,
+          "loadIncrement": 5,
+          "why": "Provides the week's dedicated vertical press exposure and completes direct side/front-delt volume.",
+          "setDetails": [
+            {
+              "setNumber": 1,
+              "setType": "warmup",
+              "reps": "8"
+            },
+            {
+              "setNumber": 2,
+              "setType": "warmup",
+              "reps": "5"
+            },
+            {
+              "setNumber": 3,
+              "setType": "warmup",
+              "reps": "3"
+            },
+            {
+              "setNumber": 4,
+              "setType": "working",
+              "reps": "6-8",
+              "rir": 2
+            },
+            {
+              "setNumber": 5,
+              "setType": "working",
+              "reps": "6-8",
+              "rir": 2
+            },
+            {
+              "setNumber": 6,
+              "setType": "working",
+              "reps": "6-8",
+              "rir": 2
+            }
+          ]
+        },
+        {
+          "exerciseId": "cee25b69-fa62-4029-9e99-7bd862979a5d",
+          "name": "Machine Chest Press",
+          "role": "secondary",
+          "muscleGroup": "chest",
+          "primaryMuscles": [
+            "chest"
+          ],
+          "movementPattern": "horizontal_push",
+          "sets": 3,
+          "repMin": 8,
+          "repMax": 10,
+          "targetRir": 2,
+          "restSeconds": 120,
+          "loadIncrement": 5,
+          "why": "Adds stable chest volume late in the week without the setup cost of another barbell press."
+        },
+        {
+          "exerciseId": "103403c0-4e2e-4aa6-a2b6-4e2002746e78",
+          "name": "One-Arm Row",
+          "role": "secondary",
+          "muscleGroup": "lats",
+          "primaryMuscles": [
+            "lats"
+          ],
+          "movementPattern": "horizontal_pull",
+          "sets": 3,
+          "repMin": 8,
+          "repMax": 10,
+          "targetRir": 2,
+          "restSeconds": 90,
+          "loadIncrement": 5,
+          "why": "Finishes direct lat and upper-back work with a unilateral row that also supports arm development.",
+          "setDetails": [
+            {
+              "setNumber": 1,
+              "setType": "working",
+              "reps": "8-10/side",
+              "rir": 2
+            },
+            {
+              "setNumber": 2,
+              "setType": "working",
+              "reps": "8-10/side",
+              "rir": 2
+            },
+            {
+              "setNumber": 3,
+              "setType": "working",
+              "reps": "8-10/side",
+              "rir": 2
+            }
+          ]
+        },
+        {
+          "exerciseId": "f900c996-1150-4caa-8d67-17ffa42f0ae7",
+          "name": "Nordic Hamstring Curl",
+          "role": "isolation",
+          "muscleGroup": "hamstrings",
+          "primaryMuscles": [
+            "hamstrings"
+          ],
+          "movementPattern": "knee_flexion",
+          "sets": 3,
+          "repMin": 4,
+          "repMax": 6,
+          "targetRir": 2,
+          "restSeconds": 90,
+          "loadIncrement": 5,
+          "why": "Direct knee-flexion hamstring work rounds out the week's posterior-chain stimulus.",
+          "supersetGroupId": "ai-Fri-1",
+          "supersetLabel": "Superset A",
+          "supersetOrder": 1
+        },
+        {
+          "exerciseId": "eeecddd9-6e4c-49ac-8fd4-369cceee4662",
+          "name": "Farmer Carry",
+          "role": "accessory",
+          "muscleGroup": "muscle",
+          "primaryMuscles": [],
+          "movementPattern": "carry",
+          "sets": 3,
+          "repMin": 20,
+          "repMax": 40,
+          "targetRir": 2,
+          "restSeconds": 60,
+          "loadIncrement": 5,
+          "why": "Adds forearm, upper-back, trunk, and bracing work with minimal technical demand at the end of the week.",
+          "supersetGroupId": "ai-Fri-1",
+          "supersetLabel": "Superset A",
+          "supersetOrder": 2
+        }
+      ],
+      "cooldown": [
+        {
+          "name": "Hamstring Stretch",
+          "category": "mobility",
+          "reps": "30-40 seconds",
+          "sets": 1,
+          "exerciseId": "5820865f-94d7-4577-a3f0-b13912bf3ad1",
+          "why": "Helps relax the posterior chain after hip thrusts, rows, and Nordic curls."
+        },
+        {
+          "name": "Doorway Pec Stretch",
+          "category": "mobility",
+          "reps": "30-40 seconds",
+          "sets": 1,
+          "exerciseId": "768c593d-c352-45ca-9eee-2b724164294f",
+          "why": "Opens the chest and front shoulder after machine pressing and overhead pressing."
+        }
+      ],
+      "estimatedMinutes": 60
+    }
+  ],
+  "weekly_muscle_volume": {
+    "quads": 10,
+    "glutes": 10.5,
+    "chest": 10,
+    "triceps": 8,
+    "front_delts": 11,
+    "upper_back": 7,
+    "biceps": 8.5,
+    "hamstrings": 8,
+    "lats": 10,
+    "rear_delts": 3
+  },
+  "movement_pattern_distribution": {
+    "squat": 2,
+    "horizontal_push": 3,
+    "horizontal_pull": 4,
+    "hinge": 2,
+    "vertical_push": 2,
+    "vertical_pull": 1,
+    "lunge": 1,
+    "knee_flexion": 1,
+    "carry": 1
+  },
+  "fatigue_distribution": {
+    "high": 10,
+    "medium": 7
+  },
+  "duration_estimates": [
+    {
+      "day": "Mon",
+      "estimated_minutes": 69,
+      "classification": {
+        "over": "warning",
+        "under": "ok"
+      }
+    },
+    {
+      "day": "Wed",
+      "estimated_minutes": 65,
+      "classification": {
+        "over": "ok",
+        "under": "ok"
+      }
+    },
+    {
+      "day": "Fri",
+      "estimated_minutes": 60,
+      "classification": {
+        "over": "ok",
+        "under": "ok"
+      }
+    }
+  ],
+  "metadata_problems": []
+}

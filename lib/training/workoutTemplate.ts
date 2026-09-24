@@ -1,6 +1,7 @@
 import { inferExerciseType } from './exerciseTypes';
 import { exerciseSection, sectionExercises } from '../programDesign/workoutPreview';
 import { defaultCatalogEquipment } from './exerciseEquipment';
+import { prescriptionColumnsFromSources } from './prescriptionMeta';
 
 export const WORKOUT_TEMPLATE_SECTIONS = [
   { id: 'warmup', label: 'Warm Up / Prep' },
@@ -135,12 +136,16 @@ export function getSupersetGroupsForSection(workout: any, section: string) {
 }
 
 export function catalogPayloadFromItem(catalogItem: any, section: string, current?: any) {
+  const meta = prescriptionColumnsFromSources({ catalogItem, section, role: current?.program_role });
   return {
     name: catalogItem.name,
     muscle_group: catalogItem.muscle_group || '',
     catalog_exercise_id: catalogItem.id,
     exercise_type: inferExerciseType(catalogItem.name, catalogItem.muscle_group, section, catalogItem.exercise_type),
     equipment: defaultCatalogEquipment(catalogItem, current),
+    program_role: meta.program_role,
+    measurement_type: meta.measurement_type,
+    laterality: meta.laterality,
   };
 }
 

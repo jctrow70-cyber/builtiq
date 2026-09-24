@@ -1,0 +1,3 @@
+﻿NODE_OK
+VERSION v22.22.1
+SCRIPT tsx lib/scienceEngine/acceptanceCheck.ts
