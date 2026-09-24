@@ -1,7 +1,6 @@
 import { ADAPTATION_ENGINE_VERSION } from '../types';
 import type { ProgressionDecisionKind } from '../types';
 import { SCIENCE_ENGINE_VERSION } from '../../version';
-import { parseLoad } from '../countedSets';
 import { applicationKey, loadLabel, prescriptionFingerprint, successfulEvent, workingSetsOf } from './fingerprint';
 import { explainAdaptation } from './explain';
 import { selectNextEligibleExposure } from './nextExposure';
@@ -42,7 +41,10 @@ function buildEvent(
     to_week: target?.week ?? null,
     exercise_catalog_id: input.source.catalog_exercise_id || null,
     decision: d.decision,
-    reason_codes: [...d.reason_codes, abort].filter((c): c is string => !!c && c !== 'ALREADY_APPLIED'),
+    reason_codes: [
+      ...d.reason_codes,
+      ...(abort && abort !== 'ALREADY_APPLIED' ? [abort] : []),
+    ],
     before_json: {
       source: input.source,
       target_before: target

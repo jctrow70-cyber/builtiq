@@ -352,8 +352,8 @@ export function runPhase2a3ApplyChecks() {
   assert(!A.application_key.includes('1.4.4') && !A.application_key.includes(ADAPTATION_ENGINE_VERSION) && !A.application_key.includes(APPLY_ENGINE_VERSION), 'application key excludes engine/science versions');
 
   const copy: LedgerEventRecord = { ...A.event };
-  assert(copy.apply_engine_version === undefined, '2A.3 version lives on after_json, not by overloading 2A.1 columns');
-  void APPLY_ENGINE_VERSION;
+  assert(!('apply_engine_version' in copy), '2A.3 version lives on after_json, not by overloading 2A.1 columns');
+  assert(copy.after_json.apply_engine_version === APPLY_ENGINE_VERSION, 'apply engine version is stored on after_json');
 
   const text = explainAdaptation({
     decision: 'progress_load',

@@ -1,0 +1,23 @@
+bytes=351
+lines=15
+errorCount=1
+
+node=C:\Users\JesseTrowbridge\AppData\Local\buildiq-node\node-v22.16.0-win-x64\node.exe
+nodeExists=true
+tscExists=true
+tsconfigExists=true
+
+EXIT=2
+SIGNAL=null
+ERROR=
+
+--- STDOUT ---
+lib/scienceEngine/adaptation/apply/phase2a3Check.ts(355,15): error TS2339: Property 'apply_engine_version' does not exist on type 'LedgerEventRecord'.
+
+--- STDERR ---
+
+
+
+--- ERRORS ---
+
+lib/scienceEngine/adaptation/apply/phase2a3Check.ts(355,15): error TS2339: Property 'apply_engine_version' does not exist on type 'LedgerEventRecord'.
