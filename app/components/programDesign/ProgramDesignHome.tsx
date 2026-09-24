@@ -19,7 +19,6 @@ import {
   liveTemplateId,
   personalLibraryBuckets,
   programEditAudience,
-  shouldPromptUnfollowForPersonalCreate,
   suggestedNextGroupStart,
 } from '../../../lib/programDesign/enrollment';
 import { cycleLengthOf, formatCycleLength, formatProgramRange, generationWeeksOf, nextMondayFrom, programDateRange } from '../../../lib/programDesign/cycle';
@@ -76,6 +75,7 @@ function ProgramRow({
   onFollow,
   onUnfollow,
   onRemove,
+  removing,
 }: {
   program: ProgramDesignRecord;
   badge?: string;
@@ -84,6 +84,7 @@ function ProgramRow({
   onFollow?: () => void;
   onUnfollow?: () => void;
   onRemove?: () => void;
+  removing?: boolean;
 }) {
   const { start, end } = programDateRange(program);
   return (
@@ -108,8 +109,8 @@ function ProgramRow({
           </button>
         )}
         {onRemove && (
-          <button type="button" className="btn small secondary" onClick={onRemove}>
-            Remove
+          <button type="button" className="btn small secondary" disabled={removing} onClick={onRemove}>
+            {removing ? 'Removing…' : 'Remove'}
           </button>
         )}
       </div>
@@ -139,12 +140,13 @@ export default function ProgramDesignHome({
   const [editing, setEditing] = useState<ProgramDesignRecord | null>(null);
   const [creating, setCreating] = useState(false);
   const [followBusy, setFollowBusy] = useState(false);
-  const [removeBusy, setRemoveBusy] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
   const [createDefaultStart, setCreateDefaultStart] = useState(nextMondayFrom());
   const [sequencingHint, setSequencingHint] = useState<string | null>(null);
   const [buildBanner, setBuildBanner] = useState<string | null>(null);
   const [liveGroupPrograms, setLiveGroupPrograms] = useState<ProgramDesignRecord[]>([]);
   const appliedLaunchKey = useRef('');
+  const skipNextListLoading = useRef(false);
 
   const groupId = selectedTeamId || teams[0]?.id || null;
   const activeGroup = teams.find((t) => t.id === groupId) || null;
@@ -208,8 +210,17 @@ export default function ProgramDesignHome({
     return followedId;
   }
 
-  async function reload() {
-    setLoading(true);
+  function dropProgramFromLists(programId: string) {
+    setPrograms((prev) => prev.filter((p) => p.id !== programId));
+    setPersonalPrograms((prev) => prev.filter((p) => p.id !== programId));
+    setSharedPrograms((prev) => prev.filter((p) => p.id !== programId));
+    setLiveGroupPrograms((prev) => prev.filter((p) => p.id !== programId));
+  }
+
+  async function reload(opts?: { silent?: boolean }) {
+    const silent = opts?.silent === true || skipNextListLoading.current;
+    skipNextListLoading.current = false;
+    if (!silent) setLoading(true);
     setError('');
     try {
       const mine = await loadPersonal();
@@ -247,7 +258,7 @@ export default function ProgramDesignHome({
     } catch (e: any) {
       setError(e?.message || 'Could not load programs');
     }
-    setLoading(false);
+    if (!silent) setLoading(false);
   }
 
   useEffect(() => {
@@ -280,27 +291,6 @@ export default function ProgramDesignHome({
   async function beginCreate(nextScope: ProgramScope = scope) {
     setError('');
     if (nextScope !== scope) setScope(nextScope);
-    if (nextScope === 'personal' && shouldPromptUnfollowForPersonalCreate(following)) {
-      const groupName =
-        teams.find((t) => t.id === (following as any)?.team_id)?.name ||
-        sharedPrograms.find((p) => p.id === following?.source_program_id)?.groupName ||
-        'your group';
-      const ok = window.confirm(
-        `You're following a group program (${following?.name || 'group plan'} from ${groupName}).\n\nUnfollow the group program first to create a personal program?`
-      );
-      if (!ok) return;
-      setFollowBusy(true);
-      const { error: unfollowError } = await unfollowProgram(supabase, userId, {
-        source: following,
-        personalPrograms,
-      });
-      setFollowBusy(false);
-      if (unfollowError) {
-        setError(unfollowError);
-        return;
-      }
-      onFollowed?.(null);
-    }
 
     if (nextScope === 'group') {
       const start = suggestedNextGroupStart(programs);
@@ -460,7 +450,7 @@ export default function ProgramDesignHome({
   }
 
   function canRemoveProgram(program: ProgramDesignRecord): boolean {
-    if (removeBusy || followBusy) return false;
+    if (followBusy) return false;
     if (program.visibility === 'team' || program.visibility === 'group') {
       const team = teams.find((t) => t.id === program.team_id) || activeGroup;
       return canEditGroupProgram(team?.my_role);
@@ -485,20 +475,23 @@ export default function ProgramDesignHome({
           ? `Remove “${label}”? Training will stop using this plan. Completed workout history is kept.`
           : `Remove “${label}”? Completed workout history is kept, but the program template will be removed.`;
     if (!window.confirm(msg)) return;
-    setRemoveBusy(true);
+    setRemovingId(program.id);
     setError('');
     const { error: removeError } = await deleteProgramRecord(supabase, program.id);
-    setRemoveBusy(false);
+    setRemovingId(null);
     if (removeError) {
       setError(removeError);
       return;
     }
-    if (inTraining) onFollowed?.(null);
+    dropProgramFromLists(program.id);
     if (editing?.id === program.id) {
       setEditing(null);
       setView('home');
     }
-    await reload();
+    if (inTraining) {
+      skipNextListLoading.current = true;
+      onFollowed?.(null);
+    }
   }
 
   async function handleUnfollow() {
@@ -562,6 +555,7 @@ export default function ProgramDesignHome({
               : undefined
           }
           onRemove={canRemoveProgram(program) ? () => void handleRemove(program) : undefined}
+          removing={removingId === program.id}
         />
       ));
   }
@@ -766,7 +760,6 @@ export default function ProgramDesignHome({
       )}
       {loading && <p className="muted">Loading programs…</p>}
       {followBusy && <p className="muted">Updating the program you follow…</p>}
-      {removeBusy && <p className="muted">Removing program…</p>}
 
       {!loading && (
         <>
@@ -783,6 +776,7 @@ export default function ProgramDesignHome({
                 }}
                 onUnfollow={() => void handleUnfollow()}
                 onRemove={canRemoveProgram(following) ? () => void handleRemove(following) : undefined}
+                removing={removingId === following.id}
               />
             ) : (
               <p className="muted pd-empty">
@@ -817,6 +811,7 @@ export default function ProgramDesignHome({
                         : undefined
                     }
                     onRemove={canRemoveProgram(program) ? () => void handleRemove(program) : undefined}
+                    removing={removingId === program.id}
                   />
                 );
               })}
@@ -882,6 +877,7 @@ export default function ProgramDesignHome({
                       : undefined
                   }
                   onRemove={canRemoveProgram(program) ? () => void handleRemove(program) : undefined}
+                  removing={removingId === program.id}
                 />
               ))}
 

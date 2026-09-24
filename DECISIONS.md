@@ -859,7 +859,7 @@ Role rules:
 2. **Editor (Manager)** — sees group programs as available; **not** auto-enrolled. May **Use in Training** the live group template so Training follows the shared plan, or **Just me** from the group-plan editor for a private copy.
 3. **Owner** — may create multiple dated group plans. Suggested start for a new plan is after the latest existing plan ends so members hand off cleanly by calendar date. Same live-edit vs just-me choice as editors when they follow the group plan.
 
-Creating a **personal** program while following a group-sourced plan requires an explicit unfollow prompt first.
+Creating a **personal** program while following a group-sourced plan used to require an explicit unfollow prompt first. Superseded by Decision 071: create leaves Training on the current follow; the new plan is available until Use in Training.
 
 Training loads **only** the program referenced by `followed_program_id`. When that field is null, Training shows the empty “choose a program” state — it must not fall back to the newest published personal program.
 
@@ -1837,6 +1837,34 @@ The first live Phase 1 week passed the structural contract and still produced we
 - Science engine 1.4.1, designer prompt `designer@2.1`
 - Env: `OPENAI_PROGRAM_MODEL`, `OPENAI_PROGRAM_REASONING_EFFORT`
 - Phase 2 / Phase 3 remain unstarted
+
+---
+
+## Decision 071 - Personal Create Does Not Require Unfollow
+
+Date: 2026-09-24  
+Status: Accepted  
+Category: Program Design
+
+### Decision
+
+A user may create a For me plan while Training is already using another plan (including a group plan). Do not prompt unfollow first. The new program is added to My plans and stays available until they tap Use in Training. Training keeps the current followed program until they choose otherwise.
+
+This supersedes the Decision 031 rule that personal create required an explicit unfollow.
+
+### Reason
+
+Building a personal plan is library work. Forcing unfollow just to draft or generate a plan interrupts Training and makes create feel blocked.
+
+### Alternatives Considered
+
+- Keep the unfollow prompt — rejected; the user asked to create without leaving the current Training plan
+- Auto-follow the new plan after create — rejected; “available if I want to use it” means opt-in via Use in Training
+
+### Impact
+
+- `shouldPromptUnfollowForPersonalCreate` is always false
+- Programs create flow no longer unfollows
 
 ---
 

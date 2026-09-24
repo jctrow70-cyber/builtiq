@@ -207,8 +207,9 @@ export function describeEnrollmentRole(role: string | null | undefined): string 
   return 'Owners schedule group plans by date. Members pick up the active plan automatically.';
 }
 
+/** Creating a For me plan must not require unfollow. The new plan stays available until Use in Training. */
 export function shouldPromptUnfollowForPersonalCreate(
-  followed: ProgramDesignRecord | null | undefined
+  _followed?: ProgramDesignRecord | null
 ): boolean {
-  return isGroupSourcedProgram(followed);
+  return false;
 }

@@ -11,6 +11,53 @@ Branch:
 Status:
 ```
 
+## BIQ-0223 - Create a For Me Plan Without Unfollowing
+
+Date: 2026-09-24
+Branch: develop
+Status: Local
+
+### Summary
+
+Create a plan for me no longer asks you to unfollow first. Training keeps the current plan. The new program lands in My plans and can be used later with Use in Training.
+
+### Purpose
+
+Drafting or generating a personal plan should not kick you off the program Training is already using.
+
+### Changes
+
+- Removed the unfollow confirm from personal create
+- `shouldPromptUnfollowForPersonalCreate` always returns false (Decision 071)
+
+### Files Changed
+
+- `app/components/programDesign/ProgramDesignHome.tsx`
+- `lib/programDesign/enrollment.ts`
+- `DECISIONS.md`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Follow a group or personal plan so Training is using it
+2. Programs → For me → Create a plan for me — no unfollow prompt
+3. Finish create — Training is using stays the previous plan
+4. New plan appears under My plans / Drafts with Use in Training
+5. Use in Training on the new plan switches Training
+6. Mobile: create still opens without a blocking confirm
+
+### Known Issues
+
+- Signed-in browser flow was not verified in this session
+
+### Recommended Commit Message
+
+`BIQ-0223 Allow creating a personal plan without unfollowing`
+
 ## BIQ-0222 - Remove Draft or Active Programs From the List
 
 Date: 2026-09-24
@@ -31,6 +78,7 @@ Users were opening a program just to get rid of it. Archive lived inside the edi
 - Active programs appear in the list (not only Training is using)
 - Confirm copy keeps workout history; Training unfollow happens if that plan was in use
 - Group default plan still cannot be removed until another plan is assigned
+- After Remove, the row drops in place — the list does not reload or jump to the top
 
 ### Files Changed
 
