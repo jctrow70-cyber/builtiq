@@ -11,6 +11,53 @@ Branch:
 Status:
 ```
 
+## BIQ-0226 - Generate Program Shows a Real Error Instead of Invalid JSON
+
+Date: 2026-09-24
+Branch: develop
+Status: Local
+
+### Summary
+
+Generate program no longer surfaces `Unexpected token 'A', "An error o"... is not valid JSON`. The API always returns JSON on failure, and the wizard reads the response as text first.
+
+### Purpose
+
+A server crash/timeout returned plain text (`An error occurred...`). The wizard tried to parse it as JSON and hid the real failure.
+
+### Changes
+
+- Generate route wraps uncaught errors in `{ error }`
+- Wizard parses generate responses safely
+- Science-to-AI plan mapping no longer throws when warmup/cooldown arrays are missing
+
+### Files Changed
+
+- `app/api/programs/generate/route.ts`
+- `app/components/programDesign/AIProgramSetupWizard.tsx`
+- `app/page.tsx`
+- `lib/scienceEngine/toAiPlan.ts`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Programs → create a plan → reach Review and generate
+2. Generate program
+3. If generate fails, the red error should be a readable sentence, not a JSON parse error
+4. Retry Generate, or Skip and add workouts later
+
+### Known Issues
+
+- A platform timeout can still fail generate; the message is now readable
+
+### Recommended Commit Message
+
+`BIQ-0226 Show a readable error when program generate fails`
+
 ## BIQ-0225 - Create Plan Date No Longer Fails Pattern Check
 
 Date: 2026-09-24

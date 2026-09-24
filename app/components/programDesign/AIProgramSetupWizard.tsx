@@ -214,7 +214,15 @@ export default function AIProgramSetupWizard({
         },
         body: JSON.stringify(body),
       });
-      const data = await res.json();
+      const raw = await res.text();
+      let data: any = {};
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        setError('Could not generate your training program. Please try again.');
+        setLoading(false);
+        return;
+      }
       if (!res.ok || data.error) {
         setError(data.error || 'Could not generate your training program.');
         setLoading(false);

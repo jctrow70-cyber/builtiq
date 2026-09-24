@@ -2507,7 +2507,9 @@ function onSelectTrainingDay(date:string){
     experienceLevel:profileDraft.experience_level,
     mode:'personal',
    })});
-   const data=await res.json();
+   const raw=await res.text();
+   let data:any={};
+   try{data=raw?JSON.parse(raw):{};}catch{setStrengthSetupError('Could not generate this workout. Please try again.');return;}
    if(!res.ok||data.error){
     setStrengthSetupError(data.error||'Could not generate this workout.');
     return;

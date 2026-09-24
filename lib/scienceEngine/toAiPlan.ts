@@ -8,15 +8,15 @@ export function scienceProgramToAiPlan(program: ScienceProgram, config?: Partial
     program_summary: program.summary,
     coaching_notes: program.explanations.join(' '),
     program_style: styleFromName(program.name),
-    workouts: program.workouts.map(toAiWorkout),
+    workouts: (program.workouts || []).map(toAiWorkout),
   };
 }
 
 function toAiWorkout(workout: ScienceWorkout): AiWorkout {
-  const warmup = workout.warmup.map((item) => warmupToAi(item, 'Dynamic warm-up'));
-  const primer = workout.potentiation.map((item) => prescriptionToAi(item, 'POWER PRIMER'));
+  const warmup = (workout.warmup || []).map((item) => warmupToAi(item, 'Dynamic warm-up'));
+  const primer = (workout.potentiation || []).map((item) => prescriptionToAi(item, 'POWER PRIMER'));
   const strength = strengthItems(workout);
-  const cooldown = workout.cooldown.map((item) => warmupToAi(item, 'Cooldown'));
+  const cooldown = (workout.cooldown || []).map((item) => warmupToAi(item, 'Cooldown'));
   return {
     week: workout.week,
     day_label: workout.dayLabel,
@@ -31,7 +31,7 @@ function toAiWorkout(workout: ScienceWorkout): AiWorkout {
 function strengthItems(workout: ScienceWorkout) {
   const out: Array<AiExercise | { superset: AiExercise[] }> = [];
   const seen = new Set<string>();
-  workout.exercises.forEach((ex) => {
+  (workout.exercises || []).forEach((ex) => {
     if (ex.supersetGroupId) {
       if (seen.has(ex.supersetGroupId)) return;
       seen.add(ex.supersetGroupId);

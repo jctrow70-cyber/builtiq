@@ -33,6 +33,17 @@ function normalizeDays(days: unknown): string[] {
 }
 
 export async function POST(request: Request) {
+  try {
+    return await generateProgramPost(request);
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: err?.message || 'Could not generate your training program. Please try again.' },
+      { status: 500 }
+    );
+  }
+}
+
+async function generateProgramPost(request: Request) {
   const { supabase, token } = createSupabaseFromRequest(request);
   const { user, error: authError } = await requireAuthUser(supabase, token);
   if (authError || !user) {
@@ -261,6 +272,9 @@ export async function POST(request: Request) {
   }
 
   const scienceProgram = pipeline.program;
+  if (!scienceProgram?.workouts?.length) {
+    return NextResponse.json({ error: 'The generator did not return any workouts. Please try again.' }, { status: 500 });
+  }
   const persistMethod = persistableGenerationMethod(pipeline.method);
   const qualityWarnings = pipeline.qualityWarnings;
   const aiError = pipeline.aiError;
