@@ -7,7 +7,7 @@ import { extraSetInsertPayload, countsTowardProgression } from '../../training/e
 import { canAddPlannedSetAfterSiblingLogs, canRewritePlannedSetPrescription } from '../../training/plannedSetGuard';
 import { plannedRepRangeFromLog } from '../../training/setLogSnapshots';
 import { evaluateProgressionDecision, adaptationDraftFromDecision } from './decision';
-import { REASON, RIR_TOLERANCE } from './reasonCodes';
+import { REASON, RIR_TOLERANCE, RIR_TOLERANCE_HIGH, RIR_TOLERANCE_LOW, classifyRir } from './reasonCodes';
 import { resolveLoadIncrement, roundLoadToIncrement } from './increments';
 import { reportedRirOrUnknown } from './confidence';
 import type { ExerciseExposureInput, LoggedSetInput } from './inputs';
@@ -117,7 +117,8 @@ export function runPhase2a2DecisionChecks() {
 
   const poor1 = bench({ date: '2026-09-03', reps: [7, 7, 6], rir: [1, 1, 0] });
   const G = expect('reduce_load', bench({ date: '2026-09-17', reps: [7, 6, 6], rir: [1, 0, 0] }), [poor1]);
-  assert(G.reason_codes.includes(REASON.REDUCE_REPEATED_BELOW_RANGE), 'G: repeated below-minimum reduces');
+  assert(G.reason_codes.includes(REASON.REDUCE_REPEATED_BELOW_RANGE_EXCESSIVE), 'G: repeated below-min + excessive effort reduces');
+  assert(G.reason_codes.includes(REASON.REDUCE_REPEATED_BELOW_RANGE), 'G: keeps the family reason code');
   assert(G.proposed_load === 180, `G: 185-5, got ${G.proposed_load}`);
 
   const priorTop = bench({ date: '2026-09-10', reps: [10, 10, 10], rir: [2, 2, 2] });
@@ -313,7 +314,8 @@ export function runPhase2a2DecisionChecks() {
       sets: [set(10, { id: 'c1' }), set(7, { id: 'c2' })],
     })
   );
-  assert(couldNot.decision === 'hold' || couldNot.decision === 'insufficient_data', 'could_not_complete uses logged sets as evidence');
+  assert(couldNot.decision === 'hold', 'could_not_complete uses logged sets as evidence');
+  assert(couldNot.reason_codes.includes(REASON.HOLD_COULD_NOT_COMPLETE), 'first could_not_complete holds');
   assert(!couldNot.reason_codes.includes(REASON.INSUFFICIENT_SKIPPED), 'could_not_complete is not treated as skipped');
 
   const otherLift = bench({
@@ -339,11 +341,90 @@ export function runPhase2a2DecisionChecks() {
   assert(draft.decision === 'progress_load' && draft.actor === 'engine', 'ledger draft is available for 2A.3');
   assert((draft.after_json as any).applied === false, 'draft records that 2A.2 did not apply');
 
-  assert(RIR_TOLERANCE === 0.5, 'RIR tolerance is 0.5');
+  assert(RIR_TOLERANCE === 0.5 && RIR_TOLERANCE_LOW === 0.5 && RIR_TOLERANCE_HIGH === 1.5, 'RIR band is [target-0.5, target+1.5]');
+  assert(classifyRir(1.5, 2) === 'compatible' && classifyRir(3.5, 2) === 'compatible', 'band edges are compatible');
+  assert(classifyRir(1, 2) === 'excessive' && classifyRir(5, 2) === 'underchallenged', 'outside the band is classified');
   const almost = expect('progress_load', bench({ reps: [10, 10, 10], rir: [1.5, 2, 2] }));
-  assert(almost.decision === 'progress_load', 'RIR 1.5 vs target 2 is within tolerance');
+  assert(almost.reason_codes.includes(REASON.PROG_LOAD_TOP_RANGE_RIR), 'RIR 1.5 vs target 2 is target-compatible');
+  const easyBand = expect('progress_load', bench({ reps: [10, 10, 10], rir: [3, 3, 3] }));
+  assert(easyBand.reason_codes.includes(REASON.PROG_LOAD_TOP_RANGE_RIR), 'RIR 3 vs target 2 is still in the compatible band');
   const tooHard = expect('hold', bench({ reps: [10, 10, 10], rir: [1, 1, 1] }));
   assert(tooHard.reason_codes.includes(REASON.HOLD_EXCESSIVE_EFFORT), 'RIR 1 vs target 2 is excessive');
+
+  const U = expect('progress_load', bench({ reps: [10, 10, 10], rir: [5, 5, 5] }));
+  assert(U.reason_codes.includes(REASON.PROG_LOAD_UNDERCHALLENGED), 'U: RIR 5 is underchallenged progression');
+  assert(!U.reason_codes.includes(REASON.PROG_LOAD_TOP_RANGE_RIR), 'U: not target-compatible reason');
+  assert(U.proposed_load === 190, 'U: still one equipment increment');
+
+  const easyMiss1 = bench({ date: '2026-09-03', reps: [7, 7, 7], rir: [5, 5, 5] });
+  const V = expect('review_required', bench({ date: '2026-09-17', reps: [7, 7, 7], rir: [5, 5, 5] }), [easyMiss1]);
+  assert(V.decision !== 'reduce_load', 'V: easy below-range does not reduce');
+  assert(V.reason_codes.includes(REASON.REVIEW_BELOW_RANGE_UNDERCHALLENGED), 'V: underchallenged below-range reviews');
+  assert(V.proposed_load === 185, 'V: keep 185');
+
+  const grind1 = bench({ date: '2026-09-03', reps: [7, 6, 5], rir: [1, 0, 1] });
+  const W = expect('reduce_load', bench({ date: '2026-09-17', reps: [7, 6, 5], rir: [0, 1, 0] }), [grind1]);
+  assert(W.reason_codes.includes(REASON.REDUCE_REPEATED_BELOW_RANGE_EXCESSIVE), 'W: below-range + excessive effort reduces');
+  assert(W.proposed_load === 180, `W: 185-5, got ${W.proposed_load}`);
+
+  const unknown1 = bench({ date: '2026-09-03', reps: [7, 7, 7], rir: [null, null, null] });
+  const X = expect('review_required', bench({ date: '2026-09-17', reps: [7, 7, 6], rir: [null, null, null] }), [unknown1]);
+  assert(X.decision !== 'reduce_load', 'X: missing RIR does not auto-reduce');
+  assert(X.reason_codes.includes(REASON.REVIEW_BELOW_RANGE_UNKNOWN_EFFORT), 'X: unknown effort reviews');
+
+  const Y = expect(
+    'hold',
+    bench({
+      attempt_outcome: 'could_not_complete',
+      exercise_status: 'partial',
+      reps: [8, 7],
+      rir: [1, 0],
+      sets: [set(8, { actual_rir: 1, id: 'y1' }), set(7, { actual_rir: 0, id: 'y2' })],
+    })
+  );
+  assert(Y.reason_codes.includes(REASON.HOLD_COULD_NOT_COMPLETE), 'Y: first CNC holds');
+  assert(Y.proposed_load === 185, 'Y: no immediate reduction');
+
+  const z1 = bench({
+    date: '2026-09-03',
+    attempt_outcome: 'could_not_complete',
+    exercise_status: 'partial',
+    reps: [7, 6, 5],
+    rir: [0, 1, 0],
+  });
+  const Z = expect(
+    'reduce_load',
+    bench({
+      date: '2026-09-17',
+      attempt_outcome: 'could_not_complete',
+      exercise_status: 'partial',
+      reps: [7, 6, 5],
+      rir: [1, 0, 0],
+    }),
+    [z1]
+  );
+  assert(Z.reason_codes.includes(REASON.REDUCE_REPEATED_BELOW_RANGE_EXCESSIVE), 'Z: repeated CNC + grind may reduce');
+
+  const aa1 = bench({
+    date: '2026-09-03',
+    attempt_outcome: 'could_not_complete',
+    exercise_status: 'partial',
+    reps: [8, 7],
+    rir: [null, null],
+  });
+  const AA = expect(
+    'review_required',
+    bench({
+      date: '2026-09-17',
+      attempt_outcome: 'could_not_complete',
+      exercise_status: 'partial',
+      reps: [8, 6],
+      rir: [null, null],
+    }),
+    [aa1]
+  );
+  assert(AA.reason_codes.includes(REASON.REVIEW_COULD_NOT_COMPLETE), 'AA: repeated CNC without effort evidence reviews');
+  assert(AA.decision !== 'reduce_load', 'AA: does not auto-reduce');
 
   const profile = trainingProfileFromSources({
     profile: { experience_level: 'intermediate', primary_goal: 'muscle' },

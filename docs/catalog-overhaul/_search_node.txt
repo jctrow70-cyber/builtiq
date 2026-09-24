@@ -1,0 +1,4 @@
+C:\Users\JesseTrowbridge\AppData\Local\buildiq-node\node-v22.16.0-win-x64\node.exe
+C:\Users\JesseTrowbridge\AppData\Local\builtiq-node\node-v22.16.0-win-x64\node.exe
+C:\Users\JesseTrowbridge\AppData\Local\Programs\cursor\resources\app\resources\helpers\node.exe
+C:\Users\JesseTrowbridge\AppData\Local\Programs\cursor\_\resources\app\resources\helpers\node.exe

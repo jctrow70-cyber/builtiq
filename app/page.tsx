@@ -47,11 +47,14 @@ import BodyDashboardCard from './components/BodyDashboardCard';
 import SegmentedControl from './components/ui/SegmentedControl';
 import WorkoutSetLogger from './components/WorkoutSetLogger';
 import SessionOutcomeCard from './components/training/SessionOutcomeCard';
+import NextExposureCard from './components/training/NextExposureCard';
 import { snapshotForLog as buildSetLogSnapshot, stripMissingSnapshotColumns } from '../lib/training/setLogSnapshots';
 import { canRewritePlannedSetPrescription } from '../lib/training/plannedSetGuard';
 import { deriveSessionStatus } from '../lib/training/sessionOutcome';
 import { extraLogsFromSetLogs, extraSetInsertPayload, extraSetsForExercise, nextExtraSetNumber, type ExtraSetLog } from '../lib/training/extraSets';
 import { normalizePainFlag, upsertExerciseSession, upsertWorkoutFeel, upsertWorkoutSession } from '../lib/training/workoutSessions';
+import { applyProgressionForCompletedExercise, patchProgramPlannedWeights } from '../lib/training/adaptationApply';
+import type { AdaptationApplicationResult } from '../lib/scienceEngine/adaptation/apply/types';
 import { prescriptionColumnsFromSources } from '../lib/training/prescriptionMeta';
 import type { PainFlag, SessionStatus, SkipReason, WorkoutFeel } from '../lib/scienceEngine/adaptation/types';
 import GroupsHub from './components/groups/GroupsHub';
@@ -229,6 +232,7 @@ export default function Page(){
  const [sessionSkipReason,setSessionSkipReason]=useState<SkipReason|''>('');
  const [skippedExerciseIds,setSkippedExerciseIds]=useState<Record<string,boolean>>({});
  const [phase2a1Pending,setPhase2a1Pending]=useState(false);
+ const [nextAdaptation,setNextAdaptation]=useState<AdaptationApplicationResult|null>(null);
  const [customizeForMeBusy,setCustomizeForMeBusy]=useState(false);
  const [addExercisePanel,setAddExercisePanel]=useState<any>(null);
  const [exerciseSwapPrompt,setExerciseSwapPrompt]=useState<any>(null);
@@ -2081,6 +2085,25 @@ export default function Page(){
     const celebration=detectSetPersonalRecord(data,priorCompletedLogsForPr(sid,logDay),weightUnit);
     if(celebration)showPrCelebration(celebration);
    }
+   const working=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted&&String(s.set_type||'working')!=='warmup'&&String(s.set_type||'')!=='ramp');
+   if(working.length&&working.every((s:any)=>nextLogs[s.id]?.completed)&&session?.user?.id){
+    const liveProgram=planEditRef.current?.program||program;
+    void applyProgressionForCompletedExercise({
+      supabase,
+      userId:uid,
+      program:liveProgram,
+      workout:located.workout,
+      exercise:ex,
+      logsByPlannedSetId:nextLogs,
+      extraWorkouts:extraWorkoutsForLogging(),
+    }).then((result)=>{
+      if(!result)return;
+      setNextAdaptation(result);
+      if(result.mutated){
+        setProgram((prev:any)=>patchProgramPlannedWeights(prev,result.mutations));
+      }
+    }).catch(()=>{});
+   }
   }
   return data;
   };
@@ -2888,6 +2911,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
     {!viewingMember&&!activeAssignedRecipient&&program&&isDraftProgram(program)&&canEdit()&&<div className="card program-draft-banner"><div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}><div><h2>Draft program</h2><p className="muted"><b>{program.name}</b> is a draft — it will not appear here for logging until you publish it in Programs.</p></div><button type="button" className="btn small green" onClick={()=>{setTrainingSubNav('personal');setDraftEditProgramId(null);setAppNav('Programs');}}>Open in Programs</button></div></div>}
     {showEditScope&&<div className="applybox-compact"><label htmlFor="apply-scope">Apply this change to</label><select id="apply-scope" value={applyScope} onChange={e=>setApplyScope(e.target.value as any)}><option value="current">Just today</option><option value="future">Rest of program</option></select></div>}
     {trainingSessionOpen&&trainingSessionIntent==='log'&&workout&&<SessionOutcomeCard status={sessionOutcome} feel={sessionFeel} pain={sessionPain} notes={sessionNotes} skipReason={sessionSkipReason} canEdit={canLog()} pendingMigration={phase2a1Pending} onStatus={(s)=>void saveSessionOutcome(s)} onFeel={(v)=>void saveSessionOutcome(sessionOutcome,{feel:v})} onPain={(v)=>void saveSessionOutcome(sessionOutcome,{pain:v})} onNotes={(v)=>void saveSessionOutcome(sessionOutcome,{notes:v})} onSkipReason={(v)=>void saveSessionOutcome('skipped',{skipReason:v})}/>}
+    {trainingSessionOpen&&trainingSessionIntent==='log'&&nextAdaptation&&<NextExposureCard result={nextAdaptation}/>}
     {(trainingSessionOpen||!!activeAssignedRecipient)&&workoutExerciseSections}
   </section>}
   {addExercisePanel&&<div className="panel-overlay" onClick={()=>setAddExercisePanel(null)}><div className="add-exercise-panel card" onClick={e=>e.stopPropagation()}><div className="topline" style={{justifyContent:'space-between'}}><h2>{addExercisePanel.replaceTarget?'Replace exercise':'Add Exercise'} · {addPanelSectionLabel(addExercisePanel.section)}</h2><button type="button" className="btn small secondary" onClick={()=>setAddExercisePanel(null)}>Cancel</button></div>

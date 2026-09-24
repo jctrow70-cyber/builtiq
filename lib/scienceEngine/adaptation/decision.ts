@@ -15,7 +15,9 @@ import {
   POOR_EXPOSURES_BEFORE_REDUCE,
   POOR_EXPOSURES_BEFORE_REVIEW,
   REASON,
-  RIR_TOLERANCE,
+  RIR_TOLERANCE_HIGH,
+  RIR_TOLERANCE_LOW,
+  type EffortClass,
   type ReasonCode,
 } from './reasonCodes';
 import type { AdaptationEventDraft, DecisionConfidence, IncrementSource, ProgressionDecisionKind } from './types';
@@ -32,8 +34,10 @@ export type ProgressionEvidence = {
   counted_set_count: number;
   excluded: { extras: number; warmups: number; ramps: number; skipped: number; empty: number };
   comparable_window: { days: number; max_exposures: number };
-  rir_path: 'high' | 'performance_only' | 'none' | null;
-  rir_tolerance: number;
+  rir_path: 'high' | 'performance_only' | 'underchallenged' | 'none' | null;
+  rir_tolerance_low: number;
+  rir_tolerance_high: number;
+  effort: EffortClass | null;
   load_mode: string;
   laterality_limitation: string | null;
 };
@@ -92,7 +96,9 @@ function evidenceFrom(
     excluded,
     comparable_window: { days: COMPARABLE_LOOKBACK_DAYS, max_exposures: COMPARABLE_MAX_EXPOSURES },
     rir_path: rirPath,
-    rir_tolerance: RIR_TOLERANCE,
+    rir_tolerance_low: RIR_TOLERANCE_LOW,
+    rir_tolerance_high: RIR_TOLERANCE_HIGH,
+    effort: current.effort,
     load_mode: loadMode,
     laterality_limitation: lateralityLimitation,
   };
@@ -134,16 +140,37 @@ function sideProgressionGate(
   return { ok: qualify(counted), note: REASON.NOTE_UNILATERAL_NO_SIDE_SPLIT };
 }
 
-function consecutivePoor(history: ComparableExposure[], increment: number, currentLoad: number | null): number {
-  let n = 0;
+function belowRange(row: ComparableExposure): boolean {
+  return row.majority_below_min || (row.any_below_min && !row.all_in_range);
+}
+
+function streakWhere(
+  current: ComparableExposure,
+  history: ComparableExposure[],
+  increment: number,
+  predicate: (row: ComparableExposure) => boolean
+): ComparableExposure[] {
+  if (!predicate(current)) return [];
+  const rows = [current];
   for (const row of history) {
-    if (!sameLoadContext(row.load, currentLoad, increment) && row.load != null && currentLoad != null && row.load < currentLoad) {
+    if (!sameLoadContext(row.load, current.load, increment) && row.load != null && current.load != null && row.load < current.load) {
       break;
     }
-    if (row.majority_below_min || (row.any_below_min && !row.all_in_range)) n += 1;
-    else break;
+    if (!sameLoadContext(row.load, current.load, increment) && row.load != null && current.load != null) break;
+    if (!predicate(row)) break;
+    rows.push(row);
   }
-  return n;
+  return rows;
+}
+
+function streakEffort(rows: ComparableExposure[]): EffortClass {
+  if (!rows.length) return 'unknown';
+  const efforts = rows.map((r) => r.effort);
+  if (efforts.every((e) => e === 'excessive')) return 'excessive';
+  if (efforts.every((e) => e === 'underchallenged')) return 'underchallenged';
+  if (efforts.every((e) => e === 'compatible')) return 'compatible';
+  if (efforts.every((e) => e === 'unknown')) return 'unknown';
+  return 'mixed';
 }
 
 function consecutiveTopMissingRir(current: ComparableExposure, history: ComparableExposure[], increment: number): number {
@@ -182,8 +209,8 @@ export function evaluateProgressionDecision(input: EvaluateProgressionInput): Pr
     loadMode,
   });
   const usedIncrement = incrementForMode;
-  const current = summarizeExposure(currentIn, RIR_TOLERANCE);
-  const history = selectComparableHistory(currentIn, input.history, RIR_TOLERANCE);
+  const current = summarizeExposure(currentIn);
+  const history = selectComparableHistory(currentIn, input.history);
   const laterality = weakerSideBlocks(countedInfo.counted, currentIn.laterality);
   const notes: ReasonCode[] = [];
   if (countedInfo.excluded.extras) notes.push(REASON.NOTE_EXTRAS_EXCLUDED);
@@ -318,7 +345,35 @@ export function evaluateProgressionDecision(input: EvaluateProgressionInput): Pr
   const allInRange = current.all_in_range;
   const anyBelow = current.any_below_min;
   const loadStep = manualLoadIncrease(current, history, usedIncrement.increment);
-  const poorStreak = (anyBelow ? 1 : 0) + consecutivePoor(history, usedIncrement.increment, current.load);
+  const belowStreak = streakWhere(current, history, usedIncrement.increment, belowRange);
+  const cncStreak = streakWhere(current, history, usedIncrement.increment, (row) => row.could_not_complete);
+
+  if (current.could_not_complete) {
+    const cncEffort = streakEffort(cncStreak);
+    if (cncStreak.length >= 2 && cncEffort === 'excessive') {
+      const proposed = proposeLoad(current.load, usedIncrement.increment, 'down');
+      return finish('reduce_load', [REASON.REDUCE_REPEATED_BELOW_RANGE_EXCESSIVE, REASON.REDUCE_REPEATED_BELOW_RANGE, REASON.HOLD_COULD_NOT_COMPLETE], {
+        confidence: 'hold',
+        proposed_load: proposed,
+        summary: `Repeated could_not_complete outcomes with excessive effort support reducing load to ${proposed} ${usedIncrement.unit}.`,
+        facts: { could_not_complete_streak: cncStreak.length, effort: cncEffort },
+      });
+    }
+    if (cncStreak.length >= 2) {
+      return finish('review_required', [REASON.REVIEW_COULD_NOT_COMPLETE], {
+        confidence: 'review',
+        proposed_load: current.load,
+        summary: 'Repeated could_not_complete outcomes without clear excessive-effort evidence. Review before changing load.',
+        facts: { could_not_complete_streak: cncStreak.length, effort: cncEffort },
+      });
+    }
+    return finish('hold', [REASON.HOLD_COULD_NOT_COMPLETE], {
+      confidence: 'hold',
+      proposed_load: current.load,
+      summary: 'First could_not_complete is performance evidence, not a skip. Hold the load and review the session.',
+      facts: { could_not_complete_streak: 1, effort: current.effort },
+    });
+  }
 
   if (loadStep && allInRange && !allTop) {
     return finish('build_reps', [REASON.HOLD_SUCCESSFUL_LOAD_STEP, REASON.BUILD_REPS_WITHIN_RANGE], {
@@ -340,7 +395,7 @@ export function evaluateProgressionDecision(input: EvaluateProgressionInput): Pr
     return finish('hold', [REASON.HOLD_EXCESSIVE_EFFORT], {
       confidence: 'hold',
       rir_path: 'none',
-      summary: `All counted sets hit ${range.max} but reported RIR was more than ${RIR_TOLERANCE} below target ${range.targetRir}. Do not progress load.`,
+      summary: `All counted sets hit ${range.max} but reported RIR was more than ${RIR_TOLERANCE_LOW} below target ${range.targetRir}. Do not progress load.`,
     });
   }
 
@@ -349,27 +404,35 @@ export function evaluateProgressionDecision(input: EvaluateProgressionInput): Pr
       confidence: 'hold',
       rir_path: 'none',
       proposed_load: current.load,
-      summary: `Sets stayed in range but reported RIR was more than ${RIR_TOLERANCE} below target ${range.targetRir}. Keep the load.`,
+      summary: `Sets stayed in range but reported RIR was more than ${RIR_TOLERANCE_LOW} below target ${range.targetRir}. Keep the load.`,
     });
   }
 
   if (allTop && !current.rir_excessive) {
     const knownAll = countedInfo.counted.every((s) => s.rir != null) && range.targetRir != null;
-    if (knownAll && current.rir_compatible) {
+    if (knownAll && (current.rir_compatible || current.rir_underchallenged)) {
       if (loadMode === 'bodyweight' && !(current.load != null && current.load > 0)) {
         return finish('hold', [REASON.HOLD_BODYWEIGHT_NO_EXTERNAL_LOAD], {
           confidence: 'high',
-          rir_path: 'high',
+          rir_path: current.rir_underchallenged ? 'underchallenged' : 'high',
           proposed_load: current.load ?? 0,
           summary: 'Bodyweight sets reached the top of the range. 2A.2 will not add external load unless weighted performance was logged.',
         });
       }
       const proposed = proposeLoad(current.load, usedIncrement.increment, 'up');
+      if (current.rir_underchallenged) {
+        return finish('progress_load', [REASON.PROG_LOAD_UNDERCHALLENGED], {
+          confidence: 'high',
+          rir_path: 'underchallenged',
+          proposed_load: proposed,
+          summary: `All counted sets reached ${range.max} but RIR was clearly easier than target ${range.targetRir} (above ${range.targetRir + RIR_TOLERANCE_HIGH}). Progress one increment to ${proposed} ${usedIncrement.unit}; this is not target-compatible effort.`,
+        });
+      }
       return finish('progress_load', [REASON.PROG_LOAD_TOP_RANGE_RIR], {
         confidence: 'high',
         rir_path: 'high',
         proposed_load: proposed,
-        summary: `All counted working sets reached ${range.max} with RIR compatible with target ${range.targetRir} (tolerance ${RIR_TOLERANCE}). Propose ${proposed} ${usedIncrement.unit}.`,
+        summary: `All counted working sets reached ${range.max} with RIR in the target band [${range.targetRir - RIR_TOLERANCE_LOW}, ${range.targetRir + RIR_TOLERANCE_HIGH}]. Propose ${proposed} ${usedIncrement.unit}.`,
       });
     }
 
@@ -410,28 +473,45 @@ export function evaluateProgressionDecision(input: EvaluateProgressionInput): Pr
   }
 
   if (anyBelow) {
-    if (poorStreak >= POOR_EXPOSURES_BEFORE_REVIEW) {
-      return finish('review_required', [REASON.REVIEW_CONFLICTING_SIGNAL, REASON.REDUCE_REPEATED_BELOW_RANGE], {
-        confidence: 'review',
-        proposed_load: proposeLoad(current.load, usedIncrement.increment, 'down'),
-        summary: 'Repeated below-range performances across comparable exposures. Review before automatically changing the plan.',
-        facts: { poor_streak: poorStreak },
-      });
-    }
-    if (poorStreak >= POOR_EXPOSURES_BEFORE_REDUCE) {
+    const effort = streakEffort(belowStreak);
+    if (belowStreak.length >= POOR_EXPOSURES_BEFORE_REDUCE && effort === 'excessive') {
       const proposed = proposeLoad(current.load, usedIncrement.increment, 'down');
-      return finish('reduce_load', [REASON.REDUCE_REPEATED_BELOW_RANGE], {
+      return finish('reduce_load', [REASON.REDUCE_REPEATED_BELOW_RANGE_EXCESSIVE, REASON.REDUCE_REPEATED_BELOW_RANGE], {
         confidence: 'hold',
         proposed_load: proposed,
-        summary: `Two consecutive comparable exposures were below ${range.min}. Propose ${proposed} ${usedIncrement.unit}.`,
-        facts: { poor_streak: poorStreak },
+        summary: `Two consecutive comparable exposures were below ${range.min} with excessive effort. Propose ${proposed} ${usedIncrement.unit}.`,
+        facts: { poor_streak: belowStreak.length, effort },
+      });
+    }
+    if (belowStreak.length >= POOR_EXPOSURES_BEFORE_REDUCE && effort === 'underchallenged') {
+      return finish('review_required', [REASON.REVIEW_BELOW_RANGE_UNDERCHALLENGED], {
+        confidence: 'review',
+        proposed_load: current.load,
+        summary: `Repeated below-range reps with clearly high RIR. The load does not look too heavy. Review rather than reduce.`,
+        facts: { poor_streak: belowStreak.length, effort },
+      });
+    }
+    if (belowStreak.length >= POOR_EXPOSURES_BEFORE_REDUCE) {
+      return finish('review_required', [REASON.REVIEW_BELOW_RANGE_UNKNOWN_EFFORT, effort === 'mixed' ? REASON.REVIEW_CONFLICTING_SIGNAL : null], {
+        confidence: 'review',
+        proposed_load: current.load,
+        summary: 'Repeated below-range reps without enough effort evidence to prove the load is too heavy. Hold and review; RIR was not invented.',
+        facts: { poor_streak: belowStreak.length, effort },
+      });
+    }
+    if (current.effort === 'underchallenged') {
+      return finish('hold', [REASON.HOLD_BELOW_RANGE_UNDERCHALLENGED], {
+        confidence: 'hold',
+        proposed_load: current.load,
+        summary: 'Reps were below the range but RIR was high. Hold; this is not evidence that the load is too heavy.',
+        facts: { poor_streak: belowStreak.length, effort: current.effort },
       });
     }
     return finish('hold', [REASON.HOLD_SINGLE_BAD_EXPOSURE], {
       confidence: 'hold',
       proposed_load: current.load,
       summary: 'One comparable exposure fell short of the prescribed range. Hold the load; one hard day is not an automatic regression.',
-      facts: { poor_streak: poorStreak },
+      facts: { poor_streak: belowStreak.length, effort: current.effort },
     });
   }
 

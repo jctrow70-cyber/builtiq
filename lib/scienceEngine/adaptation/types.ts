@@ -27,7 +27,7 @@ export type IncrementSource = 'user' | 'gym' | 'equipment_default';
 
 export type IncrementRounding = 'nearest_increment' | 'none';
 
-export const ADAPTATION_ENGINE_VERSION = '2a2.0.0';
+export const ADAPTATION_ENGINE_VERSION = '2a2.1.0';
 
 export type ProgressionDecisionKind =
   | 'progress_load'

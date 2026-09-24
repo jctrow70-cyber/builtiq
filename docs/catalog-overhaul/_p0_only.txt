@@ -1,0 +1,1 @@
+c:\Users\JesseTrowbridge\AppData\Local\Programs\cursor\resources\app\node_modules\@vscode\ripgrep\bin

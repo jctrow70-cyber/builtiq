@@ -1,5 +1,5 @@
 import { countWorkingSets, inferLoadMode, prescriptionRange, currentLoadOf, isWorkingRole } from './countedSets';
-import { COMPARABLE_LOOKBACK_DAYS, COMPARABLE_MAX_EXPOSURES } from './reasonCodes';
+import { classifyRir, COMPARABLE_LOOKBACK_DAYS, COMPARABLE_MAX_EXPOSURES, type EffortClass } from './reasonCodes';
 import type { ExerciseExposureInput } from './inputs';
 import type { CountedWorkingSet } from './countedSets';
 
@@ -22,6 +22,9 @@ export type ComparableExposure = {
   missing_rir: boolean;
   rir_compatible: boolean | null;
   rir_excessive: boolean;
+  rir_underchallenged: boolean;
+  effort: EffortClass;
+  could_not_complete: boolean;
 };
 
 function normalizeName(name?: string | null): string {
@@ -66,13 +69,29 @@ export function exposuresAreComparable(current: ExerciseExposureInput, other: Ex
   return rangesOverlap(prescriptionRange(current), prescriptionRange(other));
 }
 
-export function summarizeExposure(exposure: ExerciseExposureInput, rirTolerance: number): ComparableExposure {
+export function sessionEffort(counted: CountedWorkingSet[], targetRir: number | null): EffortClass {
+  if (targetRir == null) return 'unknown';
+  const known = counted.filter((s) => s.rir != null);
+  if (!known.length) return 'unknown';
+  const bands = known.map((s) => classifyRir(Number(s.rir), targetRir));
+  const allExcessive = bands.every((b) => b === 'excessive');
+  const allEasy = bands.every((b) => b === 'underchallenged');
+  const allCompatible = bands.every((b) => b === 'compatible');
+  if (allExcessive) return 'excessive';
+  if (allEasy && known.length === counted.length) return 'underchallenged';
+  if (allCompatible) return 'compatible';
+  if (bands.some((b) => b === 'excessive')) return 'mixed';
+  return 'compatible';
+}
+
+export function summarizeExposure(exposure: ExerciseExposureInput, _rirTolerance?: number): ComparableExposure {
   const counted = countWorkingSets(exposure).counted;
   const range = prescriptionRange(exposure);
+  const effort = sessionEffort(counted, range.targetRir);
   const knownRir = counted.filter((s) => s.rir != null);
-  const rirExcessive = range.targetRir != null && knownRir.some((s) => Number(s.rir) + rirTolerance < range.targetRir);
-  const rirCompatible =
-    range.targetRir == null || !knownRir.length ? null : knownRir.every((s) => Number(s.rir) + rirTolerance >= range.targetRir);
+  const rirExcessive = effort === 'excessive' || (range.targetRir != null && knownRir.some((s) => classifyRir(Number(s.rir), range.targetRir) === 'excessive'));
+  const rirUnderchallenged = effort === 'underchallenged';
+  const rirCompatible = effort === 'compatible' ? true : range.targetRir == null || !knownRir.length ? null : false;
   const allTop = !!range.max && counted.length > 0 && counted.every((s) => s.reps >= range.max);
   const anyBelow = range.min != null && counted.some((s) => s.reps < range.min);
   const belowCount = range.min != null ? counted.filter((s) => s.reps < range.min).length : 0;
@@ -95,13 +114,16 @@ export function summarizeExposure(exposure: ExerciseExposureInput, rirTolerance:
     missing_rir: counted.length > 0 && counted.some((s) => s.rir == null),
     rir_compatible: rirCompatible,
     rir_excessive: rirExcessive,
+    rir_underchallenged: rirUnderchallenged,
+    effort,
+    could_not_complete: exposure.attempt_outcome === 'could_not_complete',
   };
 }
 
 export function selectComparableHistory(
   current: ExerciseExposureInput,
   history: ExerciseExposureInput[] | undefined,
-  rirTolerance: number
+  _rirTolerance?: number
 ): ComparableExposure[] {
   const currentKey = `${String(current.log_date).slice(0, 10)}|${current.catalog_exercise_id || current.exercise_name || ''}`;
   const rows = (history || [])
@@ -112,7 +134,7 @@ export function selectComparableHistory(
     .filter((row) => daysBetween(current.log_date, row.log_date) <= COMPARABLE_LOOKBACK_DAYS)
     .sort((a, b) => String(b.log_date).localeCompare(String(a.log_date)))
     .slice(0, COMPARABLE_MAX_EXPOSURES)
-    .map((row) => summarizeExposure(row, rirTolerance));
+    .map((row) => summarizeExposure(row));
   return rows;
 }
 

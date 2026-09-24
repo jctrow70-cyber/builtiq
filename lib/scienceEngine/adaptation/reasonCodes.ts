@@ -1,6 +1,7 @@
 /** Stable Phase 2A.2 reason codes. Every decision emits at least one. */
 export const REASON = {
   PROG_LOAD_TOP_RANGE_RIR: 'PROG_LOAD_TOP_RANGE_RIR',
+  PROG_LOAD_UNDERCHALLENGED: 'PROG_LOAD_UNDERCHALLENGED',
   PROG_LOAD_REPEATED_PERFORMANCE: 'PROG_LOAD_REPEATED_PERFORMANCE',
   BUILD_REPS_WITHIN_RANGE: 'BUILD_REPS_WITHIN_RANGE',
   HOLD_EXCESSIVE_EFFORT: 'HOLD_EXCESSIVE_EFFORT',
@@ -9,7 +10,13 @@ export const REASON = {
   HOLD_SUCCESSFUL_LOAD_STEP: 'HOLD_SUCCESSFUL_LOAD_STEP',
   HOLD_BODYWEIGHT_NO_EXTERNAL_LOAD: 'HOLD_BODYWEIGHT_NO_EXTERNAL_LOAD',
   HOLD_NON_REP_MEASUREMENT: 'HOLD_NON_REP_MEASUREMENT',
+  HOLD_COULD_NOT_COMPLETE: 'HOLD_COULD_NOT_COMPLETE',
+  HOLD_BELOW_RANGE_UNDERCHALLENGED: 'HOLD_BELOW_RANGE_UNDERCHALLENGED',
   REDUCE_REPEATED_BELOW_RANGE: 'REDUCE_REPEATED_BELOW_RANGE',
+  REDUCE_REPEATED_BELOW_RANGE_EXCESSIVE: 'REDUCE_REPEATED_BELOW_RANGE_EXCESSIVE',
+  REVIEW_BELOW_RANGE_UNDERCHALLENGED: 'REVIEW_BELOW_RANGE_UNDERCHALLENGED',
+  REVIEW_BELOW_RANGE_UNKNOWN_EFFORT: 'REVIEW_BELOW_RANGE_UNKNOWN_EFFORT',
+  REVIEW_COULD_NOT_COMPLETE: 'REVIEW_COULD_NOT_COMPLETE',
   INSUFFICIENT_SKIPPED: 'INSUFFICIENT_SKIPPED',
   INSUFFICIENT_PARTIAL: 'INSUFFICIENT_PARTIAL',
   INSUFFICIENT_NO_COUNTED_SETS: 'INSUFFICIENT_NO_COUNTED_SETS',
@@ -25,8 +32,24 @@ export const REASON = {
 
 export type ReasonCode = (typeof REASON)[keyof typeof REASON];
 
-/** Actual RIR is compatible when it is not more than this below target. Easier (higher) RIR still qualifies. */
-export const RIR_TOLERANCE = 0.5;
+/**
+ * Target-compatible RIR band relative to prescribed target:
+ *   [target - RIR_TOLERANCE_LOW, target + RIR_TOLERANCE_HIGH]
+ * Target 2 → compatible 1.5–3.5. Below that is excessive. Above that is underchallenged.
+ */
+export const RIR_TOLERANCE_LOW = 0.5;
+export const RIR_TOLERANCE_HIGH = 1.5;
+/** @deprecated Use RIR_TOLERANCE_LOW. Kept so existing 2A.2 imports keep working. */
+export const RIR_TOLERANCE = RIR_TOLERANCE_LOW;
+
+export type RirBand = 'excessive' | 'compatible' | 'underchallenged';
+export type EffortClass = RirBand | 'unknown' | 'mixed';
+
+export function classifyRir(actual: number, target: number): RirBand {
+  if (actual + RIR_TOLERANCE_LOW < target) return 'excessive';
+  if (actual > target + RIR_TOLERANCE_HIGH) return 'underchallenged';
+  return 'compatible';
+}
 
 export const COMPARABLE_LOOKBACK_DAYS = 42;
 export const COMPARABLE_MAX_EXPOSURES = 4;

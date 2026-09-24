@@ -11,11 +11,141 @@ Branch:
 Status:
 ```
 
+## BIQ-0220 - Phase 2A.3 Template Targets and Version-Stable Identity
+
+Date: 2026-09-24
+Branch: develop
+Status: Local / apply engine 2a3.0.1. Migration 053 updated, not applied.
+
+### Summary
+
+Template weeks may receive a single next-exposure prescription write without being activated. The durable `application_key` is the source→target adaptation identity and no longer includes science or engine versions.
+
+### Purpose
+
+Week 1 Friday → Week 2 Monday must be able to become 190 while Week 2 stays `template` and Week 3 is untouched. A patch bump of the apply engine must not restack that write.
+
+### Changes
+
+- `template` is an eligible week status for the first later comparable unperformed exposure
+- `completed` and `locked` remain ineligible
+- Applying into a template never changes `week_status`
+- `application_key` = user + source workout/exercise + target workout/exercise + catalog + decision
+- Science/adaptation/apply versions stay on the ledger as metadata only
+- A prior `not_applied` stale row does not block one later successful apply of the same identity after the target is restored
+- 053 comments updated; unique success index unchanged
+
+### Files Changed
+
+- `lib/scienceEngine/adaptation/apply/types.ts`
+- `lib/scienceEngine/adaptation/apply/nextExposure.ts`
+- `lib/scienceEngine/adaptation/apply/fingerprint.ts`
+- `lib/scienceEngine/adaptation/apply/applyDecision.ts`
+- `lib/scienceEngine/adaptation/apply/explain.ts`
+- `lib/scienceEngine/adaptation/apply/phase2a3Check.ts`
+- `lib/scienceEngine/adaptation/apply/index.ts`
+- `supabase/migrations/20260924_053_phase2a3_adaptation_application.sql`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+053 still unapplied. Comments only: key formula and unique-success semantics. No new columns.
+
+### Testing Steps
+
+1. `npm run test:science` — Phase 1, 2A.1, 2A.2, and 2A.3 A–Z plus AA
+2. Confirm 053 was not applied
+3. Confirm Week 2 template can receive 190 and stay `template`
+
+### Known Issues
+
+- Durable unique success index still needs 053
+- Live Training still does not load comparable history beyond the current session
+- Phase 2B is not started
+
+### Recommended Commit Message
+
+`BIQ-0220 Allow template-week apply and version-stable adaptation identity`
+
+## BIQ-0219 - Phase 2A.3 Safe Application of Progression Decisions
+
+Date: 2026-09-24
+Branch: develop
+Status: Local / apply engine 2a3.0.0. Migration 053 written, not applied.
+
+### Summary
+
+Phase 2A.3 applies a frozen 2A.2 decision to the next eligible comparable exposure only. It does not invent new coaching rules. Automatic decisions may mutate the next unlogged working-set load; review/pain/insufficient never rewrite a future prescription. Manual edits win before and after apply.
+
+### Purpose
+
+After a completed bench (or other comparable lift), Friday's working load can become the exact 2A.2 proposed value (185 → 190) once, with an auditable ledger row and a short Next time card. Next Monday is not touched until Friday is performed and the engine evaluates again.
+
+### Changes
+
+- `applyProgressionDecision()` selects the first later eligible comparable exposure and applies `progress_load` / `reduce_load` using the exact 2A.2 `proposed_load`
+- `build_reps` and `hold` are `recorded_no_change` when the prescription is already correct
+- `review_required`, `pain_hold`, and `insufficient_data` are `not_applied`
+- Stale fingerprint abort: `STALE_TARGET_PRESCRIPTION`
+- Deterministic `application_key` + in-memory replay; unique success index is in unapplied 053
+- Warmup/ramp sets are never rewritten
+- Training shows a minimal Next time card after working sets complete
+- Additive migration `20260924_053_phase2a3_adaptation_application.sql` is ready and **not applied**
+
+### Files Changed
+
+- `lib/scienceEngine/adaptation/apply/types.ts`
+- `lib/scienceEngine/adaptation/apply/fingerprint.ts`
+- `lib/scienceEngine/adaptation/apply/nextExposure.ts`
+- `lib/scienceEngine/adaptation/apply/explain.ts`
+- `lib/scienceEngine/adaptation/apply/applyDecision.ts`
+- `lib/scienceEngine/adaptation/apply/phase2a3Check.ts`
+- `lib/scienceEngine/adaptation/apply/index.ts`
+- `lib/scienceEngine/adaptation/index.ts`
+- `lib/scienceEngine/acceptanceCheck.ts`
+- `lib/scienceEngine/index.ts`
+- `lib/training/adaptationApply.ts`
+- `app/components/training/NextExposureCard.tsx`
+- `app/globals.css`
+- `app/page.tsx`
+- `supabase/migrations/20260924_053_phase2a3_adaptation_application.sql`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+Required and **not applied**. Additive columns on `st_adaptation_events`: source/target identity, `application_status`, `application_key`, `target_fingerprint`, `confidence`, `adaptation_engine_version`, plus a unique index on successful `application_key` rows. No 2A.1 data is rewritten.
+
+### Testing Steps
+
+1. `npm run test:science` — Phase 1, 260-card policy, 2A.1, 2A.2, and 2A.3 A–T
+2. Confirm 053 was not applied
+3. Log all working sets on a Monday bench at top of range with target RIR — Friday working load should become the proposed value if Friday is activated/unlogged
+4. Repeat the same save — load must stay (not +5 again)
+5. Edit Friday load before the last Monday set completes — apply must abort stale and keep the edit
+6. Confirm warmup/ramp rows on Friday did not change
+7. Mobile: Next time card readable under the session outcome card
+
+### Known Issues
+
+- Durable ledger idempotency needs 053; until then, exact `proposed_load` still prevents 190 → 195
+- Future `template` weeks may receive a prescription write (BIQ-0220) without week activation
+- History exposures beyond the current session are not passed into 2A.2, so no-RIR repeated-performance may wait until history is wired
+- Time/distance and side-specific progression remain out of scope
+- Phase 2B is not started
+
+### Recommended Commit Message
+
+`BIQ-0219 Apply 2A.2 decisions to the next eligible exposure`
+
 ## BIQ-0218 - Phase 2A.2 Deterministic Progression Decisions
 
 Date: 2026-09-24
 Branch: develop
-Status: Local / decision engine only. Phase 2A.3 not started.
+Status: Local / decision engine only (2a2.1.0). Phase 2A.3 not started.
 
 ### Summary
 
@@ -30,6 +160,9 @@ BuiltIQ can now say whether the next comparable exposure should progress load, b
 - `evaluateProgressionDecision()` produces `progress_load` / `build_reps` / `hold` / `reduce_load` / `insufficient_data` / `review_required` / `pain_hold`
 - Counted sets exclude extras, warmups, ramps, skipped, and empty logs
 - High-confidence RIR path vs two consecutive no-RIR top-range confirmations
+- Target-compatible RIR band is `[target-0.5, target+1.5]`; clearly easier top-range work progresses as `PROG_LOAD_UNDERCHALLENGED` (one increment, not a multi-jump)
+- Automatic `reduce_load` requires repeated below-range work **and** excessive effort; easy or unknown-RIR misses review instead
+- First `could_not_complete` holds; repeated CNC reduces only with grind evidence
 - Manual load increases with an in-range reset are successful steps, not regressions
 - Equipment-aware increments include rounding and future user/gym override hooks
 - Bodyweight, unilateral, and time/distance have conservative specialized rules

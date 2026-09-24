@@ -1840,6 +1840,112 @@ The first live Phase 1 week passed the structural contract and still produced we
 
 ---
 
+## Decision 069 - Template Prescription Prep and Version-Stable Apply Identity
+
+Date: 2026-09-24  
+Status: Accepted  
+Category: Program Design
+
+### Decision
+
+A future `template` exposure may be the next comparable target when it is first, unperformed, same user/program/catalog, and not completed or locked. Writing the 2A.2 proposed load into that template is prescription preparation. `week_status` stays `template`. Do not activate the week and do not propagate to later template weeks.
+
+`application_key` identifies the adaptation relationship (user + source workout/exercise + target workout/exercise + catalog + decision). Science version, adaptation engine version, and apply engine version are ledger metadata only. Changing a version must not mint a new key or restack a successful mutation.
+
+A prior `not_applied` / stale row does not occupy the unique success slot. If the user restores the target so a fresh evaluation matches, the same identity may succeed once. After a successful row exists, retries return `ALREADY_APPLIED`.
+
+Do not apply 053. Do not start Phase 2B.
+
+### Reason
+
+Skipping templates broke Friday → next-Monday progression. Including versions in the key would let a deploy rewrite 190 to 195.
+
+### Alternatives Considered
+
+- Activate Week 2 when writing 190 — rejected; week activation is a separate system
+- New key per engine version — rejected; that is a duplicate mutation
+- Treat stale `not_applied` as permanently blocking — rejected; the user must be able to restore and apply once
+
+### Impact
+
+- Apply engine version `2a3.0.1`
+- Unique success index on 053 stays; comments updated
+- Phase 2B remains unstarted
+
+---
+
+## Decision 068 - Phase 2A.3 Applies the Next Exposure Only
+
+Date: 2026-09-24  
+Status: Accepted  
+Category: Program Design
+
+### Decision
+
+Phase 2A.3 applies a frozen 2A.2 decision to the first later eligible comparable exposure in the same user + active program. 2A.2 remains the authority for what should happen. 2A.3 only decides where and how that change is applied safely.
+
+Automatically applicable: `progress_load`, `reduce_load`, `build_reps` when a real prescription change is required, and `hold` for record/explain. Never automatically rewrite for `review_required`, `insufficient_data`, or `pain_hold`.
+
+Do not update every future occurrence. Do not activate template weeks. Do not recalculate increments. Use the exact 2A.2 `proposed_load`. Abort with `STALE_TARGET_PRESCRIPTION` if the target working-set fingerprint changed. Manual edits win before and after apply. The same source + target + decision + versions must never increment twice.
+
+Classify each attempt as `mutated`, `recorded_no_change`, or `not_applied`. Persist an auditable `st_adaptation_events` row when appropriate. Additive migration 053 is required for source/target identity, application status, fingerprint, and a unique success key. Do not apply 053 until reviewed.
+
+Do not start Phase 2B.
+
+### Reason
+
+Writing the next Friday bench to 190 is useful only if history, other users, other programs, warmups, and later manual edits stay untouched. Idempotency and a stale fingerprint keep a second save or a user edit from stacking load.
+
+### Alternatives Considered
+
+- Adapt every remaining bench in the cycle — rejected; evaluate after each performed exposure
+- Recalculate +5 from the current target at apply time — rejected; would turn 190 into 195 on retry
+- Activate next-week templates from 2A.3 — rejected; week activation is a separate system
+- Overwrite a newer manual edit — rejected; the user wins
+
+### Impact
+
+- Apply engine version `2a3.0.0`
+- Adaptation decision engine stays `2a2.1.0`
+- Science generation stays `1.4.4`
+- Phase 1 / 1.1 / 2A.1 / 2A.2 remain frozen
+- Live ledger uniqueness waits on unapplied 053
+
+---
+
+## Decision 067 - Effort-Aware RIR Band, Reduction, and Could-Not-Complete
+
+Date: 2026-09-24  
+Status: Accepted  
+Category: Program Design
+
+### Decision
+
+Keep Phase 2A.2 decision-only. Refine three rules:
+
+1. Target-compatible RIR is the band `[target − 0.5, target + 1.5]`. Top-of-range work easier than that still progresses one increment, but as `PROG_LOAD_UNDERCHALLENGED`, not target-compatible RIR. No multi-increment jumps.
+2. `reduce_load` requires repeated comparable underperformance **and** excessive-effort evidence. Below-range + high RIR, or below-range with unknown RIR, holds/reviews. Missing RIR is never invented to justify a cut.
+3. `could_not_complete` is performance evidence, not a skip. First occurrence holds (`HOLD_COULD_NOT_COMPLETE`). Repeated CNC may reduce only with excessive effort; otherwise `review_required`.
+
+Do not start Phase 2A.3.
+
+### Reason
+
+High RIR at the top of the range is not the same as hitting the prescribed effort. Low reps at high RIR do not prove the load is too heavy. Stopping short is not adherence.
+
+### Alternatives Considered
+
+- Treat every RIR above target as target-compatible — rejected; RIR 5 is not RIR 2
+- Multi-increment jumps for underchallenged work — rejected for 2A.2
+- Reduce after any two below-min exposures — rejected; effort must support it
+
+### Impact
+
+- Adaptation engine `2a2.1.0`
+- Phase 2A.3 still unstarted
+
+---
+
 ## Decision 066 - Phase 2A.2 Recommends Progression, 2A.3 Applies It
 
 Date: 2026-09-24  
