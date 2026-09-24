@@ -11,6 +11,54 @@ Branch:
 Status:
 ```
 
+## BIQ-0221 - Phase 2A.3 Live Verification After 053
+
+Date: 2026-09-24
+Branch: develop
+Status: Live-verified against current Supabase. 053 was not reapplied.
+
+### Summary
+
+Disposable closed-loop verification ran the real 2A.2 evaluator and 2A.3 apply path against live `st_planned_sets` and `st_adaptation_events`. Week 1 Bench 185×10/10/10 @ RIR 2 progressed Week 2 template to 190 and left Week 3 at 185. Durable unique-success index rejected a second successful row. Disposable users/programs were deleted.
+
+### Purpose
+
+Prove the adaptive strength loop is operational on the applied 053 schema without activating template weeks or stacking load.
+
+### Changes
+
+- `scripts/verify-phase2a3-live.ts` live verify (does not reapply 053)
+- Training apply now reads working-set prescription, not warmup, for 2A.2 evaluation
+- Candidate `user_id` comes from the program owner so another user cannot target the row
+- Ledger `before_json` load is captured before in-memory mutation
+
+### Files Changed
+
+- `scripts/verify-phase2a3-live.ts`
+- `lib/training/adaptationApply.ts`
+- `lib/scienceEngine/adaptation/apply/applyDecision.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None. 053 already applied by the user. This change did not reapply it.
+
+### Testing Steps
+
+1. `npx tsx scripts/verify-phase2a3-live.ts` — live schema, closed loop, idempotency, stale, RLS, hold/build/review/pain
+2. `npm run test:science` — Phase 1 / 1.1 / 2A.1 / 2A.2 / 2A.3
+
+### Known Issues
+
+- Training Next time card was verified from live result data, not a logged-in browser session
+- First live event captured `target_before.load` after in-memory mutation; fingerprint and mutations still showed 185 → 190. Fixed for subsequent events.
+
+### Recommended Commit Message
+
+`BIQ-0221 Live-verify Phase 2A.3 apply path after 053`
+
 ## BIQ-0220 - Phase 2A.3 Template Targets and Version-Stable Identity
 
 Date: 2026-09-24

@@ -31,7 +31,8 @@ function buildEvent(
   mutations: PlannedSetMutation[],
   key: string,
   expectedFp: string | null,
-  actualFp: string | null
+  actualFp: string | null,
+  beforeLoad: string | null
 ): LedgerEventRecord {
   const d = input.decision;
   return {
@@ -52,8 +53,8 @@ function buildEvent(
             workout_id: target.workout_id,
             exercise_id: target.exercise_id,
             week: target.week,
-            load: workingLoad(target),
-            fingerprint: actualFp,
+            load: beforeLoad,
+            fingerprint: expectedFp || actualFp,
           }
         : null,
       abort_reason: abort,
@@ -122,7 +123,7 @@ function resultOf(
     application_key: key,
     target_fingerprint_expected: expectedFp,
     target_fingerprint_actual: actualFp,
-    event: buildEvent(input, target, status, abort, mutations, key, expectedFp, actualFp),
+    event: buildEvent(input, target, status, abort, mutations, key, expectedFp, actualFp, beforeLoad),
     mutations,
   };
 }

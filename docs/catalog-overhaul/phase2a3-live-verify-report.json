@@ -1,0 +1,719 @@
+{
+  "generated_at": "2026-09-24T16:58:02.191Z",
+  "phase_2b": "not_started",
+  "migration": {
+    "apply": {
+      "attempted": false,
+      "skipped": "User already applied 053. This script does not reapply it."
+    }
+  },
+  "schema": {
+    "ledger_columns": {
+      "ok": true,
+      "columns": [
+        "source_workout_id",
+        "source_exercise_id",
+        "source_log_date",
+        "target_workout_id",
+        "target_exercise_id",
+        "application_status",
+        "application_key",
+        "target_fingerprint",
+        "confidence",
+        "adaptation_engine_version"
+      ]
+    },
+    "unique_success_index": {
+      "first_ok": true,
+      "second_blocked": true,
+      "second_error": "duplicate key value violates unique constraint \"st_adaptation_events_application_key_success_idx\""
+    }
+  },
+  "live": {
+    "catalog": {
+      "id": "811272d6-06df-435f-a9bc-ceacea7dbfb9",
+      "name": "Bench Press"
+    },
+    "closed_loop": {
+      "decision": "progress_load",
+      "proposed_load": 190,
+      "abort_reason": null,
+      "status": "mutated",
+      "target": {
+        "week": 2,
+        "exercise_id": "b94800c7-2aa0-49d9-9936-f9e34e03281e",
+        "week_status": "template"
+      },
+      "week2_working": [
+        "190",
+        "190",
+        "190"
+      ],
+      "week3_working": [
+        "185",
+        "185",
+        "185"
+      ],
+      "week2_status": "template",
+      "week3_status": "template",
+      "week2_warmup": [
+        "45"
+      ],
+      "week2_ramp": [
+        "135"
+      ],
+      "explanation": {
+        "headline": "Barbell Bench Press 190 lb",
+        "why": "Barbell Bench Press increased from 185 lb to 190 lb because you reached the top of your 8–10 rep range across all working sets while staying within the target effort range.",
+        "next_line": "↑ 5 lb"
+      }
+    },
+    "ledger": {
+      "user_id": "7e45a3a9-db93-477f-84b0-e0e9562baa2c",
+      "program_id": "44a4fc9c-0f17-4856-aad9-0af3ef2c4618",
+      "source_workout_id": "a1e1b532-8f47-47c5-b5a0-377d4fb94593",
+      "source_exercise_id": "b067a0ad-6556-4059-8589-2c2e4646f5a7",
+      "source_log_date": "2026-09-24",
+      "target_workout_id": "3eb5f5f7-e46e-479b-bcaf-fdc0f7f0621e",
+      "target_exercise_id": "b94800c7-2aa0-49d9-9936-f9e34e03281e",
+      "exercise_catalog_id": "811272d6-06df-435f-a9bc-ceacea7dbfb9",
+      "decision": "progress_load",
+      "reason_codes": [
+        "PROG_LOAD_TOP_RANGE_RIR",
+        "NOTE_WARMUP_RAMP_EXCLUDED"
+      ],
+      "confidence": "high",
+      "before_json": {
+        "source": {
+          "week": 1,
+          "user_id": "7e45a3a9-db93-477f-84b0-e0e9562baa2c",
+          "log_date": "2026-09-24",
+          "day_order": 1,
+          "laterality": "bilateral",
+          "program_id": "44a4fc9c-0f17-4856-aad9-0af3ef2c4618",
+          "workout_id": "a1e1b532-8f47-47c5-b5a0-377d4fb94593",
+          "exercise_id": "b067a0ad-6556-4059-8589-2c2e4646f5a7",
+          "program_role": "primary",
+          "exercise_name": "Barbell Bench Press",
+          "measurement_type": "reps",
+          "catalog_exercise_id": "811272d6-06df-435f-a9bc-ceacea7dbfb9"
+        },
+        "abort_reason": null,
+        "target_before": {
+          "load": "190",
+          "week": 2,
+          "workout_id": "3eb5f5f7-e46e-479b-bcaf-fdc0f7f0621e",
+          "exercise_id": "b94800c7-2aa0-49d9-9936-f9e34e03281e",
+          "fingerprint": "86b9d980-93c7-4a60-b6ef-a65c60bc1ebe:1:185:8-10:8:10:2|81f36a62-b3a1-4447-8237-6af3a4675249:2:185:8-10:8:10:2|e04f9c0b-900d-44d9-8a9e-7cd5adf42d6f:3:185:8-10:8:10:2"
+        }
+      },
+      "after_json": {
+        "applied": true,
+        "mutations": [
+          {
+            "to": "190",
+            "from": "185",
+            "field": "target_weight",
+            "planned_set_id": "86b9d980-93c7-4a60-b6ef-a65c60bc1ebe"
+          },
+          {
+            "to": "190",
+            "from": "185",
+            "field": "target_weight",
+            "planned_set_id": "81f36a62-b3a1-4447-8237-6af3a4675249"
+          },
+          {
+            "to": "190",
+            "from": "185",
+            "field": "target_weight",
+            "planned_set_id": "e04f9c0b-900d-44d9-8a9e-7cd5adf42d6f"
+          }
+        ],
+        "proposed_load": 190,
+        "application_status": "mutated",
+        "apply_engine_version": "2a3.0.1"
+      },
+      "increment_value": 5,
+      "increment_source": "equipment_default",
+      "science_version": "1.4.4",
+      "adaptation_engine_version": "2a2.1.0",
+      "application_status": "mutated",
+      "application_key": "7e45a3a9-db93-477f-84b0-e0e9562baa2c|a1e1b532-8f47-47c5-b5a0-377d4fb94593|b067a0ad-6556-4059-8589-2c2e4646f5a7|3eb5f5f7-e46e-479b-bcaf-fdc0f7f0621e|b94800c7-2aa0-49d9-9936-f9e34e03281e|811272d6-06df-435f-a9bc-ceacea7dbfb9|progress_load",
+      "target_fingerprint": "86b9d980-93c7-4a60-b6ef-a65c60bc1ebe:1:185:8-10:8:10:2|81f36a62-b3a1-4447-8237-6af3a4675249:2:185:8-10:8:10:2|e04f9c0b-900d-44d9-8a9e-7cd5adf42d6f:3:185:8-10:8:10:2"
+    },
+    "idempotency": {
+      "second_abort": "ALREADY_APPLIED",
+      "week2_after": [
+        "190",
+        "190",
+        "190"
+      ],
+      "week3_after": [
+        "185",
+        "185",
+        "185"
+      ],
+      "successful_event_count": 1,
+      "live_unique_reject": true,
+      "live_unique_error": "duplicate key value violates unique constraint \"st_adaptation_events_application_key_success_idx\"",
+      "version_replay_abort": "ALREADY_APPLIED"
+    },
+    "stale": {
+      "first_abort": "STALE_TARGET_PRESCRIPTION",
+      "first_status": "not_applied",
+      "weights_after_stale": [
+        "200",
+        "200",
+        "200"
+      ],
+      "not_applied_rows": 1,
+      "restore_status": "mutated",
+      "restore_abort": null,
+      "weights_after_restore": [
+        "190",
+        "190",
+        "190"
+      ],
+      "successful_after_restore": 1
+    },
+    "safety": {
+      "logged_target_abort": "NO_ELIGIBLE_TARGET",
+      "logged_target_week2": [
+        "185",
+        "185",
+        "185"
+      ],
+      "history_trigger_blocked": true,
+      "history_trigger_error": "Cannot rewrite a planned prescription after that set has been logged.",
+      "locked_abort": "NO_ELIGIBLE_TARGET",
+      "locked_week2": [
+        "185",
+        "185",
+        "185"
+      ],
+      "completed_abort": "NO_ELIGIBLE_TARGET",
+      "completed_week2": [
+        "185",
+        "185",
+        "185"
+      ],
+      "other_program_week2": [
+        "185",
+        "185",
+        "185"
+      ],
+      "other_user_cannot_edit": true,
+      "other_user_cannot_read_ledger": true,
+      "other_user_apply_abort": "NO_ELIGIBLE_TARGET"
+    },
+    "no_change": {
+      "hold": {
+        "decision": "hold",
+        "status": "recorded_no_change",
+        "week2": [
+          "185",
+          "185",
+          "185"
+        ],
+        "card": {
+          "title": "Next time",
+          "headline": "Keep 185 lb",
+          "delta": "Keep 185 lb.",
+          "why": "The load is held after this exposure. One hard or unconfirmed session is not an automatic change.",
+          "not_changed": null
+        }
+      },
+      "build_reps": {
+        "decision": "build_reps",
+        "status": "recorded_no_change",
+        "week2": [
+          "185",
+          "185",
+          "185"
+        ],
+        "card": {
+          "title": "Next time",
+          "headline": "Keep 185 lb",
+          "delta": "Keep 185 lb and work toward 10 reps on every set.",
+          "why": "Stay at 185 lb and work toward 10 reps on every set.",
+          "not_changed": null
+        }
+      }
+    },
+    "non_applicable": {
+      "review_required": {
+        "decision": "review_required",
+        "apply": {
+          "status": "not_applied",
+          "applied": false,
+          "mutated": false,
+          "abort_reason": "NON_AUTOMATIC_DECISION",
+          "decision": "review_required",
+          "reason_codes": [
+            "REVIEW_PAIN_DISCOMFORT"
+          ],
+          "explanation": {
+            "headline": "No automatic change to Barbell Bench Press",
+            "why": "Signals conflicted or effort was unclear, so BuiltIQ did not rewrite the next workout.",
+            "next_line": "Review this exercise before changing load."
+          },
+          "target": {
+            "user_id": "7e45a3a9-db93-477f-84b0-e0e9562baa2c",
+            "program_id": "f5c256e0-c4c9-4700-8519-e206ecea5715",
+            "workout_id": "efd07996-f674-433f-bed6-19b28c90d447",
+            "exercise_id": "45b7f55f-3093-459e-8e0d-6dcf919d3cfd",
+            "catalog_exercise_id": "811272d6-06df-435f-a9bc-ceacea7dbfb9",
+            "exercise_name": "Barbell Bench Press",
+            "program_role": "primary",
+            "measurement_type": "reps",
+            "laterality": "bilateral",
+            "week": 2,
+            "day_order": 1,
+            "week_status": "template",
+            "has_performance": false,
+            "planned_sets": [
+              {
+                "id": "cb4a1cbd-9756-4f55-851f-f050e8961e83",
+                "exercise_id": "45b7f55f-3093-459e-8e0d-6dcf919d3cfd",
+                "sort_order": 0,
+                "set_number": 0,
+                "set_type": "warmup",
+                "target_weight": "45",
+                "target_reps": "10",
+                "target_rpe": null,
+                "is_deleted": false,
+                "created_at": "2026-09-24T16:58:38.859911+00:00",
+                "target_rir": 5,
+                "rest_seconds": null,
+                "rep_min": 10,
+                "rep_max": 10
+              },
+              {
+                "id": "65f282b9-b719-4b65-aaf2-527a83e34599",
+                "exercise_id": "45b7f55f-3093-459e-8e0d-6dcf919d3cfd",
+                "sort_order": 1,
+                "set_number": 0,
+                "set_type": "ramp",
+                "target_weight": "135",
+                "target_reps": "5",
+                "target_rpe": null,
+                "is_deleted": false,
+                "created_at": "2026-09-24T16:58:38.859911+00:00",
+                "target_rir": 3,
+                "rest_seconds": null,
+                "rep_min": 5,
+                "rep_max": 5
+              },
+              {
+                "id": "6e75e43b-b970-4a86-b3be-3e6588ca790d",
+                "exercise_id": "45b7f55f-3093-459e-8e0d-6dcf919d3cfd",
+                "sort_order": 2,
+                "set_number": 1,
+                "set_type": "working",
+                "target_weight": "185",
+                "target_reps": "8-10",
+                "target_rpe": null,
+                "is_deleted": false,
+                "created_at": "2026-09-24T16:58:38.859911+00:00",
+                "target_rir": 2,
+                "rest_seconds": null,
+                "rep_min": 8,
+                "rep_max": 10
+              },
+              {
+                "id": "e81aedfe-44f1-4da1-809f-c697971cf3ee",
+                "exercise_id": "45b7f55f-3093-459e-8e0d-6dcf919d3cfd",
+                "sort_order": 3,
+                "set_number": 2,
+                "set_type": "working",
+                "target_weight": "185",
+                "target_reps": "8-10",
+                "target_rpe": null,
+                "is_deleted": false,
+                "created_at": "2026-09-24T16:58:38.859911+00:00",
+                "target_rir": 2,
+                "rest_seconds": null,
+                "rep_min": 8,
+                "rep_max": 10
+              },
+              {
+                "id": "c9051061-e3ee-4387-95f7-e6a754b176ad",
+                "exercise_id": "45b7f55f-3093-459e-8e0d-6dcf919d3cfd",
+                "sort_order": 4,
+                "set_number": 3,
+                "set_type": "working",
+                "target_weight": "185",
+                "target_reps": "8-10",
+                "target_rpe": null,
+                "is_deleted": false,
+                "created_at": "2026-09-24T16:58:38.859911+00:00",
+                "target_rir": 2,
+                "rest_seconds": null,
+                "rep_min": 8,
+                "rep_max": 10
+              }
+            ]
+          },
+          "before_load": "185",
+          "after_load": "185",
+          "application_key": "7e45a3a9-db93-477f-84b0-e0e9562baa2c|b1a205bd-18b5-48b7-a511-bf5b56dd0b5e|c2b47305-d128-4ec3-a716-52e1e6b53a64|efd07996-f674-433f-bed6-19b28c90d447|45b7f55f-3093-459e-8e0d-6dcf919d3cfd|811272d6-06df-435f-a9bc-ceacea7dbfb9|review_required",
+          "target_fingerprint_expected": null,
+          "target_fingerprint_actual": "6e75e43b-b970-4a86-b3be-3e6588ca790d:1:185:8-10:8:10:2|e81aedfe-44f1-4da1-809f-c697971cf3ee:2:185:8-10:8:10:2|c9051061-e3ee-4387-95f7-e6a754b176ad:3:185:8-10:8:10:2",
+          "event": {
+            "user_id": "7e45a3a9-db93-477f-84b0-e0e9562baa2c",
+            "program_id": "f5c256e0-c4c9-4700-8519-e206ecea5715",
+            "from_week": 1,
+            "to_week": 2,
+            "exercise_catalog_id": "811272d6-06df-435f-a9bc-ceacea7dbfb9",
+            "decision": "review_required",
+            "reason_codes": [
+              "REVIEW_PAIN_DISCOMFORT",
+              "NON_AUTOMATIC_DECISION"
+            ],
+            "before_json": {
+              "source": {
+                "user_id": "7e45a3a9-db93-477f-84b0-e0e9562baa2c",
+                "program_id": "f5c256e0-c4c9-4700-8519-e206ecea5715",
+                "workout_id": "b1a205bd-18b5-48b7-a511-bf5b56dd0b5e",
+                "exercise_id": "c2b47305-d128-4ec3-a716-52e1e6b53a64",
+                "catalog_exercise_id": "811272d6-06df-435f-a9bc-ceacea7dbfb9",
+                "week": 1,
+                "day_order": 1,
+                "log_date": "2026-09-24",
+                "measurement_type": "reps",
+                "program_role": "primary",
+                "laterality": "bilateral",
+                "exercise_name": "Barbell Bench Press"
+              },
+              "target_before": {
+                "workout_id": "efd07996-f674-433f-bed6-19b28c90d447",
+                "exercise_id": "45b7f55f-3093-459e-8e0d-6dcf919d3cfd",
+                "week": 2,
+                "load": "185",
+                "fingerprint": "6e75e43b-b970-4a86-b3be-3e6588ca790d:1:185:8-10:8:10:2|e81aedfe-44f1-4da1-809f-c697971cf3ee:2:185:8-10:8:10:2|c9051061-e3ee-4387-95f7-e6a754b176ad:3:185:8-10:8:10:2"
+              },
+              "abort_reason": "NON_AUTOMATIC_DECISION"
+            },
+            "after_json": {
+              "application_status": "not_applied",
+              "proposed_load": 185,
+              "mutations": [],
+              "applied": false,
+              "apply_engine_version": "2a3.0.1"
+            },
+            "actor": "engine",
+            "science_version": "1.4.4",
+            "adaptation_engine_version": "2a2.1.0",
+            "increment_source": "equipment_default",
+            "increment_reason": "Barbell upper-body plate step",
+            "increment_value": 5,
+            "increment_unit": "lb",
+            "source_workout_id": "b1a205bd-18b5-48b7-a511-bf5b56dd0b5e",
+            "source_exercise_id": "c2b47305-d128-4ec3-a716-52e1e6b53a64",
+            "source_log_date": "2026-09-24",
+            "target_workout_id": "efd07996-f674-433f-bed6-19b28c90d447",
+            "target_exercise_id": "45b7f55f-3093-459e-8e0d-6dcf919d3cfd",
+            "application_status": "not_applied",
+            "application_key": "7e45a3a9-db93-477f-84b0-e0e9562baa2c|b1a205bd-18b5-48b7-a511-bf5b56dd0b5e|c2b47305-d128-4ec3-a716-52e1e6b53a64|efd07996-f674-433f-bed6-19b28c90d447|45b7f55f-3093-459e-8e0d-6dcf919d3cfd|811272d6-06df-435f-a9bc-ceacea7dbfb9|review_required",
+            "target_fingerprint": null,
+            "confidence": "review"
+          },
+          "mutations": []
+        },
+        "week2": [
+          "185",
+          "185",
+          "185"
+        ],
+        "card": {
+          "title": "Next time",
+          "headline": "No automatic change to Barbell Bench Press",
+          "delta": "Review this exercise before changing load.",
+          "why": "Signals conflicted or effort was unclear, so BuiltIQ did not rewrite the next workout.",
+          "not_changed": "The next workout was not changed."
+        }
+      },
+      "pain_hold": {
+        "decision": "pain_hold",
+        "apply": {
+          "status": "not_applied",
+          "applied": false,
+          "mutated": false,
+          "abort_reason": "NON_AUTOMATIC_DECISION",
+          "decision": "pain_hold",
+          "reason_codes": [
+            "PAIN_HOLD"
+          ],
+          "explanation": {
+            "headline": "No change to Barbell Bench Press",
+            "why": "Pain was reported. The next prescription was not changed. This is not a diagnosis.",
+            "next_line": "Review how this exercise felt before adding load."
+          },
+          "target": {
+            "user_id": "7e45a3a9-db93-477f-84b0-e0e9562baa2c",
+            "program_id": "d7e4fc16-94f9-409d-bc89-2cd989ff9e5c",
+            "workout_id": "39ce77c6-da8d-470e-9e24-e46b35f2f446",
+            "exercise_id": "caac6bbd-170f-49c1-9067-53621c732819",
+            "catalog_exercise_id": "811272d6-06df-435f-a9bc-ceacea7dbfb9",
+            "exercise_name": "Barbell Bench Press",
+            "program_role": "primary",
+            "measurement_type": "reps",
+            "laterality": "bilateral",
+            "week": 2,
+            "day_order": 1,
+            "week_status": "template",
+            "has_performance": false,
+            "planned_sets": [
+              {
+                "id": "bf8672c5-ce5a-4452-81c9-9bfca72817be",
+                "exercise_id": "caac6bbd-170f-49c1-9067-53621c732819",
+                "sort_order": 0,
+                "set_number": 0,
+                "set_type": "warmup",
+                "target_weight": "45",
+                "target_reps": "10",
+                "target_rpe": null,
+                "is_deleted": false,
+                "created_at": "2026-09-24T16:58:41.379507+00:00",
+                "target_rir": 5,
+                "rest_seconds": null,
+                "rep_min": 10,
+                "rep_max": 10
+              },
+              {
+                "id": "51b93327-80a4-448a-8abc-3c24616ede28",
+                "exercise_id": "caac6bbd-170f-49c1-9067-53621c732819",
+                "sort_order": 1,
+                "set_number": 0,
+                "set_type": "ramp",
+                "target_weight": "135",
+                "target_reps": "5",
+                "target_rpe": null,
+                "is_deleted": false,
+                "created_at": "2026-09-24T16:58:41.379507+00:00",
+                "target_rir": 3,
+                "rest_seconds": null,
+                "rep_min": 5,
+                "rep_max": 5
+              },
+              {
+                "id": "1c93c4ab-dff2-481d-9538-61c69ecee7a4",
+                "exercise_id": "caac6bbd-170f-49c1-9067-53621c732819",
+                "sort_order": 2,
+                "set_number": 1,
+                "set_type": "working",
+                "target_weight": "185",
+                "target_reps": "8-10",
+                "target_rpe": null,
+                "is_deleted": false,
+                "created_at": "2026-09-24T16:58:41.379507+00:00",
+                "target_rir": 2,
+                "rest_seconds": null,
+                "rep_min": 8,
+                "rep_max": 10
+              },
+              {
+                "id": "12ae8a0e-74dd-4a73-a60f-c61187b19dfc",
+                "exercise_id": "caac6bbd-170f-49c1-9067-53621c732819",
+                "sort_order": 3,
+                "set_number": 2,
+                "set_type": "working",
+                "target_weight": "185",
+                "target_reps": "8-10",
+                "target_rpe": null,
+                "is_deleted": false,
+                "created_at": "2026-09-24T16:58:41.379507+00:00",
+                "target_rir": 2,
+                "rest_seconds": null,
+                "rep_min": 8,
+                "rep_max": 10
+              },
+              {
+                "id": "7a86543b-0154-4ef2-8000-33f7a9eb501b",
+                "exercise_id": "caac6bbd-170f-49c1-9067-53621c732819",
+                "sort_order": 4,
+                "set_number": 3,
+                "set_type": "working",
+                "target_weight": "185",
+                "target_reps": "8-10",
+                "target_rpe": null,
+                "is_deleted": false,
+                "created_at": "2026-09-24T16:58:41.379507+00:00",
+                "target_rir": 2,
+                "rest_seconds": null,
+                "rep_min": 8,
+                "rep_max": 10
+              }
+            ]
+          },
+          "before_load": "185",
+          "after_load": "185",
+          "application_key": "7e45a3a9-db93-477f-84b0-e0e9562baa2c|71a4cc55-ba66-4308-b159-ab6ec2fb5652|92c91441-4e77-4ad3-ae5c-81da4a96f078|39ce77c6-da8d-470e-9e24-e46b35f2f446|caac6bbd-170f-49c1-9067-53621c732819|811272d6-06df-435f-a9bc-ceacea7dbfb9|pain_hold",
+          "target_fingerprint_expected": null,
+          "target_fingerprint_actual": "1c93c4ab-dff2-481d-9538-61c69ecee7a4:1:185:8-10:8:10:2|12ae8a0e-74dd-4a73-a60f-c61187b19dfc:2:185:8-10:8:10:2|7a86543b-0154-4ef2-8000-33f7a9eb501b:3:185:8-10:8:10:2",
+          "event": {
+            "user_id": "7e45a3a9-db93-477f-84b0-e0e9562baa2c",
+            "program_id": "d7e4fc16-94f9-409d-bc89-2cd989ff9e5c",
+            "from_week": 1,
+            "to_week": 2,
+            "exercise_catalog_id": "811272d6-06df-435f-a9bc-ceacea7dbfb9",
+            "decision": "pain_hold",
+            "reason_codes": [
+              "PAIN_HOLD",
+              "NON_AUTOMATIC_DECISION"
+            ],
+            "before_json": {
+              "source": {
+                "user_id": "7e45a3a9-db93-477f-84b0-e0e9562baa2c",
+                "program_id": "d7e4fc16-94f9-409d-bc89-2cd989ff9e5c",
+                "workout_id": "71a4cc55-ba66-4308-b159-ab6ec2fb5652",
+                "exercise_id": "92c91441-4e77-4ad3-ae5c-81da4a96f078",
+                "catalog_exercise_id": "811272d6-06df-435f-a9bc-ceacea7dbfb9",
+                "week": 1,
+                "day_order": 1,
+                "log_date": "2026-09-24",
+                "measurement_type": "reps",
+                "program_role": "primary",
+                "laterality": "bilateral",
+                "exercise_name": "Barbell Bench Press"
+              },
+              "target_before": {
+                "workout_id": "39ce77c6-da8d-470e-9e24-e46b35f2f446",
+                "exercise_id": "caac6bbd-170f-49c1-9067-53621c732819",
+                "week": 2,
+                "load": "185",
+                "fingerprint": "1c93c4ab-dff2-481d-9538-61c69ecee7a4:1:185:8-10:8:10:2|12ae8a0e-74dd-4a73-a60f-c61187b19dfc:2:185:8-10:8:10:2|7a86543b-0154-4ef2-8000-33f7a9eb501b:3:185:8-10:8:10:2"
+              },
+              "abort_reason": "NON_AUTOMATIC_DECISION"
+            },
+            "after_json": {
+              "application_status": "not_applied",
+              "proposed_load": 185,
+              "mutations": [],
+              "applied": false,
+              "apply_engine_version": "2a3.0.1"
+            },
+            "actor": "engine",
+            "science_version": "1.4.4",
+            "adaptation_engine_version": "2a2.1.0",
+            "increment_source": "equipment_default",
+            "increment_reason": "Barbell upper-body plate step",
+            "increment_value": 5,
+            "increment_unit": "lb",
+            "source_workout_id": "71a4cc55-ba66-4308-b159-ab6ec2fb5652",
+            "source_exercise_id": "92c91441-4e77-4ad3-ae5c-81da4a96f078",
+            "source_log_date": "2026-09-24",
+            "target_workout_id": "39ce77c6-da8d-470e-9e24-e46b35f2f446",
+            "target_exercise_id": "caac6bbd-170f-49c1-9067-53621c732819",
+            "application_status": "not_applied",
+            "application_key": "7e45a3a9-db93-477f-84b0-e0e9562baa2c|71a4cc55-ba66-4308-b159-ab6ec2fb5652|92c91441-4e77-4ad3-ae5c-81da4a96f078|39ce77c6-da8d-470e-9e24-e46b35f2f446|caac6bbd-170f-49c1-9067-53621c732819|811272d6-06df-435f-a9bc-ceacea7dbfb9|pain_hold",
+            "target_fingerprint": null,
+            "confidence": "hold"
+          },
+          "mutations": []
+        },
+        "week2": [
+          "185",
+          "185",
+          "185"
+        ],
+        "card": {
+          "title": "Next time",
+          "headline": "No change to Barbell Bench Press",
+          "delta": "Review how this exercise felt before adding load.",
+          "why": "Pain was reported. The next prescription was not changed. This is not a diagnosis.",
+          "not_changed": "The next workout was not changed."
+        }
+      },
+      "insufficient_data": {
+        "decision": "insufficient_data",
+        "status": "not_applied",
+        "abort": "NON_AUTOMATIC_DECISION",
+        "week2": [
+          "185",
+          "185",
+          "185"
+        ],
+        "card": {
+          "title": "Next time",
+          "headline": "No change to Barbell Bench Press",
+          "delta": "No prescription change.",
+          "why": "There was not enough comparable performance to adapt the next workout.",
+          "not_changed": "The next workout was not changed."
+        }
+      }
+    },
+    "cleanup": {
+      "programIds": [
+        "44a4fc9c-0f17-4856-aad9-0af3ef2c4618",
+        "4663534e-5caf-467d-9108-a9b0ca239e5a",
+        "fc77b9a9-8aa1-4384-880c-2ae452da5f2a",
+        "0ebd9c54-d3f0-473f-9dfa-7989f64b9e2e",
+        "2cb59f7c-4c7f-466e-a65c-6337a12b42d2",
+        "875329e7-3020-42c9-95ce-73879d46b2b7",
+        "01362f32-d587-41c7-9222-c6f2ddffef38",
+        "636ea179-7bfc-4628-855e-e73fcca65612",
+        "f5c256e0-c4c9-4700-8519-e206ecea5715",
+        "d7e4fc16-94f9-409d-bc89-2cd989ff9e5c",
+        "49a28f2b-24c9-4592-8338-409f8afa63ac"
+      ],
+      "users_deleted": [
+        "biq0219.verify.1790269083483@builtiq.test",
+        "biq0219.other.1790269083483@builtiq.test"
+      ]
+    }
+  },
+  "ui": {
+    "browser": "not_run",
+    "reason": "No logged-in Training session available for browser automation.",
+    "progress_card": {
+      "title": "Next time",
+      "headline": "Barbell Bench Press 190 lb",
+      "delta": "↑ 5 lb",
+      "why": "Barbell Bench Press increased from 185 lb to 190 lb because you reached the top of your 8–10 rep range across all working sets while staying within the target effort range.",
+      "not_changed": null
+    },
+    "hold_card": {
+      "title": "Next time",
+      "headline": "Keep 185 lb",
+      "delta": "Keep 185 lb.",
+      "why": "The load is held after this exposure. One hard or unconfirmed session is not an automatic change.",
+      "not_changed": null
+    },
+    "build_card": {
+      "title": "Next time",
+      "headline": "Keep 185 lb",
+      "delta": "Keep 185 lb and work toward 10 reps on every set.",
+      "why": "Stay at 185 lb and work toward 10 reps on every set.",
+      "not_changed": null
+    },
+    "review_card": {
+      "title": "Next time",
+      "headline": "No automatic change to Barbell Bench Press",
+      "delta": "Review this exercise before changing load.",
+      "why": "Signals conflicted or effort was unclear, so BuiltIQ did not rewrite the next workout.",
+      "not_changed": "The next workout was not changed."
+    },
+    "pain_card": {
+      "title": "Next time",
+      "headline": "No change to Barbell Bench Press",
+      "delta": "Review how this exercise felt before adding load.",
+      "why": "Pain was reported. The next prescription was not changed. This is not a diagnosis.",
+      "not_changed": "The next workout was not changed."
+    },
+    "gpt_used": false
+  },
+  "regression": {
+    "exit": 0,
+    "stdout": [
+      "BIQ-0141 science engine acceptance checks passed.",
+      "BIQ-0216 generation catalog eligibility checks passed.",
+      "BIQ-0209 Phase 1.1 generation checks passed.",
+      "BIQ-0217 Phase 2A.1 data-foundation checks passed.",
+      "BIQ-0218 Phase 2A.2 decision-engine checks passed.",
+      "BIQ-0219 Phase 2A.3 apply-layer checks passed."
+    ]
+  },
+  "issues": [],
+  "operationally_verified": true
+}

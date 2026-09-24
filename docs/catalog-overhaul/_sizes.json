@@ -1,0 +1,27 @@
+{
+  "docs/catalog-overhaul/_run-phase2a3-verify.js": {
+    "exists": false
+  },
+  "docs/catalog-overhaul/phase2a3-live-verify-console.txt": {
+    "exists": false
+  },
+  "docs/catalog-overhaul/phase2a3-live-verify-report.json": {
+    "exists": false
+  },
+  "docs/catalog-overhaul/_phase2a3-summary.json": {
+    "exists": true,
+    "size": 78
+  },
+  "docs/catalog-overhaul/_phase2a3-readable.txt": {
+    "exists": true,
+    "size": 167
+  },
+  "docs/catalog-overhaul/_extracted.txt": {
+    "exists": true,
+    "size": 184
+  },
+  "docs/catalog-overhaul/_qq.txt": {
+    "exists": true,
+    "size": 197
+  }
+}

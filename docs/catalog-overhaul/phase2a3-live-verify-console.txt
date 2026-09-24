@@ -1,0 +1,87 @@
+EXIT=0
+--- STDOUT ---
+{
+  "status": "verified",
+  "issues": [],
+  "report": "C:\\Users\\JesseTrowbridge\\OneDrive - Tegria\\Documents\\GitHub\\builtiq\\docs\\catalog-overhaul\\phase2a3-live-verify-report.json",
+  "closed_loop": {
+    "decision": "progress_load",
+    "proposed_load": 190,
+    "abort_reason": null,
+    "status": "mutated",
+    "target": {
+      "week": 2,
+      "exercise_id": "b94800c7-2aa0-49d9-9936-f9e34e03281e",
+      "week_status": "template"
+    },
+    "week2_working": [
+      "190",
+      "190",
+      "190"
+    ],
+    "week3_working": [
+      "185",
+      "185",
+      "185"
+    ],
+    "week2_status": "template",
+    "week3_status": "template",
+    "week2_warmup": [
+      "45"
+    ],
+    "week2_ramp": [
+      "135"
+    ],
+    "explanation": {
+      "headline": "Barbell Bench Press 190 lb",
+      "why": "Barbell Bench Press increased from 185 lb to 190 lb because you reached the top of your 8–10 rep range across all working sets while staying within the target effort range.",
+      "next_line": "↑ 5 lb"
+    }
+  },
+  "idempotency": {
+    "second_abort": "ALREADY_APPLIED",
+    "week2_after": [
+      "190",
+      "190",
+      "190"
+    ],
+    "week3_after": [
+      "185",
+      "185",
+      "185"
+    ],
+    "successful_event_count": 1,
+    "live_unique_reject": true,
+    "live_unique_error": "duplicate key value violates unique constraint \"st_adaptation_events_application_key_success_idx\"",
+    "version_replay_abort": "ALREADY_APPLIED"
+  },
+  "stale": {
+    "first_abort": "STALE_TARGET_PRESCRIPTION",
+    "first_status": "not_applied",
+    "weights_after_stale": [
+      "200",
+      "200",
+      "200"
+    ],
+    "not_applied_rows": 1,
+    "restore_status": "mutated",
+    "restore_abort": null,
+    "weights_after_restore": [
+      "190",
+      "190",
+      "190"
+    ],
+    "successful_after_restore": 1
+  },
+  "regression": [
+    "BIQ-0141 science engine acceptance checks passed.",
+    "BIQ-0216 generation catalog eligibility checks passed.",
+    "BIQ-0209 Phase 1.1 generation checks passed.",
+    "BIQ-0217 Phase 2A.1 data-foundation checks passed.",
+    "BIQ-0218 Phase 2A.2 decision-engine checks passed.",
+    "BIQ-0219 Phase 2A.3 apply-layer checks passed."
+  ]
+}
+
+--- STDERR ---
+

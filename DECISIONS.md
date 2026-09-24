@@ -1840,6 +1840,27 @@ The first live Phase 1 week passed the structural contract and still produced we
 
 ---
 
+## Decision 070 - Phase 2A.3 Is Live-Verified; Do Not Start 2B
+
+Date: 2026-09-24  
+Status: Accepted  
+Category: Program Design
+
+### Decision
+
+Treat Phase 2A.3 as operationally verified on the live project after 053. Do not reapply 053. Do not start Phase 2B until that work is explicitly requested.
+
+### Reason
+
+The disposable closed-loop used the real evaluator and apply path, the unique success index rejected a duplicate mutation, and template week status stayed `template`.
+
+### Impact
+
+- Adaptive strength loop (log → decide → apply next exposure → ledger → explanation) is live
+- Phase 2B remains unstarted
+
+---
+
 ## Decision 069 - Template Prescription Prep and Version-Stable Apply Identity
 
 Date: 2026-09-24  

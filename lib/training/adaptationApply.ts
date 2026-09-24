@@ -30,7 +30,7 @@ export function candidatesFromProgram(opts: {
       const planned = ex.st_planned_sets || [];
       const hasPerf = planned.some((s: any) => logHasPerformance(opts.logsByPlannedSetId?.[s.id]));
       rows.push({
-        user_id: opts.userId,
+        user_id: opts.program.owner_user_id || opts.userId,
         program_id: opts.program.id,
         workout_id: workout.id,
         exercise_id: ex.id,
@@ -68,6 +68,11 @@ export function exposureFromLoggedExercise(opts: {
   logsByPlannedSetId: Record<string, any>;
 }): ExerciseExposureInput {
   const planned = (opts.exercise.st_planned_sets || []).filter((s: any) => !s.is_deleted);
+  const working = planned.filter((s: any) => {
+    const type = String(s.set_type || 'working').toLowerCase();
+    return type !== 'warmup' && type !== 'warm-up' && type !== 'ramp' && type !== 'ramp_up';
+  });
+  const rx = working[0] || planned[0];
   return {
     log_date: Object.values(opts.logsByPlannedSetId)[0]?.log_date || new Date().toISOString().slice(0, 10),
     catalog_exercise_id: opts.exercise.catalog_exercise_id,
@@ -77,10 +82,10 @@ export function exposureFromLoggedExercise(opts: {
     laterality: lateralityOf(opts.exercise),
     equipment: opts.exercise.equipment || opts.exercise.snapshot_equipment,
     prescription: {
-      rep_min: planned[0]?.rep_min,
-      rep_max: planned[0]?.rep_max,
-      target_rir: planned[0]?.target_rir,
-      working_set_count: planned.filter((s: any) => String(s.set_type || 'working') !== 'warmup').length,
+      rep_min: rx?.rep_min,
+      rep_max: rx?.rep_max,
+      target_rir: rx?.target_rir,
+      working_set_count: working.length,
     },
     sets: planned.map((s: any) => {
       const log = opts.logsByPlannedSetId[s.id] || {};

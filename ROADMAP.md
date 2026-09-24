@@ -210,7 +210,7 @@ Goal: Prepare BuildIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
-**BIQ-0220** refined Phase 2A.3: a template week may receive the next-exposure prescription without being activated, and `application_key` is version-stable. Review and apply `20260924_053_phase2a3_adaptation_application.sql` before relying on durable ledger idempotency. Do not start Phase 2B.
+**BIQ-0221** live-verified Phase 2A.3 on the current Supabase project after 053 was applied. The 2A.2 → 2A.3 loop wrote Week 2 template Bench 185 → 190, left Week 3 at 185, and the unique success index blocked a second apply. Do not start Phase 2B.
 
 ### Recently completed
 

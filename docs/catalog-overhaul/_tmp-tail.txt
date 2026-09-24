@@ -1,0 +1,28 @@
+y on core types in this language mode.
+At C:\Users\JesseTrowbridge\AppData\Local\Temp\ps-script-f69c93e8-e142-4e32-b8b2-ed9e7df11893.ps1:155 char:9
++         $encoded = [System.Convert]::ToBase64String([System.Text.Enco ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : MethodInvocationNotSupportedInConstrainedLanguage
+ 
+Cannot invoke method. Method invocation is supported only on core types in this language mode.
+At C:\Users\JesseTrowbridge\AppData\Local\Temp\ps-script-f69c93e8-e142-4e32-b8b2-ed9e7df11893.ps1:155 char:9
++         $encoded = [System.Convert]::ToBase64String([System.Text.Enco ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : MethodInvocationNotSupportedInConstrainedLanguage
+ 
+Cannot invoke method. Method invocation is supported only on core types in this language mode.
+At C:\Users\JesseTrowbridge\AppData\Local\Temp\ps-script-f69c93e8-e142-4e32-b8b2-ed9e7df11893.ps1:155 char:9
++         $encoded = [System.Convert]::ToBase64String([System.Text.Enco ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : MethodInvocationNotSupportedInConstrainedLanguage
+ 
+Cannot invoke method. Method invocation is supported only on core types in this language mode.
+At C:\Users\JesseTrowbridge\AppData\Local\Temp\ps-script-f69c93e8-e142-4e32-b8b2-ed9e7df11893.ps1:155 char:9
++         $encoded = [System.Convert]::ToBase64String([System.Text.Enco ...
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (:) [], RuntimeException
+    + FullyQualifiedErrorId : MethodInvocationNotSupportedInConstrainedLanguage
+ 
