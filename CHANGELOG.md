@@ -30,9 +30,11 @@ Logging must record prescription metadata, session/exercise outcomes, extra sets
 - Persist `program_role`, `measurement_type`, and `laterality` from the science prescription
 - Snapshot planned RIR / rep range / role / rest onto new set logs
 - First-class workout and exercise outcomes; skipped is never inferred from empty logs
-- Extra sets live in `st_extra_set_logs`, not `st_planned_sets`
-- Week status: week 1 activated, later copied weeks template
-- Guard blocks planned-set mutation after performance logs
+- Extra sets live on `st_set_logs` (`is_extra_set`, null `planned_set_id`)
+- Week status uses evidence-based backfill; new future copies still default to template
+- Logged planned sets cannot have prescription fields rewritten; mid-session add/edit of unlogged sets remains allowed
+- Wholesale replace/import/generate still refused when a workout has performance
+- Unanswered pain stays null; `none` is an explicit answer
 - Append-only `st_adaptation_events` created; no progression writes yet
 - Minimal session UI: feel, pain, optional note
 - Confidence and increment resolvers are specified only
@@ -66,7 +68,7 @@ Logging must record prescription metadata, session/exercise outcomes, extra sets
 
 ### Database Changes
 
-Additive migration created, **not applied**: new columns on `st_exercises`, `st_set_logs`, `st_workouts`, `st_workout_feedback`; new tables `st_workout_sessions`, `st_exercise_sessions`, `st_extra_set_logs`, `st_adaptation_events`; planned-set mutation trigger.
+Additive migration created, **not applied**: new columns on `st_exercises`, `st_set_logs`, `st_workouts`, `st_workout_feedback`; new tables `st_workout_sessions`, `st_exercise_sessions`, `st_adaptation_events`; planned-set-specific rewrite trigger. Extra sets are rows on `st_set_logs`, not a separate table.
 
 ### Testing Steps
 

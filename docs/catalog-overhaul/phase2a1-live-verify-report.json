@@ -1,0 +1,48 @@
+{
+  "generated_at": "2026-09-24T00:53:59.530Z",
+  "phase_2a2": "not_started",
+  "migration": {
+    "apply": {
+      "attempted": true,
+      "ok": false,
+      "via": null,
+      "error": "No Supabase Management API token accepted. Service-role cannot run DDL via PostgREST."
+    }
+  },
+  "schema": {
+    "before": {
+      "exercise_meta": {
+        "ok": false,
+        "error": "column st_exercises.program_role does not exist"
+      },
+      "set_log_meta": {
+        "ok": false,
+        "error": "column st_set_logs.snapshot_target_rir does not exist"
+      },
+      "week_status": {
+        "ok": false,
+        "error": "column st_workouts.week_status does not exist"
+      },
+      "feedback": {
+        "ok": false,
+        "error": "column st_workout_feedback.workout_feel does not exist"
+      },
+      "sessions": {
+        "ok": false,
+        "error": "Could not find the table 'public.st_workout_sessions' in the schema cache"
+      },
+      "exercise_sessions": {
+        "ok": false,
+        "error": "Could not find the table 'public.st_exercise_sessions' in the schema cache"
+      },
+      "ledger": {
+        "ok": false,
+        "error": "Could not find the table 'public.st_adaptation_events' in the schema cache"
+      }
+    }
+  },
+  "week_status": {},
+  "live": {},
+  "issues": [],
+  "operationally_verified": false
+}

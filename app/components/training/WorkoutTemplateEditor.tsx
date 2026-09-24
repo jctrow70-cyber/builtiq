@@ -11,6 +11,7 @@ import { compatibleEquipmentOptions, defaultCatalogEquipment, resolveExerciseEqu
 import { getExerciseGuidePayload, getExerciseThumb, hasExerciseGuide, type ExerciseGuidePayload } from '../../../lib/training/exerciseMedia';
 import { exerciseTypeOf } from '../../../lib/training/exerciseTypes';
 import { SET_TYPES } from '../../../lib/training/setTypes';
+import { canRewritePlannedSetPrescription } from '../../../lib/training/plannedSetGuard';
 import {
   catalogPayloadFromItem,
   emptyAddPanelConfig,
@@ -277,6 +278,13 @@ export default function WorkoutTemplateEditor({
   async function updateSet(ex: any, set: any, field: string, value: any) {
     if (!canEdit) return;
     setError('');
+    const { data: existingLogs } = await supabase
+      .from('st_set_logs')
+      .select('id, completed, actual_weight, actual_reps, actual_duration, actual_distance, log_notes, planned_set_id')
+      .eq('planned_set_id', set.id)
+      .limit(10);
+    const rewrite = canRewritePlannedSetPrescription({ plannedSetId: set.id, logs: existingLogs || [] });
+    if (!rewrite.ok) return persistError(rewrite.reason);
     for (const tw of targets) {
       const matchEx = tw.id === workout.id ? ex : matchingExercise(tw, ex);
       const matchSet = matchEx ? (tw.id === workout.id ? set : matchingSet(matchEx, set)) : null;

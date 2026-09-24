@@ -32,7 +32,7 @@ function rowHasPerformance(row: any): boolean {
 
 function logSetNumber(row: any): number {
   const joinPs = row.st_planned_sets;
-  return Number(row.snapshot_set_number ?? joinPs?.set_number ?? 1);
+  return Number(row.snapshot_set_number ?? row.extra_set_number ?? joinPs?.set_number ?? 1);
 }
 
 function logSetType(row: any): string {

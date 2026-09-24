@@ -1848,7 +1848,9 @@ Category: Program Design
 
 ### Decision
 
-Start Phase 2A.1 only. Persist the data the future deterministic engine needs: exercise `program_role` / `measurement_type` / `laterality`, planned-vs-performed snapshots on new logs, explicit session and exercise outcomes, extra sets outside `st_planned_sets`, week status, minimal workout feel + pain feedback, and an append-only `st_adaptation_events` ledger.
+Start Phase 2A.1 only. Persist the data the future deterministic engine needs: exercise `program_role` / `measurement_type` / `laterality`, planned-vs-performed snapshots on new logs, explicit session and exercise outcomes, extra sets on `st_set_logs` (`is_extra_set`, null `planned_set_id`), evidence-based week status, minimal workout feel + pain feedback, and an append-only `st_adaptation_events` ledger.
+
+Protect a planned set's prescription fields only after that set has performance. Do not freeze the whole workout. Wholesale replace/import/generate remains blocked when performance exists. Unanswered pain is null; `none` is explicit.
 
 Missing RIR is never treated as RIR 2. Load progression eligibility uses two confidence paths (high-confidence RIR vs two consecutive top-range performance-only exposures). Those rules are specified now and not applied to programs yet.
 
@@ -1863,6 +1865,8 @@ BuiltIQ cannot learn from performed training until planned and performed data ar
 - Implement automatic double progression in the same change — rejected; 2A.1 is capture-only
 - Infer skipped from empty logs — rejected; empty means not_started
 - Store extra sets as additional planned rows — rejected; extras must not become the prescription
+- Separate `st_extra_set_logs` table — rejected; one performed-set table
+- Workout-wide planned-set trigger — rejected; it broke mid-session Training UX
 - Permanent HOLD on missing RIR — rejected; two comparable top-range exposures may progress
 
 ### Impact

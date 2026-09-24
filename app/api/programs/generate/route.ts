@@ -401,9 +401,17 @@ async function programHasNoSetLogs(supabase: any, exerciseIds: string[]): Promis
   if (!exerciseIds.length) return true;
   const { data: planned } = await supabase.from('st_planned_sets').select('id').in('exercise_id', exerciseIds);
   const plannedIds = (planned || []).map((row: { id: string }) => row.id);
-  if (!plannedIds.length) return true;
-  const { count } = await supabase.from('st_set_logs').select('id', { count: 'exact', head: true }).in('planned_set_id', plannedIds);
-  return !count;
+  if (plannedIds.length) {
+    const { count } = await supabase.from('st_set_logs').select('id', { count: 'exact', head: true }).in('planned_set_id', plannedIds);
+    if (count) return false;
+  }
+  const { count: extraCount, error: extraErr } = await supabase
+    .from('st_set_logs')
+    .select('id', { count: 'exact', head: true })
+    .in('exercise_id', exerciseIds)
+    .eq('is_extra_set', true);
+  if (extraErr && /is_extra_set|does not exist/i.test(extraErr.message || '')) return true;
+  return !extraCount;
 }
 
 async function fetchRecentTrainingSummary(supabase: any, userId: string) {

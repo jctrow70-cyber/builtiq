@@ -5,7 +5,7 @@ import { PAIN_FLAGS, WORKOUT_FEELS, type PainFlag, type SessionStatus, type Skip
 type Props = {
   status: SessionStatus;
   feel: WorkoutFeel | '';
-  pain: PainFlag;
+  pain: PainFlag | '';
   notes: string;
   skipReason: SkipReason | '';
   durationMinutes?: number | null;

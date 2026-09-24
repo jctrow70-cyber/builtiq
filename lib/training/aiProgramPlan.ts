@@ -1,6 +1,7 @@
 /** BIQ-0014: AI-driven program generation — prompt, validation, catalog matching */
 
 import { weekStatusForNewWorkout } from '../scienceEngine/adaptation/weekStatus';
+import { fetchWorkoutHasPerformance } from './plannedSetGuard';
 import { prescriptionColumnsFromSources } from './prescriptionMeta';
 import { inferExerciseType } from './exerciseTypes';
 import { hasExerciseGuide } from './exerciseMedia';
@@ -1199,22 +1200,7 @@ export async function persistWorkoutsOntoProgram(
 }
 
 async function workoutHasNoSetLogs(supabase: any, workoutId: string): Promise<boolean> {
-  const { data: exercises } = await supabase.from('st_exercises').select('id').eq('workout_id', workoutId);
-  const exerciseIds = (exercises || []).map((row: { id: string }) => row.id);
-  if (!exerciseIds.length) return true;
-  const { count: extraCount, error: extraErr } = await supabase
-    .from('st_extra_set_logs')
-    .select('id', { count: 'exact', head: true })
-    .eq('workout_id', workoutId);
-  if (!extraErr && extraCount) return false;
-  const { data: planned } = await supabase.from('st_planned_sets').select('id').in('exercise_id', exerciseIds);
-  const plannedIds = (planned || []).map((row: { id: string }) => row.id);
-  if (!plannedIds.length) return true;
-  const { count } = await supabase
-    .from('st_set_logs')
-    .select('id', { count: 'exact', head: true })
-    .in('planned_set_id', plannedIds);
-  return !count;
+  return !(await fetchWorkoutHasPerformance(supabase, workoutId));
 }
 
 function collectPersistedSections(workoutId: string, tpl: AiWorkout, catalog: any[], catMap: Record<string, any>) {

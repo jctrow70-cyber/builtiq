@@ -7,13 +7,28 @@ import { MASTER_CATALOG_SOURCE } from '../../training/masterCatalog';
 import { userCustomCatalogItems } from '../../training/catalogSearch';
 import { prescriptionColumnsFromSources } from '../../training/prescriptionMeta';
 import { snapshotForLog, plannedRepRangeFromLog } from '../../training/setLogSnapshots';
-import { canMutatePlannedSets, workoutHasPerformanceLogs } from '../../training/plannedSetGuard';
+import {
+  canAddPlannedSetAfterSiblingLogs,
+  canReplaceWorkout,
+  canRewritePlannedSetPrescription,
+  workoutHasPerformanceLogs,
+} from '../../training/plannedSetGuard';
 import { deriveSessionStatus, skippedIsNotFailed } from '../../training/sessionOutcome';
 import { deriveExerciseStatus } from '../../training/exerciseOutcome';
-import { extraSetInsertPayload, extraSetsAreNotPlanned, nextExtraSetNumber } from '../../training/extraSets';
+import {
+  countsTowardProgression,
+  extraSetInsertPayload,
+  extraSetsAreNotPlanned,
+  extraSetsDoNotCompleteWorkout,
+  extraLogsFromSetLogs,
+  nextExtraSetNumber,
+} from '../../training/extraSets';
+import { isStrengthWorkoutCompleted } from '../../programDesign/activityCompletion';
 import { backfillWeekStatus, weekStatusForNewWorkout } from './weekStatus';
 import { progressionConfidence, reportedRirOrUnknown } from './confidence';
 import { resolveLoadIncrement } from './increments';
+import { normalizePainFlag } from '../../training/workoutSessions';
+import { buildExerciseSessionHistory } from '../../training/exerciseSessionHistory';
 
 function assert(cond: unknown, message: string) {
   if (!cond) throw new Error(message);
@@ -101,51 +116,99 @@ export function runPhase2a1FoundationChecks() {
     id: 'w1',
     st_exercises: [
       {
+        id: 'exA',
         section: 'strength',
         st_planned_sets: [
-          { id: 'ps1', set_type: 'working' },
-          { id: 'ps2', set_type: 'working' },
+          { id: 'psA', set_type: 'working' },
+          { id: 'psB', set_type: 'working' },
         ],
+      },
+      {
+        id: 'exB',
+        section: 'strength',
+        st_planned_sets: [{ id: 'psC', set_type: 'working' }],
       },
     ],
   };
+  const siblingLogs = [{ planned_set_id: 'psA', completed: true, actual_reps: '8' }];
+  assert(canAddPlannedSetAfterSiblingLogs().ok, 'mid-session add set still succeeds after another set is logged');
+  assert(canRewritePlannedSetPrescription({ plannedSetId: 'psC', logs: siblingLogs }).ok, 'unlogged set in a started workout remains editable');
+  assert(!canRewritePlannedSetPrescription({ plannedSetId: 'psA', logs: siblingLogs }).ok, 'logged planned set A cannot have its prescription rewritten');
+  assert(canRewritePlannedSetPrescription({ plannedSetId: 'psB', logs: siblingLogs }).ok, 'unlogged planned set B in the same workout can still be edited');
+  assert(!canReplaceWorkout({ workout, logs: siblingLogs }).ok, 'destructive wholesale replacement of a logged workout remains guarded');
+  assert(canReplaceWorkout({ workout, logs: [] }).ok, 'unlogged workouts can still be replaced');
+  assert(workoutHasPerformanceLogs(workout, siblingLogs), 'performance logs are detected for replace guards');
+
   assert(deriveSessionStatus({ workout, logs: {} }) === 'not_started', 'empty logs are not_started, not skipped');
-  assert(deriveSessionStatus({ workout, logs: { ps1: { completed: true, actual_reps: '8' } } }) === 'in_progress', 'partial logs are in_progress');
-  assert(
-    deriveSessionStatus({ workout, logs: { ps1: { completed: true }, ps2: { completed: true } } }) === 'completed',
-    'all planned sets completed'
-  );
+  assert(deriveSessionStatus({ workout, logs: { psA: { completed: true, actual_reps: '8' } } }) === 'in_progress', 'partial logs are in_progress');
   assert(deriveSessionStatus({ workout, logs: {}, explicit: { status: 'skipped' } }) === 'skipped', 'skipped is explicit');
   assert(skippedIsNotFailed('skipped'), 'skipped does not equal failed performance');
   const skippedEx = deriveExerciseStatus({ plannedSets: workout.st_exercises[0].st_planned_sets, logs: {}, explicit: { status: 'skipped' } });
   assert(skippedEx.status === 'skipped' && skippedEx.attempt === 'did_not_perform', 'I did not do this');
   const failedEx = deriveExerciseStatus({
     plannedSets: workout.st_exercises[0].st_planned_sets,
-    logs: { ps1: { completed: true, actual_reps: '3' } },
+    logs: { psA: { completed: true, actual_reps: '3' } },
     explicit: { attempt_outcome: 'could_not_complete' },
   });
   assert(failedEx.status === 'partial' && failedEx.attempt === 'could_not_complete', 'I tried and could not complete it');
 
   const extra = extraSetInsertPayload({
-    exercise_id: 'ex1',
+    exercise_id: 'exA',
     log_date: '2026-09-23',
     extra_set_number: nextExtraSetNumber([]),
     actual_reps: '8',
     actual_weight: '185',
+    snapshot_exercise_name: 'Barbell Bench Press',
   });
-  assert(extraSetsAreNotPlanned(extra as any), 'extra sets can be logged without becoming planned sets');
-  assert(!extra.planned_set_id, 'extra set payload has no planned_set_id');
+  assert(extra.is_extra_set === true, 'extra sets are stored as is_extra_set');
+  assert(extra.planned_set_id == null, 'extra set planned_set_id is null');
+  assert(extra.exercise_id === 'exA', 'extra set has exercise_id');
+  assert(extraSetsAreNotPlanned(extra), 'extra sets can be logged without becoming planned sets');
+  assert(!countsTowardProgression(extra as any), 'extra sets are excluded from deterministic progression');
+  const extraInHistory = extraLogsFromSetLogs([
+    { planned_set_id: 'psA', completed: true, actual_reps: '8' },
+    extra,
+  ]);
+  assert(extraInHistory.length === 1, 'extras are identifiable among st_set_logs');
+  const history = buildExerciseSessionHistory(
+    [
+      {
+        ...extra,
+        log_date: '2026-09-23',
+        completed: true,
+        snapshot_day_label: 'Mon',
+      },
+    ],
+    'strength',
+    { matchDayLabel: false }
+  );
+  assert(history.length === 1 && history[0].sets.length === 1, 'extra sets appear in exercise history');
+  assert(
+    !extraSetsDoNotCompleteWorkout({
+      plannedSetIds: ['psA', 'psB', 'psC'],
+      logs: [{ ...extra, completed: true } as any],
+    }),
+    'extra sets do not satisfy planned workout completion by themselves'
+  );
+  assert(
+    !isStrengthWorkoutCompleted(workout, { extra1: { planned_set_id: undefined, completed: true, is_extra_set: true } as any }),
+    'completion map ignores extras without planned_set_id'
+  );
 
-  const logs = [{ planned_set_id: 'ps1', completed: true, actual_reps: '8' }];
-  const guard = canMutatePlannedSets({ workout, logs });
-  assert(!guard.ok, 'workouts with logs are protected by the future-adaptation guard');
-  assert(workoutHasPerformanceLogs(workout, logs), 'performance logs are detected');
-  assert(canMutatePlannedSets({ workout, logs: [] }).ok, 'unlogged workouts can still edit prescriptions');
+  assert(weekStatusForNewWorkout(1) === 'activated', 'week 1 new insert is activated');
+  assert(weekStatusForNewWorkout(3) === 'template', 'new future copied weeks are templates');
+  assert(backfillWeekStatus({ week: 2, hasPerformance: true, fullyCompleted: true }) === 'completed', 'completed historical week becomes completed');
+  assert(backfillWeekStatus({ week: 2, hasPerformance: true, fullyCompleted: false }) === 'in_progress', 'partially trained week becomes in_progress');
+  assert(backfillWeekStatus({ week: 2, hasPerformance: false, currentProgramWeek: 3 }) === 'activated', 'trained-calendar week 2 without leftover template if it is current/elapsed');
+  assert(backfillWeekStatus({ week: 2, hasPerformance: true, currentProgramWeek: 1 }) === 'in_progress', 'trained week 2 does not become template');
+  assert(backfillWeekStatus({ week: 4, hasPerformance: false, currentProgramWeek: 1 }) === 'template', 'untouched future week becomes template');
+  assert(backfillWeekStatus({ week: 3, hasPerformance: false, currentProgramWeek: null }) === 'activated', 'ambiguous old week remains activated');
+  assert(backfillWeekStatus({ week: 3, existing: 'activated' }) === 'activated', 'explicit historical status is preserved');
+  assert(backfillWeekStatus({ week: 1, existing: 'completed' }) === 'completed', 'existing completed week 1 stays completed');
 
-  assert(weekStatusForNewWorkout(1) === 'activated', 'week 1 is activated');
-  assert(weekStatusForNewWorkout(3) === 'template', 'copied later weeks are templates');
-  assert(backfillWeekStatus(3, 'activated') === 'activated', 'week status does not alter historical weeks');
-  assert(backfillWeekStatus(1, 'completed') === 'completed', 'existing completed week 1 stays completed');
+  assert(normalizePainFlag('') === null, 'unanswered pain is null');
+  assert(normalizePainFlag(undefined) === null, 'missing pain is null');
+  assert(normalizePainFlag('none') === 'none', 'explicit no pain is none');
 
   const custom = {
     id: 'custom-1',

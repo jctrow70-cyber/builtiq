@@ -20,6 +20,12 @@ export type WorkoutFeedbackDraft = {
   notes?: string | null;
 };
 
+export function normalizePainFlag(value: unknown): PainFlag | null {
+  if (value == null || String(value).trim() === '') return null;
+  const v = String(value);
+  return v === 'none' || v === 'discomfort' || v === 'pain_limiting' || v === 'stopped_due_to_pain' ? (v as PainFlag) : null;
+}
+
 function missingTable(error: { message?: string } | null | undefined): boolean {
   return /does not exist|could not find|schema cache/i.test(error?.message || '');
 }
@@ -58,7 +64,7 @@ export async function upsertWorkoutFeel(
     workout_id: opts.workoutId,
     log_date: opts.logDate,
     workout_feel: opts.draft.workout_feel || null,
-    pain_flag: opts.draft.pain_flag || 'none',
+    pain_flag: normalizePainFlag(opts.draft.pain_flag),
     notes: opts.draft.notes || null,
   };
   const { data, error } = await supabase.from('st_workout_feedback').insert(payload).select('id').maybeSingle();

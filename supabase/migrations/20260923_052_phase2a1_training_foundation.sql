@@ -1,4 +1,4 @@
--- BIQ-0217 Phase 2A.1 training data foundation
+-- BIQ-0217 Phase 2A.1 training data foundation (revised pre-apply)
 -- Additive only. Does not drop programs, workouts, or set-log history.
 -- Does NOT implement automatic progression.
 -- REVIEW BEFORE APPLYING.
@@ -53,7 +53,7 @@ comment on column public.st_exercises.laterality is
   'bilateral | unilateral | alternating. Null on historical rows; do not backfill.';
 
 -- ---------------------------------------------------------------------------
--- 2. Planned-vs-performed snapshots on set logs
+-- 2. Planned-vs-performed snapshots + extra sets on st_set_logs
 -- ---------------------------------------------------------------------------
 
 alter table public.st_set_logs
@@ -62,26 +62,214 @@ alter table public.st_set_logs
   add column if not exists snapshot_rep_max smallint,
   add column if not exists snapshot_program_role text,
   add column if not exists snapshot_rest_seconds int,
-  add column if not exists exercise_id uuid references public.st_exercises(id) on delete set null;
+  add column if not exists exercise_id uuid references public.st_exercises(id) on delete set null,
+  add column if not exists is_extra_set boolean not null default false,
+  add column if not exists extra_set_number int;
 
 comment on column public.st_set_logs.snapshot_target_rir is
   'Planned RIR at log time. Null on historical logs; never fabricated.';
 comment on column public.st_set_logs.exercise_id is
-  'Exercise for extra-set logs and orphaned planned-set logs.';
+  'Required for extra sets. Optional on planned-set logs.';
+comment on column public.st_set_logs.is_extra_set is
+  'true = user-added performed set. Never a planned set. Excluded from 2A progression unless later decided.';
+comment on column public.st_set_logs.extra_set_number is
+  '1-based extra set index for that exercise/date. Null on planned-set logs.';
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'st_set_logs_extra_set_check'
+      and conrelid = 'public.st_set_logs'::regclass
+  ) then
+    alter table public.st_set_logs
+      add constraint st_set_logs_extra_set_check
+      check (
+        is_extra_set = false
+        or (
+          is_extra_set = true
+          and planned_set_id is null
+          and exercise_id is not null
+          and extra_set_number is not null
+          and extra_set_number >= 1
+        )
+      );
+  end if;
+end $$;
+
+create unique index if not exists st_set_logs_extra_unique
+  on public.st_set_logs (user_id, exercise_id, log_date, extra_set_number)
+  where is_extra_set = true;
+
+create index if not exists st_set_logs_extra_exercise_idx
+  on public.st_set_logs (exercise_id, log_date)
+  where is_extra_set = true;
+
+-- Owner insert already allows user_id = auth.uid() without planned_set_id.
+-- Extend insert so coaches can log extras through exercise_id.
+drop policy if exists "set_logs_insert" on public.st_set_logs;
+create policy "set_logs_insert" on public.st_set_logs
+  for insert with check (
+    user_id = auth.uid()
+    or exists (
+      select 1
+      from public.st_planned_sets ps
+      join public.st_exercises e on e.id = ps.exercise_id
+      join public.st_workouts w on w.id = e.workout_id
+      join public.st_programs p on p.id = w.program_id
+      join public.st_team_members coach on coach.team_id = p.team_id
+      where ps.id = st_set_logs.planned_set_id
+        and coach.user_id = auth.uid()
+        and coach.status = 'active'
+        and coach.role in ('owner', 'manager')
+        and p.visibility = 'team'
+    )
+    or (
+      coalesce(st_set_logs.is_extra_set, false) = true
+      and st_set_logs.planned_set_id is null
+      and st_set_logs.exercise_id is not null
+      and exists (
+        select 1
+        from public.st_exercises e
+        join public.st_workouts w on w.id = e.workout_id
+        join public.st_programs p on p.id = w.program_id
+        join public.st_team_members coach on coach.team_id = p.team_id
+        where e.id = st_set_logs.exercise_id
+          and coach.user_id = auth.uid()
+          and coach.status = 'active'
+          and coach.role in ('owner', 'manager')
+          and p.visibility = 'team'
+      )
+    )
+  );
 
 -- ---------------------------------------------------------------------------
--- 3. Week status
+-- 3. Week status — evidence-based backfill
 -- ---------------------------------------------------------------------------
 
 alter table public.st_workouts
   add column if not exists week_status text;
 
-update public.st_workouts
-set week_status = case
-  when coalesce(week, 1) <= 1 then 'activated'
-  else 'template'
-end
-where week_status is null or week_status = '';
+create or replace function public.st_log_row_has_performance(
+  p_completed boolean,
+  p_weight text,
+  p_reps text,
+  p_duration text,
+  p_distance text
+)
+returns boolean
+language sql
+immutable
+as $$
+  select
+    coalesce(p_completed, false)
+    or coalesce(length(trim(p_weight)), 0) > 0
+    or coalesce(length(trim(p_reps)), 0) > 0
+    or coalesce(length(trim(p_duration)), 0) > 0
+    or coalesce(length(trim(p_distance)), 0) > 0;
+$$;
+
+create or replace function public.st_program_current_week(p_start date, p_created timestamptz, p_weeks int)
+returns int
+language sql
+stable
+as $$
+  select
+    case
+      when coalesce(p_start, p_created::date) is null then null
+      when current_date < date_trunc('week', coalesce(p_start, p_created::date))::date then 1
+      else least(
+        greatest(
+          1,
+          floor(
+            (current_date - date_trunc('week', coalesce(p_start, p_created::date))::date) / 7
+          )::int + 1
+        ),
+        greatest(1, coalesce(p_weeks, 6))
+      )
+    end;
+$$;
+
+update public.st_workouts w
+set week_status = computed.status
+from (
+  select
+    w2.id,
+    case
+      when w2.week_status in ('template', 'activated', 'in_progress', 'completed', 'locked')
+        then w2.week_status
+      when complete.fully_completed then 'completed'
+      when perf.has_performance then 'in_progress'
+      when coalesce(w2.week, 1) <= 1 then 'activated'
+      when public.st_program_current_week(p.start_date, p.created_at, p.weeks) is null
+        then 'activated'
+      when coalesce(w2.week, 1) <= public.st_program_current_week(p.start_date, p.created_at, p.weeks)
+        then 'activated'
+      else 'template'
+    end as status
+  from public.st_workouts w2
+  left join public.st_programs p on p.id = w2.program_id
+  left join lateral (
+    select
+      exists (
+        select 1
+        from public.st_exercises e
+        join public.st_planned_sets ps on ps.exercise_id = e.id
+        join public.st_set_logs sl on sl.planned_set_id = ps.id
+        where e.workout_id = w2.id
+          and public.st_log_row_has_performance(
+            sl.completed,
+            sl.actual_weight::text,
+            sl.actual_reps::text,
+            sl.actual_duration::text,
+            sl.actual_distance::text
+          )
+      )
+      or exists (
+        select 1
+        from public.st_exercises e
+        join public.st_set_logs sl on sl.exercise_id = e.id
+        where e.workout_id = w2.id
+          and sl.is_extra_set = true
+          and public.st_log_row_has_performance(
+            sl.completed,
+            sl.actual_weight::text,
+            sl.actual_reps::text,
+            sl.actual_duration::text,
+            sl.actual_distance::text
+          )
+      ) as has_performance
+  ) perf on true
+  left join lateral (
+    select
+      exists (
+        select 1
+        from public.st_exercises e
+        join public.st_planned_sets ps on ps.exercise_id = e.id
+        where e.workout_id = w2.id
+          and coalesce(e.section, 'strength') <> 'warmup'
+          and coalesce(ps.is_deleted, false) = false
+          and coalesce(ps.set_type, 'working') <> 'warmup'
+      )
+      and not exists (
+        select 1
+        from public.st_exercises e
+        join public.st_planned_sets ps on ps.exercise_id = e.id
+        where e.workout_id = w2.id
+          and coalesce(e.section, 'strength') <> 'warmup'
+          and coalesce(ps.is_deleted, false) = false
+          and coalesce(ps.set_type, 'working') <> 'warmup'
+          and not exists (
+            select 1
+            from public.st_set_logs sl
+            where sl.planned_set_id = ps.id
+              and sl.completed = true
+          )
+      ) as fully_completed
+  ) complete on true
+) computed
+where w.id = computed.id
+  and (w.week_status is null or w.week_status = '');
 
 alter table public.st_workouts
   alter column week_status set default 'activated';
@@ -100,7 +288,7 @@ begin
 end $$;
 
 comment on column public.st_workouts.week_status is
-  'template = copied later week; activated = available to train. Historical week 1 is activated, not rewritten from logs.';
+  'Evidence-based: completed/in_progress from logs; current/elapsed untouched = activated; future untouched = template. locked is never inferred.';
 
 -- ---------------------------------------------------------------------------
 -- 4. Session + exercise outcomes
@@ -196,6 +384,9 @@ begin
   end if;
 end $$;
 
+comment on column public.st_workout_feedback.pain_flag is
+  'NULL = unanswered. none = user explicitly reported no pain.';
+
 alter table public.st_workout_sessions
   drop constraint if exists st_workout_sessions_feedback_fk;
 alter table public.st_workout_sessions
@@ -203,46 +394,7 @@ alter table public.st_workout_sessions
   foreign key (feedback_id) references public.st_workout_feedback(id) on delete set null;
 
 -- ---------------------------------------------------------------------------
--- 6. Extra sets (never become planned sets)
--- ---------------------------------------------------------------------------
-
-create table if not exists public.st_extra_set_logs (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
-  exercise_id uuid not null references public.st_exercises(id) on delete cascade,
-  workout_id uuid references public.st_workouts(id) on delete set null,
-  catalog_exercise_id uuid references public.st_exercise_catalog(id) on delete set null,
-  log_date date not null,
-  extra_set_number int not null check (extra_set_number >= 1),
-  set_type text not null default 'working',
-  actual_weight text,
-  actual_reps text,
-  actual_rir smallint,
-  actual_rpe text,
-  actual_duration text,
-  actual_distance text,
-  completed boolean not null default false,
-  log_notes text,
-  snapshot_exercise_name text,
-  snapshot_program_role text,
-  created_at timestamptz not null default now(),
-  constraint st_extra_set_logs_unique unique (user_id, exercise_id, log_date, extra_set_number)
-);
-
-comment on table public.st_extra_set_logs is
-  'User-added working sets. Not st_planned_sets. Future progression may ignore them.';
-
-create index if not exists st_extra_set_logs_exercise_idx
-  on public.st_extra_set_logs (exercise_id, log_date);
-
-alter table public.st_extra_set_logs enable row level security;
-
-drop policy if exists "extra_set_logs_own" on public.st_extra_set_logs;
-create policy "extra_set_logs_own" on public.st_extra_set_logs
-  for all using (user_id = auth.uid()) with check (user_id = auth.uid());
-
--- ---------------------------------------------------------------------------
--- 7. Append-only adaptation ledger (no writes in 2A.1)
+-- 6. Append-only adaptation ledger (no writes in 2A.1)
 -- ---------------------------------------------------------------------------
 
 create table if not exists public.st_adaptation_events (
@@ -288,8 +440,29 @@ create policy "adaptation_events_insert_own" on public.st_adaptation_events
 -- No update/delete policies: append-only for clients.
 
 -- ---------------------------------------------------------------------------
--- 8. History-safety guard
+-- 7. History protection — planned-set-specific UPDATE only
 -- ---------------------------------------------------------------------------
+
+create or replace function public.st_planned_set_has_performance(p_planned_set_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.st_set_logs sl
+    where sl.planned_set_id = p_planned_set_id
+      and public.st_log_row_has_performance(
+        sl.completed,
+        sl.actual_weight::text,
+        sl.actual_reps::text,
+        sl.actual_duration::text,
+        sl.actual_distance::text
+      )
+  );
+$$;
 
 create or replace function public.st_workout_has_performance_logs(p_workout_id uuid)
 returns boolean
@@ -305,75 +478,68 @@ as $$
       join public.st_planned_sets ps on ps.exercise_id = e.id
       join public.st_set_logs sl on sl.planned_set_id = ps.id
       where e.workout_id = p_workout_id
-        and (
-          sl.completed = true
-          or coalesce(length(trim(sl.actual_weight::text)), 0) > 0
-          or coalesce(length(trim(sl.actual_reps::text)), 0) > 0
-          or coalesce(length(trim(sl.actual_duration::text)), 0) > 0
-          or coalesce(length(trim(sl.actual_distance::text)), 0) > 0
+        and public.st_log_row_has_performance(
+          sl.completed,
+          sl.actual_weight::text,
+          sl.actual_reps::text,
+          sl.actual_duration::text,
+          sl.actual_distance::text
         )
     )
     or exists (
       select 1
-      from public.st_extra_set_logs x
-      where x.workout_id = p_workout_id
+      from public.st_exercises e
+      join public.st_set_logs sl on sl.exercise_id = e.id
+      where e.workout_id = p_workout_id
+        and sl.is_extra_set = true
+        and public.st_log_row_has_performance(
+          sl.completed,
+          sl.actual_weight::text,
+          sl.actual_reps::text,
+          sl.actual_duration::text,
+          sl.actual_distance::text
+        )
     );
 $$;
 
-create or replace function public.st_prevent_logged_planned_set_mutation()
+create or replace function public.st_prevent_logged_planned_set_rewrite()
 returns trigger
 language plpgsql
 as $$
-declare
-  v_workout_id uuid;
 begin
-  select e.workout_id into v_workout_id
-  from public.st_exercises e
-  where e.id = coalesce(new.exercise_id, old.exercise_id);
-
-  if v_workout_id is not null and public.st_workout_has_performance_logs(v_workout_id) then
-    if tg_op = 'INSERT' then
-      raise exception 'Cannot add planned sets after performance has been logged. Use extra sets.';
-    end if;
-    if tg_op = 'DELETE' then
-      raise exception 'Cannot delete planned sets after performance has been logged.';
-    end if;
-    if (
-      new.target_weight,
-      new.target_reps,
-      new.target_rpe,
-      new.target_rir,
-      new.rep_min,
-      new.rep_max,
-      new.rest_seconds,
-      new.set_type,
-      new.set_number,
-      coalesce(new.is_deleted, false)
-    ) is distinct from (
-      old.target_weight,
-      old.target_reps,
-      old.target_rpe,
-      old.target_rir,
-      old.rep_min,
-      old.rep_max,
-      old.rest_seconds,
-      old.set_type,
-      old.set_number,
-      coalesce(old.is_deleted, false)
-    ) then
-      raise exception 'Cannot change a planned prescription after performance has been logged.';
-    end if;
+  if not public.st_planned_set_has_performance(old.id) then
+    return new;
   end if;
-
-  if tg_op = 'DELETE' then
-    return old;
+  if (
+    new.target_weight,
+    new.target_reps,
+    new.target_rpe,
+    new.target_rir,
+    new.rep_min,
+    new.rep_max,
+    new.rest_seconds,
+    new.set_type,
+    new.set_number
+  ) is distinct from (
+    old.target_weight,
+    old.target_reps,
+    old.target_rpe,
+    old.target_rir,
+    old.rep_min,
+    old.rep_max,
+    old.rest_seconds,
+    old.set_type,
+    old.set_number
+  ) then
+    raise exception 'Cannot rewrite a planned prescription after that set has been logged.';
   end if;
   return new;
 end;
 $$;
 
 drop trigger if exists st_planned_sets_logged_guard on public.st_planned_sets;
-create trigger st_planned_sets_logged_guard
-  before insert or update or delete on public.st_planned_sets
+drop trigger if exists st_planned_sets_logged_rewrite_guard on public.st_planned_sets;
+create trigger st_planned_sets_logged_rewrite_guard
+  before update on public.st_planned_sets
   for each row
-  execute procedure public.st_prevent_logged_planned_set_mutation();
+  execute procedure public.st_prevent_logged_planned_set_rewrite();

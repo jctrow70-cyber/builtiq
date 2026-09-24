@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { fetchWorkoutHasPerformance } from '../training/plannedSetGuard';
 import type { ProgramActivity } from './types';
 
 export type SourceWorkout = {
@@ -210,6 +211,9 @@ export async function importWorkoutsIntoActivities(
 
   for (const { activity, source } of matched) {
     const workoutId = activity.workout_id!;
+    if (await fetchWorkoutHasPerformance(supabase, workoutId)) {
+      return { imported, error: 'This workout already has performance logs. History was not replaced.' };
+    }
 
     // Clear existing exercises from the target workout (it's an empty shell)
     await supabase.from('st_exercises').delete().eq('workout_id', workoutId);

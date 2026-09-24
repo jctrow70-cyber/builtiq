@@ -48,10 +48,10 @@ import SegmentedControl from './components/ui/SegmentedControl';
 import WorkoutSetLogger from './components/WorkoutSetLogger';
 import SessionOutcomeCard from './components/training/SessionOutcomeCard';
 import { snapshotForLog as buildSetLogSnapshot, stripMissingSnapshotColumns } from '../lib/training/setLogSnapshots';
-import { canMutatePlannedSets } from '../lib/training/plannedSetGuard';
+import { canRewritePlannedSetPrescription } from '../lib/training/plannedSetGuard';
 import { deriveSessionStatus } from '../lib/training/sessionOutcome';
-import { extraSetInsertPayload, extraSetsForExercise, nextExtraSetNumber, type ExtraSetLog } from '../lib/training/extraSets';
-import { upsertExerciseSession, upsertWorkoutFeel, upsertWorkoutSession } from '../lib/training/workoutSessions';
+import { extraLogsFromSetLogs, extraSetInsertPayload, extraSetsForExercise, nextExtraSetNumber, type ExtraSetLog } from '../lib/training/extraSets';
+import { normalizePainFlag, upsertExerciseSession, upsertWorkoutFeel, upsertWorkoutSession } from '../lib/training/workoutSessions';
 import { prescriptionColumnsFromSources } from '../lib/training/prescriptionMeta';
 import type { PainFlag, SessionStatus, SkipReason, WorkoutFeel } from '../lib/scienceEngine/adaptation/types';
 import GroupsHub from './components/groups/GroupsHub';
@@ -124,7 +124,7 @@ const groupSectionBlocks=(exercises:any[])=>{const blocks:any[]=[];const groups=
 const logExerciseName=(row:any,joinEx?:any)=>String(row.snapshot_exercise_name||joinEx?.name||'').trim();
 const logCatalogId=(row:any,joinEx?:any)=>row.snapshot_catalog_exercise_id||joinEx?.catalog_exercise_id||'';
 const logSetType=(row:any,joinPs?:any)=>row.snapshot_set_type||joinPs?.set_type||'working';
-const logSetNumber=(row:any,joinPs?:any)=>row.snapshot_set_number??joinPs?.set_number??1;
+const logSetNumber=(row:any,joinPs?:any)=>row.snapshot_set_number??row.extra_set_number??joinPs?.set_number??1;
 const exerciseHistoryKey=(catalogId:string,name:string)=>catalogId||String(name||'').toLowerCase().trim();
 const logHistoryKeys=(row:any)=>{const joinEx=row.st_planned_sets?.st_exercises;const joinPs=row.st_planned_sets;const catalogId=logCatalogId(row,joinEx);const name=logExerciseName(row,joinEx);const exerciseKey=exerciseHistoryKey(catalogId,name);const setType=logSetType(row,joinPs);const setNumber=logSetNumber(row,joinPs);const setKey=`${exerciseKey}|${setType}|${setNumber}`;return {exerciseKey,setKey,catalogId,name,setType,setNumber};};
 const logHasPerformance=(row:any)=>!!(
@@ -224,7 +224,7 @@ export default function Page(){
  const [extraSetLogs,setExtraSetLogs]=useState<ExtraSetLog[]>([]);
  const [sessionOutcome,setSessionOutcome]=useState<SessionStatus>('not_started');
  const [sessionFeel,setSessionFeel]=useState<WorkoutFeel|''>('');
- const [sessionPain,setSessionPain]=useState<PainFlag>('none');
+ const [sessionPain,setSessionPain]=useState<PainFlag|''>('');
  const [sessionNotes,setSessionNotes]=useState('');
  const [sessionSkipReason,setSessionSkipReason]=useState<SkipReason|''>('');
  const [skippedExerciseIds,setSkippedExerciseIds]=useState<Record<string,boolean>>({});
@@ -1435,9 +1435,7 @@ export default function Page(){
   setLogs(by);
   const workoutIds=[...(p?.st_workouts||[]),...extras].map((w:any)=>w?.id).filter(Boolean);
   if(workoutIds.length){
-    const {data:extraRows,error:extraErr}=await supabase.from('st_extra_set_logs').select('*').eq('user_id',uid).eq('log_date',day).in('workout_id',workoutIds);
-    if(extraErr && /st_extra_set_logs|does not exist/i.test(extraErr.message||'')) setPhase2a1Pending(true);
-    else if(!extraErr) setExtraSetLogs((extraRows||[]) as ExtraSetLog[]);
+    setExtraSetLogs(extraLogsFromSetLogs(dateLogs||[]));
     const sessionWorkoutId=workoutOnDay?.id||workoutIds[0];
     const {data:sessionRow,error:sessionErr}=sessionWorkoutId?await supabase.from('st_workout_sessions').select('*').eq('user_id',uid).eq('log_date',day).eq('workout_id',sessionWorkoutId).maybeSingle():{data:null,error:null};
     if(sessionErr && /st_workout_sessions|does not exist/i.test(sessionErr.message||'')) setPhase2a1Pending(true);
@@ -1726,7 +1724,7 @@ export default function Page(){
  async function requestReplaceExercise(ex:any,catalogItem:any){if(!catalogItem)return; const ctx=await ensurePersonalCopyForTrainingEdit(); if(!ctx)return; const current=ctx.workout||workout; const remaining=remainingSameDayWorkouts(current).length; if(remaining<=1){await replaceExerciseWithCatalog(ex,catalogItem,'current'); setAddExercisePanel(null); return;} setAddExercisePanel(null); setExerciseSwapPrompt({ex,catalogItem,remaining,fromName:ex?.name||'this exercise',toName:catalogItem.name});}
  async function pickExerciseForPanel(item:any){if(!addExercisePanel)return; if(addExercisePanel.replaceTarget){await requestReplaceExercise(addExercisePanel.replaceTarget,item); return;} const defaultSets=sectionDefaultSets(addExercisePanel.section); setAddExercisePanel({...addExercisePanel,step:'configure',picked:item,config:{...addExercisePanel.config,setCount:defaultSets}});}
  async function createCustomInPanel(){if(!addExercisePanel||!session?.user)return; const d=addExercisePanel.custom; const name=d.name.trim(); if(!name)return alert('Enter exercise name.'); const movement=resolveCatalogMovementPattern(d.movement_pattern); if(movement.error)return alert(movement.error); const{data,error}=await supabase.from('st_exercise_catalog').insert({user_id:session.user.id,name,category:d.category||addExercisePanel.section,muscle_group:d.muscle_group.trim()||null,equipment:d.equipment.trim()||null,movement_pattern:movement.value,is_system:false,is_archived:false}).select().single(); if(error)return alert(error.message); await loadCatalog(); setAddExercisePanel({...addExercisePanel,step:'configure',picked:data,config:{...addExercisePanel.config,setCount:sectionDefaultSets(addExercisePanel.section)}});}
- async function confirmAddExercise(){if(!addExercisePanel?.picked)return; if(!(await ensurePersonalCopyForTrainingEdit()))return; if(!plannedMutationGuard())return; const current=planEditRef.current?.workout||workout; if(!current)return; const{section,picked,config}=addExercisePanel; const exType=exerciseTypeOf(picked,picked); let groupId:string|null=null; let supersetLabel:string|null=null; let slotOrder:number|null=null; let existing:any[]=[]; if(config.mode==='superset'){if(!config.supersetGroupId||config.supersetGroupId==='__new__')groupId=makeSupersetGroupId(); else groupId=config.supersetGroupId; if(groupId){existing=sectionExercises(current,section).filter((e:any)=>e.superset_group_id===groupId); if(existing.length>=3)return alert('That superset already has 3 exercises.'); if(!existing.length){supersetLabel=nextSupersetLabel(current,section); slotOrder=1;} else {supersetLabel=existing[0].superset_label; slotOrder=existing.length+1;}}} let sortOrder=nextSortOrder(current,section); if(groupId&&existing.length)sortOrder=existing[0].sort_order??sortOrder; const setCount=Math.max(1,Number(config.setCount)||sectionDefaultSets(section)); const existingInGroup=groupId?sectionExercises(current,section).filter((e:any)=>e.superset_group_id===groupId).length:0; for(const tw of targetWorkoutsFrom(current)){const addMeta=prescriptionColumnsFromSources({catalogItem:picked,section}); const addPayload:any={workout_id:tw.id,section,sort_order:sortOrder,name:picked.name,muscle_group:picked.muscle_group||'',equipment:defaultCatalogEquipment(picked),catalog_exercise_id:picked.id,exercise_type:exType,superset_group_id:groupId,superset_label:supersetLabel,superset_order:slotOrder,program_role:addMeta.program_role,measurement_type:addMeta.measurement_type,laterality:addMeta.laterality}; let{data:e,error}=await supabase.from('st_exercises').insert(addPayload).select().single(); if(error&&/equipment/i.test(error.message||'')){delete addPayload.equipment; ({data:e,error}=await supabase.from('st_exercises').insert(addPayload).select().single());} if(error&&/program_role|measurement_type|laterality/i.test(error.message||'')){delete addPayload.program_role; delete addPayload.measurement_type; delete addPayload.laterality; ({data:e,error}=await supabase.from('st_exercises').insert(addPayload).select().single());} if(error)return alert(error.message); const rows:any[]=[]; for(let i=0;i<setCount;i++)rows.push({exercise_id:e.id,sort_order:i,set_number:i+1,set_type:'working',target_weight:config.targetWeight||'',target_reps:config.targetReps||''}); if(rows.length)await supabase.from('st_planned_sets').insert(rows);} await reloadKeepDay(); const newGroupCount=existingInGroup+1; if(config.mode==='superset'&&groupId&&newGroupCount<3){setPendingSupersetGroup({...pendingSupersetGroup,[section]:groupId}); setAddExercisePanel({section,step:'search',query:'',picked:null,config:{...emptyAddPanelConfig(),mode:'superset',supersetGroupId:groupId,setCount:sectionDefaultSets(section),targetReps:'8-12',targetWeight:''},custom:emptyAddPanelCustom()}); return;} setPendingSupersetGroup({...pendingSupersetGroup,[section]:null}); setAddExercisePanel(null);}
+ async function confirmAddExercise(){if(!addExercisePanel?.picked)return; if(!(await ensurePersonalCopyForTrainingEdit()))return; const current=planEditRef.current?.workout||workout; if(!current)return; const{section,picked,config}=addExercisePanel; const exType=exerciseTypeOf(picked,picked); let groupId:string|null=null; let supersetLabel:string|null=null; let slotOrder:number|null=null; let existing:any[]=[]; if(config.mode==='superset'){if(!config.supersetGroupId||config.supersetGroupId==='__new__')groupId=makeSupersetGroupId(); else groupId=config.supersetGroupId; if(groupId){existing=sectionExercises(current,section).filter((e:any)=>e.superset_group_id===groupId); if(existing.length>=3)return alert('That superset already has 3 exercises.'); if(!existing.length){supersetLabel=nextSupersetLabel(current,section); slotOrder=1;} else {supersetLabel=existing[0].superset_label; slotOrder=existing.length+1;}}} let sortOrder=nextSortOrder(current,section); if(groupId&&existing.length)sortOrder=existing[0].sort_order??sortOrder; const setCount=Math.max(1,Number(config.setCount)||sectionDefaultSets(section)); const existingInGroup=groupId?sectionExercises(current,section).filter((e:any)=>e.superset_group_id===groupId).length:0; for(const tw of targetWorkoutsFrom(current)){const addMeta=prescriptionColumnsFromSources({catalogItem:picked,section}); const addPayload:any={workout_id:tw.id,section,sort_order:sortOrder,name:picked.name,muscle_group:picked.muscle_group||'',equipment:defaultCatalogEquipment(picked),catalog_exercise_id:picked.id,exercise_type:exType,superset_group_id:groupId,superset_label:supersetLabel,superset_order:slotOrder,program_role:addMeta.program_role,measurement_type:addMeta.measurement_type,laterality:addMeta.laterality}; let{data:e,error}=await supabase.from('st_exercises').insert(addPayload).select().single(); if(error&&/equipment/i.test(error.message||'')){delete addPayload.equipment; ({data:e,error}=await supabase.from('st_exercises').insert(addPayload).select().single());} if(error&&/program_role|measurement_type|laterality/i.test(error.message||'')){delete addPayload.program_role; delete addPayload.measurement_type; delete addPayload.laterality; ({data:e,error}=await supabase.from('st_exercises').insert(addPayload).select().single());} if(error)return alert(error.message); const rows:any[]=[]; for(let i=0;i<setCount;i++)rows.push({exercise_id:e.id,sort_order:i,set_number:i+1,set_type:'working',target_weight:config.targetWeight||'',target_reps:config.targetReps||''}); if(rows.length)await supabase.from('st_planned_sets').insert(rows);} await reloadKeepDay(); const newGroupCount=existingInGroup+1; if(config.mode==='superset'&&groupId&&newGroupCount<3){setPendingSupersetGroup({...pendingSupersetGroup,[section]:groupId}); setAddExercisePanel({section,step:'search',query:'',picked:null,config:{...emptyAddPanelConfig(),mode:'superset',supersetGroupId:groupId,setCount:sectionDefaultSets(section),targetReps:'8-12',targetWeight:''},custom:emptyAddPanelCustom()}); return;} setPendingSupersetGroup({...pendingSupersetGroup,[section]:null}); setAddExercisePanel(null);}
  async function renameSuperset(ex:any,newLabel:string){
   if(!ex.superset_group_id||!newLabel.trim())return;
   if(!(await ensurePersonalCopyForTrainingEdit()))return;
@@ -1970,15 +1968,8 @@ export default function Page(){
  }
  await reloadKeepDay();
 }
- function plannedMutationGuard(){
-  const current=planEditRef.current?.workout||workout;
-  const check=canMutatePlannedSets({workout:current,logs:Object.values(logsRef.current||{}),extraSetCount:extraSetLogs.length});
-  if(!check.ok){alert(check.reason);return false;}
-  return true;
- }
  async function addSet(e:any){
  if(!(await ensurePersonalCopyForTrainingEdit()))return;
- if(!plannedMutationGuard())return;
  const current=planEditRef.current?.workout||workout;
  const active=(e.st_planned_sets||[]).filter((s:any)=>!s.is_deleted);
  const n=active.length?Math.max(...active.map((s:any)=>s.set_number||0))+1:1;
@@ -1991,7 +1982,8 @@ export default function Page(){
 }
  async function editSet(s:any,field:string,value:any){
  if(!(await ensurePersonalCopyForTrainingEdit()))return;
- if(!plannedMutationGuard())return;
+ const rewrite=canRewritePlannedSetPrescription({plannedSetId:s.id,logs:Object.values(logsRef.current||{})});
+ if(!rewrite.ok){alert(rewrite.reason);return;}
  const current=planEditRef.current?.workout||workout;
  const ex=(current?.st_exercises||[]).find((e:any)=>(e.st_planned_sets||[]).some((ps:any)=>ps.id===s.id))
   ||(workout?.st_exercises||[]).find((e:any)=>(e.st_planned_sets||[]).some((ps:any)=>ps.id===s.id));
@@ -2005,7 +1997,6 @@ export default function Page(){
 }
  async function removeSet(s:any){
  if(!(await ensurePersonalCopyForTrainingEdit()))return;
- if(!plannedMutationGuard())return;
  const current=planEditRef.current?.workout||workout;
  const ex=(current?.st_exercises||[]).find((e:any)=>(e.st_planned_sets||[]).some((ps:any)=>ps.id===s.id))
   ||(workout?.st_exercises||[]).find((e:any)=>(e.st_planned_sets||[]).some((ps:any)=>ps.id===s.id));
@@ -2131,7 +2122,7 @@ export default function Page(){
   if(extras?.pain!==undefined)setSessionPain(extras.pain);
   if(extras?.notes!==undefined)setSessionNotes(extras.notes);
   if(extras?.skipReason!==undefined)setSessionSkipReason(extras.skipReason);
-  const feelRes=await upsertWorkoutFeel(supabase,{userId:session.user.id,workoutId:workout.id,logDate:activeLogDateForLogging(),draft:{workout_feel:feel||null,pain_flag:pain,notes}});
+  const feelRes=await upsertWorkoutFeel(supabase,{userId:session.user.id,workoutId:workout.id,logDate:activeLogDateForLogging(),draft:{workout_feel:feel||null,pain_flag:normalizePainFlag(pain),notes}});
   if(feelRes.pendingMigration)setPhase2a1Pending(true);
   const saved=await upsertWorkoutSession(supabase,{
     user_id:session.user.id,
@@ -2153,17 +2144,20 @@ export default function Page(){
   const row:ExtraSetLog={
     user_id:session.user.id,
     exercise_id:ex.id,
-    workout_id:workout.id,
     catalog_exercise_id:ex.catalog_exercise_id||null,
     log_date:date,
     extra_set_number:nextExtraSetNumber(existing),
     set_type:'working',
     snapshot_exercise_name:ex.name||'',
     snapshot_program_role:ex.program_role||null,
+    snapshot_catalog_exercise_id:ex.catalog_exercise_id||null,
+    snapshot_week:workout.week??null,
+    snapshot_day_label:workout.day_label||'',
+    snapshot_workout_type:workout.workout_type||'',
   };
-  const {data,error}=await supabase.from('st_extra_set_logs').insert(extraSetInsertPayload(row)).select().single();
+  const {data,error}=await supabase.from('st_set_logs').insert(extraSetInsertPayload(row)).select().single();
   if(error){
-    if(/st_extra_set_logs|does not exist/i.test(error.message||'')){setPhase2a1Pending(true);alert('Extra sets need the Phase 2A.1 migration.');return;}
+    if(/is_extra_set|extra_set_number|does not exist/i.test(error.message||'')){setPhase2a1Pending(true);alert('Extra sets need the Phase 2A.1 migration.');return;}
     return alert(error.message);
   }
   setExtraSetLogs((prev)=>[...prev,data as ExtraSetLog]);
@@ -2172,7 +2166,7 @@ export default function Page(){
   const patch:any={[field]:value};
   if(opts?.completed!==undefined)patch.completed=opts.completed;
   if(field==='completed')patch.completed=opts?.completed??value==='true';
-  const {error}=await supabase.from('st_extra_set_logs').update(patch).eq('id',extraId);
+  const {error}=await supabase.from('st_set_logs').update(patch).eq('id',extraId);
   if(error)return alert(error.message);
   setExtraSetLogs((prev)=>prev.map((row)=>row.id===extraId?{...row,...patch}:row));
  }
