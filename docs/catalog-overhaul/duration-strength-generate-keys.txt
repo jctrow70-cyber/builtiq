@@ -1,0 +1,52 @@
+TEST=PASS
+TOP_KEYS=generated_at,science_version,program_id,persist_error,method,fallback,model,openai_calls,ai_latency_ms,wall_ms,raw_ai_duration,repairs,final_issues,final_ok,pre_persist,post_persist,diff,acceptance
+program_id=bc2e4996-eb02-4f70-945a-3897d99abf45
+method=ai_repaired
+fallback=false
+model=gpt-5.4-2026-03-05
+openai_calls=1
+ai_latency_ms=33884
+wall_ms=33947
+persist_error=null
+final_ok=true
+acceptance={"A_no_jump_815":true,"B_ramp_rir_null":true,"C_final_validator_used_ramps":true,"D_timed_warmup":true,"E_pre_post_agree":true,"F_not_77":true,"G_kept_primary":true,"H_tests":"see science-test-output"}
+top.final_issues.length=18
+top.final_issues ISSUE code=SESSION_FATIGUE sev=warning msg=Full Body A - Squat & Bench Priority is 3/4 high-fatigue selections. day=Mon
+top.final_issues ISSUE code=DURATION_OVER sev=warning msg=Full Body A - Squat & Bench Priority is estimated at 66 min vs 60 day=Mon
+top.final_issues ISSUE code=SESSION_FATIGUE sev=warning msg=Full Body B - Hinge & Vertical Pull Priority is 3/4 high-fatigue selections. day=Wed
+top.final_issues ISSUE code=SESSION_FATIGUE sev=warning msg=Full Body C - Front Squat & Row Volume is 3/4 high-fatigue selections. day=Fri
+top.repairs.length=48
+top.repairs REPAIR action=Removed extra warmup Scapular Push-Up to fit the session day=Mon {"code":"DURATION_OVER","action":"Removed extra warmup Scapular Push-Up to fit the session","day_label":"Mon","exercise_id":"08e24827-ccce-42a6-ad6f-6ec0bd9a09d8"}
+top.repairs REPAIR action=Reduced Box Jump primer to 2 sets day=Mon {"code":"DURATION_OVER","action":"Reduced Box Jump primer to 2 sets","day_label":"Mon","exercise_id":"9a8c6def-8171-45f0-b6c0-708003baab9f"}
+top.repairs REPAIR action=Removed extra warmup Band Pull-Apart to fit the session day=Mon {"code":"DURATION_OVER","action":"Removed extra warmup Band Pull-Apart to fit the session","day_label":"Mon","exercise_id":"11b1ea29-fd8c-4002-9d21-50c8ec0802c8"}
+top.repairs REPAIR action=Reduced Face Pull to 2 sets for duration day=Mon {"code":"DURATION_OVER","action":"Reduced Face Pull to 2 sets for duration","day_label":"Mon","exercise_id":"23ace7e2-2bfa-4c5c-93b5-9fff98eb0afb"}
+top.repairs REPAIR action=Removed Farmer Carry to fit the session day=Mon {"code":"DURATION_OVER","action":"Removed Farmer Carry to fit the session","day_label":"Mon","exercise_id":"eeecddd9-6e4c-49ac-8fd4-369cceee4662"}
+top.repairs REPAIR action=Removed Face Pull to fit the session day=Mon {"code":"DURATION_OVER","action":"Removed Face Pull to fit the session","day_label":"Mon","exercise_id":"23ace7e2-2bfa-4c5c-93b5-9fff98eb0afb"}
+top.repairs REPAIR action=Reduced Bulgarian Split Squat to 2 sets for duration day=Mon {"code":"DURATION_OVER","action":"Reduced Bulgarian Split Squat to 2 sets for duration","day_label":"Mon","exercise_id":"26781050-0c19-43f3-b026-d26fa79c5630"}
+top.repairs REPAIR action=Reduced Chest-Supported Row to 2 sets for duration day=Mon {"code":"DURATION_OVER","action":"Reduced Chest-Supported Row to 2 sets for duration","day_label":"Mon","exercise_id":"1695e444-3146-42aa-af3b-ebc2e9b110f4"}
+top.repairs REPAIR action=Removed extra warmup External Rotation to fit the session day=Wed {"code":"DURATION_OVER","action":"Removed extra warmup External Rotation to fit the session","day_label":"Wed","exercise_id":"51596dc7-cbef-46c7-89b4-577fc7bacb38"}
+top.repairs REPAIR action=Removed extra warmup Scapular Pull-Up to fit the session day=Wed {"code":"DURATION_OVER","action":"Removed extra warmup Scapular Pull-Up to fit the session","day_label":"Wed","exercise_id":"aa95b5b4-26ee-4511-849f-5bfe20987760"}
+top.repairs REPAIR action=Reduced Kettlebell Swing primer to 2 sets day=Wed {"code":"DURATION_OVER","action":"Reduced Kettlebell Swing primer to 2 sets","day_label":"Wed","exercise_id":"de70a572-55a5-4970-a06e-cf5c595aa65d"}
+top.repairs REPAIR action=Removed extra warmup Hip Airplane to fit the session day=Wed {"code":"DURATION_OVER","action":"Removed extra warmup Hip Airplane to fit the session","day_label":"Wed","exercise_id":"137621a9-e0c2-4ae6-b1bd-b3acb4db59b6"}
+top.repairs REPAIR action=Reduced Incline Press to 2 sets for duration day=Wed {"code":"DURATION_OVER","action":"Reduced Incline Press to 2 sets for duration","day_label":"Wed","exercise_id":"581ba89b-76c0-4929-a143-2aac2cf14192"}
+top.repairs REPAIR action=Removed Suitcase Carry to fit the session day=Wed {"code":"DURATION_OVER","action":"Removed Suitcase Carry to fit the session","day_label":"Wed","exercise_id":"57cedbf6-513d-4966-a598-5c69bcdf2792"}
+top.repairs REPAIR action=Removed Incline Press to fit the session day=Wed {"code":"DURATION_OVER","action":"Removed Incline Press to fit the session","day_label":"Wed","exercise_id":"581ba89b-76c0-4929-a143-2aac2cf14192"}
+top.repairs REPAIR action=Reduced Leg Press to 2 sets for duration day=Wed {"code":"DURATION_OVER","action":"Reduced Leg Press to 2 sets for duration","day_label":"Wed","exercise_id":"d3cd5bb8-2d71-4ab1-b38c-c2fb8971cd14"}
+top.repairs REPAIR action=Reduced Overhead Press to 2 sets for duration day=Wed {"code":"DURATION_OVER","action":"Reduced Overhead Press to 2 sets for duration","day_label":"Wed","exercise_id":"c4eafc32-a802-4706-9fcf-07ef8be13710"}
+top.repairs REPAIR action=Removed extra warmup Band Pull-Apart to fit the session day=Fri {"code":"DURATION_OVER","action":"Removed extra warmup Band Pull-Apart to fit the session","day_label":"Fri","exercise_id":"11b1ea29-fd8c-4002-9d21-50c8ec0802c8"}
+top.repairs REPAIR action=Removed extra warmup Thoracic Rotation to fit the session day=Fri {"code":"DURATION_OVER","action":"Removed extra warmup Thoracic Rotation to fit the session","day_label":"Fri","exercise_id":"78835aa5-aaa9-408a-ba29-92d4abb0906a"}
+top.repairs REPAIR action=Reduced Medicine Ball Chest Pass primer to 2 sets day=Fri {"code":"DURATION_OVER","action":"Reduced Medicine Ball Chest Pass primer to 2 sets","day_label":"Fri","exercise_id":"039a2c70-8b08-40e3-bea9-640a4cebe078"}
+top.repairs REPAIR action=Removed extra warmup Adductor Rockback to fit the session day=Fri {"code":"DURATION_OVER","action":"Removed extra warmup Adductor Rockback to fit the session","day_label":"Fri","exercise_id":"b8fbf23f-6532-40b8-b638-c8d915aa6ad0"}
+top.repairs REPAIR action=Reduced Reverse Lunge to 2 sets for duration day=Fri {"code":"DURATION_OVER","action":"Reduced Reverse Lunge to 2 sets for duration","day_label":"Fri","exercise_id":"a42ebeaf-d52e-431c-9494-e01a7f54d92e"}
+top.repairs REPAIR action=Reduced Close-Grip Pulldown to 2 sets for duration day=Fri {"code":"DURATION_OVER","action":"Reduced Close-Grip Pulldown to 2 sets for duration","day_label":"Fri","exercise_id":"c53c1691-a5f9-47b4-ac86-7909b80860be"}
+top.repairs REPAIR action=Removed Overhead Carry to fit the session day=Fri {"code":"DURATION_OVER","action":"Removed Overhead Carry to fit the session","day_label":"Fri","exercise_id":"2154a6e6-da33-4ab2-96a2-60e550d3acc7"}
+top.repairs REPAIR action=Removed Reverse Lunge to fit the session day=Fri {"code":"DURATION_OVER","action":"Removed Reverse Lunge to fit the session","day_label":"Fri","exercise_id":"a42ebeaf-d52e-431c-9494-e01a7f54d92e"}
+top.repairs REPAIR action=Removed Close-Grip Pulldown to fit the session day=Fri {"code":"DURATION_OVER","action":"Removed Close-Grip Pulldown to fit the session","day_label":"Fri","exercise_id":"c53c1691-a5f9-47b4-ac86-7909b80860be"}
+top.repairs REPAIR action=Reduced Romanian Deadlift to 2 sets for duration day=Fri {"code":"DURATION_OVER","action":"Reduced Romanian Deadlift to 2 sets for duration","day_label":"Fri","exercise_id":"2134cfe4-b564-4270-a02e-2d4882d6d9a5"}
+top.repairs REPAIR action=Reduced Floor Press to 2 sets for duration day=Fri {"code":"DURATION_OVER","action":"Reduced Floor Press to 2 sets for duration","day_label":"Fri","exercise_id":"fb2209ef-6244-4085-a8ec-8ee29b351585"}
+TEST_EXIT=0
+GENERATE_EXIT=0
+GENERATE_WALL_TOOL_MS=47320
+TEST_EXIT=0
+GENERATE_EXIT=0
+GENERATE_WALL_TOOL_MS=47320

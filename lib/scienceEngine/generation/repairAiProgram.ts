@@ -1,7 +1,16 @@
 import { creditSets, contributionsForExercise } from '../contributions';
 import { classifySessionDuration, estimateSessionFromAi, minStrengthMoves } from '../duration';
+import { parsePrescriptionTiming } from '../prescriptionTime';
+import {
+  classifyPowerExercise,
+  clampPowerSets,
+  formatPowerPrescription,
+  isHypertrophyStylePowerRx,
+  parsePrepPrescription,
+  powerPrescriptionFor,
+} from '../powerPrescription';
 import { goalUsesHypertrophyBias } from '../rules';
-import type { CatalogExercise } from '../types';
+import type { CatalogExercise, PrimaryGoal } from '../types';
 import type { MuscleId } from '../taxonomy';
 import { findDesignerById } from './matchById';
 import { isWorkingIsolationAsCooldown, muscleTier, restBand, whyAgreesWithExercise } from './qualityRules';
@@ -31,6 +40,19 @@ export function repairAiProgram(
     repairWorkout(workout, context, library, catalogById, repairs);
   });
   repairWeeklyVolume(next, context, library, catalogById, repairs);
+  (next.workouts || []).forEach((workout) => efficiencyPass(workout, context, library, repairs));
+  return { program: next, repairs };
+}
+
+export function applyDurationEfficiency(
+  program: AiWeekProgram,
+  context: GenerationContext,
+  catalogById: Map<string, CatalogExercise>
+): { program: AiWeekProgram; repairs: DeterministicRepair[] } {
+  const next = JSON.parse(JSON.stringify(program)) as AiWeekProgram;
+  const repairs: DeterministicRepair[] = [];
+  const library = libraryFromContext(context);
+  (next.workouts || []).forEach((workout) => efficiencyPass(workout, context, library, repairs));
   return { program: next, repairs };
 }
 
@@ -68,6 +90,7 @@ function repairWorkout(
   });
 
   splitHeavySupersets(workout, library, repairs);
+  normalizeLoneBlocks(workout);
   normalizeRoles(workout, library, context, repairs);
   trimDuration(workout, context, library, repairs);
 }
@@ -149,6 +172,29 @@ function repairPrep(
       day_label: workout.day_label,
       exercise_id: meta.exercise_id,
     });
+  }
+  if (kind === 'potentiation' && meta) {
+    const family = classifyPowerExercise(meta);
+    const rx = powerPrescriptionFor(family, {
+      experienceLevel: context.athlete.experience_level,
+      conservative: goalUsesHypertrophyBias(context.athlete.primary_goal as PrimaryGoal),
+    });
+    const parsed = parsePrepPrescription(item.prescription);
+    const sets = item.sets || parsed.sets;
+    const needsRewrite =
+      isHypertrophyStylePowerRx(family, sets, parsed.min, parsed.max) ||
+      parsed.min == null ||
+      (parsed.min != null && (parsed.min < rx.repMin || (parsed.max ?? parsed.min) > rx.repMax));
+    if (needsRewrite) {
+      item.sets = clampPowerSets(sets, rx);
+      item.prescription = formatPowerPrescription(rx);
+      repairs.push({
+        code: 'PRIMER_HYPERTROPHY_RX',
+        action: `Rewrote ${meta.name} potentiation to ${item.sets} x ${item.prescription}`,
+        day_label: workout.day_label,
+        exercise_id: meta.exercise_id,
+      });
+    }
   }
   return item;
 }
@@ -333,6 +379,60 @@ function normalizeRoles(
   }
 }
 
+function sessionOver(workout: AiWorkoutPlan, context: GenerationContext, library: Map<string, DesignerExercise>) {
+  const estimated = estimateSessionFromAi(workout, library, { experienceLevel: context.athlete.experience_level });
+  return {
+    estimated,
+    over: classifySessionDuration(estimated, context.constraints.session_minutes).over,
+  };
+}
+
+function isGeneralWarmup(item: AiPrepItem, library: Map<string, DesignerExercise>) {
+  const name = (library.get(item.exercise_id)?.name || '').toLowerCase();
+  const timing = parsePrescriptionTiming(item.prescription, library.get(item.exercise_id)?.measurement_type);
+  return timing.kind === 'time' || timing.kind === 'distance' || /walk|bike|row|jog|treadmill|elliptical|cardio/.test(name);
+}
+
+function normalizeLoneBlocks(workout: AiWorkoutPlan) {
+  workout.strength = (workout.strength || []).map((block) => {
+    if (block.type !== 'straight_sets' && (block.exercises || []).length < 2) {
+      return { type: 'straight_sets', exercises: block.exercises };
+    }
+    return block;
+  });
+}
+
+function isHighFatigue(ex: AiStrengthExercise, library: Map<string, DesignerExercise>) {
+  return library.get(ex.exercise_id)?.fatigue_cost === 'high';
+}
+
+function wouldCauseAllHighFatigue(
+  workout: AiWorkoutPlan,
+  dropId: string,
+  library: Map<string, DesignerExercise>
+) {
+  const remaining = flattenStrength(workout).filter((ex) => ex.exercise_id !== dropId);
+  if (remaining.length < 4) return false;
+  return remaining.every((ex) => isHighFatigue(ex, library));
+}
+
+function dropWarmupExtra(
+  workout: AiWorkoutPlan,
+  library: Map<string, DesignerExercise>,
+  repairs: DeterministicRepair[]
+): boolean {
+  const drop = [...(workout.warmup || [])].reverse().find((item) => !isGeneralWarmup(item, library));
+  if (!drop) return false;
+  workout.warmup = workout.warmup.filter((item) => item !== drop);
+  repairs.push({
+    code: 'DURATION_OVER',
+    action: `Removed extra warmup ${library.get(drop.exercise_id)?.name || drop.exercise_id} to fit the session`,
+    day_label: workout.day_label,
+    exercise_id: drop.exercise_id,
+  });
+  return true;
+}
+
 function trimDuration(
   workout: AiWorkoutPlan,
   context: GenerationContext,
@@ -341,33 +441,110 @@ function trimDuration(
   protectIds: Set<string> = new Set()
 ) {
   const minutes = context.constraints.session_minutes;
-  const minMoves = minStrengthMoves(minutes);
+  const minMoves = Math.min(4, minStrengthMoves(minutes));
+  const pref = String(context.athlete.superset_preference || '').toLowerCase();
+  const allowSuperset = /sometimes|often|always|frequently|yes/.test(pref);
   let guard = 0;
-  while (guard < 8) {
-    const estimated = estimateSessionFromAi(workout, library);
-    if (classifySessionDuration(estimated, minutes).over !== 'error') break;
+  while (guard < 24) {
+    normalizeLoneBlocks(workout);
+    if (sessionOver(workout, context, library).over !== 'error') break;
+
+    // A. Unnecessary/redundant warmup volume
+    const extras = (workout.warmup || []).filter((item) => !isGeneralWarmup(item, library));
+    if (extras.length > 2 && dropWarmupExtra(workout, library, repairs)) {
+      guard += 1;
+      continue;
+    }
+    const general = (workout.warmup || []).find((item) => isGeneralWarmup(item, library));
+    if (general) {
+      const timing = parsePrescriptionTiming(general.prescription, library.get(general.exercise_id)?.measurement_type);
+      if (timing.kind === 'time' && timing.seconds > 300) {
+        general.prescription = '5 minutes';
+        repairs.push({
+          code: 'DURATION_OVER',
+          action: `Capped ${library.get(general.exercise_id)?.name || general.exercise_id} general warmup at 5 minutes`,
+          day_label: workout.day_label,
+          exercise_id: general.exercise_id,
+        });
+        guard += 1;
+        continue;
+      }
+    }
+
+    // B. Excessive potentiation
+    const primer = [...(workout.potentiation || [])].reverse().find((item) => (item.sets || 1) > 2);
+    if (primer) {
+      primer.sets = 2;
+      repairs.push({
+        code: 'DURATION_OVER',
+        action: `Reduced ${library.get(primer.exercise_id)?.name || primer.exercise_id} primer to 2 sets`,
+        day_label: workout.day_label,
+        exercise_id: primer.exercise_id,
+      });
+      guard += 1;
+      continue;
+    }
+    if ((workout.potentiation || []).length > 1) {
+      const extraPrimer = workout.potentiation[workout.potentiation.length - 1];
+      workout.potentiation = workout.potentiation.slice(0, -1);
+      repairs.push({
+        code: 'DURATION_OVER',
+        action: `Removed extra primer ${library.get(extraPrimer.exercise_id)?.name || extraPrimer.exercise_id}`,
+        day_label: workout.day_label,
+        exercise_id: extraPrimer.exercise_id,
+      });
+      guard += 1;
+      continue;
+    }
+
+    if (extras.length > 1 && dropWarmupExtra(workout, library, repairs)) {
+      guard += 1;
+      continue;
+    }
+
     const strength = flattenStrength(workout);
-    if (strength.length <= minMoves) break;
-    const drop = [...strength].reverse().find((ex) => (ex.role === 'isolation' || ex.role === 'accessory') && !protectIds.has(ex.exercise_id));
-    if (drop && drop.working_sets > 2) {
-      drop.working_sets -= 1;
+    const primaries = strength.filter((ex) => ex.role === 'primary');
+    const secondaries = strength.filter((ex) => ex.role === 'secondary' && !protectIds.has(ex.exercise_id));
+    const lowPriority = [...strength].reverse().filter(
+      (ex) => (ex.role === 'isolation' || ex.role === 'accessory') && !protectIds.has(ex.exercise_id)
+    );
+
+    // C. Lower-priority accessory/isolation volume
+    const extraSets = lowPriority.find((ex) => ex.working_sets > 2);
+    if (extraSets) {
+      extraSets.working_sets -= 1;
       repairs.push({
         code: 'DURATION_OVER',
-        action: `Reduced ${library.get(drop.exercise_id)?.name || drop.exercise_id} to ${drop.working_sets} sets for duration`,
+        action: `Reduced ${library.get(extraSets.exercise_id)?.name || extraSets.exercise_id} to ${extraSets.working_sets} sets for duration`,
         day_label: workout.day_label,
-        exercise_id: drop.exercise_id,
+        exercise_id: extraSets.exercise_id,
       });
-    } else if (drop) {
-      removeStrengthExercise(workout, drop.exercise_id);
+      guard += 1;
+      continue;
+    }
+
+    // D. Accessory supersets when preference allows (before deleting the last accessory)
+    if (allowSuperset && pairAccessorySuperset(workout, library, repairs)) {
+      guard += 1;
+      continue;
+    }
+
+    const dropAccessory = lowPriority.find((ex) => !wouldCauseAllHighFatigue(workout, ex.exercise_id, library));
+    if (dropAccessory && (strength.length > minMoves || primaries.length >= 1)) {
+      removeStrengthExercise(workout, dropAccessory.exercise_id);
       repairs.push({
         code: 'DURATION_OVER',
-        action: `Removed ${library.get(drop.exercise_id)?.name || drop.exercise_id} to fit the session`,
+        action: `Removed ${library.get(dropAccessory.exercise_id)?.name || dropAccessory.exercise_id} to fit the session`,
         day_label: workout.day_label,
-        exercise_id: drop.exercise_id,
+        exercise_id: dropAccessory.exercise_id,
       });
-    } else {
-      const secondary = [...strength].reverse().find((ex) => ex.role === 'secondary' && ex.working_sets > 2);
-      if (!secondary) break;
+      guard += 1;
+      continue;
+    }
+
+    // E. Reduce secondary work
+    const secondary = [...strength].reverse().find((ex) => ex.role === 'secondary' && ex.working_sets > 2 && !protectIds.has(ex.exercise_id));
+    if (secondary) {
       secondary.working_sets -= 1;
       repairs.push({
         code: 'DURATION_OVER',
@@ -375,9 +552,143 @@ function trimDuration(
         day_label: workout.day_label,
         exercise_id: secondary.exercise_id,
       });
+      guard += 1;
+      continue;
     }
-    guard += 1;
+    if (secondaries.length > 1 && strength.length > minMoves) {
+      const drop = [...secondaries].reverse().find((ex) => !wouldCauseAllHighFatigue(workout, ex.exercise_id, library));
+      if (drop) {
+        removeStrengthExercise(workout, drop.exercise_id);
+        repairs.push({
+          code: 'DURATION_OVER',
+          action: `Removed ${library.get(drop.exercise_id)?.name || drop.exercise_id} to fit the session`,
+          day_label: workout.day_label,
+          exercise_id: drop.exercise_id,
+        });
+        guard += 1;
+        continue;
+      }
+    }
+
+    const heavyPrimary = [...strength].reverse().find((ex) => ex.role === 'primary' && ex.working_sets > 3 && !protectIds.has(ex.exercise_id));
+    if (heavyPrimary) {
+      heavyPrimary.working_sets -= 1;
+      repairs.push({
+        code: 'DURATION_OVER',
+        action: `Reduced ${library.get(heavyPrimary.exercise_id)?.name || heavyPrimary.exercise_id} to ${heavyPrimary.working_sets} sets for duration`,
+        day_label: workout.day_label,
+        exercise_id: heavyPrimary.exercise_id,
+      });
+      guard += 1;
+      continue;
+    }
+    break;
   }
+  efficiencyPass(workout, context, library, repairs, protectIds);
+}
+
+function efficiencyPass(
+  workout: AiWorkoutPlan,
+  context: GenerationContext,
+  library: Map<string, DesignerExercise>,
+  repairs: DeterministicRepair[],
+  protectIds: Set<string> = new Set()
+) {
+  const pref = String(context.athlete.superset_preference || '').toLowerCase();
+  const allowSuperset = /sometimes|often|always|frequently|yes/.test(pref);
+  let guard = 0;
+  while (guard < 8) {
+    normalizeLoneBlocks(workout);
+    if (sessionOver(workout, context, library).over === 'ok') break;
+
+    if (allowSuperset && pairAccessorySuperset(workout, library, repairs)) {
+      guard += 1;
+      continue;
+    }
+
+    const extras = (workout.warmup || []).filter((item) => !isGeneralWarmup(item, library));
+    if (extras.length > 2 && dropWarmupExtra(workout, library, repairs)) {
+      guard += 1;
+      continue;
+    }
+
+    const strength = flattenStrength(workout);
+    const accessory = [...strength].reverse().find(
+      (ex) => (ex.role === 'isolation' || ex.role === 'accessory') && ex.working_sets > 2 && !protectIds.has(ex.exercise_id)
+    );
+    if (accessory) {
+      accessory.working_sets -= 1;
+      repairs.push({
+        code: 'DURATION_OVER',
+        action: `Reduced ${library.get(accessory.exercise_id)?.name || accessory.exercise_id} to ${accessory.working_sets} sets for duration`,
+        day_label: workout.day_label,
+        exercise_id: accessory.exercise_id,
+      });
+      guard += 1;
+      continue;
+    }
+
+    const secondary = [...strength].reverse().find(
+      (ex) => ex.role === 'secondary' && ex.working_sets > 2 && !protectIds.has(ex.exercise_id)
+    );
+    if (secondary) {
+      secondary.working_sets -= 1;
+      repairs.push({
+        code: 'DURATION_OVER',
+        action: `Reduced ${library.get(secondary.exercise_id)?.name || secondary.exercise_id} to ${secondary.working_sets} sets for duration`,
+        day_label: workout.day_label,
+        exercise_id: secondary.exercise_id,
+      });
+      guard += 1;
+      continue;
+    }
+    break;
+  }
+}
+
+function pairAccessorySuperset(
+  workout: AiWorkoutPlan,
+  library: Map<string, DesignerExercise>,
+  repairs: DeterministicRepair[]
+): boolean {
+  const unpaired: Array<{ ex: AiStrengthExercise; meta: DesignerExercise; blockIndex: number }> = [];
+  (workout.strength || []).forEach((block, blockIndex) => {
+    if (block.type !== 'straight_sets' || (block.exercises || []).length !== 1) return;
+    const ex = block.exercises[0];
+    const meta = library.get(ex.exercise_id);
+    if (!ex || !meta || ex.role === 'primary') return;
+    const accessory = ex.role === 'isolation' || ex.role === 'accessory';
+    const pairableSecondary = ex.role === 'secondary' && !isHeavyCompound(meta);
+    if (!accessory && !pairableSecondary) return;
+    if (isHeavyCompound(meta)) return;
+    unpaired.push({ ex, meta, blockIndex });
+  });
+  for (let i = 0; i < unpaired.length; i += 1) {
+    for (let j = i + 1; j < unpaired.length; j += 1) {
+      const a = unpaired[i];
+      const b = unpaired[j];
+      const accessoryRole = (ex: AiStrengthExercise) => ex.role === 'isolation' || ex.role === 'accessory';
+      if (!accessoryRole(a.ex) && !accessoryRole(b.ex)) continue;
+      if (a.meta.movement_pattern === b.meta.movement_pattern) continue;
+      if (a.meta.fatigue_cost === 'high' && b.meta.fatigue_cost === 'high') continue;
+      const keep = Math.min(a.blockIndex, b.blockIndex);
+      const drop = Math.max(a.blockIndex, b.blockIndex);
+      const first = keep === a.blockIndex ? a.ex : b.ex;
+      const second = keep === a.blockIndex ? b.ex : a.ex;
+      const firstMeta = keep === a.blockIndex ? a.meta : b.meta;
+      const secondMeta = keep === a.blockIndex ? b.meta : a.meta;
+      workout.strength[keep] = { type: 'superset', exercises: [first, second] };
+      workout.strength.splice(drop, 1);
+      repairs.push({
+        code: 'DURATION_OVER',
+        action: `Superset ${firstMeta.name} with ${secondMeta.name} to save rest time`,
+        day_label: workout.day_label,
+        exercise_id: first.exercise_id,
+      });
+      return true;
+    }
+  }
+  return false;
 }
 
 function removeStrengthExercise(workout: AiWorkoutPlan, exerciseId: string) {

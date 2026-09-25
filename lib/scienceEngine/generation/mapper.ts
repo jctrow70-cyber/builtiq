@@ -3,7 +3,7 @@ import { prescribeExercise } from '../prescription';
 import type { CatalogExercise, ExercisePrescription, ScienceProgram, ScienceWorkout, TrainingProfile, WarmupItem } from '../types';
 import { findByExerciseId } from './matchById';
 import { lateralityOf, measurementTypeOf } from './library';
-import { isRampEligiblePrimary, standardRampSets } from './ramps';
+import { assignSessionRamps } from './ramps';
 import type { AiPrepItem, AiStrengthExercise, AiWeekProgram, AiWorkoutPlan, DesignerExercise } from './types';
 
 export function mapAiWeekToScience(
@@ -52,7 +52,7 @@ function workoutFromAi(
   catalogById: Map<string, CatalogExercise>,
   library: Map<string, DesignerExercise>
 ): ScienceWorkout {
-  const exercises: ExercisePrescription[] = [];
+  const pending: Array<{ raw: AiStrengthExercise; prescribed: ExercisePrescription; grouped: boolean; groupId?: string; label?: string; order: number }> = [];
   let groupNum = 0;
   (row.strength || []).forEach((block) => {
     const grouped = block.type !== 'straight_sets' && block.exercises.length >= 2;
@@ -62,13 +62,23 @@ function workoutFromAi(
     block.exercises.forEach((raw, i) => {
       const prescribed = mapStrength(raw, profile, catalogById, library);
       if (!prescribed) return;
-      if (grouped) {
-        prescribed.supersetGroupId = groupId;
-        prescribed.supersetLabel = label;
-        prescribed.supersetOrder = i + 1;
-      }
-      exercises.push(prescribed);
+      pending.push({ raw, prescribed, grouped, groupId, label, order: i + 1 });
     });
+  });
+  const ramped = assignSessionRamps(
+    pending.map((row) => ({ exercise_id: row.raw.exercise_id, role: row.raw.role, rep_max: row.prescribed.repMax })),
+    library,
+    profile.experienceLevel
+  );
+  const exercises: ExercisePrescription[] = pending.map((row, i) => {
+    const prescribed = row.prescribed;
+    if (row.grouped) {
+      prescribed.supersetGroupId = row.groupId;
+      prescribed.supersetLabel = row.label;
+      prescribed.supersetOrder = row.order;
+    }
+    applyRampDetails(prescribed, row.raw, ramped[i]?.ramp_sets || []);
+    return prescribed;
   });
 
   const primary = exercises.find((ex) => ex.role === 'primary') || exercises[0];
@@ -86,7 +96,7 @@ function workoutFromAi(
     rampSets: [],
     exercises,
     cooldown: (row.cooldown || []).map((item) => mapPrep(item, catalogById, 'mobility')).filter(Boolean) as WarmupItem[],
-    estimatedMinutes: estimateSessionFromAi(row, library),
+    estimatedMinutes: estimateSessionFromAi(row, library, { experienceLevel: profile.experienceLevel }),
   };
 }
 
@@ -113,11 +123,14 @@ function mapStrength(
   prescribed.restSeconds = raw.rest_seconds || prescribed.restSeconds;
   prescribed.laterality = meta.laterality;
   prescribed.measurementType = meta.measurement_type;
-  const ramps = raw.ramp_sets?.length
-    ? raw.ramp_sets
-    : isRampEligiblePrimary(meta, raw.role, prescribed.repMax)
-      ? standardRampSets(profile, prescribed.repMax)
-      : [];
+  return prescribed;
+}
+
+function applyRampDetails(
+  prescribed: ExercisePrescription,
+  raw: AiStrengthExercise,
+  ramps: Array<{ percent_of_working: number; reps: number }>
+) {
   if (ramps.length) {
     prescribed.setDetails = [
       ...ramps.map((ramp, i) => ({
@@ -128,19 +141,18 @@ function mapStrength(
       ...Array.from({ length: prescribed.sets }, (_, i) => ({
         setNumber: ramps.length + i + 1,
         setType: 'working' as const,
-        reps: raw.reps_per_side && meta.laterality !== 'bilateral' ? `${prescribed.repMin}-${prescribed.repMax}/side` : `${prescribed.repMin}-${prescribed.repMax}`,
-        rir: prescribed.targetRir,
+        reps: raw.reps_per_side && prescribed.laterality !== 'bilateral' ? `${prescribed.repMin}-${prescribed.repMax}/side` : `${prescribed.repMin}-${prescribed.repMax}`,
+        rir: prescribed.targetRir ?? undefined,
       })),
     ];
-  } else if (raw.reps_per_side && meta.laterality !== 'bilateral') {
+  } else if (raw.reps_per_side && prescribed.laterality !== 'bilateral') {
     prescribed.setDetails = Array.from({ length: prescribed.sets }, (_, i) => ({
       setNumber: i + 1,
       setType: 'working' as const,
       reps: `${prescribed.repMin}-${prescribed.repMax}/side`,
-      rir: prescribed.targetRir,
+      rir: prescribed.targetRir ?? undefined,
     }));
   }
-  return prescribed;
 }
 
 function mapPrep(item: AiPrepItem, catalogById: Map<string, CatalogExercise>, category: WarmupItem['category']): WarmupItem | null {

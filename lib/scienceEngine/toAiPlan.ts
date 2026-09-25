@@ -98,7 +98,7 @@ function prescriptionToAi(ex: ExercisePrescription, note?: string): AiExercise {
     sets: ex.sets,
     reps: `${ex.repMin}-${ex.repMax}`,
     rpe: rirToRpe(ex.targetRir),
-    target_rir: ex.targetRir,
+    target_rir: ex.targetRir ?? undefined,
     rest_seconds: ex.restSeconds,
     notes: note || ex.coachingNote || ex.why,
     catalog_exercise_id: ex.exerciseId,

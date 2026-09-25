@@ -238,7 +238,7 @@ function resolveExercise(raw: any, catalog: CatalogExercise[], profile: Training
       setType: String(row.set_type || 'working') === 'warmup' ? 'warmup' : 'working',
       weight: row.weight ? String(row.weight) : undefined,
       reps: String(row.reps || prescribed.repMax),
-      rir: row.rir != null ? Number(row.rir) : prescribed.targetRir,
+      rir: String(row.set_type || 'working') === 'warmup' ? undefined : row.rir != null ? Number(row.rir) : prescribed.targetRir ?? undefined,
     }));
   }
   return prescribed;

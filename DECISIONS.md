@@ -1840,6 +1840,95 @@ The first live Phase 1 week passed the structural contract and still produced we
 
 ---
 
+## Decision 076 - 60-Minute Sessions Target 55–65
+
+Date: 2026-09-25  
+Status: Accepted  
+Category: Program Design
+
+### Decision
+
+For a 60-minute request, 55–65 minutes is on target, 66–69 is repairable overage, and 70+ remains a hard error. Do not require an exact 60:00 session. When a session lands at 66–69, run a conservative efficiency pass: safe accessory/secondary supersets if the user allows them, then extra warmup, then low-priority accessory sets, then a small secondary set cut. Do not delete primaries, cut primary working sets, shorten heavy-compound rest, or pair two high-fatigue compounds. If a sound session cannot reach 65 without hurting quality, keep it slightly over and explain why.
+
+### Reason
+
+After the effective-workout fix, successful 60-minute weeks were persisting at 69. That is inside the old error band but not on the requested target.
+
+### Alternatives Considered
+
+- Keep 66 as acceptable — rejected; 60 is the target
+- Force every session to 65 by deleting secondaries — rejected; quality first
+
+### Impact
+
+- Science generation `1.4.9`
+- Decision 061's 10%/15% bands still apply to non-60 lengths
+- Phase 2B is not started
+
+---
+
+## Decision 075 - Duration Uses the Effective Persisted Workout
+
+Date: 2026-09-25  
+Status: Accepted  
+Category: Program Design
+
+### Decision
+
+Validate and repair duration on one effective-workout representation: the session that will persist, including science-generated ramps and timed prescriptions. AI still does not author ramps. A 60-minute request treats 77 minutes as an error. Repair reduces extra warmup, excess primer, accessories, then secondary work, and may pair a leftover accessory with a non-heavy partner when supersets are allowed. Do not delete primaries or pair two high-fatigue compounds to save time. A leftover isolation may be removed even at the 5-move floor, and a 4-set primary may drop to 3 only after accessories and spare secondaries are exhausted. Do not delete the last non-high-fatigue lift if that would make SESSION_FATIGUE an error.
+
+Ramp rules: first ramp-eligible primary gets a full opener (4 stages if working ≤6 and not beginner; otherwise 3). Later ramp-eligible primaries get a 2-stage specific warmup.
+
+### Reason
+
+Validation was running on AI JSON before deterministic ramps existed, and every warmup item was 42 seconds, so a 5-minute walk and 7–8 ramps never entered the 60-minute check.
+
+### Alternatives Considered
+
+- Widen the ±9 band — rejected; the request is the constraint
+- Drop later-primary ramps entirely — rejected; they still need a short specific warmup
+- Always strip accessories first — rejected; redundant warmup and excess primer should go first
+
+### Impact
+
+- Science generation `1.4.8`
+- Phase 2B is not started
+
+---
+
+## Decision 074 - Power Prescriptions Use Exercise Family; Ramps Do Not Store Working RIR
+
+Date: 2026-09-24  
+Status: Accepted  
+Category: Program Design
+
+### Decision
+
+Potentiation prescriptions are driven by exercise family (explosive jump, throw, ballistic swing, olympic, general power), not by the leftover strength-goal accessory 8-15 / 5 RIR band. Jumps and throws stay low-rep explosive work. Swings may use a slightly higher crisp range. Power RIR is not persisted or displayed as working-set RIR.
+
+Ramp/warmup planned sets keep `set_type='warmup'` and store `target_rir` null. The UI shows ramp effort instead of inheriting the exercise working RIR. No schema change. Phase 2 adaptation still counts working sets only.
+
+The duration estimator must count the ramps the mapper will persist, including when the AI leaves `ramp_sets` empty. Do not widen the 60-minute ±6 / ±9 band to hide that undercount.
+
+### Reason
+
+The accepted Get Stronger week had good complementary selection, but primers were hypertrophy-shaped and ramps displayed 2 RIR because persist inherited `extras.target_rir`. The validator also under-counted session length by ignoring inferred ramps.
+
+### Alternatives Considered
+
+- Hardcode 2-3 x 3-5 on every power exercise — rejected; swings and olympic lifts need different ranges
+- Add a new `ramp_effort` column — rejected; existing nullable `target_rir` plus `set_type` is enough
+- Widen duration tolerance — rejected; the generator must respect requested minutes
+
+### Impact
+
+- Science generation `1.4.7` / `designer@2.3`
+- Future generates repair illegal jump primers instead of persisting 3x8-15
+- Already-persisted programs are not rewritten
+- Phase 2B is not started
+
+---
+
 ## Decision 073 - Master Hypertrophy Credits Are Authoritative
 
 Date: 2026-09-24  

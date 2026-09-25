@@ -5,7 +5,11 @@
 import { FALLBACK_CATALOG } from '../catalogAdapter';
 import { contributionsForExercise } from '../contributions';
 import { movementFamily, pickExercise } from '../exerciseSelection';
-import { classifySessionDuration, sessionDurationTolerance } from '../duration';
+import { classifySessionDuration, countPersistedRampSets, estimateSessionBreakdownFromAi, estimateSessionFromAi, estimateWorkoutBreakdown, sessionDurationTolerance } from '../duration';
+import { classifyPowerExercise, isHypertrophyStylePowerRx } from '../powerPrescription';
+import { parsePrescriptionTiming, prepItemSeconds } from '../prescriptionTime';
+import { buildEffectiveWorkout } from './effectiveWorkout';
+import { assignSessionRamps } from './ramps';
 import { generateProgram } from '../generateProgram';
 import { trainingProfileFromSources } from '../profile';
 import { scienceProgramToAiPlan } from '../toAiPlan';
@@ -16,7 +20,7 @@ import { findByExerciseId } from './matchById';
 import { parseWeekProgram } from './openaiClient';
 import { runGenerationPipeline } from './orchestrator';
 import { slimContextForPrompt } from './prompt';
-import { repairAiProgram } from './repairAiProgram';
+import { applyDurationEfficiency, repairAiProgram } from './repairAiProgram';
 import { validateAiProgram, workingSetCreditsForTests } from './validateAiProgram';
 import type { AiStrengthExercise, AiWeekProgram, AiWorkoutPlan } from './types';
 
@@ -194,9 +198,10 @@ export async function runPhase1GenerationChecks() {
   assert(mapped.explanations.some((line) => /week-1 template/i.test(line)), 'Later weeks must be described as unprogressed week-1 copies');
   assert(mon!.estimatedMinutes > 45 && mon!.estimatedMinutes < 75, `Deterministic Monday duration should be realistic, got ${mon!.estimatedMinutes}`);
   const sixty = sessionDurationTolerance(60);
-  assert(sixty.warnDelta === 6 && sixty.errorDelta === 9, `60-minute bands should be ±6 / ±9, got ${sixty.warnDelta}/${sixty.errorDelta}`);
-  assert(classifySessionDuration(66, 60).over === 'ok', '66 vs 60 should be acceptable');
-  assert(classifySessionDuration(67, 60).over === 'warning', '67 vs 60 should warn');
+  assert(sixty.warnDelta === 5 && sixty.errorDelta === 9, `60-minute bands should be 55–65 / 70+, got ${sixty.warnDelta}/${sixty.errorDelta}`);
+  assert(classifySessionDuration(65, 60).over === 'ok', '65 vs 60 should be on target');
+  assert(classifySessionDuration(66, 60).over === 'warning', '66 vs 60 should be repairable overage');
+  assert(classifySessionDuration(69, 60).over === 'warning', '69 vs 60 should stay a warning');
   assert(classifySessionDuration(70, 60).over === 'error', '70 vs 60 should error');
   assert(classifySessionDuration(38, 30).over !== 'error', 'Short sessions must not use a 3-minute error band');
 
@@ -743,6 +748,223 @@ export async function runPhase1GenerationChecks() {
     }
   );
   assert(rowPick && /row/i.test(rowPick.name), `Upper-back slot should pick a row, got ${rowPick?.name}`);
+
+  assert(classifyPowerExercise({ name: 'Box Jump', movement_pattern: 'jump' }) === 'explosive_jump', 'Box Jump is an explosive jump');
+  assert(classifyPowerExercise({ name: 'Squat Jump', movement_pattern: 'jump' }) === 'explosive_jump', 'Squat Jump is an explosive jump');
+  assert(classifyPowerExercise({ name: 'Kettlebell Swing', movement_pattern: 'hinge' }) === 'ballistic_swing', 'KB swing is ballistic, not a jump');
+  assert(isHypertrophyStylePowerRx('explosive_jump', 3, 8, 15), '3x8-15 must be illegal jump potentiation');
+
+  const badJumpWeek: AiWeekProgram = {
+    ...week,
+    workouts: [
+      {
+        ...week.workouts[0],
+        potentiation: [{ exercise_id: idOf('Vertical Jump'), sets: 3, prescription: '8-15', why: 'Prime quads' }],
+      },
+      week.workouts[1],
+      week.workouts[2],
+    ],
+  };
+  const jumpCheck = validateAiProgram(badJumpWeek, context, catalogById);
+  assert(
+    jumpCheck.issues.some((i) => i.code === 'PRIMER_HYPERTROPHY_RX' && i.severity === 'error'),
+    'Vertical Jump 3x8-15 potentiation must error'
+  );
+  const jumpFixed = repairAiProgram(badJumpWeek, context, catalogById);
+  const jumpAfter = validateAiProgram(jumpFixed.program, context, catalogById);
+  assert(
+    !jumpAfter.issues.some((i) => i.code === 'PRIMER_HYPERTROPHY_RX'),
+    `Repair must clear jump hypertrophy RX: ${jumpFixed.program.workouts[0].potentiation[0]?.prescription}`
+  );
+  const mappedJump = mapAiWeekToScience(badJumpWeek, science, profile, catalogById, library);
+  const jumpPrimer = mappedJump.workouts.find((w) => w.week === 1 && w.dayLabel === 'Mon')?.potentiation[0];
+  assert(jumpPrimer && jumpPrimer.repMax <= 5 && jumpPrimer.repMin >= 2, `Mapped jump primer must stay low-rep, got ${jumpPrimer?.repMin}-${jumpPrimer?.repMax}`);
+  assert(jumpPrimer!.targetRir == null, `Jump primer must not carry a working-set RIR, got ${jumpPrimer!.targetRir}`);
+  assert(jumpPrimer!.sets >= 2 && jumpPrimer!.sets <= 3, `Jump primer sets ${jumpPrimer!.sets}`);
+
+  const badSwingWeek: AiWeekProgram = {
+    ...week,
+    workouts: [
+      {
+        ...week.workouts[1],
+        potentiation: [{ exercise_id: idOf('Kettlebell Swing'), sets: 3, prescription: '8-15', why: 'Prime hips' }],
+      },
+      week.workouts[0],
+      week.workouts[2],
+    ],
+  };
+  const swingFixed = repairAiProgram(badSwingWeek, context, catalogById);
+  const swingRx = swingFixed.program.workouts[0].potentiation[0]?.prescription || '';
+  assert(/5\s*-\s*10|5\s*-\s*8/.test(swingRx), `Swing repair should stay ballistic, got ${swingRx}`);
+  assert(!/^8-15$/.test(swingRx), 'Swing repair must not keep 8-15');
+  const mappedSwing = mapAiWeekToScience(badSwingWeek, science, profile, catalogById, library);
+  const swingPrimer = mappedSwing.workouts.find((w) => w.week === 1 && w.dayLabel === 'Wed')?.potentiation[0];
+  assert(swingPrimer && swingPrimer.repMax >= 8 && swingPrimer.repMax <= 10, `Mapped swing should be 5-10, got ${swingPrimer?.repMin}-${swingPrimer?.repMax}`);
+
+  const strippedRamps: AiWeekProgram = {
+    ...week,
+    workouts: week.workouts.map((w) => ({
+      ...w,
+      strength: w.strength.map((block) => ({
+        ...block,
+        exercises: block.exercises.map((ex) => ({ ...ex, ramp_sets: [] })),
+      })),
+    })),
+  };
+  const inferredRamps = countPersistedRampSets(strippedRamps.workouts[0], library, 'intermediate');
+  assert(inferredRamps >= 3, `Empty AI ramp_sets must still count persisted primary ramps, got ${inferredRamps}`);
+  const inferredMinutes = estimateSessionFromAi(strippedRamps.workouts[0], library, { experienceLevel: 'intermediate' });
+  const explicitMinutes = estimateSessionFromAi(week.workouts[0], library, { experienceLevel: 'intermediate' });
+  assert(inferredMinutes >= explicitMinutes, 'Inferred ramps must not under-count versus explicit ramps');
+
+  assert(parsePrescriptionTiming('5 minutes').kind === 'time' && parsePrescriptionTiming('5 minutes').seconds === 300, '5 minutes must parse as 300s');
+  assert(parsePrescriptionTiming('30-45 seconds').seconds >= 30 && parsePrescriptionTiming('30-45 seconds').seconds <= 45, 'Second ranges use the midpoint');
+  assert(parsePrescriptionTiming('8 reps per side').perSide && (parsePrescriptionTiming('8 reps per side').reps || 0) === 8, 'Per-side reps must parse');
+  assert(parsePrescriptionTiming('0.25 miles').kind === 'distance', 'Distance prescriptions must parse');
+  assert(prepItemSeconds({ prescription: '5 minutes', sets: 1 }) >= 300, 'A 5-minute timed warmup must count about 5 minutes');
+  const timedWarm = estimateWorkoutBreakdown({
+    warmupItems: [{ name: 'Treadmill Walk', category: 'raise', reps: '5 minutes', sets: 1, measurementType: 'time' }],
+    potentiation: [],
+    rampCount: 0,
+    exercises: [],
+    cooldownItems: [],
+  });
+  assert(timedWarm.warmupSeconds >= 300 + 90, `5-minute walk plus overhead should be ~6+ min, got ${timedWarm.warmupSeconds}s`);
+  assert(classifySessionDuration(77, 60).over === 'error', '77 vs 60 must remain a duration error');
+
+  const twoPrimary: AiWeekProgram = {
+    ...week,
+    workouts: [
+      {
+        ...week.workouts[0],
+        strength: [
+          { type: 'straight_sets' as const, exercises: [lift('Back Squat', 'primary', { working_sets: 3, rep_min: 4, rep_max: 6, ramp_sets: [] })] },
+          { type: 'straight_sets' as const, exercises: [lift('Barbell Bench Press', 'primary', { working_sets: 3, rep_min: 4, rep_max: 6, ramp_sets: [] })] },
+        ],
+      },
+      week.workouts[1],
+      week.workouts[2],
+    ],
+  };
+  const slotRamps = assignSessionRamps(
+    [
+      { exercise_id: idOf('Back Squat'), role: 'primary' as const, rep_max: 6 },
+      { exercise_id: idOf('Barbell Bench Press'), role: 'primary' as const, rep_max: 6 },
+    ],
+    library,
+    'intermediate'
+  );
+  assert(slotRamps[0].ramp_sets.length === 4, `Opener heavy squat should get 4 ramps, got ${slotRamps[0].ramp_sets.length}`);
+  assert(slotRamps[1].ramp_sets.length === 2, `Later bench should get abbreviated 2 ramps, got ${slotRamps[1].ramp_sets.length}`);
+  const effectiveTwo = buildEffectiveWorkout(twoPrimary.workouts[0], library, { experienceLevel: 'intermediate' });
+  assert(effectiveTwo.strength[0].ramp_sets.length === 4 && effectiveTwo.strength[1].ramp_sets.length === 2, 'Effective workout must use the same session ramp plan');
+  const mappedTwo = mapAiWeekToScience(twoPrimary, science, profile, catalogById, library);
+  const mappedMonTwo = mappedTwo.workouts.find((w) => w.week === 1 && w.dayLabel === 'Mon');
+  const squatRamps = (mappedMonTwo?.exercises[0].setDetails || []).filter((s) => s.setType === 'warmup').length;
+  const benchRamps = (mappedMonTwo?.exercises[1].setDetails || []).filter((s) => s.setType === 'warmup').length;
+  assert(squatRamps === 4 && benchRamps === 2, `Mapper ramps must match effective plan, got squat ${squatRamps} bench ${benchRamps}`);
+  const pre = estimateSessionBreakdownFromAi(twoPrimary.workouts[0], library, { experienceLevel: 'intermediate' });
+  assert(pre.rampCount === 6, `Authoritative duration must count 4+2 ramps, got ${pre.rampCount}`);
+
+  const fatWeek: AiWeekProgram = {
+    ...week,
+    workouts: [
+      {
+        ...week.workouts[0],
+        warmup: [
+          { exercise_id: idOf('Goblet Squat'), sets: 1, prescription: '10 minutes', why: 'General raise' },
+          { exercise_id: idOf('Band Row'), sets: 1, prescription: '12', why: 'Pull prep' },
+          { exercise_id: idOf('Scapular Push-Up'), sets: 1, prescription: '8', why: 'Scap prep' },
+          { exercise_id: idOf('Ankle Rocker'), sets: 1, prescription: '12', why: 'Ankle prep' },
+          { exercise_id: idOf('Hamstring Stretch'), sets: 1, prescription: '30 sec', why: 'Extra stretch' },
+        ],
+        potentiation: [{ exercise_id: idOf('Vertical Jump'), sets: 3, prescription: '3-5', why: 'Prime quads' }],
+        strength: [
+          { type: 'straight_sets' as const, exercises: [lift('Back Squat', 'primary', { working_sets: 4, rest_seconds: 180 })] },
+          { type: 'straight_sets' as const, exercises: [lift('Barbell Bench Press', 'secondary', { working_sets: 4, rest_seconds: 180 })] },
+          { type: 'straight_sets' as const, exercises: [lift('Dumbbell Row', 'accessory', { working_sets: 3 })] },
+          { type: 'straight_sets' as const, exercises: [lift('Lateral Raise', 'isolation', { working_sets: 3 })] },
+          { type: 'straight_sets' as const, exercises: [lift('Face Pull', 'isolation', { working_sets: 3 })] },
+        ],
+      },
+      week.workouts[1],
+      week.workouts[2],
+    ],
+  };
+  const fatBefore = estimateSessionFromAi(fatWeek.workouts[0], library, { experienceLevel: 'intermediate' });
+  assert(fatBefore > 69, `Overloaded session should start over the 60-minute error band, got ${fatBefore}`);
+  const fatFixed = repairAiProgram(fatWeek, context, catalogById);
+  const fatAfter = estimateSessionFromAi(fatFixed.program.workouts[0], library, { experienceLevel: 'intermediate' });
+  assert(classifySessionDuration(fatAfter, 60).over !== 'error', `Repair must bring the effective session under the error band, got ${fatAfter}`);
+  const fatNames = fatFixed.program.workouts[0].strength.flatMap((b) => b.exercises.map((ex) => library.get(ex.exercise_id)?.name || ex.exercise_id));
+  assert(fatNames.includes('Back Squat') && fatNames.includes('Barbell Bench Press'), `Duration repair must keep primary/secondary compounds, got ${fatNames.join(', ')}`);
+  assert(fatFixed.repairs.some((r) => r.code === 'DURATION_OVER'), 'Duration repair must be logged');
+
+  const liveLike: AiWeekProgram = {
+    ...week,
+    workouts: [
+      {
+        ...week.workouts[0],
+        warmup: [
+          { exercise_id: idOf('Goblet Squat'), sets: 1, prescription: '5 minutes easy walk', why: 'General raise' },
+          { exercise_id: idOf('Band Row'), sets: 1, prescription: '15', why: 'Pull prep' },
+          { exercise_id: idOf('Scapular Push-Up'), sets: 1, prescription: '8', why: 'Scap prep' },
+          { exercise_id: idOf('Ankle Rocker'), sets: 1, prescription: '8 reps per side', why: 'Ankle prep' },
+        ],
+        potentiation: [{ exercise_id: idOf('Vertical Jump'), sets: 3, prescription: '3-5', why: 'Prime quads' }],
+        strength: [
+          { type: 'straight_sets' as const, exercises: [lift('Back Squat', 'primary', { working_sets: 4, rep_min: 4, rep_max: 6, rest_seconds: 180 })] },
+          { type: 'straight_sets' as const, exercises: [lift('Barbell Bench Press', 'primary', { working_sets: 4, rep_min: 4, rep_max: 6, rest_seconds: 180 })] },
+          { type: 'straight_sets' as const, exercises: [lift('Dumbbell Row', 'secondary', { working_sets: 3, rest_seconds: 90 })] },
+          { type: 'straight_sets' as const, exercises: [lift('Romanian Deadlift', 'secondary', { working_sets: 3, rest_seconds: 120 })] },
+          { type: 'straight_sets' as const, exercises: [lift('Face Pull', 'accessory', { working_sets: 2, rest_seconds: 75 })] },
+        ],
+      },
+      week.workouts[1],
+      week.workouts[2],
+    ],
+  };
+  const liveBefore = estimateSessionFromAi(liveLike.workouts[0], library, { experienceLevel: 'intermediate' });
+  assert(liveBefore > 69, `Two heavy 4-set primaries plus a 5-minute walk should start over the error band, got ${liveBefore}`);
+  const liveFixed = repairAiProgram(liveLike, context, catalogById);
+  const liveAfter = estimateSessionFromAi(liveFixed.program.workouts[0], library, { experienceLevel: 'intermediate' });
+  assert(classifySessionDuration(liveAfter, 60).over !== 'error', `Live-like 60-minute repair must leave the error band, got ${liveAfter}`);
+  const liveNames = liveFixed.program.workouts[0].strength.flatMap((b) => b.exercises.map((ex) => library.get(ex.exercise_id)?.name || ex.exercise_id));
+  assert(liveNames.includes('Back Squat') && liveNames.includes('Barbell Bench Press'), `Live-like repair must keep both primaries, got ${liveNames.join(', ')}`);
+
+  const overTarget: AiWeekProgram = {
+    ...week,
+    workouts: [
+      {
+        ...week.workouts[0],
+        warmup: [
+          { exercise_id: idOf('Goblet Squat'), sets: 1, prescription: '5 minutes easy walk', why: 'General raise' },
+          { exercise_id: idOf('Band Row'), sets: 1, prescription: '15', why: 'Pull prep' },
+          { exercise_id: idOf('Scapular Push-Up'), sets: 1, prescription: '8', why: 'Scap prep' },
+          { exercise_id: idOf('Ankle Rocker'), sets: 1, prescription: '8 reps per side', why: 'Ankle prep' },
+        ],
+        potentiation: [{ exercise_id: idOf('Vertical Jump'), sets: 2, prescription: '3-5', why: 'Prime quads' }],
+        strength: [
+          { type: 'straight_sets' as const, exercises: [lift('Back Squat', 'primary', { working_sets: 4, rep_min: 4, rep_max: 6, rest_seconds: 180 })] },
+          { type: 'straight_sets' as const, exercises: [lift('Barbell Bench Press', 'primary', { working_sets: 3, rep_min: 4, rep_max: 6, rest_seconds: 180 })] },
+          { type: 'straight_sets' as const, exercises: [lift('Dumbbell Row', 'secondary', { working_sets: 3, rest_seconds: 90 })] },
+          { type: 'straight_sets' as const, exercises: [lift('Face Pull', 'isolation', { working_sets: 3, rest_seconds: 75 })] },
+          { type: 'straight_sets' as const, exercises: [lift('Lateral Raise', 'isolation', { working_sets: 3, rest_seconds: 60 })] },
+        ],
+      },
+      week.workouts[1],
+      week.workouts[2],
+    ],
+  };
+  const overBefore = estimateSessionFromAi(overTarget.workouts[0], library, { experienceLevel: 'intermediate' });
+  assert(overBefore >= 66, `Efficiency fixture should start over the 60-minute target, got ${overBefore}`);
+  const efficient = applyDurationEfficiency(overTarget, context, catalogById);
+  const overAfter = estimateSessionFromAi(efficient.program.workouts[0], library, { experienceLevel: 'intermediate' });
+  const overNames = efficient.program.workouts[0].strength.flatMap((b) => b.exercises.map((ex) => library.get(ex.exercise_id)?.name || ex.exercise_id));
+  assert(overNames.includes('Back Squat') && overNames.includes('Barbell Bench Press'), `Efficiency must keep primaries, got ${overNames.join(', ')}`);
+  assert(overNames.includes('Face Pull') && overNames.includes('Lateral Raise'), 'Efficiency should pair leftover accessories rather than delete them');
+  assert(efficient.program.workouts[0].strength.some((b) => b.type === 'superset'), 'Sometimes preference should pair leftover accessories before deleting them');
+  assert(overAfter <= overBefore, `Efficiency should not add time, ${overBefore} → ${overAfter}`);
 
   console.log('BIQ-0209 Phase 1.1 generation checks passed.');
   console.log(

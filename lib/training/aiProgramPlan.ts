@@ -974,14 +974,16 @@ function buildPlannedSetRows(
   const rows: Record<string, unknown>[] = [];
   for (let i = 0; i < n; i++) {
     const detail = details?.[i];
+    const setType = detail?.set_type || 'working';
+    const rampEffort = /^(warmup|ramp)$/i.test(setType);
     rows.push({
       sort_order: i,
       set_number: i + 1,
-      set_type: detail?.set_type || 'working',
+      set_type: setType,
       target_weight: detail?.weight || extras?.target_weight || '',
       target_reps: detail?.reps || extras?.reps || '',
-      target_rpe: extras?.rpe || '',
-      target_rir: detail?.rir ?? extras?.target_rir ?? null,
+      target_rpe: rampEffort ? '' : extras?.rpe || '',
+      target_rir: rampEffort ? null : detail?.rir ?? extras?.target_rir ?? null,
       rest_seconds: extras?.rest_seconds ?? null,
       rep_min: parseRepBound(detail?.reps || extras?.reps || '', 'min'),
       rep_max: parseRepBound(detail?.reps || extras?.reps || '', 'max'),

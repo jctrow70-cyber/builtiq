@@ -10,7 +10,7 @@ import { normalizeEquipmentList } from '../../../lib/training/equipmentFilter';
 import { compatibleEquipmentOptions, defaultCatalogEquipment, resolveExerciseEquipment } from '../../../lib/training/exerciseEquipment';
 import { getExerciseGuidePayload, getExerciseThumb, hasExerciseGuide, type ExerciseGuidePayload } from '../../../lib/training/exerciseMedia';
 import { exerciseTypeOf } from '../../../lib/training/exerciseTypes';
-import { SET_TYPES } from '../../../lib/training/setTypes';
+import { SET_TYPES, isRampEffortSetType } from '../../../lib/training/setTypes';
 import { canRewritePlannedSetPrescription } from '../../../lib/training/plannedSetGuard';
 import {
   catalogPayloadFromItem,
@@ -942,21 +942,28 @@ function TemplateExerciseCard({
                       onBlur={(e) => onUpdateSet(set, 'target_weight', e.target.value || null)}
                     />
                   </label>
-                  <label className="log-field-card log-field-card-compact">
-                    <span>RIR</span>
-                    <input
-                      className="log-input-card log-input-compact"
-                      defaultValue={set.target_rir ?? ''}
-                      disabled={!canEdit || busy}
-                      placeholder="RIR"
-                      inputMode="decimal"
-                      key={`${set.id}-rir-${set.target_rir ?? ''}`}
-                      onBlur={(e) => {
-                        const n = Number(e.target.value);
-                        onUpdateSet(set, 'target_rir', e.target.value === '' || !Number.isFinite(n) ? null : n);
-                      }}
-                    />
-                  </label>
+                  {isRampEffortSetType(set.set_type) ? (
+                    <label className="log-field-card log-field-card-compact">
+                      <span>Effort</span>
+                      <input className="log-input-card log-input-compact" value="Ramp" disabled title="Ramp sets are load/speed prep, not working-set RIR" />
+                    </label>
+                  ) : (
+                    <label className="log-field-card log-field-card-compact">
+                      <span>RIR</span>
+                      <input
+                        className="log-input-card log-input-compact"
+                        defaultValue={set.target_rir ?? ''}
+                        disabled={!canEdit || busy}
+                        placeholder="RIR"
+                        inputMode="decimal"
+                        key={`${set.id}-rir-${set.target_rir ?? ''}`}
+                        onBlur={(e) => {
+                          const n = Number(e.target.value);
+                          onUpdateSet(set, 'target_rir', e.target.value === '' || !Number.isFinite(n) ? null : n);
+                        }}
+                      />
+                    </label>
+                  )}
                 </div>
                 {canEdit && (
                   <div className="set-log-rail">

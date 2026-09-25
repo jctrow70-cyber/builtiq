@@ -30,7 +30,7 @@ export function validateProgram(program: ScienceProgram, profile: TrainingProfil
     workout.exercises.forEach((ex) => {
       if (ex.sets < 1 || ex.sets > 6) issues.push(err('SETS', `${ex.name} has an invalid set count.`));
       if (ex.repMin > ex.repMax) issues.push(err('REPS', `${ex.name} has an inverted rep range.`));
-      if (ex.targetRir < 0 || ex.targetRir > 5) issues.push(err('RIR', `${ex.name} has an invalid RIR.`));
+      if (ex.targetRir != null && (ex.targetRir < 0 || ex.targetRir > 5)) issues.push(err('RIR', `${ex.name} has an invalid RIR.`));
       if (profile.excludedExercises.some((n) => n.toLowerCase() === ex.name.toLowerCase())) {
         issues.push(err('RESTRICTED', `${ex.name} is excluded by the user profile.`));
       }

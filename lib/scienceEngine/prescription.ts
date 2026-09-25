@@ -1,5 +1,6 @@
 import { lateralityOf, measurementTypeOf } from './generation/library';
-import { getScienceRules, goalUsesStrengthBias } from './rules';
+import { classifyPowerExercise, powerPrescriptionFor } from './powerPrescription';
+import { getScienceRules, goalUsesHypertrophyBias, goalUsesStrengthBias } from './rules';
 import type { CatalogExercise, ExercisePrescription, PrimaryGoal, ProgramRole, TrainingProfile } from './types';
 
 export function repRangeFor(role: ProgramRole, goal: PrimaryGoal, exercise: CatalogExercise): { min: number; max: number } {
@@ -67,6 +68,33 @@ export function prescribeExercise(opts: {
   why?: string;
 }): ExercisePrescription {
   const { exercise, role, profile, sets, preferPressRange, why } = opts;
+  if (role === 'power') {
+    const family = classifyPowerExercise(exercise);
+    const rx = powerPrescriptionFor(family, {
+      experienceLevel: profile.experienceLevel,
+      conservative: goalUsesHypertrophyBias(profile.primaryGoal),
+    });
+    const requested = Number(sets);
+    const nextSets = Number.isFinite(requested) && requested >= 2 && requested <= 3 ? Math.round(requested) : rx.sets;
+    return {
+      exerciseId: exercise.id,
+      name: exercise.name,
+      role,
+      muscleGroup: exercise.primaryMuscles[0] || 'muscle',
+      primaryMuscles: exercise.primaryMuscles,
+      movementPattern: exercise.movementPattern,
+      sets: nextSets,
+      repMin: rx.repMin,
+      repMax: rx.repMax,
+      targetRir: rx.targetRir,
+      restSeconds: rx.restSeconds,
+      loadIncrement: loadIncrementFor(exercise),
+      why: why || rx.effortCue,
+      coachingNote: rx.effortCue,
+      laterality: lateralityOf(exercise),
+      measurementType: measurementTypeOf(exercise),
+    };
+  }
   let range = repRangeFor(role, profile.primaryGoal, exercise);
   if (preferPressRange && profile.primaryGoal === 'hypertrophy' && role === 'primary') {
     range = hypertrophyPrimaryPressRange();
@@ -91,7 +119,8 @@ export function prescribeExercise(opts: {
   };
 }
 
-export function rirToRpe(rir: number): string {
+export function rirToRpe(rir: number | null | undefined): string {
+  if (rir == null || !Number.isFinite(rir)) return '';
   const rpe = Math.max(5, Math.min(10, 10 - rir));
   return String(rpe);
 }

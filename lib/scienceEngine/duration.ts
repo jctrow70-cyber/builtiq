@@ -1,16 +1,22 @@
-import type { ExercisePrescription, ScienceWorkout, TrainingProfile, WarmupItem } from './types';
+import {
+  BILATERAL_SET_SECONDS,
+  COOLDOWN_ITEM_SECONDS,
+  EXERCISE_TRANSITION_SECONDS,
+  POWER_REST_SECONDS,
+  PREP_TRANSITION_SECONDS,
+  RAMP_REST_SECONDS,
+  RAMP_SET_SECONDS,
+  SESSION_OVERHEAD_SECONDS,
+  SUPERSET_SWAP_SECONDS,
+  UNILATERAL_SET_SECONDS,
+  type WorkoutDurationBreakdown,
+} from './durationConstants';
+import { buildEffectiveWorkout, estimateEffectiveBreakdown, estimateEffectiveMinutes } from './generation/effectiveWorkout';
 import type { AiWorkoutPlan, DesignerExercise } from './generation/types';
+import { prepItemSeconds } from './prescriptionTime';
+import type { ExercisePrescription, ScienceWorkout, TrainingProfile, WarmupItem } from './types';
 
-const BILATERAL_SET_SECONDS = 48;
-const UNILATERAL_SET_SECONDS = 78;
-const RAMP_SET_SECONDS = 32;
-const RAMP_REST_SECONDS = 45;
-const PREP_ITEM_SECONDS = 42;
-const PREP_TRANSITION_SECONDS = 12;
-const EXERCISE_TRANSITION_SECONDS = 40;
-const SESSION_OVERHEAD_SECONDS = 90;
-const COOLDOWN_ITEM_SECONDS = 50;
-const SUPERSET_SWAP_SECONDS = 18;
+export type { WorkoutDurationBreakdown } from './durationConstants';
 
 export function maxStrengthMoves(minutes: number): number {
   if (minutes <= 30) return 4;
@@ -28,9 +34,15 @@ export function minStrengthMoves(minutes: number): number {
   return 7;
 }
 
-/** Floors keep 20–30 minute sessions from getting 2–3 minute error bands. */
+/**
+ * 60-minute requests use a practical target band: 55–65 on target, 66–69
+ * repairable overage, 70+ hard error. Other lengths keep ~10% / ~15% with floors.
+ */
 export function sessionDurationTolerance(requestedMinutes: number): { warnDelta: number; errorDelta: number } {
   const minutes = Math.max(1, Number(requestedMinutes) || 60);
+  if (minutes === 60) {
+    return { warnDelta: 5, errorDelta: 9 };
+  }
   return {
     warnDelta: Math.max(5, Math.round(minutes * 0.1)),
     errorDelta: Math.max(8, Math.round(minutes * 0.15)),
@@ -58,21 +70,43 @@ function setExecutionSeconds(name: string, unilateral?: boolean): number {
   return unilateral || isUnilateralName(name) ? UNILATERAL_SET_SECONDS : BILATERAL_SET_SECONDS;
 }
 
-export function estimateWorkoutMinutes(opts: {
+export function countPersistedRampSets(
+  workout: AiWorkoutPlan,
+  library: Map<string, DesignerExercise>,
+  experienceLevel?: string
+): number {
+  return buildEffectiveWorkout(workout, library, { experienceLevel }).strength.reduce(
+    (sum, ex) => sum + (ex.ramp_sets?.length || 0),
+    0
+  );
+}
+
+export function estimateWorkoutBreakdown(opts: {
   warmupItems: WarmupItem[];
   potentiation: ExercisePrescription[];
   rampCount: number;
   exercises: ExercisePrescription[];
-  cooldownItems?: Array<{ sets?: number }>;
-}): number {
-  const warmup =
+  cooldownItems?: Array<{ sets?: number; reps?: string; measurementType?: string }>;
+}): WorkoutDurationBreakdown {
+  const warmupSeconds =
     SESSION_OVERHEAD_SECONDS +
-    opts.warmupItems.reduce((sum, item) => sum + (item.sets || 1) * PREP_ITEM_SECONDS + PREP_TRANSITION_SECONDS, 0);
-  const primer = opts.potentiation.reduce(
-    (sum, ex) => sum + ex.sets * (setExecutionSeconds(ex.name, isUnilateralName(ex.name)) + (ex.restSeconds || 45)),
+    opts.warmupItems.reduce(
+      (sum, item) =>
+        sum +
+        prepItemSeconds({
+          prescription: item.reps,
+          sets: item.sets,
+          measurementType: item.measurementType,
+          laterality: item.laterality,
+        }) +
+        PREP_TRANSITION_SECONDS,
+      0
+    );
+  const potentiationSeconds = opts.potentiation.reduce(
+    (sum, ex) => sum + ex.sets * (setExecutionSeconds(ex.name, isUnilateralName(ex.name)) + (ex.restSeconds || POWER_REST_SECONDS)),
     opts.potentiation.length ? 40 : 0
   );
-  const ramp = opts.rampCount * (RAMP_SET_SECONDS + RAMP_REST_SECONDS);
+  const rampSeconds = opts.rampCount * (RAMP_SET_SECONDS + RAMP_REST_SECONDS);
   const groups = new Map<string, ExercisePrescription[]>();
   opts.exercises.forEach((ex, i) => {
     const key = ex.supersetGroupId || `solo-${i}`;
@@ -80,74 +114,71 @@ export function estimateWorkoutMinutes(opts: {
     list.push(ex);
     groups.set(key, list);
   });
-  let work = 0;
+  let workingSeconds = 0;
   groups.forEach((members) => {
     const grouped = members.length > 1 && members[0].supersetGroupId;
     if (grouped) {
       const rounds = Math.max(...members.map((ex) => ex.sets || 1));
       const pairWork = members.reduce((sum, ex) => sum + setExecutionSeconds(ex.name, isUnilateralName(ex.name)), 0);
       const pairRest = Math.max(...members.map((ex) => ex.restSeconds || 90));
-      work += rounds * (pairWork + SUPERSET_SWAP_SECONDS * (members.length - 1) + pairRest) + EXERCISE_TRANSITION_SECONDS;
+      workingSeconds += rounds * (pairWork + SUPERSET_SWAP_SECONDS * (members.length - 1) + pairRest) + EXERCISE_TRANSITION_SECONDS;
     } else {
       const ex = members[0];
-      work +=
+      workingSeconds +=
         (ex.sets || 1) * (setExecutionSeconds(ex.name, isUnilateralName(ex.name)) + (ex.restSeconds || 90)) +
         EXERCISE_TRANSITION_SECONDS;
     }
   });
-  const cooldown = (opts.cooldownItems || []).reduce((sum, item) => sum + (item.sets || 1) * COOLDOWN_ITEM_SECONDS, 0);
-  return Math.max(1, Math.round((warmup + primer + ramp + work + cooldown) / 60));
+  const cooldownSeconds = (opts.cooldownItems || []).reduce((sum, item) => {
+    if (item.reps) {
+      return (
+        sum +
+        prepItemSeconds({
+          prescription: item.reps,
+          sets: item.sets,
+          measurementType: item.measurementType,
+        })
+      );
+    }
+    return sum + (item.sets || 1) * COOLDOWN_ITEM_SECONDS;
+  }, 0);
+  const totalSeconds = warmupSeconds + potentiationSeconds + rampSeconds + workingSeconds + cooldownSeconds;
+  return {
+    warmupSeconds,
+    potentiationSeconds,
+    rampSeconds,
+    workingSeconds,
+    cooldownSeconds,
+    totalSeconds,
+    minutes: Math.max(1, Math.round(totalSeconds / 60)),
+    rampCount: opts.rampCount,
+  };
+}
+
+export function estimateWorkoutMinutes(opts: {
+  warmupItems: WarmupItem[];
+  potentiation: ExercisePrescription[];
+  rampCount: number;
+  exercises: ExercisePrescription[];
+  cooldownItems?: Array<{ sets?: number; reps?: string; measurementType?: string }>;
+}): number {
+  return estimateWorkoutBreakdown(opts).minutes;
 }
 
 export function estimateSessionFromAi(
   workout: AiWorkoutPlan,
-  library: Map<string, DesignerExercise>
+  library: Map<string, DesignerExercise>,
+  opts?: { experienceLevel?: string }
 ): number {
-  const exercises = (workout.strength || []).flatMap((block, blockIndex) =>
-    (block.exercises || []).map((ex, i) => {
-      const meta = library.get(ex.exercise_id);
-      const grouped = block.type !== 'straight_sets' && (block.exercises || []).length >= 2;
-      return {
-        name: meta?.name || ex.exercise_id,
-        sets: ex.working_sets,
-        restSeconds: ex.rest_seconds || 90,
-        role: ex.role,
-        muscleGroup: '',
-        primaryMuscles: [],
-        movementPattern: meta?.movement_pattern || 'other',
-        repMin: ex.rep_min,
-        repMax: ex.rep_max,
-        targetRir: ex.target_rir,
-        loadIncrement: 5,
-        supersetGroupId: grouped ? `block-${blockIndex}` : undefined,
-        unilateral: meta?.laterality === 'unilateral' || ex.reps_per_side,
-      } as ExercisePrescription & { unilateral?: boolean };
-    })
-  );
-  return estimateWorkoutMinutes({
-    warmupItems: (workout.warmup || []).map((item) => ({
-      name: item.exercise_id,
-      category: 'activation',
-      reps: item.prescription,
-      sets: item.sets || 1,
-    })),
-    potentiation: (workout.potentiation || []).map((item) => ({
-      name: item.exercise_id,
-      sets: item.sets || 1,
-      restSeconds: 45,
-      role: 'power',
-      muscleGroup: '',
-      primaryMuscles: [],
-      movementPattern: 'other',
-      repMin: 3,
-      repMax: 5,
-      targetRir: 5,
-      loadIncrement: 0,
-    })),
-    rampCount: (workout.strength || []).flatMap((block) => block.exercises || []).reduce((sum, ex) => sum + (ex.ramp_sets?.length || 0), 0),
-    exercises,
-    cooldownItems: workout.cooldown || [],
-  });
+  return estimateEffectiveMinutes(buildEffectiveWorkout(workout, library, opts));
+}
+
+export function estimateSessionBreakdownFromAi(
+  workout: AiWorkoutPlan,
+  library: Map<string, DesignerExercise>,
+  opts?: { experienceLevel?: string }
+): WorkoutDurationBreakdown {
+  return estimateEffectiveBreakdown(buildEffectiveWorkout(workout, library, opts));
 }
 
 export function trimForDuration(workout: ScienceWorkout, profile: TrainingProfile): ScienceWorkout {
@@ -157,7 +188,7 @@ export function trimForDuration(workout: ScienceWorkout, profile: TrainingProfil
   next.estimatedMinutes = estimateWorkoutMinutes({
     warmupItems: next.warmup,
     potentiation: next.potentiation,
-    rampCount: next.rampSets.length,
+    rampCount: next.exercises.reduce((sum, ex) => sum + (ex.setDetails || []).filter((s) => s.setType === 'warmup').length, 0),
     exercises: next.exercises,
     cooldownItems: next.cooldown,
   });
@@ -169,7 +200,7 @@ export function trimForDuration(workout: ScienceWorkout, profile: TrainingProfil
     next.estimatedMinutes = estimateWorkoutMinutes({
       warmupItems: next.warmup,
       potentiation: next.potentiation,
-      rampCount: next.rampSets.length,
+      rampCount: next.exercises.reduce((sum, ex) => sum + (ex.setDetails || []).filter((s) => s.setType === 'warmup').length, 0),
       exercises: next.exercises,
       cooldownItems: next.cooldown,
     });

@@ -116,6 +116,7 @@ Programming intent:
 - Cover major hypertrophy muscles (chest, upper back, lats, quads, hamstrings, glutes) across the week.
 - Superset preference is "${context.athlete.superset_preference}". "sometimes" means at least one non-competing pair in the week, not a pair in every session. Never pair two high-fatigue compounds.
 - Warm-up prepares THAT day's lifts. Cooldown is stretch/mobility/breathing only.
+- Potentiation is optional neural prep, not hypertrophy work. Jumps/throws stay low-rep and explosive (about 2-3 x 3-5). Ballistic swings may use a slightly higher crisp range. Do not prescribe 8-15 or working-set RIR on primers.
 - why: one short clause, muscles that actually belong to the exercise.
 
 Materialize week 1 only. progression.strategy is intent, not applied loads.

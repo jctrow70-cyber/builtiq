@@ -1,0 +1,1427 @@
+{
+  "generated_at": "2026-09-25T15:53:59.493Z",
+  "science_version": "1.4.9",
+  "program_id": "bc2e4996-eb02-4f70-945a-3897d99abf45",
+  "persist_error": null,
+  "method": "ai_repaired",
+  "fallback": false,
+  "model": "gpt-5.4-2026-03-05",
+  "openai_calls": 1,
+  "ai_latency_ms": 33884,
+  "wall_ms": 33947,
+  "raw_ai_duration": [
+    {
+      "day": "Mon",
+      "ai_estimated_minutes": 58,
+      "effective_before_repair": {
+        "warmupSeconds": 586,
+        "potentiationSeconds": 364,
+        "rampSeconds": 462,
+        "workingSeconds": 3071,
+        "cooldownSeconds": 129,
+        "totalSeconds": 4612,
+        "minutes": 77,
+        "rampCount": 6
+      }
+    },
+    {
+      "day": "Wed",
+      "ai_estimated_minutes": 57,
+      "effective_before_repair": {
+        "warmupSeconds": 538,
+        "potentiationSeconds": 364,
+        "rampSeconds": 462,
+        "workingSeconds": 3282,
+        "cooldownSeconds": 114,
+        "totalSeconds": 4760,
+        "minutes": 79,
+        "rampCount": 6
+      }
+    },
+    {
+      "day": "Fri",
+      "ai_estimated_minutes": 59,
+      "effective_before_repair": {
+        "warmupSeconds": 591,
+        "potentiationSeconds": 364,
+        "rampSeconds": 462,
+        "workingSeconds": 3465,
+        "cooldownSeconds": 114,
+        "totalSeconds": 4996,
+        "minutes": 83,
+        "rampCount": 6
+      }
+    }
+  ],
+  "repairs": [
+    {
+      "code": "LATERALITY_MISMATCH",
+      "action": "Removed /side from Knee-to-Wall Ankle Mobilization warmup",
+      "day_label": "Mon",
+      "exercise_id": "92a1cb43-2d26-4f61-ab2f-f92d032ec660"
+    },
+    {
+      "code": "REST_TOO_SHORT",
+      "action": "Raised Back Squat rest 150s → 180s",
+      "day_label": "Mon",
+      "exercise_id": "4b3ca64d-8aeb-4bc6-8b1f-3ca6116ecdc4"
+    },
+    {
+      "code": "REST_TOO_SHORT",
+      "action": "Raised Bench Press rest 150s → 180s",
+      "day_label": "Mon",
+      "exercise_id": "811272d6-06df-435f-a9bc-ceacea7dbfb9"
+    },
+    {
+      "code": "REST_TOO_SHORT",
+      "action": "Raised Bulgarian Split Squat rest 75s → 120s",
+      "day_label": "Mon",
+      "exercise_id": "26781050-0c19-43f3-b026-d26fa79c5630"
+    },
+    {
+      "code": "REST_TOO_SHORT",
+      "action": "Raised Farmer Carry rest 60s → 75s",
+      "day_label": "Mon",
+      "exercise_id": "eeecddd9-6e4c-49ac-8fd4-369cceee4662"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Removed extra warmup Scapular Push-Up to fit the session",
+      "day_label": "Mon",
+      "exercise_id": "08e24827-ccce-42a6-ad6f-6ec0bd9a09d8"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Reduced Box Jump primer to 2 sets",
+      "day_label": "Mon",
+      "exercise_id": "9a8c6def-8171-45f0-b6c0-708003baab9f"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Removed extra warmup Band Pull-Apart to fit the session",
+      "day_label": "Mon",
+      "exercise_id": "11b1ea29-fd8c-4002-9d21-50c8ec0802c8"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Reduced Face Pull to 2 sets for duration",
+      "day_label": "Mon",
+      "exercise_id": "23ace7e2-2bfa-4c5c-93b5-9fff98eb0afb"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Removed Farmer Carry to fit the session",
+      "day_label": "Mon",
+      "exercise_id": "eeecddd9-6e4c-49ac-8fd4-369cceee4662"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Removed Face Pull to fit the session",
+      "day_label": "Mon",
+      "exercise_id": "23ace7e2-2bfa-4c5c-93b5-9fff98eb0afb"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Reduced Bulgarian Split Squat to 2 sets for duration",
+      "day_label": "Mon",
+      "exercise_id": "26781050-0c19-43f3-b026-d26fa79c5630"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Reduced Chest-Supported Row to 2 sets for duration",
+      "day_label": "Mon",
+      "exercise_id": "1695e444-3146-42aa-af3b-ebc2e9b110f4"
+    },
+    {
+      "code": "LATERALITY_MISMATCH",
+      "action": "Removed /side from Hip Airplane warmup",
+      "day_label": "Wed",
+      "exercise_id": "137621a9-e0c2-4ae6-b1bd-b3acb4db59b6"
+    },
+    {
+      "code": "LATERALITY_MISMATCH",
+      "action": "Removed /side from Hip Flexor Stretch cooldown",
+      "day_label": "Wed",
+      "exercise_id": "6dc4e24b-b5ca-4e5e-8322-a467ae9b5faf"
+    },
+    {
+      "code": "LATERALITY_MISMATCH",
+      "action": "Removed /side from Figure-Four Stretch cooldown",
+      "day_label": "Wed",
+      "exercise_id": "39ff2afd-a879-4e24-976e-66f8f18a1504"
+    },
+    {
+      "code": "REST_TOO_SHORT",
+      "action": "Raised Deadlift rest 165s → 180s",
+      "day_label": "Wed",
+      "exercise_id": "8b9630fe-ea3a-4dfd-afe8-190201e8931d"
+    },
+    {
+      "code": "REST_TOO_SHORT",
+      "action": "Raised Chin-Up rest 120s → 180s",
+      "day_label": "Wed",
+      "exercise_id": "20b6559e-1e94-4db6-873a-548f85234747"
+    },
+    {
+      "code": "REST_TOO_SHORT",
+      "action": "Raised Overhead Press rest 105s → 120s",
+      "day_label": "Wed",
+      "exercise_id": "c4eafc32-a802-4706-9fcf-07ef8be13710"
+    },
+    {
+      "code": "REST_TOO_SHORT",
+      "action": "Raised Suitcase Carry rest 60s → 75s",
+      "day_label": "Wed",
+      "exercise_id": "57cedbf6-513d-4966-a598-5c69bcdf2792"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Removed extra warmup External Rotation to fit the session",
+      "day_label": "Wed",
+      "exercise_id": "51596dc7-cbef-46c7-89b4-577fc7bacb38"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Removed extra warmup Scapular Pull-Up to fit the session",
+      "day_label": "Wed",
+      "exercise_id": "aa95b5b4-26ee-4511-849f-5bfe20987760"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Reduced Kettlebell Swing primer to 2 sets",
+      "day_label": "Wed",
+      "exercise_id": "de70a572-55a5-4970-a06e-cf5c595aa65d"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Removed extra warmup Hip Airplane to fit the session",
+      "day_label": "Wed",
+      "exercise_id": "137621a9-e0c2-4ae6-b1bd-b3acb4db59b6"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Reduced Incline Press to 2 sets for duration",
+      "day_label": "Wed",
+      "exercise_id": "581ba89b-76c0-4929-a143-2aac2cf14192"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Removed Suitcase Carry to fit the session",
+      "day_label": "Wed",
+      "exercise_id": "57cedbf6-513d-4966-a598-5c69bcdf2792"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Removed Incline Press to fit the session",
+      "day_label": "Wed",
+      "exercise_id": "581ba89b-76c0-4929-a143-2aac2cf14192"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Reduced Leg Press to 2 sets for duration",
+      "day_label": "Wed",
+      "exercise_id": "d3cd5bb8-2d71-4ab1-b38c-c2fb8971cd14"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Reduced Overhead Press to 2 sets for duration",
+      "day_label": "Wed",
+      "exercise_id": "c4eafc32-a802-4706-9fcf-07ef8be13710"
+    },
+    {
+      "code": "LATERALITY_MISMATCH",
+      "action": "Removed /side from 90/90 Hip Rotation warmup",
+      "day_label": "Fri",
+      "exercise_id": "ffcb01e4-b775-426f-8513-c96eb96b0d1d"
+    },
+    {
+      "code": "LATERALITY_MISMATCH",
+      "action": "Removed /side from Adductor Rockback warmup",
+      "day_label": "Fri",
+      "exercise_id": "b8fbf23f-6532-40b8-b638-c8d915aa6ad0"
+    },
+    {
+      "code": "LATERALITY_MISMATCH",
+      "action": "Removed /side from Thoracic Rotation warmup",
+      "day_label": "Fri",
+      "exercise_id": "78835aa5-aaa9-408a-ba29-92d4abb0906a"
+    },
+    {
+      "code": "LATERALITY_MISMATCH",
+      "action": "Removed /side from Quad Stretch cooldown",
+      "day_label": "Fri",
+      "exercise_id": "409c9f46-6e92-4668-9bd7-40134d8565d8"
+    },
+    {
+      "code": "REST_TOO_SHORT",
+      "action": "Raised Front Squat rest 150s → 180s",
+      "day_label": "Fri",
+      "exercise_id": "c28f3288-bff5-47c0-9390-209bbd2d585e"
+    },
+    {
+      "code": "REST_TOO_SHORT",
+      "action": "Raised Bent-Over Row rest 120s → 180s",
+      "day_label": "Fri",
+      "exercise_id": "b4bbb290-e036-4981-9318-5eda3021f8d1"
+    },
+    {
+      "code": "REST_TOO_SHORT",
+      "action": "Raised Romanian Deadlift rest 105s → 120s",
+      "day_label": "Fri",
+      "exercise_id": "2134cfe4-b564-4270-a02e-2d4882d6d9a5"
+    },
+    {
+      "code": "REST_TOO_SHORT",
+      "action": "Raised Overhead Carry rest 60s → 75s",
+      "day_label": "Fri",
+      "exercise_id": "2154a6e6-da33-4ab2-96a2-60e550d3acc7"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Removed extra warmup Band Pull-Apart to fit the session",
+      "day_label": "Fri",
+      "exercise_id": "11b1ea29-fd8c-4002-9d21-50c8ec0802c8"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Removed extra warmup Thoracic Rotation to fit the session",
+      "day_label": "Fri",
+      "exercise_id": "78835aa5-aaa9-408a-ba29-92d4abb0906a"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Reduced Medicine Ball Chest Pass primer to 2 sets",
+      "day_label": "Fri",
+      "exercise_id": "039a2c70-8b08-40e3-bea9-640a4cebe078"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Removed extra warmup Adductor Rockback to fit the session",
+      "day_label": "Fri",
+      "exercise_id": "b8fbf23f-6532-40b8-b638-c8d915aa6ad0"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Reduced Reverse Lunge to 2 sets for duration",
+      "day_label": "Fri",
+      "exercise_id": "a42ebeaf-d52e-431c-9494-e01a7f54d92e"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Reduced Close-Grip Pulldown to 2 sets for duration",
+      "day_label": "Fri",
+      "exercise_id": "c53c1691-a5f9-47b4-ac86-7909b80860be"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Removed Overhead Carry to fit the session",
+      "day_label": "Fri",
+      "exercise_id": "2154a6e6-da33-4ab2-96a2-60e550d3acc7"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Removed Reverse Lunge to fit the session",
+      "day_label": "Fri",
+      "exercise_id": "a42ebeaf-d52e-431c-9494-e01a7f54d92e"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Removed Close-Grip Pulldown to fit the session",
+      "day_label": "Fri",
+      "exercise_id": "c53c1691-a5f9-47b4-ac86-7909b80860be"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Reduced Romanian Deadlift to 2 sets for duration",
+      "day_label": "Fri",
+      "exercise_id": "2134cfe4-b564-4270-a02e-2d4882d6d9a5"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Reduced Floor Press to 2 sets for duration",
+      "day_label": "Fri",
+      "exercise_id": "fb2209ef-6244-4085-a8ec-8ee29b351585"
+    }
+  ],
+  "final_issues": [
+    {
+      "code": "SESSION_FATIGUE",
+      "severity": "warning",
+      "message": "Full Body A - Squat & Bench Priority is 3/4 high-fatigue selections.",
+      "day_label": "Mon"
+    },
+    {
+      "code": "DURATION_OVER",
+      "severity": "warning",
+      "message": "Full Body A - Squat & Bench Priority is estimated at 66 min vs 60",
+      "day_label": "Mon"
+    },
+    {
+      "code": "SESSION_FATIGUE",
+      "severity": "warning",
+      "message": "Full Body B - Hinge & Vertical Pull Priority is 3/4 high-fatigue selections.",
+      "day_label": "Wed"
+    },
+    {
+      "code": "SESSION_FATIGUE",
+      "severity": "warning",
+      "message": "Full Body C - Front Squat & Row Volume is 3/4 high-fatigue selections.",
+      "day_label": "Fri"
+    },
+    {
+      "code": "VOLUME_OFF",
+      "severity": "warning",
+      "message": "chest working sets (6) vs target 10."
+    },
+    {
+      "code": "VOLUME_OFF",
+      "severity": "info",
+      "message": "upper_back planned 8 vs target 10."
+    },
+    {
+      "code": "VOLUME_OFF",
+      "severity": "info",
+      "message": "lats planned 7 vs target 10."
+    },
+    {
+      "code": "VOLUME_OFF",
+      "severity": "warning",
+      "message": "side_delts working sets (0) are well below the 6 target."
+    },
+    {
+      "code": "VOLUME_OFF",
+      "severity": "warning",
+      "message": "rear_delts working sets (0) are well below the 6 target."
+    },
+    {
+      "code": "VOLUME_OFF",
+      "severity": "info",
+      "message": "Optional forearms has no direct work; indirect stimulus may be enough."
+    },
+    {
+      "code": "VOLUME_OFF",
+      "severity": "warning",
+      "message": "hamstrings working sets (4) vs target 10."
+    },
+    {
+      "code": "VOLUME_OFF",
+      "severity": "info",
+      "message": "Optional calves has no direct work; indirect stimulus may be enough."
+    },
+    {
+      "code": "VOLUME_OFF",
+      "severity": "info",
+      "message": "Optional adductors has no direct work; indirect stimulus may be enough."
+    },
+    {
+      "code": "VOLUME_OFF",
+      "severity": "info",
+      "message": "Optional hip_flexors has no direct work; indirect stimulus may be enough."
+    },
+    {
+      "code": "VOLUME_OFF",
+      "severity": "info",
+      "message": "Optional abs has no direct work; indirect stimulus may be enough."
+    },
+    {
+      "code": "VOLUME_OFF",
+      "severity": "info",
+      "message": "Optional obliques has no direct work; indirect stimulus may be enough."
+    },
+    {
+      "code": "VOLUME_OFF",
+      "severity": "info",
+      "message": "Optional spinal_erectors has no direct work; indirect stimulus may be enough."
+    },
+    {
+      "code": "SUPERSET_PREF",
+      "severity": "warning",
+      "message": "Superset preference is \"sometimes\" but the week contains no supersets."
+    }
+  ],
+  "final_ok": true,
+  "pre_persist": [
+    {
+      "day": "Mon",
+      "breakdown": {
+        "warmup_min": 8.1,
+        "power_min": 4.3,
+        "ramp_min": 7.7,
+        "working_min": 44.3,
+        "cooldown_min": 2.1,
+        "total_min": 66,
+        "ramp_sets": 6
+      },
+      "warmup": [
+        {
+          "exercise_id": "7f499115-0667-4e79-b4b8-b666dd4c1666",
+          "sets": 1,
+          "prescription": "5 minutes easy walk",
+          "why": "raise temperature for full-body training",
+          "name": "Treadmill Walk"
+        },
+        {
+          "exercise_id": "4e46599f-1f19-4a8c-ad23-6c4da41a7f56",
+          "sets": 1,
+          "prescription": "30-45 seconds",
+          "why": "open hips and ankles for squatting",
+          "name": "Deep Squat Hold"
+        },
+        {
+          "exercise_id": "92a1cb43-2d26-4f61-ab2f-f92d032ec660",
+          "sets": 1,
+          "prescription": "8 reps",
+          "why": "improve ankle motion for squat depth",
+          "name": "Knee-to-Wall Ankle Mobilization"
+        }
+      ],
+      "potentiation": [
+        {
+          "exercise_id": "9a8c6def-8171-45f0-b6c0-708003baab9f",
+          "sets": 2,
+          "prescription": "3 reps, reset between reps",
+          "why": "prime quads and glutes for squatting",
+          "name": "Box Jump"
+        }
+      ],
+      "strength": [
+        {
+          "type": "straight_sets",
+          "exercises": [
+            {
+              "id": "4b3ca64d-8aeb-4bc6-8b1f-3ca6116ecdc4",
+              "name": "Back Squat",
+              "role": "primary",
+              "sets": 4,
+              "reps": "4-6",
+              "rest": 180
+            }
+          ]
+        },
+        {
+          "type": "straight_sets",
+          "exercises": [
+            {
+              "id": "811272d6-06df-435f-a9bc-ceacea7dbfb9",
+              "name": "Bench Press",
+              "role": "primary",
+              "sets": 4,
+              "reps": "4-6",
+              "rest": 180
+            }
+          ]
+        },
+        {
+          "type": "straight_sets",
+          "exercises": [
+            {
+              "id": "1695e444-3146-42aa-af3b-ebc2e9b110f4",
+              "name": "Chest-Supported Row",
+              "role": "secondary",
+              "sets": 2,
+              "reps": "6-8",
+              "rest": 90
+            }
+          ]
+        },
+        {
+          "type": "straight_sets",
+          "exercises": [
+            {
+              "id": "26781050-0c19-43f3-b026-d26fa79c5630",
+              "name": "Bulgarian Split Squat",
+              "role": "secondary",
+              "sets": 2,
+              "reps": "8-10",
+              "rest": 120
+            }
+          ]
+        }
+      ],
+      "cooldown": [
+        {
+          "exercise_id": "5820865f-94d7-4577-a3f0-b13912bf3ad1",
+          "sets": 1,
+          "prescription": "30-45 seconds",
+          "why": "downshift hamstrings after squats",
+          "name": "Hamstring Stretch"
+        },
+        {
+          "exercise_id": "768c593d-c352-45ca-9eee-2b724164294f",
+          "sets": 1,
+          "prescription": "30-45 seconds",
+          "why": "relax chest and front delts after benching",
+          "name": "Doorway Pec Stretch"
+        },
+        {
+          "exercise_id": "56be6acd-3d0b-4e7b-8d99-90b946cc4f93",
+          "sets": 1,
+          "prescription": "45-60 seconds",
+          "why": "restore lats and trunk after upper-body work",
+          "name": "Child's Pose"
+        }
+      ]
+    },
+    {
+      "day": "Wed",
+      "breakdown": {
+        "warmup_min": 7.2,
+        "power_min": 4.3,
+        "ramp_min": 7.7,
+        "working_min": 43.3,
+        "cooldown_min": 1.9,
+        "total_min": 64,
+        "ramp_sets": 6
+      },
+      "warmup": [
+        {
+          "exercise_id": "7f499115-0667-4e79-b4b8-b666dd4c1666",
+          "sets": 1,
+          "prescription": "5 minutes easy walk",
+          "why": "raise temperature for pulling session",
+          "name": "Treadmill Walk"
+        },
+        {
+          "exercise_id": "a8f60ba6-3256-45c0-99fa-a8c9b7d64c06",
+          "sets": 1,
+          "prescription": "8 reps",
+          "why": "mobilize trunk for hinging",
+          "name": "Cat-Cow"
+        }
+      ],
+      "potentiation": [
+        {
+          "exercise_id": "de70a572-55a5-4970-a06e-cf5c595aa65d",
+          "sets": 2,
+          "prescription": "5 crisp reps",
+          "why": "prime glutes and hamstrings for hinging",
+          "name": "Kettlebell Swing"
+        }
+      ],
+      "strength": [
+        {
+          "type": "straight_sets",
+          "exercises": [
+            {
+              "id": "8b9630fe-ea3a-4dfd-afe8-190201e8931d",
+              "name": "Deadlift",
+              "role": "primary",
+              "sets": 4,
+              "reps": "3-5",
+              "rest": 180
+            }
+          ]
+        },
+        {
+          "type": "straight_sets",
+          "exercises": [
+            {
+              "id": "20b6559e-1e94-4db6-873a-548f85234747",
+              "name": "Chin-Up",
+              "role": "primary",
+              "sets": 4,
+              "reps": "4-6",
+              "rest": 180
+            }
+          ]
+        },
+        {
+          "type": "straight_sets",
+          "exercises": [
+            {
+              "id": "c4eafc32-a802-4706-9fcf-07ef8be13710",
+              "name": "Overhead Press",
+              "role": "secondary",
+              "sets": 2,
+              "reps": "5-7",
+              "rest": 120
+            }
+          ]
+        },
+        {
+          "type": "straight_sets",
+          "exercises": [
+            {
+              "id": "d3cd5bb8-2d71-4ab1-b38c-c2fb8971cd14",
+              "name": "Leg Press",
+              "role": "secondary",
+              "sets": 2,
+              "reps": "8-10",
+              "rest": 90
+            }
+          ]
+        }
+      ],
+      "cooldown": [
+        {
+          "exercise_id": "6dc4e24b-b5ca-4e5e-8322-a467ae9b5faf",
+          "sets": 1,
+          "prescription": "30-45 seconds",
+          "why": "reduce front-hip tension after pulls and pressing",
+          "name": "Hip Flexor Stretch"
+        },
+        {
+          "exercise_id": "a3ca1ad2-8b2d-4e61-9732-e3b6ae09e25d",
+          "sets": 1,
+          "prescription": "30-45 seconds",
+          "why": "restore lats after chin-ups",
+          "name": "Lat Stretch"
+        },
+        {
+          "exercise_id": "39ff2afd-a879-4e24-976e-66f8f18a1504",
+          "sets": 1,
+          "prescription": "30-45 seconds",
+          "why": "relax glutes after deadlifting",
+          "name": "Figure-Four Stretch"
+        }
+      ]
+    },
+    {
+      "day": "Fri",
+      "breakdown": {
+        "warmup_min": 7.2,
+        "power_min": 4.3,
+        "ramp_min": 7.7,
+        "working_min": 43.3,
+        "cooldown_min": 1.9,
+        "total_min": 64,
+        "ramp_sets": 6
+      },
+      "warmup": [
+        {
+          "exercise_id": "7f499115-0667-4e79-b4b8-b666dd4c1666",
+          "sets": 1,
+          "prescription": "5 minutes easy walk",
+          "why": "raise temperature for full-body work",
+          "name": "Treadmill Walk"
+        },
+        {
+          "exercise_id": "ffcb01e4-b775-426f-8513-c96eb96b0d1d",
+          "sets": 1,
+          "prescription": "6 reps",
+          "why": "improve hip rotation for squat positions",
+          "name": "90/90 Hip Rotation"
+        }
+      ],
+      "potentiation": [
+        {
+          "exercise_id": "039a2c70-8b08-40e3-bea9-640a4cebe078",
+          "sets": 2,
+          "prescription": "4 reps, explosive",
+          "why": "prime chest and triceps for pressing",
+          "name": "Medicine Ball Chest Pass"
+        }
+      ],
+      "strength": [
+        {
+          "type": "straight_sets",
+          "exercises": [
+            {
+              "id": "c28f3288-bff5-47c0-9390-209bbd2d585e",
+              "name": "Front Squat",
+              "role": "primary",
+              "sets": 4,
+              "reps": "4-6",
+              "rest": 180
+            }
+          ]
+        },
+        {
+          "type": "straight_sets",
+          "exercises": [
+            {
+              "id": "b4bbb290-e036-4981-9318-5eda3021f8d1",
+              "name": "Bent-Over Row",
+              "role": "primary",
+              "sets": 4,
+              "reps": "5-7",
+              "rest": 180
+            }
+          ]
+        },
+        {
+          "type": "straight_sets",
+          "exercises": [
+            {
+              "id": "fb2209ef-6244-4085-a8ec-8ee29b351585",
+              "name": "Floor Press",
+              "role": "secondary",
+              "sets": 2,
+              "reps": "6-8",
+              "rest": 90
+            }
+          ]
+        },
+        {
+          "type": "straight_sets",
+          "exercises": [
+            {
+              "id": "2134cfe4-b564-4270-a02e-2d4882d6d9a5",
+              "name": "Romanian Deadlift",
+              "role": "secondary",
+              "sets": 2,
+              "reps": "6-8",
+              "rest": 120
+            }
+          ]
+        }
+      ],
+      "cooldown": [
+        {
+          "exercise_id": "409c9f46-6e92-4668-9bd7-40134d8565d8",
+          "sets": 1,
+          "prescription": "30-45 seconds",
+          "why": "relax quads and hips after front squats",
+          "name": "Quad Stretch"
+        },
+        {
+          "exercise_id": "5820865f-94d7-4577-a3f0-b13912bf3ad1",
+          "sets": 1,
+          "prescription": "30-45 seconds",
+          "why": "restore hamstrings after RDLs",
+          "name": "Hamstring Stretch"
+        },
+        {
+          "exercise_id": "a3ca1ad2-8b2d-4e61-9732-e3b6ae09e25d",
+          "sets": 1,
+          "prescription": "30-45 seconds",
+          "why": "downshift lats after rows and pulldowns",
+          "name": "Lat Stretch"
+        }
+      ]
+    }
+  ],
+  "post_persist": [
+    {
+      "day": "Mon",
+      "name": "Full Body A - Squat & Bench Priority",
+      "breakdown": {
+        "warmup_min": 8.1,
+        "power_min": 4.8,
+        "ramp_min": 7.7,
+        "working_min": 44.3,
+        "cooldown_min": 2.1,
+        "total_min": 67,
+        "ramp_sets": 6
+      },
+      "warmup": [
+        {
+          "name": "Treadmill Walk",
+          "sets": [
+            {
+              "type": "working",
+              "reps": "5 minutes easy walk",
+              "rir": null
+            }
+          ]
+        },
+        {
+          "name": "Deep Squat Hold",
+          "sets": [
+            {
+              "type": "working",
+              "reps": "30-45 seconds",
+              "rir": null
+            }
+          ]
+        },
+        {
+          "name": "Knee-to-Wall Ankle Mobilization",
+          "sets": [
+            {
+              "type": "working",
+              "reps": "8 reps",
+              "rir": null
+            }
+          ]
+        }
+      ],
+      "primer": [
+        {
+          "name": "Box Jump",
+          "sets": [
+            {
+              "type": "working",
+              "reps": "3-5",
+              "rir": null
+            },
+            {
+              "type": "working",
+              "reps": "3-5",
+              "rir": null
+            }
+          ]
+        }
+      ],
+      "strength": [
+        {
+          "name": "Back Squat",
+          "role": "primary",
+          "superset": null,
+          "sets": [
+            {
+              "type": "warmup",
+              "reps": "10",
+              "rir": null,
+              "rest": 180
+            },
+            {
+              "type": "warmup",
+              "reps": "8",
+              "rir": null,
+              "rest": 180
+            },
+            {
+              "type": "warmup",
+              "reps": "5",
+              "rir": null,
+              "rest": 180
+            },
+            {
+              "type": "warmup",
+              "reps": "3",
+              "rir": null,
+              "rest": 180
+            },
+            {
+              "type": "working",
+              "reps": "4-6",
+              "rir": 2,
+              "rest": 180
+            },
+            {
+              "type": "working",
+              "reps": "4-6",
+              "rir": 2,
+              "rest": 180
+            },
+            {
+              "type": "working",
+              "reps": "4-6",
+              "rir": 2,
+              "rest": 180
+            },
+            {
+              "type": "working",
+              "reps": "4-6",
+              "rir": 2,
+              "rest": 180
+            }
+          ]
+        },
+        {
+          "name": "Bench Press",
+          "role": "primary",
+          "superset": null,
+          "sets": [
+            {
+              "type": "warmup",
+              "reps": "5",
+              "rir": null,
+              "rest": 180
+            },
+            {
+              "type": "warmup",
+              "reps": "3",
+              "rir": null,
+              "rest": 180
+            },
+            {
+              "type": "working",
+              "reps": "4-6",
+              "rir": 2,
+              "rest": 180
+            },
+            {
+              "type": "working",
+              "reps": "4-6",
+              "rir": 2,
+              "rest": 180
+            },
+            {
+              "type": "working",
+              "reps": "4-6",
+              "rir": 2,
+              "rest": 180
+            },
+            {
+              "type": "working",
+              "reps": "4-6",
+              "rir": 2,
+              "rest": 180
+            }
+          ]
+        },
+        {
+          "name": "Chest-Supported Row",
+          "role": "secondary",
+          "superset": null,
+          "sets": [
+            {
+              "type": "working",
+              "reps": "6-8",
+              "rir": 2,
+              "rest": 90
+            },
+            {
+              "type": "working",
+              "reps": "6-8",
+              "rir": 2,
+              "rest": 90
+            }
+          ]
+        },
+        {
+          "name": "Bulgarian Split Squat",
+          "role": "secondary",
+          "superset": null,
+          "sets": [
+            {
+              "type": "working",
+              "reps": "8-10/side",
+              "rir": 2,
+              "rest": 120
+            },
+            {
+              "type": "working",
+              "reps": "8-10/side",
+              "rir": 2,
+              "rest": 120
+            }
+          ]
+        }
+      ],
+      "cooldown": [
+        "Hamstring Stretch",
+        "Doorway Pec Stretch",
+        "Child's Pose"
+      ],
+      "jump_hypertrophy": false,
+      "ramp_rir_null": true
+    },
+    {
+      "day": "Wed",
+      "name": "Full Body B - Hinge & Vertical Pull Priority",
+      "breakdown": {
+        "warmup_min": 7.2,
+        "power_min": 4.3,
+        "ramp_min": 7.7,
+        "working_min": 43.3,
+        "cooldown_min": 1.9,
+        "total_min": 64,
+        "ramp_sets": 6
+      },
+      "warmup": [
+        {
+          "name": "Treadmill Walk",
+          "sets": [
+            {
+              "type": "working",
+              "reps": "5 minutes easy walk",
+              "rir": null
+            }
+          ]
+        },
+        {
+          "name": "Cat-Cow",
+          "sets": [
+            {
+              "type": "working",
+              "reps": "8 reps",
+              "rir": null
+            }
+          ]
+        }
+      ],
+      "primer": [
+        {
+          "name": "Kettlebell Swing",
+          "sets": [
+            {
+              "type": "working",
+              "reps": "5-10",
+              "rir": null
+            },
+            {
+              "type": "working",
+              "reps": "5-10",
+              "rir": null
+            }
+          ]
+        }
+      ],
+      "strength": [
+        {
+          "name": "Deadlift",
+          "role": "primary",
+          "superset": null,
+          "sets": [
+            {
+              "type": "warmup",
+              "reps": "10",
+              "rir": null,
+              "rest": 180
+            },
+            {
+              "type": "warmup",
+              "reps": "8",
+              "rir": null,
+              "rest": 180
+            },
+            {
+              "type": "warmup",
+              "reps": "5",
+              "rir": null,
+              "rest": 180
+            },
+            {
+              "type": "warmup",
+              "reps": "3",
+              "rir": null,
+              "rest": 180
+            },
+            {
+              "type": "working",
+              "reps": "3-5",
+              "rir": 2,
+              "rest": 180
+            },
+            {
+              "type": "working",
+              "reps": "3-5",
+              "rir": 2,
+              "rest": 180
+            },
+            {
+              "type": "working",
+              "reps": "3-5",
+              "rir": 2,
+              "rest": 180
+            },
+            {
+              "type": "working",
+              "reps": "3-5",
+              "rir": 2,
+              "rest": 180
+            }
+          ]
+        },
+        {
+          "name": "Chin-Up",
+          "role": "primary",
+          "superset": null,
+          "sets": [
+            {
+              "type": "warmup",
+              "reps": "5",
+              "rir": null,
+              "rest": 180
+            },
+            {
+              "type": "warmup",
+              "reps": "3",
+              "rir": null,
+              "rest": 180
+            },
+            {
+              "type": "working",
+              "reps": "4-6",
+              "rir": 2,
+              "rest": 180
+            },
+            {
+              "type": "working",
+              "reps": "4-6",
+              "rir": 2,
+              "rest": 180
+            },
+            {
+              "type": "working",
+              "reps": "4-6",
+              "rir": 2,
+              "rest": 180
+            },
+            {
+              "type": "working",
+              "reps": "4-6",
+              "rir": 2,
+              "rest": 180
+            }
+          ]
+        },
+        {
+          "name": "Overhead Press",
+          "role": "secondary",
+          "superset": null,
+          "sets": [
+            {
+              "type": "working",
+              "reps": "5-7",
+              "rir": 2,
+              "rest": 120
+            },
+            {
+              "type": "working",
+              "reps": "5-7",
+              "rir": 2,
+              "rest": 120
+            }
+          ]
+        },
+        {
+          "name": "Leg Press",
+          "role": "secondary",
+          "superset": null,
+          "sets": [
+            {
+              "type": "working",
+              "reps": "8-10",
+              "rir": 2,
+              "rest": 90
+            },
+            {
+              "type": "working",
+              "reps": "8-10",
+              "rir": 2,
+              "rest": 90
+            }
+          ]
+        }
+      ],
+      "cooldown": [
+        "Hip Flexor Stretch",
+        "Lat Stretch",
+        "Figure-Four Stretch"
+      ],
+      "jump_hypertrophy": false,
+      "ramp_rir_null": true
+    },
+    {
+      "day": "Fri",
+      "name": "Full Body C - Front Squat & Row Volume",
+      "breakdown": {
+        "warmup_min": 7.2,
+        "power_min": 4.3,
+        "ramp_min": 7.7,
+        "working_min": 43.3,
+        "cooldown_min": 1.9,
+        "total_min": 64,
+        "ramp_sets": 6
+      },
+      "warmup": [
+        {
+          "name": "Treadmill Walk",
+          "sets": [
+            {
+              "type": "working",
+              "reps": "5 minutes easy walk",
+              "rir": null
+            }
+          ]
+        },
+        {
+          "name": "90/90 Hip Rotation",
+          "sets": [
+            {
+              "type": "working",
+              "reps": "6 reps",
+              "rir": null
+            }
+          ]
+        }
+      ],
+      "primer": [
+        {
+          "name": "Medicine Ball Chest Pass",
+          "sets": [
+            {
+              "type": "working",
+              "reps": "3-5",
+              "rir": null
+            },
+            {
+              "type": "working",
+              "reps": "3-5",
+              "rir": null
+            }
+          ]
+        }
+      ],
+      "strength": [
+        {
+          "name": "Front Squat",
+          "role": "primary",
+          "superset": null,
+          "sets": [
+            {
+              "type": "warmup",
+              "reps": "10",
+              "rir": null,
+              "rest": 180
+            },
+            {
+              "type": "warmup",
+              "reps": "8",
+              "rir": null,
+              "rest": 180
+            },
+            {
+              "type": "warmup",
+              "reps": "5",
+              "rir": null,
+              "rest": 180
+            },
+            {
+              "type": "warmup",
+              "reps": "3",
+              "rir": null,
+              "rest": 180
+            },
+            {
+              "type": "working",
+              "reps": "4-6",
+              "rir": 2,
+              "rest": 180
+            },
+            {
+              "type": "working",
+              "reps": "4-6",
+              "rir": 2,
+              "rest": 180
+            },
+            {
+              "type": "working",
+              "reps": "4-6",
+              "rir": 2,
+              "rest": 180
+            },
+            {
+              "type": "working",
+              "reps": "4-6",
+              "rir": 2,
+              "rest": 180
+            }
+          ]
+        },
+        {
+          "name": "Bent-Over Row",
+          "role": "primary",
+          "superset": null,
+          "sets": [
+            {
+              "type": "warmup",
+              "reps": "5",
+              "rir": null,
+              "rest": 180
+            },
+            {
+              "type": "warmup",
+              "reps": "2",
+              "rir": null,
+              "rest": 180
+            },
+            {
+              "type": "working",
+              "reps": "5-7",
+              "rir": 2,
+              "rest": 180
+            },
+            {
+              "type": "working",
+              "reps": "5-7",
+              "rir": 2,
+              "rest": 180
+            },
+            {
+              "type": "working",
+              "reps": "5-7",
+              "rir": 2,
+              "rest": 180
+            },
+            {
+              "type": "working",
+              "reps": "5-7",
+              "rir": 2,
+              "rest": 180
+            }
+          ]
+        },
+        {
+          "name": "Floor Press",
+          "role": "secondary",
+          "superset": null,
+          "sets": [
+            {
+              "type": "working",
+              "reps": "6-8",
+              "rir": 2,
+              "rest": 90
+            },
+            {
+              "type": "working",
+              "reps": "6-8",
+              "rir": 2,
+              "rest": 90
+            }
+          ]
+        },
+        {
+          "name": "Romanian Deadlift",
+          "role": "secondary",
+          "superset": null,
+          "sets": [
+            {
+              "type": "working",
+              "reps": "6-8",
+              "rir": 2,
+              "rest": 120
+            },
+            {
+              "type": "working",
+              "reps": "6-8",
+              "rir": 2,
+              "rest": 120
+            }
+          ]
+        }
+      ],
+      "cooldown": [
+        "Quad Stretch",
+        "Hamstring Stretch",
+        "Lat Stretch"
+      ],
+      "jump_hypertrophy": false,
+      "ramp_rir_null": true
+    }
+  ],
+  "diff": [
+    {
+      "day": "Mon",
+      "pre": 66,
+      "post": 67,
+      "delta": 1
+    },
+    {
+      "day": "Wed",
+      "pre": 64,
+      "post": 64,
+      "delta": 0
+    },
+    {
+      "day": "Fri",
+      "pre": 64,
+      "post": 64,
+      "delta": 0
+    }
+  ],
+  "acceptance": {
+    "A_no_jump_815": true,
+    "B_ramp_rir_null": true,
+    "C_final_validator_used_ramps": true,
+    "D_timed_warmup": true,
+    "E_pre_post_agree": true,
+    "F_not_77": true,
+    "G_kept_primary": true,
+    "H_tests": "see science-test-output"
+  }
+}

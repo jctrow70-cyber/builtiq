@@ -10,9 +10,10 @@ import { persistGenerationRun } from './log';
 import { mapAiWeekToScience } from './mapper';
 import { programModelName, requestWeekProgram, type ModelCallResult } from './openaiClient';
 import { buildDesignerInstructions, buildDesignerUserContent } from './prompt';
-import { repairAiProgram } from './repairAiProgram';
+import { applyDurationEfficiency, repairAiProgram } from './repairAiProgram';
 import { validateAiProgram } from './validateAiProgram';
 import type {
+  AiWeekProgram,
   DeterministicRepair,
   GenerationContext,
   GenerationMethod,
@@ -34,6 +35,7 @@ export type OrchestratorResult = {
   replacedDays: number;
   run: GenerationRun;
   generationRunId: string | null;
+  rawAiProgram: AiWeekProgram | null;
 };
 
 export async function runGenerationPipeline(opts: {
@@ -85,6 +87,7 @@ export async function runGenerationPipeline(opts: {
       raw: null,
       supabase: opts.supabase,
       userId: opts.userId,
+      rawAiProgram: null,
     });
   }
 
@@ -96,6 +99,7 @@ export async function runGenerationPipeline(opts: {
   });
   const aiLatencyMs = Date.now() - aiStarted;
   const lastError = call.error;
+  const rawAiProgram = call.program;
   let working = call.program;
   const initialValidation = validateAiProgram(working, context, catalogById);
   let repairs: DeterministicRepair[] = [];
@@ -106,6 +110,13 @@ export async function runGenerationPipeline(opts: {
     working = repaired.program;
     repairs = repaired.repairs;
     validation = validateAiProgram(working, context, catalogById);
+  } else if (working && validation.issues.some((issue) => issue.code === 'DURATION_OVER' && issue.severity === 'warning')) {
+    const tightened = applyDurationEfficiency(working, context, catalogById);
+    if (tightened.repairs.length) {
+      working = tightened.program;
+      repairs = tightened.repairs;
+      validation = validateAiProgram(working, context, catalogById);
+    }
   }
 
   const unusable = !working || !validation.ok || Boolean(lastError);
@@ -130,6 +141,7 @@ export async function runGenerationPipeline(opts: {
       reasoningEffort: call.reasoningEffort,
       supabase: opts.supabase,
       userId: opts.userId,
+      rawAiProgram,
     });
   }
 
@@ -152,6 +164,7 @@ export async function runGenerationPipeline(opts: {
     reasoningEffort: call.reasoningEffort,
     supabase: opts.supabase,
     userId: opts.userId,
+    rawAiProgram,
   });
 }
 
@@ -174,6 +187,7 @@ async function finish(opts: {
   reasoningEffort?: string | null;
   supabase?: any;
   userId?: string | null;
+  rawAiProgram?: AiWeekProgram | null;
 }): Promise<OrchestratorResult> {
   const run: GenerationRun = {
     method: opts.method,
@@ -210,5 +224,6 @@ async function finish(opts: {
     replacedDays: opts.method === 'science_fallback' ? 0 : opts.science.split.length,
     run,
     generationRunId,
+    rawAiProgram: opts.rawAiProgram || null,
   };
 }

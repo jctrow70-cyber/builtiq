@@ -15,7 +15,7 @@ import {
   parseSideFromNotes,
   type LogFieldUI,
 } from '../../lib/training/logFieldUI';
-import { SET_TYPES, setTypeAcronym, setTypeLabel, type SetTypeValue } from '../../lib/training/setTypes';
+import { SET_TYPES, isRampEffortSetType, setTypeAcronym, setTypeLabel, type SetTypeValue } from '../../lib/training/setTypes';
 
 type SetRow = {
   id: string;
@@ -575,7 +575,7 @@ export default function WorkoutSetLogger({
             allSets={sets}
             log={logs[s.id] || {}}
             prev={prevBySetId[s.id] || null}
-            layout={layout}
+            layout={isRampEffortSetType(s.set_type) ? { ...layout, showRirChips: false } : layout}
             weightUnit={weightUnit}
             distanceUnit={distanceUnit}
             canEdit={canEdit}

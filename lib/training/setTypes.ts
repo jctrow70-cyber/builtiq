@@ -27,3 +27,8 @@ export function normalizeSetType(value: string): SetTypeValue {
   const hit = SET_TYPES.find((t) => t.value === value);
   return hit?.value ?? 'working';
 }
+
+export function isRampEffortSetType(value?: string | null): boolean {
+  const t = String(value || 'working').toLowerCase();
+  return t === 'warmup' || t === 'ramp';
+}

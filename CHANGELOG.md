@@ -11,6 +11,181 @@ Branch:
 Status:
 ```
 
+## BIQ-0233 - 60-Minute Target Band and Conservative Efficiency Pass
+
+Date: 2026-09-25
+Branch: develop
+Status: Local
+
+### Summary
+
+A 60-minute request now treats 55–65 as on target, 66–69 as repairable overage, and 70+ as a hard error. A conservative efficiency pass tries safe accessory/secondary supersets, extra warmup, and small accessory/secondary set cuts before leaving a scientifically sound session slightly over 65.
+
+### Purpose
+
+The duration architecture was correct, but a successful 60-minute week was drifting to 69. 60 should be the target, not the floor of a 9-minute success band.
+
+### Changes
+
+- `sessionDurationTolerance(60)` is 5 / 9 (65 ok, 66–69 warning, 70+ error)
+- `applyDurationEfficiency` runs on duration warnings without deleting primaries or pairing two high-fatigue lifts
+- Hard 70+ repair is unchanged
+- Science version `1.4.9`
+
+### Files Changed
+
+- `lib/scienceEngine/duration.ts`
+- `lib/scienceEngine/generation/repairAiProgram.ts`
+- `lib/scienceEngine/generation/orchestrator.ts`
+- `lib/scienceEngine/generation/phase1Check.ts`
+- `lib/scienceEngine/version.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Run `npm run test:science`
+2. Generate a 60-minute Get Stronger week and confirm sessions are preferably ≤65 and never ≥70
+3. Confirm pre-persist and post-persist duration still agree
+
+### Known Issues
+
+- A scientifically sound session may still land at 66–69 if pairing and small set cuts are not enough
+- Phase 2B is not started
+
+### Recommended Commit Message
+
+`BIQ-0233 Treat 60 minutes as a 55-65 target with a conservative efficiency pass`
+
+## BIQ-0232 - Authoritative Effective-Workout Duration
+
+Date: 2026-09-25
+Branch: develop
+Status: Local
+
+### Summary
+
+Final validation now estimates the workout that will actually persist: timed warmups, science ramps, power, supersets, rest, and cooldown. 77 minutes vs a 60-minute request is an error. Repair trims in a fixed priority without cutting primary compounds or pairing two heavy lifts.
+
+### Purpose
+
+The previous Get Stronger week validated at ~67 minutes and persisted at ~77 because ramps were added after validation and a 5-minute walk counted as 42 seconds.
+
+### Changes
+
+- One `buildEffectiveWorkout` representation for validate, repair, mapper, and duration
+- Timed / distance / per-side prescriptions use measurement values, not a flat 42s warmup
+- Session ramps: 4-stage opener for a heavy first primary, 2-stage specific warmup for later primaries
+- Duration repair order: extra warmup → primer volume → accessories → allowed accessory supersets → secondary sets
+- If two heavy primaries plus a 5-minute walk still overflow, repair may remove leftover accessories and a spare secondary, and only then drop a primary from 4 to 3 sets
+- Science version `1.4.8`
+
+### Files Changed
+
+- `lib/scienceEngine/prescriptionTime.ts`
+- `lib/scienceEngine/durationConstants.ts`
+- `lib/scienceEngine/duration.ts`
+- `lib/scienceEngine/generation/effectiveWorkout.ts`
+- `lib/scienceEngine/generation/ramps.ts`
+- `lib/scienceEngine/generation/mapper.ts`
+- `lib/scienceEngine/generation/repairAiProgram.ts`
+- `lib/scienceEngine/generation/phase1Check.ts`
+- `lib/scienceEngine/version.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Run `npm run test:science`
+2. Confirm a 5-minute timed warmup contributes ~5 minutes
+3. Confirm a later primary gets 2 ramps, not a second 4-set opener
+4. Generate a 60-minute Get Stronger week and confirm pre-persist and post-persist estimates agree and are not ~77
+
+### Known Issues
+
+- The earlier `strength test 1` program was not rewritten
+- Two earlier duration-test generates fell back (`f56e9f67…`, `96f4fec1…`) before repair could both fit 60 minutes and keep a non-high-fatigue lift
+- Phase 2B is not started
+
+### Recommended Commit Message
+
+`BIQ-0232 Validate the effective persisted workout duration including ramps and timed warmups`
+
+## BIQ-0231 - Power Prescriptions, Ramp RIR, and Duration Accounting
+
+Date: 2026-09-24
+Branch: develop
+Status: Local
+
+### Summary
+
+Potentiation now uses science-aware power prescriptions by exercise family, ramp sets no longer inherit working-set RIR, and the duration estimator counts the ramps the mapper actually persists.
+
+### Purpose
+
+The latest Get Stronger UI generate kept good complementary strength selection, but jumps were prescribed 3x8-15 @ 5 RIR, ramp sets displayed 2 RIR, and the 60-minute validator could miss overtime because AI JSON leaves ramps out.
+
+### Changes
+
+- Classify power work as jump / throw / swing / olympic / general and prescribe explosive quality instead of hypertrophy 8-15
+- Validator errors `PRIMER_HYPERTROPHY_RX` when a jump or throw primer is 3x8-15; repair rewrites it
+- Persist `target_rir` null on warmup/ramp sets; hide RIR in the logger and template editor for those set types
+- Duration estimator counts inferred primary ramps so `DURATION_OVER` and trim see the same work the user gets
+- No volume-credit or strength-selection policy change; no schema change; Phase 2B not started
+
+### Files Changed
+
+- `lib/scienceEngine/powerPrescription.ts`
+- `lib/scienceEngine/prescription.ts`
+- `lib/scienceEngine/duration.ts`
+- `lib/scienceEngine/generation/mapper.ts`
+- `lib/scienceEngine/generation/validateAiProgram.ts`
+- `lib/scienceEngine/generation/repairAiProgram.ts`
+- `lib/scienceEngine/generation/prompt.ts`
+- `lib/scienceEngine/generation/phase1Check.ts`
+- `lib/scienceEngine/toAiPlan.ts`
+- `lib/scienceEngine/applyAiDesign.ts`
+- `lib/scienceEngine/validator.ts`
+- `lib/scienceEngine/types.ts`
+- `lib/scienceEngine/version.ts`
+- `lib/training/aiProgramPlan.ts`
+- `lib/training/setTypes.ts`
+- `app/components/WorkoutSetLogger.tsx`
+- `app/components/training/WorkoutTemplateEditor.tsx`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None. `st_planned_sets.target_rir` is already nullable.
+
+### Testing Steps
+
+1. Run `npm run test:science`
+2. Generate a strength program with optional potentiation and confirm jumps are low-rep with no working-set RIR
+3. Open a ramped primary and confirm warmup/ramp rows show ramp effort, not 2 RIR
+4. Confirm a 60-minute request still uses ±6 / ±9 bands and does not silently drop ramps from the estimate
+5. Confirm existing logged history still loads; adaptation still counts working sets only
+
+### Known Issues
+
+- Already-persisted programs keep their original primer 8-15 and ramp `target_rir=2` until regenerated
+- This change does not rewrite the audited Get Stronger program
+
+### Recommended Commit Message
+
+`BIQ-0231 Prescribe explosive primers and stop inheriting RIR onto ramp sets`
+
 ## BIQ-0230 - Fix Generate Route Const Assertion Build Error
 
 Date: 2026-09-24

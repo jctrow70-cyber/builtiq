@@ -1,0 +1,1 @@
+require('fs').writeFileSync('docs/catalog-overhaul/_report-shape.txt',(function walk(o,p,d,a){if(d=[maxdepth]');return a;}if(o==null

@@ -1,5 +1,6 @@
 import { creditSets, contributionsForExercise } from '../contributions';
 import { classifySessionDuration, estimateSessionFromAi } from '../duration';
+import { classifyPowerExercise, isHypertrophyStylePowerRx, parsePrepPrescription } from '../powerPrescription';
 import { goalUsesHypertrophyBias } from '../rules';
 import type { CatalogExercise } from '../types';
 import type { MuscleId } from '../taxonomy';
@@ -65,7 +66,7 @@ function validateWorkout(
   const strength = flattenStrength(workout);
   const used = new Set<string>();
 
-  const checkItem = (item: { exercise_id: string; prescription?: string; why?: string }, kind: 'warmup' | 'potentiation' | 'cooldown' | 'strength') => {
+  const checkItem = (item: { exercise_id: string; sets?: number; prescription?: string; why?: string }, kind: 'warmup' | 'potentiation' | 'cooldown' | 'strength') => {
     const hit = findDesignerById(library, item.exercise_id);
     if (!hit) {
       issues.push(err('UNKNOWN_EXERCISE_ID', `Unknown exercise_id ${item.exercise_id}`, workout.day_label, item.exercise_id));
@@ -85,6 +86,20 @@ function validateWorkout(
     }
     if (kind === 'potentiation' && !hit.power_eligible) {
       issues.push(err('PRIMER_NOT_ELIGIBLE', `${hit.name} is not power-eligible`, workout.day_label, hit.exercise_id));
+    }
+    if (kind === 'potentiation') {
+      const parsed = parsePrepPrescription(item.prescription);
+      const family = classifyPowerExercise(hit);
+      if (isHypertrophyStylePowerRx(family, item.sets || parsed.sets, parsed.min, parsed.max)) {
+        issues.push(
+          err(
+            'PRIMER_HYPERTROPHY_RX',
+            `${hit.name} potentiation uses hypertrophy-style ${item.sets || parsed.sets || '?'} x ${item.prescription || `${parsed.min}-${parsed.max}`}. Explosive primers should stay low-rep.`,
+            workout.day_label,
+            hit.exercise_id
+          )
+        );
+      }
     }
     if (kind === 'cooldown' && (isWorkingIsolationAsCooldown(hit) || !hit.cooldown_eligible)) {
       issues.push(
@@ -343,7 +358,7 @@ function validateStimulus(
   const minutes = context.constraints.session_minutes;
   const workingSets = strength.reduce((sum, ex) => sum + ex.working_sets, 0);
   const patterns = new Set(strength.map((ex) => library.get(ex.exercise_id)?.movement_pattern).filter(Boolean));
-  const estimated = estimateSessionFromAi(workout, library);
+  const estimated = estimateSessionFromAi(workout, library, { experienceLevel: context.athlete.experience_level });
   const goal = context.athlete.primary_goal;
   const fullBody = requestedType(workout, context) === 'Full Body';
 

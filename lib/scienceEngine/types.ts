@@ -154,7 +154,7 @@ export type ExercisePrescription = {
   sets: number;
   repMin: number;
   repMax: number;
-  targetRir: number;
+  targetRir: number | null;
   restSeconds: number;
   loadIncrement: number;
   coachingNote?: string;
