@@ -11,6 +11,49 @@ Branch:
 Status:
 ```
 
+## BIQ-0230 - Fix Generate Route Const Assertion Build Error
+
+Date: 2026-09-24
+Branch: develop
+Status: Local
+
+### Summary
+
+`POST /api/programs/generate` no longer uses `as const` on a ternary, which Next.js typecheck rejected on Vercel.
+
+### Purpose
+
+Unblock production builds after BIQ-0228.
+
+### Changes
+
+- Type `mode` as `GenerationMode` instead of asserting `as const` on an expression
+- Replace `Map.values()` spreads with `Array.from` so Next typecheck does not require downlevelIteration
+
+### Files Changed
+
+- `app/api/programs/generate/route.ts`
+- `lib/scienceEngine/generation/prompt.ts`
+- `lib/scienceEngine/generation/repairAiProgram.ts`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Run `npm run build` and confirm typecheck passes
+2. Confirm Generate still accepts full-program and single-session requests
+
+### Known Issues
+
+- Vercel was deploying `main`; this fix must reach the branch that host builds
+
+### Recommended Commit Message
+
+`BIQ-0230 Fix generate route mode type so Vercel can compile`
+
 ## BIQ-0229 - Hypertrophy Credit Authority and Pull-Family Selection
 
 Date: 2026-09-24

@@ -18,6 +18,7 @@ import {
 import { adaptGenerationCatalog } from '../../../../lib/scienceEngine/generation/catalogEligibility';
 import { runGenerationPipeline } from '../../../../lib/scienceEngine/generation';
 import { attachGenerationRunProgram } from '../../../../lib/scienceEngine/generation/log';
+import type { GenerationMode } from '../../../../lib/scienceEngine/generation/types';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
@@ -259,7 +260,7 @@ async function generateProgramPost(request: Request) {
     catalog: adaptGenerationCatalog(catalog),
     userPrompt: prompt || scienceProfile.intakeNotes || 'Build a training week from the athlete constraints.',
     programName: programName || defaultProgramName,
-    mode: (targetWorkout ? 'single_session' : 'full_program') as const,
+    mode: (targetWorkout ? 'single_session' : 'full_program') as GenerationMode,
     recentTraining: await fetchRecentTrainingSummary(supabase, user.id),
     supabase,
     userId: user.id,

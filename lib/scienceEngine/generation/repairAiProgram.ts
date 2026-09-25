@@ -86,7 +86,7 @@ function repairPrep(
       ? context.warmup_library
       : kind === 'cooldown'
         ? context.cooldown_library || []
-        : [...library.values()].filter((ex) => ex.power_eligible);
+        : Array.from(library.values()).filter((ex) => ex.power_eligible);
   const used = new Set(
     [
       ...(workout.warmup || []).map((row) => row.exercise_id),
@@ -501,7 +501,7 @@ function addLibraryIsolation(
   muscle: string
 ): { name: string; day: string; exercise_id: string } | null {
   const used = new Set(workouts.flatMap((w) => flattenStrength(w).map((ex) => ex.exercise_id)));
-  const unused = [...library.values()].filter((ex) => {
+  const unused = Array.from(library.values()).filter((ex) => {
     if (used.has(ex.exercise_id)) return false;
     if (ex.warmup_eligible && !ex.program_roles.some((r) => r !== 'warmup' && r !== 'power')) return false;
     return (creditsForExercise(ex, catalogById, 1)[muscle] || 0) > 0;

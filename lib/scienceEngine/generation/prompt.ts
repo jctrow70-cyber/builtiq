@@ -53,7 +53,7 @@ export function slimContextForPrompt(context: GenerationContext) {
   [...context.candidate_library, ...context.warmup_library, ...(context.cooldown_library || [])].forEach((ex) => {
     byId.set(ex.exercise_id, ex);
   });
-  const library = [...byId.values()];
+  const library = Array.from(byId.values());
   return {
     schema_version: context.schema_version,
     request: context.request,
