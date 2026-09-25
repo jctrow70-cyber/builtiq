@@ -12,17 +12,22 @@ export const EXERCISE_ALIASES: Record<string, string> = {
   'dumbbell overhead press': 'Dumbbell Shoulder Press',
   'db overhead press': 'Dumbbell Shoulder Press',
   'db shoulder press': 'Dumbbell Shoulder Press',
-  'chest-supported row': 'Dumbbell Row',
-  'chest supported row': 'Dumbbell Row',
-  'chest supported db row': 'Dumbbell Row',
-  'db row': 'Dumbbell Row',
-  'cable row': 'Seated Cable Row',
-  'seated row': 'Seated Cable Row',
+  'barbell row': 'Bent-Over Row',
+  'chest-supported row': 'Chest-Supported Row',
+  'chest supported row': 'Chest-Supported Row',
+  'chest supported db row': 'Chest-Supported Row',
+  'db row': 'One-Arm Row',
+  'dumbbell row': 'One-Arm Row',
+  'cable row': 'Machine Row',
+  'seated row': 'Machine Row',
+  'seated cable row': 'Machine Row',
   'lat pull down': 'Lat Pulldown',
   'lat pull-down': 'Lat Pulldown',
   'pulldown': 'Lat Pulldown',
   'pull up': 'Pull-Up',
   'pullups': 'Pull-Up',
+  'chin up': 'Chin-Up',
+  'chinups': 'Chin-Up',
   'deadlift': 'Conventional Deadlift',
   'conv deadlift': 'Conventional Deadlift',
   'rdl': 'Romanian Deadlift',
@@ -55,10 +60,33 @@ export const EXERCISE_ALIASES: Record<string, string> = {
   'wall slide': 'Scapular Push-Up',
 };
 
+/** Prefer 260-master names first, then FALLBACK_CATALOG names. */
+export const EXERCISE_ALIAS_CANDIDATES: Record<string, string[]> = {
+  'barbell row': ['Bent-Over Row', 'Barbell Row'],
+  'dumbbell row': ['One-Arm Row', 'Dumbbell Row'],
+  'db row': ['One-Arm Row', 'Dumbbell Row'],
+  'chest-supported row': ['Chest-Supported Row', 'One-Arm Row', 'Dumbbell Row'],
+  'chest supported row': ['Chest-Supported Row', 'One-Arm Row', 'Dumbbell Row'],
+  'chest supported db row': ['Chest-Supported Row', 'One-Arm Row', 'Dumbbell Row'],
+  'cable row': ['Machine Row', 'Low Row', 'Seated Cable Row'],
+  'seated row': ['Machine Row', 'Low Row', 'Seated Cable Row'],
+  'seated cable row': ['Machine Row', 'Low Row', 'Seated Cable Row'],
+};
+
 export function aliasExerciseName(name: string): string {
   const key = String(name || '')
     .trim()
     .toLowerCase()
     .replace(/\s+/g, ' ');
   return EXERCISE_ALIASES[key] || name;
+}
+
+export function aliasCandidates(name: string): string[] {
+  const key = String(name || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ' ');
+  if (EXERCISE_ALIAS_CANDIDATES[key]) return EXERCISE_ALIAS_CANDIDATES[key];
+  const single = EXERCISE_ALIASES[key];
+  return single ? [single] : [];
 }

@@ -254,21 +254,24 @@ async function generateProgramPost(request: Request) {
 
   const apiKey = process.env.OPENAI_API_KEY;
   const canCallAi = Boolean(apiKey) && (structuredIntake || prompt.length >= 8 || Boolean(targetWorkout));
+  const pipelineInput = {
+    profile: scienceProfile,
+    catalog: adaptGenerationCatalog(catalog),
+    userPrompt: prompt || scienceProfile.intakeNotes || 'Build a training week from the athlete constraints.',
+    programName: programName || defaultProgramName,
+    mode: (targetWorkout ? 'single_session' : 'full_program') as const,
+    recentTraining: await fetchRecentTrainingSummary(supabase, user.id),
+    supabase,
+    userId: user.id,
+  };
   let pipeline;
   try {
     pipeline = await runGenerationPipeline({
-      profile: scienceProfile,
-      catalog: adaptGenerationCatalog(catalog),
-      userPrompt: prompt || scienceProfile.intakeNotes || 'Build a training week from the athlete constraints.',
-      programName: programName || defaultProgramName,
-      mode: targetWorkout ? 'single_session' : 'full_program',
-      recentTraining: await fetchRecentTrainingSummary(supabase, user.id),
+      ...pipelineInput,
       apiKey: canCallAi ? apiKey : null,
-      supabase,
-      userId: user.id,
     });
   } catch (err: any) {
-    return NextResponse.json({ error: err?.message || 'Science engine failed to generate a program' }, { status: 500 });
+    return NextResponse.json({ error: err?.message || 'Could not generate your training program. Please try again.' }, { status: 500 });
   }
 
   const scienceProgram = pipeline.program;
@@ -276,9 +279,6 @@ async function generateProgramPost(request: Request) {
     return NextResponse.json({ error: 'The generator did not return any workouts. Please try again.' }, { status: 500 });
   }
   const persistMethod = persistableGenerationMethod(pipeline.method);
-  const qualityWarnings = pipeline.qualityWarnings;
-  const aiError = pipeline.aiError;
-  const replacedDays = pipeline.replacedDays;
 
   const config: GenerationConfig = {
     prompt: prompt || scienceProgram.summary,
@@ -377,6 +377,7 @@ async function generateProgramPost(request: Request) {
   if (persistError || !programId) {
     return NextResponse.json({ error: persistError || 'Failed to save program' }, { status: 500 });
   }
+
   await attachGenerationRunProgram(supabase, pipeline.generationRunId, programId);
 
   try {
@@ -403,15 +404,16 @@ async function generateProgramPost(request: Request) {
     generation_method: pipeline.method,
     generation_run_id: pipeline.generationRunId,
     science_version: SCIENCE_ENGINE_VERSION,
-    volume_targets: scienceProgram.volumeTargets,
-    validation_warnings: qualityWarnings,
-    ai_error: aiError,
-    replaced_days: replacedDays,
+    volume_targets: pipeline.program.volumeTargets,
+    validation_warnings: pipeline.qualityWarnings,
+    ai_error: pipeline.aiError,
+    replaced_days: pipeline.replacedDays,
   });
 }
 
 function persistableGenerationMethod(method: string): GenerationConfig['generationMethod'] {
   if (method === 'science_fallback') return 'template';
+  if (method === 'ai_repaired') return 'ai_repaired';
   return 'ai';
 }
 

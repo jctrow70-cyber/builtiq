@@ -36,7 +36,7 @@ function fullBodySlots(variantIndex: number): DaySlot[] {
     [
       { muscle: 'quads', role: 'primary', pattern: 'squat', preferred: ['Back Squat', 'Goblet Squat'] },
       { muscle: 'chest', role: 'primary', pattern: 'horizontal_push', preferred: ['Barbell Bench Press', 'Bench Press'], preferPressRange: true },
-      { muscle: 'upper_back', role: 'primary', pattern: 'horizontal_pull', preferred: ['Barbell Row', 'Pendlay Row'] },
+      { muscle: 'upper_back', role: 'primary', pattern: 'horizontal_pull', preferred: ['Bent-Over Row', 'Pendlay Row', 'Barbell Row'] },
       { muscle: 'hamstrings', role: 'secondary', pattern: 'hinge', preferred: ['Romanian Deadlift', 'Dumbbell RDL'] },
       { muscle: 'lats', role: 'secondary', pattern: 'vertical_pull', preferred: ['Lat Pulldown'] },
       { muscle: 'side_delts', role: 'isolation', preferred: ['Lateral Raise'] },
@@ -47,14 +47,14 @@ function fullBodySlots(variantIndex: number): DaySlot[] {
       { muscle: 'front_delts', role: 'primary', pattern: 'vertical_push', preferred: ['Overhead Press', 'Dumbbell Shoulder Press'] },
       { muscle: 'lats', role: 'primary', pattern: 'vertical_pull', preferred: ['Pull-Up', 'Chin-Up', 'Lat Pulldown'] },
       { muscle: 'quads', role: 'secondary', pattern: 'lunge', preferred: ['Walking Lunge', 'Bulgarian Split Squat', 'Leg Press'] },
-      { muscle: 'upper_back', role: 'secondary', pattern: 'horizontal_pull', preferred: ['Dumbbell Row', 'Chest-Supported Row'] },
+      { muscle: 'upper_back', role: 'secondary', pattern: 'horizontal_pull', preferred: ['One-Arm Row', 'Chest-Supported Row', 'Dumbbell Row'] },
       { muscle: 'triceps', role: 'isolation', preferred: ['Triceps Pushdown', 'Overhead Triceps Extension'] },
       { muscle: 'abs', role: 'accessory', preferred: ['Pallof Press', 'Dead Bug'] },
     ],
     [
       { muscle: 'quads', role: 'primary', pattern: 'lunge', preferred: ['Bulgarian Split Squat', 'Front Squat', 'Goblet Squat'] },
       { muscle: 'chest', role: 'primary', pattern: 'horizontal_push', preferred: ['Incline Dumbbell Press', 'Incline Bench'] },
-      { muscle: 'upper_back', role: 'primary', pattern: 'horizontal_pull', preferred: ['Seated Cable Row', 'Chest-Supported Row', 'Dumbbell Row'] },
+      { muscle: 'upper_back', role: 'primary', pattern: 'horizontal_pull', preferred: ['Machine Row', 'Chest-Supported Row', 'One-Arm Row', 'Seated Cable Row'] },
       { muscle: 'glutes', role: 'secondary', pattern: 'hinge', preferred: ['Hip Thrust', 'Glute Bridge'] },
       { muscle: 'lats', role: 'secondary', pattern: 'vertical_pull', preferred: ['Straight-Arm Pulldown', 'Lat Pulldown'] },
       { muscle: 'biceps', role: 'isolation', preferred: ['Dumbbell Curl', 'Hammer Curl'] },
@@ -79,7 +79,7 @@ function slotsForDay(type: SplitDay['workoutType'], variantIndex: number): DaySl
     if (variantIndex % 2 === 0) {
       return [
         { muscle: 'chest', role: 'primary', pattern: 'horizontal_push', preferred: ['Barbell Bench Press', 'Bench Press'], preferPressRange: true },
-        { muscle: 'upper_back', role: 'primary', pattern: 'horizontal_pull', preferred: ['Barbell Row', 'Dumbbell Row'] },
+        { muscle: 'upper_back', role: 'primary', pattern: 'horizontal_pull', preferred: ['Bent-Over Row', 'One-Arm Row', 'Barbell Row', 'Dumbbell Row'] },
         { muscle: 'lats', role: 'secondary', pattern: 'vertical_pull', preferred: ['Lat Pulldown', 'Pull-Up'] },
         { muscle: 'chest', role: 'isolation', pattern: 'horizontal_push', preferred: ['Cable Chest Fly', 'Dumbbell Fly'] },
         { muscle: 'side_delts', role: 'isolation', pattern: 'shoulder_abduction', preferred: ['Lateral Raise'] },
@@ -91,7 +91,7 @@ function slotsForDay(type: SplitDay['workoutType'], variantIndex: number): DaySl
       { muscle: 'chest', role: 'secondary', pattern: 'horizontal_push', preferred: ['Incline Dumbbell Press', 'Incline Bench'] },
       { muscle: 'front_delts', role: 'secondary', pattern: 'vertical_push', preferred: ['Overhead Press'] },
       { muscle: 'lats', role: 'primary', pattern: 'vertical_pull', preferred: ['Pull-Up', 'Lat Pulldown'] },
-      { muscle: 'upper_back', role: 'secondary', pattern: 'horizontal_pull', preferred: ['Dumbbell Row'] },
+      { muscle: 'upper_back', role: 'secondary', pattern: 'horizontal_pull', preferred: ['One-Arm Row', 'Chest-Supported Row', 'Dumbbell Row'] },
       { muscle: 'chest', role: 'isolation', pattern: 'horizontal_push', preferred: ['Cable Chest Fly'] },
       { muscle: 'rear_delts', role: 'isolation', preferred: ['Face Pull'] },
       { muscle: 'biceps', role: 'isolation', preferred: ['Dumbbell Curl'] },
@@ -121,7 +121,7 @@ function slotsForDay(type: SplitDay['workoutType'], variantIndex: number): DaySl
   if (type === 'Pull') {
     return [
       { muscle: 'lats', role: 'primary', pattern: 'vertical_pull', preferred: ['Pull-Up', 'Lat Pulldown'] },
-      { muscle: 'upper_back', role: 'primary', pattern: 'horizontal_pull', preferred: ['Barbell Row'] },
+      { muscle: 'upper_back', role: 'primary', pattern: 'horizontal_pull', preferred: ['Bent-Over Row', 'Pendlay Row', 'Barbell Row'] },
       { muscle: 'rear_delts', role: 'isolation', preferred: ['Face Pull'] },
       { muscle: 'biceps', role: 'isolation', preferred: ['Dumbbell Curl'] },
     ];
@@ -141,9 +141,9 @@ function slotsForDay(type: SplitDay['workoutType'], variantIndex: number): DaySl
   if (type === 'Back') {
     return [
       { muscle: 'lats', role: 'primary', pattern: 'vertical_pull', preferred: ['Pull-Up', 'Lat Pulldown'] },
-      { muscle: 'upper_back', role: 'primary', pattern: 'horizontal_pull', preferred: ['Barbell Row', 'Pendlay Row'] },
+      { muscle: 'upper_back', role: 'primary', pattern: 'horizontal_pull', preferred: ['Bent-Over Row', 'Pendlay Row', 'Barbell Row'] },
       { muscle: 'lats', role: 'secondary', pattern: 'vertical_pull', preferred: ['Lat Pulldown', 'Straight-Arm Pulldown'] },
-      { muscle: 'upper_back', role: 'secondary', pattern: 'horizontal_pull', preferred: ['Seated Cable Row', 'Dumbbell Row'] },
+      { muscle: 'upper_back', role: 'secondary', pattern: 'horizontal_pull', preferred: ['Machine Row', 'One-Arm Row', 'Seated Cable Row', 'Dumbbell Row'] },
       { muscle: 'rear_delts', role: 'isolation', preferred: ['Face Pull'] },
     ];
   }
@@ -169,7 +169,7 @@ function slotsForDay(type: SplitDay['workoutType'], variantIndex: number): DaySl
   return [
     { muscle: 'quads', role: 'primary', pattern: 'squat', preferred: ['Back Squat', 'Goblet Squat'] },
     { muscle: 'chest', role: 'primary', pattern: 'horizontal_push', preferred: ['Barbell Bench Press', 'Bench Press'], preferPressRange: true },
-    { muscle: 'upper_back', role: 'primary', pattern: 'horizontal_pull', preferred: ['Barbell Row'] },
+    { muscle: 'upper_back', role: 'primary', pattern: 'horizontal_pull', preferred: ['Bent-Over Row', 'Pendlay Row', 'Barbell Row'] },
     { muscle: 'hamstrings', role: 'secondary', pattern: 'hinge', preferred: ['Romanian Deadlift'] },
     { muscle: 'lats', role: 'secondary', pattern: 'vertical_pull', preferred: ['Lat Pulldown'] },
     { muscle: 'side_delts', role: 'isolation', preferred: ['Lateral Raise'] },
@@ -460,6 +460,12 @@ function slotPoolForMuscle(muscle: MuscleId, variantIndex: number): DaySlot[] {
         { muscle: 'lats', role: 'secondary', preferred: ['Straight-Arm Pulldown', 'Lat Pulldown'] },
       ],
     ],
+    upper_back: [
+      [
+        { muscle: 'upper_back', role: 'primary', pattern: 'horizontal_pull', preferred: ['Bent-Over Row', 'Pendlay Row'] },
+        { muscle: 'upper_back', role: 'secondary', pattern: 'horizontal_pull', preferred: ['Chest-Supported Row', 'One-Arm Row'] },
+      ],
+    ],
     side_delts: [
       [
         { muscle: 'side_delts', role: 'isolation', preferred: ['Lateral Raise', 'Cable Lateral Raise'] },
@@ -515,7 +521,8 @@ function isDedicatedForMuscle(ex: Pick<ExercisePrescription, 'name' | 'primaryMu
   if (muscle === 'triceps') return /triceps|pushdown|skull crusher/i.test(n);
   if (muscle === 'quads') return /squat|lunge|leg press|leg extension/i.test(n);
   if (muscle === 'hamstrings') return /rdl|deadlift|leg curl|hamstring/i.test(n);
-  if (muscle === 'lats') return /pulldown|pull-?up|lat /i.test(n);
+  if (muscle === 'lats') return /pulldown|pull-?up|chin-?up|lat /i.test(n);
+  if (muscle === 'upper_back') return /\brow\b/i.test(n) && !/upright|renegade|rear.?delt/i.test(n);
   if (muscle === 'side_delts') return /lateral raise/i.test(n);
   return false;
 }

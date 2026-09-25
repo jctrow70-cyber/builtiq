@@ -3,6 +3,8 @@
  * Imported from lib/scienceEngine/acceptanceCheck.ts
  */
 import { FALLBACK_CATALOG } from '../catalogAdapter';
+import { contributionsForExercise } from '../contributions';
+import { movementFamily, pickExercise } from '../exerciseSelection';
 import { classifySessionDuration, sessionDurationTolerance } from '../duration';
 import { generateProgram } from '../generateProgram';
 import { trainingProfileFromSources } from '../profile';
@@ -13,6 +15,8 @@ import { mapAiWeekToScience } from './mapper';
 import { findByExerciseId } from './matchById';
 import { parseWeekProgram } from './openaiClient';
 import { runGenerationPipeline } from './orchestrator';
+import { slimContextForPrompt } from './prompt';
+import { repairAiProgram } from './repairAiProgram';
 import { validateAiProgram, workingSetCreditsForTests } from './validateAiProgram';
 import type { AiStrengthExercise, AiWeekProgram, AiWorkoutPlan } from './types';
 
@@ -161,6 +165,13 @@ export async function runPhase1GenerationChecks() {
   assert(context.candidate_library.length >= 20, `Library too small: ${context.candidate_library.length}`);
   assert(context.weekly_volume_targets.length > 0, 'Weekly working-set targets must be sent');
   assert(context.schedule.days.map((d) => d.day_label).join(',') === 'Mon,Wed,Fri', 'All week days must be sent together');
+  const slim = slimContextForPrompt(context);
+  const uniqueIds = new Set(slim.exercise_library.map((ex) => ex.exercise_id));
+  assert(slim.exercise_library.length === uniqueIds.size, 'Prompt must serialize each exercise once');
+  assert(slim.warmup_ids.every((id) => uniqueIds.has(id)), 'Warmup IDs must point at the single library');
+  assert(slim.cooldown_ids.every((id) => uniqueIds.has(id)), 'Cooldown IDs must point at the single library');
+  assert(!JSON.stringify(slim.exercise_library[0] || {}).includes('ramp_eligible'), 'Ramp eligibility stays off the GPT payload');
+  assert(!JSON.stringify(slim.exercise_library[0] || {}).includes('default_rep'), 'Default reps stay off the GPT payload');
 
   const week = validWeek();
   const ok = validateAiProgram(week, context, catalogById);
@@ -384,7 +395,7 @@ export async function runPhase1GenerationChecks() {
         raw: null,
         model: 'gpt-5.4',
         api: 'responses',
-        reasoningEffort: 'medium',
+        reasoningEffort: 'low',
         inputTokens: null,
         outputTokens: null,
         reasoningTokens: null,
@@ -392,11 +403,105 @@ export async function runPhase1GenerationChecks() {
       };
     },
   });
-  assert(failCalls === 3, `Repair loop should be initial + 2 repairs, got ${failCalls}`);
-  assert(failedRepair.method === 'science_fallback', `Failed repair should fall back, got ${failedRepair.method}`);
+  assert(failCalls === 1, `Ordinary generation must make exactly one AI call, got ${failCalls}`);
+  assert(failedRepair.method === 'science_fallback', `Unfixable AI week should fall back, got ${failedRepair.method}`);
+  assert(failedRepair.openaiCalls === 1, `Fallback after unusable AI must still be one OpenAI call, got ${failedRepair.openaiCalls}`);
   assert(
     failedRepair.program.workouts.filter((w) => w.week === 1).every((w) => w.exercises.every((ex) => ex.exerciseId !== 'not-a-real-id')),
     'Fallback must not persist the invalid AI exercise id'
+  );
+
+  let timeoutCalls = 0;
+  let persistCount = 0;
+  const timedOut = await runGenerationPipeline({
+    ...pipelineOpts,
+    apiKey: 'test-key',
+    requestFn: async () => {
+      timeoutCalls += 1;
+      return {
+        program: null,
+        raw: null,
+        model: 'gpt-5.4',
+        api: 'responses',
+        reasoningEffort: 'low',
+        inputTokens: null,
+        outputTokens: null,
+        reasoningTokens: null,
+        error: 'Request timed out',
+      };
+    },
+  });
+  persistCount += 1;
+  assert(timeoutCalls === 1, `Timeout path must not retry the model, got ${timeoutCalls}`);
+  assert(timedOut.method === 'science_fallback', `Timeout should use science fallback, got ${timedOut.method}`);
+  assert(timedOut.program.workouts.length > 0, 'Timeout fallback must still produce workouts');
+  assert(persistCount === 1, 'Fallback program is persisted once');
+
+  const lateralityBroken = {
+    ...week,
+    workouts: [
+      {
+        ...week.workouts[0],
+        strength: [
+          { type: 'straight_sets' as const, exercises: [lift('Back Squat', 'primary', { reps_per_side: true })] },
+          ...week.workouts[0].strength.slice(1),
+        ],
+      },
+      week.workouts[1],
+      week.workouts[2],
+    ],
+  };
+  const lateralityFixed = repairAiProgram(lateralityBroken, context, catalogById);
+  assert(
+    lateralityFixed.program.workouts[0].strength[0].exercises[0].reps_per_side === false,
+    'Deterministic repair must clear per-side on bilateral lifts'
+  );
+  assert(lateralityFixed.repairs.some((r) => r.code === 'LATERALITY_MISMATCH'), 'Laterality repair must be logged');
+
+  const restBroken = {
+    ...week,
+    workouts: [
+      {
+        ...week.workouts[0],
+        strength: [
+          { type: 'straight_sets' as const, exercises: [lift('Back Squat', 'primary', { rest_seconds: 90 })] },
+          ...week.workouts[0].strength.slice(1),
+        ],
+      },
+      week.workouts[1],
+      week.workouts[2],
+    ],
+  };
+  const restFixed = repairAiProgram(restBroken, context, catalogById);
+  assert(restFixed.program.workouts[0].strength[0].exercises[0].rest_seconds >= 150, 'Deterministic repair must raise squat rest');
+
+  const cooldownBroken = {
+    ...week,
+    workouts: [{ ...week.workouts[0], cooldown: [{ exercise_id: idOf('Leg Extension'), sets: 1, prescription: '12', why: 'Cooldown' }] }, week.workouts[1], week.workouts[2]],
+  };
+  const cooldownFixed = repairAiProgram(cooldownBroken, context, catalogById);
+  const cooldownId = cooldownFixed.program.workouts[0].cooldown[0]?.exercise_id;
+  assert(cooldownId && cooldownId !== idOf('Leg Extension'), 'Ineligible cooldown must be replaced from the library');
+  assert(validateAiProgram(cooldownFixed.program, context, catalogById).ok || !validateAiProgram(cooldownFixed.program, context, catalogById).issues.some((i) => i.code === 'COOLDOWN_NOT_ELIGIBLE' && i.severity === 'error'), 'Replaced cooldown must not stay ineligible');
+
+  const heavySupersetBroken = {
+    ...week,
+    workouts: [
+      {
+        ...week.workouts[0],
+        strength: [
+          { type: 'superset' as const, exercises: [lift('Back Squat', 'primary'), lift('Conventional Deadlift', 'secondary')] },
+          ...week.workouts[0].strength.slice(1),
+        ],
+      },
+      week.workouts[1],
+      week.workouts[2],
+    ],
+  };
+  const pairFixed = repairAiProgram(heavySupersetBroken, context, catalogById);
+  assert(
+    pairFixed.program.workouts[0].strength[0].type === 'straight_sets' && pairFixed.program.workouts[0].strength[1].type === 'straight_sets',
+    'Heavy + heavy superset must be split into straight sets'
   );
 
   let repairCalls = 0;
@@ -406,20 +511,11 @@ export async function runPhase1GenerationChecks() {
     requestFn: async () => {
       repairCalls += 1;
       return {
-        program: repairCalls === 1
-          ? {
-              ...week,
-              workouts: week.workouts.map((w, i) =>
-                i === 0
-                  ? { ...w, strength: [{ type: 'straight_sets' as const, exercises: [lift('Back Squat', 'primary', { exercise_id: 'not-a-real-id' })] }] }
-                  : w
-              ),
-            }
-          : week,
+        program: restBroken,
         raw: null,
         model: 'gpt-5.4',
         api: 'responses',
-        reasoningEffort: 'medium',
+        reasoningEffort: 'low',
         inputTokens: null,
         outputTokens: null,
         reasoningTokens: null,
@@ -427,11 +523,13 @@ export async function runPhase1GenerationChecks() {
       };
     },
   });
-  assert(repaired.method === 'ai_repaired', `Successful repair should be ai_repaired, got ${repaired.method}`);
+  assert(repairCalls === 1, `Deterministic repair must not call GPT again, got ${repairCalls}`);
+  assert(repaired.method === 'ai_repaired', `Successful deterministic repair should be ai_repaired, got ${repaired.method}`);
   assert(
     repaired.program.workouts.find((w) => w.week === 1 && w.dayLabel === 'Mon')?.exercises[0]?.name === 'Back Squat',
-    'Repaired AI week should keep the corrected Monday primary'
+    'Repaired AI week should keep the Monday primary'
   );
+  assert((repaired.program.workouts.find((w) => w.week === 1 && w.dayLabel === 'Mon')?.exercises[0]?.restSeconds || 0) >= 150, 'Repaired squat rest must be raised');
 
   const accepted = await runGenerationPipeline({
     ...pipelineOpts,
@@ -601,6 +699,50 @@ export async function runPhase1GenerationChecks() {
     volumeCheck.issues.some((i) => i.code === 'VOLUME_OFF' && i.severity === 'error' && /hamstring/i.test(i.message)),
     `Zero/severe hamstring stimulus should ERROR for hypertrophy: ${volumeCheck.issues.map((i) => `${i.severity}:${i.message}`).join('; ')}`
   );
+  const volumeFixed = repairAiProgram(thinHams, context, catalogById);
+  const volumeAfter = validateAiProgram(volumeFixed.program, context, catalogById);
+  assert(
+    !volumeAfter.issues.some((i) => i.code === 'VOLUME_OFF' && i.severity === 'error' && /hamstring/i.test(i.message)),
+    `Deterministic repair should restore hamstring credit: ${volumeAfter.issues.map((i) => `${i.severity}:${i.message}`).join('; ')}`
+  );
+  assert(volumeFixed.repairs.some((r) => r.code === 'VOLUME_OFF'), 'Hamstring volume repair must be logged');
+
+  const explicitChin = contributionsForExercise({
+    name: 'Chin-Up',
+    primaryMuscles: ['lats'],
+    secondaryMuscles: ['biceps', 'upper_back'],
+    raw: { coaching_metadata: { hypertrophy_volume_credits: [{ muscle: 'lats', credit: 1 }, { muscle: 'biceps', credit: 0.5 }] } },
+  });
+  assert(
+    !explicitChin.some((row) => row.muscle === 'upper_back'),
+    'Explicit hypertrophy_volume_credits must not merge name-defaults'
+  );
+  const legacyChin = contributionsForExercise({
+    name: 'Chin-Up',
+    primaryMuscles: ['lats'],
+    secondaryMuscles: ['biceps'],
+    raw: {},
+  });
+  assert(
+    legacyChin.some((row) => row.muscle === 'upper_back' && row.contribution === 0.5),
+    'Legacy name inference must still credit Chin-Up upper_back at 0.5'
+  );
+  assert(movementFamily('Chin-Up') === 'vertical_pull' && movementFamily('Pull-Up') === 'vertical_pull', 'Chin-Up and Pull-Up share a family');
+  assert(movementFamily('Bent-Over Row') === 'row' && movementFamily('One-Arm Row') === 'row', 'Working rows share a family');
+  const barbellProfile = hypertrophyProfile();
+  barbellProfile.availableEquipment = ['barbell', 'dumbbell', 'cable', 'machine', 'bench', 'rack', 'bodyweight'];
+  const rowPick = pickExercise(
+    FALLBACK_CATALOG.filter((ex) => /row/i.test(ex.name)),
+    {
+      profile: barbellProfile,
+      muscle: 'upper_back',
+      role: 'primary',
+      pattern: 'horizontal_pull',
+      alreadyNames: [],
+      preferredNames: ['Barbell Row', 'Bent-Over Row'],
+    }
+  );
+  assert(rowPick && /row/i.test(rowPick.name), `Upper-back slot should pick a row, got ${rowPick?.name}`);
 
   console.log('BIQ-0209 Phase 1.1 generation checks passed.');
   console.log(

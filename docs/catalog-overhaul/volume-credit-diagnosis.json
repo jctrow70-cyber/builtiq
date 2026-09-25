@@ -1,0 +1,7964 @@
+{
+  "generated_at": "2026-09-25T00:00:39.969Z",
+  "scenario": {
+    "experience": "intermediate",
+    "goal": "hypertrophy",
+    "days": [
+      "Mon",
+      "Wed",
+      "Fri"
+    ],
+    "minutes": 60,
+    "split": "full_body",
+    "variety": "balanced",
+    "supersets": "sometimes"
+  },
+  "contribution_model": {
+    "0": "No hypertrophy set credit: stabilizer, warmup, mobility, stretch, hang, cardio, olympic/power practice.",
+    "1.0": "Primary hypertrophy stimulus. One working set counts as one equivalent set for that muscle.",
+    "0.5": "Meaningful secondary hypertrophy stimulus. One working set counts as half an equivalent set.",
+    "0.25": "Reserved. Not used by current SCIENCE_RULES (primary=1, secondary=0.5). Do not invent it for this pass."
+  },
+  "precedence_proposed": {
+    "order": [
+      "coaching_metadata.hypertrophy_volume_credits if non-empty (authoritative for the 260)",
+      "do not merge name-defaults into explicit credits",
+      "muscle_targets / primaryMuscles / NAME_DEFAULTS only for legacy or incomplete rows"
+    ],
+    "current_runtime_order": [
+      "stored contribution rows if passed",
+      "hypertrophy_volume_credits, then BIQ-0228 merges missing NAME_DEFAULTS muscles",
+      "muscle_targets mapped through 1.0/0.5, then same name-default merge",
+      "NAME_DEFAULTS",
+      "primaryMuscles 1.0 + secondaryMuscles 0.5"
+    ]
+  },
+  "catalog_counts": {
+    "raw_fetch": 2486,
+    "ai_eligible": 260,
+    "adapted": 260
+  },
+  "weekly_targets": [
+    {
+      "muscle": "chest",
+      "targetSets": 10,
+      "minSets": 10,
+      "maxSets": 14,
+      "priority": "normal",
+      "major": true
+    },
+    {
+      "muscle": "upper_back",
+      "targetSets": 10,
+      "minSets": 10,
+      "maxSets": 14,
+      "priority": "normal",
+      "major": true
+    },
+    {
+      "muscle": "lats",
+      "targetSets": 10,
+      "minSets": 10,
+      "maxSets": 14,
+      "priority": "normal",
+      "major": true
+    },
+    {
+      "muscle": "front_delts",
+      "targetSets": 6,
+      "minSets": 6,
+      "maxSets": 10,
+      "priority": "normal",
+      "major": false
+    },
+    {
+      "muscle": "side_delts",
+      "targetSets": 6,
+      "minSets": 6,
+      "maxSets": 10,
+      "priority": "normal",
+      "major": false
+    },
+    {
+      "muscle": "rear_delts",
+      "targetSets": 6,
+      "minSets": 6,
+      "maxSets": 10,
+      "priority": "normal",
+      "major": false
+    },
+    {
+      "muscle": "biceps",
+      "targetSets": 6,
+      "minSets": 6,
+      "maxSets": 10,
+      "priority": "normal",
+      "major": false
+    },
+    {
+      "muscle": "triceps",
+      "targetSets": 6,
+      "minSets": 6,
+      "maxSets": 10,
+      "priority": "normal",
+      "major": false
+    },
+    {
+      "muscle": "forearms",
+      "targetSets": 6,
+      "minSets": 6,
+      "maxSets": 10,
+      "priority": "normal",
+      "major": false
+    },
+    {
+      "muscle": "quads",
+      "targetSets": 10,
+      "minSets": 10,
+      "maxSets": 14,
+      "priority": "normal",
+      "major": true
+    },
+    {
+      "muscle": "hamstrings",
+      "targetSets": 10,
+      "minSets": 10,
+      "maxSets": 14,
+      "priority": "normal",
+      "major": true
+    },
+    {
+      "muscle": "glutes",
+      "targetSets": 10,
+      "minSets": 10,
+      "maxSets": 14,
+      "priority": "normal",
+      "major": true
+    },
+    {
+      "muscle": "calves",
+      "targetSets": 6,
+      "minSets": 6,
+      "maxSets": 10,
+      "priority": "normal",
+      "major": false
+    },
+    {
+      "muscle": "adductors",
+      "targetSets": 6,
+      "minSets": 6,
+      "maxSets": 10,
+      "priority": "normal",
+      "major": false
+    },
+    {
+      "muscle": "hip_flexors",
+      "targetSets": 6,
+      "minSets": 6,
+      "maxSets": 10,
+      "priority": "normal",
+      "major": false
+    },
+    {
+      "muscle": "abs",
+      "targetSets": 6,
+      "minSets": 6,
+      "maxSets": 10,
+      "priority": "normal",
+      "major": false
+    },
+    {
+      "muscle": "obliques",
+      "targetSets": 6,
+      "minSets": 6,
+      "maxSets": 10,
+      "priority": "normal",
+      "major": false
+    },
+    {
+      "muscle": "spinal_erectors",
+      "targetSets": 6,
+      "minSets": 6,
+      "maxSets": 10,
+      "priority": "normal",
+      "major": false
+    }
+  ],
+  "upper_back_target_explanation": {
+    "value": 10,
+    "lats_value": 10,
+    "formula": "calculateWeeklyVolume: intermediate.major.start (10) * normal priority (1.0) = 10. Same formula as chest/lats/quads/hamstrings/glutes.",
+    "definition": "targetSets are equivalent working sets after contribution weighting. A 3-set row at upper_back 1.0 = 3. A 3-set chin-up at upper_back 0.5 = 1.5.",
+    "validator": "VOLUME_OFF error if major got < 1, or hypertrophy && got/target < 0.5 (so upper_back 10 requires at least 5 equivalent sets). Warning below 0.7.",
+    "same_set_definition": "Yes: the input target and exercise credits use the same equivalent-set unit. They do not currently use the same muscle role (rows were enriched as lat-primary).",
+    "rules": {
+      "primaryContribution": 1,
+      "secondaryContribution": 0.5,
+      "intermediate_major": {
+        "min": 10,
+        "max": 14,
+        "start": 10
+      },
+      "major_muscles": [
+        "chest",
+        "upper_back",
+        "lats",
+        "quads",
+        "hamstrings",
+        "glutes"
+      ]
+    }
+  },
+  "audit_summary": {
+    "total": 260,
+    "with_stored_credits": 185,
+    "empty_stored_credits": 75,
+    "suspicious_count": 17,
+    "proposed_changes": 136
+  },
+  "suspicious_master_exercises": [
+    {
+      "id": "e9e34e71-ad77-4fdb-8d86-1179cd5ecc05",
+      "name": "Assisted Pull-Up",
+      "pattern": "vertical_pull",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "biceps",
+        "upper_back"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "vertical pull missing upper_back secondary credit"
+      ],
+      "changed": true
+    },
+    {
+      "id": "b4bbb290-e036-4981-9318-5eda3021f8d1",
+      "name": "Bent-Over Row",
+      "pattern": "horizontal_pull",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "upper_back",
+        "rear_delts",
+        "biceps",
+        "spinal_erectors"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "horizontal row under-credits upper_back (lat-primary enrichment)"
+      ],
+      "changed": true
+    },
+    {
+      "id": "c663f055-278c-487c-b8c9-b30a6e591165",
+      "name": "Cable Row to Neck",
+      "pattern": "horizontal_pull",
+      "primary_muscles": [
+        "rear_delts"
+      ],
+      "secondary_muscles": [
+        "upper_back",
+        "biceps"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "horizontal row under-credits upper_back (lat-primary enrichment)"
+      ],
+      "changed": true
+    },
+    {
+      "id": "20b6559e-1e94-4db6-873a-548f85234747",
+      "name": "Chin-Up",
+      "pattern": "vertical_pull",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "biceps",
+        "upper_back"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "vertical pull missing upper_back secondary credit"
+      ],
+      "changed": true
+    },
+    {
+      "id": "c53c1691-a5f9-47b4-ac86-7909b80860be",
+      "name": "Close-Grip Pulldown",
+      "pattern": "vertical_pull",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "biceps",
+        "upper_back"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "vertical pull missing upper_back secondary credit"
+      ],
+      "changed": true
+    },
+    {
+      "id": "98072829-5982-4634-a2cc-d9b0407a68a9",
+      "name": "Lat Pulldown",
+      "pattern": "vertical_pull",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "biceps",
+        "upper_back"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "vertical pull missing upper_back secondary credit"
+      ],
+      "changed": true
+    },
+    {
+      "id": "0d1ab3b6-39b9-4f03-9c4f-7b8dd080cd66",
+      "name": "Low Row",
+      "pattern": "horizontal_pull",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "upper_back",
+        "biceps"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "horizontal row under-credits upper_back (lat-primary enrichment)"
+      ],
+      "changed": true
+    },
+    {
+      "id": "252b6022-8632-489b-9687-5b75113f2c07",
+      "name": "Machine Pulldown",
+      "pattern": "vertical_pull",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "biceps",
+        "upper_back"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "vertical pull missing upper_back secondary credit"
+      ],
+      "changed": true
+    },
+    {
+      "id": "ab28ed41-43fa-44fa-854c-9a833a73ad98",
+      "name": "Meadows Row",
+      "pattern": "horizontal_pull",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "upper_back",
+        "biceps",
+        "rear_delts"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "horizontal row under-credits upper_back (lat-primary enrichment)"
+      ],
+      "changed": true
+    },
+    {
+      "id": "103403c0-4e2e-4aa6-a2b6-4e2002746e78",
+      "name": "One-Arm Row",
+      "pattern": "horizontal_pull",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "upper_back",
+        "rear_delts",
+        "biceps"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "horizontal row under-credits upper_back (lat-primary enrichment)"
+      ],
+      "changed": true
+    },
+    {
+      "id": "20d8dac5-7bc1-410c-bfe6-1ee8c5dac75d",
+      "name": "Pull-Up",
+      "pattern": "vertical_pull",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "biceps",
+        "upper_back",
+        "abs"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "vertical pull missing upper_back secondary credit"
+      ],
+      "changed": true
+    },
+    {
+      "id": "cf93e392-4104-4738-8739-a9cdeae5cead",
+      "name": "Pull-Up Work",
+      "pattern": "vertical_pull",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "biceps",
+        "upper_back"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "vertical pull missing upper_back secondary credit"
+      ],
+      "changed": true
+    },
+    {
+      "id": "12b1ada8-ad85-4acc-bb9b-590c1043c8ac",
+      "name": "Rear Delt Row",
+      "pattern": "horizontal_pull",
+      "primary_muscles": [
+        "rear_delts"
+      ],
+      "secondary_muscles": [
+        "upper_back",
+        "biceps"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "horizontal row under-credits upper_back (lat-primary enrichment)"
+      ],
+      "changed": true
+    },
+    {
+      "id": "ed62278e-1dd1-4405-b664-58b7c522094e",
+      "name": "Renegade Row",
+      "pattern": "core_anti_rotation",
+      "primary_muscles": [
+        "abs"
+      ],
+      "secondary_muscles": [
+        "biceps"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "abs",
+          "credit": 1
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "abs",
+          "credit": 1
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "horizontal row under-credits upper_back (lat-primary enrichment)"
+      ],
+      "changed": true
+    },
+    {
+      "id": "ec94b7bf-d245-442c-8717-cebaea168527",
+      "name": "Rope Climb",
+      "pattern": "vertical_pull",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "biceps",
+        "forearms",
+        "abs"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "vertical pull missing upper_back secondary credit"
+      ],
+      "changed": true
+    },
+    {
+      "id": "cbc9e466-ba31-4aec-b1af-4e10ac8c84ae",
+      "name": "Straight-Arm Pulldown",
+      "pattern": "vertical_pull",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "triceps"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "vertical pull missing upper_back secondary credit"
+      ],
+      "changed": true
+    },
+    {
+      "id": "e86eb7a8-08c3-498c-bd71-fd5be1b8f67b",
+      "name": "T-Bar Row",
+      "pattern": "horizontal_pull",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "upper_back",
+        "biceps",
+        "rear_delts"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "horizontal row under-credits upper_back (lat-primary enrichment)"
+      ],
+      "changed": true
+    }
+  ],
+  "focus_pulls": [
+    {
+      "id": "e9e34e71-ad77-4fdb-8d86-1179cd5ecc05",
+      "name": "Assisted Pull-Up",
+      "pattern": "vertical_pull",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "biceps",
+        "upper_back"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "vertical pull missing upper_back secondary credit"
+      ],
+      "changed": true
+    },
+    {
+      "id": "11b1ea29-fd8c-4002-9d21-50c8ec0802c8",
+      "name": "Band Pull-Apart",
+      "pattern": "other",
+      "primary_muscles": [],
+      "secondary_muscles": [
+        "upper_back",
+        "rear_delts"
+      ],
+      "stored_hypertrophy_volume_credits": [],
+      "current_runtime_map": [
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "rear_delts",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [],
+      "suspicious": [],
+      "changed": true
+    },
+    {
+      "id": "b4bbb290-e036-4981-9318-5eda3021f8d1",
+      "name": "Bent-Over Row",
+      "pattern": "horizontal_pull",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "upper_back",
+        "rear_delts",
+        "biceps",
+        "spinal_erectors"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "horizontal row under-credits upper_back (lat-primary enrichment)"
+      ],
+      "changed": true
+    },
+    {
+      "id": "1bbfadad-9757-4537-9c51-0328d8cf5520",
+      "name": "Cable Reverse Fly",
+      "pattern": "other",
+      "primary_muscles": [
+        "rear_delts"
+      ],
+      "secondary_muscles": [
+        "upper_back"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [],
+      "changed": true
+    },
+    {
+      "id": "c663f055-278c-487c-b8c9-b30a6e591165",
+      "name": "Cable Row to Neck",
+      "pattern": "horizontal_pull",
+      "primary_muscles": [
+        "rear_delts"
+      ],
+      "secondary_muscles": [
+        "upper_back",
+        "biceps"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "horizontal row under-credits upper_back (lat-primary enrichment)"
+      ],
+      "changed": true
+    },
+    {
+      "id": "1695e444-3146-42aa-af3b-ebc2e9b110f4",
+      "name": "Chest-Supported Row",
+      "pattern": "horizontal_pull",
+      "primary_muscles": [
+        "upper_back"
+      ],
+      "secondary_muscles": [
+        "lats",
+        "rear_delts",
+        "biceps"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [],
+      "changed": true
+    },
+    {
+      "id": "20b6559e-1e94-4db6-873a-548f85234747",
+      "name": "Chin-Up",
+      "pattern": "vertical_pull",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "biceps",
+        "upper_back"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "vertical pull missing upper_back secondary credit"
+      ],
+      "changed": true
+    },
+    {
+      "id": "c53c1691-a5f9-47b4-ac86-7909b80860be",
+      "name": "Close-Grip Pulldown",
+      "pattern": "vertical_pull",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "biceps",
+        "upper_back"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "vertical pull missing upper_back secondary credit"
+      ],
+      "changed": true
+    },
+    {
+      "id": "23ace7e2-2bfa-4c5c-93b5-9fff98eb0afb",
+      "name": "Face Pull",
+      "pattern": "horizontal_pull",
+      "primary_muscles": [
+        "rear_delts"
+      ],
+      "secondary_muscles": [
+        "upper_back"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [],
+      "changed": true
+    },
+    {
+      "id": "208acbf7-5c7f-452b-9c65-e328d46948ef",
+      "name": "High Row",
+      "pattern": "horizontal_pull",
+      "primary_muscles": [
+        "upper_back"
+      ],
+      "secondary_muscles": [
+        "lats",
+        "rear_delts",
+        "biceps"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [],
+      "changed": true
+    },
+    {
+      "id": "3f2f0d01-ee39-4529-82fb-39a4ecee6c2f",
+      "name": "Inverted Row",
+      "pattern": "horizontal_pull",
+      "primary_muscles": [
+        "upper_back"
+      ],
+      "secondary_muscles": [
+        "lats",
+        "biceps",
+        "rear_delts",
+        "abs"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [],
+      "changed": true
+    },
+    {
+      "id": "37f7bb9d-c406-4a2f-bdb0-3ed72e37fbe2",
+      "name": "Landmine Row",
+      "pattern": "horizontal_pull",
+      "primary_muscles": [
+        "upper_back"
+      ],
+      "secondary_muscles": [
+        "lats",
+        "biceps",
+        "rear_delts"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [],
+      "changed": true
+    },
+    {
+      "id": "98072829-5982-4634-a2cc-d9b0407a68a9",
+      "name": "Lat Pulldown",
+      "pattern": "vertical_pull",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "biceps",
+        "upper_back"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "vertical pull missing upper_back secondary credit"
+      ],
+      "changed": true
+    },
+    {
+      "id": "0d1ab3b6-39b9-4f03-9c4f-7b8dd080cd66",
+      "name": "Low Row",
+      "pattern": "horizontal_pull",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "upper_back",
+        "biceps"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "horizontal row under-credits upper_back (lat-primary enrichment)"
+      ],
+      "changed": true
+    },
+    {
+      "id": "252b6022-8632-489b-9687-5b75113f2c07",
+      "name": "Machine Pulldown",
+      "pattern": "vertical_pull",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "biceps",
+        "upper_back"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "vertical pull missing upper_back secondary credit"
+      ],
+      "changed": true
+    },
+    {
+      "id": "3dbe8693-4929-42ab-b23c-e401ccc5e2d6",
+      "name": "Machine Row",
+      "pattern": "horizontal_pull",
+      "primary_muscles": [
+        "upper_back"
+      ],
+      "secondary_muscles": [
+        "lats",
+        "biceps"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [],
+      "changed": true
+    },
+    {
+      "id": "ab28ed41-43fa-44fa-854c-9a833a73ad98",
+      "name": "Meadows Row",
+      "pattern": "horizontal_pull",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "upper_back",
+        "biceps",
+        "rear_delts"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "horizontal row under-credits upper_back (lat-primary enrichment)"
+      ],
+      "changed": true
+    },
+    {
+      "id": "5920effc-9c6c-4a03-a01b-f22ebaaee2f7",
+      "name": "Medicine Ball Rotational Throw",
+      "pattern": "throw",
+      "primary_muscles": [
+        "obliques"
+      ],
+      "secondary_muscles": [
+        "glutes"
+      ],
+      "stored_hypertrophy_volume_credits": [],
+      "current_runtime_map": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [],
+      "suspicious": [],
+      "changed": true
+    },
+    {
+      "id": "103403c0-4e2e-4aa6-a2b6-4e2002746e78",
+      "name": "One-Arm Row",
+      "pattern": "horizontal_pull",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "upper_back",
+        "rear_delts",
+        "biceps"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "horizontal row under-credits upper_back (lat-primary enrichment)"
+      ],
+      "changed": true
+    },
+    {
+      "id": "97ae9c44-3765-48fa-9ea4-403a8cd0961e",
+      "name": "Pendlay Row",
+      "pattern": "horizontal_pull",
+      "primary_muscles": [
+        "upper_back"
+      ],
+      "secondary_muscles": [
+        "lats",
+        "biceps",
+        "spinal_erectors"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [],
+      "changed": true
+    },
+    {
+      "id": "20d8dac5-7bc1-410c-bfe6-1ee8c5dac75d",
+      "name": "Pull-Up",
+      "pattern": "vertical_pull",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "biceps",
+        "upper_back",
+        "abs"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "vertical pull missing upper_back secondary credit"
+      ],
+      "changed": true
+    },
+    {
+      "id": "cf93e392-4104-4738-8739-a9cdeae5cead",
+      "name": "Pull-Up Work",
+      "pattern": "vertical_pull",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "biceps",
+        "upper_back"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "vertical pull missing upper_back secondary credit"
+      ],
+      "changed": true
+    },
+    {
+      "id": "12b1ada8-ad85-4acc-bb9b-590c1043c8ac",
+      "name": "Rear Delt Row",
+      "pattern": "horizontal_pull",
+      "primary_muscles": [
+        "rear_delts"
+      ],
+      "secondary_muscles": [
+        "upper_back",
+        "biceps"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "horizontal row under-credits upper_back (lat-primary enrichment)"
+      ],
+      "changed": true
+    },
+    {
+      "id": "ed62278e-1dd1-4405-b664-58b7c522094e",
+      "name": "Renegade Row",
+      "pattern": "core_anti_rotation",
+      "primary_muscles": [
+        "abs"
+      ],
+      "secondary_muscles": [
+        "biceps"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "abs",
+          "credit": 1
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "abs",
+          "credit": 1
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "horizontal row under-credits upper_back (lat-primary enrichment)"
+      ],
+      "changed": true
+    },
+    {
+      "id": "c1354932-52ae-4e3e-b324-e456cab5e732",
+      "name": "Reverse Fly",
+      "pattern": "other",
+      "primary_muscles": [
+        "rear_delts"
+      ],
+      "secondary_muscles": [
+        "upper_back"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [],
+      "changed": true
+    },
+    {
+      "id": "48d59b70-83bf-4ca4-94e2-ae90894570f2",
+      "name": "Row",
+      "pattern": "horizontal_pull",
+      "primary_muscles": [
+        "upper_back"
+      ],
+      "secondary_muscles": [
+        "lats",
+        "rear_delts",
+        "biceps"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [],
+      "changed": true
+    },
+    {
+      "id": "eae46ace-0eab-41c7-9568-5a4683d2fc46",
+      "name": "Row Ergometer",
+      "pattern": "horizontal_pull",
+      "primary_muscles": [],
+      "secondary_muscles": [
+        "abs"
+      ],
+      "stored_hypertrophy_volume_credits": [],
+      "current_runtime_map": [
+        {
+          "muscle": "abs",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [],
+      "suspicious": [],
+      "changed": true
+    },
+    {
+      "id": "aa95b5b4-26ee-4511-849f-5bfe20987760",
+      "name": "Scapular Pull-Up",
+      "pattern": "other",
+      "primary_muscles": [],
+      "secondary_muscles": [
+        "upper_back",
+        "lats"
+      ],
+      "stored_hypertrophy_volume_credits": [],
+      "current_runtime_map": [
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [],
+      "suspicious": [],
+      "changed": true
+    },
+    {
+      "id": "feca6736-ca50-4bb6-955d-c3a0215e2fb3",
+      "name": "Seal Row",
+      "pattern": "horizontal_pull",
+      "primary_muscles": [
+        "upper_back"
+      ],
+      "secondary_muscles": [
+        "lats",
+        "rear_delts",
+        "biceps"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [],
+      "changed": true
+    },
+    {
+      "id": "cbc9e466-ba31-4aec-b1af-4e10ac8c84ae",
+      "name": "Straight-Arm Pulldown",
+      "pattern": "vertical_pull",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "triceps"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "vertical pull missing upper_back secondary credit"
+      ],
+      "changed": true
+    },
+    {
+      "id": "e86eb7a8-08c3-498c-bd71-fd5be1b8f67b",
+      "name": "T-Bar Row",
+      "pattern": "horizontal_pull",
+      "primary_muscles": [
+        "lats"
+      ],
+      "secondary_muscles": [
+        "upper_back",
+        "biceps",
+        "rear_delts"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "suspicious": [
+        "horizontal row under-credits upper_back (lat-primary enrichment)"
+      ],
+      "changed": true
+    },
+    {
+      "id": "680af487-e111-4392-97e1-5b4c4712971e",
+      "name": "Upright Row",
+      "pattern": "shoulder_abduction",
+      "primary_muscles": [
+        "side_delts"
+      ],
+      "secondary_muscles": [
+        "upper_back",
+        "biceps"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "side_delts",
+          "credit": 1
+        }
+      ],
+      "current_runtime_map": [
+        {
+          "muscle": "side_delts",
+          "credit": 1
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "side_delts",
+          "credit": 1
+        }
+      ],
+      "suspicious": [],
+      "changed": false
+    }
+  ],
+  "proposed_corrections": [
+    {
+      "exercise": "90/90 Hip Rotation",
+      "id": "ffcb01e4-b775-426f-8513-c96eb96b0d1d",
+      "current_credits": [
+        {
+          "muscle": "hip_flexors",
+          "credit": 0.5
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Ab Wheel Rollout",
+      "id": "de643a87-6d9e-4fc2-a746-1fb355eec2db",
+      "current_credits": [
+        {
+          "muscle": "abs",
+          "credit": 1
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "abs",
+          "credit": 1
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "abs",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Active Hang",
+      "id": "f234ffb5-5cca-449f-9cae-00d82f359a25",
+      "current_credits": [
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "forearms",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Adductor Rockback",
+      "id": "b8fbf23f-6532-40b8-b638-c8d915aa6ad0",
+      "current_credits": [
+        {
+          "muscle": "adductors",
+          "credit": 0.5
+        },
+        {
+          "muscle": "hip_flexors",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Assisted Dip",
+      "id": "dc13aca9-2ca6-4e4e-af35-c39bdf306e0e",
+      "current_credits": [
+        {
+          "muscle": "triceps",
+          "credit": 1
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "triceps",
+          "credit": 1
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "front_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "triceps",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Assisted Pull-Up",
+      "id": "e9e34e71-ad77-4fdb-8d86-1179cd5ecc05",
+      "current_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "reason": "vertical pull missing upper_back secondary credit"
+    },
+    {
+      "exercise": "Back Extension",
+      "id": "4b6225db-034a-4bd8-96c8-12865b125f28",
+      "current_credits": [
+        {
+          "muscle": "spinal_erectors",
+          "credit": 1
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "spinal_erectors",
+          "credit": 1
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "hamstrings",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Band Pull-Apart",
+      "id": "11b1ea29-fd8c-4002-9d21-50c8ec0802c8",
+      "current_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "rear_delts",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Battle Rope Slams",
+      "id": "d62b4d0d-6408-4b0c-b4ad-1411fa472759",
+      "current_credits": [
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "abs",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Battle Rope Waves",
+      "id": "6f7ce08b-8539-4e49-8a77-c48bce949ec8",
+      "current_credits": [
+        {
+          "muscle": "abs",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Bear Crawl",
+      "id": "08bc3b69-4109-4a47-a8a0-07fb6a2c5b19",
+      "current_credits": [
+        {
+          "muscle": "abs",
+          "credit": 0.5
+        },
+        {
+          "muscle": "quads",
+          "credit": 0.5
+        },
+        {
+          "muscle": "hip_flexors",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Bench Dip",
+      "id": "10bbf3da-adb6-4640-9911-eb571da573fc",
+      "current_credits": [
+        {
+          "muscle": "triceps",
+          "credit": 1
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "triceps",
+          "credit": 1
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "front_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "triceps",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Bent-Over Row",
+      "id": "b4bbb290-e036-4981-9318-5eda3021f8d1",
+      "current_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "reason": "horizontal row under-credits upper_back (lat-primary enrichment)"
+    },
+    {
+      "exercise": "Bike Sprint",
+      "id": "98e2b24e-8e2c-4c55-8297-257caa2745cf",
+      "current_credits": [
+        {
+          "muscle": "quads",
+          "credit": 0.5
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        },
+        {
+          "muscle": "calves",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Bird Dog",
+      "id": "27bb95dc-30ac-4fec-b144-1a764d2afe87",
+      "current_credits": [
+        {
+          "muscle": "abs",
+          "credit": 1
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "abs",
+          "credit": 1
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "abs",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Block Pull",
+      "id": "288b7fee-20cf-44a8-b7aa-95c189919a2d",
+      "current_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 1
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 1
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "hamstrings",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Box Jump",
+      "id": "9a8c6def-8171-45f0-b6c0-708003baab9f",
+      "current_credits": [
+        {
+          "muscle": "quads",
+          "credit": 0.5
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        },
+        {
+          "muscle": "calves",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Broad Jump",
+      "id": "f58a17e7-b4d2-480d-8d57-d21c77cfaf55",
+      "current_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        },
+        {
+          "muscle": "quads",
+          "credit": 0.5
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        },
+        {
+          "muscle": "calves",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Cable Deadlift",
+      "id": "3a0d31f0-8505-4066-994f-4c877134c894",
+      "current_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 1
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 1
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "hamstrings",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Cable External Rotation",
+      "id": "687b1faf-8975-4305-84f8-8be0a27ce797",
+      "current_credits": [
+        {
+          "muscle": "rear_delts",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Cable Hip Flexion",
+      "id": "37d2ef03-6ff8-40c2-b60d-d90ac71ae389",
+      "current_credits": [
+        {
+          "muscle": "hip_flexors",
+          "credit": 1
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "hip_flexors",
+          "credit": 1
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "hip_flexors",
+          "credit": 1
+        },
+        {
+          "muscle": "quads",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Cable Reverse Fly",
+      "id": "1bbfadad-9757-4537-9c51-0328d8cf5520",
+      "current_credits": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Cable Row to Neck",
+      "id": "c663f055-278c-487c-b8c9-b30a6e591165",
+      "current_credits": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "reason": "horizontal row under-credits upper_back (lat-primary enrichment)"
+    },
+    {
+      "exercise": "Cable Y Raise",
+      "id": "8a98e4c8-7d4c-4fab-845b-c4d765cdaebf",
+      "current_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "rear_delts",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Calf Stretch",
+      "id": "730a6b5b-dc59-4059-abc0-2c4ce2605bae",
+      "current_credits": [
+        {
+          "muscle": "calves",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Cat-Cow",
+      "id": "a8f60ba6-3256-45c0-99fa-a8c9b7d64c06",
+      "current_credits": [
+        {
+          "muscle": "abs",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Chest Fly",
+      "id": "ba21683d-7309-45e5-ab52-14aca596f776",
+      "current_credits": [
+        {
+          "muscle": "chest",
+          "credit": 1
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "chest",
+          "credit": 1
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "chest",
+          "credit": 1
+        },
+        {
+          "muscle": "triceps",
+          "credit": 0.5
+        },
+        {
+          "muscle": "front_delts",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Chest-Supported Row",
+      "id": "1695e444-3146-42aa-af3b-ebc2e9b110f4",
+      "current_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Child's Pose",
+      "id": "56be6acd-3d0b-4e7b-8d99-90b946cc4f93",
+      "current_credits": [
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "hip_flexors",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Chin-Up",
+      "id": "20b6559e-1e94-4db6-873a-548f85234747",
+      "current_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "reason": "vertical pull missing upper_back secondary credit"
+    },
+    {
+      "exercise": "Clamshell",
+      "id": "5a5da1d1-04a5-48f8-b6c0-0a6ed01069ea",
+      "current_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Clean & Jerk",
+      "id": "acdefa0f-0350-4f53-86bf-02c2357618b8",
+      "current_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        },
+        {
+          "muscle": "quads",
+          "credit": 0.5
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "front_delts",
+          "credit": 0.5
+        },
+        {
+          "muscle": "triceps",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Close-Grip Press",
+      "id": "417d384e-bd67-4426-8634-1f13f40b7933",
+      "current_credits": [
+        {
+          "muscle": "triceps",
+          "credit": 1
+        },
+        {
+          "muscle": "front_delts",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "triceps",
+          "credit": 1
+        },
+        {
+          "muscle": "front_delts",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "chest",
+          "credit": 1
+        },
+        {
+          "muscle": "triceps",
+          "credit": 0.5
+        },
+        {
+          "muscle": "front_delts",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Close-Grip Pulldown",
+      "id": "c53c1691-a5f9-47b4-ac86-7909b80860be",
+      "current_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "reason": "vertical pull missing upper_back secondary credit"
+    },
+    {
+      "exercise": "Cossack Squat",
+      "id": "b0b0b076-b209-4975-98bc-e54bb24187e0",
+      "current_credits": [
+        {
+          "muscle": "adductors",
+          "credit": 0.5
+        },
+        {
+          "muscle": "quads",
+          "credit": 0.5
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Crab Walk",
+      "id": "bd31fe69-4b86-423d-8b48-6a83eeed9db7",
+      "current_credits": [
+        {
+          "muscle": "triceps",
+          "credit": 0.5
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        },
+        {
+          "muscle": "abs",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Dead Hang",
+      "id": "84453477-d6b1-4eb7-8084-67a4a323c53f",
+      "current_credits": [
+        {
+          "muscle": "forearms",
+          "credit": 0.5
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Deadlift",
+      "id": "8b9630fe-ea3a-4dfd-afe8-190201e8931d",
+      "current_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 1
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 1
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "hamstrings",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Deep Squat Hold",
+      "id": "4e46599f-1f19-4a8c-ad23-6c4da41a7f56",
+      "current_credits": [
+        {
+          "muscle": "hip_flexors",
+          "credit": 0.5
+        },
+        {
+          "muscle": "quads",
+          "credit": 0.5
+        },
+        {
+          "muscle": "adductors",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Dip",
+      "id": "9479211f-b4d7-47bd-b69f-5da631d061bd",
+      "current_credits": [
+        {
+          "muscle": "chest",
+          "credit": 1
+        },
+        {
+          "muscle": "triceps",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "chest",
+          "credit": 1
+        },
+        {
+          "muscle": "triceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "front_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "triceps",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Doorway Pec Stretch",
+      "id": "768c593d-c352-45ca-9eee-2b724164294f",
+      "current_credits": [
+        {
+          "muscle": "chest",
+          "credit": 0.5
+        },
+        {
+          "muscle": "front_delts",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Elliptical",
+      "id": "2312fcad-475b-4615-823e-c52dc5e8f0f5",
+      "current_credits": [
+        {
+          "muscle": "quads",
+          "credit": 0.5
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "External Rotation",
+      "id": "51596dc7-cbef-46c7-89b4-577fc7bacb38",
+      "current_credits": [
+        {
+          "muscle": "rear_delts",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Face Pull",
+      "id": "23ace7e2-2bfa-4c5c-93b5-9fff98eb0afb",
+      "current_credits": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Farmer Carry",
+      "id": "eeecddd9-6e4c-49ac-8fd4-369cceee4662",
+      "current_credits": [
+        {
+          "muscle": "forearms",
+          "credit": 0.5
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "abs",
+          "credit": 0.5
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Figure-Four Stretch",
+      "id": "39ff2afd-a879-4e24-976e-66f8f18a1504",
+      "current_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Front Rack Carry",
+      "id": "1bf48baf-f793-4551-8cdd-84092c89b8da",
+      "current_credits": [
+        {
+          "muscle": "abs",
+          "credit": 0.5
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "front_delts",
+          "credit": 0.5
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Glute Kickback",
+      "id": "b0568347-93a4-40a4-b33a-873c051ab63b",
+      "current_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 1
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 1
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 1
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Groin Stretch",
+      "id": "7e815412-d968-42ab-b4d3-868147a1dbbc",
+      "current_credits": [
+        {
+          "muscle": "adductors",
+          "credit": 0.5
+        },
+        {
+          "muscle": "hip_flexors",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Hamstring Stretch",
+      "id": "5820865f-94d7-4577-a3f0-b13912bf3ad1",
+      "current_credits": [
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        },
+        {
+          "muscle": "calves",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Hang Clean",
+      "id": "14d11e1a-958e-40b7-a23b-6c548b987376",
+      "current_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        },
+        {
+          "muscle": "quads",
+          "credit": 0.5
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Hanging Knee Raise",
+      "id": "e45d7432-9655-40a8-a3fb-25e9684008bc",
+      "current_credits": [
+        {
+          "muscle": "abs",
+          "credit": 1
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "abs",
+          "credit": 1
+        }
+      ],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Hanging Leg Raise",
+      "id": "0a9d79ca-77f3-4af1-95f3-8d2a80398902",
+      "current_credits": [
+        {
+          "muscle": "abs",
+          "credit": 1
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "abs",
+          "credit": 1
+        }
+      ],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "High Row",
+      "id": "208acbf7-5c7f-452b-9c65-e328d46948ef",
+      "current_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Hip Airplane",
+      "id": "137621a9-e0c2-4ae6-b1bd-b3acb4db59b6",
+      "current_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        },
+        {
+          "muscle": "abs",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Hip Flexor Stretch",
+      "id": "6dc4e24b-b5ca-4e5e-8322-a467ae9b5faf",
+      "current_credits": [
+        {
+          "muscle": "hip_flexors",
+          "credit": 0.5
+        },
+        {
+          "muscle": "quads",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Incline Chest Fly",
+      "id": "1c267558-4163-45d3-a5a3-810f91c2c117",
+      "current_credits": [
+        {
+          "muscle": "chest",
+          "credit": 1
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "chest",
+          "credit": 1
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "chest",
+          "credit": 1
+        },
+        {
+          "muscle": "triceps",
+          "credit": 0.5
+        },
+        {
+          "muscle": "front_delts",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Internal Rotation",
+      "id": "378285d4-0463-4fb3-881a-79901482bf1a",
+      "current_credits": [
+        {
+          "muscle": "chest",
+          "credit": 0.5
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Inverted Row",
+      "id": "3f2f0d01-ee39-4529-82fb-39a4ecee6c2f",
+      "current_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Jefferson Curl",
+      "id": "c0ba9428-586b-4a5b-a684-f38ad956df2d",
+      "current_credits": [
+        {
+          "muscle": "hamstrings",
+          "credit": 1
+        },
+        {
+          "muscle": "spinal_erectors",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Jump Rope",
+      "id": "987e46ca-740c-4ec2-9823-a0a95373152b",
+      "current_credits": [
+        {
+          "muscle": "calves",
+          "credit": 0.5
+        },
+        {
+          "muscle": "abs",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Kettlebell Clean",
+      "id": "505e4736-4b22-4533-9861-d23a93483991",
+      "current_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        },
+        {
+          "muscle": "abs",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Kettlebell Deadlift",
+      "id": "0e91cd3a-7373-4eff-8abe-83d20ce097d2",
+      "current_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 1
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 1
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "hamstrings",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Kettlebell Snatch",
+      "id": "45f1e311-a8a5-4026-8018-283687594db6",
+      "current_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        },
+        {
+          "muscle": "abs",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Kettlebell Swing",
+      "id": "de70a572-55a5-4970-a06e-cf5c595aa65d",
+      "current_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 1
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 1
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "hamstrings",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Knee-to-Wall Ankle Mobilization",
+      "id": "92a1cb43-2d26-4f61-ab2f-f92d032ec660",
+      "current_credits": [
+        {
+          "muscle": "calves",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Landmine Press",
+      "id": "817baa77-5dd9-4233-9a9d-f0033267e16a",
+      "current_credits": [
+        {
+          "muscle": "chest",
+          "credit": 1
+        },
+        {
+          "muscle": "front_delts",
+          "credit": 0.5
+        },
+        {
+          "muscle": "triceps",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "chest",
+          "credit": 1
+        },
+        {
+          "muscle": "front_delts",
+          "credit": 0.5
+        },
+        {
+          "muscle": "triceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "chest",
+          "credit": 1
+        },
+        {
+          "muscle": "triceps",
+          "credit": 0.5
+        },
+        {
+          "muscle": "front_delts",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Landmine Row",
+      "id": "37f7bb9d-c406-4a2f-bdb0-3ed72e37fbe2",
+      "current_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Lat Pulldown",
+      "id": "98072829-5982-4634-a2cc-d9b0407a68a9",
+      "current_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "reason": "vertical pull missing upper_back secondary credit"
+    },
+    {
+      "exercise": "Lat Stretch",
+      "id": "a3ca1ad2-8b2d-4e61-9732-e3b6ae09e25d",
+      "current_credits": [
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Lateral Bound",
+      "id": "1e4c03ea-a6f6-41cb-b6b6-1b1abd349f61",
+      "current_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        },
+        {
+          "muscle": "quads",
+          "credit": 0.5
+        },
+        {
+          "muscle": "adductors",
+          "credit": 0.5
+        },
+        {
+          "muscle": "calves",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Lateral Lunge",
+      "id": "0ce2c4eb-05a9-4159-8aad-bf6510e11871",
+      "current_credits": [
+        {
+          "muscle": "adductors",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "adductors",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "quads",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Low Row",
+      "id": "0d1ab3b6-39b9-4f03-9c4f-7b8dd080cd66",
+      "current_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "reason": "horizontal row under-credits upper_back (lat-primary enrichment)"
+    },
+    {
+      "exercise": "Machine Pulldown",
+      "id": "252b6022-8632-489b-9687-5b75113f2c07",
+      "current_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "reason": "vertical pull missing upper_back secondary credit"
+    },
+    {
+      "exercise": "Machine Row",
+      "id": "3dbe8693-4929-42ab-b23c-e401ccc5e2d6",
+      "current_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Meadows Row",
+      "id": "ab28ed41-43fa-44fa-854c-9a833a73ad98",
+      "current_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "reason": "horizontal row under-credits upper_back (lat-primary enrichment)"
+    },
+    {
+      "exercise": "Medicine Ball Chest Pass",
+      "id": "039a2c70-8b08-40e3-bea9-640a4cebe078",
+      "current_credits": [
+        {
+          "muscle": "chest",
+          "credit": 1
+        },
+        {
+          "muscle": "triceps",
+          "credit": 0.5
+        },
+        {
+          "muscle": "abs",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Medicine Ball Rotational Throw",
+      "id": "5920effc-9c6c-4a03-a01b-f22ebaaee2f7",
+      "current_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Medicine Ball Slam",
+      "id": "55e879bd-9e26-4f31-99d6-174f29a06c22",
+      "current_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "abs",
+          "credit": 0.5
+        },
+        {
+          "muscle": "triceps",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Mountain Climber",
+      "id": "1a0da77c-aa35-46b6-992e-170f16107610",
+      "current_credits": [
+        {
+          "muscle": "abs",
+          "credit": 0.5
+        },
+        {
+          "muscle": "hip_flexors",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Neck Isometric",
+      "id": "5629d7ee-bd42-4eec-af5f-db79236eabba",
+      "current_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "One-Arm Row",
+      "id": "103403c0-4e2e-4aa6-a2b6-4e2002746e78",
+      "current_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "reason": "horizontal row under-credits upper_back (lat-primary enrichment)"
+    },
+    {
+      "exercise": "Overhead Carry",
+      "id": "2154a6e6-da33-4ab2-96a2-60e550d3acc7",
+      "current_credits": [
+        {
+          "muscle": "side_delts",
+          "credit": 0.5
+        },
+        {
+          "muscle": "front_delts",
+          "credit": 0.5
+        },
+        {
+          "muscle": "abs",
+          "credit": 0.5
+        },
+        {
+          "muscle": "obliques",
+          "credit": 0.5
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Pec Deck",
+      "id": "1214dd4a-3ec3-4b05-9e3e-4957dfed4117",
+      "current_credits": [
+        {
+          "muscle": "chest",
+          "credit": 1
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "chest",
+          "credit": 1
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "chest",
+          "credit": 1
+        },
+        {
+          "muscle": "front_delts",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Pendlay Row",
+      "id": "97ae9c44-3765-48fa-9ea4-403a8cd0961e",
+      "current_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Plank",
+      "id": "174802b9-d21f-4e5d-92c5-69357c56a9a3",
+      "current_credits": [
+        {
+          "muscle": "abs",
+          "credit": 1
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "abs",
+          "credit": 1
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "abs",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Pogo Jump",
+      "id": "cc607a7f-32d8-4ebf-8fa5-c81d3a9310ff",
+      "current_credits": [
+        {
+          "muscle": "calves",
+          "credit": 1
+        },
+        {
+          "muscle": "quads",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Power Clean",
+      "id": "7b05f006-f8c2-47c7-8ab4-cb98582aca21",
+      "current_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        },
+        {
+          "muscle": "quads",
+          "credit": 0.5
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "front_delts",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Power Snatch",
+      "id": "721c359f-ba79-4862-a99f-072f99bdad9c",
+      "current_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        },
+        {
+          "muscle": "quads",
+          "credit": 0.5
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Pull-Through",
+      "id": "c3bc7b23-c354-4ff3-a4d7-d924afd0898a",
+      "current_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 1
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 1
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "hamstrings",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Pull-Up",
+      "id": "20d8dac5-7bc1-410c-bfe6-1ee8c5dac75d",
+      "current_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "reason": "vertical pull missing upper_back secondary credit"
+    },
+    {
+      "exercise": "Pull-Up Work",
+      "id": "cf93e392-4104-4738-8739-a9cdeae5cead",
+      "current_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "reason": "vertical pull missing upper_back secondary credit"
+    },
+    {
+      "exercise": "Pullover",
+      "id": "d840c153-8d70-4c55-8a09-34cb76e1a765",
+      "current_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "chest",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Push Jerk",
+      "id": "12c93f38-2ae4-4e0d-8a56-97856720e0ba",
+      "current_credits": [
+        {
+          "muscle": "front_delts",
+          "credit": 0.5
+        },
+        {
+          "muscle": "triceps",
+          "credit": 0.5
+        },
+        {
+          "muscle": "quads",
+          "credit": 0.5
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Push Press",
+      "id": "a4b52a18-914c-4ccb-a751-40008c65c787",
+      "current_credits": [
+        {
+          "muscle": "front_delts",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "front_delts",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "front_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "triceps",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Quad Stretch",
+      "id": "409c9f46-6e92-4668-9bd7-40134d8565d8",
+      "current_credits": [
+        {
+          "muscle": "quads",
+          "credit": 0.5
+        },
+        {
+          "muscle": "hip_flexors",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Rear Delt Row",
+      "id": "12b1ada8-ad85-4acc-bb9b-590c1043c8ac",
+      "current_credits": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "reason": "horizontal row under-credits upper_back (lat-primary enrichment)"
+    },
+    {
+      "exercise": "Renegade Row",
+      "id": "ed62278e-1dd1-4405-b664-58b7c522094e",
+      "current_credits": [
+        {
+          "muscle": "abs",
+          "credit": 1
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "abs",
+          "credit": 1
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "reason": "horizontal row under-credits upper_back (lat-primary enrichment)"
+    },
+    {
+      "exercise": "Reverse Curl",
+      "id": "d2cd1ec2-70b3-4729-a817-320f10cdac9e",
+      "current_credits": [
+        {
+          "muscle": "forearms",
+          "credit": 1
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "forearms",
+          "credit": 1
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "biceps",
+          "credit": 1
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Reverse Fly",
+      "id": "c1354932-52ae-4e3e-b324-e456cab5e732",
+      "current_credits": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Reverse Hyperextension",
+      "id": "d110b5c0-88b7-4153-948c-2e5c00f51217",
+      "current_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 1
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 1
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "hamstrings",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Reverse Pec Deck",
+      "id": "72059bad-25d5-41c3-8d1f-e00c9dfad908",
+      "current_credits": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "rear_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Reverse Wrist Curl",
+      "id": "82d43e08-7505-45f9-a1e0-aaecdd7858bb",
+      "current_credits": [
+        {
+          "muscle": "forearms",
+          "credit": 1
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "forearms",
+          "credit": 1
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "biceps",
+          "credit": 1
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Rope Climb",
+      "id": "ec94b7bf-d245-442c-8717-cebaea168527",
+      "current_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "reason": "vertical pull missing upper_back secondary credit"
+    },
+    {
+      "exercise": "Row",
+      "id": "48d59b70-83bf-4ca4-94e2-ae90894570f2",
+      "current_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Row Ergometer",
+      "id": "eae46ace-0eab-41c7-9568-5a4683d2fc46",
+      "current_credits": [
+        {
+          "muscle": "abs",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Scapular Pull-Up",
+      "id": "aa95b5b4-26ee-4511-849f-5bfe20987760",
+      "current_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Scapular Push-Up",
+      "id": "08e24827-ccce-42a6-ad6f-6ec0bd9a09d8",
+      "current_credits": [
+        {
+          "muscle": "abs",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Seal Row",
+      "id": "feca6736-ca50-4bb6-955d-c3a0215e2fb3",
+      "current_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Shoulder Dislocate",
+      "id": "633073c0-fb92-460e-be50-b088c98952fd",
+      "current_credits": [
+        {
+          "muscle": "chest",
+          "credit": 0.5
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Single-Leg Balance",
+      "id": "21b9c703-46c4-47b5-9d2a-98792c53dade",
+      "current_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        },
+        {
+          "muscle": "abs",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Sled Pull",
+      "id": "2ee5d391-aa46-4905-97d0-70e57375bf93",
+      "current_credits": [
+        {
+          "muscle": "forearms",
+          "credit": 0.5
+        },
+        {
+          "muscle": "abs",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Sled Push",
+      "id": "9b559159-e018-4527-9c84-5f253f008fff",
+      "current_credits": [
+        {
+          "muscle": "quads",
+          "credit": 0.5
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        },
+        {
+          "muscle": "calves",
+          "credit": 0.5
+        },
+        {
+          "muscle": "abs",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Snatch",
+      "id": "9bffdf02-8b76-4324-b3e6-c0760cfa739d",
+      "current_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        },
+        {
+          "muscle": "quads",
+          "credit": 0.5
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "front_delts",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Split Jerk",
+      "id": "9308dd1a-e3db-4fda-a234-b697c8b0cbe3",
+      "current_credits": [
+        {
+          "muscle": "front_delts",
+          "credit": 0.5
+        },
+        {
+          "muscle": "triceps",
+          "credit": 0.5
+        },
+        {
+          "muscle": "quads",
+          "credit": 0.5
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Squat Jump",
+      "id": "ca0b1d74-8ddf-4859-9912-365c352ac403",
+      "current_credits": [
+        {
+          "muscle": "quads",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        },
+        {
+          "muscle": "calves",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Stair Climber",
+      "id": "243106d7-8a5b-441c-a07b-2829e27a446e",
+      "current_credits": [
+        {
+          "muscle": "quads",
+          "credit": 0.5
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        },
+        {
+          "muscle": "calves",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Straight-Arm Pulldown",
+      "id": "cbc9e466-ba31-4aec-b1af-4e10ac8c84ae",
+      "current_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "reason": "vertical pull missing upper_back secondary credit"
+    },
+    {
+      "exercise": "Suitcase Carry",
+      "id": "57cedbf6-513d-4966-a598-5c69bcdf2792",
+      "current_credits": [
+        {
+          "muscle": "obliques",
+          "credit": 0.5
+        },
+        {
+          "muscle": "abs",
+          "credit": 0.5
+        },
+        {
+          "muscle": "forearms",
+          "credit": 0.5
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Sumo Deadlift",
+      "id": "06faab21-b716-452c-9922-af20acc29832",
+      "current_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 1
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 1
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "hamstrings",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Sumo Squat",
+      "id": "ab2059a7-2359-42d0-894b-4c83177f1f2e",
+      "current_credits": [
+        {
+          "muscle": "adductors",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "adductors",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "quads",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "T Raise",
+      "id": "6bc14263-260d-4d7a-855b-1085d06df7bf",
+      "current_credits": [
+        {
+          "muscle": "rear_delts",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "T-Bar Row",
+      "id": "e86eb7a8-08c3-498c-bd71-fd5be1b8f67b",
+      "current_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "lats",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "reason": "horizontal row under-credits upper_back (lat-primary enrichment)"
+    },
+    {
+      "exercise": "Thoracic Rotation",
+      "id": "78835aa5-aaa9-408a-ba29-92d4abb0906a",
+      "current_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Trap Bar Deadlift",
+      "id": "3bbba7b8-12fe-4d1e-bcf6-07fe137e6714",
+      "current_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 1
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 1
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "hamstrings",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Treadmill Run",
+      "id": "dda979d7-9234-46d6-9f37-0cb3ce811bb5",
+      "current_credits": [
+        {
+          "muscle": "quads",
+          "credit": 0.5
+        },
+        {
+          "muscle": "calves",
+          "credit": 0.5
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Treadmill Walk",
+      "id": "7f499115-0667-4e79-b4b8-b666dd4c1666",
+      "current_credits": [
+        {
+          "muscle": "calves",
+          "credit": 0.5
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Turkish Get-Up",
+      "id": "53847d44-17c8-41e8-9a65-b7c028a1ffa0",
+      "current_credits": [
+        {
+          "muscle": "abs",
+          "credit": 1
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "abs",
+          "credit": 1
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "abs",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Walking Knee Hug",
+      "id": "a4c231d9-fb2e-44a2-9ed0-4c276448b5d5",
+      "current_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        },
+        {
+          "muscle": "hip_flexors",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Walking Quad Stretch",
+      "id": "a3f38095-5c1d-4594-9069-2db5144afdfc",
+      "current_credits": [
+        {
+          "muscle": "quads",
+          "credit": 0.5
+        },
+        {
+          "muscle": "hip_flexors",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Wall Slide",
+      "id": "ffceb07e-352f-4592-b67b-b0b2347480b0",
+      "current_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Windmill",
+      "id": "aff0e6bc-6e00-4558-a6f4-4dd3ef0851f4",
+      "current_credits": [
+        {
+          "muscle": "obliques",
+          "credit": 1
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "obliques",
+          "credit": 1
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "obliques",
+          "credit": 1
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "World's Greatest Stretch",
+      "id": "65ce1dd8-9fe6-496d-845a-b57041e48461",
+      "current_credits": [
+        {
+          "muscle": "hip_flexors",
+          "credit": 0.5
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Wrist Curl",
+      "id": "d0cb2c38-35a2-4110-b60a-19779655c940",
+      "current_credits": [
+        {
+          "muscle": "forearms",
+          "credit": 1
+        }
+      ],
+      "stored_credits": [
+        {
+          "muscle": "forearms",
+          "credit": 1
+        }
+      ],
+      "proposed_credits": [
+        {
+          "muscle": "biceps",
+          "credit": 1
+        }
+      ],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Wrist Pronation/Supination",
+      "id": "87f1f31b-ae84-4a42-877f-8b3117b645a0",
+      "current_credits": [
+        {
+          "muscle": "forearms",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    },
+    {
+      "exercise": "Y Raise",
+      "id": "e6ce20a4-71de-45c4-a5f1-4f49cb66f9f8",
+      "current_credits": [
+        {
+          "muscle": "upper_back",
+          "credit": 1
+        },
+        {
+          "muscle": "rear_delts",
+          "credit": 0.5
+        }
+      ],
+      "stored_credits": [],
+      "proposed_credits": [],
+      "reason": "align stored/runtime credits with proposed pattern model"
+    }
+  ],
+  "ai_call": {
+    "skipped": false,
+    "model": "gpt-5.4-2026-03-05",
+    "latency_note": "single design call, no deterministic repair",
+    "error": null,
+    "input_tokens": 15306,
+    "output_tokens": 3769,
+    "reasoning_tokens": 165
+  },
+  "rejected_ai_week": {
+    "summary": "Week 1 uses three complementary full-body hypertrophy sessions with different lead patterns across the week. One session includes a non-competing superset to match the \"sometimes\" preference.",
+    "coaching_notes": "Keep 1-3 RIR on most work and add load or reps only when all sets land cleanly in range. Move smoothly on warm-ups and save fatigue for the strength work.",
+    "workouts": [
+      {
+        "day": "Mon",
+        "name": "Full Body A - Pull and Squat Bias",
+        "emphasis": "Vertical pull, quad-dominant lower body, chest support work",
+        "strength": [
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "id": "20b6559e-1e94-4db6-873a-548f85234747",
+                "name": "Chin-Up",
+                "role": "primary",
+                "sets": 4,
+                "reps": "6-8",
+                "rest": 120
+              }
+            ]
+          },
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "id": "d41fb856-4c58-41fc-903a-9a1c42594f81",
+                "name": "Tempo Squat",
+                "role": "primary",
+                "sets": 4,
+                "reps": "8-10",
+                "rest": 120
+              }
+            ]
+          },
+          {
+            "type": "superset",
+            "exercises": [
+              {
+                "id": "9479211f-b4d7-47bd-b69f-5da631d061bd",
+                "name": "Dip",
+                "role": "secondary",
+                "sets": 3,
+                "reps": "8-12",
+                "rest": 75
+              },
+              {
+                "id": "4b6225db-034a-4bd8-96c8-12865b125f28",
+                "name": "Back Extension",
+                "role": "accessory",
+                "sets": 3,
+                "reps": "10-15",
+                "rest": 75
+              }
+            ]
+          },
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "id": "26781050-0c19-43f3-b026-d26fa79c5630",
+                "name": "Bulgarian Split Squat",
+                "role": "secondary",
+                "sets": 3,
+                "reps": "8-10",
+                "rest": 90
+              }
+            ]
+          },
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "id": "229752e2-29ec-4697-8389-138313dd5a40",
+                "name": "Standing Calf Raise",
+                "role": "isolation",
+                "sets": 3,
+                "reps": "10-15",
+                "rest": 60
+              }
+            ]
+          },
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "id": "58660663-1065-4529-9d8f-23f6d90beae4",
+                "name": "Russian Twist",
+                "role": "accessory",
+                "sets": 2,
+                "reps": "14-20",
+                "rest": 45
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "day": "Wed",
+        "name": "Full Body B - Hinge and Push Bias",
+        "emphasis": "Posterior chain, chest/triceps volume, unilateral leg work",
+        "strength": [
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "id": "014b8ff9-c2d4-4b56-b4b9-8e2c3a4a9ed1",
+                "name": "Single-Leg Romanian Deadlift",
+                "role": "primary",
+                "sets": 4,
+                "reps": "8-10",
+                "rest": 105
+              }
+            ]
+          },
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "id": "f39db302-48a4-47c8-8090-9eb85cae64ad",
+                "name": "Decline Push-Up",
+                "role": "primary",
+                "sets": 4,
+                "reps": "10-15",
+                "rest": 90
+              }
+            ]
+          },
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "id": "20d8dac5-7bc1-410c-bfe6-1ee8c5dac75d",
+                "name": "Pull-Up",
+                "role": "secondary",
+                "sets": 3,
+                "reps": "6-10",
+                "rest": 120
+              }
+            ]
+          },
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "id": "a42ebeaf-d52e-431c-9494-e01a7f54d92e",
+                "name": "Reverse Lunge",
+                "role": "secondary",
+                "sets": 3,
+                "reps": "10-12",
+                "rest": 75
+              }
+            ]
+          },
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "id": "d110b5c0-88b7-4153-948c-2e5c00f51217",
+                "name": "Reverse Hyperextension",
+                "role": "accessory",
+                "sets": 3,
+                "reps": "12-15",
+                "rest": 60
+              }
+            ]
+          },
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "id": "2518d126-a855-4189-b388-1cd41db3e00d",
+                "name": "Copenhagen Plank",
+                "role": "isolation",
+                "sets": 2,
+                "reps": "20-30",
+                "rest": 45
+              },
+              {
+                "id": "e9a2fc5b-0c2e-49a7-b04f-267bfb8545e9",
+                "name": "Single-Leg Calf Raise",
+                "role": "isolation",
+                "sets": 2,
+                "reps": "12-15",
+                "rest": 45
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "day": "Fri",
+        "name": "Full Body C - Mixed Volume and Stability",
+        "emphasis": "Chest and back balance, glute-quad accessory volume, core stability",
+        "strength": [
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "id": "9479211f-b4d7-47bd-b69f-5da631d061bd",
+                "name": "Dip",
+                "role": "primary",
+                "sets": 4,
+                "reps": "6-10",
+                "rest": 105
+              },
+              {
+                "id": "cf93e392-4104-4738-8739-a9cdeae5cead",
+                "name": "Pull-Up Work",
+                "role": "primary",
+                "sets": 4,
+                "reps": "6-10",
+                "rest": 105
+              }
+            ]
+          },
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "id": "678c27d4-9e11-41f9-bdb0-acb97b7d3dd7",
+                "name": "Step-Up",
+                "role": "secondary",
+                "sets": 3,
+                "reps": "8-10",
+                "rest": 75
+              }
+            ]
+          },
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "id": "849737e2-72d3-4315-8239-7ba35c822329",
+                "name": "Glute Bridge",
+                "role": "secondary",
+                "sets": 3,
+                "reps": "10-15",
+                "rest": 75
+              }
+            ]
+          },
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "id": "f900c996-1150-4caa-8d67-17ffa42f0ae7",
+                "name": "Nordic Hamstring Curl",
+                "role": "isolation",
+                "sets": 2,
+                "reps": "5-8",
+                "rest": 90
+              }
+            ]
+          },
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "id": "10bbf3da-adb6-4640-9911-eb571da573fc",
+                "name": "Bench Dip",
+                "role": "accessory",
+                "sets": 2,
+                "reps": "10-15",
+                "rest": 60
+              }
+            ]
+          },
+          {
+            "type": "straight_sets",
+            "exercises": [
+              {
+                "id": "5b650cbf-8d44-496c-8de5-df4541eaf448",
+                "name": "Plank Shoulder Tap",
+                "role": "accessory",
+                "sets": 2,
+                "reps": "20-30",
+                "rest": 45
+              },
+              {
+                "id": "229752e2-29ec-4697-8389-138313dd5a40",
+                "name": "Standing Calf Raise",
+                "role": "isolation",
+                "sets": 2,
+                "reps": "12-18",
+                "rest": 45
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "per_exercise_trace": [
+    {
+      "day": "Mon",
+      "name": "Chin-Up",
+      "catalog_id": "20b6559e-1e94-4db6-873a-548f85234747",
+      "sets": 4,
+      "role": "primary",
+      "movement_pattern": "vertical_pull",
+      "catalog_primary_muscles": [
+        "lats"
+      ],
+      "catalog_secondary_muscles": [
+        "biceps",
+        "upper_back"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_contribution_map": [
+        {
+          "muscle": "lats",
+          "contribution": 1
+        },
+        {
+          "muscle": "biceps",
+          "contribution": 0.5
+        }
+      ],
+      "current_set_credits": {
+        "lats": 4,
+        "biceps": 2
+      },
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_set_credits": {
+        "lats": 4,
+        "upper_back": 2,
+        "biceps": 2
+      }
+    },
+    {
+      "day": "Mon",
+      "name": "Tempo Squat",
+      "catalog_id": "d41fb856-4c58-41fc-903a-9a1c42594f81",
+      "sets": 4,
+      "role": "primary",
+      "movement_pattern": "squat",
+      "catalog_primary_muscles": [
+        "quads"
+      ],
+      "catalog_secondary_muscles": [
+        "glutes",
+        "abs"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "quads",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "current_contribution_map": [
+        {
+          "muscle": "quads",
+          "contribution": 1
+        },
+        {
+          "muscle": "glutes",
+          "contribution": 0.5
+        }
+      ],
+      "current_set_credits": {
+        "quads": 4,
+        "glutes": 2
+      },
+      "proposed_credits": [
+        {
+          "muscle": "quads",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "proposed_set_credits": {
+        "quads": 4,
+        "glutes": 2
+      }
+    },
+    {
+      "day": "Mon",
+      "name": "Dip",
+      "catalog_id": "9479211f-b4d7-47bd-b69f-5da631d061bd",
+      "sets": 3,
+      "role": "secondary",
+      "movement_pattern": "vertical_push",
+      "catalog_primary_muscles": [
+        "chest"
+      ],
+      "catalog_secondary_muscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "chest",
+          "credit": 1
+        },
+        {
+          "muscle": "triceps",
+          "credit": 0.5
+        }
+      ],
+      "current_contribution_map": [
+        {
+          "muscle": "chest",
+          "contribution": 1
+        },
+        {
+          "muscle": "triceps",
+          "contribution": 0.5
+        }
+      ],
+      "current_set_credits": {
+        "chest": 3,
+        "triceps": 1.5
+      },
+      "proposed_credits": [
+        {
+          "muscle": "front_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "triceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_set_credits": {
+        "front_delts": 3,
+        "triceps": 1.5
+      }
+    },
+    {
+      "day": "Mon",
+      "name": "Back Extension",
+      "catalog_id": "4b6225db-034a-4bd8-96c8-12865b125f28",
+      "sets": 3,
+      "role": "accessory",
+      "movement_pattern": "hinge",
+      "catalog_primary_muscles": [
+        "spinal_erectors"
+      ],
+      "catalog_secondary_muscles": [
+        "glutes",
+        "hamstrings"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "spinal_erectors",
+          "credit": 1
+        }
+      ],
+      "current_contribution_map": [
+        {
+          "muscle": "spinal_erectors",
+          "contribution": 1
+        }
+      ],
+      "current_set_credits": {
+        "spinal_erectors": 3
+      },
+      "proposed_credits": [
+        {
+          "muscle": "hamstrings",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "proposed_set_credits": {
+        "hamstrings": 3,
+        "glutes": 1.5
+      }
+    },
+    {
+      "day": "Mon",
+      "name": "Bulgarian Split Squat",
+      "catalog_id": "26781050-0c19-43f3-b026-d26fa79c5630",
+      "sets": 3,
+      "role": "secondary",
+      "movement_pattern": "lunge",
+      "catalog_primary_muscles": [
+        "quads"
+      ],
+      "catalog_secondary_muscles": [
+        "glutes",
+        "adductors"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "quads",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "current_contribution_map": [
+        {
+          "muscle": "quads",
+          "contribution": 1
+        },
+        {
+          "muscle": "glutes",
+          "contribution": 0.5
+        }
+      ],
+      "current_set_credits": {
+        "quads": 3,
+        "glutes": 1.5
+      },
+      "proposed_credits": [
+        {
+          "muscle": "quads",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "proposed_set_credits": {
+        "quads": 3,
+        "glutes": 1.5
+      }
+    },
+    {
+      "day": "Mon",
+      "name": "Standing Calf Raise",
+      "catalog_id": "229752e2-29ec-4697-8389-138313dd5a40",
+      "sets": 3,
+      "role": "isolation",
+      "movement_pattern": "calf_raise",
+      "catalog_primary_muscles": [
+        "calves"
+      ],
+      "catalog_secondary_muscles": [],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "calves",
+          "credit": 1
+        }
+      ],
+      "current_contribution_map": [
+        {
+          "muscle": "calves",
+          "contribution": 1
+        }
+      ],
+      "current_set_credits": {
+        "calves": 3
+      },
+      "proposed_credits": [
+        {
+          "muscle": "calves",
+          "credit": 1
+        }
+      ],
+      "proposed_set_credits": {
+        "calves": 3
+      }
+    },
+    {
+      "day": "Mon",
+      "name": "Russian Twist",
+      "catalog_id": "58660663-1065-4529-9d8f-23f6d90beae4",
+      "sets": 2,
+      "role": "accessory",
+      "movement_pattern": "core_rotation",
+      "catalog_primary_muscles": [
+        "obliques"
+      ],
+      "catalog_secondary_muscles": [
+        "abs",
+        "hip_flexors"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "obliques",
+          "credit": 1
+        }
+      ],
+      "current_contribution_map": [
+        {
+          "muscle": "obliques",
+          "contribution": 1
+        }
+      ],
+      "current_set_credits": {
+        "obliques": 2
+      },
+      "proposed_credits": [
+        {
+          "muscle": "obliques",
+          "credit": 1
+        }
+      ],
+      "proposed_set_credits": {
+        "obliques": 2
+      }
+    },
+    {
+      "day": "Wed",
+      "name": "Single-Leg Romanian Deadlift",
+      "catalog_id": "014b8ff9-c2d4-4b56-b4b9-8e2c3a4a9ed1",
+      "sets": 4,
+      "role": "primary",
+      "movement_pattern": "hinge",
+      "catalog_primary_muscles": [
+        "hamstrings"
+      ],
+      "catalog_secondary_muscles": [
+        "glutes",
+        "abs"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "hamstrings",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "current_contribution_map": [
+        {
+          "muscle": "hamstrings",
+          "contribution": 1
+        },
+        {
+          "muscle": "glutes",
+          "contribution": 0.5
+        }
+      ],
+      "current_set_credits": {
+        "hamstrings": 4,
+        "glutes": 2
+      },
+      "proposed_credits": [
+        {
+          "muscle": "hamstrings",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "proposed_set_credits": {
+        "hamstrings": 4,
+        "glutes": 2
+      }
+    },
+    {
+      "day": "Wed",
+      "name": "Decline Push-Up",
+      "catalog_id": "f39db302-48a4-47c8-8090-9eb85cae64ad",
+      "sets": 4,
+      "role": "primary",
+      "movement_pattern": "horizontal_push",
+      "catalog_primary_muscles": [
+        "chest"
+      ],
+      "catalog_secondary_muscles": [
+        "triceps",
+        "front_delts",
+        "abs"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "chest",
+          "credit": 1
+        },
+        {
+          "muscle": "triceps",
+          "credit": 0.5
+        },
+        {
+          "muscle": "front_delts",
+          "credit": 0.5
+        }
+      ],
+      "current_contribution_map": [
+        {
+          "muscle": "chest",
+          "contribution": 1
+        },
+        {
+          "muscle": "triceps",
+          "contribution": 0.5
+        },
+        {
+          "muscle": "front_delts",
+          "contribution": 0.5
+        }
+      ],
+      "current_set_credits": {
+        "chest": 4,
+        "triceps": 2,
+        "front_delts": 2
+      },
+      "proposed_credits": [
+        {
+          "muscle": "chest",
+          "credit": 1
+        },
+        {
+          "muscle": "triceps",
+          "credit": 0.5
+        },
+        {
+          "muscle": "front_delts",
+          "credit": 0.5
+        }
+      ],
+      "proposed_set_credits": {
+        "chest": 4,
+        "triceps": 2,
+        "front_delts": 2
+      }
+    },
+    {
+      "day": "Wed",
+      "name": "Pull-Up",
+      "catalog_id": "20d8dac5-7bc1-410c-bfe6-1ee8c5dac75d",
+      "sets": 3,
+      "role": "secondary",
+      "movement_pattern": "vertical_pull",
+      "catalog_primary_muscles": [
+        "lats"
+      ],
+      "catalog_secondary_muscles": [
+        "biceps",
+        "upper_back",
+        "abs"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_contribution_map": [
+        {
+          "muscle": "lats",
+          "contribution": 1
+        },
+        {
+          "muscle": "biceps",
+          "contribution": 0.5
+        }
+      ],
+      "current_set_credits": {
+        "lats": 3,
+        "biceps": 1.5
+      },
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_set_credits": {
+        "lats": 3,
+        "upper_back": 1.5,
+        "biceps": 1.5
+      }
+    },
+    {
+      "day": "Wed",
+      "name": "Reverse Lunge",
+      "catalog_id": "a42ebeaf-d52e-431c-9494-e01a7f54d92e",
+      "sets": 3,
+      "role": "secondary",
+      "movement_pattern": "lunge",
+      "catalog_primary_muscles": [
+        "quads"
+      ],
+      "catalog_secondary_muscles": [
+        "glutes",
+        "adductors"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "quads",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "current_contribution_map": [
+        {
+          "muscle": "quads",
+          "contribution": 1
+        },
+        {
+          "muscle": "glutes",
+          "contribution": 0.5
+        }
+      ],
+      "current_set_credits": {
+        "quads": 3,
+        "glutes": 1.5
+      },
+      "proposed_credits": [
+        {
+          "muscle": "quads",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "proposed_set_credits": {
+        "quads": 3,
+        "glutes": 1.5
+      }
+    },
+    {
+      "day": "Wed",
+      "name": "Reverse Hyperextension",
+      "catalog_id": "d110b5c0-88b7-4153-948c-2e5c00f51217",
+      "sets": 3,
+      "role": "accessory",
+      "movement_pattern": "hinge",
+      "catalog_primary_muscles": [
+        "glutes"
+      ],
+      "catalog_secondary_muscles": [
+        "hamstrings",
+        "spinal_erectors"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 1
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        }
+      ],
+      "current_contribution_map": [
+        {
+          "muscle": "glutes",
+          "contribution": 1
+        },
+        {
+          "muscle": "hamstrings",
+          "contribution": 0.5
+        }
+      ],
+      "current_set_credits": {
+        "glutes": 3,
+        "hamstrings": 1.5
+      },
+      "proposed_credits": [
+        {
+          "muscle": "hamstrings",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "proposed_set_credits": {
+        "hamstrings": 3,
+        "glutes": 1.5
+      }
+    },
+    {
+      "day": "Wed",
+      "name": "Copenhagen Plank",
+      "catalog_id": "2518d126-a855-4189-b388-1cd41db3e00d",
+      "sets": 2,
+      "role": "isolation",
+      "movement_pattern": "core_anti_lateral_flexion",
+      "catalog_primary_muscles": [
+        "adductors"
+      ],
+      "catalog_secondary_muscles": [
+        "obliques",
+        "abs"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "adductors",
+          "credit": 1
+        }
+      ],
+      "current_contribution_map": [
+        {
+          "muscle": "adductors",
+          "contribution": 1
+        }
+      ],
+      "current_set_credits": {
+        "adductors": 2
+      },
+      "proposed_credits": [
+        {
+          "muscle": "adductors",
+          "credit": 1
+        }
+      ],
+      "proposed_set_credits": {
+        "adductors": 2
+      }
+    },
+    {
+      "day": "Wed",
+      "name": "Single-Leg Calf Raise",
+      "catalog_id": "e9a2fc5b-0c2e-49a7-b04f-267bfb8545e9",
+      "sets": 2,
+      "role": "isolation",
+      "movement_pattern": "calf_raise",
+      "catalog_primary_muscles": [
+        "calves"
+      ],
+      "catalog_secondary_muscles": [],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "calves",
+          "credit": 1
+        }
+      ],
+      "current_contribution_map": [
+        {
+          "muscle": "calves",
+          "contribution": 1
+        }
+      ],
+      "current_set_credits": {
+        "calves": 2
+      },
+      "proposed_credits": [
+        {
+          "muscle": "calves",
+          "credit": 1
+        }
+      ],
+      "proposed_set_credits": {
+        "calves": 2
+      }
+    },
+    {
+      "day": "Fri",
+      "name": "Dip",
+      "catalog_id": "9479211f-b4d7-47bd-b69f-5da631d061bd",
+      "sets": 4,
+      "role": "primary",
+      "movement_pattern": "vertical_push",
+      "catalog_primary_muscles": [
+        "chest"
+      ],
+      "catalog_secondary_muscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "chest",
+          "credit": 1
+        },
+        {
+          "muscle": "triceps",
+          "credit": 0.5
+        }
+      ],
+      "current_contribution_map": [
+        {
+          "muscle": "chest",
+          "contribution": 1
+        },
+        {
+          "muscle": "triceps",
+          "contribution": 0.5
+        }
+      ],
+      "current_set_credits": {
+        "chest": 4,
+        "triceps": 2
+      },
+      "proposed_credits": [
+        {
+          "muscle": "front_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "triceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_set_credits": {
+        "front_delts": 4,
+        "triceps": 2
+      }
+    },
+    {
+      "day": "Fri",
+      "name": "Pull-Up Work",
+      "catalog_id": "cf93e392-4104-4738-8739-a9cdeae5cead",
+      "sets": 4,
+      "role": "primary",
+      "movement_pattern": "vertical_pull",
+      "catalog_primary_muscles": [
+        "lats"
+      ],
+      "catalog_secondary_muscles": [
+        "biceps",
+        "upper_back"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "current_contribution_map": [
+        {
+          "muscle": "lats",
+          "contribution": 1
+        },
+        {
+          "muscle": "biceps",
+          "contribution": 0.5
+        }
+      ],
+      "current_set_credits": {
+        "lats": 4,
+        "biceps": 2
+      },
+      "proposed_credits": [
+        {
+          "muscle": "lats",
+          "credit": 1
+        },
+        {
+          "muscle": "upper_back",
+          "credit": 0.5
+        },
+        {
+          "muscle": "biceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_set_credits": {
+        "lats": 4,
+        "upper_back": 2,
+        "biceps": 2
+      }
+    },
+    {
+      "day": "Fri",
+      "name": "Step-Up",
+      "catalog_id": "678c27d4-9e11-41f9-bdb0-acb97b7d3dd7",
+      "sets": 3,
+      "role": "secondary",
+      "movement_pattern": "lunge",
+      "catalog_primary_muscles": [
+        "quads"
+      ],
+      "catalog_secondary_muscles": [
+        "glutes",
+        "hamstrings"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "quads",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "current_contribution_map": [
+        {
+          "muscle": "quads",
+          "contribution": 1
+        },
+        {
+          "muscle": "glutes",
+          "contribution": 0.5
+        }
+      ],
+      "current_set_credits": {
+        "quads": 3,
+        "glutes": 1.5
+      },
+      "proposed_credits": [
+        {
+          "muscle": "quads",
+          "credit": 1
+        },
+        {
+          "muscle": "glutes",
+          "credit": 0.5
+        }
+      ],
+      "proposed_set_credits": {
+        "quads": 3,
+        "glutes": 1.5
+      }
+    },
+    {
+      "day": "Fri",
+      "name": "Glute Bridge",
+      "catalog_id": "849737e2-72d3-4315-8239-7ba35c822329",
+      "sets": 3,
+      "role": "secondary",
+      "movement_pattern": "hinge",
+      "catalog_primary_muscles": [
+        "glutes"
+      ],
+      "catalog_secondary_muscles": [
+        "hamstrings"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 1
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        }
+      ],
+      "current_contribution_map": [
+        {
+          "muscle": "glutes",
+          "contribution": 1
+        },
+        {
+          "muscle": "hamstrings",
+          "contribution": 0.5
+        }
+      ],
+      "current_set_credits": {
+        "glutes": 3,
+        "hamstrings": 1.5
+      },
+      "proposed_credits": [
+        {
+          "muscle": "glutes",
+          "credit": 1
+        },
+        {
+          "muscle": "hamstrings",
+          "credit": 0.5
+        }
+      ],
+      "proposed_set_credits": {
+        "glutes": 3,
+        "hamstrings": 1.5
+      }
+    },
+    {
+      "day": "Fri",
+      "name": "Nordic Hamstring Curl",
+      "catalog_id": "f900c996-1150-4caa-8d67-17ffa42f0ae7",
+      "sets": 2,
+      "role": "isolation",
+      "movement_pattern": "knee_flexion",
+      "catalog_primary_muscles": [
+        "hamstrings"
+      ],
+      "catalog_secondary_muscles": [
+        "glutes",
+        "calves"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "hamstrings",
+          "credit": 1
+        }
+      ],
+      "current_contribution_map": [
+        {
+          "muscle": "hamstrings",
+          "contribution": 1
+        }
+      ],
+      "current_set_credits": {
+        "hamstrings": 2
+      },
+      "proposed_credits": [
+        {
+          "muscle": "hamstrings",
+          "credit": 1
+        }
+      ],
+      "proposed_set_credits": {
+        "hamstrings": 2
+      }
+    },
+    {
+      "day": "Fri",
+      "name": "Bench Dip",
+      "catalog_id": "10bbf3da-adb6-4640-9911-eb571da573fc",
+      "sets": 2,
+      "role": "accessory",
+      "movement_pattern": "vertical_push",
+      "catalog_primary_muscles": [
+        "triceps"
+      ],
+      "catalog_secondary_muscles": [
+        "chest",
+        "front_delts"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "triceps",
+          "credit": 1
+        }
+      ],
+      "current_contribution_map": [
+        {
+          "muscle": "triceps",
+          "contribution": 1
+        }
+      ],
+      "current_set_credits": {
+        "triceps": 2
+      },
+      "proposed_credits": [
+        {
+          "muscle": "front_delts",
+          "credit": 1
+        },
+        {
+          "muscle": "triceps",
+          "credit": 0.5
+        }
+      ],
+      "proposed_set_credits": {
+        "front_delts": 2,
+        "triceps": 1
+      }
+    },
+    {
+      "day": "Fri",
+      "name": "Plank Shoulder Tap",
+      "catalog_id": "5b650cbf-8d44-496c-8de5-df4541eaf448",
+      "sets": 2,
+      "role": "accessory",
+      "movement_pattern": "core_anti_rotation",
+      "catalog_primary_muscles": [
+        "abs"
+      ],
+      "catalog_secondary_muscles": [
+        "obliques"
+      ],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "abs",
+          "credit": 1
+        }
+      ],
+      "current_contribution_map": [
+        {
+          "muscle": "abs",
+          "contribution": 1
+        }
+      ],
+      "current_set_credits": {
+        "abs": 2
+      },
+      "proposed_credits": [
+        {
+          "muscle": "abs",
+          "credit": 1
+        }
+      ],
+      "proposed_set_credits": {
+        "abs": 2
+      }
+    },
+    {
+      "day": "Fri",
+      "name": "Standing Calf Raise",
+      "catalog_id": "229752e2-29ec-4697-8389-138313dd5a40",
+      "sets": 2,
+      "role": "isolation",
+      "movement_pattern": "calf_raise",
+      "catalog_primary_muscles": [
+        "calves"
+      ],
+      "catalog_secondary_muscles": [],
+      "stored_hypertrophy_volume_credits": [
+        {
+          "muscle": "calves",
+          "credit": 1
+        }
+      ],
+      "current_contribution_map": [
+        {
+          "muscle": "calves",
+          "contribution": 1
+        }
+      ],
+      "current_set_credits": {
+        "calves": 2
+      },
+      "proposed_credits": [
+        {
+          "muscle": "calves",
+          "credit": 1
+        }
+      ],
+      "proposed_set_credits": {
+        "calves": 2
+      }
+    }
+  ],
+  "volume_before_after": {
+    "current": {
+      "upper_back": 0,
+      "lats": 11,
+      "rear_delts": 0,
+      "biceps": 5.5,
+      "chest": 11,
+      "quads": 13,
+      "hamstrings": 9,
+      "glutes": 14.5,
+      "front_delts": 2,
+      "side_delts": 0,
+      "triceps": 7.5
+    },
+    "proposed": {
+      "upper_back": 5.5,
+      "lats": 11,
+      "rear_delts": 0,
+      "biceps": 5.5,
+      "chest": 4,
+      "quads": 13,
+      "hamstrings": 13.5,
+      "glutes": 14.5,
+      "front_delts": 11,
+      "side_delts": 0,
+      "triceps": 6.5
+    },
+    "targets": {
+      "upper_back": 10,
+      "lats": 10,
+      "rear_delts": 6,
+      "biceps": 6,
+      "chest": 10,
+      "quads": 10,
+      "hamstrings": 10,
+      "glutes": 10,
+      "front_delts": 6,
+      "side_delts": 6,
+      "triceps": 6
+    }
+  },
+  "why_upper_back_is_low": {
+    "current_upper_back": 0,
+    "proposed_upper_back": 5.5,
+    "target": 10,
+    "error_threshold_equivalent_sets": 5,
+    "explanation": "Current runtime often gives vertical pulls lats 1.0 and only 0.5 upper_back (via name-default merge). Rows were enriched as lat-primary so they also give upper_back 0.5 instead of 1.0. A week of chin-ups/pull-ups without a true row lands near 1.5–3 equivalent upper_back sets."
+  },
+  "would_pass_after_correction": {
+    "current_validator_ok": false,
+    "current_errors": [
+      "World's Greatest Stretch is bilateral and cannot be prescribed /side",
+      "Doorway Pec Stretch is bilateral and cannot be prescribed /side",
+      "Hamstring Stretch is bilateral and cannot be prescribed /side",
+      "Lat Stretch is bilateral and cannot be prescribed /side",
+      "Heavy compounds Dip + Back Extension should not share a superset",
+      "90/90 Hip Rotation is bilateral and cannot be prescribed /side",
+      "Hip Airplane is bilateral and cannot be prescribed /side",
+      "Thoracic Rotation is bilateral and cannot be prescribed /side",
+      "Figure-Four Stretch is bilateral and cannot be prescribed /side",
+      "Hip Flexor Stretch is bilateral and cannot be prescribed /side",
+      "Single-Leg Romanian Deadlift rests 105s; primary high-fatigue compound work is likely to lose performance below 120s.",
+      "Walking Knee Hug is bilateral and cannot be prescribed /side",
+      "Lateral Bound is bilateral and cannot be prescribed /side",
+      "Groin Stretch is bilateral and cannot be prescribed /side",
+      "Quad Stretch is bilateral and cannot be prescribed /side",
+      "Pull-Up Work rests 105s; primary high-fatigue compound work is likely to lose performance below 120s.",
+      "Major hypertrophy target upper_back has no meaningful working-set credit."
+    ],
+    "proposed_major_volume_errors": [
+      {
+        "muscle": "chest",
+        "got": 4,
+        "target": 10,
+        "ratio": 0.4,
+        "severity": "error"
+      }
+    ],
+    "volume_would_pass": false,
+    "note": "Re-score is contribution-only. Laterality/rest/superset errors are unchanged and are deterministic-repair problems, not this audit."
+  },
+  "fallback_week": [
+    {
+      "day": "Mon",
+      "name": "Full Body A",
+      "exercises": [
+        {
+          "name": "Box Squat",
+          "role": "primary",
+          "sets": 3,
+          "pattern": "squat",
+          "current_credits": [
+            {
+              "muscle": "quads",
+              "contribution": 1
+            },
+            {
+              "muscle": "glutes",
+              "contribution": 0.5
+            }
+          ],
+          "proposed_credits": [
+            {
+              "muscle": "quads",
+              "credit": 1
+            },
+            {
+              "muscle": "glutes",
+              "credit": 0.5
+            }
+          ]
+        },
+        {
+          "name": "Decline Push-Up",
+          "role": "primary",
+          "sets": 3,
+          "pattern": "horizontal_push",
+          "current_credits": [
+            {
+              "muscle": "chest",
+              "contribution": 1
+            },
+            {
+              "muscle": "triceps",
+              "contribution": 0.5
+            },
+            {
+              "muscle": "front_delts",
+              "contribution": 0.5
+            }
+          ],
+          "proposed_credits": [
+            {
+              "muscle": "chest",
+              "credit": 1
+            },
+            {
+              "muscle": "triceps",
+              "credit": 0.5
+            },
+            {
+              "muscle": "front_delts",
+              "credit": 0.5
+            }
+          ]
+        },
+        {
+          "name": "Chin-Up",
+          "role": "primary",
+          "sets": 3,
+          "pattern": "vertical_pull",
+          "current_credits": [
+            {
+              "muscle": "lats",
+              "contribution": 1
+            },
+            {
+              "muscle": "biceps",
+              "contribution": 0.5
+            }
+          ],
+          "proposed_credits": [
+            {
+              "muscle": "lats",
+              "credit": 1
+            },
+            {
+              "muscle": "upper_back",
+              "credit": 0.5
+            },
+            {
+              "muscle": "biceps",
+              "credit": 0.5
+            }
+          ]
+        },
+        {
+          "name": "Single-Leg Romanian Deadlift",
+          "role": "secondary",
+          "sets": 3,
+          "pattern": "hinge",
+          "current_credits": [
+            {
+              "muscle": "hamstrings",
+              "contribution": 1
+            },
+            {
+              "muscle": "glutes",
+              "contribution": 0.5
+            }
+          ],
+          "proposed_credits": [
+            {
+              "muscle": "hamstrings",
+              "credit": 1
+            },
+            {
+              "muscle": "glutes",
+              "credit": 0.5
+            }
+          ]
+        },
+        {
+          "name": "Pull-Up",
+          "role": "secondary",
+          "sets": 3,
+          "pattern": "vertical_pull",
+          "current_credits": [
+            {
+              "muscle": "lats",
+              "contribution": 1
+            },
+            {
+              "muscle": "biceps",
+              "contribution": 0.5
+            }
+          ],
+          "proposed_credits": [
+            {
+              "muscle": "lats",
+              "credit": 1
+            },
+            {
+              "muscle": "upper_back",
+              "credit": 0.5
+            },
+            {
+              "muscle": "biceps",
+              "credit": 0.5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "day": "Wed",
+      "name": "Full Body B",
+      "exercises": [
+        {
+          "name": "Single-Leg Romanian Deadlift",
+          "role": "primary",
+          "sets": 3,
+          "pattern": "hinge",
+          "current_credits": [
+            {
+              "muscle": "hamstrings",
+              "contribution": 1
+            },
+            {
+              "muscle": "glutes",
+              "contribution": 0.5
+            }
+          ],
+          "proposed_credits": [
+            {
+              "muscle": "hamstrings",
+              "credit": 1
+            },
+            {
+              "muscle": "glutes",
+              "credit": 0.5
+            }
+          ]
+        },
+        {
+          "name": "Bench Dip",
+          "role": "primary",
+          "sets": 3,
+          "pattern": "vertical_push",
+          "current_credits": [
+            {
+              "muscle": "triceps",
+              "contribution": 1
+            }
+          ],
+          "proposed_credits": [
+            {
+              "muscle": "front_delts",
+              "credit": 1
+            },
+            {
+              "muscle": "triceps",
+              "credit": 0.5
+            }
+          ]
+        },
+        {
+          "name": "Chin-Up",
+          "role": "primary",
+          "sets": 3,
+          "pattern": "vertical_pull",
+          "current_credits": [
+            {
+              "muscle": "lats",
+              "contribution": 1
+            },
+            {
+              "muscle": "biceps",
+              "contribution": 0.5
+            }
+          ],
+          "proposed_credits": [
+            {
+              "muscle": "lats",
+              "credit": 1
+            },
+            {
+              "muscle": "upper_back",
+              "credit": 0.5
+            },
+            {
+              "muscle": "biceps",
+              "credit": 0.5
+            }
+          ]
+        },
+        {
+          "name": "Bulgarian Split Squat",
+          "role": "secondary",
+          "sets": 3,
+          "pattern": "lunge",
+          "current_credits": [
+            {
+              "muscle": "quads",
+              "contribution": 1
+            },
+            {
+              "muscle": "glutes",
+              "contribution": 0.5
+            }
+          ],
+          "proposed_credits": [
+            {
+              "muscle": "quads",
+              "credit": 1
+            },
+            {
+              "muscle": "glutes",
+              "credit": 0.5
+            }
+          ]
+        },
+        {
+          "name": "Pull-Up",
+          "role": "secondary",
+          "sets": 3,
+          "pattern": "vertical_pull",
+          "current_credits": [
+            {
+              "muscle": "lats",
+              "contribution": 1
+            },
+            {
+              "muscle": "biceps",
+              "contribution": 0.5
+            }
+          ],
+          "proposed_credits": [
+            {
+              "muscle": "lats",
+              "credit": 1
+            },
+            {
+              "muscle": "upper_back",
+              "credit": 0.5
+            },
+            {
+              "muscle": "biceps",
+              "credit": 0.5
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "day": "Fri",
+      "name": "Full Body C",
+      "exercises": [
+        {
+          "name": "Bulgarian Split Squat",
+          "role": "primary",
+          "sets": 3,
+          "pattern": "lunge",
+          "current_credits": [
+            {
+              "muscle": "quads",
+              "contribution": 1
+            },
+            {
+              "muscle": "glutes",
+              "contribution": 0.5
+            }
+          ],
+          "proposed_credits": [
+            {
+              "muscle": "quads",
+              "credit": 1
+            },
+            {
+              "muscle": "glutes",
+              "credit": 0.5
+            }
+          ]
+        },
+        {
+          "name": "Decline Push-Up",
+          "role": "primary",
+          "sets": 3,
+          "pattern": "horizontal_push",
+          "current_credits": [
+            {
+              "muscle": "chest",
+              "contribution": 1
+            },
+            {
+              "muscle": "triceps",
+              "contribution": 0.5
+            },
+            {
+              "muscle": "front_delts",
+              "contribution": 0.5
+            }
+          ],
+          "proposed_credits": [
+            {
+              "muscle": "chest",
+              "credit": 1
+            },
+            {
+              "muscle": "triceps",
+              "credit": 0.5
+            },
+            {
+              "muscle": "front_delts",
+              "credit": 0.5
+            }
+          ]
+        },
+        {
+          "name": "Chin-Up",
+          "role": "primary",
+          "sets": 3,
+          "pattern": "vertical_pull",
+          "current_credits": [
+            {
+              "muscle": "lats",
+              "contribution": 1
+            },
+            {
+              "muscle": "biceps",
+              "contribution": 0.5
+            }
+          ],
+          "proposed_credits": [
+            {
+              "muscle": "lats",
+              "credit": 1
+            },
+            {
+              "muscle": "upper_back",
+              "credit": 0.5
+            },
+            {
+              "muscle": "biceps",
+              "credit": 0.5
+            }
+          ]
+        },
+        {
+          "name": "Frog Pump",
+          "role": "secondary",
+          "sets": 3,
+          "pattern": "hinge",
+          "current_credits": [
+            {
+              "muscle": "glutes",
+              "contribution": 1
+            },
+            {
+              "muscle": "hamstrings",
+              "contribution": 0.5
+            }
+          ],
+          "proposed_credits": [
+            {
+              "muscle": "glutes",
+              "credit": 1
+            },
+            {
+              "muscle": "hamstrings",
+              "credit": 0.5
+            }
+          ]
+        },
+        {
+          "name": "Pull-Up",
+          "role": "secondary",
+          "sets": 3,
+          "pattern": "vertical_pull",
+          "current_credits": [
+            {
+              "muscle": "lats",
+              "contribution": 1
+            },
+            {
+              "muscle": "biceps",
+              "contribution": 0.5
+            }
+          ],
+          "proposed_credits": [
+            {
+              "muscle": "lats",
+              "credit": 1
+            },
+            {
+              "muscle": "upper_back",
+              "credit": 0.5
+            },
+            {
+              "muscle": "biceps",
+              "credit": 0.5
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "fallback_diagnosis": {
+    "observation": "Fallback repeats Chin-Up + Pull-Up because generateProgram fills lats via vertical_pull (1.0 each) and still owes upper_back. Rows only pay 0.5 upper_back under lat-primary enrichment, so the engine keeps adding more pulls instead of one authoritative horizontal row at 1.0.",
+    "if_credits_corrected": "A 3-set row would pay 3 upper_back + 1.5 lats. Combined with one vertical pull (3 lats + 1.5 upper_back) a 3-day week can hit both majors without stacking two vertical pulls every day."
+  },
+  "files_that_would_change": [
+    "st_exercises.coaching_metadata.hypertrophy_volume_credits for the 260 active master rows (not archived, not user-custom)",
+    "optionally st_exercises.muscle_targets / coaching_metadata.primary_muscles so rows are upper_back-primary",
+    "lib/scienceEngine/catalogEnrichment/qualityPass.ts conservativeCredits + inferPrimaryFallback + EXACT row overrides (so future enrichment does not re-lat-primary rows)",
+    "lib/scienceEngine/contributions.ts: stop merging NAME_DEFAULTS into explicit hypertrophy_volume_credits once the 260 are complete"
+  ]
+}

@@ -9,17 +9,27 @@ import { libraryById } from './library';
 import { persistGenerationRun } from './log';
 import { mapAiWeekToScience } from './mapper';
 import { programModelName, requestWeekProgram, type ModelCallResult } from './openaiClient';
-import { buildDesignerInstructions, buildDesignerUserContent, buildRepairInstructions, buildRepairUserContent } from './prompt';
+import { buildDesignerInstructions, buildDesignerUserContent } from './prompt';
+import { repairAiProgram } from './repairAiProgram';
 import { validateAiProgram } from './validateAiProgram';
-import type { GenerationContext, GenerationMethod, GenerationMode, GenerationRun, ValidationIssue } from './types';
-
-const MAX_REPAIRS = 2;
+import type {
+  DeterministicRepair,
+  GenerationContext,
+  GenerationMethod,
+  GenerationMode,
+  GenerationRun,
+  ValidationIssue,
+  ValidationResult,
+} from './types';
 
 export type OrchestratorResult = {
   program: ScienceProgram;
   method: GenerationMethod;
   validation: { ok: boolean; issues: ValidationIssue[] };
+  initialValidation: ValidationResult;
   qualityWarnings: ValidationIssue[];
+  repairs: DeterministicRepair[];
+  openaiCalls: number;
   aiError: string | null;
   replacedDays: number;
   run: GenerationRun;
@@ -65,9 +75,12 @@ export async function runGenerationPipeline(opts: {
       context,
       method: 'science_fallback',
       validation: { ok: true, issues: [] },
+      initialValidation: { ok: false, issues: [] },
       program: null,
       aiError: 'AI is not configured; used the science template.',
-      repairAttempts: 0,
+      repairs: [],
+      openaiCalls: 0,
+      aiLatencyMs: 0,
       latencyMs: Date.now() - started,
       raw: null,
       supabase: opts.supabase,
@@ -75,40 +88,40 @@ export async function runGenerationPipeline(opts: {
     });
   }
 
-  let call = await request({
+  const aiStarted = Date.now();
+  const call = await request({
     apiKey: opts.apiKey,
     system: buildDesignerInstructions(context),
     user: buildDesignerUserContent(context),
   });
-  let repairAttempts = 0;
-  let validation = validateAiProgram(call.program, context, catalogById);
-  let lastError = call.error;
+  const aiLatencyMs = Date.now() - aiStarted;
+  const lastError = call.error;
+  let working = call.program;
+  const initialValidation = validateAiProgram(working, context, catalogById);
+  let repairs: DeterministicRepair[] = [];
+  let validation = initialValidation;
 
-  while ((!call.program || !validation.ok) && repairAttempts < MAX_REPAIRS && opts.apiKey) {
-    repairAttempts += 1;
-    const errors = validation.issues.filter((i) => i.severity === 'error');
-    if (!errors.length && !call.program) {
-      errors.push({ code: 'EMPTY_PROGRAM', severity: 'error', message: lastError || 'The model returned unreadable JSON.' });
-    }
-    call = await request({
-      apiKey: opts.apiKey,
-      system: buildRepairInstructions(),
-      user: buildRepairUserContent(call.program, errors),
-    });
-    lastError = call.error;
-    validation = validateAiProgram(call.program, context, catalogById);
+  if (working && !validation.ok) {
+    const repaired = repairAiProgram(working, context, catalogById);
+    working = repaired.program;
+    repairs = repaired.repairs;
+    validation = validateAiProgram(working, context, catalogById);
   }
 
-  if (call.program && validation.ok) {
-    const mapped = mapAiWeekToScience(call.program, science, opts.profile, catalogById, library);
+  const unusable = !working || !validation.ok || Boolean(lastError);
+  if (!unusable && working) {
+    const mapped = mapAiWeekToScience(working, science, opts.profile, catalogById, library);
     return finish({
       science: mapped,
       context,
-      method: repairAttempts ? 'ai_repaired' : 'ai',
+      method: repairs.length ? 'ai_repaired' : 'ai',
       validation,
-      program: call.program,
+      initialValidation,
+      program: working,
       aiError: null,
-      repairAttempts,
+      repairs,
+      openaiCalls: 1,
+      aiLatencyMs,
       latencyMs: Date.now() - started,
       raw: call.raw,
       tokens: { in: call.inputTokens, out: call.outputTokens, reasoning: call.reasoningTokens },
@@ -125,12 +138,15 @@ export async function runGenerationPipeline(opts: {
     context,
     method: 'science_fallback',
     validation,
-    program: call.program,
-    aiError: lastError || 'AI week failed validation after repair; used the science template.',
-    repairAttempts,
+    initialValidation,
+    program: working,
+    aiError: lastError || 'AI week failed validation after deterministic repair; used the science template.',
+    repairs,
+    openaiCalls: 1,
+    aiLatencyMs,
     latencyMs: Date.now() - started,
     raw: call.raw,
-    tokens: { in: call.inputTokens, out: call.outputTokens },
+    tokens: { in: call.inputTokens, out: call.outputTokens, reasoning: call.reasoningTokens },
     model: call.model,
     api: call.api,
     reasoningEffort: call.reasoningEffort,
@@ -143,10 +159,13 @@ async function finish(opts: {
   science: ScienceProgram;
   context: GenerationContext;
   method: GenerationMethod;
-  validation: { ok: boolean; issues: ValidationIssue[] };
+  validation: ValidationResult;
+  initialValidation: ValidationResult;
   program: GenerationRun['program'];
   aiError: string | null;
-  repairAttempts: number;
+  repairs: DeterministicRepair[];
+  openaiCalls: number;
+  aiLatencyMs: number;
   latencyMs: number;
   raw: unknown;
   tokens?: { in: number | null; out: number | null; reasoning?: number | null };
@@ -164,9 +183,13 @@ async function finish(opts: {
     program: opts.program,
     context: opts.context,
     validation: opts.validation,
-    repairAttempts: opts.repairAttempts,
+    initialValidation: opts.initialValidation,
+    repairs: opts.repairs,
+    repairAttempts: opts.repairs.length,
+    openaiCalls: opts.openaiCalls,
     aiError: opts.aiError,
     latencyMs: opts.latencyMs,
+    aiLatencyMs: opts.aiLatencyMs,
     inputTokens: opts.tokens?.in ?? null,
     outputTokens: opts.tokens?.out ?? null,
     reasoningTokens: opts.tokens?.reasoning ?? null,
@@ -179,7 +202,10 @@ async function finish(opts: {
     program: opts.science,
     method: opts.method,
     validation: opts.validation,
+    initialValidation: opts.initialValidation,
     qualityWarnings: opts.validation.issues.filter((i) => i.severity !== 'error'),
+    repairs: opts.repairs,
+    openaiCalls: opts.openaiCalls,
     aiError: opts.aiError,
     replacedDays: opts.method === 'science_fallback' ? 0 : opts.science.split.length,
     run,

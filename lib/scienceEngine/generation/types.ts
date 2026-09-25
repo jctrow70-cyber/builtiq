@@ -1,4 +1,4 @@
-export const GENERATION_SCHEMA_VERSION = '2.0';
+export const GENERATION_SCHEMA_VERSION = '2.1';
 
 export type GenerationMode = 'full_program' | 'single_session';
 export type GenerationMethod = 'ai' | 'ai_repaired' | 'science_fallback';
@@ -116,7 +116,7 @@ export type AiStrengthExercise = {
   rest_seconds: number;
   reps_per_side: boolean;
   measurement_type: MeasurementType;
-  ramp_sets: AiRampSet[];
+  ramp_sets?: AiRampSet[];
   why: string;
 };
 
@@ -144,19 +144,13 @@ export type AiWorkoutPlan = {
 export type AiWeekProgram = {
   schema_version: string;
   summary: string;
-  coaching_notes: string;
-  program_rationale: {
-    weekly_idea: string;
-    fatigue_plan: string;
-    consistency_plan: string;
-  };
-  weekly_targets: Array<{ muscle: string; planned_working_sets: number }>;
+  coaching_notes?: string;
   workouts: AiWorkoutPlan[];
-  progression: {
+  progression?: {
     strategy: string;
     primary_exercise_ids: string[];
-    accessory_rotation_allowed: boolean;
-    weekly_rules: Array<{
+    accessory_rotation_allowed?: boolean;
+    weekly_rules?: Array<{
       week: number;
       load_change: string;
       set_change: number;
@@ -165,7 +159,13 @@ export type AiWeekProgram = {
       notes: string;
     }>;
   };
-  quality_review: {
+  program_rationale?: {
+    weekly_idea: string;
+    fatigue_plan: string;
+    consistency_plan: string;
+  };
+  weekly_targets?: Array<{ muscle: string; planned_working_sets: number }>;
+  quality_review?: {
     passed: boolean;
     notes: string;
     self_check: {
@@ -175,6 +175,13 @@ export type AiWeekProgram = {
       fits_session_minutes: boolean;
     };
   };
+};
+
+export type DeterministicRepair = {
+  code: string;
+  action: string;
+  day_label?: string;
+  exercise_id?: string;
 };
 
 export type ValidationIssue = {
@@ -198,9 +205,13 @@ export type GenerationRun = {
   program: AiWeekProgram | null;
   context: GenerationContext;
   validation: ValidationResult;
+  initialValidation: ValidationResult;
+  repairs: DeterministicRepair[];
   repairAttempts: number;
+  openaiCalls: number;
   aiError: string | null;
   latencyMs: number;
+  aiLatencyMs: number;
   inputTokens: number | null;
   outputTokens: number | null;
   reasoningTokens: number | null;

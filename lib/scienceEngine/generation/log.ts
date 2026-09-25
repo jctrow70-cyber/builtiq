@@ -36,7 +36,17 @@ export async function persistGenerationRun(
         ok: !run.validation || run.validation.ok || run.method === 'science_fallback',
         input_json: sanitizeGenerationInput(run.context),
         output_json: run.program,
-        validation_json: run.validation,
+        validation_json: {
+          ok: run.validation?.ok ?? false,
+          issues: run.validation?.issues || [],
+          initial: run.initialValidation,
+          repairs: run.repairs || [],
+          openai_calls: run.openaiCalls ?? null,
+          ai_latency_ms: run.aiLatencyMs ?? null,
+          wall_ms: run.latencyMs ?? null,
+          reasoning_effort: run.reasoningEffort,
+          reasoning_tokens: run.reasoningTokens,
+        },
         error_text: run.aiError,
       })
       .select('id')

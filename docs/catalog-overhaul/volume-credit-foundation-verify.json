@@ -1,0 +1,339 @@
+{
+  "generated_at": "2026-09-25T00:52:04.982Z",
+  "phase_2b": "not_started",
+  "catalog_count": 260,
+  "captured_week_rescore": {
+    "current_at_capture": {
+      "upper_back": 0,
+      "lats": 11,
+      "rear_delts": 0,
+      "biceps": 5.5,
+      "chest": 11,
+      "quads": 13,
+      "hamstrings": 9,
+      "glutes": 14.5,
+      "front_delts": 2,
+      "side_delts": 0,
+      "triceps": 7.5
+    },
+    "after_live_credits": {
+      "upper_back": 5.5,
+      "lats": 11,
+      "rear_delts": 0,
+      "biceps": 5.5,
+      "chest": 11,
+      "quads": 13,
+      "hamstrings": 9,
+      "glutes": 14.5,
+      "front_delts": 2,
+      "side_delts": 0,
+      "triceps": 7.5
+    },
+    "expected_upper_back": 5.5,
+    "expected_chest": 11,
+    "major_volume_errors": [],
+    "volume_error_pass": true
+  },
+  "forced_fallback": {
+    "days": [
+      {
+        "day": "Mon",
+        "exercises": [
+          {
+            "name": "Back Squat",
+            "role": "primary",
+            "sets": 3,
+            "pattern": "squat"
+          },
+          {
+            "name": "Bench Press",
+            "role": "primary",
+            "sets": 3,
+            "pattern": "horizontal_push"
+          },
+          {
+            "name": "Bent-Over Row",
+            "role": "primary",
+            "sets": 3,
+            "pattern": "horizontal_pull"
+          },
+          {
+            "name": "B-Stance Romanian Deadlift",
+            "role": "secondary",
+            "sets": 3,
+            "pattern": "hinge"
+          },
+          {
+            "name": "Assisted Pull-Up",
+            "role": "secondary",
+            "sets": 3,
+            "pattern": "vertical_pull"
+          }
+        ],
+        "vertical_pulls": [
+          "Assisted Pull-Up"
+        ],
+        "has_row": true,
+        "stacked_vertical_family": false
+      },
+      {
+        "day": "Wed",
+        "exercises": [
+          {
+            "name": "Romanian Deadlift",
+            "role": "primary",
+            "sets": 3,
+            "pattern": "hinge"
+          },
+          {
+            "name": "Overhead Press",
+            "role": "primary",
+            "sets": 3,
+            "pattern": "vertical_push"
+          },
+          {
+            "name": "Assisted Pull-Up",
+            "role": "primary",
+            "sets": 3,
+            "pattern": "vertical_pull"
+          },
+          {
+            "name": "Bulgarian Split Squat",
+            "role": "secondary",
+            "sets": 3,
+            "pattern": "lunge"
+          },
+          {
+            "name": "Bent-Over Row",
+            "role": "secondary",
+            "sets": 3,
+            "pattern": "horizontal_pull"
+          }
+        ],
+        "vertical_pulls": [
+          "Assisted Pull-Up"
+        ],
+        "has_row": true,
+        "stacked_vertical_family": false
+      },
+      {
+        "day": "Fri",
+        "exercises": [
+          {
+            "name": "Bulgarian Split Squat",
+            "role": "primary",
+            "sets": 3,
+            "pattern": "lunge"
+          },
+          {
+            "name": "Bench Press",
+            "role": "primary",
+            "sets": 3,
+            "pattern": "horizontal_push"
+          },
+          {
+            "name": "Bent-Over Row",
+            "role": "primary",
+            "sets": 3,
+            "pattern": "horizontal_pull"
+          },
+          {
+            "name": "B-Stance Hip Thrust",
+            "role": "secondary",
+            "sets": 3,
+            "pattern": "hinge"
+          },
+          {
+            "name": "Assisted Pull-Up",
+            "role": "secondary",
+            "sets": 3,
+            "pattern": "vertical_pull"
+          }
+        ],
+        "vertical_pulls": [
+          "Assisted Pull-Up"
+        ],
+        "has_row": true,
+        "stacked_vertical_family": false
+      }
+    ],
+    "has_horizontal_row": true,
+    "no_same_session_vertical_stack": true
+  },
+  "live_ai": {
+    "method": "ai_repaired",
+    "fallback_used": false,
+    "model": "gpt-5.4-2026-03-05",
+    "ai_latency_ms": 23399,
+    "openai_calls": 1,
+    "initial_errors": [
+      "Bulgarian Split Squat rests 90s; primary high-fatigue compound work is likely to lose performance below 120s.",
+      "Chin-Up rests 105s; primary high-fatigue compound work is likely to lose performance below 120s."
+    ],
+    "repairs": [
+      {
+        "code": "REST_TOO_SHORT",
+        "action": "Raised Chin-Up rest 120s → 150s",
+        "day_label": "Mon",
+        "exercise_id": "20b6559e-1e94-4db6-873a-548f85234747"
+      },
+      {
+        "code": "REST_TOO_SHORT",
+        "action": "Raised Bulgarian Split Squat rest 90s → 150s",
+        "day_label": "Wed",
+        "exercise_id": "26781050-0c19-43f3-b026-d26fa79c5630"
+      },
+      {
+        "code": "REST_TOO_SHORT",
+        "action": "Raised Push-Up rest 90s → 120s",
+        "day_label": "Wed",
+        "exercise_id": "f4e97608-4829-4975-9cde-fe61215988c8"
+      },
+      {
+        "code": "REST_TOO_SHORT",
+        "action": "Raised Single-Leg Romanian Deadlift rest 90s → 120s",
+        "day_label": "Wed",
+        "exercise_id": "014b8ff9-c2d4-4b56-b4b9-8e2c3a4a9ed1"
+      },
+      {
+        "code": "REST_TOO_SHORT",
+        "action": "Raised Pull-Up rest 105s → 120s",
+        "day_label": "Wed",
+        "exercise_id": "20d8dac5-7bc1-410c-bfe6-1ee8c5dac75d"
+      },
+      {
+        "code": "REST_TOO_SHORT",
+        "action": "Raised Glute Bridge rest 90s → 120s",
+        "day_label": "Fri",
+        "exercise_id": "849737e2-72d3-4315-8239-7ba35c822329"
+      },
+      {
+        "code": "REST_TOO_SHORT",
+        "action": "Raised Chin-Up rest 105s → 150s",
+        "day_label": "Fri",
+        "exercise_id": "20b6559e-1e94-4db6-873a-548f85234747"
+      }
+    ],
+    "final_errors": [],
+    "final_ok": true,
+    "workouts": [
+      {
+        "day": "Mon",
+        "exercises": [
+          {
+            "name": "Tempo Squat",
+            "role": "primary",
+            "sets": 4
+          },
+          {
+            "name": "Chin-Up",
+            "role": "primary",
+            "sets": 4
+          },
+          {
+            "name": "Dip",
+            "role": "secondary",
+            "sets": 3
+          },
+          {
+            "name": "Back Extension",
+            "role": "accessory",
+            "sets": 3
+          },
+          {
+            "name": "Standing Calf Raise",
+            "role": "isolation",
+            "sets": 3
+          },
+          {
+            "name": "Crunch",
+            "role": "isolation",
+            "sets": 2
+          },
+          {
+            "name": "Copenhagen Plank",
+            "role": "accessory",
+            "sets": 2
+          }
+        ]
+      },
+      {
+        "day": "Wed",
+        "exercises": [
+          {
+            "name": "Bulgarian Split Squat",
+            "role": "primary",
+            "sets": 4
+          },
+          {
+            "name": "Push-Up",
+            "role": "primary",
+            "sets": 4
+          },
+          {
+            "name": "Single-Leg Romanian Deadlift",
+            "role": "secondary",
+            "sets": 3
+          },
+          {
+            "name": "Pull-Up",
+            "role": "secondary",
+            "sets": 3
+          },
+          {
+            "name": "Single-Leg Calf Raise",
+            "role": "isolation",
+            "sets": 3
+          },
+          {
+            "name": "Bicycle Crunch",
+            "role": "isolation",
+            "sets": 2
+          }
+        ]
+      },
+      {
+        "day": "Fri",
+        "exercises": [
+          {
+            "name": "Glute Bridge",
+            "role": "primary",
+            "sets": 4
+          },
+          {
+            "name": "Chin-Up",
+            "role": "primary",
+            "sets": 3
+          },
+          {
+            "name": "Decline Push-Up",
+            "role": "secondary",
+            "sets": 3
+          },
+          {
+            "name": "Lateral Lunge",
+            "role": "secondary",
+            "sets": 3
+          },
+          {
+            "name": "Sliding Leg Curl",
+            "role": "isolation",
+            "sets": 3
+          },
+          {
+            "name": "V-Up",
+            "role": "isolation",
+            "sets": 2
+          },
+          {
+            "name": "Side Plank",
+            "role": "isolation",
+            "sets": 2
+          }
+        ]
+      }
+    ],
+    "ai_error": null,
+    "reused": true
+  }
+}

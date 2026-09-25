@@ -1,0 +1,880 @@
+{
+  "generated_at": "2026-09-24T22:55:24.215Z",
+  "wall_ms": 26950,
+  "ai_latency_ms": 24292,
+  "pipeline_ms": 24385,
+  "model": "gpt-5.4-2026-03-05",
+  "reasoning_effort": "low",
+  "input_tokens": 15312,
+  "output_tokens": 3407,
+  "reasoning_tokens": 125,
+  "openai_calls": 1,
+  "generation_method": "science_fallback",
+  "fallback_used": true,
+  "prompt_chars": 48913,
+  "unique_exercise_count": 95,
+  "serialized_exercise_object_count": 95,
+  "warmup_ids": 29,
+  "cooldown_ids": 24,
+  "initial_validator": {
+    "ok": false,
+    "issues": [
+      {
+        "code": "LATERALITY_MISMATCH",
+        "severity": "error",
+        "message": "Knee-to-Wall Ankle Mobilization is bilateral and cannot be prescribed /side",
+        "day_label": "Mon",
+        "exercise_id": "92a1cb43-2d26-4f61-ab2f-f92d032ec660"
+      },
+      {
+        "code": "LATERALITY_MISMATCH",
+        "severity": "error",
+        "message": "Quad Stretch is bilateral and cannot be prescribed /side",
+        "day_label": "Mon",
+        "exercise_id": "409c9f46-6e92-4668-9bd7-40134d8565d8"
+      },
+      {
+        "code": "LATERALITY_MISMATCH",
+        "severity": "error",
+        "message": "Calf Stretch is bilateral and cannot be prescribed /side",
+        "day_label": "Mon",
+        "exercise_id": "730a6b5b-dc59-4059-abc0-2c4ce2605bae"
+      },
+      {
+        "code": "REST_TOO_SHORT",
+        "severity": "warning",
+        "message": "Chin-Up rests 120s; primary compound work usually needs 150-240s.",
+        "day_label": "Mon",
+        "exercise_id": "20b6559e-1e94-4db6-873a-548f85234747"
+      },
+      {
+        "code": "LATERALITY_MISMATCH",
+        "severity": "error",
+        "message": "World's Greatest Stretch is bilateral and cannot be prescribed /side",
+        "day_label": "Wed",
+        "exercise_id": "65ce1dd8-9fe6-496d-845a-b57041e48461"
+      },
+      {
+        "code": "LATERALITY_MISMATCH",
+        "severity": "error",
+        "message": "Hip Airplane is bilateral and cannot be prescribed /side",
+        "day_label": "Wed",
+        "exercise_id": "137621a9-e0c2-4ae6-b1bd-b3acb4db59b6"
+      },
+      {
+        "code": "LATERALITY_MISMATCH",
+        "severity": "error",
+        "message": "Hamstring Stretch is bilateral and cannot be prescribed /side",
+        "day_label": "Wed",
+        "exercise_id": "5820865f-94d7-4577-a3f0-b13912bf3ad1"
+      },
+      {
+        "code": "LATERALITY_MISMATCH",
+        "severity": "error",
+        "message": "Doorway Pec Stretch is bilateral and cannot be prescribed /side",
+        "day_label": "Wed",
+        "exercise_id": "768c593d-c352-45ca-9eee-2b724164294f"
+      },
+      {
+        "code": "LATERALITY_MISMATCH",
+        "severity": "error",
+        "message": "Figure-Four Stretch is bilateral and cannot be prescribed /side",
+        "day_label": "Wed",
+        "exercise_id": "39ff2afd-a879-4e24-976e-66f8f18a1504"
+      },
+      {
+        "code": "REST_TOO_SHORT",
+        "severity": "error",
+        "message": "Single-Leg Romanian Deadlift rests 105s; primary high-fatigue compound work is likely to lose performance below 120s.",
+        "day_label": "Wed",
+        "exercise_id": "014b8ff9-c2d4-4b56-b4b9-8e2c3a4a9ed1"
+      },
+      {
+        "code": "REST_TOO_SHORT",
+        "severity": "warning",
+        "message": "Decline Push-Up rests 90s; primary compound work usually needs 120-210s.",
+        "day_label": "Wed",
+        "exercise_id": "f39db302-48a4-47c8-8090-9eb85cae64ad"
+      },
+      {
+        "code": "REST_TOO_SHORT",
+        "severity": "warning",
+        "message": "Bulgarian Split Squat rests 90s; secondary compound work usually needs 120-210s.",
+        "day_label": "Wed",
+        "exercise_id": "26781050-0c19-43f3-b026-d26fa79c5630"
+      },
+      {
+        "code": "REST_TOO_SHORT",
+        "severity": "warning",
+        "message": "Pull-Up rests 105s; secondary compound work usually needs 120-210s.",
+        "day_label": "Wed",
+        "exercise_id": "20d8dac5-7bc1-410c-bfe6-1ee8c5dac75d"
+      },
+      {
+        "code": "LATERALITY_MISMATCH",
+        "severity": "error",
+        "message": "Walking Knee Hug is bilateral and cannot be prescribed /side",
+        "day_label": "Fri",
+        "exercise_id": "a4c231d9-fb2e-44a2-9ed0-4c276448b5d5"
+      },
+      {
+        "code": "LATERALITY_MISMATCH",
+        "severity": "error",
+        "message": "Lateral Bound is bilateral and cannot be prescribed /side",
+        "day_label": "Fri",
+        "exercise_id": "1e4c03ea-a6f6-41cb-b6b6-1b1abd349f61"
+      },
+      {
+        "code": "LATERALITY_MISMATCH",
+        "severity": "error",
+        "message": "Hamstring Stretch is bilateral and cannot be prescribed /side",
+        "day_label": "Fri",
+        "exercise_id": "5820865f-94d7-4577-a3f0-b13912bf3ad1"
+      },
+      {
+        "code": "REST_TOO_SHORT",
+        "severity": "warning",
+        "message": "Step-Up rests 90s; primary compound work usually needs 120-210s.",
+        "day_label": "Fri",
+        "exercise_id": "678c27d4-9e11-41f9-bdb0-acb97b7d3dd7"
+      },
+      {
+        "code": "REST_TOO_SHORT",
+        "severity": "warning",
+        "message": "Chin-Up rests 105s; secondary compound work usually needs 120-210s.",
+        "day_label": "Fri",
+        "exercise_id": "20b6559e-1e94-4db6-873a-548f85234747"
+      },
+      {
+        "code": "VOLUME_OFF",
+        "severity": "error",
+        "message": "Major hypertrophy target upper_back has no meaningful working-set credit."
+      },
+      {
+        "code": "VOLUME_OFF",
+        "severity": "warning",
+        "message": "Secondary hypertrophy muscle side_delts has no direct/meaningful stimulus."
+      },
+      {
+        "code": "VOLUME_OFF",
+        "severity": "warning",
+        "message": "Secondary hypertrophy muscle rear_delts has no direct/meaningful stimulus."
+      },
+      {
+        "code": "VOLUME_OFF",
+        "severity": "info",
+        "message": "Optional forearms has no direct work; indirect stimulus may be enough."
+      },
+      {
+        "code": "VOLUME_OFF",
+        "severity": "info",
+        "message": "hamstrings planned 7 vs target 10."
+      },
+      {
+        "code": "VOLUME_OFF",
+        "severity": "info",
+        "message": "glutes planned 7.5 vs target 10."
+      },
+      {
+        "code": "VOLUME_OFF",
+        "severity": "info",
+        "message": "Optional hip_flexors has no direct work; indirect stimulus may be enough."
+      }
+    ]
+  },
+  "deterministic_repairs": [
+    {
+      "code": "LATERALITY_MISMATCH",
+      "action": "Removed /side from Knee-to-Wall Ankle Mobilization warmup",
+      "day_label": "Mon",
+      "exercise_id": "92a1cb43-2d26-4f61-ab2f-f92d032ec660"
+    },
+    {
+      "code": "LATERALITY_MISMATCH",
+      "action": "Removed /side from Quad Stretch cooldown",
+      "day_label": "Mon",
+      "exercise_id": "409c9f46-6e92-4668-9bd7-40134d8565d8"
+    },
+    {
+      "code": "LATERALITY_MISMATCH",
+      "action": "Removed /side from Calf Stretch cooldown",
+      "day_label": "Mon",
+      "exercise_id": "730a6b5b-dc59-4059-abc0-2c4ce2605bae"
+    },
+    {
+      "code": "REST_TOO_SHORT",
+      "action": "Raised Chin-Up rest 120s → 150s",
+      "day_label": "Mon",
+      "exercise_id": "20b6559e-1e94-4db6-873a-548f85234747"
+    },
+    {
+      "code": "LATERALITY_MISMATCH",
+      "action": "Removed /side from World's Greatest Stretch warmup",
+      "day_label": "Wed",
+      "exercise_id": "65ce1dd8-9fe6-496d-845a-b57041e48461"
+    },
+    {
+      "code": "LATERALITY_MISMATCH",
+      "action": "Removed /side from Hip Airplane warmup",
+      "day_label": "Wed",
+      "exercise_id": "137621a9-e0c2-4ae6-b1bd-b3acb4db59b6"
+    },
+    {
+      "code": "LATERALITY_MISMATCH",
+      "action": "Removed /side from Hamstring Stretch cooldown",
+      "day_label": "Wed",
+      "exercise_id": "5820865f-94d7-4577-a3f0-b13912bf3ad1"
+    },
+    {
+      "code": "LATERALITY_MISMATCH",
+      "action": "Removed /side from Doorway Pec Stretch cooldown",
+      "day_label": "Wed",
+      "exercise_id": "768c593d-c352-45ca-9eee-2b724164294f"
+    },
+    {
+      "code": "LATERALITY_MISMATCH",
+      "action": "Removed /side from Figure-Four Stretch cooldown",
+      "day_label": "Wed",
+      "exercise_id": "39ff2afd-a879-4e24-976e-66f8f18a1504"
+    },
+    {
+      "code": "REST_TOO_SHORT",
+      "action": "Raised Single-Leg Romanian Deadlift rest 105s → 150s",
+      "day_label": "Wed",
+      "exercise_id": "014b8ff9-c2d4-4b56-b4b9-8e2c3a4a9ed1"
+    },
+    {
+      "code": "REST_TOO_SHORT",
+      "action": "Raised Decline Push-Up rest 90s → 120s",
+      "day_label": "Wed",
+      "exercise_id": "f39db302-48a4-47c8-8090-9eb85cae64ad"
+    },
+    {
+      "code": "REST_TOO_SHORT",
+      "action": "Raised Bulgarian Split Squat rest 90s → 120s",
+      "day_label": "Wed",
+      "exercise_id": "26781050-0c19-43f3-b026-d26fa79c5630"
+    },
+    {
+      "code": "REST_TOO_SHORT",
+      "action": "Raised Pull-Up rest 105s → 120s",
+      "day_label": "Wed",
+      "exercise_id": "20d8dac5-7bc1-410c-bfe6-1ee8c5dac75d"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Reduced Russian Twist to 2 sets for duration",
+      "day_label": "Wed",
+      "exercise_id": "58660663-1065-4529-9d8f-23f6d90beae4"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Removed Russian Twist to fit the session",
+      "day_label": "Wed",
+      "exercise_id": "58660663-1065-4529-9d8f-23f6d90beae4"
+    },
+    {
+      "code": "LATERALITY_MISMATCH",
+      "action": "Removed /side from Walking Knee Hug warmup",
+      "day_label": "Fri",
+      "exercise_id": "a4c231d9-fb2e-44a2-9ed0-4c276448b5d5"
+    },
+    {
+      "code": "LATERALITY_MISMATCH",
+      "action": "Removed /side from Lateral Bound potentiation",
+      "day_label": "Fri",
+      "exercise_id": "1e4c03ea-a6f6-41cb-b6b6-1b1abd349f61"
+    },
+    {
+      "code": "LATERALITY_MISMATCH",
+      "action": "Removed /side from Hamstring Stretch cooldown",
+      "day_label": "Fri",
+      "exercise_id": "5820865f-94d7-4577-a3f0-b13912bf3ad1"
+    },
+    {
+      "code": "REST_TOO_SHORT",
+      "action": "Raised Step-Up rest 90s → 120s",
+      "day_label": "Fri",
+      "exercise_id": "678c27d4-9e11-41f9-bdb0-acb97b7d3dd7"
+    },
+    {
+      "code": "REST_TOO_SHORT",
+      "action": "Raised Chin-Up rest 105s → 120s",
+      "day_label": "Fri",
+      "exercise_id": "20b6559e-1e94-4db6-873a-548f85234747"
+    },
+    {
+      "code": "VOLUME_OFF",
+      "action": "Added Active Hang for upper_back",
+      "day_label": "Wed",
+      "exercise_id": "f234ffb5-5cca-449f-9cae-00d82f359a25"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Reduced Donkey Calf Raise to 2 sets for duration",
+      "day_label": "Wed",
+      "exercise_id": "e4b236eb-0b43-4f38-9b24-e6acd1966293"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Removed Donkey Calf Raise to fit the session",
+      "day_label": "Wed",
+      "exercise_id": "e4b236eb-0b43-4f38-9b24-e6acd1966293"
+    },
+    {
+      "code": "VOLUME_OFF",
+      "action": "Added Neck Isometric for upper_back",
+      "day_label": "Wed",
+      "exercise_id": "5629d7ee-bd42-4eec-af5f-db79236eabba"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Reduced Active Hang to 2 sets for duration",
+      "day_label": "Wed",
+      "exercise_id": "f234ffb5-5cca-449f-9cae-00d82f359a25"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Removed Active Hang to fit the session",
+      "day_label": "Wed",
+      "exercise_id": "f234ffb5-5cca-449f-9cae-00d82f359a25"
+    },
+    {
+      "code": "VOLUME_OFF",
+      "action": "Added Active Hang for upper_back",
+      "day_label": "Wed",
+      "exercise_id": "f234ffb5-5cca-449f-9cae-00d82f359a25"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Reduced Neck Isometric to 2 sets for duration",
+      "day_label": "Wed",
+      "exercise_id": "5629d7ee-bd42-4eec-af5f-db79236eabba"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Removed Neck Isometric to fit the session",
+      "day_label": "Wed",
+      "exercise_id": "5629d7ee-bd42-4eec-af5f-db79236eabba"
+    },
+    {
+      "code": "VOLUME_OFF",
+      "action": "Added Neck Isometric for upper_back",
+      "day_label": "Wed",
+      "exercise_id": "5629d7ee-bd42-4eec-af5f-db79236eabba"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Reduced Active Hang to 2 sets for duration",
+      "day_label": "Wed",
+      "exercise_id": "f234ffb5-5cca-449f-9cae-00d82f359a25"
+    },
+    {
+      "code": "DURATION_OVER",
+      "action": "Removed Active Hang to fit the session",
+      "day_label": "Wed",
+      "exercise_id": "f234ffb5-5cca-449f-9cae-00d82f359a25"
+    }
+  ],
+  "final_validator": {
+    "ok": false,
+    "issues": [
+      {
+        "code": "VOLUME_OFF",
+        "severity": "error",
+        "message": "upper_back working sets (1.5) are severely below the 10 target."
+      },
+      {
+        "code": "VOLUME_OFF",
+        "severity": "warning",
+        "message": "Secondary hypertrophy muscle side_delts has no direct/meaningful stimulus."
+      },
+      {
+        "code": "VOLUME_OFF",
+        "severity": "warning",
+        "message": "Secondary hypertrophy muscle rear_delts has no direct/meaningful stimulus."
+      },
+      {
+        "code": "VOLUME_OFF",
+        "severity": "info",
+        "message": "Optional forearms has no direct work; indirect stimulus may be enough."
+      },
+      {
+        "code": "VOLUME_OFF",
+        "severity": "info",
+        "message": "hamstrings planned 7 vs target 10."
+      },
+      {
+        "code": "VOLUME_OFF",
+        "severity": "info",
+        "message": "glutes planned 7.5 vs target 10."
+      },
+      {
+        "code": "VOLUME_OFF",
+        "severity": "info",
+        "message": "Optional hip_flexors has no direct work; indirect stimulus may be enough."
+      },
+      {
+        "code": "VOLUME_OFF",
+        "severity": "info",
+        "message": "Optional obliques has no direct work; indirect stimulus may be enough."
+      }
+    ]
+  },
+  "estimated_usd": 0.089385,
+  "volume_targets": [
+    {
+      "muscle": "chest",
+      "priority": "normal",
+      "minSets": 10,
+      "maxSets": 14,
+      "targetSets": 10
+    },
+    {
+      "muscle": "upper_back",
+      "priority": "normal",
+      "minSets": 10,
+      "maxSets": 14,
+      "targetSets": 10
+    },
+    {
+      "muscle": "lats",
+      "priority": "normal",
+      "minSets": 10,
+      "maxSets": 14,
+      "targetSets": 10
+    },
+    {
+      "muscle": "front_delts",
+      "priority": "normal",
+      "minSets": 6,
+      "maxSets": 10,
+      "targetSets": 6
+    },
+    {
+      "muscle": "side_delts",
+      "priority": "normal",
+      "minSets": 6,
+      "maxSets": 10,
+      "targetSets": 6
+    },
+    {
+      "muscle": "rear_delts",
+      "priority": "normal",
+      "minSets": 6,
+      "maxSets": 10,
+      "targetSets": 6
+    },
+    {
+      "muscle": "biceps",
+      "priority": "normal",
+      "minSets": 6,
+      "maxSets": 10,
+      "targetSets": 6
+    },
+    {
+      "muscle": "triceps",
+      "priority": "normal",
+      "minSets": 6,
+      "maxSets": 10,
+      "targetSets": 6
+    },
+    {
+      "muscle": "forearms",
+      "priority": "normal",
+      "minSets": 6,
+      "maxSets": 10,
+      "targetSets": 6
+    },
+    {
+      "muscle": "quads",
+      "priority": "normal",
+      "minSets": 10,
+      "maxSets": 14,
+      "targetSets": 10
+    },
+    {
+      "muscle": "hamstrings",
+      "priority": "normal",
+      "minSets": 10,
+      "maxSets": 14,
+      "targetSets": 10
+    },
+    {
+      "muscle": "glutes",
+      "priority": "normal",
+      "minSets": 10,
+      "maxSets": 14,
+      "targetSets": 10
+    },
+    {
+      "muscle": "calves",
+      "priority": "normal",
+      "minSets": 6,
+      "maxSets": 10,
+      "targetSets": 6
+    },
+    {
+      "muscle": "adductors",
+      "priority": "normal",
+      "minSets": 6,
+      "maxSets": 10,
+      "targetSets": 6
+    },
+    {
+      "muscle": "hip_flexors",
+      "priority": "normal",
+      "minSets": 6,
+      "maxSets": 10,
+      "targetSets": 6
+    },
+    {
+      "muscle": "abs",
+      "priority": "normal",
+      "minSets": 6,
+      "maxSets": 10,
+      "targetSets": 6
+    },
+    {
+      "muscle": "obliques",
+      "priority": "normal",
+      "minSets": 6,
+      "maxSets": 10,
+      "targetSets": 6
+    },
+    {
+      "muscle": "spinal_erectors",
+      "priority": "normal",
+      "minSets": 6,
+      "maxSets": 10,
+      "targetSets": 6
+    }
+  ],
+  "workouts": [
+    {
+      "day": "Mon",
+      "name": "Full Body A",
+      "emphasis": "Squat / horizontal push",
+      "estimated_minutes": 69,
+      "warmup": [
+        {
+          "name": "Goblet Squat",
+          "sets": 2,
+          "reps": "8"
+        },
+        {
+          "name": "Lateral Lunge",
+          "sets": 2,
+          "reps": "5/side"
+        },
+        {
+          "name": "Push-Up",
+          "sets": 2,
+          "reps": "6/side"
+        },
+        {
+          "name": "Scapular Push-Up",
+          "sets": 2,
+          "reps": "8-10"
+        },
+        {
+          "name": "Band Row",
+          "sets": 2,
+          "reps": "12"
+        }
+      ],
+      "potentiation": [
+        {
+          "name": "Vertical Jump",
+          "sets": 2
+        }
+      ],
+      "strength": [
+        {
+          "name": "Box Squat",
+          "role": "primary",
+          "sets": 3,
+          "reps": "5-10",
+          "rir": 2,
+          "rest": 120,
+          "superset": null,
+          "pattern": "squat",
+          "fatigue": null
+        },
+        {
+          "name": "Decline Push-Up",
+          "role": "primary",
+          "sets": 3,
+          "reps": "6-8",
+          "rir": 2,
+          "rest": 120,
+          "superset": null,
+          "pattern": "horizontal_push",
+          "fatigue": null
+        },
+        {
+          "name": "Chin-Up",
+          "role": "primary",
+          "sets": 3,
+          "reps": "5-10",
+          "rir": 2,
+          "rest": 180,
+          "superset": null,
+          "pattern": "vertical_pull",
+          "fatigue": null
+        },
+        {
+          "name": "Single-Leg Romanian Deadlift",
+          "role": "secondary",
+          "sets": 3,
+          "reps": "6-12",
+          "rir": 2,
+          "rest": 120,
+          "superset": null,
+          "pattern": "hinge",
+          "fatigue": null
+        },
+        {
+          "name": "Pull-Up",
+          "role": "secondary",
+          "sets": 3,
+          "reps": "6-12",
+          "rir": 2,
+          "rest": 120,
+          "superset": null,
+          "pattern": "vertical_pull",
+          "fatigue": null
+        }
+      ],
+      "cooldown": [
+        {
+          "name": "Doorway Pec Stretch",
+          "sets": 1,
+          "reps": "30 sec/side"
+        },
+        {
+          "name": "Lat Stretch",
+          "sets": 1,
+          "reps": "30 sec/side"
+        }
+      ]
+    },
+    {
+      "day": "Wed",
+      "name": "Full Body B",
+      "emphasis": "Hinge / vertical push",
+      "estimated_minutes": 74,
+      "warmup": [
+        {
+          "name": "Light DB RDL",
+          "sets": 2,
+          "reps": "8"
+        },
+        {
+          "name": "Glute Bridge",
+          "sets": 2,
+          "reps": "10"
+        },
+        {
+          "name": "Scapular Push-Up",
+          "sets": 2,
+          "reps": "8-10"
+        },
+        {
+          "name": "Thoracic Rotation",
+          "sets": 2,
+          "reps": "5/side"
+        },
+        {
+          "name": "Band Row",
+          "sets": 2,
+          "reps": "12"
+        }
+      ],
+      "potentiation": [
+        {
+          "name": "Broad Jump",
+          "sets": 2
+        }
+      ],
+      "strength": [
+        {
+          "name": "Single-Leg Romanian Deadlift",
+          "role": "primary",
+          "sets": 3,
+          "reps": "5-10",
+          "rir": 2,
+          "rest": 180,
+          "superset": null,
+          "pattern": "hinge",
+          "fatigue": null
+        },
+        {
+          "name": "Bench Dip",
+          "role": "primary",
+          "sets": 3,
+          "reps": "5-10",
+          "rir": 2,
+          "rest": 120,
+          "superset": null,
+          "pattern": "vertical_push",
+          "fatigue": null
+        },
+        {
+          "name": "Chin-Up",
+          "role": "primary",
+          "sets": 3,
+          "reps": "5-10",
+          "rir": 2,
+          "rest": 180,
+          "superset": null,
+          "pattern": "vertical_pull",
+          "fatigue": null
+        },
+        {
+          "name": "Bulgarian Split Squat",
+          "role": "secondary",
+          "sets": 3,
+          "reps": "6-12",
+          "rir": 2,
+          "rest": 120,
+          "superset": null,
+          "pattern": "lunge",
+          "fatigue": null
+        },
+        {
+          "name": "Pull-Up",
+          "role": "secondary",
+          "sets": 3,
+          "reps": "6-12",
+          "rir": 2,
+          "rest": 120,
+          "superset": null,
+          "pattern": "vertical_pull",
+          "fatigue": null
+        }
+      ],
+      "cooldown": [
+        {
+          "name": "Doorway Pec Stretch",
+          "sets": 1,
+          "reps": "30 sec/side"
+        },
+        {
+          "name": "Lat Stretch",
+          "sets": 1,
+          "reps": "30 sec/side"
+        }
+      ]
+    },
+    {
+      "day": "Fri",
+      "name": "Full Body C",
+      "emphasis": "Unilateral / athletic hypertrophy",
+      "estimated_minutes": 72,
+      "warmup": [
+        {
+          "name": "Lunge",
+          "sets": 2,
+          "reps": "5/side"
+        },
+        {
+          "name": "Lateral Lunge",
+          "sets": 2,
+          "reps": "5/side"
+        },
+        {
+          "name": "Push-Up",
+          "sets": 2,
+          "reps": "6/side"
+        },
+        {
+          "name": "Scapular Push-Up",
+          "sets": 2,
+          "reps": "8-10"
+        },
+        {
+          "name": "Band Row",
+          "sets": 2,
+          "reps": "12"
+        }
+      ],
+      "potentiation": [
+        {
+          "name": "Medicine-Ball Chest Pass",
+          "sets": 2
+        }
+      ],
+      "strength": [
+        {
+          "name": "Bulgarian Split Squat",
+          "role": "primary",
+          "sets": 3,
+          "reps": "5-10",
+          "rir": 2,
+          "rest": 180,
+          "superset": null,
+          "pattern": "lunge",
+          "fatigue": null
+        },
+        {
+          "name": "Decline Push-Up",
+          "role": "primary",
+          "sets": 3,
+          "reps": "5-10",
+          "rir": 2,
+          "rest": 120,
+          "superset": null,
+          "pattern": "horizontal_push",
+          "fatigue": null
+        },
+        {
+          "name": "Chin-Up",
+          "role": "primary",
+          "sets": 3,
+          "reps": "5-10",
+          "rir": 2,
+          "rest": 180,
+          "superset": null,
+          "pattern": "vertical_pull",
+          "fatigue": null
+        },
+        {
+          "name": "Frog Pump",
+          "role": "secondary",
+          "sets": 3,
+          "reps": "6-12",
+          "rir": 2,
+          "rest": 120,
+          "superset": "Superset A",
+          "pattern": "hinge",
+          "fatigue": null
+        },
+        {
+          "name": "Pull-Up",
+          "role": "secondary",
+          "sets": 3,
+          "reps": "6-12",
+          "rir": 2,
+          "rest": 120,
+          "superset": "Superset A",
+          "pattern": "vertical_pull",
+          "fatigue": null
+        }
+      ],
+      "cooldown": [
+        {
+          "name": "Doorway Pec Stretch",
+          "sets": 1,
+          "reps": "30 sec/side"
+        },
+        {
+          "name": "Lat Stretch",
+          "sets": 1,
+          "reps": "30 sec/side"
+        }
+      ]
+    }
+  ],
+  "ai_error": "AI week failed validation after deterministic repair; used the science template."
+}

@@ -1,4 +1,4 @@
-/** Strict Structured Output schema. No example exercise names. */
+/** Strict Structured Output schema. Design fields only — science owns validation, ramps, and progression. */
 
 const prepItem = {
   type: 'object',
@@ -9,16 +9,6 @@ const prepItem = {
     sets: { type: 'integer' },
     prescription: { type: 'string' },
     why: { type: 'string' },
-  },
-};
-
-const rampSet = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['percent_of_working', 'reps'],
-  properties: {
-    percent_of_working: { type: 'number' },
-    reps: { type: 'integer' },
   },
 };
 
@@ -35,7 +25,6 @@ const strengthExercise = {
     'rest_seconds',
     'reps_per_side',
     'measurement_type',
-    'ramp_sets',
     'why',
   ],
   properties: {
@@ -48,7 +37,6 @@ const strengthExercise = {
     rest_seconds: { type: 'integer' },
     reps_per_side: { type: 'boolean' },
     measurement_type: { type: 'string', enum: ['reps', 'time', 'distance'] },
-    ramp_sets: { type: 'array', items: rampSet },
     why: { type: 'string' },
   },
 };
@@ -82,87 +70,19 @@ const workout = {
 export const WEEK_PROGRAM_JSON_SCHEMA = {
   type: 'object',
   additionalProperties: false,
-  required: [
-    'schema_version',
-    'summary',
-    'coaching_notes',
-    'program_rationale',
-    'weekly_targets',
-    'workouts',
-    'progression',
-    'quality_review',
-  ],
+  required: ['schema_version', 'summary', 'coaching_notes', 'workouts', 'progression'],
   properties: {
     schema_version: { type: 'string' },
     summary: { type: 'string' },
     coaching_notes: { type: 'string' },
-    program_rationale: {
-      type: 'object',
-      additionalProperties: false,
-      required: ['weekly_idea', 'fatigue_plan', 'consistency_plan'],
-      properties: {
-        weekly_idea: { type: 'string' },
-        fatigue_plan: { type: 'string' },
-        consistency_plan: { type: 'string' },
-      },
-    },
-    weekly_targets: {
-      type: 'array',
-      items: {
-        type: 'object',
-        additionalProperties: false,
-        required: ['muscle', 'planned_working_sets'],
-        properties: {
-          muscle: { type: 'string' },
-          planned_working_sets: { type: 'number' },
-        },
-      },
-    },
     workouts: { type: 'array', items: workout },
     progression: {
       type: 'object',
       additionalProperties: false,
-      required: ['strategy', 'primary_exercise_ids', 'accessory_rotation_allowed', 'weekly_rules'],
+      required: ['strategy', 'primary_exercise_ids'],
       properties: {
         strategy: { type: 'string' },
         primary_exercise_ids: { type: 'array', items: { type: 'string' } },
-        accessory_rotation_allowed: { type: 'boolean' },
-        weekly_rules: {
-          type: 'array',
-          items: {
-            type: 'object',
-            additionalProperties: false,
-            required: ['week', 'load_change', 'set_change', 'rir_change', 'is_deload', 'notes'],
-            properties: {
-              week: { type: 'integer' },
-              load_change: { type: 'string' },
-              set_change: { type: 'integer' },
-              rir_change: { type: 'integer' },
-              is_deload: { type: 'boolean' },
-              notes: { type: 'string' },
-            },
-          },
-        },
-      },
-    },
-    quality_review: {
-      type: 'object',
-      additionalProperties: false,
-      required: ['passed', 'notes', 'self_check'],
-      properties: {
-        passed: { type: 'boolean' },
-        notes: { type: 'string' },
-        self_check: {
-          type: 'object',
-          additionalProperties: false,
-          required: ['days_complementary', 'primaries_not_cloned', 'warmup_matches_session', 'fits_session_minutes'],
-          properties: {
-            days_complementary: { type: 'boolean' },
-            primaries_not_cloned: { type: 'boolean' },
-            warmup_matches_session: { type: 'boolean' },
-            fits_session_minutes: { type: 'boolean' },
-          },
-        },
       },
     },
   },

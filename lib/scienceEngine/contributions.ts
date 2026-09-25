@@ -2,9 +2,10 @@ import { SCIENCE_RULES_V1 } from './rules';
 import { normalizeMuscleId, type MuscleId } from './taxonomy';
 import type { CatalogExercise, MuscleContribution } from './types';
 
+/** Legacy safety only. The 260 masters use explicit hypertrophy_volume_credits. */
 const NAME_DEFAULTS: { match: RegExp; contributions: MuscleContribution[] }[] = [
   {
-    match: /bench press|chest press|push-?up|push up/,
+    match: /bench press|chest press|push-?up|push up/i,
     contributions: [
       { muscle: 'chest', contribution: 1 },
       { muscle: 'triceps', contribution: 0.5 },
@@ -12,7 +13,7 @@ const NAME_DEFAULTS: { match: RegExp; contributions: MuscleContribution[] }[] = 
     ],
   },
   {
-    match: /pulldown|pull-?up|chin-?up/,
+    match: /pulldown|pull-?up|chin-?up/i,
     contributions: [
       { muscle: 'lats', contribution: 1 },
       { muscle: 'biceps', contribution: 0.5 },
@@ -20,7 +21,7 @@ const NAME_DEFAULTS: { match: RegExp; contributions: MuscleContribution[] }[] = 
     ],
   },
   {
-    match: /row/,
+    match: /\brow\b/i,
     contributions: [
       { muscle: 'upper_back', contribution: 1 },
       { muscle: 'lats', contribution: 0.5 },
@@ -28,14 +29,14 @@ const NAME_DEFAULTS: { match: RegExp; contributions: MuscleContribution[] }[] = 
     ],
   },
   {
-    match: /back squat|squat(?! jump)/,
+    match: /back squat|squat(?! jump)/i,
     contributions: [
       { muscle: 'quads', contribution: 1 },
       { muscle: 'glutes', contribution: 0.5 },
     ],
   },
   {
-    match: /deadlift|rdl|romanian/,
+    match: /deadlift|rdl|romanian/i,
     contributions: [
       { muscle: 'hamstrings', contribution: 1 },
       { muscle: 'glutes', contribution: 0.5 },
@@ -58,15 +59,14 @@ export function contributionsForExercise(
   }
 
   const credits = exercise.raw?.coaching_metadata?.hypertrophy_volume_credits;
-  if (Array.isArray(credits)) {
-    return dedupeContributions(
-      credits
-        .map((row: any) => {
-          const muscle = normalizeMuscleId(row.muscle);
-          return muscle ? { muscle, contribution: Number(row.credit) || 0 } : null;
-        })
-        .filter((row): row is MuscleContribution => !!row)
-    );
+  if (Array.isArray(credits) && credits.length) {
+    const fromCredits = credits
+      .map((row: any) => {
+        const muscle = normalizeMuscleId(row.muscle);
+        return muscle ? { muscle, contribution: Number(row.credit) || 0 } : null;
+      })
+      .filter((row): row is MuscleContribution => !!row);
+    if (fromCredits.length) return dedupeContributions(fromCredits);
   }
 
   const targets = exercise.raw?.muscle_targets;

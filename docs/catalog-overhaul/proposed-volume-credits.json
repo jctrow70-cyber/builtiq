@@ -1,0 +1,172 @@
+{
+  "status": "proposal_only_not_applied",
+  "generated_at": "2026-09-25T00:10:00.000Z",
+  "source_capture": "docs/catalog-overhaul/volume-credit-diagnosis.json",
+  "do_not_apply": [
+    "Do not write Supabase yet",
+    "Do not modify archived rows",
+    "Do not modify user custom exercises",
+    "Do not use the naive pattern overlay from diagnose-volume-credits.ts proposedCredits() — that draft misclassified dips, reverse hypers, renegade rows, and rear-delt rows"
+  ],
+  "contribution_model": {
+    "1.0": "Primary hypertrophy target. One working set = one equivalent set for that muscle.",
+    "0.5": "Meaningful secondary hypertrophy stimulus. One working set = half an equivalent set.",
+    "0.25": "Reserved. Not used by SCIENCE_RULES_V1. Do not invent for this pass.",
+    "0": "No hypertrophy credit: stabilizer, warmup, mobility, stretch, hang, cardio, olympic/power practice."
+  },
+  "precedence": {
+    "authoritative": "coaching_metadata.hypertrophy_volume_credits when non-empty",
+    "legacy_only": [
+      "muscle_targets mapped through primary=1.0 / secondary=0.5",
+      "NAME_DEFAULTS name inference",
+      "primaryMuscles 1.0 + secondaryMuscles 0.5"
+    ],
+    "rule": "The 260 enriched masters must not depend on name inference for normal operation. Stop merging NAME_DEFAULTS into explicit credits once the 260 are complete. Name inference remains a safety net for incomplete/legacy/custom rows only."
+  },
+  "naive_audit_vs_authoritative_proposal": {
+    "naive_proposed_changes": 136,
+    "naive_rejected_reason": "Pattern-only overlay treated every vertical_push as an overhead press (Dip → front_delts 1.0) and every hinge as a hamstring deadlift. That is not the contribution model.",
+    "authoritative_change_count": 27,
+    "leave_unchanged_examples": [
+      "Dip stays chest 1.0 + triceps 0.5",
+      "Bench Dip stays triceps 1.0",
+      "Back Extension stays spinal_erectors 1.0",
+      "Reverse Hyperextension stays glutes 1.0 + hamstrings 0.5",
+      "Low Row stays lats 1.0 + upper_back 0.5 + biceps 0.5 (lat-biased elbow path)",
+      "Meadows Row stays lats 1.0 + upper_back 0.5 + biceps 0.5 (lat-stretch row)",
+      "Renegade Row stays abs 1.0",
+      "Straight-Arm Pulldown stays lats-only after removing erroneous biceps 0.5; no upper_back"
+    ]
+  },
+  "rules": [
+    {
+      "id": "vertical_pull_secondary_upper_back",
+      "reason": "Vertical pulls are lat-primary. Scapular depressors / mid-back get meaningful but not equal stimulus. Catalog already lists upper_back as secondary; stored credits omit it. conservativeCredits() only adds biceps for vertical_pull.",
+      "proposed": { "lats": 1.0, "upper_back": 0.5, "biceps": 0.5 },
+      "exercises": [
+        { "id": "e9e34e71-ad77-4fdb-8d86-1179cd5ecc05", "exercise": "Assisted Pull-Up", "current_credits": { "lats": 1, "biceps": 0.5 } },
+        { "id": "20b6559e-1e94-4db6-873a-548f85234747", "exercise": "Chin-Up", "current_credits": { "lats": 1, "biceps": 0.5 } },
+        { "id": "c53c1691-a5f9-47b4-ac86-7909b80860be", "exercise": "Close-Grip Pulldown", "current_credits": { "lats": 1, "biceps": 0.5 } },
+        { "id": "98072829-5982-4634-a2cc-d9b0407a68a9", "exercise": "Lat Pulldown", "current_credits": { "lats": 1, "biceps": 0.5 } },
+        { "id": "252b6022-8632-489b-9687-5b75113f2c07", "exercise": "Machine Pulldown", "current_credits": { "lats": 1, "biceps": 0.5 } },
+        { "id": "20d8dac5-7bc1-410c-bfe6-1ee8c5dac75d", "exercise": "Pull-Up", "current_credits": { "lats": 1, "biceps": 0.5 } },
+        { "id": "cf93e392-4104-4738-8739-a9cdeae5cead", "exercise": "Pull-Up Work", "current_credits": { "lats": 1, "biceps": 0.5 } },
+        { "id": "ec94b7bf-d245-442c-8717-cebaea168527", "exercise": "Rope Climb", "current_credits": { "lats": 1, "biceps": 0.5 } }
+      ]
+    },
+    {
+      "id": "midback_row_primary_upper_back",
+      "reason": "Free-weight / chest-supported horizontal rows are scapular-retraction upper-back primaries. Enrichment EXACT overrides and inferPrimaryFallback currently force lats 1.0 + upper_back 0.5. Do not also give lats 1.0.",
+      "proposed": { "upper_back": 1.0, "lats": 0.5, "biceps": 0.5 },
+      "exercises": [
+        { "id": "b4bbb290-e036-4981-9318-5eda3021f8d1", "exercise": "Bent-Over Row", "current_credits": { "lats": 1, "upper_back": 0.5 } },
+        { "id": "e86eb7a8-08c3-498c-bd71-fd5be1b8f67b", "exercise": "T-Bar Row", "current_credits": { "lats": 1, "upper_back": 0.5 } },
+        { "id": "103403c0-4e2e-4aa6-a2b6-4e2002746e78", "exercise": "One-Arm Row", "current_credits": { "lats": 1, "upper_back": 0.5, "biceps": 0.5 } }
+      ]
+    },
+    {
+      "id": "already_upper_back_primary_add_lats",
+      "reason": "These rows already credit upper_back 1.0 correctly. They omit lats 0.5 even though catalog secondary_muscles include lats. Add the missing secondary only.",
+      "proposed": { "upper_back": 1.0, "lats": 0.5, "biceps": 0.5 },
+      "exercises": [
+        { "id": "1695e444-3146-42aa-af3b-ebc2e9b110f4", "exercise": "Chest-Supported Row", "current_credits": { "upper_back": 1, "biceps": 0.5 } },
+        { "id": "208acbf7-5c7f-452b-9c65-e328d46948ef", "exercise": "High Row", "current_credits": { "upper_back": 1, "biceps": 0.5 } },
+        { "id": "3f2f0d01-ee39-4529-82fb-39a4ecee6c2f", "exercise": "Inverted Row", "current_credits": { "upper_back": 1, "biceps": 0.5 } },
+        { "id": "37f7bb9d-c406-4a2f-bdb0-3ed72e37fbe2", "exercise": "Landmine Row", "current_credits": { "upper_back": 1, "biceps": 0.5 } },
+        { "id": "3dbe8693-4929-42ab-b23c-e401ccc5e2d6", "exercise": "Machine Row", "current_credits": { "upper_back": 1, "biceps": 0.5 } },
+        { "id": "97ae9c44-3765-48fa-9ea4-403a8cd0961e", "exercise": "Pendlay Row", "current_credits": { "upper_back": 1, "biceps": 0.5 } },
+        { "id": "48d59b70-83bf-4ca4-94e2-ae90894570f2", "exercise": "Row", "current_credits": { "upper_back": 1, "biceps": 0.5 } },
+        { "id": "feca6736-ca50-4bb6-955d-c3a0215e2fb3", "exercise": "Seal Row", "current_credits": { "upper_back": 1, "biceps": 0.5 } }
+      ]
+    },
+    {
+      "id": "lat_biased_row_keep",
+      "reason": "Elbows-tucked / stretch-biased rows stay lat-primary. This is the exercise-specific exception so not every row becomes upper_back 1.0.",
+      "proposed": { "lats": 1.0, "upper_back": 0.5, "biceps": 0.5 },
+      "exercises": [
+        { "id": "0d1ab3b6-39b9-4f03-9c4f-7b8dd080cd66", "exercise": "Low Row", "current_credits": { "lats": 1, "upper_back": 0.5, "biceps": 0.5 }, "change": "none" },
+        { "id": "ab28ed41-43fa-44fa-854c-9a833a73ad98", "exercise": "Meadows Row", "current_credits": { "lats": 1, "upper_back": 0.5, "biceps": 0.5 }, "change": "none" }
+      ]
+    },
+    {
+      "id": "rear_delt_scapular",
+      "reason": "Rear-delt / scapular work is rear_delts-primary with meaningful upper_back secondary. Enrichment tagged them horizontal_pull and auto-added biceps 0.5. Do not convert them into generic rows (upper_back 1 + lats 0.5).",
+      "proposed": { "rear_delts": 1.0, "upper_back": 0.5 },
+      "exercises": [
+        { "id": "23ace7e2-2bfa-4c5c-93b5-9fff98eb0afb", "exercise": "Face Pull", "current_credits": { "rear_delts": 1, "biceps": 0.5 } },
+        { "id": "12b1ada8-ad85-4acc-bb9b-590c1043c8ac", "exercise": "Rear Delt Row", "current_credits": { "rear_delts": 1, "biceps": 0.5 } },
+        { "id": "c663f055-278c-487c-b8c9-b30a6e591165", "exercise": "Cable Row to Neck", "current_credits": { "rear_delts": 1, "biceps": 0.5 } },
+        { "id": "c1354932-52ae-4e3e-b324-e456cab5e732", "exercise": "Reverse Fly", "current_credits": { "rear_delts": 1 } },
+        { "id": "1bbfadad-9757-4537-9c51-0328d8cf5520", "exercise": "Cable Reverse Fly", "current_credits": { "rear_delts": 1 } }
+      ]
+    },
+    {
+      "id": "straight_arm_pulldown_lat_isolation",
+      "reason": "Shoulder-extension lat isolation. No scapular retraction, no elbow flexion. Stored biceps 0.5 is an enrichment artifact from vertical_pull + biceps default.",
+      "proposed": { "lats": 1.0 },
+      "exercises": [
+        { "id": "cbc9e466-ba31-4aec-b1af-4e10ac8c84ae", "exercise": "Straight-Arm Pulldown", "current_credits": { "lats": 1, "biceps": 0.5 } }
+      ]
+    },
+    {
+      "id": "empty_working_scapular",
+      "reason": "Working or commonly prescribed scapular drills with empty stored credits currently fall through to 0.5/0.5 secondaries or zero if treated as warmup.",
+      "proposed": { "rear_delts": 1.0, "upper_back": 0.5 },
+      "exercises": [
+        { "id": "11b1ea29-fd8c-4002-9d21-50c8ec0802c8", "exercise": "Band Pull-Apart", "current_credits": {}, "note": "empty stored credits; runtime today is upper_back 0.5 + rear_delts 0.5 from secondaryMuscles" }
+      ]
+    }
+  ],
+  "rejected_ai_week_rescore": {
+    "note": "Same GPT week, no regeneration. Authoritative model only (vertical pulls gain upper_back 0.5). Dips/chest/hinges unchanged.",
+    "current": {
+      "upper_back": 0,
+      "lats": 11,
+      "rear_delts": 0,
+      "biceps": 5.5,
+      "chest": 11,
+      "quads": 13,
+      "hamstrings": 9,
+      "glutes": 14.5,
+      "front_delts": 2,
+      "side_delts": 0,
+      "triceps": 7.5
+    },
+    "after_authoritative_credits": {
+      "upper_back": 5.5,
+      "lats": 11,
+      "rear_delts": 0,
+      "biceps": 5.5,
+      "chest": 11,
+      "quads": 13,
+      "hamstrings": 9,
+      "glutes": 14.5,
+      "front_delts": 2,
+      "side_delts": 0,
+      "triceps": 7.5
+    },
+    "targets": {
+      "upper_back": 10,
+      "lats": 10,
+      "rear_delts": 6,
+      "biceps": 6,
+      "chest": 10,
+      "quads": 10,
+      "hamstrings": 10,
+      "glutes": 10,
+      "front_delts": 6,
+      "side_delts": 6,
+      "triceps": 6
+    },
+    "volume_error_after": false,
+    "volume_warning_after": ["upper_back 5.5/10 = 0.55 (warn < 0.7)", "rear_delts 0", "side_delts 0"],
+    "full_validator_would_pass": false,
+    "remaining_non_volume_errors": ["laterality /side on bilateral stretches", "Dip + Back Extension heavy superset", "primary rest 105s < 120s"]
+  },
+  "files_and_db_to_change_when_approved": [
+    "st_exercises.coaching_metadata.hypertrophy_volume_credits for the listed active master rows only",
+    "optionally st_exercises.muscle_targets / coaching_metadata.primary_muscles for Bent-Over Row / T-Bar Row / One-Arm Row so primary is upper_back",
+    "lib/scienceEngine/catalogEnrichment/qualityPass.ts: inferPrimaryFallback must stop mapping every horizontal_pull to lats; conservativeCredits must add upper_back 0.5 on vertical_pull; EXACT t-bar/bent-over overrides must become upper_back-primary",
+    "lib/scienceEngine/contributions.ts: case-insensitive NAME_DEFAULTS as legacy safety only; stop merging NAME_DEFAULTS into complete explicit credits after the 260 are written"
+  ]
+}

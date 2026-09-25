@@ -1,2 +1,0 @@
-assert(primer && /chest pass|medicine/i.test(primer.name), `Expected medicine-ball chest pass, got ${primer?.name}`);
-console.log('BIQ-0141 science engine acceptance checks passed.');

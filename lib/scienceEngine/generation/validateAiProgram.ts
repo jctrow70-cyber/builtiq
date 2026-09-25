@@ -144,7 +144,7 @@ function validateWorkout(
     if (ex.measurement_type !== hit.measurement_type && hit.measurement_type !== 'reps') {
       issues.push(err('MEASUREMENT_MISMATCH', `${hit.name} should use ${hit.measurement_type}`, workout.day_label, hit.exercise_id));
     }
-    if (ex.ramp_sets.length && ex.role !== 'primary') {
+    if ((ex.ramp_sets?.length || 0) && ex.role !== 'primary') {
       issues.push(warn('RAMP_ON_ACCESSORY', `Ramp sets on ${hit.name} are unusual`, workout.day_label, hit.exercise_id));
     }
     if (ex.why && !whyAgreesWithExercise(ex.why, hit)) {

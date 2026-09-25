@@ -1,0 +1,2034 @@
+{
+  "generated_at": "2026-09-25T00:48:25.799Z",
+  "supabase_host": "qruiwfzzrylrirlxzdqx.supabase.co",
+  "rows": [
+    {
+      "id": "e9e34e71-ad77-4fdb-8d86-1179cd5ecc05",
+      "name": "Assisted Pull-Up",
+      "coaching_metadata": {
+        "aliases": [
+          "Assisted Chin/Pull-Up"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound vertical pull; high fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits lats:1, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "high",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "No swinging",
+          "Full range",
+          "Controlled"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "primary",
+          "secondary"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Compound",
+        "master_movement": "Vertical Pull",
+        "primary_muscles": [
+          "lats"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "lats",
+          "biceps",
+          "upper_back"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "vertical_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Machine",
+        "secondary_muscles": [
+          "biceps",
+          "upper_back"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Machine"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "lats"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      },
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "lats",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "muscle_group": "lats"
+    },
+    {
+      "id": "20b6559e-1e94-4db6-873a-548f85234747",
+      "name": "Chin-Up",
+      "coaching_metadata": {
+        "aliases": [
+          "Chinup"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound vertical pull; high fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits lats:1, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "high",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Chest up",
+          "No kicking",
+          "Full range"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "primary",
+          "secondary"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Compound",
+        "master_movement": "Vertical Pull",
+        "primary_muscles": [
+          "lats"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "lats",
+          "biceps",
+          "upper_back"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "vertical_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Bodyweight",
+        "secondary_muscles": [
+          "biceps",
+          "upper_back"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Bodyweight",
+          "Assisted",
+          "Weighted"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "lats"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      },
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "lats",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "muscle_group": "lats"
+    },
+    {
+      "id": "c53c1691-a5f9-47b4-ac86-7909b80860be",
+      "name": "Close-Grip Pulldown",
+      "coaching_metadata": {
+        "aliases": [
+          "Neutral-Grip Pulldown"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound vertical pull; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits lats:1, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Don't lean excessively",
+          "Full stretch",
+          "Squeeze lats"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Compound",
+        "master_movement": "Vertical Pull",
+        "primary_muscles": [
+          "lats"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "lats",
+          "biceps",
+          "upper_back"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "vertical_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Cable",
+        "secondary_muscles": [
+          "biceps",
+          "upper_back"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Cable",
+          "Machine"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "lats"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      },
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "lats",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "muscle_group": "lats"
+    },
+    {
+      "id": "98072829-5982-4634-a2cc-d9b0407a68a9",
+      "name": "Lat Pulldown",
+      "coaching_metadata": {
+        "aliases": [
+          "Pulldown",
+          "Lat Pull Down"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound vertical pull; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits lats:1, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Chest tall",
+          "Elbows down",
+          "Don't swing"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Compound",
+        "master_movement": "Vertical Pull",
+        "primary_muscles": [
+          "lats"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "lats",
+          "biceps",
+          "upper_back"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "vertical_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Cable",
+        "secondary_muscles": [
+          "biceps",
+          "upper_back"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Cable",
+          "Machine",
+          "Bands"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "lats"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      },
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "lats",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "muscle_group": "lats"
+    },
+    {
+      "id": "252b6022-8632-489b-9687-5b75113f2c07",
+      "name": "Machine Pulldown",
+      "coaching_metadata": {
+        "aliases": [
+          "Pulldown Machine"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound vertical pull; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits lats:1, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Don't swing",
+          "Full stretch",
+          "Chest tall"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Compound",
+        "master_movement": "Vertical Pull",
+        "primary_muscles": [
+          "lats"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "lats",
+          "biceps",
+          "upper_back"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "vertical_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Machine",
+        "secondary_muscles": [
+          "biceps",
+          "upper_back"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Machine"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "lats"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      },
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "lats",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "muscle_group": "lats"
+    },
+    {
+      "id": "20d8dac5-7bc1-410c-bfe6-1ee8c5dac75d",
+      "name": "Pull-Up",
+      "coaching_metadata": {
+        "aliases": [
+          "Pullup"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound vertical pull; high fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits lats:1, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "high",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "No swinging",
+          "Full hang",
+          "Drive elbows down"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "primary",
+          "secondary"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Compound",
+        "master_movement": "Vertical Pull",
+        "primary_muscles": [
+          "lats"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "lats",
+          "biceps",
+          "upper_back",
+          "abs"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "vertical_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Bodyweight",
+        "secondary_muscles": [
+          "biceps",
+          "upper_back",
+          "abs"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Bodyweight",
+          "Assisted",
+          "Weighted"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "lats"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      },
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "lats",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "muscle_group": "lats"
+    },
+    {
+      "id": "cf93e392-4104-4738-8739-a9cdeae5cead",
+      "name": "Pull-Up Work",
+      "coaching_metadata": {
+        "aliases": [
+          "Pull up work"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound vertical pull; high fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits lats:1, biceps:0.5",
+        "design_notes": "Household logged this as its own card, separate from Pull-Up and Chin-Up.",
+        "fatigue_cost": "high",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Ribs down",
+          "Full hang if able",
+          "Own the last inch"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "primary",
+          "secondary"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Compound",
+        "master_movement": "Vertical Pull",
+        "primary_muscles": [
+          "lats"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "lats",
+          "biceps",
+          "upper_back"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "vertical_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Bodyweight",
+        "secondary_muscles": [
+          "biceps",
+          "upper_back"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Bodyweight",
+          "Band"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "lats"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      },
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "lats",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "muscle_group": "lats"
+    },
+    {
+      "id": "ec94b7bf-d245-442c-8717-cebaea168527",
+      "name": "Rope Climb",
+      "coaching_metadata": {
+        "aliases": [
+          "Climb Rope"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound vertical pull; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits lats:1, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Learn foot lock",
+          "Control descent",
+          "Clear landing"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Functional",
+        "master_movement": "Vertical Pull",
+        "primary_muscles": [
+          "lats"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "lats",
+          "biceps",
+          "forearms",
+          "abs"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "vertical_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Rope",
+        "secondary_muscles": [
+          "biceps",
+          "forearms",
+          "abs"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Rope"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "lats"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      },
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "lats",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "muscle_group": "lats"
+    },
+    {
+      "id": "b4bbb290-e036-4981-9318-5eda3021f8d1",
+      "name": "Bent-Over Row",
+      "coaching_metadata": {
+        "aliases": [
+          "Barbell Row",
+          "Bent Row"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound horizontal pull; high fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits lats:1, upper_back:0.5",
+        "design_notes": "",
+        "fatigue_cost": "high",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Hinge and hold",
+          "Elbows back",
+          "No jerking"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "primary",
+          "secondary"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Compound",
+        "master_movement": "Horizontal Pull",
+        "primary_muscles": [
+          "lats"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "lats",
+          "upper_back",
+          "rear_delts",
+          "biceps",
+          "spinal_erectors"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "horizontal_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Barbell",
+        "secondary_muscles": [
+          "upper_back",
+          "rear_delts",
+          "biceps",
+          "spinal_erectors"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Barbell",
+          "Dumbbell",
+          "Kettlebell"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "lats"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "upper_back"
+          }
+        ]
+      },
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "lats",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "upper_back",
+          "percentage": 40
+        }
+      ],
+      "muscle_group": "lats"
+    },
+    {
+      "id": "e86eb7a8-08c3-498c-bd71-fd5be1b8f67b",
+      "name": "T-Bar Row",
+      "coaching_metadata": {
+        "aliases": [
+          "T Bar Row"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound horizontal pull; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits lats:1, upper_back:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Chest tall",
+          "Elbows back",
+          "Controlled stretch"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Compound",
+        "master_movement": "Horizontal Pull",
+        "primary_muscles": [
+          "lats"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "lats",
+          "upper_back",
+          "biceps",
+          "rear_delts"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "horizontal_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Machine",
+        "secondary_muscles": [
+          "upper_back",
+          "biceps",
+          "rear_delts"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Machine",
+          "Landmine"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "lats"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "upper_back"
+          }
+        ]
+      },
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "lats",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "upper_back",
+          "percentage": 40
+        }
+      ],
+      "muscle_group": "lats"
+    },
+    {
+      "id": "103403c0-4e2e-4aa6-a2b6-4e2002746e78",
+      "name": "One-Arm Row",
+      "coaching_metadata": {
+        "aliases": [
+          "Single-Arm Row"
+        ],
+        "laterality": "unilateral",
+        "demand_notes": "compound horizontal pull; medium fatigue; medium skill; unilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits lats:1, upper_back:0.5, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Pull to hip",
+          "Keep torso quiet",
+          "Full reach"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Compound",
+        "master_movement": "Horizontal Pull",
+        "primary_muscles": [
+          "lats"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "lats",
+          "upper_back",
+          "rear_delts",
+          "biceps"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "horizontal_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Dumbbell",
+        "secondary_muscles": [
+          "upper_back",
+          "rear_delts",
+          "biceps"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Dumbbell",
+          "Cable",
+          "Kettlebell"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "lats"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "upper_back"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      },
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "lats",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "upper_back",
+          "percentage": 40
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "muscle_group": "lats"
+    },
+    {
+      "id": "1695e444-3146-42aa-af3b-ebc2e9b110f4",
+      "name": "Chest-Supported Row",
+      "coaching_metadata": {
+        "aliases": [
+          "Supported Row"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound horizontal pull; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits upper_back:1, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Chest stays down",
+          "No shrugging",
+          "Pause at top"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Compound",
+        "master_movement": "Horizontal Pull",
+        "primary_muscles": [
+          "upper_back"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "upper_back",
+          "lats",
+          "rear_delts",
+          "biceps"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "horizontal_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Dumbbell",
+        "secondary_muscles": [
+          "lats",
+          "rear_delts",
+          "biceps"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Dumbbell",
+          "Machine",
+          "Barbell"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "upper_back"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      },
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "upper_back",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "muscle_group": "upper_back"
+    },
+    {
+      "id": "208acbf7-5c7f-452b-9c65-e328d46948ef",
+      "name": "High Row",
+      "coaching_metadata": {
+        "aliases": [
+          "High Cable Row"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound horizontal pull; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits upper_back:1, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Shoulders down",
+          "Drive elbows",
+          "Avoid leaning"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Compound",
+        "master_movement": "Diagonal Pull",
+        "primary_muscles": [
+          "upper_back"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "upper_back",
+          "lats",
+          "rear_delts",
+          "biceps"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "horizontal_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Machine",
+        "secondary_muscles": [
+          "lats",
+          "rear_delts",
+          "biceps"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Machine",
+          "Cable",
+          "Bands"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "upper_back"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      },
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "upper_back",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "muscle_group": "upper_back"
+    },
+    {
+      "id": "3f2f0d01-ee39-4529-82fb-39a4ecee6c2f",
+      "name": "Inverted Row",
+      "coaching_metadata": {
+        "aliases": [],
+        "laterality": "bilateral",
+        "demand_notes": "compound horizontal pull; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits upper_back:1, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Body Row",
+          "Australian Pull-Up"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Bodyweight",
+        "master_movement": "Horizontal Pull",
+        "primary_muscles": [
+          "upper_back"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "upper_back",
+          "lats",
+          "biceps",
+          "rear_delts",
+          "abs"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "horizontal_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Bodyweight; Suspension Trainer",
+        "secondary_muscles": [
+          "lats",
+          "biceps",
+          "rear_delts",
+          "abs"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Set body under a fixed bar or straps in a straight line."
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "upper_back"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      },
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "upper_back",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "muscle_group": "upper_back"
+    },
+    {
+      "id": "37f7bb9d-c406-4a2f-bdb0-3ed72e37fbe2",
+      "name": "Landmine Row",
+      "coaching_metadata": {
+        "aliases": [
+          "T-Bar Landmine Row"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound horizontal pull; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits upper_back:1, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Neutral spine",
+          "Drive elbows",
+          "Don't yank"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Compound",
+        "master_movement": "Horizontal Pull",
+        "primary_muscles": [
+          "upper_back"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "upper_back",
+          "lats",
+          "biceps",
+          "rear_delts"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "horizontal_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Landmine",
+        "secondary_muscles": [
+          "lats",
+          "biceps",
+          "rear_delts"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Landmine"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "upper_back"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      },
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "upper_back",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "muscle_group": "upper_back"
+    },
+    {
+      "id": "3dbe8693-4929-42ab-b23c-e401ccc5e2d6",
+      "name": "Machine Row",
+      "coaching_metadata": {
+        "aliases": [
+          "Seated Row Machine"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound horizontal pull; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits upper_back:1, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Chest supported",
+          "Elbows back",
+          "Control"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Compound",
+        "master_movement": "Horizontal Pull",
+        "primary_muscles": [
+          "upper_back"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "upper_back",
+          "lats",
+          "biceps"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "horizontal_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Machine",
+        "secondary_muscles": [
+          "lats",
+          "biceps"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Machine"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "upper_back"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      },
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "upper_back",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "muscle_group": "upper_back"
+    },
+    {
+      "id": "97ae9c44-3765-48fa-9ea4-403a8cd0961e",
+      "name": "Pendlay Row",
+      "coaching_metadata": {
+        "aliases": [
+          "Dead-Stop Row"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound horizontal pull; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits upper_back:1, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Reset each rep",
+          "Brace",
+          "No torso rise"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Compound",
+        "master_movement": "Horizontal Pull",
+        "primary_muscles": [
+          "upper_back"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "upper_back",
+          "lats",
+          "biceps",
+          "spinal_erectors"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "horizontal_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Barbell",
+        "secondary_muscles": [
+          "lats",
+          "biceps",
+          "spinal_erectors"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Barbell"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "upper_back"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      },
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "upper_back",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "muscle_group": "upper_back"
+    },
+    {
+      "id": "48d59b70-83bf-4ca4-94e2-ae90894570f2",
+      "name": "Row",
+      "coaching_metadata": {
+        "aliases": [
+          "Seated Row",
+          "Bent Row"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound horizontal pull; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits upper_back:1, biceps:0.5",
+        "design_notes": "Use specific records below when torso position materially changes the movement.",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Lead with elbows",
+          "Don't shrug",
+          "Control reach"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Compound",
+        "master_movement": "Horizontal Pull",
+        "primary_muscles": [
+          "upper_back"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "upper_back",
+          "lats",
+          "rear_delts",
+          "biceps"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "horizontal_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Cable",
+        "secondary_muscles": [
+          "lats",
+          "rear_delts",
+          "biceps"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Cable",
+          "Barbell",
+          "Dumbbell",
+          "Machine",
+          "Bands",
+          "Landmine"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "upper_back"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      },
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "upper_back",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "muscle_group": "upper_back"
+    },
+    {
+      "id": "feca6736-ca50-4bb6-955d-c3a0215e2fb3",
+      "name": "Seal Row",
+      "coaching_metadata": {
+        "aliases": [
+          "Prone Row"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound horizontal pull; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits upper_back:1, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Chest stays down",
+          "Full reach",
+          "No momentum"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Compound",
+        "master_movement": "Horizontal Pull",
+        "primary_muscles": [
+          "upper_back"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "upper_back",
+          "lats",
+          "rear_delts",
+          "biceps"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "horizontal_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Barbell",
+        "secondary_muscles": [
+          "lats",
+          "rear_delts",
+          "biceps"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Barbell",
+          "Dumbbell"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "upper_back"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      },
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "upper_back",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "muscle_group": "upper_back"
+    },
+    {
+      "id": "23ace7e2-2bfa-4c5c-93b5-9fff98eb0afb",
+      "name": "Face Pull",
+      "coaching_metadata": {
+        "aliases": [
+          "Rope Face Pull"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound horizontal pull; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits rear_delts:1, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Elbows high",
+          "Hands apart",
+          "Don't shrug"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Accessory",
+        "master_movement": "Horizontal Pull",
+        "primary_muscles": [
+          "rear_delts"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "rear_delts",
+          "upper_back",
+          "rotator_cuff"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "horizontal_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Cable",
+        "secondary_muscles": [
+          "upper_back",
+          "rotator_cuff"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Cable",
+          "Bands"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "rear_delts"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      },
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "rear_delts",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "muscle_group": "rear_delts"
+    },
+    {
+      "id": "12b1ada8-ad85-4acc-bb9b-590c1043c8ac",
+      "name": "Rear Delt Row",
+      "coaching_metadata": {
+        "aliases": [
+          "Wide-Elbow Row"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound horizontal pull; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits rear_delts:1, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Elbows wide",
+          "Don't shrug",
+          "Light and controlled"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Accessory",
+        "master_movement": "Horizontal Pull",
+        "primary_muscles": [
+          "rear_delts"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "rear_delts",
+          "upper_back",
+          "biceps"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "horizontal_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Dumbbell",
+        "secondary_muscles": [
+          "upper_back",
+          "biceps"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Dumbbell",
+          "Cable",
+          "Machine"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "rear_delts"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      },
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "rear_delts",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "muscle_group": "rear_delts"
+    },
+    {
+      "id": "c663f055-278c-487c-b8c9-b30a6e591165",
+      "name": "Cable Row to Neck",
+      "coaching_metadata": {
+        "aliases": [
+          "High Rope Row"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound horizontal pull; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits rear_delts:1, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Light load",
+          "Elbows high",
+          "No shrugging"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Accessory",
+        "master_movement": "Horizontal Pull",
+        "primary_muscles": [
+          "rear_delts"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "rear_delts",
+          "upper_back",
+          "biceps"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "horizontal_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Cable",
+        "secondary_muscles": [
+          "upper_back",
+          "biceps"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Cable"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "rear_delts"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      },
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "rear_delts",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "muscle_group": "rear_delts"
+    },
+    {
+      "id": "c1354932-52ae-4e3e-b324-e456cab5e732",
+      "name": "Reverse Fly",
+      "coaching_metadata": {
+        "aliases": [
+          "Rear Delt Fly"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "isolation other; low fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits rear_delts:1",
+        "design_notes": "",
+        "fatigue_cost": "low",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Soft elbows",
+          "No momentum",
+          "Shoulder blades controlled"
+        ],
+        "exercise_kind": "isolation",
+        "program_roles": [
+          "isolation",
+          "accessory"
+        ],
+        "ramp_eligible": false,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 15,
+        "default_rep_min": 8,
+        "master_category": "Isolation",
+        "master_movement": "Horizontal Abduction",
+        "primary_muscles": [
+          "rear_delts"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "rear_delts",
+          "upper_back"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "other",
+        "cooldown_eligible": false,
+        "default_equipment": "Dumbbell",
+        "secondary_muscles": [
+          "upper_back"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Dumbbell",
+          "Cable",
+          "Machine",
+          "Bands"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "rear_delts"
+          }
+        ]
+      },
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "rear_delts",
+          "percentage": 60
+        }
+      ],
+      "muscle_group": "rear_delts"
+    },
+    {
+      "id": "1bbfadad-9757-4537-9c51-0328d8cf5520",
+      "name": "Cable Reverse Fly",
+      "coaching_metadata": {
+        "aliases": [
+          "Cable Rear Delt Fly"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "isolation other; low fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits rear_delts:1",
+        "design_notes": "",
+        "fatigue_cost": "low",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Soft elbows",
+          "No shrugging",
+          "Slow return"
+        ],
+        "exercise_kind": "isolation",
+        "program_roles": [
+          "isolation",
+          "accessory"
+        ],
+        "ramp_eligible": false,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 15,
+        "default_rep_min": 8,
+        "master_category": "Isolation",
+        "master_movement": "Horizontal Abduction",
+        "primary_muscles": [
+          "rear_delts"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "rear_delts",
+          "upper_back"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "other",
+        "cooldown_eligible": false,
+        "default_equipment": "Cable",
+        "secondary_muscles": [
+          "upper_back"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Cable"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "rear_delts"
+          }
+        ]
+      },
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "rear_delts",
+          "percentage": 60
+        }
+      ],
+      "muscle_group": "rear_delts"
+    },
+    {
+      "id": "cbc9e466-ba31-4aec-b1af-4e10ac8c84ae",
+      "name": "Straight-Arm Pulldown",
+      "coaching_metadata": {
+        "aliases": [
+          "Cable Pullover",
+          "Straight Arm Pull Down"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound vertical pull; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits lats:1, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Soft elbows",
+          "Ribs down",
+          "Pull from lats"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Isolation",
+        "master_movement": "Shoulder Extension",
+        "primary_muscles": [
+          "lats"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "lats",
+          "triceps",
+          "serratus"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "vertical_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Cable",
+        "secondary_muscles": [
+          "triceps",
+          "serratus"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Cable",
+          "Bands"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "lats"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      },
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "lats",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "muscle_group": "lats"
+    },
+    {
+      "id": "11b1ea29-fd8c-4002-9d21-50c8ec0802c8",
+      "name": "Band Pull-Apart",
+      "coaching_metadata": {
+        "aliases": [
+          "Pull Apart"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "isolation other; low fatigue; low skill; bilateral; reps measurement; volume policy zero_non_hypertrophy; no hypertrophy primary by design; zero hypertrophy volume credit",
+        "design_notes": "",
+        "fatigue_cost": "low",
+        "skill_demand": "low",
+        "coaching_cues": [
+          "Shoulders down",
+          "Don't arch",
+          "Control return"
+        ],
+        "exercise_kind": "isolation",
+        "program_roles": [
+          "warmup",
+          "isolation",
+          "accessory"
+        ],
+        "ramp_eligible": false,
+        "volume_policy": "zero_non_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 8,
+        "default_rep_min": 1,
+        "master_category": "Prehab",
+        "master_movement": "Horizontal Abduction",
+        "primary_muscles": [],
+        "warmup_eligible": true,
+        "involved_muscles": [
+          "upper_back",
+          "rear_delts",
+          "rotator_cuff"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "other",
+        "cooldown_eligible": true,
+        "default_equipment": "Bands",
+        "secondary_muscles": [
+          "upper_back",
+          "rear_delts",
+          "rotator_cuff"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "none_intentional",
+        "compatible_equipment": [
+          "Bands"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": []
+      },
+      "muscle_targets": [],
+      "muscle_group": null
+    }
+  ]
+}

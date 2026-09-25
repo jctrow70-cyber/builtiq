@@ -1,94 +1,128 @@
 import { DESIGNER_PROMPT_VERSION, SCIENCE_ENGINE_VERSION } from '../version';
-import type { GenerationContext } from './types';
+import type { DesignerExercise, GenerationContext } from './types';
 
 function durationTargetGuidance(minutes: number) {
   const requested = Math.max(1, Number(minutes) || 60);
   const targetLow = Math.max(15, requested - 5);
-  return `The requested ${requested} minutes is a ceiling for comfortable training content, not a fill-to-the-line goal. Design so the engine's realistic calculated duration lands around ${targetLow}-${requested} minutes, leaving room for transitions and setup. Do not pack toward the warning/error band. Do not add filler just to consume leftover time, and do not cut useful primary/secondary volume just to go shorter.`;
+  return `Aim each session at roughly ${targetLow}-${requested} minutes of training content. The engine calculates duration and rest. Do not pack filler and do not cut useful primary/secondary volume just to go shorter.`;
+}
+
+export type PromptExercise = {
+  exercise_id: string;
+  name: string;
+  movement_pattern: string;
+  primary_muscles: string[];
+  secondary_muscles: string[];
+  equipment: string[];
+  laterality: string;
+  measurement_type: string;
+  exercise_kind: string;
+  program_roles: string[];
+  fatigue_cost: string;
+  skill_level: string;
+  warmup_eligible: boolean;
+  cooldown_eligible: boolean;
+  power_eligible: boolean;
+  contraindications?: string[];
+};
+
+export function toPromptExercise(ex: DesignerExercise): PromptExercise {
+  const row: PromptExercise = {
+    exercise_id: ex.exercise_id,
+    name: ex.name,
+    movement_pattern: ex.movement_pattern,
+    primary_muscles: ex.primary_muscles,
+    secondary_muscles: ex.secondary_muscles,
+    equipment: ex.equipment,
+    laterality: ex.laterality,
+    measurement_type: ex.measurement_type,
+    exercise_kind: ex.exercise_kind,
+    program_roles: ex.program_roles,
+    fatigue_cost: ex.fatigue_cost,
+    skill_level: ex.skill_level,
+    warmup_eligible: ex.warmup_eligible,
+    cooldown_eligible: ex.cooldown_eligible,
+    power_eligible: ex.power_eligible,
+  };
+  if (ex.contraindications.length) row.contraindications = ex.contraindications;
+  return row;
+}
+
+export function slimContextForPrompt(context: GenerationContext) {
+  const byId = new Map<string, DesignerExercise>();
+  [...context.candidate_library, ...context.warmup_library, ...(context.cooldown_library || [])].forEach((ex) => {
+    byId.set(ex.exercise_id, ex);
+  });
+  const library = [...byId.values()];
+  return {
+    schema_version: context.schema_version,
+    request: context.request,
+    athlete: context.athlete,
+    schedule: context.schedule,
+    constraints: {
+      session_minutes: context.constraints.session_minutes,
+      rir_min: context.constraints.rir_min,
+      rir_max: context.constraints.rir_max,
+      working_sets_per_exercise: context.constraints.working_sets_per_exercise,
+      typical_strength_moves: context.constraints.typical_strength_moves,
+      laterality_rule: context.constraints.laterality_rule,
+      equipment_must_match: context.constraints.equipment_must_match,
+      no_medical_diagnosis: true,
+    },
+    weekly_volume_targets: context.weekly_volume_targets.map((t) => ({
+      muscle: t.muscle,
+      target_working_sets: t.target_working_sets,
+      priority: t.priority,
+    })),
+    ...(context.recent_training.lifts.length ? { recent_training: context.recent_training } : {}),
+    exercise_library: library.map(toPromptExercise),
+    warmup_ids: context.warmup_library.map((ex) => ex.exercise_id),
+    cooldown_ids: (context.cooldown_library || []).map((ex) => ex.exercise_id),
+    power_ids: library.filter((ex) => ex.power_eligible).map((ex) => ex.exercise_id),
+  };
 }
 
 export function buildDesignerInstructions(context: GenerationContext): string {
   const single = context.request.mode === 'single_session';
   return `You are the program designer for BuiltIQ Health (science ${SCIENCE_ENGINE_VERSION}, ${DESIGNER_PROMPT_VERSION}).
 
-${single ? 'Design ONE training session for the supplied day.' : 'Design ONE complete training WEEK. Sessions must complement each other. Reason about the week as a single program, not isolated days.'}
+${single ? 'Design ONE training session for the supplied day.' : 'Design ONE complete training WEEK. Sessions must complement each other as A/B/C, not cloned days.'}
 
-Use only exercise_id values from candidate_library, warmup_library, or cooldown_library. Never invent IDs. Never rely on exercise names for identity.
+Use only exercise_id values from exercise_library. Warm-up IDs must be in warmup_ids. Cooldown IDs must be in cooldown_ids. Potentiation IDs must be in power_ids. Never invent IDs.
+
+You own:
+- exercise selection and order
+- complementary day structure and session emphasis
+- accessory variation across the week
+- whether/where a superset is useful
+- optional potentiation (empty array is valid)
+
+The science engine owns weekly set totals, session duration, exact rest, laterality flags, ramps, cooldown eligibility, and progression. Do not spend reasoning on those calculations. Send a reasonable rest_seconds guess; the engine will correct it. Leave ramps out. Set reps_per_side true only for unilateral/alternating lifts.
 
 Hard constraints:
 - Keep the supplied days and requested day types.
 - ${durationTargetGuidance(context.constraints.session_minutes)}
-- RIR must be ${context.constraints.rir_min}-${context.constraints.rir_max}.
-- Working sets per exercise ${context.constraints.working_sets_per_exercise.min}-${context.constraints.working_sets_per_exercise.max}.
+- RIR ${context.constraints.rir_min}-${context.constraints.rir_max}. Working sets per exercise ${context.constraints.working_sets_per_exercise.min}-${context.constraints.working_sets_per_exercise.max}.
 - Honor excluded exercises, pain areas, and limitations. Do not diagnose injury.
 - Equipment must match the athlete list. Bodyweight mobility is allowed.
-- Unilateral exercises use per-side prescriptions. Bilateral exercises must not use "/side".
-- Weekly working-set targets and preferred exposures are calculations to solve, not a seed workout.
-- Do not copy the same identical primary prescription onto every similar day. Frequency can be intentional when volume, reps, RIR, or emphasis differ.
+- Do not copy the same identical primary prescription onto every similar day.
 
-Role assignment (session purpose, not catalog eligibility):
-- primary: the session's main loaded movement(s). Usually 1-2. A 60-minute full-body day may have two if they are different patterns.
-- secondary: supporting compounds that add weekly volume.
-- accessory: extra compounds or mixed-support work that is not a main lift.
-- isolation: single-joint or isolation work.
-- Do not label every exercise primary.
+Roles (session purpose):
+- primary: 1-2 main loaded movements. A 60-minute full-body day may have two if they are different patterns.
+- secondary: supporting compounds.
+- accessory / isolation: extra work. Do not label every exercise primary.
 
-Weekly volume:
-- Hit major hypertrophy muscles (chest, upper back, lats, quads, hamstrings, glutes) with meaningful working-set credit.
-- Secondary muscles (delts, arms) should get some direct or clearly meaningful stimulus across the week.
-- Optional/minor muscles (calves, abs, adductors, hip flexors, forearms) may be trained indirectly. Do not force every listed muscle to its maximum target.
-- Zero working-set credit on a major hypertrophy target is a failure.
+Programming intent:
+- Cover major hypertrophy muscles (chest, upper back, lats, quads, hamstrings, glutes) across the week.
+- Superset preference is "${context.athlete.superset_preference}". "sometimes" means at least one non-competing pair in the week, not a pair in every session. Never pair two high-fatigue compounds.
+- Warm-up prepares THAT day's lifts. Cooldown is stretch/mobility/breathing only.
+- why: one short clause, muscles that actually belong to the exercise.
 
-Rest intervals:
-- High-fatigue primary compounds need enough rest to keep performance. Hypertrophy squat/hinge/press/row work is usually 150-240s, not 90s.
-- Isolation and low-fatigue accessories can rest 45-90s.
-- In a superset, rest after the pair should still protect the harder lift.
+Materialize week 1 only. progression.strategy is intent, not applied loads.
 
-Supersets:
-- Preference is "${context.athlete.superset_preference}".
-- "sometimes" does not require a superset in every workout, but ignoring the preference for the entire week is a miss.
-- Use supersets to save time on non-competing accessories or a primary + low-fatigue non-competing isolation.
-- Never pair two high-fatigue competing compounds.
-
-Potentiation:
-- Decide intentionally. Useful when the athlete is intermediate/advanced, the primary is a heavy compound, time allows, and fatigue cost stays low.
-- Omit it (empty array) when it would steal time or add fatigue. Omission is valid.
-
-Warm-up and cooldown:
-- Warm-up must come from warmup_library and prepare THAT day's lifts.
-- Cooldown must come from cooldown_library. Use stretches, easy mobility, or breathing. Do not use working isolations (leg extension, calf raise, kickback, triceps extension) as cooldown.
-- The why field must agree with the exercise's muscles and the session purpose. Do not say a row warms the chest.
-
-Ramps:
-- Leave ramp_sets empty. The engine adds preparation ramps from exercise metadata and session role. Do not invent warm-up load percentages.
-
-Progression:
-- Materialize week 1 only. Store progression.strategy and weekly_rules as intent for later coaching.
-- Do not pretend weeks 2-6 have already been progressed. The engine will copy the week-1 template.
-
-Programming you own:
-- session emphasis, exercise selection and order
-- weekly working-set distribution and fatigue placement
-- movement-pattern balance appropriate to the goal
-- optional potentiation
-- cooldown from cooldown_library
-- progression intent for later weeks
-
-Return the structured program only.`;
+Return the structured program only. Keep summary and coaching_notes to one or two short sentences.`;
 }
 
 export function buildDesignerUserContent(context: GenerationContext): string {
-  return JSON.stringify(context);
-}
-
-export function buildRepairInstructions(): string {
-  return `Correct ONLY the listed validation errors in the proposed program. Preserve every valid programming decision. Do not replace valid days, do not add science-template filler, and do not invent exercise IDs. Return a complete corrected program in the same schema.`;
-}
-
-export function buildRepairUserContent(program: unknown, errors: Array<{ code: string; message: string; day_label?: string }>): string {
-  return JSON.stringify({
-    instruction: 'Correct only the listed errors. Do not redesign valid sessions.',
-    proposed_program: program,
-    errors,
-  });
+  return JSON.stringify(slimContextForPrompt(context));
 }

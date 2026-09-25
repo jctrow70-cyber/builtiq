@@ -486,8 +486,8 @@ const EXACT: Record<string, Override> = {
   },
   't-bar row': {
     movement_pattern: 'horizontal_pull',
-    primary_muscles: ['lats'],
-    secondary_muscles: ['upper_back', 'biceps', 'rear_delts'],
+    primary_muscles: ['upper_back'],
+    secondary_muscles: ['lats', 'biceps', 'rear_delts'],
     laterality: 'bilateral',
     measurement_type: 'reps',
     exercise_kind: 'compound',
@@ -495,20 +495,20 @@ const EXACT: Record<string, Override> = {
     skill_demand: 'medium',
     ramp_eligible: true,
     volume_policy: 'strength_hypertrophy',
-    hypertrophy_volume_credits: creditsOf(['lats', 1], ['upper_back', 0.5]),
+    hypertrophy_volume_credits: creditsOf(['upper_back', 1], ['lats', 0.5], ['biceps', 0.5]),
     program_roles: ['secondary', 'accessory'],
   },
   'bent-over row': {
     movement_pattern: 'horizontal_pull',
-    primary_muscles: ['lats'],
-    secondary_muscles: ['upper_back', 'rear_delts', 'biceps', 'spinal_erectors'],
+    primary_muscles: ['upper_back'],
+    secondary_muscles: ['lats', 'rear_delts', 'biceps', 'spinal_erectors'],
     laterality: 'bilateral',
     exercise_kind: 'compound',
     fatigue_cost: 'high',
     skill_demand: 'medium',
     ramp_eligible: true,
     volume_policy: 'strength_hypertrophy',
-    hypertrophy_volume_credits: creditsOf(['lats', 1], ['upper_back', 0.5]),
+    hypertrophy_volume_credits: creditsOf(['upper_back', 1], ['lats', 0.5], ['biceps', 0.5]),
     program_roles: ['primary', 'secondary'],
   },
   'seated calf raise': {
@@ -1112,7 +1112,10 @@ function inferRamp(opts: {
 
 function inferPrimaryFallback(name: string, pattern: string, mappedPrimary: string[], mappedSecondary: string[]): string[] {
   if (mappedPrimary.length) return mappedPrimary;
-  if (/\b(t-?bar row|bent-over row|landmine row|inverted row|chest-supported row)\b/.test(name)) return ['lats'];
+  if (/\b(low row|meadows row)\b/.test(name)) return ['lats'];
+  if (/\b(t-?bar row|bent-over row|landmine row|inverted row|chest-supported row|one-arm row|seal row|pendlay row)\b/.test(name)) {
+    return ['upper_back'];
+  }
   if (/\blandmine press\b/.test(name)) return /kneeling/.test(name) ? ['front_delts'] : ['chest'];
   if (/\bneck\b/.test(name)) return ['neck'];
   if (/calf raise|calf press/.test(name)) return ['calves'];
@@ -1133,7 +1136,12 @@ function inferPrimaryFallback(name: string, pattern: string, mappedPrimary: stri
   }
   if (pattern === 'vertical_push') return ['front_delts'];
   if (pattern === 'horizontal_push') return ['chest'];
-  if (pattern === 'vertical_pull' || pattern === 'horizontal_pull') return ['lats'];
+  if (pattern === 'vertical_pull') return ['lats'];
+  if (pattern === 'horizontal_pull') {
+    if (/\b(face pull|reverse fly|rear.?delt|row to neck|pull-apart)\b/.test(name)) return ['rear_delts'];
+    if (/\b(low row|meadows)\b/.test(name)) return ['lats'];
+    return ['upper_back'];
+  }
   if (pattern === 'squat' || pattern === 'lunge') return ['quads'];
   if (pattern === 'hinge') return mappedSecondary.includes('hamstrings') ? ['hamstrings'] : ['glutes'];
   if (pattern === 'knee_flexion') return ['hamstrings'];
@@ -1153,7 +1161,9 @@ function conservativeCredits(opts: {
     return opts.primary.slice(0, 1).map((muscle) => ({ muscle, credit: 0.5 }));
   }
   if (opts.policy === 'core' || opts.kind === 'isolation') {
-    return opts.primary.slice(0, 1).map((muscle) => ({ muscle, credit: 1 }));
+    const isolation = opts.primary.slice(0, 1).map((muscle) => ({ muscle, credit: 1 }));
+    if (opts.primary[0] === 'rear_delts') isolation.push({ muscle: 'upper_back', credit: 0.5 });
+    return isolation;
   }
   const credits = creditsOf(opts.primary[0] ? [opts.primary[0], 1] : null);
   if (opts.pattern === 'horizontal_push') {
@@ -1161,10 +1171,15 @@ function conservativeCredits(opts: {
   } else if (opts.pattern === 'vertical_push') {
     credits.push({ muscle: 'triceps', credit: 0.5 });
   } else if (opts.pattern === 'horizontal_pull') {
-    if (opts.primary[0] === 'lats') credits.push({ muscle: 'upper_back', credit: 0.5 });
-    credits.push({ muscle: 'biceps', credit: 0.5 });
+    if (opts.primary[0] === 'rear_delts') {
+      credits.push({ muscle: 'upper_back', credit: 0.5 });
+    } else if (opts.primary[0] === 'lats') {
+      credits.push({ muscle: 'upper_back', credit: 0.5 }, { muscle: 'biceps', credit: 0.5 });
+    } else {
+      credits.push({ muscle: 'lats', credit: 0.5 }, { muscle: 'biceps', credit: 0.5 });
+    }
   } else if (opts.pattern === 'vertical_pull') {
-    credits.push({ muscle: 'biceps', credit: 0.5 });
+    credits.push({ muscle: 'upper_back', credit: 0.5 }, { muscle: 'biceps', credit: 0.5 });
   } else if (opts.pattern === 'squat' || opts.pattern === 'lunge') {
     if (opts.primary[0] !== 'glutes') credits.push({ muscle: 'glutes', credit: 0.5 });
     else credits.push({ muscle: 'quads', credit: 0.5 });

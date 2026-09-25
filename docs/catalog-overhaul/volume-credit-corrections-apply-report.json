@@ -1,0 +1,478 @@
+{
+  "generated_at": "2026-09-25T00:48:22.266Z",
+  "status": "applied",
+  "phase_2b": "not_started",
+  "live_total_rows": 2507,
+  "live_active_master": 260,
+  "live_archived": 2228,
+  "supabase_host": "qruiwfzzrylrirlxzdqx.supabase.co",
+  "target_count": 26,
+  "rollback_path": "C:\\Users\\JesseTrowbridge\\OneDrive - Tegria\\Documents\\GitHub\\builtiq\\docs\\catalog-overhaul\\volume-credit-corrections-rollback.json",
+  "rollback_rows": 26,
+  "rows_updated": 26,
+  "archived_rows_modified": 0,
+  "verified": [
+    {
+      "id": "e9e34e71-ad77-4fdb-8d86-1179cd5ecc05",
+      "name": "Assisted Pull-Up",
+      "rule": "vertical_pull_secondary_upper_back",
+      "credits": [
+        {
+          "credit": 1,
+          "muscle": "lats"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "upper_back"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "biceps"
+        }
+      ]
+    },
+    {
+      "id": "20b6559e-1e94-4db6-873a-548f85234747",
+      "name": "Chin-Up",
+      "rule": "vertical_pull_secondary_upper_back",
+      "credits": [
+        {
+          "credit": 1,
+          "muscle": "lats"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "upper_back"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "biceps"
+        }
+      ]
+    },
+    {
+      "id": "c53c1691-a5f9-47b4-ac86-7909b80860be",
+      "name": "Close-Grip Pulldown",
+      "rule": "vertical_pull_secondary_upper_back",
+      "credits": [
+        {
+          "credit": 1,
+          "muscle": "lats"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "upper_back"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "biceps"
+        }
+      ]
+    },
+    {
+      "id": "98072829-5982-4634-a2cc-d9b0407a68a9",
+      "name": "Lat Pulldown",
+      "rule": "vertical_pull_secondary_upper_back",
+      "credits": [
+        {
+          "credit": 1,
+          "muscle": "lats"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "upper_back"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "biceps"
+        }
+      ]
+    },
+    {
+      "id": "252b6022-8632-489b-9687-5b75113f2c07",
+      "name": "Machine Pulldown",
+      "rule": "vertical_pull_secondary_upper_back",
+      "credits": [
+        {
+          "credit": 1,
+          "muscle": "lats"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "upper_back"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "biceps"
+        }
+      ]
+    },
+    {
+      "id": "20d8dac5-7bc1-410c-bfe6-1ee8c5dac75d",
+      "name": "Pull-Up",
+      "rule": "vertical_pull_secondary_upper_back",
+      "credits": [
+        {
+          "credit": 1,
+          "muscle": "lats"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "upper_back"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "biceps"
+        }
+      ]
+    },
+    {
+      "id": "cf93e392-4104-4738-8739-a9cdeae5cead",
+      "name": "Pull-Up Work",
+      "rule": "vertical_pull_secondary_upper_back",
+      "credits": [
+        {
+          "credit": 1,
+          "muscle": "lats"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "upper_back"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "biceps"
+        }
+      ]
+    },
+    {
+      "id": "ec94b7bf-d245-442c-8717-cebaea168527",
+      "name": "Rope Climb",
+      "rule": "vertical_pull_secondary_upper_back",
+      "credits": [
+        {
+          "credit": 1,
+          "muscle": "lats"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "upper_back"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "biceps"
+        }
+      ]
+    },
+    {
+      "id": "b4bbb290-e036-4981-9318-5eda3021f8d1",
+      "name": "Bent-Over Row",
+      "rule": "midback_row_primary_upper_back",
+      "credits": [
+        {
+          "credit": 1,
+          "muscle": "upper_back"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "lats"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "biceps"
+        }
+      ]
+    },
+    {
+      "id": "e86eb7a8-08c3-498c-bd71-fd5be1b8f67b",
+      "name": "T-Bar Row",
+      "rule": "midback_row_primary_upper_back",
+      "credits": [
+        {
+          "credit": 1,
+          "muscle": "upper_back"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "lats"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "biceps"
+        }
+      ]
+    },
+    {
+      "id": "103403c0-4e2e-4aa6-a2b6-4e2002746e78",
+      "name": "One-Arm Row",
+      "rule": "midback_row_primary_upper_back",
+      "credits": [
+        {
+          "credit": 1,
+          "muscle": "upper_back"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "lats"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "biceps"
+        }
+      ]
+    },
+    {
+      "id": "1695e444-3146-42aa-af3b-ebc2e9b110f4",
+      "name": "Chest-Supported Row",
+      "rule": "already_upper_back_primary_add_lats",
+      "credits": [
+        {
+          "credit": 1,
+          "muscle": "upper_back"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "lats"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "biceps"
+        }
+      ]
+    },
+    {
+      "id": "208acbf7-5c7f-452b-9c65-e328d46948ef",
+      "name": "High Row",
+      "rule": "already_upper_back_primary_add_lats",
+      "credits": [
+        {
+          "credit": 1,
+          "muscle": "upper_back"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "lats"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "biceps"
+        }
+      ]
+    },
+    {
+      "id": "3f2f0d01-ee39-4529-82fb-39a4ecee6c2f",
+      "name": "Inverted Row",
+      "rule": "already_upper_back_primary_add_lats",
+      "credits": [
+        {
+          "credit": 1,
+          "muscle": "upper_back"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "lats"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "biceps"
+        }
+      ]
+    },
+    {
+      "id": "37f7bb9d-c406-4a2f-bdb0-3ed72e37fbe2",
+      "name": "Landmine Row",
+      "rule": "already_upper_back_primary_add_lats",
+      "credits": [
+        {
+          "credit": 1,
+          "muscle": "upper_back"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "lats"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "biceps"
+        }
+      ]
+    },
+    {
+      "id": "3dbe8693-4929-42ab-b23c-e401ccc5e2d6",
+      "name": "Machine Row",
+      "rule": "already_upper_back_primary_add_lats",
+      "credits": [
+        {
+          "credit": 1,
+          "muscle": "upper_back"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "lats"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "biceps"
+        }
+      ]
+    },
+    {
+      "id": "97ae9c44-3765-48fa-9ea4-403a8cd0961e",
+      "name": "Pendlay Row",
+      "rule": "already_upper_back_primary_add_lats",
+      "credits": [
+        {
+          "credit": 1,
+          "muscle": "upper_back"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "lats"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "biceps"
+        }
+      ]
+    },
+    {
+      "id": "48d59b70-83bf-4ca4-94e2-ae90894570f2",
+      "name": "Row",
+      "rule": "already_upper_back_primary_add_lats",
+      "credits": [
+        {
+          "credit": 1,
+          "muscle": "upper_back"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "lats"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "biceps"
+        }
+      ]
+    },
+    {
+      "id": "feca6736-ca50-4bb6-955d-c3a0215e2fb3",
+      "name": "Seal Row",
+      "rule": "already_upper_back_primary_add_lats",
+      "credits": [
+        {
+          "credit": 1,
+          "muscle": "upper_back"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "lats"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "biceps"
+        }
+      ]
+    },
+    {
+      "id": "23ace7e2-2bfa-4c5c-93b5-9fff98eb0afb",
+      "name": "Face Pull",
+      "rule": "rear_delt_scapular",
+      "credits": [
+        {
+          "credit": 1,
+          "muscle": "rear_delts"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "upper_back"
+        }
+      ]
+    },
+    {
+      "id": "12b1ada8-ad85-4acc-bb9b-590c1043c8ac",
+      "name": "Rear Delt Row",
+      "rule": "rear_delt_scapular",
+      "credits": [
+        {
+          "credit": 1,
+          "muscle": "rear_delts"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "upper_back"
+        }
+      ]
+    },
+    {
+      "id": "c663f055-278c-487c-b8c9-b30a6e591165",
+      "name": "Cable Row to Neck",
+      "rule": "rear_delt_scapular",
+      "credits": [
+        {
+          "credit": 1,
+          "muscle": "rear_delts"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "upper_back"
+        }
+      ]
+    },
+    {
+      "id": "c1354932-52ae-4e3e-b324-e456cab5e732",
+      "name": "Reverse Fly",
+      "rule": "rear_delt_scapular",
+      "credits": [
+        {
+          "credit": 1,
+          "muscle": "rear_delts"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "upper_back"
+        }
+      ]
+    },
+    {
+      "id": "1bbfadad-9757-4537-9c51-0328d8cf5520",
+      "name": "Cable Reverse Fly",
+      "rule": "rear_delt_scapular",
+      "credits": [
+        {
+          "credit": 1,
+          "muscle": "rear_delts"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "upper_back"
+        }
+      ]
+    },
+    {
+      "id": "cbc9e466-ba31-4aec-b1af-4e10ac8c84ae",
+      "name": "Straight-Arm Pulldown",
+      "rule": "straight_arm_pulldown_lat_isolation",
+      "credits": [
+        {
+          "credit": 1,
+          "muscle": "lats"
+        }
+      ]
+    },
+    {
+      "id": "11b1ea29-fd8c-4002-9d21-50c8ec0802c8",
+      "name": "Band Pull-Apart",
+      "rule": "empty_working_scapular",
+      "credits": [
+        {
+          "credit": 1,
+          "muscle": "rear_delts"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "upper_back"
+        }
+      ]
+    }
+  ]
+}

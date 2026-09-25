@@ -11,6 +11,180 @@ Branch:
 Status:
 ```
 
+## BIQ-0229 - Hypertrophy Credit Authority and Pull-Family Selection
+
+Date: 2026-09-24
+Branch: develop
+Status: Local
+
+### Summary
+
+Active master `hypertrophy_volume_credits` are now the volume authority. Vertical pulls gain a 0.5 upper_back secondary, mid-back rows are upper_back-primary, and science selection no longer stacks Chin-Up with Pull-Up or miss existing row cards.
+
+### Purpose
+
+Intermediate hypertrophy Generate was failing VOLUME_OFF on `upper_back` because stored credits omitted it on vertical pulls, lat-primary enrichment under-counted rows, and fallback preferred names that are not in the 260.
+
+### Changes
+
+- Wrote approved credit corrections to active master rows only, after a rollback snapshot
+- Explicit credits are authoritative; name inference is legacy-only and case-insensitive
+- Enrichment no longer maps every horizontal pull to lats or omits upper_back on vertical pulls
+- Chin-Up shares the vertical-pull movement family with Pull-Up / pulldown
+- Preferred row names resolve to cards that exist in the 260 (Bent-Over, One-Arm, Machine, Chest-Supported)
+- Equipment eligibility compares case-insensitively so `Barbell` catalog implements match `barbell` intake
+
+### Files Changed
+
+- `lib/scienceEngine/contributions.ts`
+- `lib/scienceEngine/catalogEnrichment/qualityPass.ts`
+- `lib/scienceEngine/exerciseAliases.ts`
+- `lib/scienceEngine/exerciseSelection.ts`
+- `lib/scienceEngine/generateProgram.ts`
+- `lib/scienceEngine/generation/phase1Check.ts`
+- `lib/scienceEngine/version.ts`
+- `scripts/apply-volume-credit-corrections.ts`
+- `docs/catalog-overhaul/proposed-volume-credits.json`
+- `docs/catalog-overhaul/verify-volume-credit-foundation.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+`st_exercise_catalog.coaching_metadata.hypertrophy_volume_credits` updated on 26 active `builtiq_master` rows. Bent-Over Row, T-Bar Row, and One-Arm Row also set `primary_muscles` to `upper_back`. Archived and user-custom rows were not modified. Rollback: `docs/catalog-overhaul/volume-credit-corrections-rollback.json`.
+
+### Testing Steps
+
+1. Confirm rollback JSON exists before trusting the write
+2. Re-read Chin-Up / Pull-Up / Bent-Over Row credits in the catalog
+3. Run `npm run test:science`
+4. Check `docs/catalog-overhaul/volume-credit-foundation-verify.json` for captured-week upper_back 5.5, a fallback row, and no same-session Chin-Up+Pull-Up
+5. Programs → Generate the same 3-day intermediate hypertrophy plan and confirm it is not forced to science fallback solely for upper_back
+
+### Known Issues
+
+- The captured GPT week still has no row and no rear/side-delt work; credits only stop the false VOLUME_OFF
+- Preferred-name aliases still keep FALLBACK_CATALOG names as backups
+- Phase 2B is not started
+
+### Recommended Commit Message
+
+`BIQ-0229 Make master hypertrophy credits authoritative and stop stacking vertical pulls`
+
+## BIQ-0228 - One Low-Reasoning AI Design Call Plus Deterministic Repair
+
+Date: 2026-09-24
+Branch: develop
+Status: Local
+
+### Summary
+
+Generate Program is AI-first again. GPT-5.4 designs one week at low reasoning, the science engine repairs ordinary violations, and the accepted program is persisted once. Science fallback is only used when that single AI call is unusable.
+
+### Purpose
+
+Fallback-first persist made the science template the normal result. The real bottleneck was a 131-second medium-reasoning call plus AI repairs inside a 120-second Vercel function.
+
+### Changes
+
+- Reverted BIQ-0227 science-persist-then-delete-and-rewrite
+- Default reasoning effort is `low`; AI timeout is 75s (max 90s)
+- One OpenAI request per generate; AI repair loop removed
+- Deterministic repair for laterality, rest, warmup/cooldown eligibility, heavy supersets, duration, volume, roles, and ramps
+- Prompt sends each exercise object once plus warmup/cooldown/power ID lists
+- Structured output no longer requires quality_review, program_rationale, weekly_targets, or weekly_rules
+- Generation-run JSON now stores initial validation, repairs, AI latency, and token/reasoning metadata
+
+### Files Changed
+
+- `app/api/programs/generate/route.ts`
+- `app/components/programDesign/AIProgramSetupWizard.tsx`
+- `lib/scienceEngine/generation/orchestrator.ts`
+- `lib/scienceEngine/generation/openaiClient.ts`
+- `lib/scienceEngine/generation/prompt.ts`
+- `lib/scienceEngine/generation/schema.ts`
+- `lib/scienceEngine/generation/repairAiProgram.ts`
+- `lib/scienceEngine/generation/types.ts`
+- `lib/scienceEngine/generation/log.ts`
+- `lib/scienceEngine/generation/phase1Check.ts`
+- `lib/scienceEngine/generation/index.ts`
+- `lib/scienceEngine/generation/validateAiProgram.ts`
+- `lib/scienceEngine/version.ts`
+- `.env.example`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+None. Extra observability is stored in existing `st_generation_runs.validation_json`.
+
+### Testing Steps
+
+1. Programs → create a 3-day intermediate hypertrophy plan → Generate program
+2. Confirm the review screen stays on generating, then opens the editor with AI workouts
+3. Check week 1 Mon/Wed/Fri for complementary lifts, not an empty plan
+4. If AI is unavailable, confirm a science-template week is saved once and the plan is not emptied
+
+### Known Issues
+
+- A first GPT-5.4 low call can still land near 40s on a large prompt; 75s timeout is the budget under Vercel 120s
+- Deterministic repair cannot invent a valid week from unknown exercise IDs; that path uses science fallback
+- Live 3-day hypertrophy volume-credit miss for `upper_back` is addressed in BIQ-0229; latency and persist-once behavior remain as designed here
+
+### Recommended Commit Message
+
+`BIQ-0228 One low-reasoning AI design call with deterministic science repair`
+
+## BIQ-0227 - Generate Saves a Science Plan Before AI So Timeouts Still Work
+
+Date: 2026-09-24
+Branch: develop
+Status: Local
+
+### Summary
+
+Generate program now writes the science-template workouts first, then tries AI. If AI is slow or the host kills the request, the plan still has workouts. AI wait is capped at 35s so the function can finish.
+
+### Purpose
+
+Generate kept dying while waiting on GPT-5.4. The wizard only showed “Could not generate your training program.”
+
+### Changes
+
+- Science draft is persisted before the AI call
+- OpenAI client timeout is 35s; timeouts skip model fallbacks and repairs
+- If generate still fails, the wizard opens the plan so you can review what was saved
+
+### Files Changed
+
+- `app/api/programs/generate/route.ts`
+- `lib/scienceEngine/generation/openaiClient.ts`
+- `lib/scienceEngine/generation/orchestrator.ts`
+- `app/components/programDesign/AIProgramSetupWizard.tsx`
+- `.env.example`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Programs → create a plan → Review → Generate program
+2. Wait — you should land in the editor with workouts, even if AI is slow
+3. Open week 1 and confirm lifts/sets exist
+4. If a red error still appears, Skip or let it open the plan and check for workouts
+
+### Known Issues
+
+- First generate may still use the science template when AI times out
+
+### Recommended Commit Message
+
+`BIQ-0227 Persist science workouts before AI so generate survives timeouts`
+
 ## BIQ-0226 - Generate Program Shows a Real Error Instead of Invalid JSON
 
 Date: 2026-09-24

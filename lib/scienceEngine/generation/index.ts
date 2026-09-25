@@ -3,6 +3,8 @@ export { runGenerationPipeline } from './orchestrator';
 export { buildGenerationContext } from './context';
 export { buildDesignerLibraries, libraryById, toDesignerExercise } from './library';
 export { validateAiProgram } from './validateAiProgram';
+export { repairAiProgram } from './repairAiProgram';
+export { slimContextForPrompt } from './prompt';
 export { mapAiWeekToScience } from './mapper';
 export { findByExerciseId } from './matchById';
 export { parseWeekProgram } from './openaiClient';

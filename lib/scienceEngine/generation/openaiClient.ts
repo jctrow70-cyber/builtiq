@@ -16,7 +16,11 @@ export type ModelCallResult = {
 
 /** Reasoning-capable default. Override with OPENAI_PROGRAM_MODEL after the access spike. */
 const DEFAULT_MODEL = 'gpt-5.4';
-const DEFAULT_REASONING_EFFORT = 'medium';
+const DEFAULT_REASONING_EFFORT = 'low';
+const DEFAULT_TIMEOUT_MS = 75_000;
+const MIN_TIMEOUT_MS = 20_000;
+const MAX_TIMEOUT_MS = 90_000;
+const MAX_OUTPUT_TOKENS = 6000;
 const CHAT_MODELS = /gpt-4o|gpt-4\.1|gpt-3\.5|chatgpt/i;
 
 export function programModelName(): string {
@@ -33,6 +37,16 @@ export function modelUsesReasoning(model: string): boolean {
 
 const MODEL_FALLBACKS = ['gpt-5.4', 'gpt-5', 'gpt-4o-mini'];
 
+/** One design call must finish below the Vercel 120s route budget after catalog + persist. */
+export function programRequestTimeoutMs(): number {
+  const n = Number(process.env.OPENAI_PROGRAM_TIMEOUT_MS);
+  return Number.isFinite(n) && n >= MIN_TIMEOUT_MS ? Math.min(n, MAX_TIMEOUT_MS) : DEFAULT_TIMEOUT_MS;
+}
+
+export function isAiTimeoutError(message: string | null | undefined): boolean {
+  return /timeout|timed out|abort|deadline/i.test(String(message || ''));
+}
+
 export async function requestWeekProgram(opts: {
   apiKey: string;
   system: string;
@@ -40,13 +54,14 @@ export async function requestWeekProgram(opts: {
 }): Promise<ModelCallResult> {
   const preferred = programModelName();
   const effort = programReasoningEffort();
-  const openai = new OpenAI({ apiKey: opts.apiKey, timeout: 180_000 });
+  const openai = new OpenAI({ apiKey: opts.apiKey, timeout: programRequestTimeoutMs() });
   const chain = [preferred, ...MODEL_FALLBACKS.filter((name) => name !== preferred)];
   let last: ModelCallResult | null = null;
   for (const model of chain) {
     if (modelUsesReasoning(model) && typeof (openai as any).responses?.create === 'function') {
       last = await requestViaResponses(openai, model, effort, opts.system, opts.user);
       if (last.program && !last.error) return last;
+      if (last.error && isAiTimeoutError(last.error)) return last;
       if (last.error && /model|not found|does not exist|invalid model/i.test(last.error)) continue;
       if (last.program) return last;
       if (last.error && !/structured|json_schema|text\.format|unsupported/i.test(last.error) && model === preferred) {
@@ -55,6 +70,7 @@ export async function requestWeekProgram(opts: {
     }
     last = await requestViaChat(openai, model, opts.system, opts.user);
     if (last.program && !last.error) return last;
+    if (last.error && isAiTimeoutError(last.error)) return last;
     if (last.error && /model|not found|does not exist|invalid model/i.test(last.error)) continue;
     return last;
   }
@@ -72,7 +88,7 @@ async function requestViaResponses(
     const response = await (openai as any).responses.create({
       model,
       reasoning: { effort },
-      max_output_tokens: 16000,
+      max_output_tokens: MAX_OUTPUT_TOKENS,
       input: [
         { role: 'system', content: system },
         { role: 'user', content: user },
@@ -118,7 +134,7 @@ async function requestViaChat(openai: OpenAI, model: string, system: string, use
     const completion = await openai.chat.completions.create({
       model,
       temperature: 0.4,
-      max_tokens: 8000,
+      max_tokens: MAX_OUTPUT_TOKENS,
       response_format: {
         type: 'json_schema',
         json_schema: {
@@ -199,7 +215,7 @@ export function estimateApiCostUsd(opts: {
   reasoningTokens?: number | null;
 }): number | null {
   const inTok = opts.inputTokens ?? 0;
-  const outTok = (opts.outputTokens ?? 0) + (opts.reasoningTokens ?? 0);
+  const outTok = opts.outputTokens ?? 0;
   if (!inTok && !outTok) return null;
   const rates: Record<string, { in: number; out: number }> = {
     'gpt-4o-mini': { in: 0.15, out: 0.6 },

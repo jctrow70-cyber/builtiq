@@ -1,5 +1,5 @@
 import { hasEquipmentFilter } from '../training/equipmentFilter';
-import { aliasExerciseName } from './exerciseAliases';
+import { aliasCandidates, aliasExerciseName } from './exerciseAliases';
 import type { CatalogExercise, ProgramRole, TrainingProfile } from './types';
 import type { MovementPatternId, MuscleId } from './taxonomy';
 
@@ -25,8 +25,11 @@ function restrictionConflicts(ex: CatalogExercise, restriction: string): boolean
 
 function equipmentAllowed(ex: CatalogExercise, available: string[]): boolean {
   const have = available.map((e) => e.toLowerCase());
-  if (ex.equipment.some((e) => ['bodyweight', 'none', ''].includes(e.toLowerCase()))) return true;
-  return ex.equipment.some((e) => have.some((h) => h.includes(e) || e.includes(h)));
+  return ex.equipment.some((e) => {
+    const item = String(e || '').toLowerCase();
+    if (['bodyweight', 'none', ''].includes(item)) return true;
+    return have.some((h) => h.includes(item) || item.includes(h));
+  });
 }
 
 export function scoreExercise(ex: CatalogExercise, ctx: {
@@ -79,7 +82,7 @@ function redundancyPenalty(ex: CatalogExercise, alreadyNames: string[]): number 
   return hits >= 1 ? 25 * hits : 0;
 }
 
-function movementFamily(name: string): string {
+export function movementFamily(name: string): string {
   const n = name.toLowerCase();
   if (/bench press|chest press/.test(n)) return 'flat_press';
   if (/incline/.test(n) && /press|bench/.test(n)) return 'incline_press';
@@ -87,8 +90,8 @@ function movementFamily(name: string): string {
   if (/hip thrust/.test(n)) return 'hip_thrust';
   if (/kickback/.test(n)) return 'glute_kickback';
   if (/hip abduction|lateral band/.test(n)) return 'hip_abduction';
-  if (/row/.test(n)) return 'row';
-  if (/pulldown|pull-?up/.test(n)) return 'vertical_pull';
+  if (/\brow\b/.test(n) && !/upright|renegade/.test(n)) return 'row';
+  if (/pulldown|pull-?up|chin-?up/.test(n) && !/scapular/.test(n)) return 'vertical_pull';
   if (/squat/.test(n) && !/split squat/.test(n)) return 'squat';
   if (/split squat|bulgarian/.test(n)) return 'split_squat';
   // Keep RDL distinct from conventional across the WEEK so full-body A/B can vary.
@@ -146,11 +149,19 @@ export function findByName(pool: CatalogExercise[], name: string): CatalogExerci
   const raw = String(name || '').trim();
   if (!raw) return null;
   const key = raw.toLowerCase();
-  const aliased = aliasExerciseName(raw).toLowerCase();
-  return (
-    pool.find((ex) => ex.name.toLowerCase() === key) ||
-    pool.find((ex) => ex.name.toLowerCase() === aliased) ||
-    pool.find((ex) => ex.name.toLowerCase().includes(key) || key.includes(ex.name.toLowerCase())) ||
-    null
-  );
+  const exact = pool.find((ex) => ex.name.toLowerCase() === key);
+  if (exact) return exact;
+  for (const candidate of [aliasExerciseName(raw), ...aliasCandidates(raw)]) {
+    const hit = pool.find((ex) => ex.name.toLowerCase() === candidate.toLowerCase());
+    if (hit) return hit;
+  }
+  const substantial = pool
+    .filter((ex) => {
+      const n = ex.name.toLowerCase();
+      if (n.includes(key) && key.length >= 6) return true;
+      if (key.includes(n) && n.split(/\s+/).length >= 2) return true;
+      return false;
+    })
+    .sort((a, b) => b.name.length - a.name.length);
+  return substantial[0] || null;
 }

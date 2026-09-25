@@ -1840,6 +1840,66 @@ The first live Phase 1 week passed the structural contract and still produced we
 
 ---
 
+## Decision 073 - Master Hypertrophy Credits Are Authoritative
+
+Date: 2026-09-24  
+Status: Accepted  
+Category: Program Design
+
+### Decision
+
+For the 260 active master exercises, `coaching_metadata.hypertrophy_volume_credits` is the only volume map used in normal generation. Name inference and `muscle_targets` are legacy safety for incomplete, archived, or user-custom rows. Vertical pulls credit lats 1.0 and upper_back 0.5. Mid-back rows credit upper_back 1.0 and lats 0.5. Lat-biased Low Row / Meadows Row stay lat-primary. Do not give every pull lats 1.0 + upper_back 1.0. The intermediate major target of 10 equivalent sets for both `upper_back` and `lats` is unchanged.
+
+### Reason
+
+Generate was failing VOLUME_OFF because stored credits omitted upper_back on vertical pulls, enrichment treated many rows as lat-primary, and name-default merge was case-sensitive so it never fired on master names.
+
+### Alternatives Considered
+
+- Lower the upper_back target so a pull-only week passes — rejected; target and credits must use the same equivalent-set definition
+- Give every pull lats 1.0 + upper_back 1.0 — rejected; that erases the lat vs mid-back distinction
+- Keep merging NAME_DEFAULTS into explicit credits — rejected; the 260 must not depend on name inference
+
+### Impact
+
+- Science generation `1.4.6`
+- 26 active master rows updated; rollback snapshot required before the write
+- Science fallback can pick real catalog rows and will not stack Chin-Up with Pull-Up in one session
+- Phase 2B is not started
+
+---
+
+## Decision 072 - One AI Design Call, Deterministic Repair, Persist Once
+
+Date: 2026-09-24  
+Status: Accepted  
+Category: Program Design
+
+### Decision
+
+Generate Program uses one GPT-5.4 Responses call with `reasoning.effort=low`. The science engine validates and deterministically repairs ordinary violations, then persists the accepted week once. Science fallback is emergency-only when that single AI call fails or remains invalid after repair.
+
+This supersedes Decision 059's two AI repair attempts and Decision 060's default `reasoning.effort=medium` for the design call. It reverts BIQ-0227 fallback-first persist. Phase 2A progression/adaptation and the 260-master catalog are unchanged. Phase 2B is not started.
+
+### Reason
+
+A diagnosis run showed medium reasoning took 131s and 8,795 reasoning tokens while still failing validation. Low reasoning took 39.5s with one validator error. AI repair inside the same 120s Vercel function is what killed Generate. The science engine already owns rest, laterality, duration, volume, cooldown eligibility, and ramps.
+
+### Alternatives Considered
+
+- Keep fallback-first persist as the normal path — rejected; the science template must not become the default Generate result
+- Keep two GPT repair calls — rejected; a second 40–60s call does not fit the host budget
+- Switch the model family — rejected until low reasoning plus deterministic repair is measured
+- Raise Vercel `maxDuration` instead of fixing the request — rejected; that hides the architecture problem
+
+### Impact
+
+- Science generation `1.4.5`, designer prompt `designer@2.2`
+- Env default: `OPENAI_PROGRAM_REASONING_EFFORT=low`, `OPENAI_PROGRAM_TIMEOUT_MS=75000`
+- `ai_repaired` now means deterministic repair, not a second GPT call
+
+---
+
 ## Decision 071 - Personal Create Does Not Require Unfollow
 
 Date: 2026-09-24  
