@@ -1,0 +1,75 @@
+{
+  "generated_at": "2026-09-25T16:48:28.809Z",
+  "science_version": "1.4.10",
+  "program_id": "bc2e4996-eb02-4f70-945a-3897d99abf45",
+  "program_name": "Get Stronger 60 duration test 4",
+  "rewritten": false,
+  "days": [
+    {
+      "day": "Mon",
+      "primer": [
+        {
+          "name": "Box Jump",
+          "persisted_rest": 75,
+          "family_rest": 75,
+          "ramp_rir_null": true
+        }
+      ],
+      "persisted_min": 67,
+      "family_rest_min": 67,
+      "persisted": {
+        "warmup_min": 8.1,
+        "power_min": 4.8,
+        "ramp_min": 7.7,
+        "working_min": 44.3,
+        "cooldown_min": 2.1,
+        "total_min": 67
+      },
+      "rewritten": false
+    },
+    {
+      "day": "Wed",
+      "primer": [
+        {
+          "name": "Kettlebell Swing",
+          "persisted_rest": 60,
+          "family_rest": 60,
+          "ramp_rir_null": true
+        }
+      ],
+      "persisted_min": 64,
+      "family_rest_min": 64,
+      "persisted": {
+        "warmup_min": 7.2,
+        "power_min": 4.3,
+        "ramp_min": 7.7,
+        "working_min": 43.3,
+        "cooldown_min": 1.9,
+        "total_min": 64
+      },
+      "rewritten": false
+    },
+    {
+      "day": "Fri",
+      "primer": [
+        {
+          "name": "Medicine Ball Chest Pass",
+          "persisted_rest": 60,
+          "family_rest": 60,
+          "ramp_rir_null": true
+        }
+      ],
+      "persisted_min": 64,
+      "family_rest_min": 64,
+      "persisted": {
+        "warmup_min": 7.2,
+        "power_min": 4.3,
+        "ramp_min": 7.7,
+        "working_min": 43.3,
+        "cooldown_min": 1.9,
+        "total_min": 64
+      },
+      "rewritten": false
+    }
+  ]
+}

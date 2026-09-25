@@ -122,6 +122,10 @@ export function formatPowerPrescription(rx: PowerRx): string {
   return rx.repMin === rx.repMax ? String(rx.repMin) : `${rx.repMin}-${rx.repMax}`;
 }
 
+export function powerRestSecondsFor(ex: PowerExerciseMeta): number {
+  return powerPrescriptionFor(classifyPowerExercise(ex)).restSeconds;
+}
+
 export function clampPowerSets(requested: number | undefined, rx: PowerRx): number {
   const n = Number(requested);
   if (!Number.isFinite(n) || n < 1) return rx.sets;

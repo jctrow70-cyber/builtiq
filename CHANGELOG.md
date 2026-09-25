@@ -11,6 +11,55 @@ Branch:
 Status:
 ```
 
+## BIQ-0234 - Power Rest Uses the Family Prescription in Duration
+
+Date: 2026-09-25
+Branch: develop
+Status: Local
+
+### Summary
+
+Effective-workout duration now uses each power exercise's family rest (75s jumps, 60s throws/swings, 90s olympic) instead of a flat 60s, matching the rest that persist writes.
+
+### Purpose
+
+Get Stronger 60 duration test 4 estimated Monday at 66 pre-persist and 67 post-persist because Box Jump rest was 60s in the estimator and 75s in the database.
+
+### Changes
+
+- `powerRestSecondsFor` is the shared rest source
+- Effective workout and `estimateWorkoutBreakdown` use family rest when a set rest is not already present
+- Science version `1.4.10`
+
+### Files Changed
+
+- `lib/scienceEngine/powerPrescription.ts`
+- `lib/scienceEngine/generation/effectiveWorkout.ts`
+- `lib/scienceEngine/duration.ts`
+- `lib/scienceEngine/generation/phase1Check.ts`
+- `lib/scienceEngine/version.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+
+### Database Changes
+
+None. Existing programs are not rewritten.
+
+### Testing Steps
+
+1. Run `npm run test:science`
+2. Re-read Get Stronger 60 duration test 4 and confirm persisted Monday stays 67
+3. Confirm a new estimate of the same jump rest now matches persist
+
+### Known Issues
+
+- Test 4 Monday remains 66–67 by protected primary work; it is not trimmed further
+- Phase 2B is not started
+
+### Recommended Commit Message
+
+`BIQ-0234 Use power-family rest in the effective duration estimate`
+
 ## BIQ-0233 - 60-Minute Target Band and Conservative Efficiency Pass
 
 Date: 2026-09-25

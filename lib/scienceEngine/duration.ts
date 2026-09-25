@@ -13,6 +13,7 @@ import {
 } from './durationConstants';
 import { buildEffectiveWorkout, estimateEffectiveBreakdown, estimateEffectiveMinutes } from './generation/effectiveWorkout';
 import type { AiWorkoutPlan, DesignerExercise } from './generation/types';
+import { powerRestSecondsFor } from './powerPrescription';
 import { prepItemSeconds } from './prescriptionTime';
 import type { ExercisePrescription, ScienceWorkout, TrainingProfile, WarmupItem } from './types';
 
@@ -103,7 +104,11 @@ export function estimateWorkoutBreakdown(opts: {
       0
     );
   const potentiationSeconds = opts.potentiation.reduce(
-    (sum, ex) => sum + ex.sets * (setExecutionSeconds(ex.name, isUnilateralName(ex.name)) + (ex.restSeconds || POWER_REST_SECONDS)),
+    (sum, ex) =>
+      sum +
+      ex.sets *
+        (setExecutionSeconds(ex.name, isUnilateralName(ex.name)) +
+          (ex.restSeconds || powerRestSecondsFor({ name: ex.name, movementPattern: ex.movementPattern }))),
     opts.potentiation.length ? 40 : 0
   );
   const rampSeconds = opts.rampCount * (RAMP_SET_SECONDS + RAMP_REST_SECONDS);

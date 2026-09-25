@@ -11,6 +11,7 @@ import {
   UNILATERAL_SET_SECONDS,
   type WorkoutDurationBreakdown,
 } from '../durationConstants';
+import { powerRestSecondsFor } from '../powerPrescription';
 import { prepItemSeconds } from '../prescriptionTime';
 import { assignSessionRamps } from './ramps';
 import type { AiPrepItem, AiStrengthExercise, AiWorkoutPlan, DesignerExercise } from './types';
@@ -23,6 +24,7 @@ export type EffectivePrep = {
   measurement_type?: string;
   laterality?: string;
   executionSeconds: number;
+  restSeconds?: number;
 };
 
 export type EffectiveStrength = {
@@ -50,12 +52,13 @@ export type EffectiveEstimateOpts = {
   experienceLevel?: string;
 };
 
-function mapPrep(item: AiPrepItem, library: Map<string, DesignerExercise>): EffectivePrep {
+function mapPrep(item: AiPrepItem, library: Map<string, DesignerExercise>, kind: 'warmup' | 'potentiation' | 'cooldown'): EffectivePrep {
   const meta = library.get(item.exercise_id);
   const prescription = item.prescription || '';
+  const name = meta?.name || item.exercise_id;
   return {
     exercise_id: item.exercise_id,
-    name: meta?.name || item.exercise_id,
+    name,
     sets: Math.max(1, Number(item.sets) || 1),
     prescription,
     measurement_type: meta?.measurement_type,
@@ -66,6 +69,10 @@ function mapPrep(item: AiPrepItem, library: Map<string, DesignerExercise>): Effe
       measurementType: meta?.measurement_type,
       laterality: meta?.laterality,
     }),
+    restSeconds:
+      kind === 'potentiation'
+        ? powerRestSecondsFor({ name, movement_pattern: meta?.movement_pattern })
+        : undefined,
   };
 }
 
@@ -102,10 +109,10 @@ export function buildEffectiveWorkout(
 
   return {
     day_label: workout.day_label,
-    warmup: (workout.warmup || []).map((item) => mapPrep(item, library)),
-    potentiation: (workout.potentiation || []).map((item) => mapPrep(item, library)),
+    warmup: (workout.warmup || []).map((item) => mapPrep(item, library, 'warmup')),
+    potentiation: (workout.potentiation || []).map((item) => mapPrep(item, library, 'potentiation')),
     strength,
-    cooldown: (workout.cooldown || []).map((item) => mapPrep(item, library)),
+    cooldown: (workout.cooldown || []).map((item) => mapPrep(item, library, 'cooldown')),
   };
 }
 
@@ -122,7 +129,7 @@ export function estimateEffectiveBreakdown(workout: EffectiveWorkout): WorkoutDu
     workout.warmup.reduce((sum, item) => sum + item.executionSeconds + PREP_TRANSITION_SECONDS, 0);
   const potentiationSeconds = workout.potentiation.reduce((sum, item) => {
     const work = setWorkSeconds(item.name, item.laterality === 'unilateral');
-    return sum + item.sets * (work + POWER_REST_SECONDS);
+    return sum + item.sets * (work + (item.restSeconds || POWER_REST_SECONDS));
   }, workout.potentiation.length ? 40 : 0);
   const rampCount = workout.strength.reduce((sum, ex) => sum + (ex.ramp_sets?.length || 0), 0);
   const rampSeconds = rampCount * (RAMP_SET_SECONDS + RAMP_REST_SECONDS);

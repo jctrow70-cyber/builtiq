@@ -1840,6 +1840,33 @@ The first live Phase 1 week passed the structural contract and still produced we
 
 ---
 
+## Decision 077 - Power Duration Rest Comes From the Family Prescription
+
+Date: 2026-09-25  
+Status: Accepted  
+Category: Program Design
+
+### Decision
+
+Pre-persist duration uses the same power-family rest that persist writes: 75s for explosive jumps, 60s for throws and ballistic swings, 90s for olympic lifts. Do not use a flat 60s power rest in the effective workout.
+
+### Reason
+
+Box Jump rest was 60s in the estimator and 75s on saved sets, so Monday pre/post disagreed by a minute.
+
+### Alternatives Considered
+
+- Widen pre/post tolerance — rejected; the authority should match persist
+- Change jump rest to 60s — rejected; the family prescription is the persist source
+
+### Impact
+
+- Science generation `1.4.10`
+- Existing programs are not rewritten
+- Phase 2B is not started
+
+---
+
 ## Decision 076 - 60-Minute Sessions Target 55–65
 
 Date: 2026-09-25  

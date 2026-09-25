@@ -6,7 +6,7 @@ import { FALLBACK_CATALOG } from '../catalogAdapter';
 import { contributionsForExercise } from '../contributions';
 import { movementFamily, pickExercise } from '../exerciseSelection';
 import { classifySessionDuration, countPersistedRampSets, estimateSessionBreakdownFromAi, estimateSessionFromAi, estimateWorkoutBreakdown, sessionDurationTolerance } from '../duration';
-import { classifyPowerExercise, isHypertrophyStylePowerRx } from '../powerPrescription';
+import { classifyPowerExercise, isHypertrophyStylePowerRx, powerPrescriptionFor, powerRestSecondsFor } from '../powerPrescription';
 import { parsePrescriptionTiming, prepItemSeconds } from '../prescriptionTime';
 import { buildEffectiveWorkout } from './effectiveWorkout';
 import { assignSessionRamps } from './ramps';
@@ -830,6 +830,33 @@ export async function runPhase1GenerationChecks() {
     cooldownItems: [],
   });
   assert(timedWarm.warmupSeconds >= 300 + 90, `5-minute walk plus overhead should be ~6+ min, got ${timedWarm.warmupSeconds}s`);
+  assert(powerRestSecondsFor({ name: 'Box Jump', movementPattern: 'jump' }) === 75, 'Jump rest must come from the power prescription');
+  assert(powerPrescriptionFor('explosive_jump').restSeconds === 75, 'Explosive jump rest stays 75s');
+  assert(powerPrescriptionFor('throw').restSeconds === 60, 'Throw rest stays 60s');
+  assert(powerPrescriptionFor('ballistic_swing').restSeconds === 60, 'Swing rest stays 60s');
+  const jumpOnly: AiWeekProgram = {
+    ...week,
+    workouts: [
+      {
+        ...week.workouts[0],
+        warmup: [],
+        potentiation: [{ exercise_id: idOf('Vertical Jump'), sets: 2, prescription: '3-5', why: 'Prime quads' }],
+        strength: [],
+        cooldown: [],
+      },
+      week.workouts[1],
+      week.workouts[2],
+    ],
+  };
+  const jumpBreak = estimateSessionBreakdownFromAi(jumpOnly.workouts[0], library, { experienceLevel: 'intermediate' });
+  assert(jumpBreak.potentiationSeconds === 2 * (48 + 75) + 40, `Jump duration must use 75s rest, got ${jumpBreak.potentiationSeconds}s`);
+  const jumpPersist = estimateWorkoutBreakdown({
+    warmupItems: [],
+    potentiation: [{ name: 'Box Jump', sets: 2, restSeconds: 75, role: 'power', muscleGroup: '', primaryMuscles: [], movementPattern: 'jump', repMin: 3, repMax: 5, targetRir: null, loadIncrement: 0 }],
+    rampCount: 0,
+    exercises: [],
+  });
+  assert(jumpPersist.potentiationSeconds === jumpBreak.potentiationSeconds, 'Pre-persist and persist jump rest math must match');
   assert(classifySessionDuration(77, 60).over === 'error', '77 vs 60 must remain a duration error');
 
   const twoPrimary: AiWeekProgram = {
