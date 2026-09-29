@@ -15,6 +15,7 @@ import { evaluateProgression } from './progression';
 import { validateProgram } from './validator';
 import { runPhase1GenerationChecks } from './generation/phase1Check';
 import { runGenerationCatalogPolicyChecks } from './generation/catalogEligibilityCheck';
+import { runCatalogCleanupChecks } from '../training/catalogCleanupCheck';
 import { runPhase2a1FoundationChecks } from './adaptation/phase2a1Check';
 import { runPhase2a2DecisionChecks } from './adaptation/phase2a2Check';
 import { runPhase2a3ApplyChecks } from './adaptation/apply/phase2a3Check';
@@ -544,6 +545,7 @@ async function run() {
   console.log(`Warm-up: ${upperA!.warmup.map((w) => w.name).join(', ')}`);
   console.log(`Power Primer: ${primer!.name} ${primer!.sets} x ${primer!.repMin}-${primer!.repMax}`);
   console.log(`Ramp: ${upperA!.rampSets.map((r) => `${r.weight || r.percent} x ${r.reps}`).join(', ')}`);
+  runCatalogCleanupChecks();
   runGenerationCatalogPolicyChecks();
   await runPhase1GenerationChecks();
   runPhase2a1FoundationChecks();

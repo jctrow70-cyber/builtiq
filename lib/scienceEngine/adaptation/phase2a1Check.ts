@@ -3,7 +3,7 @@ import { trainingProfileFromSources } from '../profile';
 import { scienceProgramToAiPlan } from '../toAiPlan';
 import { adaptGenerationCatalog, isAiGenerationEligibleRow, selectAiGenerationCatalogRows } from '../generation/catalogEligibility';
 import { FALLBACK_CATALOG } from '../catalogAdapter';
-import { MASTER_CATALOG_SOURCE } from '../../training/masterCatalog';
+import { expectedMasterCatalogCount, MASTER_CATALOG_SOURCE } from '../../training/masterCatalog';
 import { userCustomCatalogItems } from '../../training/catalogSearch';
 import { prescriptionColumnsFromSources } from '../../training/prescriptionMeta';
 import { snapshotForLog, plannedRepRangeFromLog } from '../../training/setLogSnapshots';
@@ -220,10 +220,11 @@ export function runPhase2a1FoundationChecks() {
   assert(!isAiGenerationEligibleRow(custom), 'custom exercises remain excluded from AI generation');
   assert(userCustomCatalogItems([custom], custom.user_id).length === 1, 'custom exercises remain visible to their owner');
 
-  const masters = Array.from({ length: 260 }, (_, i) => masterRow(String(i + 1), `Master ${i + 1}`));
+  const masterCount = expectedMasterCatalogCount();
+  const masters = Array.from({ length: masterCount }, (_, i) => masterRow(String(i + 1), `Master ${i + 1}`));
   const live = [...masters, custom];
-  assert(selectAiGenerationCatalogRows(live).length === 260, '260-card AI generation policy remains unchanged');
-  assert(adaptGenerationCatalog(live, { allowFallback: false }).length === 260, 'adapted generation catalog stays 260');
+  assert(selectAiGenerationCatalogRows(live).length === masterCount, `${masterCount}-card AI generation policy remains unchanged`);
+  assert(adaptGenerationCatalog(live, { allowFallback: false }).length === masterCount, `adapted generation catalog stays ${masterCount}`);
 
   const missingRir = reportedRirOrUnknown('');
   assert(missingRir === null, 'missing RIR is never interpreted as 2');

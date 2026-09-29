@@ -745,7 +745,9 @@ function TemplateExerciseCard({
   const isEditingName = nameSearch?.exerciseId === ex.id;
   const nameQuery = isEditingName ? nameSearch!.query : ex.name || '';
   const nameResults =
-    isEditingName && nameQuery.trim() ? searchCatalog(searchPool, { query: nameQuery, limit: 8 }) : [];
+    isEditingName && nameQuery.trim()
+      ? searchCatalog(searchPool, { query: nameQuery, limit: 8, section: ex.section || 'strength' })
+      : [];
   const sets = plannedSets(ex);
   const cardKey = `${ex.id}:${ex.catalog_exercise_id || 'n'}:${ex.name}`;
   const eqOptions = compatibleEquipmentOptions(catalogItem, ex.equipment);

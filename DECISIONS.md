@@ -19,6 +19,35 @@ Impact:
 
 ---
 
+## Decision 078 - Catalog Type Inference and Equipment Variants Stay Additive
+
+Date: 2026-09-28
+Status: Accepted
+Category: Exercise Library
+
+### Decision
+
+Infer cardio from whole-word activity names and authoritative master category, not from substrings such as `row` or `cycle`. Picker ranking uses the requested section. Equipment variants stay on the existing `compatible_equipment` + `st_exercises.equipment` + snapshot model. Diverging Row and Converging Chest Press are distinct master cards (261, 262), not aliases. Reverse Lunge (63) gains a Rear Lunge alias and Smith Machine as an allowed implement. Do not start Phase 2B.
+
+### Reason
+
+The 260-card import stored strength rows as cardio/duration because `/row/` matched Bent-Over Row. Users could not find strength rows or pick Smith on Reverse Lunge without duplicate cards.
+
+### Alternatives Considered
+
+- Special-case the query `row` — rejected
+- Four Rear Lunge master cards — rejected
+- Alias Diverging Row to Machine Row — rejected; the machine path is different
+- Schema migration for `allowed_equipment[]` — rejected; the compatible-equipment mechanism already exists
+
+### Impact
+
+- Active BuiltIQ master library is 262 generation-eligible cards
+- Existing master IDs and history rows are unchanged
+- Phase 1 generation/duration architecture is unchanged
+
+---
+
 ## Decision 001 - Product Name
 
 Date: 2026-07-06  

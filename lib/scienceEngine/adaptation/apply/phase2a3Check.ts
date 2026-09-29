@@ -2,7 +2,7 @@ import { generateProgram } from '../../generateProgram';
 import { trainingProfileFromSources } from '../../profile';
 import { FALLBACK_CATALOG } from '../../catalogAdapter';
 import { adaptGenerationCatalog, isAiGenerationEligibleRow, selectAiGenerationCatalogRows } from '../../generation/catalogEligibility';
-import { MASTER_CATALOG_SOURCE } from '../../../training/masterCatalog';
+import { expectedMasterCatalogCount, MASTER_CATALOG_SOURCE } from '../../../training/masterCatalog';
 import { evaluateProgressionDecision } from '../decision';
 import { REASON } from '../reasonCodes';
 import { ADAPTATION_ENGINE_VERSION } from '../types';
@@ -499,7 +499,8 @@ export function runPhase2a3ApplyChecks() {
     is_archived: false,
   };
   assert(!isAiGenerationEligibleRow(custom), 'T: customs still excluded');
-  const masters = Array.from({ length: 260 }, (_, i) => ({
+  const masterCount = expectedMasterCatalogCount();
+  const masters = Array.from({ length: masterCount }, (_, i) => ({
     id: String(i + 1),
     name: `Master ${i + 1}`,
     is_archived: false,
@@ -507,8 +508,8 @@ export function runPhase2a3ApplyChecks() {
     user_id: null,
     external_source: MASTER_CATALOG_SOURCE,
   }));
-  assert(selectAiGenerationCatalogRows([...masters, custom]).length === 260, 'T: 260-card policy');
-  assert(adaptGenerationCatalog([...masters, custom], { allowFallback: false }).length === 260, 'T: adapted 260');
+  assert(selectAiGenerationCatalogRows([...masters, custom]).length === masterCount, `T: ${masterCount}-card policy`);
+  assert(adaptGenerationCatalog([...masters, custom], { allowFallback: false }).length === masterCount, `T: adapted ${masterCount}`);
   console.log('BIQ-0219 Phase 2A.3 apply-layer checks passed.');
   console.log(`A Friday ${workingWeight(friday)} after progress; U Week2 ${workingWeight(week2Mon)} template; Y/Z version-stable; AA ${AA3.abort_reason}`);
 }

@@ -48,6 +48,7 @@ export default function AddExercisePanel({
     query: panel.query || '',
     filters: { ...filters, availableEquipment: hasEquipmentFilter(equipment) ? equipment : undefined },
     limit: 60,
+    section: panel.section,
   };
   const filterOptions = buildCatalogFilterOptions(catalog);
   const matchCount = countCatalogMatches(catalog, searchOpts);

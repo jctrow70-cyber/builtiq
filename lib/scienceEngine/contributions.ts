@@ -2,7 +2,7 @@ import { SCIENCE_RULES_V1 } from './rules';
 import { normalizeMuscleId, type MuscleId } from './taxonomy';
 import type { CatalogExercise, MuscleContribution } from './types';
 
-/** Legacy safety only. The 260 masters use explicit hypertrophy_volume_credits. */
+/** Legacy safety only. Active masters use explicit hypertrophy_volume_credits. */
 const NAME_DEFAULTS: { match: RegExp; contributions: MuscleContribution[] }[] = [
   {
     match: /bench press|chest press|push-?up|push up/i,

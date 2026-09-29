@@ -2,7 +2,7 @@ import { generateProgram } from '../generateProgram';
 import { trainingProfileFromSources } from '../profile';
 import { adaptGenerationCatalog, isAiGenerationEligibleRow, selectAiGenerationCatalogRows } from '../generation/catalogEligibility';
 import { FALLBACK_CATALOG } from '../catalogAdapter';
-import { MASTER_CATALOG_SOURCE } from '../../training/masterCatalog';
+import { expectedMasterCatalogCount, MASTER_CATALOG_SOURCE } from '../../training/masterCatalog';
 import { extraSetInsertPayload, countsTowardProgression } from '../../training/extraSets';
 import { canAddPlannedSetAfterSiblingLogs, canRewritePlannedSetPrescription } from '../../training/plannedSetGuard';
 import { plannedRepRangeFromLog } from '../../training/setLogSnapshots';
@@ -445,8 +445,9 @@ export function runPhase2a2DecisionChecks() {
     is_system: false,
     is_archived: false,
   };
-  assert(!isAiGenerationEligibleRow(custom), '260-card policy still excludes customs');
-  const masters = Array.from({ length: 260 }, (_, i) => ({
+  assert(!isAiGenerationEligibleRow(custom), 'active-master policy still excludes customs');
+  const masterCount = expectedMasterCatalogCount();
+  const masters = Array.from({ length: masterCount }, (_, i) => ({
     id: String(i + 1),
     name: `Master ${i + 1}`,
     is_archived: false,
@@ -454,8 +455,8 @@ export function runPhase2a2DecisionChecks() {
     user_id: null,
     external_source: MASTER_CATALOG_SOURCE,
   }));
-  assert(selectAiGenerationCatalogRows([...masters, custom]).length === 260, 'eligibility stays 260');
-  assert(adaptGenerationCatalog([...masters, custom], { allowFallback: false }).length === 260, 'adapted catalog stays 260');
+  assert(selectAiGenerationCatalogRows([...masters, custom]).length === masterCount, `eligibility stays ${masterCount}`);
+  assert(adaptGenerationCatalog([...masters, custom], { allowFallback: false }).length === masterCount, `adapted catalog stays ${masterCount}`);
   assert(canAddPlannedSetAfterSiblingLogs().ok, '2A.1 mid-session add remains allowed');
   assert(!canRewritePlannedSetPrescription({ plannedSetId: 'psA', logs: [{ planned_set_id: 'psA', completed: true, actual_reps: '8' }] }).ok, '2A.1 logged-set rewrite guard unchanged');
 

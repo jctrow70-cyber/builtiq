@@ -1,4 +1,4 @@
-import { MASTER_CATALOG_SOURCE } from '../../training/masterCatalog';
+import { expectedMasterCatalogCount, MASTER_CATALOG_SOURCE } from '../../training/masterCatalog';
 import { userCustomCatalogItems, workoutSearchCatalogItems } from '../../training/catalogSearch';
 import { adaptCatalog, FALLBACK_CATALOG } from '../catalogAdapter';
 import { adaptGenerationCatalog, isAiGenerationEligibleRow, selectAiGenerationCatalogRows } from './catalogEligibility';
@@ -44,7 +44,8 @@ function customRow(id: string, name: string, userId: string, extra: Record<strin
 export function runGenerationCatalogPolicyChecks() {
   const userA = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
   const userB = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
-  const masters = Array.from({ length: 260 }, (_, i) => masterRow(String(i + 1), `Master ${i + 1}`));
+  const masterCount = expectedMasterCatalogCount();
+  const masters = Array.from({ length: masterCount }, (_, i) => masterRow(String(i + 1), `Master ${i + 1}`));
   const archivedMaster = masterRow('archived-1', 'Archived Master', { is_archived: true, id: 'archived-1' });
   const legacySystem = {
     id: 'legacy-1',
@@ -62,8 +63,8 @@ export function runGenerationCatalogPolicyChecks() {
   const customsB = [customRow('custom-b-row', 'Monkey Rows', userB)];
   const serviceRoleFetch = [...masters, archivedMaster, legacySystem, ...customsA, ...customsB];
 
-  assert(masters.every(isAiGenerationEligibleRow), 'all 260 active builtiq_master exercises are eligible');
-  assert(selectAiGenerationCatalogRows(masters).length === 260, 'select keeps all 260 active masters');
+  assert(masters.every(isAiGenerationEligibleRow), `all ${masterCount} active builtiq_master exercises are eligible`);
+  assert(selectAiGenerationCatalogRows(masters).length === masterCount, `select keeps all ${masterCount} active masters`);
   assert(!isAiGenerationEligibleRow(archivedMaster), 'archived master exercises are not eligible');
   assert(customsA.every((row) => !isAiGenerationEligibleRow(row)), 'user custom exercises are not eligible');
   assert(!isAiGenerationEligibleRow(legacySystem), 'non-master system rows are not eligible');
@@ -79,23 +80,20 @@ export function runGenerationCatalogPolicyChecks() {
   );
 
   const serviceRoleEligible = selectAiGenerationCatalogRows(serviceRoleFetch);
-  assert(serviceRoleEligible.length === 260, `service-role fetch must not bypass ownership policy, got ${serviceRoleEligible.length}`);
+  assert(serviceRoleEligible.length === masterCount, `service-role fetch must not bypass ownership policy, got ${serviceRoleEligible.length}`);
   assert(
     serviceRoleEligible.every((row) => row.external_source === MASTER_CATALOG_SOURCE && !row.user_id && row.is_archived !== true),
     'service-role eligible set is active builtiq_master only'
   );
 
-  const liveShape = Array.from({ length: 279 }, (_, i) =>
-    i < 260 ? masters[i] : customRow(`live-custom-${i}`, `Custom ${i}`, userA)
-  );
-  assert(liveShape.length === 279, 'live-shaped catalog is 279 actives');
-  assert(selectAiGenerationCatalogRows(liveShape).length === 260, '279 active rows → AI candidate library should become 260');
-  assert(adaptGenerationCatalog(liveShape, { allowFallback: false }).length === 260, 'adapted generation catalog is 260');
+  const liveShape = [...masters, ...customsA, ...customsB];
+  assert(selectAiGenerationCatalogRows(liveShape).length === masterCount, `mixed catalog → AI candidate library should become ${masterCount}`);
+  assert(adaptGenerationCatalog(liveShape, { allowFallback: false }).length === masterCount, `adapted generation catalog is ${masterCount}`);
 
   const adaptedLeak = adaptCatalog(serviceRoleFetch, { allowFallback: false });
   const pipelineSafe = adaptGenerationCatalog(adaptedLeak, { allowFallback: false });
   assert(
-    pipelineSafe.length === 260 && pipelineSafe.every((ex) => !ex.raw?.user_id),
+    pipelineSafe.length === masterCount && pipelineSafe.every((ex) => !ex.raw?.user_id),
     'adapting a service-role dump first still cannot leak customs into generation'
   );
 

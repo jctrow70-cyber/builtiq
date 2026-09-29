@@ -7,6 +7,9 @@ Bench: 3 x 6-8 @ 2 RIR
 Warm-up: Push-Up to Toe Touch, Scapular Push-Up, Band Row
 Power Primer: Medicine-Ball Chest Pass 2 x 4-4
 Ramp: 45 x 10, 95 x 8, 135 x 5, 165 x 3
+BIQ-0235 catalog cleanup checks passed.
+Strength row top: Row, Bent-Over Row, Cable Row to Neck, Chest-Supported Row, Diverging Row, High Row, Landmine Row, Low Row, Machine Row, Meadows Row
+Cardio row top: Row Ergometer, Row, Bent-Over Row, Cable Row to Neck, Chest-Supported Row, Diverging Row, High Row, Landmine Row
 BIQ-0216 generation catalog eligibility checks passed.
 BIQ-0209 Phase 1.1 generation checks passed.
 Sample 3-day Full Body (AI fixture, not science fallback): Full Body A: Back Squat, Barbell Bench Press, Dumbbell Row, Lateral Raise, Romanian Deadlift, Plank | Full Body B: Conventional Deadlift, Overhead Press, Lat Pulldown, Walking Lunge, Face Pull | Full Body C: Bulgarian Split Squat, Incline Dumbbell Press, Seated Cable Row, Hip Thrust, Dumbbell Curl

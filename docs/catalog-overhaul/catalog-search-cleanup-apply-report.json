@@ -1,0 +1,896 @@
+{
+  "generated_at": "2026-09-29T01:27:46.447Z",
+  "change": "BIQ-0235",
+  "status": "applied",
+  "phase_2b": "not_started",
+  "schema_migration": false,
+  "live_total": 2507,
+  "live_active_master_before": 260,
+  "live_archived": 2228,
+  "live_customs": 21,
+  "supabase_host": "qruiwfzzrylrirlxzdqx.supabase.co",
+  "rollback_path": "C:\\Users\\JesseTrowbridge\\OneDrive - Tegria\\Documents\\GitHub\\builtiq\\docs\\catalog-overhaul\\catalog-search-cleanup-rollback.json",
+  "rollback_rows": 24,
+  "type_repair_ids": [
+    {
+      "external_id": "13",
+      "name": "Bent-Over Row",
+      "before": {
+        "exercise_type": "cardio",
+        "category": "cardio",
+        "progression_type": "weight"
+      },
+      "after": {
+        "exercise_type": "strength",
+        "category": "strength",
+        "progression_type": "weight"
+      }
+    },
+    {
+      "external_id": "216",
+      "name": "Bicycle Crunch",
+      "before": {
+        "exercise_type": "cardio",
+        "category": "cardio",
+        "progression_type": "weight"
+      },
+      "after": {
+        "exercise_type": "strength",
+        "category": "strength",
+        "progression_type": "weight"
+      }
+    },
+    {
+      "external_id": "102",
+      "name": "Cable Crunch",
+      "before": {
+        "exercise_type": "cardio",
+        "category": "cardio",
+        "progression_type": "weight"
+      },
+      "after": {
+        "exercise_type": "strength",
+        "category": "strength",
+        "progression_type": "weight"
+      }
+    },
+    {
+      "external_id": "156",
+      "name": "Cable Row to Neck",
+      "before": {
+        "exercise_type": "cardio",
+        "category": "cardio",
+        "progression_type": "weight"
+      },
+      "after": {
+        "exercise_type": "strength",
+        "category": "strength",
+        "progression_type": "weight"
+      }
+    },
+    {
+      "external_id": "15",
+      "name": "Chest-Supported Row",
+      "before": {
+        "exercise_type": "cardio",
+        "category": "cardio",
+        "progression_type": "weight"
+      },
+      "after": {
+        "exercise_type": "strength",
+        "category": "strength",
+        "progression_type": "weight"
+      }
+    },
+    {
+      "external_id": "101",
+      "name": "Crunch",
+      "before": {
+        "exercise_type": "cardio",
+        "category": "cardio",
+        "progression_type": "weight"
+      },
+      "after": {
+        "exercise_type": "strength",
+        "category": "strength",
+        "progression_type": "weight"
+      }
+    },
+    {
+      "external_id": "18",
+      "name": "High Row",
+      "before": {
+        "exercise_type": "cardio",
+        "category": "cardio",
+        "progression_type": "weight"
+      },
+      "after": {
+        "exercise_type": "strength",
+        "category": "strength",
+        "progression_type": "weight"
+      }
+    },
+    {
+      "external_id": "25",
+      "name": "Inverted Row",
+      "before": {
+        "exercise_type": "cardio",
+        "category": "cardio",
+        "progression_type": "weight"
+      },
+      "after": {
+        "exercise_type": "strength",
+        "category": "strength",
+        "progression_type": "weight"
+      }
+    },
+    {
+      "external_id": "16",
+      "name": "Landmine Row",
+      "before": {
+        "exercise_type": "cardio",
+        "category": "cardio",
+        "progression_type": "weight"
+      },
+      "after": {
+        "exercise_type": "strength",
+        "category": "strength",
+        "progression_type": "weight"
+      }
+    },
+    {
+      "external_id": "19",
+      "name": "Low Row",
+      "before": {
+        "exercise_type": "cardio",
+        "category": "cardio",
+        "progression_type": "weight"
+      },
+      "after": {
+        "exercise_type": "strength",
+        "category": "strength",
+        "progression_type": "weight"
+      }
+    },
+    {
+      "external_id": "142",
+      "name": "Machine Row",
+      "before": {
+        "exercise_type": "cardio",
+        "category": "cardio",
+        "progression_type": "weight"
+      },
+      "after": {
+        "exercise_type": "strength",
+        "category": "strength",
+        "progression_type": "weight"
+      }
+    },
+    {
+      "external_id": "189",
+      "name": "Meadows Row",
+      "before": {
+        "exercise_type": "cardio",
+        "category": "cardio",
+        "progression_type": "weight"
+      },
+      "after": {
+        "exercise_type": "strength",
+        "category": "strength",
+        "progression_type": "weight"
+      }
+    },
+    {
+      "external_id": "121",
+      "name": "Medicine Ball Rotational Throw",
+      "before": {
+        "exercise_type": "cardio",
+        "category": "plyometric",
+        "progression_type": "weight"
+      },
+      "after": {
+        "exercise_type": "strength",
+        "category": "plyometric",
+        "progression_type": "weight"
+      }
+    },
+    {
+      "external_id": "14",
+      "name": "One-Arm Row",
+      "before": {
+        "exercise_type": "cardio",
+        "category": "cardio",
+        "progression_type": "weight"
+      },
+      "after": {
+        "exercise_type": "strength",
+        "category": "strength",
+        "progression_type": "weight"
+      }
+    },
+    {
+      "external_id": "191",
+      "name": "Pendlay Row",
+      "before": {
+        "exercise_type": "cardio",
+        "category": "cardio",
+        "progression_type": "weight"
+      },
+      "after": {
+        "exercise_type": "strength",
+        "category": "strength",
+        "progression_type": "weight"
+      }
+    },
+    {
+      "external_id": "34",
+      "name": "Rear Delt Row",
+      "before": {
+        "exercise_type": "cardio",
+        "category": "cardio",
+        "progression_type": "weight"
+      },
+      "after": {
+        "exercise_type": "strength",
+        "category": "strength",
+        "progression_type": "weight"
+      }
+    },
+    {
+      "external_id": "221",
+      "name": "Renegade Row",
+      "before": {
+        "exercise_type": "cardio",
+        "category": "cardio",
+        "progression_type": "weight"
+      },
+      "after": {
+        "exercise_type": "strength",
+        "category": "strength",
+        "progression_type": "weight"
+      }
+    },
+    {
+      "external_id": "103",
+      "name": "Reverse Crunch",
+      "before": {
+        "exercise_type": "cardio",
+        "category": "cardio",
+        "progression_type": "weight"
+      },
+      "after": {
+        "exercise_type": "strength",
+        "category": "strength",
+        "progression_type": "weight"
+      }
+    },
+    {
+      "external_id": "12",
+      "name": "Row",
+      "before": {
+        "exercise_type": "cardio",
+        "category": "cardio",
+        "progression_type": "weight"
+      },
+      "after": {
+        "exercise_type": "strength",
+        "category": "strength",
+        "progression_type": "weight"
+      }
+    },
+    {
+      "external_id": "190",
+      "name": "Seal Row",
+      "before": {
+        "exercise_type": "cardio",
+        "category": "cardio",
+        "progression_type": "weight"
+      },
+      "after": {
+        "exercise_type": "strength",
+        "category": "strength",
+        "progression_type": "weight"
+      }
+    },
+    {
+      "external_id": "17",
+      "name": "T-Bar Row",
+      "before": {
+        "exercise_type": "cardio",
+        "category": "cardio",
+        "progression_type": "weight"
+      },
+      "after": {
+        "exercise_type": "strength",
+        "category": "strength",
+        "progression_type": "weight"
+      }
+    },
+    {
+      "external_id": "253",
+      "name": "Trunk Rotation",
+      "before": {
+        "exercise_type": "cardio",
+        "category": "cardio",
+        "progression_type": "weight"
+      },
+      "after": {
+        "exercise_type": "strength",
+        "category": "strength",
+        "progression_type": "weight"
+      }
+    },
+    {
+      "external_id": "35",
+      "name": "Upright Row",
+      "before": {
+        "exercise_type": "cardio",
+        "category": "cardio",
+        "progression_type": "weight"
+      },
+      "after": {
+        "exercise_type": "strength",
+        "category": "strength",
+        "progression_type": "weight"
+      }
+    }
+  ],
+  "archived_rows_modified": 0,
+  "custom_rows_modified": 0,
+  "live_active_master_after": 262,
+  "ai_candidates": 262,
+  "repaired": [
+    {
+      "external_id": "13",
+      "name": "Bent-Over Row",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight"
+    },
+    {
+      "external_id": "216",
+      "name": "Bicycle Crunch",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight"
+    },
+    {
+      "external_id": "102",
+      "name": "Cable Crunch",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight"
+    },
+    {
+      "external_id": "156",
+      "name": "Cable Row to Neck",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight"
+    },
+    {
+      "external_id": "15",
+      "name": "Chest-Supported Row",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight"
+    },
+    {
+      "external_id": "101",
+      "name": "Crunch",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight"
+    },
+    {
+      "external_id": "18",
+      "name": "High Row",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight"
+    },
+    {
+      "external_id": "25",
+      "name": "Inverted Row",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight"
+    },
+    {
+      "external_id": "16",
+      "name": "Landmine Row",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight"
+    },
+    {
+      "external_id": "19",
+      "name": "Low Row",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight"
+    },
+    {
+      "external_id": "142",
+      "name": "Machine Row",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight"
+    },
+    {
+      "external_id": "189",
+      "name": "Meadows Row",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight"
+    },
+    {
+      "external_id": "121",
+      "name": "Medicine Ball Rotational Throw",
+      "exercise_type": "strength",
+      "category": "plyometric",
+      "progression_type": "weight"
+    },
+    {
+      "external_id": "14",
+      "name": "One-Arm Row",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight"
+    },
+    {
+      "external_id": "191",
+      "name": "Pendlay Row",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight"
+    },
+    {
+      "external_id": "34",
+      "name": "Rear Delt Row",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight"
+    },
+    {
+      "external_id": "221",
+      "name": "Renegade Row",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight"
+    },
+    {
+      "external_id": "103",
+      "name": "Reverse Crunch",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight"
+    },
+    {
+      "external_id": "12",
+      "name": "Row",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight"
+    },
+    {
+      "external_id": "190",
+      "name": "Seal Row",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight"
+    },
+    {
+      "external_id": "17",
+      "name": "T-Bar Row",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight"
+    },
+    {
+      "external_id": "253",
+      "name": "Trunk Rotation",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight"
+    },
+    {
+      "external_id": "35",
+      "name": "Upright Row",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight"
+    }
+  ],
+  "strength_row_search": [
+    {
+      "rank": 1,
+      "name": "Row",
+      "external_id": "12",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps"
+    },
+    {
+      "rank": 2,
+      "name": "Bent-Over Row",
+      "external_id": "13",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps"
+    },
+    {
+      "rank": 3,
+      "name": "Cable Row to Neck",
+      "external_id": "156",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps"
+    },
+    {
+      "rank": 4,
+      "name": "Chest-Supported Row",
+      "external_id": "15",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps"
+    },
+    {
+      "rank": 5,
+      "name": "Diverging Row",
+      "external_id": "261",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps"
+    },
+    {
+      "rank": 6,
+      "name": "High Row",
+      "external_id": "18",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps"
+    },
+    {
+      "rank": 7,
+      "name": "Landmine Row",
+      "external_id": "16",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps"
+    },
+    {
+      "rank": 8,
+      "name": "Low Row",
+      "external_id": "19",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps"
+    },
+    {
+      "rank": 9,
+      "name": "Machine Row",
+      "external_id": "142",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps"
+    },
+    {
+      "rank": 10,
+      "name": "Meadows Row",
+      "external_id": "189",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps"
+    },
+    {
+      "rank": 11,
+      "name": "One-Arm Row",
+      "external_id": "14",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps"
+    },
+    {
+      "rank": 12,
+      "name": "Pendlay Row",
+      "external_id": "191",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps"
+    }
+  ],
+  "cardio_row_search": [
+    {
+      "rank": 1,
+      "name": "Row Ergometer",
+      "external_id": "242",
+      "exercise_type": "cardio"
+    },
+    {
+      "rank": 2,
+      "name": "Row",
+      "external_id": "12",
+      "exercise_type": "strength"
+    },
+    {
+      "rank": 3,
+      "name": "Bent-Over Row",
+      "external_id": "13",
+      "exercise_type": "strength"
+    },
+    {
+      "rank": 4,
+      "name": "Cable Row to Neck",
+      "external_id": "156",
+      "exercise_type": "strength"
+    },
+    {
+      "rank": 5,
+      "name": "Chest-Supported Row",
+      "external_id": "15",
+      "exercise_type": "strength"
+    },
+    {
+      "rank": 6,
+      "name": "Diverging Row",
+      "external_id": "261",
+      "exercise_type": "strength"
+    },
+    {
+      "rank": 7,
+      "name": "High Row",
+      "external_id": "18",
+      "exercise_type": "strength"
+    },
+    {
+      "rank": 8,
+      "name": "Landmine Row",
+      "external_id": "16",
+      "exercise_type": "strength"
+    }
+  ],
+  "diverging_row": {
+    "id": "9518a05d-4b70-435b-bf9f-833a165ff3da",
+    "user_id": null,
+    "name": "Diverging Row",
+    "category": "strength",
+    "muscle_group": "Upper Back",
+    "equipment": "Machine",
+    "movement_pattern": "pull_horizontal",
+    "is_system": true,
+    "is_archived": false,
+    "created_at": "2026-09-29T01:27:54.64735+00:00",
+    "updated_at": "2026-09-29T01:27:54.64735+00:00",
+    "exercise_type": "strength",
+    "external_source": "builtiq_master",
+    "external_id": "261",
+    "media_url": null,
+    "image_url": null,
+    "video_url": null,
+    "gif_url": null,
+    "instructions": "Setup: Sit tall on the diverging / iso-lateral row with chest supported and independent handles at full reach.\n\nExecution: Pull each handle back on a diverging path, then return to a controlled stretch.\n\nCues: Chest stays on the pad; Elbows travel back; Own the stretch",
+    "training_goal": "strength",
+    "progression_type": "weight",
+    "primary_muscle_percentage": 60,
+    "secondary_muscle_percentage": 40,
+    "muscle_targets": [
+      {
+        "role": "primary",
+        "muscle": "Upper Back",
+        "percentage": 60
+      },
+      {
+        "role": "secondary",
+        "muscle": "Lats",
+        "percentage": 14
+      },
+      {
+        "role": "secondary",
+        "muscle": "Biceps",
+        "percentage": 13
+      },
+      {
+        "role": "secondary",
+        "muscle": "Rear Delts",
+        "percentage": 13
+      }
+    ],
+    "coaching_metadata": {
+      "aliases": [
+        "Iso-Lateral Row",
+        "Hammer Strength Row",
+        "Diverging Machine Row",
+        "Independent Row"
+      ],
+      "laterality": "bilateral",
+      "demand_notes": "compound horizontal pull; medium fatigue; low skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits upper_back:1, biceps:0.5",
+      "design_notes": "Distinct from linear Machine Row (142). Independent diverging arms are the point of the card.",
+      "fatigue_cost": "moderate",
+      "skill_demand": "low",
+      "coaching_cues": [
+        "Chest stays on the pad",
+        "Elbows travel back",
+        "Own the stretch"
+      ],
+      "exercise_kind": "compound",
+      "program_roles": [
+        "secondary",
+        "accessory"
+      ],
+      "ramp_eligible": true,
+      "volume_policy": "strength_hypertrophy",
+      "power_eligible": false,
+      "default_rep_max": 10,
+      "default_rep_min": 5,
+      "master_category": "Compound",
+      "master_movement": "Horizontal Pull",
+      "primary_muscles": [
+        "upper_back"
+      ],
+      "warmup_eligible": false,
+      "involved_muscles": [
+        "upper_back",
+        "lats",
+        "biceps",
+        "rear_delts"
+      ],
+      "measurement_type": "reps",
+      "movement_pattern": "horizontal_pull",
+      "cooldown_eligible": false,
+      "default_equipment": "Machine",
+      "secondary_muscles": [
+        "lats",
+        "biceps",
+        "rear_delts"
+      ],
+      "enrichment_version": "BIQ-0213",
+      "primary_assignment": "assigned",
+      "compatible_equipment": [
+        "Machine"
+      ],
+      "demand_characteristics": [],
+      "hypertrophy_volume_credits": [
+        {
+          "credit": 1,
+          "muscle": "upper_back"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "biceps"
+        }
+      ]
+    }
+  },
+  "converging_chest_press": {
+    "id": "1a40cfc5-7aae-4960-bd27-d46f869e42a2",
+    "user_id": null,
+    "name": "Converging Chest Press",
+    "category": "strength",
+    "muscle_group": "Chest",
+    "equipment": "Machine",
+    "movement_pattern": "push_horizontal",
+    "is_system": true,
+    "is_archived": false,
+    "created_at": "2026-09-29T01:27:54.64735+00:00",
+    "updated_at": "2026-09-29T01:27:54.64735+00:00",
+    "exercise_type": "strength",
+    "external_source": "builtiq_master",
+    "external_id": "262",
+    "media_url": null,
+    "image_url": null,
+    "video_url": null,
+    "gif_url": null,
+    "instructions": "Setup: Adjust the seat so the converging handles start around mid-chest with shoulders set.\n\nExecution: Press the independent handles forward on a converging arc, then return under control.\n\nCues: Shoulders set; Wrists stacked; Follow the arc",
+    "training_goal": "strength",
+    "progression_type": "weight",
+    "primary_muscle_percentage": 60,
+    "secondary_muscle_percentage": 40,
+    "muscle_targets": [
+      {
+        "role": "primary",
+        "muscle": "Chest",
+        "percentage": 60
+      },
+      {
+        "role": "secondary",
+        "muscle": "Triceps",
+        "percentage": 20
+      },
+      {
+        "role": "secondary",
+        "muscle": "Front Delts",
+        "percentage": 20
+      }
+    ],
+    "coaching_metadata": {
+      "aliases": [
+        "Converging Machine Chest Press",
+        "Iso-Lateral Chest Press",
+        "Hammer Strength Chest Press"
+      ],
+      "laterality": "bilateral",
+      "demand_notes": "compound horizontal push; medium fatigue; low skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits chest:1, triceps:0.5, front_delts:0.5",
+      "design_notes": "Distinct from linear Machine Chest Press (140) and Bench Press (1). Do not merge.",
+      "fatigue_cost": "moderate",
+      "skill_demand": "low",
+      "coaching_cues": [
+        "Shoulders set",
+        "Wrists stacked",
+        "Follow the arc"
+      ],
+      "exercise_kind": "compound",
+      "program_roles": [
+        "secondary",
+        "accessory"
+      ],
+      "ramp_eligible": true,
+      "volume_policy": "strength_hypertrophy",
+      "power_eligible": false,
+      "default_rep_max": 10,
+      "default_rep_min": 5,
+      "master_category": "Compound",
+      "master_movement": "Horizontal Push",
+      "primary_muscles": [
+        "chest"
+      ],
+      "warmup_eligible": false,
+      "involved_muscles": [
+        "chest",
+        "triceps",
+        "front_delts"
+      ],
+      "measurement_type": "reps",
+      "movement_pattern": "horizontal_push",
+      "cooldown_eligible": false,
+      "default_equipment": "Machine",
+      "secondary_muscles": [
+        "triceps",
+        "front_delts"
+      ],
+      "enrichment_version": "BIQ-0213",
+      "primary_assignment": "assigned",
+      "compatible_equipment": [
+        "Machine"
+      ],
+      "demand_characteristics": [],
+      "hypertrophy_volume_credits": [
+        {
+          "credit": 1,
+          "muscle": "chest"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "triceps"
+        },
+        {
+          "credit": 0.5,
+          "muscle": "front_delts"
+        }
+      ]
+    }
+  },
+  "reverse_lunge_equipment": [
+    "Dumbbell",
+    "Bodyweight",
+    "Barbell",
+    "Kettlebell",
+    "Smith Machine"
+  ],
+  "inverted_row_equipment": [
+    "Bodyweight",
+    "Suspension Trainer"
+  ]
+}

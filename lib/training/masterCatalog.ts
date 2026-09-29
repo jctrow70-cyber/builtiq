@@ -2,6 +2,7 @@ import masterFile from './data/builtiq-master-catalog.json';
 import { inferExerciseType } from './exerciseTypes';
 import type { MovementPattern } from './exerciseIntelligence';
 import type { MappedCatalogRow } from './catalogImportTypes';
+import { coachingFieldsFromClassification, NEW_MASTER_CLASSIFICATIONS } from './masterCatalogEnrichment';
 
 export const MASTER_CATALOG_SOURCE = 'builtiq_master';
 
@@ -215,6 +216,38 @@ const ADD_ON_ROWS: MasterLibraryRecord[] = [
     design_notes: 'Competition jerk footwork. Push Jerk stays its own card.',
     active: 'Yes',
   },
+  {
+    id: '261',
+    name: 'Diverging Row',
+    aliases: 'Iso-Lateral Row; Hammer Strength Row; Diverging Machine Row; Independent Row',
+    primary_muscle: 'Upper Back',
+    secondary_muscles: 'Lats; Biceps; Rear Delts',
+    movement_pattern: 'Horizontal Pull',
+    category: 'Compound',
+    default_equipment: 'Machine',
+    compatible_equipment: 'Machine',
+    setup: 'Sit tall on the diverging / iso-lateral row with chest supported and independent handles at full reach.',
+    execution: 'Pull each handle back on a diverging path, then return to a controlled stretch.',
+    form_cues: 'Chest stays on the pad; Elbows travel back; Own the stretch',
+    design_notes: 'Distinct from linear Machine Row (142). Independent diverging arms are the point of the card.',
+    active: 'Yes',
+  },
+  {
+    id: '262',
+    name: 'Converging Chest Press',
+    aliases: 'Converging Machine Chest Press; Iso-Lateral Chest Press; Hammer Strength Chest Press',
+    primary_muscle: 'Chest',
+    secondary_muscles: 'Triceps; Front Delts',
+    movement_pattern: 'Horizontal Push',
+    category: 'Compound',
+    default_equipment: 'Machine',
+    compatible_equipment: 'Machine',
+    setup: 'Adjust the seat so the converging handles start around mid-chest with shoulders set.',
+    execution: 'Press the independent handles forward on a converging arc, then return under control.',
+    form_cues: 'Shoulders set; Wrists stacked; Follow the arc',
+    design_notes: 'Distinct from linear Machine Chest Press (140) and Bench Press (1). Do not merge.',
+    active: 'Yes',
+  },
 ];
 
 function splitList(raw?: string): string[] {
@@ -240,7 +273,7 @@ export function mapMasterMovementPattern(raw?: string | null): MovementPattern {
   return 'isolation';
 }
 
-function mapCatalogCategory(raw: string, exerciseType: string): string {
+export function mapCatalogCategory(raw: string, exerciseType: string): string {
   const v = String(raw || '').toLowerCase();
   if (v.includes('mobility')) return 'mobility';
   if (v.includes('cardio') || v.includes('conditioning')) return 'cardio';
@@ -285,6 +318,35 @@ export function loadMasterLibraryRecords(): MasterLibraryRecord[] {
       name: 'Pull-Through',
       aliases: Array.from(aliases).join('; '),
       default_equipment: pullThrough.default_equipment || 'Cable',
+      compatible_equipment: Array.from(compatible).join('; '),
+    });
+  }
+
+  const genericRow = byId.get('12');
+  if (genericRow) {
+    const aliases = splitList(genericRow.aliases).filter((alias) => alias.toLowerCase() !== 'bent row');
+    byId.set('12', { ...genericRow, aliases: aliases.join('; ') });
+  }
+
+  const invertedRow = byId.get('25');
+  if (invertedRow) {
+    byId.set('25', {
+      ...invertedRow,
+      default_equipment: 'Bodyweight',
+      compatible_equipment: 'Bodyweight; Suspension Trainer',
+    });
+  }
+
+  const reverseLunge = byId.get('63');
+  if (reverseLunge) {
+    const aliases = new Set(splitList(reverseLunge.aliases));
+    aliases.add('Backward Lunge');
+    aliases.add('Rear Lunge');
+    const compatible = new Set(splitList(reverseLunge.compatible_equipment));
+    ['Bodyweight', 'Dumbbell', 'Barbell', 'Kettlebell', 'Smith Machine'].forEach((item) => compatible.add(item));
+    byId.set('63', {
+      ...reverseLunge,
+      aliases: Array.from(aliases).join('; '),
       compatible_equipment: Array.from(compatible).join('; '),
     });
   }
@@ -344,6 +406,9 @@ export function masterRecordToCatalogRow(record: MasterLibraryRecord): MappedCat
       master_category: record.category || '',
       design_notes: record.design_notes || '',
       coaching_cues: splitList(record.form_cues),
+      ...(NEW_MASTER_CLASSIFICATIONS[record.id]
+        ? coachingFieldsFromClassification(NEW_MASTER_CLASSIFICATIONS[record.id])
+        : {}),
     },
     is_system: true,
     user_id: null,

@@ -11,6 +11,80 @@ Branch:
 Status:
 ```
 
+## BIQ-0235 - Catalog Search Cleanup and Two New Master Cards
+
+Date: 2026-09-28
+Branch: develop
+Status: Local / in progress
+
+### Summary
+
+Strength rows and Bicycle Crunch are no longer inferred or stored as cardio. Picker search is section-aware and word-boundary safe. Reverse Lunge can use Smith Machine. Diverging Row (261) and Converging Chest Press (262) are new enriched master cards. Active generation library is 262.
+
+### Purpose
+
+Manual Program Design / Training search for "row" ranked and labeled strength rows as cardio/rowing. Rear Lunge/Smith was missing because Reverse Lunge did not list Smith Machine. Two distinct machine cards were missing.
+
+### Changes
+
+- Cardio name inference uses whole-word activities (rowing/rower/ergometer, walk, run, bike, cycle) and master category metadata
+- Strength picker ranks strength rows above Row Ergometer; cardio picker does the reverse
+- "row" no longer matches Prowler
+- Targeted live repair of misclassified active `builtiq_master` first-class type fields
+- Reverse Lunge alias Rear Lunge + Smith Machine on the existing compatible-equipment list
+- Inverted Row compatible equipment restored; generic Row no longer aliases Bent Row
+- New masters 261 Diverging Row and 262 Converging Chest Press
+
+### Files Changed
+
+- `lib/training/exerciseTypes.ts`
+- `lib/training/catalogSearch.ts`
+- `lib/training/masterCatalog.ts`
+- `lib/training/masterCatalogEnrichment.ts`
+- `lib/training/catalogTypeRepair.ts`
+- `lib/training/catalogCleanupCheck.ts`
+- `app/components/training/AddExercisePanel.tsx`
+- `app/components/training/WorkoutTemplateEditor.tsx`
+- `app/page.tsx`
+- `scripts/apply-catalog-search-cleanup.ts`
+- `lib/scienceEngine/acceptanceCheck.ts`
+- `lib/scienceEngine/generation/catalogEligibilityCheck.ts`
+- `lib/scienceEngine/adaptation/phase2a1Check.ts`
+- `lib/scienceEngine/adaptation/phase2a2Check.ts`
+- `lib/scienceEngine/adaptation/apply/phase2a3Check.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+No schema migration. Data-only on live `st_exercise_catalog`:
+
+1. Repair `exercise_type` / `category` / `progression_type` on misclassified active masters
+2. Patch coaching_metadata on Reverse Lunge, Inverted Row, and generic Row
+3. Insert masters 261 and 262
+4. Rollback snapshot written first
+5. Archived and user-custom rows are not modified
+6. Planned workouts and set-log history are not rewritten
+
+### Testing Steps
+
+1. Run `npm run test:science`
+2. Program Design Strength picker: search `row` — strength rows first, shown as strength/reps
+3. Search `bicycle crunch` — strength/core, not cardio
+4. Add Diverging Row, Converging Chest Press, Reverse Lunge
+5. Reverse Lunge equipment dropdown includes Smith Machine and persists
+6. Cardio-context search for `row` leads with Row Ergometer
+
+### Known Issues
+
+- Already-added planned exercises that were saved as cardio stay cardio until re-picked
+- Phase 2B is not started
+
+### Recommended Commit Message
+
+`BIQ-0235 Fix row search inference and add diverging/converging machine cards`
+
 ## BIQ-0234 - Power Rest Uses the Family Prescription in Duration
 
 Date: 2026-09-25

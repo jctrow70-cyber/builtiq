@@ -9,6 +9,13 @@ import {
   type CatalogSourceId,
 } from './catalogSources';
 import { hasExerciseGuide } from './exerciseMedia';
+import {
+  inferExerciseType,
+  isAuthoritativeCardioCategory,
+  isCardioActivityName,
+  isStrengthLike,
+  type ExerciseType,
+} from './exerciseTypes';
 
 function systemCatalogPool(items: any[]) {
   return (items || []).filter((c) => {
@@ -85,42 +92,89 @@ export type CatalogSearchOptions = {
   query?: string;
   filters?: CatalogSearchFilters;
   limit?: number;
+  /** Picker section: strength, cardio, warmup, cooldown */
+  section?: string;
 };
 
 function activeItems(items: any[]) {
   return (items || []).filter((c) => !c?.is_archived);
 }
 
-function haystack(item: any): string {
-  const aliases = Array.isArray(item?.coaching_metadata?.aliases)
-    ? item.coaching_metadata.aliases.join(' ')
-    : '';
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** Whole-token match so "row" does not hit "Prowler". */
+export function textHasToken(text: unknown, token: string) {
+  const hay = String(text || '');
+  const t = String(token || '').trim();
+  if (!hay || !t) return false;
+  return new RegExp(`\\b${escapeRegExp(t)}\\b`, 'i').test(hay);
+}
+
+function searchableFields(item: any): string[] {
+  const aliases = Array.isArray(item?.coaching_metadata?.aliases) ? item.coaching_metadata.aliases : [];
   return [
     item?.name,
-    aliases,
+    ...aliases,
     item?.muscle_group,
     item?.equipment,
     item?.category,
     item?.exercise_type,
     item?.movement_pattern,
-    item?.instructions,
+    item?.coaching_metadata?.master_category,
+    item?.coaching_metadata?.master_movement,
+    ...(Array.isArray(item?.coaching_metadata?.compatible_equipment)
+      ? item.coaching_metadata.compatible_equipment
+      : []),
   ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
+    .map((v) => String(v || '').trim())
+    .filter(Boolean);
 }
 
-function relevanceScore(item: any, tokens: string[]): number {
+function itemMatchesTokens(item: any, tokens: string[]) {
+  const fields = searchableFields(item);
+  return tokens.every((token) => fields.some((field) => textHasToken(field, token)));
+}
+
+function resolvedExerciseType(item: any): ExerciseType {
+  const masterCategory = item?.coaching_metadata?.master_category || item?.category || '';
+  return inferExerciseType(item?.name, item?.muscle_group, masterCategory, item?.exercise_type);
+}
+
+export function catalogItemIsCardio(item: any) {
+  if (isAuthoritativeCardioCategory(item?.coaching_metadata?.master_category || item?.category)) return true;
+  if (isCardioActivityName(item?.name)) return true;
+  return resolvedExerciseType(item) === 'cardio';
+}
+
+function contextScore(item: any, section?: string) {
+  const sec = String(section || '').toLowerCase();
+  if (!sec) return 0;
+  const cardio = catalogItemIsCardio(item);
+  const strengthLike = isStrengthLike(resolvedExerciseType(item)) && !cardio;
+  if (sec === 'cardio') return cardio ? 90 : -50;
+  if (sec === 'strength') return strengthLike ? 90 : cardio ? -80 : 20;
+  if (sec === 'warmup' || sec === 'cooldown') return cardio ? -15 : 10;
+  return 0;
+}
+
+function relevanceScore(item: any, tokens: string[], section?: string): number {
   const name = String(item?.name || '').toLowerCase();
-  let score = 0;
+  const aliases = Array.isArray(item?.coaching_metadata?.aliases)
+    ? item.coaching_metadata.aliases.map((a: unknown) => String(a || '').toLowerCase())
+    : [];
+  let score = contextScore(item, section);
   if (catalogItemHasGuide(item) || hasExerciseGuide(item)) score += 25;
   tokens.forEach((t, i) => {
     if (!t) return;
     if (name === t) score += 120;
-    else if (name.startsWith(t)) score += 80 - i * 5;
-    else if (name.includes(t)) score += 40 - i * 3;
-    if (String(item?.muscle_group || '').toLowerCase().includes(t)) score += 12;
-    if (String(item?.equipment || '').toLowerCase().includes(t)) score += 8;
+    else if (name.startsWith(`${t} `) || name === t) score += 80 - i * 5;
+    else if (textHasToken(name, t)) score += 40 - i * 3;
+    if (aliases.some((alias) => alias === t)) score += 50;
+    else if (aliases.some((alias) => textHasToken(alias, t))) score += 18;
+    if (textHasToken(item?.muscle_group, t)) score += 12;
+    if (textHasToken(item?.equipment, t)) score += 8;
   });
   return score;
 }
@@ -158,9 +212,9 @@ export function searchCatalog(items: any[], opts: CatalogSearchOptions = {}) {
   let pool = applyFilters(activeItems(items), opts.filters);
 
   if (tokens.length) {
-    pool = pool.filter((c) => tokens.every((t) => haystack(c).includes(t)));
+    pool = pool.filter((c) => itemMatchesTokens(c, tokens));
     pool.sort((a, b) => {
-      const d = relevanceScore(b, tokens) - relevanceScore(a, tokens);
+      const d = relevanceScore(b, tokens, opts.section) - relevanceScore(a, tokens, opts.section);
       if (d) return d;
       return String(a.name || '').localeCompare(String(b.name || ''));
     });
@@ -185,7 +239,7 @@ export function countCatalogMatches(items: any[], opts: CatalogSearchOptions = {
   if (!tokens.length && !hasFilters) return 0;
 
   let pool = applyFilters(activeItems(items), opts.filters);
-  if (tokens.length) pool = pool.filter((c) => tokens.every((t) => haystack(c).includes(t)));
+  if (tokens.length) pool = pool.filter((c) => itemMatchesTokens(c, tokens));
   return pool.length;
 }
 
@@ -203,7 +257,8 @@ export function buildCatalogFilterOptions(items: any[]) {
 }
 
 export function catalogResultMeta(item: any): string {
-  const parts = [item?.muscle_group, item?.equipment, item?.exercise_type].filter(Boolean);
+  const type = resolvedExerciseType(item);
+  const parts = [item?.muscle_group, item?.equipment, type].filter(Boolean);
   return parts.join(' · ') || 'Exercise';
 }
 

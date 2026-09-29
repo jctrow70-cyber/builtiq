@@ -1,0 +1,2358 @@
+{
+  "generated_at": "2026-09-29T01:27:48.881Z",
+  "change": "BIQ-0235",
+  "supabase_host": "qruiwfzzrylrirlxzdqx.supabase.co",
+  "rows": [
+    {
+      "id": "b4bbb290-e036-4981-9318-5eda3021f8d1",
+      "user_id": null,
+      "name": "Bent-Over Row",
+      "category": "cardio",
+      "muscle_group": "lats",
+      "equipment": "Barbell",
+      "movement_pattern": "pull_horizontal",
+      "is_system": true,
+      "is_archived": false,
+      "created_at": "2026-09-20T23:50:36.497547+00:00",
+      "updated_at": "2026-09-25T00:48:27.754169+00:00",
+      "exercise_type": "cardio",
+      "external_source": "builtiq_master",
+      "external_id": "13",
+      "media_url": null,
+      "image_url": null,
+      "video_url": null,
+      "gif_url": null,
+      "instructions": "Setup: Hinge at hips with neutral spine and brace torso.\n\nExecution: Pull toward lower ribs, then lower until arms extend.\n\nCues: Hinge and hold; Elbows back; No jerking",
+      "training_goal": "strength",
+      "progression_type": "weight",
+      "primary_muscle_percentage": 60,
+      "secondary_muscle_percentage": 40,
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "lats",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "upper_back",
+          "percentage": 40
+        }
+      ],
+      "coaching_metadata": {
+        "aliases": [
+          "Barbell Row",
+          "Bent Row"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound horizontal pull; high fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits lats:1, upper_back:0.5",
+        "design_notes": "",
+        "fatigue_cost": "high",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Hinge and hold",
+          "Elbows back",
+          "No jerking"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "primary",
+          "secondary"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Compound",
+        "master_movement": "Horizontal Pull",
+        "primary_muscles": [
+          "upper_back"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "lats",
+          "upper_back",
+          "rear_delts",
+          "biceps",
+          "spinal_erectors"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "horizontal_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Barbell",
+        "secondary_muscles": [
+          "rear_delts",
+          "biceps",
+          "spinal_erectors",
+          "lats"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Barbell",
+          "Dumbbell",
+          "Kettlebell"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "upper_back"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "lats"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      }
+    },
+    {
+      "id": "bd6018c5-3bde-4217-ab37-54cc0809d1a5",
+      "user_id": null,
+      "name": "Bicycle Crunch",
+      "category": "cardio",
+      "muscle_group": "obliques",
+      "equipment": "Bodyweight",
+      "movement_pattern": "rotation",
+      "is_system": true,
+      "is_archived": false,
+      "created_at": "2026-09-20T23:50:37.577917+00:00",
+      "updated_at": "2026-09-23T21:15:28.947922+00:00",
+      "exercise_type": "cardio",
+      "external_source": "builtiq_master",
+      "external_id": "216",
+      "media_url": null,
+      "image_url": null,
+      "video_url": null,
+      "gif_url": null,
+      "instructions": "Setup: Lie on back with hands lightly supporting head.\n\nExecution: Rotate shoulder toward opposite knee while extending other leg, then alternate.\n\nCues: Slow rotation; Don't pull neck; Exhale",
+      "training_goal": "strength",
+      "progression_type": "weight",
+      "primary_muscle_percentage": 60,
+      "secondary_muscle_percentage": null,
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "obliques",
+          "percentage": 60
+        }
+      ],
+      "coaching_metadata": {
+        "aliases": [
+          "Bicycles"
+        ],
+        "laterality": "alternating",
+        "demand_notes": "isolation core flexion; low fatigue; medium skill; alternating; reps measurement; volume policy core; hypertrophy credits obliques:1",
+        "design_notes": "",
+        "fatigue_cost": "low",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Slow rotation",
+          "Don't pull neck",
+          "Exhale"
+        ],
+        "exercise_kind": "isolation",
+        "program_roles": [
+          "isolation",
+          "accessory"
+        ],
+        "ramp_eligible": false,
+        "volume_policy": "core",
+        "power_eligible": false,
+        "default_rep_max": 15,
+        "default_rep_min": 8,
+        "master_category": "Core",
+        "master_movement": "Rotation/Flexion",
+        "primary_muscles": [
+          "obliques"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "obliques",
+          "abs",
+          "hip_flexors"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "core_flexion",
+        "cooldown_eligible": false,
+        "default_equipment": "Bodyweight",
+        "secondary_muscles": [
+          "abs",
+          "hip_flexors"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Bodyweight"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "obliques"
+          }
+        ]
+      }
+    },
+    {
+      "id": "6a353aff-0fa7-4255-871e-dcc14b6b6bb5",
+      "user_id": null,
+      "name": "Cable Crunch",
+      "category": "cardio",
+      "muscle_group": "abs",
+      "equipment": "Cable",
+      "movement_pattern": "rotation",
+      "is_system": true,
+      "is_archived": false,
+      "created_at": "2026-09-20T23:50:37.136447+00:00",
+      "updated_at": "2026-09-23T21:15:30.729465+00:00",
+      "exercise_type": "cardio",
+      "external_source": "builtiq_master",
+      "external_id": "102",
+      "media_url": null,
+      "image_url": null,
+      "video_url": null,
+      "gif_url": null,
+      "instructions": "Setup: Kneel or stand with high cable positioned securely.\n\nExecution: Flex trunk by bringing ribs toward pelvis while hips remain relatively stable.\n\nCues: Curl torso; Exhale; Don't just hinge hips",
+      "training_goal": "strength",
+      "progression_type": "weight",
+      "primary_muscle_percentage": 60,
+      "secondary_muscle_percentage": null,
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "abs",
+          "percentage": 60
+        }
+      ],
+      "coaching_metadata": {
+        "aliases": [
+          "Kneeling Cable Crunch"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "isolation core flexion; low fatigue; medium skill; bilateral; reps measurement; volume policy core; hypertrophy credits abs:1",
+        "design_notes": "",
+        "fatigue_cost": "low",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Curl torso",
+          "Exhale",
+          "Don't just hinge hips"
+        ],
+        "exercise_kind": "isolation",
+        "program_roles": [
+          "isolation",
+          "accessory"
+        ],
+        "ramp_eligible": false,
+        "volume_policy": "core",
+        "power_eligible": false,
+        "default_rep_max": 15,
+        "default_rep_min": 8,
+        "master_category": "Core",
+        "master_movement": "Spinal Flexion",
+        "primary_muscles": [
+          "abs"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "abs"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "core_flexion",
+        "cooldown_eligible": false,
+        "default_equipment": "Cable",
+        "secondary_muscles": [],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Cable",
+          "Machine"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "abs"
+          }
+        ]
+      }
+    },
+    {
+      "id": "c663f055-278c-487c-b8c9-b30a6e591165",
+      "user_id": null,
+      "name": "Cable Row to Neck",
+      "category": "cardio",
+      "muscle_group": "rear_delts",
+      "equipment": "Cable",
+      "movement_pattern": "pull_horizontal",
+      "is_system": true,
+      "is_archived": false,
+      "created_at": "2026-09-20T23:50:37.289887+00:00",
+      "updated_at": "2026-09-25T00:48:29.865832+00:00",
+      "exercise_type": "cardio",
+      "external_source": "builtiq_master",
+      "external_id": "156",
+      "media_url": null,
+      "image_url": null,
+      "video_url": null,
+      "gif_url": null,
+      "instructions": "Setup: Set cable around upper-chest height with rope or wide handle.\n\nExecution: Pull toward upper chest/neck with elbows high and controlled.\n\nCues: Light load; Elbows high; No shrugging",
+      "training_goal": "strength",
+      "progression_type": "weight",
+      "primary_muscle_percentage": 60,
+      "secondary_muscle_percentage": 40,
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "rear_delts",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "coaching_metadata": {
+        "aliases": [
+          "High Rope Row"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound horizontal pull; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits rear_delts:1, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Light load",
+          "Elbows high",
+          "No shrugging"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Accessory",
+        "master_movement": "Horizontal Pull",
+        "primary_muscles": [
+          "rear_delts"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "rear_delts",
+          "upper_back",
+          "biceps"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "horizontal_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Cable",
+        "secondary_muscles": [
+          "upper_back",
+          "biceps"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Cable"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "rear_delts"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "upper_back"
+          }
+        ]
+      }
+    },
+    {
+      "id": "1695e444-3146-42aa-af3b-ebc2e9b110f4",
+      "user_id": null,
+      "name": "Chest-Supported Row",
+      "category": "cardio",
+      "muscle_group": "upper_back",
+      "equipment": "Dumbbell",
+      "movement_pattern": "pull_horizontal",
+      "is_system": true,
+      "is_archived": false,
+      "created_at": "2026-09-20T23:50:36.497547+00:00",
+      "updated_at": "2026-09-25T00:48:28.397974+00:00",
+      "exercise_type": "cardio",
+      "external_source": "builtiq_master",
+      "external_id": "15",
+      "media_url": null,
+      "image_url": null,
+      "video_url": null,
+      "gif_url": null,
+      "instructions": "Setup: Support chest on an incline pad or machine.\n\nExecution: Pull elbows back without lifting chest, then lower fully.\n\nCues: Chest stays down; No shrugging; Pause at top",
+      "training_goal": "strength",
+      "progression_type": "weight",
+      "primary_muscle_percentage": 60,
+      "secondary_muscle_percentage": 40,
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "upper_back",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "coaching_metadata": {
+        "aliases": [
+          "Supported Row"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound horizontal pull; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits upper_back:1, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Chest stays down",
+          "No shrugging",
+          "Pause at top"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Compound",
+        "master_movement": "Horizontal Pull",
+        "primary_muscles": [
+          "upper_back"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "upper_back",
+          "lats",
+          "rear_delts",
+          "biceps"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "horizontal_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Dumbbell",
+        "secondary_muscles": [
+          "lats",
+          "rear_delts",
+          "biceps"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Dumbbell",
+          "Machine",
+          "Barbell"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "upper_back"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "lats"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      }
+    },
+    {
+      "id": "e97cf45f-b08a-4927-a843-e11852157145",
+      "user_id": null,
+      "name": "Crunch",
+      "category": "cardio",
+      "muscle_group": "abs",
+      "equipment": "Bodyweight",
+      "movement_pattern": "rotation",
+      "is_system": true,
+      "is_archived": false,
+      "created_at": "2026-09-20T23:50:37.136447+00:00",
+      "updated_at": "2026-09-23T21:15:36.15541+00:00",
+      "exercise_type": "cardio",
+      "external_source": "builtiq_master",
+      "external_id": "101",
+      "media_url": null,
+      "image_url": null,
+      "video_url": null,
+      "gif_url": null,
+      "instructions": "Setup: Lie or sit in a position that allows controlled trunk flexion.\n\nExecution: Bring ribs toward pelvis without pulling on neck, then return.\n\nCues: Exhale up; Small controlled range; Don't yank neck",
+      "training_goal": "strength",
+      "progression_type": "weight",
+      "primary_muscle_percentage": 60,
+      "secondary_muscle_percentage": null,
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "abs",
+          "percentage": 60
+        }
+      ],
+      "coaching_metadata": {
+        "aliases": [
+          "Ab Crunch"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "isolation core flexion; low fatigue; medium skill; bilateral; reps measurement; volume policy core; hypertrophy credits abs:1",
+        "design_notes": "",
+        "fatigue_cost": "low",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Exhale up",
+          "Small controlled range",
+          "Don't yank neck"
+        ],
+        "exercise_kind": "isolation",
+        "program_roles": [
+          "isolation",
+          "accessory"
+        ],
+        "ramp_eligible": false,
+        "volume_policy": "core",
+        "power_eligible": false,
+        "default_rep_max": 15,
+        "default_rep_min": 8,
+        "master_category": "Core",
+        "master_movement": "Spinal Flexion",
+        "primary_muscles": [
+          "abs"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "abs"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "core_flexion",
+        "cooldown_eligible": false,
+        "default_equipment": "Bodyweight",
+        "secondary_muscles": [],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Bodyweight",
+          "Cable",
+          "Machine"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "abs"
+          }
+        ]
+      }
+    },
+    {
+      "id": "208acbf7-5c7f-452b-9c65-e328d46948ef",
+      "user_id": null,
+      "name": "High Row",
+      "category": "cardio",
+      "muscle_group": "upper_back",
+      "equipment": "Machine",
+      "movement_pattern": "pull_horizontal",
+      "is_system": true,
+      "is_archived": false,
+      "created_at": "2026-09-20T23:50:36.497547+00:00",
+      "updated_at": "2026-09-25T00:48:28.520114+00:00",
+      "exercise_type": "cardio",
+      "external_source": "builtiq_master",
+      "external_id": "18",
+      "media_url": null,
+      "image_url": null,
+      "video_url": null,
+      "gif_url": null,
+      "instructions": "Setup: Set handles around upper-chest/head height and brace.\n\nExecution: Pull elbows down and back toward ribs.\n\nCues: Shoulders down; Drive elbows; Avoid leaning",
+      "training_goal": "strength",
+      "progression_type": "weight",
+      "primary_muscle_percentage": 60,
+      "secondary_muscle_percentage": 40,
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "upper_back",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "coaching_metadata": {
+        "aliases": [
+          "High Cable Row"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound horizontal pull; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits upper_back:1, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Shoulders down",
+          "Drive elbows",
+          "Avoid leaning"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Compound",
+        "master_movement": "Diagonal Pull",
+        "primary_muscles": [
+          "upper_back"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "upper_back",
+          "lats",
+          "rear_delts",
+          "biceps"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "horizontal_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Machine",
+        "secondary_muscles": [
+          "lats",
+          "rear_delts",
+          "biceps"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Machine",
+          "Cable",
+          "Bands"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "upper_back"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "lats"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      }
+    },
+    {
+      "id": "3f2f0d01-ee39-4529-82fb-39a4ecee6c2f",
+      "user_id": null,
+      "name": "Inverted Row",
+      "category": "cardio",
+      "muscle_group": "upper_back",
+      "equipment": "Bodyweight; Suspension Trainer",
+      "movement_pattern": "pull_horizontal",
+      "is_system": true,
+      "is_archived": false,
+      "created_at": "2026-09-20T23:50:36.497547+00:00",
+      "updated_at": "2026-09-25T00:48:28.630863+00:00",
+      "exercise_type": "cardio",
+      "external_source": "builtiq_master",
+      "external_id": "25",
+      "media_url": null,
+      "image_url": null,
+      "video_url": null,
+      "gif_url": null,
+      "instructions": "Setup: Pull chest toward handles/bar and lower without losing plank position.\n\nExecution: Body straight; Squeeze shoulder blades; Control descent\n\nCues: Body Row; Australian Pull-Up",
+      "training_goal": "strength",
+      "progression_type": "weight",
+      "primary_muscle_percentage": 60,
+      "secondary_muscle_percentage": 40,
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "upper_back",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "coaching_metadata": {
+        "aliases": [],
+        "laterality": "bilateral",
+        "demand_notes": "compound horizontal pull; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits upper_back:1, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Body Row",
+          "Australian Pull-Up"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Bodyweight",
+        "master_movement": "Horizontal Pull",
+        "primary_muscles": [
+          "upper_back"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "upper_back",
+          "lats",
+          "biceps",
+          "rear_delts",
+          "abs"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "horizontal_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Bodyweight; Suspension Trainer",
+        "secondary_muscles": [
+          "lats",
+          "biceps",
+          "rear_delts",
+          "abs"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Set body under a fixed bar or straps in a straight line."
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "upper_back"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "lats"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      }
+    },
+    {
+      "id": "37f7bb9d-c406-4a2f-bdb0-3ed72e37fbe2",
+      "user_id": null,
+      "name": "Landmine Row",
+      "category": "cardio",
+      "muscle_group": "upper_back",
+      "equipment": "Landmine",
+      "movement_pattern": "pull_horizontal",
+      "is_system": true,
+      "is_archived": false,
+      "created_at": "2026-09-20T23:50:36.497547+00:00",
+      "updated_at": "2026-09-25T00:48:28.740273+00:00",
+      "exercise_type": "cardio",
+      "external_source": "builtiq_master",
+      "external_id": "16",
+      "media_url": null,
+      "image_url": null,
+      "video_url": null,
+      "gif_url": null,
+      "instructions": "Setup: Straddle or stand beside the bar, hinge at hips, and brace.\n\nExecution: Pull the loaded end toward torso and lower under control.\n\nCues: Neutral spine; Drive elbows; Don't yank",
+      "training_goal": "strength",
+      "progression_type": "weight",
+      "primary_muscle_percentage": 60,
+      "secondary_muscle_percentage": 40,
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "upper_back",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "coaching_metadata": {
+        "aliases": [
+          "T-Bar Landmine Row"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound horizontal pull; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits upper_back:1, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Neutral spine",
+          "Drive elbows",
+          "Don't yank"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Compound",
+        "master_movement": "Horizontal Pull",
+        "primary_muscles": [
+          "upper_back"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "upper_back",
+          "lats",
+          "biceps",
+          "rear_delts"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "horizontal_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Landmine",
+        "secondary_muscles": [
+          "lats",
+          "biceps",
+          "rear_delts"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Landmine"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "upper_back"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "lats"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      }
+    },
+    {
+      "id": "0d1ab3b6-39b9-4f03-9c4f-7b8dd080cd66",
+      "user_id": null,
+      "name": "Low Row",
+      "category": "cardio",
+      "muscle_group": "lats",
+      "equipment": "Cable",
+      "movement_pattern": "pull_horizontal",
+      "is_system": true,
+      "is_archived": false,
+      "created_at": "2026-09-20T23:50:36.497547+00:00",
+      "updated_at": "2026-09-23T21:15:45.988884+00:00",
+      "exercise_type": "cardio",
+      "external_source": "builtiq_master",
+      "external_id": "19",
+      "media_url": null,
+      "image_url": null,
+      "video_url": null,
+      "gif_url": null,
+      "instructions": "Setup: Set handle low and sit or stand with torso stable.\n\nExecution: Pull toward lower ribs/waist and return under control.\n\nCues: Elbows close; Chest tall; Full reach",
+      "training_goal": "strength",
+      "progression_type": "weight",
+      "primary_muscle_percentage": 60,
+      "secondary_muscle_percentage": 80,
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "lats",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "upper_back",
+          "percentage": 40
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "coaching_metadata": {
+        "aliases": [
+          "Low Cable Row"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound horizontal pull; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits lats:1, upper_back:0.5, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Elbows close",
+          "Chest tall",
+          "Full reach"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Compound",
+        "master_movement": "Horizontal Pull",
+        "primary_muscles": [
+          "lats"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "lats",
+          "upper_back",
+          "biceps"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "horizontal_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Cable",
+        "secondary_muscles": [
+          "upper_back",
+          "biceps"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Cable",
+          "Machine",
+          "Bands"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "lats"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "upper_back"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      }
+    },
+    {
+      "id": "3dbe8693-4929-42ab-b23c-e401ccc5e2d6",
+      "user_id": null,
+      "name": "Machine Row",
+      "category": "cardio",
+      "muscle_group": "upper_back",
+      "equipment": "Machine",
+      "movement_pattern": "pull_horizontal",
+      "is_system": true,
+      "is_archived": false,
+      "created_at": "2026-09-20T23:50:37.289887+00:00",
+      "updated_at": "2026-09-25T00:48:28.853309+00:00",
+      "exercise_type": "cardio",
+      "external_source": "builtiq_master",
+      "external_id": "142",
+      "media_url": null,
+      "image_url": null,
+      "video_url": null,
+      "gif_url": null,
+      "instructions": "Setup: Adjust seat/chest pad and grip handles securely.\n\nExecution: Pull handles toward torso and return to full reach.\n\nCues: Chest supported; Elbows back; Control",
+      "training_goal": "strength",
+      "progression_type": "weight",
+      "primary_muscle_percentage": 60,
+      "secondary_muscle_percentage": 40,
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "upper_back",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "coaching_metadata": {
+        "aliases": [
+          "Seated Row Machine"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound horizontal pull; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits upper_back:1, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Chest supported",
+          "Elbows back",
+          "Control"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Compound",
+        "master_movement": "Horizontal Pull",
+        "primary_muscles": [
+          "upper_back"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "upper_back",
+          "lats",
+          "biceps"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "horizontal_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Machine",
+        "secondary_muscles": [
+          "lats",
+          "biceps"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Machine"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "upper_back"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "lats"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ab28ed41-43fa-44fa-854c-9a833a73ad98",
+      "user_id": null,
+      "name": "Meadows Row",
+      "category": "cardio",
+      "muscle_group": "lats",
+      "equipment": "Landmine",
+      "movement_pattern": "pull_horizontal",
+      "is_system": true,
+      "is_archived": false,
+      "created_at": "2026-09-20T23:50:37.428927+00:00",
+      "updated_at": "2026-09-23T21:15:46.618243+00:00",
+      "exercise_type": "cardio",
+      "external_source": "builtiq_master",
+      "external_id": "189",
+      "media_url": null,
+      "image_url": null,
+      "video_url": null,
+      "gif_url": null,
+      "instructions": "Setup: Stand perpendicular to landmine and hinge with staggered stance.\n\nExecution: Row bar end toward hip/ribs and lower to stretch.\n\nCues: Brace; Pull to hip; Control torso",
+      "training_goal": "strength",
+      "progression_type": "weight",
+      "primary_muscle_percentage": 60,
+      "secondary_muscle_percentage": 80,
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "lats",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "upper_back",
+          "percentage": 40
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "coaching_metadata": {
+        "aliases": [
+          "Landmine One-Arm Row"
+        ],
+        "laterality": "unilateral",
+        "demand_notes": "compound horizontal pull; medium fatigue; medium skill; unilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits lats:1, upper_back:0.5, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Brace",
+          "Pull to hip",
+          "Control torso"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Unilateral",
+        "master_movement": "Horizontal Pull",
+        "primary_muscles": [
+          "lats"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "lats",
+          "upper_back",
+          "biceps",
+          "rear_delts"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "horizontal_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Landmine",
+        "secondary_muscles": [
+          "upper_back",
+          "biceps",
+          "rear_delts"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Landmine"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "lats"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "upper_back"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      }
+    },
+    {
+      "id": "5920effc-9c6c-4a03-a01b-f22ebaaee2f7",
+      "user_id": null,
+      "name": "Medicine Ball Rotational Throw",
+      "category": "plyometric",
+      "muscle_group": "obliques",
+      "equipment": "Medicine Ball",
+      "movement_pattern": "push_horizontal",
+      "is_system": true,
+      "is_archived": false,
+      "created_at": "2026-09-20T23:50:37.289887+00:00",
+      "updated_at": "2026-09-23T21:15:46.819738+00:00",
+      "exercise_type": "cardio",
+      "external_source": "builtiq_master",
+      "external_id": "121",
+      "media_url": null,
+      "image_url": null,
+      "video_url": null,
+      "gif_url": null,
+      "instructions": "Setup: Stand sideways to a sturdy wall with ball loaded near back hip.\n\nExecution: Rotate explosively and throw ball into wall, then reset.\n\nCues: Use hips; Brace; Keep throw athletic",
+      "training_goal": "power",
+      "progression_type": "weight",
+      "primary_muscle_percentage": null,
+      "secondary_muscle_percentage": null,
+      "muscle_targets": [],
+      "coaching_metadata": {
+        "aliases": [
+          "Rotational Wall Throw"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound throw; medium fatigue; medium skill; bilateral; reps measurement; volume policy zero_non_hypertrophy; zero hypertrophy volume credit",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Use hips",
+          "Brace",
+          "Keep throw athletic"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "power",
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": false,
+        "volume_policy": "zero_non_hypertrophy",
+        "power_eligible": true,
+        "default_rep_max": 5,
+        "default_rep_min": 1,
+        "master_category": "Power",
+        "master_movement": "Rotational Throw",
+        "primary_muscles": [
+          "obliques"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "obliques",
+          "glutes"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "throw",
+        "cooldown_eligible": false,
+        "default_equipment": "Medicine Ball",
+        "secondary_muscles": [
+          "glutes"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Medicine Ball"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": []
+      }
+    },
+    {
+      "id": "103403c0-4e2e-4aa6-a2b6-4e2002746e78",
+      "user_id": null,
+      "name": "One-Arm Row",
+      "category": "cardio",
+      "muscle_group": "lats",
+      "equipment": "Dumbbell",
+      "movement_pattern": "pull_horizontal",
+      "is_system": true,
+      "is_archived": false,
+      "created_at": "2026-09-20T23:50:36.497547+00:00",
+      "updated_at": "2026-09-25T00:48:28.13902+00:00",
+      "exercise_type": "cardio",
+      "external_source": "builtiq_master",
+      "external_id": "14",
+      "media_url": null,
+      "image_url": null,
+      "video_url": null,
+      "gif_url": null,
+      "instructions": "Setup: Support torso as needed and square hips and shoulders.\n\nExecution: Pull elbow toward hip and lower to a controlled stretch.\n\nCues: Pull to hip; Keep torso quiet; Full reach",
+      "training_goal": "strength",
+      "progression_type": "weight",
+      "primary_muscle_percentage": 60,
+      "secondary_muscle_percentage": 80,
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "lats",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "upper_back",
+          "percentage": 40
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "coaching_metadata": {
+        "aliases": [
+          "Single-Arm Row"
+        ],
+        "laterality": "unilateral",
+        "demand_notes": "compound horizontal pull; medium fatigue; medium skill; unilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits lats:1, upper_back:0.5, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Pull to hip",
+          "Keep torso quiet",
+          "Full reach"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Compound",
+        "master_movement": "Horizontal Pull",
+        "primary_muscles": [
+          "upper_back"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "lats",
+          "upper_back",
+          "rear_delts",
+          "biceps"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "horizontal_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Dumbbell",
+        "secondary_muscles": [
+          "rear_delts",
+          "biceps",
+          "lats"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Dumbbell",
+          "Cable",
+          "Kettlebell"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "upper_back"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "lats"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      }
+    },
+    {
+      "id": "97ae9c44-3765-48fa-9ea4-403a8cd0961e",
+      "user_id": null,
+      "name": "Pendlay Row",
+      "category": "cardio",
+      "muscle_group": "upper_back",
+      "equipment": "Barbell",
+      "movement_pattern": "pull_horizontal",
+      "is_system": true,
+      "is_archived": false,
+      "created_at": "2026-09-20T23:50:37.428927+00:00",
+      "updated_at": "2026-09-25T00:48:28.965178+00:00",
+      "exercise_type": "cardio",
+      "external_source": "builtiq_master",
+      "external_id": "191",
+      "media_url": null,
+      "image_url": null,
+      "video_url": null,
+      "gif_url": null,
+      "instructions": "Setup: Hinge until torso is near parallel and bar starts on floor.\n\nExecution: Row bar explosively to lower chest/upper abdomen and return to floor each rep.\n\nCues: Reset each rep; Brace; No torso rise",
+      "training_goal": "strength",
+      "progression_type": "weight",
+      "primary_muscle_percentage": 60,
+      "secondary_muscle_percentage": 40,
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "upper_back",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "coaching_metadata": {
+        "aliases": [
+          "Dead-Stop Row"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound horizontal pull; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits upper_back:1, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Reset each rep",
+          "Brace",
+          "No torso rise"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Compound",
+        "master_movement": "Horizontal Pull",
+        "primary_muscles": [
+          "upper_back"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "upper_back",
+          "lats",
+          "biceps",
+          "spinal_erectors"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "horizontal_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Barbell",
+        "secondary_muscles": [
+          "lats",
+          "biceps",
+          "spinal_erectors"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Barbell"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "upper_back"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "lats"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      }
+    },
+    {
+      "id": "12b1ada8-ad85-4acc-bb9b-590c1043c8ac",
+      "user_id": null,
+      "name": "Rear Delt Row",
+      "category": "cardio",
+      "muscle_group": "rear_delts",
+      "equipment": "Dumbbell",
+      "movement_pattern": "pull_horizontal",
+      "is_system": true,
+      "is_archived": false,
+      "created_at": "2026-09-20T23:50:36.497547+00:00",
+      "updated_at": "2026-09-25T00:48:29.60589+00:00",
+      "exercise_type": "cardio",
+      "external_source": "builtiq_master",
+      "external_id": "34",
+      "media_url": null,
+      "image_url": null,
+      "video_url": null,
+      "gif_url": null,
+      "instructions": "Setup: Hinge or use chest support with elbows flared.\n\nExecution: Row elbows outward toward shoulder level and lower slowly.\n\nCues: Elbows wide; Don't shrug; Light and controlled",
+      "training_goal": "strength",
+      "progression_type": "weight",
+      "primary_muscle_percentage": 60,
+      "secondary_muscle_percentage": 40,
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "rear_delts",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "coaching_metadata": {
+        "aliases": [
+          "Wide-Elbow Row"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound horizontal pull; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits rear_delts:1, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Elbows wide",
+          "Don't shrug",
+          "Light and controlled"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Accessory",
+        "master_movement": "Horizontal Pull",
+        "primary_muscles": [
+          "rear_delts"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "rear_delts",
+          "upper_back",
+          "biceps"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "horizontal_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Dumbbell",
+        "secondary_muscles": [
+          "upper_back",
+          "biceps"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Dumbbell",
+          "Cable",
+          "Machine"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "rear_delts"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "upper_back"
+          }
+        ]
+      }
+    },
+    {
+      "id": "ed62278e-1dd1-4405-b664-58b7c522094e",
+      "user_id": null,
+      "name": "Renegade Row",
+      "category": "cardio",
+      "muscle_group": "abs",
+      "equipment": "Dumbbell",
+      "movement_pattern": "rotation",
+      "is_system": true,
+      "is_archived": false,
+      "created_at": "2026-09-20T23:50:37.577917+00:00",
+      "updated_at": "2026-09-23T21:15:51.163603+00:00",
+      "exercise_type": "cardio",
+      "external_source": "builtiq_master",
+      "external_id": "221",
+      "media_url": null,
+      "image_url": null,
+      "video_url": null,
+      "gif_url": null,
+      "instructions": "Setup: Start in high plank gripping stable weights.\n\nExecution: Row one weight toward ribs while resisting torso rotation, then alternate.\n\nCues: Feet wide; Hips square; Controlled row",
+      "training_goal": "strength",
+      "progression_type": "weight",
+      "primary_muscle_percentage": 60,
+      "secondary_muscle_percentage": null,
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "abs",
+          "percentage": 60
+        }
+      ],
+      "coaching_metadata": {
+        "aliases": [
+          "Plank Row"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound core anti rotation; low fatigue; medium skill; bilateral; reps measurement; volume policy core; hypertrophy credits abs:1",
+        "design_notes": "",
+        "fatigue_cost": "low",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Feet wide",
+          "Hips square",
+          "Controlled row"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "isolation",
+          "accessory"
+        ],
+        "ramp_eligible": false,
+        "volume_policy": "core",
+        "power_eligible": false,
+        "default_rep_max": 15,
+        "default_rep_min": 8,
+        "master_category": "Compound",
+        "master_movement": "Horizontal Pull/Anti-Rotation",
+        "primary_muscles": [
+          "abs"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "abs",
+          "biceps"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "core_anti_rotation",
+        "cooldown_eligible": false,
+        "default_equipment": "Dumbbell",
+        "secondary_muscles": [
+          "biceps"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Dumbbell",
+          "Kettlebell"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "abs"
+          }
+        ]
+      }
+    },
+    {
+      "id": "61044be3-34c1-4a5a-b438-7bfcced3d34d",
+      "user_id": null,
+      "name": "Reverse Crunch",
+      "category": "cardio",
+      "muscle_group": "abs",
+      "equipment": "Bodyweight",
+      "movement_pattern": "rotation",
+      "is_system": true,
+      "is_archived": false,
+      "created_at": "2026-09-20T23:50:37.136447+00:00",
+      "updated_at": "2026-09-23T21:15:51.270445+00:00",
+      "exercise_type": "cardio",
+      "external_source": "builtiq_master",
+      "external_id": "103",
+      "media_url": null,
+      "image_url": null,
+      "video_url": null,
+      "gif_url": null,
+      "instructions": "Setup: Lie on back with hips and knees bent.\n\nExecution: Curl pelvis toward ribs, lifting hips slightly, then lower slowly.\n\nCues: Roll pelvis; Don't swing legs; Control down",
+      "training_goal": "strength",
+      "progression_type": "weight",
+      "primary_muscle_percentage": 60,
+      "secondary_muscle_percentage": null,
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "abs",
+          "percentage": 60
+        }
+      ],
+      "coaching_metadata": {
+        "aliases": [
+          "Hip Lift Crunch"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "isolation core flexion; low fatigue; medium skill; bilateral; reps measurement; volume policy core; hypertrophy credits abs:1",
+        "design_notes": "",
+        "fatigue_cost": "low",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Roll pelvis",
+          "Don't swing legs",
+          "Control down"
+        ],
+        "exercise_kind": "isolation",
+        "program_roles": [
+          "isolation",
+          "accessory"
+        ],
+        "ramp_eligible": false,
+        "volume_policy": "core",
+        "power_eligible": false,
+        "default_rep_max": 15,
+        "default_rep_min": 8,
+        "master_category": "Core",
+        "master_movement": "Posterior Pelvic Tilt",
+        "primary_muscles": [
+          "abs"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "abs",
+          "hip_flexors"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "core_flexion",
+        "cooldown_eligible": false,
+        "default_equipment": "Bodyweight",
+        "secondary_muscles": [
+          "hip_flexors"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Bodyweight"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "abs"
+          }
+        ]
+      }
+    },
+    {
+      "id": "48d59b70-83bf-4ca4-94e2-ae90894570f2",
+      "user_id": null,
+      "name": "Row",
+      "category": "cardio",
+      "muscle_group": "upper_back",
+      "equipment": "Cable",
+      "movement_pattern": "pull_horizontal",
+      "is_system": true,
+      "is_archived": false,
+      "created_at": "2026-09-20T23:50:36.497547+00:00",
+      "updated_at": "2026-09-25T00:48:29.219707+00:00",
+      "exercise_type": "cardio",
+      "external_source": "builtiq_master",
+      "external_id": "12",
+      "media_url": null,
+      "image_url": null,
+      "video_url": null,
+      "gif_url": null,
+      "instructions": "Setup: Brace torso and begin with shoulders set and arms extended.\n\nExecution: Pull resistance toward torso, driving elbows back, then return under control.\n\nCues: Lead with elbows; Don't shrug; Control reach",
+      "training_goal": "strength",
+      "progression_type": "weight",
+      "primary_muscle_percentage": 60,
+      "secondary_muscle_percentage": 40,
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "upper_back",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "coaching_metadata": {
+        "aliases": [
+          "Seated Row",
+          "Bent Row"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound horizontal pull; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits upper_back:1, biceps:0.5",
+        "design_notes": "Use specific records below when torso position materially changes the movement.",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Lead with elbows",
+          "Don't shrug",
+          "Control reach"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Compound",
+        "master_movement": "Horizontal Pull",
+        "primary_muscles": [
+          "upper_back"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "upper_back",
+          "lats",
+          "rear_delts",
+          "biceps"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "horizontal_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Cable",
+        "secondary_muscles": [
+          "lats",
+          "rear_delts",
+          "biceps"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Cable",
+          "Barbell",
+          "Dumbbell",
+          "Machine",
+          "Bands",
+          "Landmine"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "upper_back"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "lats"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      }
+    },
+    {
+      "id": "feca6736-ca50-4bb6-955d-c3a0215e2fb3",
+      "user_id": null,
+      "name": "Seal Row",
+      "category": "cardio",
+      "muscle_group": "upper_back",
+      "equipment": "Barbell",
+      "movement_pattern": "pull_horizontal",
+      "is_system": true,
+      "is_archived": false,
+      "created_at": "2026-09-20T23:50:37.428927+00:00",
+      "updated_at": "2026-09-25T00:48:29.341008+00:00",
+      "exercise_type": "cardio",
+      "external_source": "builtiq_master",
+      "external_id": "190",
+      "media_url": null,
+      "image_url": null,
+      "video_url": null,
+      "gif_url": null,
+      "instructions": "Setup: Lie prone on elevated flat bench with arms hanging.\n\nExecution: Row resistance toward torso without torso movement.\n\nCues: Chest stays down; Full reach; No momentum",
+      "training_goal": "strength",
+      "progression_type": "weight",
+      "primary_muscle_percentage": 60,
+      "secondary_muscle_percentage": 40,
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "upper_back",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "biceps",
+          "percentage": 40
+        }
+      ],
+      "coaching_metadata": {
+        "aliases": [
+          "Prone Row"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound horizontal pull; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits upper_back:1, biceps:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Chest stays down",
+          "Full reach",
+          "No momentum"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Compound",
+        "master_movement": "Horizontal Pull",
+        "primary_muscles": [
+          "upper_back"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "upper_back",
+          "lats",
+          "rear_delts",
+          "biceps"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "horizontal_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Barbell",
+        "secondary_muscles": [
+          "lats",
+          "rear_delts",
+          "biceps"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Barbell",
+          "Dumbbell"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "upper_back"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "lats"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      }
+    },
+    {
+      "id": "e86eb7a8-08c3-498c-bd71-fd5be1b8f67b",
+      "user_id": null,
+      "name": "T-Bar Row",
+      "category": "cardio",
+      "muscle_group": "lats",
+      "equipment": "Machine",
+      "movement_pattern": "pull_horizontal",
+      "is_system": true,
+      "is_archived": false,
+      "created_at": "2026-09-20T23:50:36.497547+00:00",
+      "updated_at": "2026-09-25T00:48:27.862401+00:00",
+      "exercise_type": "cardio",
+      "external_source": "builtiq_master",
+      "external_id": "17",
+      "media_url": null,
+      "image_url": null,
+      "video_url": null,
+      "gif_url": null,
+      "instructions": "Setup: Set chest or torso position securely and grip handles.\n\nExecution: Row handles toward torso and return to full reach.\n\nCues: Chest tall; Elbows back; Controlled stretch",
+      "training_goal": "strength",
+      "progression_type": "weight",
+      "primary_muscle_percentage": 60,
+      "secondary_muscle_percentage": 40,
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "lats",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "upper_back",
+          "percentage": 40
+        }
+      ],
+      "coaching_metadata": {
+        "aliases": [
+          "T Bar Row"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound horizontal pull; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits lats:1, upper_back:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Chest tall",
+          "Elbows back",
+          "Controlled stretch"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Compound",
+        "master_movement": "Horizontal Pull",
+        "primary_muscles": [
+          "upper_back"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "lats",
+          "upper_back",
+          "biceps",
+          "rear_delts"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "horizontal_pull",
+        "cooldown_eligible": false,
+        "default_equipment": "Machine",
+        "secondary_muscles": [
+          "biceps",
+          "rear_delts",
+          "lats"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Machine",
+          "Landmine"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "upper_back"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "lats"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "biceps"
+          }
+        ]
+      }
+    },
+    {
+      "id": "3c65d8ec-6334-4a5d-9384-879e0f18a01e",
+      "user_id": null,
+      "name": "Trunk Rotation",
+      "category": "cardio",
+      "muscle_group": "obliques",
+      "equipment": "Cable",
+      "movement_pattern": "isolation",
+      "is_system": true,
+      "is_archived": false,
+      "created_at": "2026-09-21T00:04:09.19055+00:00",
+      "updated_at": "2026-09-23T21:15:59.842763+00:00",
+      "exercise_type": "cardio",
+      "external_source": "builtiq_master",
+      "external_id": "253",
+      "media_url": null,
+      "image_url": null,
+      "video_url": null,
+      "gif_url": null,
+      "instructions": "Setup: Stand side-on to a cable or band at chest height, arms extended.\n\nExecution: Rotate the trunk against the line of pull, then return with control.\n\nCues: Turn from the ribs; Soft knees; Do not yank the arms",
+      "training_goal": "strength",
+      "progression_type": "weight",
+      "primary_muscle_percentage": 60,
+      "secondary_muscle_percentage": null,
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "obliques",
+          "percentage": 60
+        }
+      ],
+      "coaching_metadata": {
+        "aliases": [
+          "Cable Trunk Rotation"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "isolation other; low fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits obliques:1",
+        "design_notes": "Cable is the default implement. Do not map to Cable Chop unless it was a high-to-low chop.",
+        "fatigue_cost": "low",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Turn from the ribs",
+          "Soft knees",
+          "Do not yank the arms"
+        ],
+        "exercise_kind": "isolation",
+        "program_roles": [
+          "isolation",
+          "accessory"
+        ],
+        "ramp_eligible": false,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 15,
+        "default_rep_min": 8,
+        "master_category": "Core",
+        "master_movement": "Rotation",
+        "primary_muscles": [
+          "obliques"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "obliques",
+          "abs"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "other",
+        "cooldown_eligible": false,
+        "default_equipment": "Cable",
+        "secondary_muscles": [
+          "abs"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Cable",
+          "Band",
+          "Landmine"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "obliques"
+          }
+        ]
+      }
+    },
+    {
+      "id": "680af487-e111-4392-97e1-5b4c4712971e",
+      "user_id": null,
+      "name": "Upright Row",
+      "category": "cardio",
+      "muscle_group": "side_delts",
+      "equipment": "Cable",
+      "movement_pattern": "isolation",
+      "is_system": true,
+      "is_archived": false,
+      "created_at": "2026-09-20T23:50:36.497547+00:00",
+      "updated_at": "2026-09-23T21:16:01.11717+00:00",
+      "exercise_type": "cardio",
+      "external_source": "builtiq_master",
+      "external_id": "35",
+      "media_url": null,
+      "image_url": null,
+      "video_url": null,
+      "gif_url": null,
+      "instructions": "Setup: Stand tall with resistance in front of thighs.\n\nExecution: Pull elbows upward within a comfortable shoulder range.\n\nCues: Lead elbows; Stop if pinching; Don't yank",
+      "training_goal": "strength",
+      "progression_type": "weight",
+      "primary_muscle_percentage": 60,
+      "secondary_muscle_percentage": null,
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "side_delts",
+          "percentage": 60
+        }
+      ],
+      "coaching_metadata": {
+        "aliases": [
+          "High Pull Row"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "High-pull / abduction pattern. Not the same vertical_pull as pull-up or lat pulldown.; isolation shoulder abduction; medium fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits side_delts:1",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Lead elbows",
+          "Stop if pinching",
+          "Don't yank"
+        ],
+        "exercise_kind": "isolation",
+        "program_roles": [
+          "isolation",
+          "accessory"
+        ],
+        "ramp_eligible": false,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 15,
+        "default_rep_min": 8,
+        "master_category": "Accessory",
+        "master_movement": "Vertical Pull",
+        "primary_muscles": [
+          "side_delts"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "side_delts",
+          "upper_back",
+          "biceps"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "shoulder_abduction",
+        "cooldown_eligible": false,
+        "default_equipment": "Cable",
+        "secondary_muscles": [
+          "upper_back",
+          "biceps"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Cable",
+          "Dumbbell",
+          "Barbell",
+          "Kettlebell"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "side_delts"
+          }
+        ]
+      }
+    },
+    {
+      "id": "a42ebeaf-d52e-431c-9494-e01a7f54d92e",
+      "user_id": null,
+      "name": "Reverse Lunge",
+      "category": "strength",
+      "muscle_group": "quads",
+      "equipment": "Dumbbell",
+      "movement_pattern": "squat",
+      "is_system": true,
+      "is_archived": false,
+      "created_at": "2026-09-20T23:50:36.774055+00:00",
+      "updated_at": "2026-09-23T21:15:51.712376+00:00",
+      "exercise_type": "strength",
+      "external_source": "builtiq_master",
+      "external_id": "63",
+      "media_url": null,
+      "image_url": null,
+      "video_url": null,
+      "gif_url": null,
+      "instructions": "Setup: Stand tall with feet under hips.\n\nExecution: Step one foot backward, lower under control, and drive through front foot to return.\n\nCues: Front foot planted; Soft back knee; Stay balanced",
+      "training_goal": "strength",
+      "progression_type": "weight",
+      "primary_muscle_percentage": 60,
+      "secondary_muscle_percentage": 40,
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "quads",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "glutes",
+          "percentage": 40
+        }
+      ],
+      "coaching_metadata": {
+        "aliases": [
+          "Backward Lunge"
+        ],
+        "laterality": "unilateral",
+        "demand_notes": "compound lunge; medium fatigue; medium skill; unilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits quads:1, glutes:0.5",
+        "design_notes": "",
+        "fatigue_cost": "moderate",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Front foot planted",
+          "Soft back knee",
+          "Stay balanced"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "secondary",
+          "accessory"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Unilateral",
+        "master_movement": "Lunge",
+        "primary_muscles": [
+          "quads"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "quads",
+          "glutes",
+          "adductors"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "lunge",
+        "cooldown_eligible": false,
+        "default_equipment": "Dumbbell",
+        "secondary_muscles": [
+          "glutes",
+          "adductors"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Bodyweight",
+          "Dumbbell",
+          "Barbell",
+          "Kettlebell"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "quads"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "glutes"
+          }
+        ]
+      }
+    }
+  ]
+}
