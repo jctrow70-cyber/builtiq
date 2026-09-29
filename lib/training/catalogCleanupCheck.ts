@@ -14,8 +14,12 @@ import { NEW_MASTER_CLASSIFICATIONS } from './masterCatalogEnrichment';
 import { adaptGenerationCatalog, isAiGenerationEligibleRow, selectAiGenerationCatalogRows } from '../scienceEngine/generation/catalogEligibility';
 import { FALLBACK_CATALOG } from '../scienceEngine/catalogAdapter';
 
-function assert(cond: unknown, message: string) {
+function assert(cond: unknown, message: string): asserts cond {
   if (!cond) throw new Error(message);
+}
+
+function stringList(value: unknown): string[] {
+  return Array.isArray(value) ? value.map((item) => String(item)) : [];
 }
 
 function mappedByName() {
@@ -93,7 +97,7 @@ export function runCatalogCleanupChecks() {
   ['Bodyweight', 'Dumbbell', 'Barbell', 'Kettlebell', 'Smith Machine'].forEach((item) => {
     assert(reverseEq.some((eq) => eq.toLowerCase() === item.toLowerCase()), `Reverse Lunge missing ${item}: ${reverseEq.join(', ')}`);
   });
-  assert(reverse!.catalog.coaching_metadata.aliases.includes('Rear Lunge'), 'Reverse Lunge has Rear Lunge alias');
+  assert(stringList(reverse.catalog.coaching_metadata.aliases).includes('Rear Lunge'), 'Reverse Lunge has Rear Lunge alias');
 
   const inverted = mapped.find((row) => row.record.id === '25');
   const invertedEq = compatibleEquipmentOptions(inverted?.catalog);
@@ -107,7 +111,7 @@ export function runCatalogCleanupChecks() {
   );
 
   const genericRow = mapped.find((row) => row.record.id === '12');
-  const aliases = (genericRow?.catalog.coaching_metadata.aliases || []).map((a: string) => a.toLowerCase());
+  const aliases = stringList(genericRow?.catalog.coaching_metadata.aliases).map((a) => a.toLowerCase());
   assert(!aliases.includes('bent row'), 'generic Row no longer aliases Bent Row');
   assert(aliases.includes('seated row'), 'generic Row still has Seated Row');
 

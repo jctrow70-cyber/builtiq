@@ -34,6 +34,7 @@ Manual Program Design / Training search for "row" ranked and labeled strength ro
 - Reverse Lunge alias Rear Lunge + Smith Machine on the existing compatible-equipment list
 - Inverted Row compatible equipment restored; generic Row no longer aliases Bent Row
 - New masters 261 Diverging Row and 262 Converging Chest Press
+- Catalog cleanup check narrows `coaching_metadata.aliases` before `.includes` so `next build` typecheck passes
 
 ### Files Changed
 
