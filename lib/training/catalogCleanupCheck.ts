@@ -99,6 +99,16 @@ export function runCatalogCleanupChecks() {
   });
   assert(stringList(reverse.catalog.coaching_metadata.aliases).includes('Rear Lunge'), 'Reverse Lunge has Rear Lunge alias');
 
+  const deadlift = mapped.find((row) => row.record.id === '71');
+  assert(deadlift, 'Deadlift exists');
+  const deadliftEq = compatibleEquipmentOptions(deadlift.catalog);
+  ['Barbell', 'Smith Machine'].forEach((item) => {
+    assert(
+      deadliftEq.some((eq) => eq.toLowerCase() === item.toLowerCase()),
+      `Deadlift missing ${item}: ${deadliftEq.join(', ')}`
+    );
+  });
+
   const inverted = mapped.find((row) => row.record.id === '25');
   const invertedEq = compatibleEquipmentOptions(inverted?.catalog);
   assert(

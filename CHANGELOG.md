@@ -11,6 +11,58 @@ Branch:
 Status:
 ```
 
+## BIQ-0236 - Deadlift Smith Machine and Training Add-for-Weeks
+
+Date: 2026-10-02
+Branch: develop
+Status: Local / in progress
+
+### Summary
+
+Deadlift can use Smith Machine on the existing master card. Training add-exercise now asks whether to keep the lift for remaining weeks. Transient Safari `TypeError: Load failed` messages are mapped to a retryable network error.
+
+### Purpose
+
+Smith Deadlift was missing because master 71 only listed Barbell. Adding an exercise during a Training session always wrote the current week only, with no This week / remaining weeks choice. Intermittent catalog/save failures surfaced as `TypeError: Load failed`.
+
+### Changes
+
+- Deadlift (71) compatible equipment includes Barbell and Smith Machine
+- Training add panel offers **Add to all remaining weeks** and **This week only** when the day repeats
+- Catalog fetch and Training add/replace wrap network `Load failed` as a friendly retry message
+
+### Files Changed
+
+- `lib/training/masterCatalog.ts`
+- `lib/training/catalogCleanupCheck.ts`
+- `lib/training/catalogFetch.ts`
+- `lib/supabaseClient.ts`
+- `app/page.tsx`
+- `scripts/apply-deadlift-smith.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+
+### Database Changes
+
+No schema migration. Data-only on live `st_exercise_catalog` master 71: add Smith Machine to `coaching_metadata.compatible_equipment`. History and planned set logs are not rewritten.
+
+### Testing Steps
+
+1. Run `npm run test:science`
+2. Training → open a multi-week workout → Add Exercise → confirm both week buttons appear
+3. Add Deadlift and confirm Smith Machine is in the equipment dropdown
+4. Add to all remaining weeks, then open a later week of the same day and confirm the exercise is there
+5. This week only must not change later weeks
+
+### Known Issues
+
+- Already-planned Deadlift rows keep their saved equipment until the user changes the dropdown
+- Phase 2B is not started
+
+### Recommended Commit Message
+
+`BIQ-0236 Add Smith Deadlift option and Training add-for-weeks`
+
 ## BIQ-0235 - Catalog Search Cleanup and Two New Master Cards
 
 Date: 2026-09-28

@@ -19,6 +19,32 @@ Impact:
 
 ---
 
+## Decision 079 - Training Add Uses the Same Week Scope Choice as Replace
+
+Date: 2026-10-02
+Status: Accepted
+Category: Training Editor
+
+### Decision
+
+When adding an exercise from Training on a repeating program day, ask **Add to all remaining weeks** or **This week only**, the same choice replace already uses. Pass that scope through `targetWorkoutsFrom` so an open logging session cannot silently force current-week-only. Deadlift stays one master card (71) with Smith Machine on `compatible_equipment`. Do not create a Smith Deadlift card.
+
+### Reason
+
+Training add ran during an open session, so `onTheFly` wrote only the current workout and hid the apply-scope control. Users could not keep a new lift for the rest of the cycle. Smith Deadlift is an implement variant, not a new movement.
+
+### Alternatives Considered
+
+- Always add to remaining weeks — rejected; a one-day substitute would rewrite the cycle
+- Separate Smith Deadlift master card — rejected; same architecture as Reverse Lunge + Smith
+
+### Impact
+
+- Planned adds can copy to later weeks of the same day without changing completed history
+- Deadlift equipment dropdown includes Smith Machine
+
+---
+
 ## Decision 078 - Catalog Type Inference and Equipment Variants Stay Additive
 
 Date: 2026-09-28

@@ -1,0 +1,107 @@
+{
+  "generated_at": "2026-10-02T22:06:47.373Z",
+  "rows": [
+    {
+      "id": "8b9630fe-ea3a-4dfd-afe8-190201e8931d",
+      "user_id": null,
+      "name": "Deadlift",
+      "category": "strength",
+      "muscle_group": "glutes",
+      "equipment": "Barbell",
+      "movement_pattern": "hinge",
+      "is_system": true,
+      "is_archived": false,
+      "created_at": "2026-09-20T23:50:36.774055+00:00",
+      "updated_at": "2026-09-23T21:15:36.998225+00:00",
+      "exercise_type": "strength",
+      "external_source": "builtiq_master",
+      "external_id": "71",
+      "media_url": null,
+      "image_url": null,
+      "video_url": null,
+      "gif_url": null,
+      "instructions": "Setup: Set feet and grip, brace trunk, and position load close to body.\n\nExecution: Push floor away and extend hips and knees together; return load with control.\n\nCues: Brace; Load close; Don't jerk from floor",
+      "training_goal": "strength",
+      "progression_type": "weight",
+      "primary_muscle_percentage": 60,
+      "secondary_muscle_percentage": 40,
+      "muscle_targets": [
+        {
+          "role": "primary",
+          "muscle": "glutes",
+          "percentage": 60
+        },
+        {
+          "role": "secondary",
+          "muscle": "hamstrings",
+          "percentage": 40
+        }
+      ],
+      "coaching_metadata": {
+        "aliases": [
+          "Conventional Deadlift"
+        ],
+        "laterality": "bilateral",
+        "demand_notes": "compound hinge; high fatigue; medium skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits glutes:1, hamstrings:0.5",
+        "design_notes": "",
+        "fatigue_cost": "high",
+        "skill_demand": "moderate",
+        "coaching_cues": [
+          "Brace",
+          "Load close",
+          "Don't jerk from floor"
+        ],
+        "exercise_kind": "compound",
+        "program_roles": [
+          "primary",
+          "secondary"
+        ],
+        "ramp_eligible": true,
+        "volume_policy": "strength_hypertrophy",
+        "power_eligible": false,
+        "default_rep_max": 10,
+        "default_rep_min": 5,
+        "master_category": "Compound",
+        "master_movement": "Hinge",
+        "primary_muscles": [
+          "glutes"
+        ],
+        "warmup_eligible": false,
+        "involved_muscles": [
+          "glutes",
+          "hamstrings",
+          "quads",
+          "abs"
+        ],
+        "measurement_type": "reps",
+        "movement_pattern": "hinge",
+        "cooldown_eligible": false,
+        "default_equipment": "Barbell",
+        "secondary_muscles": [
+          "hamstrings",
+          "quads",
+          "abs"
+        ],
+        "enrichment_version": "BIQ-0213",
+        "primary_assignment": "assigned",
+        "compatible_equipment": [
+          "Barbell",
+          "Trap Bar",
+          "Dumbbell",
+          "Kettlebell"
+        ],
+        "demand_characteristics": [],
+        "hypertrophy_volume_credits": [
+          {
+            "credit": 1,
+            "muscle": "glutes"
+          },
+          {
+            "credit": 0.5,
+            "muscle": "hamstrings"
+          }
+        ]
+      }
+    }
+  ]
+}

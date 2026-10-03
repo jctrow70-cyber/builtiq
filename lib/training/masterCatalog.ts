@@ -351,6 +351,19 @@ export function loadMasterLibraryRecords(): MasterLibraryRecord[] {
     });
   }
 
+  const deadlift = byId.get('71');
+  if (deadlift) {
+    const compatible = new Set(splitList(deadlift.compatible_equipment));
+    compatible.add(deadlift.default_equipment || 'Barbell');
+    compatible.add('Barbell');
+    compatible.add('Smith Machine');
+    byId.set('71', {
+      ...deadlift,
+      default_equipment: deadlift.default_equipment || 'Barbell',
+      compatible_equipment: Array.from(compatible).join('; '),
+    });
+  }
+
   return Array.from(byId.values()).sort((a, b) => Number(a.id) - Number(b.id));
 }
 
