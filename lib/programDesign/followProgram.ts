@@ -16,7 +16,7 @@ import {
 import { decideGroupEnrollmentSync } from './enrollmentSync';
 import { fetchDesignPrograms, updateDesignProgram } from './programDesignApi';
 import type { ProgramDesignRecord } from './types';
-import { upsertTrainingEnrollment } from '../groups/trainingSources';
+import { groupSourceKey, upsertTrainingEnrollment } from '../groups/trainingSources';
 
 export { alreadyFollowing, findPersonalCopyOf };
 
@@ -154,11 +154,31 @@ export type MemberEnrollmentSyncResult = {
   error: string | null;
 };
 
+async function currentGroupProgramId(
+  supabase: SupabaseClient,
+  userId: string,
+  teamId: string
+): Promise<string | null> {
+  try {
+    const query = supabase
+      .from('st_training_enrollments')
+      .select('program_id')
+      .eq('user_id', userId)
+      .eq('source_key', groupSourceKey(teamId));
+    if (!query || typeof (query as { maybeSingle?: () => Promise<{ data?: { program_id?: string | null } }> }).maybeSingle !== 'function') {
+      return null;
+    }
+    const { data } = await (query as { maybeSingle: () => Promise<{ data?: { program_id?: string | null } | null }> }).maybeSingle();
+    return data?.program_id || null;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Members are recorded on the group's date-active plan.
- * That write does not replace a personal program or another group's follow.
- * followed_program_id changes only when this group is allowed to claim Training.
- * Explicit unfollow stays empty until the member follows again or a new plan has no prior copy.
+ * Records this group's participation slot.
+ * That write does not replace the personal slot or another group's slot.
+ * followed_program_id changes only when this group is allowed to claim the legacy Training screen.
  */
 export async function syncMemberGroupEnrollment(
   supabase: SupabaseClient,
@@ -170,16 +190,24 @@ export async function syncMemberGroupEnrollment(
     followedProgramId?: string | null;
     dateYmd?: string;
     teamId?: string | null;
+    defaultProgramId?: string | null;
+    assignment?: { programId?: string | null; assignmentType?: string | null } | null;
+    personalParticipationProgramId?: string | null;
   }
 ): Promise<MemberEnrollmentSyncResult> {
-  const decision = decideGroupEnrollmentSync(input);
+  const existingGroupProgramId = input.teamId
+    ? await currentGroupProgramId(supabase, input.userId, input.teamId)
+    : null;
+  const decision = decideGroupEnrollmentSync({
+    ...input,
+    currentGroupProgramId: existingGroupProgramId,
+  });
 
   if (decision.personalEnrollment) {
     await upsertTrainingEnrollment(supabase, {
       userId: input.userId,
       sourceKind: 'personal',
       programId: decision.personalEnrollment.programId,
-      isPrimary: decision.personalEnrollment.isPrimary,
       status: 'active',
     });
   }
@@ -190,7 +218,6 @@ export async function syncMemberGroupEnrollment(
       teamId: decision.groupEnrollment.teamId,
       programId: decision.groupEnrollment.programId,
       status: decision.groupEnrollment.status,
-      isPrimary: decision.groupEnrollment.isPrimary,
     });
   }
 

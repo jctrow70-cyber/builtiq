@@ -1,7 +1,8 @@
 -- BIQ-0238: Group architecture phase 1
 -- One authoritative owner, manager-capable group default, collaboration flags,
--- and training enrollments that can sit beside followed_program_id.
--- Does not drop tables or delete workout history.
+-- and participation enrollments beside followed_program_id.
+-- Enrollments are not the Training calendar. Phase 2 chooses which group
+-- slots become visible. Does not drop tables or delete workout history.
 
 -- ---------------------------------------------------------------------------
 -- 1. Collaboration flags. Default false keeps today's member behavior.
@@ -642,7 +643,11 @@ comment on policy "set_logs_select" on public.st_set_logs is
   'Own logs; owner/manager teammate logs; group-scoped logs when members_can_view_member_progress is on. Body measurements stay private.';
 
 -- ---------------------------------------------------------------------------
--- 6. Training enrollments. followed_program_id stays the current Training screen.
+-- 6. Training participation. This is not the Training calendar.
+--    The calendar stays on followed_program_id in Phase 1.
+--    Phase 2 must choose which backfilled group slots become visible.
+--    Provenance is derived: personal fork via source_program_id,
+--    else active individual_team/manual assignment, else default_program_id.
 -- ---------------------------------------------------------------------------
 
 create table if not exists public.st_training_enrollments (
@@ -653,7 +658,6 @@ create table if not exists public.st_training_enrollments (
   team_id uuid references public.st_teams(id) on delete cascade,
   program_id uuid references public.st_programs(id) on delete set null,
   status text not null default 'active' check (status in ('active', 'paused', 'ended')),
-  is_primary boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (user_id, source_key),
@@ -663,35 +667,37 @@ create table if not exists public.st_training_enrollments (
   )
 );
 
+alter table public.st_training_enrollments drop column if exists is_primary;
+drop trigger if exists st_training_enrollments_primary on public.st_training_enrollments;
+drop function if exists public.st_training_enrollments_one_primary();
+
 comment on table public.st_training_enrollments is
-  'TRAINING SCHEDULE sources. One personal row and one row per group. is_primary mirrors followed_program_id for the current Training screen. Sources do not replace each other.';
+  'Programs a user participates in. One personal slot and one slot per group. Not the Training calendar. Phase 2 decides which backfilled group slots are shown. followed_program_id remains the Phase 1 display pointer.';
+comment on column public.st_training_enrollments.program_id is
+  'Program this slot participates in. Why: personal fork when the program is a non-archived personal copy of this group; else the active individual assignment; else the group default.';
 
 create index if not exists st_training_enrollments_user_idx
   on public.st_training_enrollments (user_id, status);
 
-create or replace function public.st_training_enrollments_one_primary()
+create index if not exists st_training_enrollments_team_idx
+  on public.st_training_enrollments (team_id)
+  where team_id is not null;
+
+create or replace function public.st_training_enrollments_touch()
 returns trigger
 language plpgsql
 set search_path = public
 as $$
 begin
-  if new.is_primary and new.status = 'active' then
-    update public.st_training_enrollments
-    set is_primary = false,
-        updated_at = now()
-    where user_id = new.user_id
-      and is_primary = true
-      and id is distinct from new.id;
-  end if;
   new.updated_at := now();
   return new;
 end;
 $$;
 
-drop trigger if exists st_training_enrollments_primary on public.st_training_enrollments;
-create trigger st_training_enrollments_primary
+drop trigger if exists st_training_enrollments_touch on public.st_training_enrollments;
+create trigger st_training_enrollments_touch
   before insert or update on public.st_training_enrollments
-  for each row execute function public.st_training_enrollments_one_primary();
+  for each row execute function public.st_training_enrollments_touch();
 
 alter table public.st_training_enrollments enable row level security;
 
@@ -714,45 +720,171 @@ drop policy if exists "training_enrollments_delete" on public.st_training_enroll
 create policy "training_enrollments_delete" on public.st_training_enrollments
   for delete using (user_id = auth.uid());
 
--- Mirror the program Training already shows. Do not change followed_program_id.
+-- Additive backfill. Does not update followed_program_id.
+-- A pure personal follow becomes the personal slot.
+-- A team follow becomes that group's slot.
+-- A personal fork of a team program becomes that group's slot, not the personal slot.
+-- Other memberships use an explicit individual assignment, otherwise the group default.
+-- on conflict do nothing so a later group cannot replace the program Training already shows.
+-- Phase 2 must decide visibility before rendering these extra group slots.
+
 insert into public.st_training_enrollments (
-  user_id, source_kind, source_key, team_id, program_id, status, is_primary
+  user_id, source_kind, source_key, team_id, program_id, status
 )
 select
   pr.user_id,
-  case when prog.visibility = 'team' then 'group' else 'personal' end,
-  case
-    when prog.visibility = 'team' then 'group:' || prog.team_id::text
-    else 'personal'
-  end,
-  case when prog.visibility = 'team' then prog.team_id else null end,
+  'personal',
+  'personal',
+  null,
   pr.followed_program_id,
-  'active',
-  true
+  'active'
 from public.st_profiles pr
 join public.st_programs prog on prog.id = pr.followed_program_id
-where pr.followed_program_id is not null
-  and (
-    prog.visibility = 'personal'
-    or (prog.visibility = 'team' and prog.team_id is not null)
-  )
+where prog.visibility = 'personal'
+  and prog.source_program_id is null
 on conflict (user_id, source_key) do nothing;
 
--- Other groups the user belongs to, recorded without taking the primary slot.
 insert into public.st_training_enrollments (
-  user_id, source_kind, source_key, team_id, program_id, status, is_primary
+  user_id, source_kind, source_key, team_id, program_id, status
+)
+select
+  pr.user_id,
+  'group',
+  'group:' || prog.team_id::text,
+  prog.team_id,
+  pr.followed_program_id,
+  'active'
+from public.st_profiles pr
+join public.st_programs prog on prog.id = pr.followed_program_id
+where prog.visibility = 'team'
+  and prog.team_id is not null
+on conflict (user_id, source_key) do nothing;
+
+insert into public.st_training_enrollments (
+  user_id, source_kind, source_key, team_id, program_id, status
+)
+select
+  pr.user_id,
+  'group',
+  'group:' || src.team_id::text,
+  src.team_id,
+  pr.followed_program_id,
+  'active'
+from public.st_profiles pr
+join public.st_programs fork on fork.id = pr.followed_program_id
+join public.st_programs src on src.id = fork.source_program_id
+where fork.visibility = 'personal'
+  and fork.source_program_id is not null
+  and lower(coalesce(fork.status, '')) <> 'archived'
+  and src.visibility = 'team'
+  and src.team_id is not null
+on conflict (user_id, source_key) do nothing;
+
+insert into public.st_training_enrollments (
+  user_id, source_kind, source_key, team_id, program_id, status
 )
 select
   m.user_id,
   'group',
   'group:' || m.team_id::text,
   m.team_id,
-  t.default_program_id,
-  'active',
-  false
+  coalesce(asg.program_id, t.default_program_id),
+  'active'
 from public.st_team_members m
 join public.st_teams t on t.id = m.team_id
+left join lateral (
+  select a.program_id
+  from public.st_program_assignments a
+  where a.user_id = m.user_id
+    and a.team_id = m.team_id
+    and a.is_active = true
+    and a.assignment_type in ('individual_team', 'manual')
+    and a.program_id is not null
+  order by a.created_at desc
+  limit 1
+) asg on true
 where m.status = 'active'
   and coalesce(t.is_archived, false) = false
-  and t.default_program_id is not null
+  and coalesce(asg.program_id, t.default_program_id) is not null
 on conflict (user_id, source_key) do nothing;
+
+-- Leaving a group ends only that group's participation slot.
+create or replace function public.st_leave_team(p_team_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_role text;
+begin
+  if auth.uid() is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  select role into v_role
+  from public.st_team_members
+  where team_id = p_team_id
+    and user_id = auth.uid()
+    and status = 'active';
+
+  if not found then
+    raise exception 'You are not an active member of this group';
+  end if;
+
+  if v_role = 'owner' then
+    raise exception 'Owners cannot leave — transfer ownership or delete the group';
+  end if;
+
+  update public.st_team_members
+  set status = 'removed'
+  where team_id = p_team_id
+    and user_id = auth.uid()
+    and status = 'active';
+
+  update public.st_training_enrollments
+  set status = 'ended',
+      updated_at = now()
+  where user_id = auth.uid()
+    and source_key = 'group:' || p_team_id::text;
+end;
+$$;
+
+revoke all on function public.st_leave_team(uuid) from public;
+grant execute on function public.st_leave_team(uuid) to authenticated;
+
+create or replace function public.st_delete_team(p_team_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  if not public.st_user_is_team_owner(p_team_id) then
+    raise exception 'Only the group owner can delete the group';
+  end if;
+
+  update public.st_team_members
+  set status = 'removed'
+  where team_id = p_team_id
+    and status = 'active';
+
+  update public.st_training_enrollments
+  set status = 'ended',
+      updated_at = now()
+  where team_id = p_team_id
+    and status <> 'ended';
+
+  update public.st_teams
+  set is_archived = true,
+      default_program_id = null
+  where id = p_team_id;
+end;
+$$;
+
+revoke all on function public.st_delete_team(uuid) from public;
+grant execute on function public.st_delete_team(uuid) to authenticated;

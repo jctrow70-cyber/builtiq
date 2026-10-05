@@ -19,6 +19,32 @@ Impact:
 
 ---
 
+## Decision 082 - Participation Slots Are Not the Training Calendar
+
+Date: 2026-10-05
+Status: Accepted
+Category: Groups
+
+### Decision
+
+`st_training_enrollments` stores participation only. One personal slot per user. One group slot per user per group. No `is_primary` column. The Training calendar stays a derived view, and Phase 1 still shows only `followed_program_id`. A group slot's program is the member's customized fork when that fork is the slot, otherwise the active individual assignment, otherwise `default_program_id`. Why it points there is derived from `source_program_id` and `st_program_assignments`. One-off workouts stay on `st_workout_assignments` and `st_assignment_recipients`. Backfill may record extra group slots. Phase 2 must decide which of those slots become visible before Training renders them.
+
+### Reason
+
+A second current-program flag would overlap `followed_program_id`. Copying workouts per user would drift from the shared template. The assignment table already says what the group assigned, and a personal fork already points at its source program.
+
+### Alternatives Considered
+
+- Store provenance in a new column — rejected; the fork link and the assignment row already answer it
+- Reuse `st_program_assignments` as the personal slot — rejected; that table is the group's assignment ledger
+- Render every backfilled group on the calendar now — rejected; that would change what existing users see
+
+### Impact
+
+Apply the revised `20261005_054_group_architecture_phase1.sql`. Phase 2 designs calendar visibility, schedule exceptions, and the ownership-transfer and collaboration settings screens.
+
+---
+
 ## Decision 081 - One Group Architecture, Independent Personal Training
 
 Date: 2026-10-05

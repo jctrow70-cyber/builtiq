@@ -759,6 +759,7 @@ export default function Page(){
     if(!isAutoEnrolledMemberRole(team.my_role))continue;
     const{data:groupPrograms}=await fetchDesignPrograms(supabase,{scope:'group',ownerUserId:session.user.id,teamId:team.id});
     const{data:personalPrograms}=await fetchDesignPrograms(supabase,{scope:'personal',ownerUserId:session.user.id});
+    const{data:assignmentRow,error:assignmentErr}=await supabase.from('st_program_assignments').select('program_id, assignment_type').eq('team_id',team.id).eq('user_id',session.user.id).eq('is_active',true).order('created_at',{ascending:false}).limit(1).maybeSingle();
     const sync=await syncMemberGroupEnrollment(supabase,{
      userId:session.user.id,
      role:team.my_role,
@@ -766,6 +767,10 @@ export default function Page(){
      personalPrograms:personalPrograms||[],
      followedProgramId:followedId,
      teamId:team.id,
+     ...(assignmentErr?{}:{
+      defaultProgramId:team.default_program_id||null,
+      assignment:assignmentRow?{programId:assignmentRow.program_id,assignmentType:assignmentRow.assignment_type}:null,
+     }),
     });
     if(sync.changed&&sync.programId){
      followedId=sync.programId;

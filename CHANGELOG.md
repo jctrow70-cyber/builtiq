@@ -32,7 +32,7 @@ The same group architecture has to support trainers, families, friends, and spor
 - Managers can set the group default program through `st_set_group_default_program`. They still cannot archive the group or transfer ownership.
 - Four collaboration flags on `st_teams` default to false, so members do not gain shared-edit, assign, or progress-view rights.
 - Edit Shared and Customize for Me are separate intents. Training still forks a live group plan into a personal copy.
-- `st_training_enrollments` records personal and per-group sources beside `followed_program_id`. Multi-group sync no longer lets a later group overwrite the current Training program.
+- `st_training_enrollments` records participation: one personal slot and one slot per group. It is not the Training calendar. There is no `is_primary` column. Multi-group sync no longer lets a later group overwrite the current Training program. A group slot uses a customized fork, then an explicit member assignment, then the group default. Backfill is additive and does not change `followed_program_id`. Phase 2 must decide which extra group slots become visible.
 - Group progress reads use group-scoped logs so roster and member detail agree.
 
 ### Files Changed
@@ -46,9 +46,9 @@ The same group architecture has to support trainers, families, friends, and spor
 
 ### Database Changes
 
-Apply `supabase/migrations/20261005_054_group_architecture_phase1.sql` in Supabase.
+Apply `supabase/migrations/20261005_054_group_architecture_phase1.sql` in Supabase. If an earlier draft of this file was applied with `is_primary`, running the revised file drops that column.
 
-Adds collaboration flag columns, owner-role guards, `st_set_member_role`, `st_transfer_group_ownership`, `st_set_group_default_program`, updated assign and program policies, `st_group_progress_logs`, and `st_training_enrollments` with a backfill from the current followed program. Does not drop `followed_program_id`, `default_program_id`, `st_program_assignments`, or `training_source`. Does not rename `st_teams`.
+Adds collaboration flag columns, owner-role guards, `st_set_member_role`, `st_transfer_group_ownership`, `st_set_group_default_program`, updated assign and program policies, `st_group_progress_logs`, and `st_training_enrollments`. The backfill records the current followed program in the matching slot and other groups from an explicit assignment or the group default. It does not change `followed_program_id`. Does not drop `followed_program_id`, `default_program_id`, `st_program_assignments`, or `training_source`. Does not rename `st_teams`. Leaving a group ends only that group's participation slot.
 
 ### Testing Steps
 
@@ -66,13 +66,13 @@ Adds collaboration flag columns, owner-role guards, `st_set_member_role`, `st_tr
 
 - Ownership transfer has an RPC and no screen.
 - Collaboration flags have no settings screen. They stay false.
-- Training still shows one program via `followed_program_id`. Extra sources are stored, not drawn on the calendar yet.
+- Training still shows one program via `followed_program_id`. Extra participation slots are stored and are not drawn on the calendar. Phase 2 has to choose which of those slots become visible for people who already belong to several groups.
 - The migration must be applied before the new RPCs succeed. The app tells the user which migration is missing.
 - Body measurements stay private. Group progress does not include them.
 
 ### Recommended Commit Message
 
-BIQ-0238: Separate group ownership, manager permissions, and multi-source training enrollment.
+BIQ-0238: Record group participation without a second current-program flag.
 
 ## BIQ-0237 - Seated Overhead Press Master Card
 
