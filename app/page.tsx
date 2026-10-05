@@ -95,6 +95,7 @@ import type { TrainingDayItem } from '../lib/programDesign/trainingSchedule';
 import { isAutoEnrolledMemberRole, isLiveGroupProgram, isPersonalizedGroupFollow, needsJustMeCopy } from '../lib/programDesign/enrollment';
 import { weekdayIndexFromYmd } from '../lib/programDesign/recurrence';
 import { customizeFollowedProgramForMe, matchCopiedWorkout, syncMemberGroupEnrollment } from '../lib/programDesign/followProgram';
+import { orderGroupsForEnrollment } from '../lib/groups/trainingSources';
 import { mergeProgramActivities, monthCalendarCells, monthLabel, planForCalendarDate, shiftYearMonth, tomorrowDate, weekPlansForMonday, yearMonthOf } from '../lib/programDesign/trainingSchedule';
 import {
   moveCalendarActivityToDate,
@@ -107,7 +108,7 @@ import {
 } from '../lib/programDesign/workoutDayMoves';
 import type { ProgramActivity, ProgramsLaunchIntent } from '../lib/programDesign/types';
 import { formatMacro, macroProgress } from '../lib/nutrition/macros';
-import { canManageGroup, canLogWorkout, canEditGroupProgram, isGroupOwner, roleLabel, roleForDatabase, resolveAssignmentWorkout, assignedHasPersonalCopy, assignmentDisplayTitle, copyAssignmentToPersonal, classificationSlug, loadMemberPerformanceBundle, loadMemberRosterMeta, duplicateTeamProgram, customizeProgramForMember, leaveTeam, deleteTeam, type AssignedWorkoutRow, type GroupClassification, type MemberPerformanceBundle, type MemberRosterMeta } from '../lib/groups';
+import { canManageGroup, canLogWorkout, canEditGroupProgram, canEditSharedGroupProgram, canSetGroupDefaultProgram, groupPermissionFlags, isAssignableMemberRole, isGroupOwner, resolveGroupEditIntent, roleLabel, roleForDatabase, resolveAssignmentWorkout, assignedHasPersonalCopy, assignmentDisplayTitle, copyAssignmentToPersonal, classificationSlug, fetchGroupScopedSetLogs, loadMemberPerformanceBundle, loadMemberRosterMeta, duplicateTeamProgram, customizeProgramForMember, leaveTeam, deleteTeam, setGroupDefaultProgram, type AssignedWorkoutRow, type GroupClassification, type MemberPerformanceBundle, type MemberRosterMeta } from '../lib/groups';
 import type { AssignProgramTarget } from './components/groups/TeamAssignProgramModal';
 
 const NAV=['Dashboard','Training','Programs','Groups','Nutrition','Progress','AI Coach','Settings'];
@@ -568,9 +569,9 @@ export default function Page(){
   if(!activeTeam||!members.length){setMemberStats({});setMemberRosterMeta({});return;}
   const{monday:weekStartStr,sunday:weekEndStr}=currentCalendarWeekBounds();
   const ids=members.map((m:any)=>m.user_id);
-  const{data}=await supabase.from('st_set_logs').select('user_id,log_date').in('user_id',ids).eq('completed',true).gte('log_date',weekStartStr).lte('log_date',weekEndStr);
+  const scoped=await fetchGroupScopedSetLogs(supabase,activeTeam.id,ids,{from:weekStartStr,to:weekEndStr,limit:2000});
   const stats:any={};
-  (data||[]).forEach((r:any)=>{if(!stats[r.user_id])stats[r.user_id]={sets:0,days:new Set()}; stats[r.user_id].sets++; stats[r.user_id].days.add(r.log_date);});
+  (scoped.data||[]).forEach((r:any)=>{if(!stats[r.user_id])stats[r.user_id]={sets:0,days:new Set()}; stats[r.user_id].sets++; stats[r.user_id].days.add(r.log_date);});
   setMemberStats(Object.fromEntries(Object.entries(stats).map(([k,v]:any)=>[k,{sets:v.sets,days:v.days.size}])));
   if(canManageGroupView()){
     const rosterMeta=await loadMemberRosterMeta(supabase,activeTeam.id,ids);
@@ -617,7 +618,7 @@ export default function Page(){
    } else if(/could not choose the best candidate function/i.test(raw)){
     msg='Apply assignment needs a Supabase update. In Supabase → SQL Editor, run migration 20250804_038_drop_assign_member_program_overload.sql, then try again.';
    } else if(/not authorized/i.test(raw)){
-    msg='Not authorized to assign programs. Confirm you are Owner/Editor on this team, then run Supabase migration 20250804_036 if this keeps failing.';
+    msg='Not authorized to assign programs. Confirm you are an Owner or Manager on this group, then run Supabase migration 20261005_054 if this keeps failing.';
    } else if(/select a program/i.test(raw)){
     msg='Select a published program for Individual Team Plan or Manual Assignment.';
    }
@@ -691,7 +692,7 @@ export default function Page(){
  function isPersonalCalendarWorkout(workoutId?:string|null){return !!workoutId&&calendarWorkouts.some((w:any)=>w.id===workoutId);}
  function findWorkoutAnywhere(workoutId?:string|null){if(!workoutId)return null;return findWorkoutInProgram(program,workoutId)||calendarWorkouts.find((w:any)=>w.id===workoutId)||null;}
  function isSharedTemplateEditor(){return !!draftEditProgramId||appNav==='Programs'||appNav==='Groups';}
- function canEdit(){if(!session?.user)return false; if(activeAssignedRecipient)return assignedHasPersonalCopy(activeAssignedRecipient); if(viewingMember&&viewingMember.user_id!==session.user.id)return false; if(isPersonalCalendarWorkout(activeWorkout))return true; if(program?.visibility==='personal'&&program.owner_user_id===session.user.id)return true; if(isLiveGroupProgram(program)&&!isSharedTemplateEditor())return true; if(program?.visibility==='team'){const team=teams.find((t:any)=>t.id===program.team_id)||activeTeam;return canEditGroupProgram(team?.my_role);} return mode==='personal'||canEditGroupProgram(activeTeam?.my_role);}
+ function canEdit(){if(!session?.user)return false; if(activeAssignedRecipient)return assignedHasPersonalCopy(activeAssignedRecipient); if(viewingMember&&viewingMember.user_id!==session.user.id)return false; if(isPersonalCalendarWorkout(activeWorkout))return true; if(program?.visibility==='personal'&&program.owner_user_id===session.user.id)return true; if(isLiveGroupProgram(program)&&!isSharedTemplateEditor())return true; if(program?.visibility==='team'){const team=teams.find((t:any)=>t.id===program.team_id)||activeTeam;return canEditSharedGroupProgram(team?.my_role,groupPermissionFlags(team));} return mode==='personal'||canEditGroupProgram(activeTeam?.my_role);}
  function isOwner(){return isGroupOwner(activeTeam?.my_role);}
  function logUserId(){return viewingMember?.user_id||session?.user?.id;}
  function extraWorkoutsForLogging(){
@@ -753,7 +754,8 @@ export default function Page(){
   if(options&&Object.prototype.hasOwnProperty.call(options,'followedProgramId'))followedId=options.followedProgramId||null;
   // Members: auto-enroll in the date-active group plan (Training calendar follows plan dates).
   if(context==='training'&&teams.length){
-   for(const team of teams){
+   const orderedTeams=orderGroupsForEnrollment(teams, profile?.default_team_id||null);
+   for(const team of orderedTeams){
     if(!isAutoEnrolledMemberRole(team.my_role))continue;
     const{data:groupPrograms}=await fetchDesignPrograms(supabase,{scope:'group',ownerUserId:session.user.id,teamId:team.id});
     const{data:personalPrograms}=await fetchDesignPrograms(supabase,{scope:'personal',ownerUserId:session.user.id});
@@ -763,6 +765,7 @@ export default function Page(){
      groupPrograms:groupPrograms||[],
      personalPrograms:personalPrograms||[],
      followedProgramId:followedId,
+     teamId:team.id,
     });
     if(sync.changed&&sync.programId){
      followedId=sync.programId;
@@ -1069,7 +1072,7 @@ export default function Page(){
   if(error){
    const raw=error.message||'Could not assign workout.';
    if(/not authorized/i.test(raw)){
-    throw new Error('Not authorized. Confirm you are Owner/Editor, then run Supabase migration 20250804_036 and retry.');
+    throw new Error('Not authorized. Confirm you are an Owner or Manager, then run Supabase migration 20261005_054 and retry.');
    }
    if(/could not find the function|schema cache/i.test(raw)){
     throw new Error('Assign workout needs a Supabase update. Run st_assign_workout_to_targets migrations in the SQL Editor.');
@@ -1186,13 +1189,16 @@ export default function Page(){
   if(viewingMember?.user_id===member.user_id)setViewingMember({...member,training_source:source});
  }
  async function setTeamDefaultProgram(programId:string){
-  if(!activeTeam||!canEdit())return;
+  if(!activeTeam||!canSetGroupDefaultProgram(activeTeam.my_role,groupPermissionFlags(activeTeam)))return;
   if(programId){
    const target=programs.find((p:any)=>p.id===programId);
    if(target&&!isPublishedProgram(target))return alert('Publish this program before setting it as the group active program.');
   }
-  const{error}=await supabase.from('st_teams').update({default_program_id:programId||null}).eq('id',activeTeam.id);
-  if(error)return alert(error.message);
+  const{error}=await setGroupDefaultProgram(supabase,activeTeam.id,programId||null);
+  if(error){
+   if(/could not find the function|schema cache/i.test(error))return alert('Setting the group program needs Supabase migration 20261005_054_group_architecture_phase1.sql.');
+   return alert(error);
+  }
   await loadTeams();
   await loadPrograms(appNav==='Groups'?'setup':'training');
  }
@@ -1227,8 +1233,8 @@ export default function Page(){
    return alert('Draft/publish requires Supabase migration 20250722_027. Your program is already live.');
   }
   if(makeActive&&mode==='team'&&activeTeam){
-   const{error:teamErr}=await supabase.from('st_teams').update({default_program_id:programId}).eq('id',activeTeam.id);
-   if(teamErr)return alert(teamErr.message);
+   const{error:teamErr}=await setGroupDefaultProgram(supabase,activeTeam.id,programId);
+   if(teamErr)return alert(teamErr);
    await loadTeams();
   }
   setDraftEditProgramId(null);
@@ -1278,6 +1284,11 @@ export default function Page(){
    return ctx;
   }
   if(isSharedTemplateEditor()){
+   const sharedTeam=teams.find((t:any)=>t.id===program?.team_id)||activeTeam;
+   if(isLiveGroupProgram(program)&&resolveGroupEditIntent(sharedTeam?.my_role,'shared_template',groupPermissionFlags(sharedTeam))!=='edit_shared'){
+    alert('You can customize a personal copy from Training. This does not change the shared group plan.');
+    return null;
+   }
    if(!canEdit()){alert('Only owners and managers can change the group plan.');return null;}
    const ctx=source&&program?{workout:source,program}:null;
    planEditRef.current=ctx;
@@ -1350,9 +1361,9 @@ export default function Page(){
   const target=programs.find((p:any)=>p.id===programId);
   if(!target||!isPublishedProgram(target))return alert('Publish the program before assigning.');
   if(payload.target==='team'||payload.setAsTeamDefault){
-   if(!confirm(`Set “${target.name}” as the group active program?\n\nEveryone on Follow Team Plan will use this program. Members with an individual assignment stay on their own plan.`))return;
+   if(!confirm(`Set “${target.name}” as the group active program?\n\nEveryone on Follow Group Plan will use this program. Members with an individual assignment stay on their own plan. Personal Training is not replaced.`))return;
    await setTeamDefaultProgram(programId);
-   alert('Group active program updated. Members on Follow Team Plan now use this plan.');
+   alert('Group active program updated. Members on Follow Group Plan now use this plan.');
   } else {
    if(!payload.memberUserIds.length)return alert('Select at least one member.');
    const names=payload.memberUserIds.map((uid)=>members.find((m:any)=>m.user_id===uid)?.display_name||'Member');
@@ -2217,7 +2228,7 @@ export default function Page(){
   if(!Object.keys(updates).length)return alert('No previous values found to copy.');
   await upsertSetLog(sid,updates,{completed:false});
  }
- async function setRole(member:any,role:string){if(!isOwner())return alert('Only owner can change roles.'); await supabase.from('st_team_members').update({role:roleForDatabase(role)}).eq('id',member.id); await loadMembers(); await loadTeams();}
+ async function setRole(member:any,role:string){if(!isOwner())return alert('Only the group owner can change roles.'); if(!isAssignableMemberRole(role))return alert('Ownership transfer is a separate action and is not available here.'); const{error}=await supabase.rpc('st_set_member_role',{p_member_id:member.id,p_role:roleForDatabase(role)}); if(error){if(/could not find the function|schema cache/i.test(error.message||'')){const{error:upErr}=await supabase.from('st_team_members').update({role:roleForDatabase(role)}).eq('id',member.id); if(upErr)return alert(upErr.message);} else return alert(error.message);} await loadMembers(); await loadTeams();}
  async function removeMember(member:any){
   if(!activeTeam||!canManageGroupView())return;
   if(member.user_id===session.user.id)return alert('You cannot remove yourself here.');

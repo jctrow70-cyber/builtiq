@@ -43,7 +43,7 @@ function ProgramRowList({
             <b>{row.name}</b>
             <span className="muted">
               {row.statusLabel} · {row.weeks} wk · {row.assignmentSummary}
-              {row.isDefault ? ' · Team default' : ''}
+              {row.isDefault ? ' · Group default' : ''}
               {row.sourceProgramId ? ' · Custom copy' : ''}
             </span>
           </div>
@@ -71,7 +71,7 @@ function ProgramRowList({
                 disabled={row.isDefault || defaultProgramId === row.id}
                 title={
                   row.isDefault || defaultProgramId === row.id
-                    ? 'Change the team active program before deleting'
+                    ? 'Change the group active program before deleting'
                     : undefined
                 }
                 onClick={() => onDelete(row.id)}

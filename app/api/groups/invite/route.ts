@@ -27,7 +27,7 @@ async function requireTeamManager(supabase: ReturnType<typeof createSupabaseFrom
     .maybeSingle();
   if (error) return { error: error.message, membership: null as any };
   if (!membership || membership.status !== 'active' || !canManageGroup(membership.role)) {
-    return { error: 'Only owners and editors can invite members.', membership: null as any };
+    return { error: 'Only owners and managers can invite members.', membership: null as any };
   }
   return { error: null, membership };
 }
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: teamError?.message || 'Group not found' }, { status: 404 });
   }
 
-  const inviterName = membership?.display_name || user.email || 'A BuildIQ Health coach';
+  const inviterName = membership?.display_name || user.email || 'A BuildIQ Health member';
   const appUrl = String(body?.appUrl || process.env.NEXT_PUBLIC_APP_URL || '').trim() || undefined;
 
   const results: Array<{

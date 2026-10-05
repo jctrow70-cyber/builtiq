@@ -16,7 +16,7 @@ export function buildGroupInviteEmail(input: GroupInviteEmailInput): {
   html: string;
 } {
   const app = (input.appUrl || '').replace(/\/$/, '') || 'https://builtiq-duf7.vercel.app';
-  const inviter = input.inviterName?.trim() || 'A BuildIQ Health coach';
+  const inviter = input.inviterName?.trim() || 'A BuildIQ Health member';
   const hello = input.inviteeName?.trim() ? `Hi ${input.inviteeName.trim()},` : 'Hi,';
   const role = input.roleLabel?.trim() || 'Member';
   const subject = `Join ${input.groupName} on BuildIQ Health`;
@@ -28,7 +28,7 @@ export function buildGroupInviteEmail(input: GroupInviteEmailInput): {
     'How to join:',
     `1. Open ${app}`,
     '2. Sign in or create an account',
-    '3. Go to Groups → Join Team',
+    '3. Go to Groups → Join Group',
     `4. Enter invite code: ${input.inviteCode}`,
     '',
     'If you already have BuildIQ Health installed, open the app and use the same code.',
@@ -43,7 +43,7 @@ export function buildGroupInviteEmail(input: GroupInviteEmailInput): {
       <ol>
         <li>Open <a href="${escapeHtml(app)}">${escapeHtml(app)}</a></li>
         <li>Sign in or create an account</li>
-        <li>Go to <b>Groups → Join Team</b></li>
+        <li>Go to <b>Groups → Join Group</b></li>
         <li>Enter invite code: <code style="font-size:16px;font-weight:700">${escapeHtml(input.inviteCode)}</code></li>
       </ol>
       <p style="color:#64748b;font-size:13px">If you already have BuildIQ Health installed, open the app and use the same code.</p>

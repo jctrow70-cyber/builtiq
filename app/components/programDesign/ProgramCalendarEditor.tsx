@@ -443,7 +443,7 @@ export default function ProgramCalendarEditor({
         )}
       </div>
       {isFollowing && program.visibility === 'team' && !canEdit && (
-        <p className="muted">Live group plan. Owner and editor workout edits appear here after you reopen this screen.</p>
+        <p className="muted">Live group plan. Owner and manager workout edits appear here after you reopen this screen.</p>
       )}
 
       {canEdit && (

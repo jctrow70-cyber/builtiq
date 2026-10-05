@@ -55,13 +55,13 @@ export function inviteMailtoHref(input: {
   appUrl?: string | null;
 }): string {
   const app = (input.appUrl || '').replace(/\/$/, '') || 'BuildIQ Health';
-  const inviter = input.inviterName?.trim() || 'A BuildIQ Health coach';
+  const inviter = input.inviterName?.trim() || 'A BuildIQ Health member';
   const subject = encodeURIComponent(`Join ${input.groupName} on BuildIQ Health`);
   const body = encodeURIComponent(
     `${inviter} invited you to join "${input.groupName}" on BuildIQ Health.\n\n` +
       `1. Open ${app}\n` +
       `2. Sign in or create an account\n` +
-      `3. Go to Groups → Join Team\n` +
+      `3. Go to Groups → Join Group\n` +
       `4. Enter invite code: ${input.inviteCode}\n`
   );
   return `mailto:${encodeURIComponent(input.email)}?subject=${subject}&body=${body}`;

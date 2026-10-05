@@ -54,8 +54,8 @@ export default function TeamSettingsTab({
   return (
     <>
       <div className="card">
-        <h2>Team settings</h2>
-        <label>Team name</label>
+        <h2>Group settings</h2>
+        <label>Group name</label>
         <p>
           <b>{activeTeam?.name}</b>
         </p>
@@ -68,8 +68,8 @@ export default function TeamSettingsTab({
         <p className="muted">{owners.map((m: any) => m.display_name || 'Owner').join(', ') || '—'}</p>
         {editors.length > 0 && (
           <>
-            <label>Editors</label>
-            <p className="muted">{editors.map((m: any) => m.display_name || 'Editor').join(', ')}</p>
+            <label>Managers</label>
+            <p className="muted">{editors.map((m: any) => m.display_name || 'Manager').join(', ')}</p>
           </>
         )}
         <label>Your role</label>
@@ -100,17 +100,17 @@ export default function TeamSettingsTab({
         <h2>Membership</h2>
         {!isSelfOwner && (
           <button type="button" className="btn secondary full" style={{ marginTop: 8 }} onClick={() => onLeaveTeam()}>
-            Leave team
+            Leave group
           </button>
         )}
         {isOwner && (
           <button type="button" className="btn red full" style={{ marginTop: 8 }} onClick={() => onDeleteTeam()}>
-            Delete team
+            Delete group
           </button>
         )}
         {isSelfOwner && (
           <p className="muted" style={{ marginTop: 8 }}>
-            Owners cannot leave — delete the team or transfer ownership (coming soon).
+            Owners cannot leave — delete the group or transfer ownership (coming soon).
           </p>
         )}
       </div>

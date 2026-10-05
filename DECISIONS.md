@@ -19,6 +19,59 @@ Impact:
 
 ---
 
+## Decision 081 - One Group Architecture, Independent Personal Training
+
+Date: 2026-10-05
+Status: Accepted
+Category: Groups
+
+### Decision
+
+A group is a shared training environment, not a trainer/client product. `st_teams.owner_user_id` is the only owner. Roles are Owner, Manager, and Member. Managers run programming and assignment. They do not archive the group or transfer ownership. Collaboration flags on `st_teams` default to false. `st_training_enrollments` records personal and per-group sources beside `followed_program_id`. Joining a group does not replace Personal Training or another group's enrollment. Edit Shared and Customize for Me stay separate. Group progress counts logs attributed to that group. Personal metrics stay private until a future explicit share.
+
+### Reason
+
+One membership model has to support trainers, families, friends, and teams. The previous owner flag on a membership row could disagree with `owner_user_id`. Managers were offered an entire-group assign that row-level security rejected. Auto-enrollment could replace `followed_program_id` based on which group ran last.
+
+### Alternatives Considered
+
+- Separate tables for trainer groups, family groups, and teams — rejected; the same membership and program tables already cover them
+- Store the new permissions only in `coaching_metadata` — rejected; authorization needs real columns and policies
+- Drop `followed_program_id` now — rejected; the Training screen still reads it
+- Open `st_teams` update to managers — rejected; that would let a manager change the owner
+
+### Impact
+
+Phase 1 adds the migration, permission helpers, and enrollment rows. It does not redesign Groups, Training, or Progress. Ownership transfer and the collaboration settings screen come later. Apply `20261005_054_group_architecture_phase1.sql` before those RPCs work in the app.
+
+---
+
+## Decision 080 - Seated Overhead Press Is Its Own Master Card
+
+Date: 2026-10-02
+Status: Accepted
+Category: Exercise Library
+
+### Decision
+
+Add master 263 Seated Overhead Press. Copy Overhead Press (29) compatible equipment. Do not merge with Overhead Press or Machine Shoulder Press (141). Do not move the generic Shoulder Press alias off 29.
+
+### Reason
+
+Seated and standing presses are different setups. Machine Shoulder Press is a selectorized path, not a seated free-weight press.
+
+### Alternatives Considered
+
+- Alias Seated onto Overhead Press (29) — rejected; the stance is the point of the card
+- Reuse Machine Shoulder Press — rejected; that card is machine-only
+
+### Impact
+
+- Active BuiltIQ master library is 263 generation-eligible cards
+- Existing IDs and history are unchanged
+
+---
+
 ## Decision 079 - Training Add Uses the Same Week Scope Choice as Replace
 
 Date: 2026-10-02

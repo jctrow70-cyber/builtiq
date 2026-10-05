@@ -150,7 +150,7 @@ export default function GroupInviteMembersPanel({
                   disabled={busy}
                 >
                   <option value="member">Member</option>
-                  <option value="manager">Editor</option>
+                  <option value="manager">Manager</option>
                 </select>
               </div>
             </div>

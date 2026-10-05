@@ -79,7 +79,7 @@ export default function TeamCreateJoinSheet({ mode, onClose, onCreate, onJoin }:
     setError('');
     const trimmed = name.trim();
     if (trimmed.length < 2) {
-      setError('Team name must be at least 2 characters.');
+      setError('Group name must be at least 2 characters.');
       return;
     }
     setStep('invites');
@@ -90,7 +90,7 @@ export default function TeamCreateJoinSheet({ mode, onClose, onCreate, onJoin }:
     setError('');
     const trimmed = name.trim();
     if (trimmed.length < 2) {
-      setError('Team name must be at least 2 characters.');
+      setError('Group name must be at least 2 characters.');
       setStep('details');
       return;
     }
@@ -124,7 +124,7 @@ export default function TeamCreateJoinSheet({ mode, onClose, onCreate, onJoin }:
       >
         <div className="topline" style={{ justifyContent: 'space-between' }}>
           <h2 id="team-sheet-title">
-            {mode === 'join' ? 'Join Team' : step === 'done' ? 'Team created' : step === 'invites' ? 'Invite members' : 'Create Team'}
+            {mode === 'join' ? 'Join Group' : step === 'done' ? 'Group created' : step === 'invites' ? 'Invite members' : 'Create Group'}
           </h2>
           <button type="button" className="btn small secondary" onClick={resetAndClose}>
             Close
@@ -145,12 +145,12 @@ export default function TeamCreateJoinSheet({ mode, onClose, onCreate, onJoin }:
             />
             {error && <p className="team-sheet-error">{error}</p>}
             <button type="submit" className="btn green full" style={{ marginTop: 12 }} disabled={busy}>
-              {busy ? 'Working…' : 'Join Team'}
+              {busy ? 'Working…' : 'Join Group'}
             </button>
           </form>
         ) : step === 'details' ? (
           <form onSubmit={continueToInvites} style={{ marginTop: 12 }}>
-            <label htmlFor="team-create-name">Team name</label>
+            <label htmlFor="team-create-name">Group name</label>
             <input
               id="team-create-name"
               value={name}
@@ -196,7 +196,7 @@ export default function TeamCreateJoinSheet({ mode, onClose, onCreate, onJoin }:
                         disabled={busy}
                       >
                         <option value="member">Member</option>
-                        <option value="manager">Editor</option>
+                        <option value="manager">Manager</option>
                       </select>
                     </div>
                   </div>
@@ -236,8 +236,8 @@ export default function TeamCreateJoinSheet({ mode, onClose, onCreate, onJoin }:
                 {busy
                   ? 'Creating…'
                   : validInviteCount
-                    ? `Create team & send ${validInviteCount} invite${validInviteCount === 1 ? '' : 's'}`
-                    : 'Create team without invites'}
+                    ? `Create group & send ${validInviteCount} invite${validInviteCount === 1 ? '' : 's'}`
+                    : 'Create group without invites'}
               </button>
             </div>
           </form>

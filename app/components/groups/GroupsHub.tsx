@@ -212,17 +212,17 @@ export default function GroupsHub(props: GroupsHubProps) {
     return (
       <section className="groups-hub teams-workspace">
         <div className="card">
-          <h2>Teams</h2>
+          <h2>Groups</h2>
           <p className="muted">
-            Create a team for your family, athletes, or clients — or join one with an invite code. Team workouts and
-            assignments show up in Training when your editor assigns them.
+            Create a group for your family, athletes, or clients — or join one with an invite code. Group workouts and
+            assignments show up in Training when a manager assigns them. Personal Training stays your own.
           </p>
           <div className="actions" style={{ marginTop: 12 }}>
             <button type="button" className="btn green" onClick={() => setSheetMode('create')}>
-              Create Team
+              Create Group
             </button>
             <button type="button" className="btn secondary" onClick={() => setSheetMode('join')}>
-              Join Team
+              Join Group
             </button>
           </div>
         </div>

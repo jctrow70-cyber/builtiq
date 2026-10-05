@@ -45,8 +45,8 @@ export default function TeamSelector({
         aria-expanded={open}
         aria-haspopup="listbox"
       >
-        <span className="team-selector-label">Teams</span>
-        <span className="team-selector-value">{activeTeam?.name || 'Select team'}</span>
+        <span className="team-selector-label">Groups</span>
+        <span className="team-selector-value">{activeTeam?.name || 'Select group'}</span>
         <span className="team-selector-chevron" aria-hidden="true">
           ▼
         </span>
@@ -100,10 +100,10 @@ export default function TeamSelector({
           )}
           <div className="team-selector-divider" />
           <button type="button" className="team-selector-action" onClick={() => { setOpen(false); onCreateTeam(); }}>
-            Create Team
+            Create Group
           </button>
           <button type="button" className="team-selector-action" onClick={() => { setOpen(false); onJoinTeam(); }}>
-            Join Team
+            Join Group
           </button>
         </div>
       )}

@@ -11,6 +11,119 @@ Branch:
 Status:
 ```
 
+## BIQ-0238 - Group Architecture Phase 1
+
+Date: 2026-10-05
+Branch: main
+Status: Local / in progress
+
+### Summary
+
+Normalized group ownership and roles, aligned manager permissions with the database, added collaboration flags and a multi-source training enrollment record, and stopped a later group enrollment from replacing another group's or a personal program's Training selection.
+
+### Purpose
+
+The same group architecture has to support trainers, families, friends, and sports teams without a second group product, while Personal Training stays independent. Phase 1 is the data and permission foundation. It does not redesign the Groups screens.
+
+### Changes
+
+- `st_teams.owner_user_id` is the only owner. Membership role `owner` must match that user. Normal role edits cannot create a second owner. `st_transfer_group_ownership` exists and has no UI yet.
+- Canonical labels are Owner, Manager, and Member. Legacy `editor` still maps to Manager.
+- Managers can set the group default program through `st_set_group_default_program`. They still cannot archive the group or transfer ownership.
+- Four collaboration flags on `st_teams` default to false, so members do not gain shared-edit, assign, or progress-view rights.
+- Edit Shared and Customize for Me are separate intents. Training still forks a live group plan into a personal copy.
+- `st_training_enrollments` records personal and per-group sources beside `followed_program_id`. Multi-group sync no longer lets a later group overwrite the current Training program.
+- Group progress reads use group-scoped logs so roster and member detail agree.
+
+### Files Changed
+
+- `supabase/migrations/20261005_054_group_architecture_phase1.sql`
+- `lib/groups/permissions.ts`, `groupPermissions.ts`, `trainingSources.ts`, `progressScope.ts`, `memberPerformance.ts`, `teamProgramTools.ts`, `index.ts`, `invites.ts`
+- `lib/programDesign/enrollment.ts`, `enrollmentSync.ts`, `followProgram.ts`
+- `app/page.tsx` and Groups / program-design copy that still said Editor or Team
+- `scripts/test-group-architecture.ts`, `scripts/test-unfollow-training.ts`, `scripts/test-customize-for-me.ts`
+- `package.json`, `CHANGELOG.md`, `DECISIONS.md`
+
+### Database Changes
+
+Apply `supabase/migrations/20261005_054_group_architecture_phase1.sql` in Supabase.
+
+Adds collaboration flag columns, owner-role guards, `st_set_member_role`, `st_transfer_group_ownership`, `st_set_group_default_program`, updated assign and program policies, `st_group_progress_logs`, and `st_training_enrollments` with a backfill from the current followed program. Does not drop `followed_program_id`, `default_program_id`, `st_program_assignments`, or `training_source`. Does not rename `st_teams`.
+
+### Testing Steps
+
+- `node .\node_modules\tsx\dist\cli.mjs scripts/test-group-architecture.ts`
+- `node .\node_modules\tsx\dist\cli.mjs scripts/test-unfollow-training.ts`
+- `node .\node_modules\tsx\dist\cli.mjs scripts/test-customize-for-me.ts`
+- After the migration: owner can change a member between Manager and Member; that control cannot set Owner.
+- A manager can assign Entire Group and the default program saves.
+- A member editing from Training still gets a personal copy and does not change the shared plan.
+- A user in two groups keeps the program Training already showed.
+- Personal Training is still there after joining a group.
+- Completed set logs remain after a template edit.
+
+### Known Issues
+
+- Ownership transfer has an RPC and no screen.
+- Collaboration flags have no settings screen. They stay false.
+- Training still shows one program via `followed_program_id`. Extra sources are stored, not drawn on the calendar yet.
+- The migration must be applied before the new RPCs succeed. The app tells the user which migration is missing.
+- Body measurements stay private. Group progress does not include them.
+
+### Recommended Commit Message
+
+BIQ-0238: Separate group ownership, manager permissions, and multi-source training enrollment.
+
+## BIQ-0237 - Seated Overhead Press Master Card
+
+Date: 2026-10-02
+Branch: develop
+Status: Local / in progress
+
+### Summary
+
+Added master 263 Seated Overhead Press as its own card, with the same compatible equipment as Overhead Press (29): Dumbbell, Barbell, Machine, Kettlebell, Smith Machine. Active generation library is 263.
+
+### Purpose
+
+Users need a seated overhead press that is not merged into standing Overhead Press or Machine Shoulder Press.
+
+### Changes
+
+- New enriched `builtiq_master` card 263 Seated Overhead Press
+- Equipment copied from Overhead Press (29)
+- Aliases: Seated Shoulder Press, Seated Military Press, Seated Dumbbell Overhead Press, Seated Barbell Overhead Press
+- Does not take the generic Shoulder Press alias from Overhead Press
+
+### Files Changed
+
+- `lib/training/masterCatalog.ts`
+- `lib/training/masterCatalogEnrichment.ts`
+- `lib/training/catalogCleanupCheck.ts`
+- `scripts/apply-seated-overhead-press.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+No schema migration. Data-only insert of active master 263. Existing IDs and history are unchanged.
+
+### Testing Steps
+
+1. Run `npm run test:science`
+2. Search Seated Overhead Press / seated shoulder press in Strength
+3. Confirm equipment dropdown matches Overhead Press
+4. Confirm it is distinct from Overhead Press (29) and Machine Shoulder Press (141)
+
+### Known Issues
+
+- Phase 2B is not started
+
+### Recommended Commit Message
+
+`BIQ-0237 Add Seated Overhead Press with Overhead Press equipment`
+
 ## BIQ-0236 - Deadlift Smith Machine and Training Add-for-Weeks
 
 Date: 2026-10-02

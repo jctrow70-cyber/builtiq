@@ -122,6 +122,13 @@ function profileClient(onFollow?: (id: string | null) => void) {
           },
         };
       }
+      if (table === 'st_training_enrollments') {
+        return {
+          upsert() {
+            return Promise.resolve({ error: null });
+          },
+        };
+      }
       return {
         update() {
           return { eq() { return Promise.resolve({ error: null }); } };

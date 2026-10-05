@@ -231,16 +231,53 @@ export async function fetchTeamMemberLogsForPr(
   return byUser;
 }
 
+function missingGroupProgressRpc(message: string | undefined): boolean {
+  return /st_group_progress_logs|schema cache|does not exist|Could not find the function/i.test(message || '');
+}
+
+/** Group-scoped completed logs. Falls back to team_id until the RPC migration is applied. */
+export async function fetchGroupScopedSetLogs(
+  supabase: SupabaseClient,
+  teamId: string,
+  userIds: string[],
+  opts?: { from?: string | null; to?: string | null; limit?: number },
+): Promise<{ data: any[]; pending: boolean; error: string | null }> {
+  const { data, error } = await supabase.rpc('st_group_progress_logs', {
+    p_team_id: teamId,
+    p_user_ids: userIds,
+    p_from: opts?.from || null,
+    p_to: opts?.to || null,
+    p_limit: opts?.limit || 400,
+  });
+  if (!error) return { data: data || [], pending: false, error: null };
+  if (missingGroupProgressRpc(error.message)) {
+    let q = supabase
+      .from('st_set_logs')
+      .select('*')
+      .eq('team_id', teamId)
+      .eq('completed', true)
+      .order('log_date', { ascending: false })
+      .limit(opts?.limit || 400);
+    if (userIds.length) q = q.in('user_id', userIds);
+    if (opts?.from) q = q.gte('log_date', opts.from);
+    if (opts?.to) q = q.lte('log_date', opts.to);
+    const fallback = await q;
+    if (fallback.error) return { data: [], pending: true, error: fallback.error.message };
+    return { data: fallback.data || [], pending: true, error: null };
+  }
+  return { data: [], pending: false, error: error.message };
+}
+
 export async function loadMemberPerformanceBundle(
   supabase: SupabaseClient,
   userId: string,
   teamId: string,
 ): Promise<MemberPerformanceBundle> {
-  const [logs, assignmentRows] = await Promise.all([
-    fetchMemberSetLogs(supabase, userId, { teamId: null, limit: 400 }),
+  const [scoped, assignmentRows] = await Promise.all([
+    fetchGroupScopedSetLogs(supabase, teamId, [userId], { limit: 400 }),
     fetchMemberAssignmentRows(supabase, userId, teamId),
   ]);
-  return buildMemberPerformanceBundle(logs, assignmentRows);
+  return buildMemberPerformanceBundle(scoped.data, assignmentRows);
 }
 
 export async function loadMemberRosterMeta(
@@ -254,10 +291,18 @@ export async function loadMemberRosterMeta(
   });
   if (!userIds.length) return meta;
 
-  const [assignmentsByUser, logsByUser] = await Promise.all([
+  const [assignmentsByUser, scopedLogs] = await Promise.all([
     fetchTeamAssignmentRowsByUser(supabase, teamId, userIds),
-    fetchTeamMemberLogsForPr(supabase, userIds, teamId),
+    fetchGroupScopedSetLogs(supabase, teamId, userIds, { limit: Math.min(userIds.length * 120, 800) }),
   ]);
+  const logsByUser: Record<string, any[]> = {};
+  userIds.forEach((id) => {
+    logsByUser[id] = [];
+  });
+  (scopedLogs.data || []).forEach((row: any) => {
+    if (!logsByUser[row.user_id]) logsByUser[row.user_id] = [];
+    logsByUser[row.user_id].push(row);
+  });
 
   const today = todayYmd();
   userIds.forEach((userId) => {

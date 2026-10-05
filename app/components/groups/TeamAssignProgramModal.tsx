@@ -72,8 +72,8 @@ export default function TeamAssignProgramModal({
           <b>{program.name}</b>
         </p>
         <p className="muted" style={{ marginTop: 6 }}>
-          <b>One Member</b> / <b>Selected Members</b> only updates those people. <b>Entire Team</b> sets the
-          group active program for everyone on Follow Team Plan.
+          <b>One Member</b> / <b>Selected Members</b> only updates those people. <b>Entire Group</b> sets the
+          group active program for everyone on Follow Group Plan. Personal programs stay in place.
         </p>
         <form onSubmit={submit} style={{ marginTop: 12 }}>
           <label>Assign to</label>
@@ -96,7 +96,7 @@ export default function TeamAssignProgramModal({
               Selected Members
             </button>
             <button type="button" className={target === 'team' ? 'active' : ''} onClick={() => setTarget('team')}>
-              Entire Team
+              Entire Group
             </button>
           </div>
           {target === 'team' && (

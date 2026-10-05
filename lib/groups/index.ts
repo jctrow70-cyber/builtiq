@@ -1,5 +1,6 @@
 export * from './types';
 export * from './permissions';
+export * from './groupPermissions';
 export * from './schema';
 export * from './assignments';
 export * from './classifications';
@@ -7,3 +8,5 @@ export * from './memberPerformance';
 export * from './teamProgramTools';
 export * from './programRoster';
 export * from './invites';
+export * from './trainingSources';
+export * from './progressScope';

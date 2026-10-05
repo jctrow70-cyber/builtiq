@@ -132,9 +132,9 @@ export default function GroupMemberDashboard({
             value={assignDraft.type}
             onChange={(e) => onAssignDraftChange({ ...assignDraft, type: e.target.value })}
           >
-            <option value="team">Follow Team Plan</option>
+            <option value="team">Follow Group Plan</option>
             <option value="personal">Use Personal Plan</option>
-            <option value="individual_team">Individual Team Plan</option>
+            <option value="individual_team">Individual Group Plan</option>
             <option value="manual">Manual Assignment</option>
           </select>
           {(assignDraft.type === 'individual_team' || assignDraft.type === 'manual') && (
@@ -153,7 +153,7 @@ export default function GroupMemberDashboard({
               </select>
             </>
           )}
-          <label>Editor notes</label>
+          <label>Manager notes</label>
           <input
             value={assignDraft.notes}
             onChange={(e) => onAssignDraftChange({ ...assignDraft, notes: e.target.value })}

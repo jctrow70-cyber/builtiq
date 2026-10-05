@@ -33,7 +33,7 @@ export default function TeamProgressTab({
       {canManage && (
         <div className="card team-compliance-card">
           <div className="topline" style={{ justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-            <h2>Team progress</h2>
+            <h2>Group progress</h2>
             <div className="actions" style={{ flexWrap: 'wrap' }}>
               {onRestoreHistory && (
                 <button
@@ -49,7 +49,7 @@ export default function TeamProgressTab({
             </div>
           </div>
           <p className="muted" style={{ marginTop: 6 }}>
-            This week&apos;s team activity — not your full personal lift history. Use the bottom-nav{' '}
+            This week&apos;s group activity — not your full personal lift history. Use the bottom-nav{' '}
             <b>Progress</b> tab for your logged sets. Coaches can open a member for their detail history.
           </p>
           <div className="dash-metrics">

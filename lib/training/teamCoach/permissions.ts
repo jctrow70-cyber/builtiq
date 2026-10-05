@@ -1,9 +1,10 @@
-/** BIQ-0027: Coach vs athlete permissions */
+/** BIQ-0027: Legacy helper. Canonical roles are owner, manager, and member. */
 
-import type { TeamRole } from './types';
+import { normalizeRole } from '../../groups/permissions';
 
 export function isCoachRole(role?: string | null): boolean {
-  return role === 'owner' || role === 'editor';
+  const n = normalizeRole(role);
+  return n === 'owner' || n === 'manager';
 }
 
 export function isAthleteRole(role?: string | null): boolean {

@@ -4,12 +4,12 @@ import { nextMondayFrom, programDateRange } from './cycle';
 import { lifecycleStatusOf } from './lifecycle';
 import type { ProgramDesignRecord } from './types';
 
-/** True only for group Members — not Owner or Editor/Manager. */
+/** True only for group Members — not Owner or Manager. */
 export function isAutoEnrolledMemberRole(role: string | null | undefined): boolean {
   return normalizeRole(role) === 'member';
 }
 
-/** Editors (managers) and owners opt in — they are not auto-enrolled. */
+/** Managers and owners opt in — they are not auto-enrolled. */
 export function canOptInToGroupProgram(role: string | null | undefined): boolean {
   const n = normalizeRole(role);
   return n === 'owner' || n === 'manager';
@@ -203,8 +203,48 @@ export function programCoversDate(program: ProgramDesignRecord, dateYmd = todayY
 export function describeEnrollmentRole(role: string | null | undefined): string {
   const n = normalizeRole(role);
   if (n === 'member') return 'Members are enrolled automatically when a group plan is active.';
-  if (n === 'manager') return 'Editors can pull a group plan into Training — you are not enrolled automatically.';
+  if (n === 'manager') return 'Managers can use a group plan in Training — you are not enrolled automatically.';
   return 'Owners schedule group plans by date. Members pick up the active plan automatically.';
+}
+
+/** Personal program that is the same row, or a copy of a group program. */
+export function findPersonalCopyOf(
+  source: ProgramDesignRecord,
+  personalPrograms: ProgramDesignRecord[]
+): ProgramDesignRecord | null {
+  if (source.visibility === 'personal') {
+    return personalPrograms.find((p) => p.id === source.id) || null;
+  }
+  return personalPrograms.find((p) => p.source_program_id === source.id) || null;
+}
+
+/**
+ * True only when followed_program_id matches this source or a personal copy of it.
+ * A leftover copy after unfollow does not count.
+ */
+export function alreadyFollowing(
+  source: ProgramDesignRecord,
+  personalPrograms: ProgramDesignRecord[],
+  followedProgramId?: string | null
+): ProgramDesignRecord | null {
+  if (!followedProgramId) return null;
+  if (followedProgramId === source.id) return source;
+  const hit = personalPrograms.find((p) => p.id === followedProgramId);
+  if (hit && (hit.id === source.id || hit.source_program_id === source.id)) return hit;
+  return null;
+}
+
+/** Followed program is this group's live plan or a personal fork of it. */
+export function followedSourceBelongsToGroup(
+  followedProgramId: string | null | undefined,
+  groupPrograms: ProgramDesignRecord[],
+  personalPrograms: ProgramDesignRecord[]
+): boolean {
+  if (!followedProgramId) return false;
+  if (groupPrograms.some((p) => p.id === followedProgramId)) return true;
+  const personal = personalPrograms.find((p) => p.id === followedProgramId);
+  if (!personal?.source_program_id) return false;
+  return groupPrograms.some((p) => p.id === personal.source_program_id);
 }
 
 /** Creating a For me plan must not require unfollow. The new plan stays available until Use in Training. */

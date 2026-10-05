@@ -7,7 +7,7 @@ import SegmentedControl from '../ui/SegmentedControl';
 import CreateProgramFlow from './CreateProgramFlow';
 import AIProgramSetupWizard from './AIProgramSetupWizard';
 import ProgramCalendarEditor from './ProgramCalendarEditor';
-import { canEditGroupProgram, canEditProgramRecord, isGroupOwner, roleLabel } from '../../../lib/groups';
+import { canEditGroupProgram, canEditProgramRecord, groupPermissionFlags, isGroupOwner, roleLabel } from '../../../lib/groups';
 import {
   canOptInToGroupProgram,
   describeEnrollmentRole,
@@ -429,7 +429,7 @@ export default function ProgramDesignHome({
         return;
       }
       if (!canEditGroup) {
-        setError('Only owners and editors can change the group plan for everyone.');
+        setError('Only owners and managers can change the group plan for everyone.');
         return;
       }
       const liveId = liveTemplateId(editing);
@@ -542,7 +542,7 @@ export default function ProgramDesignHome({
       setError(shareError);
       return;
     }
-    alert('Shared with the group. Members are enrolled automatically when the plan is active; editors can use it in Training.');
+    alert('Shared with the group. Members are enrolled automatically when the plan is active; managers can use it in Training.');
   }
 
   function openRow(program: ProgramDesignRecord) {
@@ -681,7 +681,7 @@ export default function ProgramDesignHome({
           program={editing}
           programs={programs}
           ownerUserId={userId}
-          canEdit={!followBusy && canEditProgramRecord(editing, editingRole)}
+          canEdit={!followBusy && canEditProgramRecord(editing, editingRole, groupPermissionFlags(teams.find((t) => t.id === editing.team_id)))}
           canEditGroupTemplate={canEditGroup}
           isFollowing={followingThis}
           groups={teams}
@@ -803,7 +803,7 @@ export default function ProgramDesignHome({
                 Training has no plan yet.
                 {memberAutoEnroll
                   ? ' As a member, you are enrolled automatically the first time a group plan is active. After you unfollow, Training stays clear until you follow again (or a new group plan enrolls you).'
-                  : ' Create a plan for you, or use a group plan in Training (editors are not enrolled automatically).'}
+                  : ' Create a plan for you, or use a group plan in Training (managers are not enrolled automatically).'}
               </p>
             )}
           </div>
@@ -813,8 +813,8 @@ export default function ProgramDesignHome({
               <h2>{sharedPrograms.some((p) => canOptInToGroupProgram(p.groupRole)) ? 'Available from your groups' : 'Shared with you'}</h2>
               <p className="muted">
                 {sharedPrograms.some((p) => canOptInToGroupProgram(p.groupRole))
-                  ? 'Editors and owners can use a group plan in Training. Members are enrolled automatically by plan dates.'
-                  : 'Programs from your groups. Training uses the live group plan, so owner and editor updates show up for everyone.'}
+                  ? 'Managers and owners can use a group plan in Training. Members are enrolled automatically by plan dates.'
+                  : 'Programs from your groups. Training uses the live group plan, so owner and manager updates show up for everyone.'}
               </p>
               {sharedPrograms.map((program) => {
                 const optIn = canOptInToGroupProgram(program.groupRole);

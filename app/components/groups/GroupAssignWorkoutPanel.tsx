@@ -169,7 +169,7 @@ export default function GroupAssignWorkoutPanel({
           {programOptions.map((p: any) => (
             <option key={p.id} value={p.id}>
               {p.name}
-              {groupProgram?.id === p.id ? ' (team active)' : ''}
+              {groupProgram?.id === p.id ? ' (group active)' : ''}
             </option>
           ))}
         </select>

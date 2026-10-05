@@ -61,7 +61,7 @@ export default function TeamMembersTab({
       <p className="muted">
         {canManage ? 'Tap a member for details and program actions.' : 'Tap your name to open Training.'}
       </p>
-      {members.length === 0 && <p className="muted">No members yet. Invite people below or share your team invite code.</p>}
+      {members.length === 0 && <p className="muted">No members yet. Invite people below or share your group invite code.</p>}
       {members.map((m: any) => {
         const stats = memberStats[m.user_id] || { sets: 0, days: 0 };
         const rosterMeta = memberRosterMeta[m.user_id] || {
@@ -105,7 +105,7 @@ export default function TeamMembersTab({
                     onClick={(e) => e.stopPropagation()}
                     aria-label={`Plan for ${m.display_name || 'member'}`}
                   >
-                    <option value="team">Team plan</option>
+                    <option value="team">Group plan</option>
                     <option value="personal">Personal</option>
                   </select>
                 )}
@@ -117,8 +117,7 @@ export default function TeamMembersTab({
                     onClick={(e) => e.stopPropagation()}
                     aria-label={`Role for ${m.display_name || 'member'}`}
                   >
-                    <option value="owner">Owner</option>
-                    <option value="manager">Editor</option>
+                    <option value="manager">Manager</option>
                     <option value="member">Member</option>
                   </select>
                 )}
