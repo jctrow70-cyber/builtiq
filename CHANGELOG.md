@@ -34,6 +34,7 @@ The same group architecture has to support trainers, families, friends, and spor
 - Edit Shared and Customize for Me are separate intents. Training still forks a live group plan into a personal copy.
 - `st_training_enrollments` records participation: one personal slot and one slot per group. It is not the Training calendar. There is no `is_primary` column. Multi-group sync no longer lets a later group overwrite the current Training program. A group slot uses a customized fork, then an explicit member assignment, then the group default. Backfill is additive and does not change `followed_program_id`. Phase 2 must decide which extra group slots become visible.
 - Group progress reads use group-scoped logs so roster and member detail agree.
+- Program editor group options include the collaboration flags so the shared-edit check typechecks in production.
 
 ### Files Changed
 

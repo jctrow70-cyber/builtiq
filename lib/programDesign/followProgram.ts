@@ -160,15 +160,13 @@ async function currentGroupProgramId(
   teamId: string
 ): Promise<string | null> {
   try {
-    const query = supabase
+    const { data, error } = await supabase
       .from('st_training_enrollments')
       .select('program_id')
       .eq('user_id', userId)
-      .eq('source_key', groupSourceKey(teamId));
-    if (!query || typeof (query as { maybeSingle?: () => Promise<{ data?: { program_id?: string | null } }> }).maybeSingle !== 'function') {
-      return null;
-    }
-    const { data } = await (query as { maybeSingle: () => Promise<{ data?: { program_id?: string | null } | null }> }).maybeSingle();
+      .eq('source_key', groupSourceKey(teamId))
+      .maybeSingle();
+    if (error) return null;
     return data?.program_id || null;
   } catch {
     return null;

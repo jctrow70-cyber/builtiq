@@ -112,4 +112,8 @@ export type GroupOption = {
   name: string;
   my_role?: string | null;
   default_program_id?: string | null;
+  members_can_create_shared_workouts?: boolean;
+  members_can_edit_shared_workouts?: boolean;
+  members_can_assign_workouts?: boolean;
+  members_can_view_member_progress?: boolean;
 };
