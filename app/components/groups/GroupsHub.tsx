@@ -411,7 +411,7 @@ export default function GroupsHub(props: GroupsHubProps) {
           compliancePct={compliancePct}
           teamActiveCount={teamActiveCount}
           teamTotalSets={teamTotalSets}
-          onOpenMember={onOpenMember}
+          onOpenMember={openMember}
           onRestoreHistory={onRestoreTeamHistory}
           restoreBusy={restoreTeamHistoryBusy}
         />
@@ -423,7 +423,6 @@ export default function GroupsHub(props: GroupsHubProps) {
         <TeamSettingsTab
           activeTeam={activeTeam}
           members={members}
-          canManage={canManage}
           isOwner={isOwner}
           isSelfOwner={activeTeam.my_role === 'owner'}
           onLeaveTeam={onLeaveTeam}

@@ -19,6 +19,31 @@ Impact:
 
 ---
 
+## Decision 084 - Group Workspace Uses Five Sections
+
+Date: 2026-10-05
+Status: Accepted
+Category: Groups
+
+### Decision
+
+A group workspace uses Overview, Training, Members, Progress, and Settings. Training holds shared plans and workout assignment. Members holds the roster, invites, and classifications. Progress is weekly group activity. Settings holds collaboration flags and ownership transfer. Chat is not a permanent tab.
+
+### Reason
+
+The previous tabs mixed programming, assignment, and settings. A fifth permanent chat tab would crowd a phone screen before messaging exists.
+
+### Alternatives Considered
+
+- Keep Programs as the tab name — rejected; Training matches the rest of the app
+- Add Chat now — rejected; the data model is not built
+
+### Impact
+
+Owners save collaboration flags with a direct team update. Ownership transfer uses `st_transfer_group_ownership`.
+
+---
+
 ## Decision 083 - Group Program Edits Follow Current Membership
 
 Date: 2026-10-05

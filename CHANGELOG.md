@@ -11,6 +11,61 @@ Branch:
 Status:
 ```
 
+## BIQ-0240 - Group Workspace Navigation
+
+Date: 2026-10-05
+Branch: main
+Status: Local / in progress
+
+### Summary
+
+Groups now opens on Overview, Training, Members, Progress, and Settings. Shared plans and workout assignment live under Training. Member tags and invites stay under Members. The Owner can set member collaboration permissions and transfer ownership from Settings.
+
+### Purpose
+
+Phase 2 starts with a simple group workspace. Chat, notification delivery, and the new invitation token are not part of this change.
+
+### Changes
+
+- Replaced Members / Programs / Group status / Settings with the five group sections.
+- Opening a member from Progress switches to Members.
+- Settings saves the four collaboration flags and calls `st_transfer_group_ownership`.
+
+### Files Changed
+
+- `app/components/groups/GroupsHub.tsx`
+- `app/components/groups/GroupOverview.tsx`
+- `app/components/groups/TeamWorkspaceTabs.tsx`
+- `app/components/groups/TeamSettingsTab.tsx`
+- `app/components/groups/GroupAssignWorkoutPanel.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `lib/groups/workspaceTabs.ts`
+- `lib/groups/index.ts`
+- `scripts/test-group-architecture.ts`
+
+### Database Changes
+
+None. Saving permissions and transferring ownership need `20261005_054` already applied.
+
+### Testing Steps
+
+- Open Groups. Overview is the first tab. The tab row scrolls on a narrow screen.
+- Training shows group plans and workout assignment for an Owner or Manager.
+- Members shows the roster, invites, and classifications.
+- Progress opens a member on the Members tab.
+- Settings: Owner can save the four permission checkboxes and transfer ownership to another member. A Manager sees the checkboxes disabled.
+
+### Known Issues
+
+- Invitation emails still use the permanent group code.
+- Chat and notifications are not built.
+- Collaboration flags can be saved only by the Owner, because team updates are owner-only.
+
+### Recommended Commit Message
+
+BIQ-0240: Give Groups an Overview, Training, Members, Progress, and Settings workspace.
+
 ## BIQ-0239 - Group Program Edits Follow Current Membership
 
 Date: 2026-10-05

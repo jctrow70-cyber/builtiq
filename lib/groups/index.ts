@@ -10,3 +10,4 @@ export * from './programRoster';
 export * from './invites';
 export * from './trainingSources';
 export * from './progressScope';
+export * from './workspaceTabs';

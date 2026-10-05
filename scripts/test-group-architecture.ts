@@ -19,6 +19,7 @@ import {
   roleLabel,
 } from '../lib/groups/permissions';
 import { DEFAULT_GROUP_PERMISSIONS, groupPermissionFlags } from '../lib/groups/groupPermissions';
+import { GROUP_WORKSPACE_TABS } from '../lib/groups/workspaceTabs';
 import { classifySetLogScope } from '../lib/groups/progressScope';
 import {
   groupEnrollmentProvenance,
@@ -483,6 +484,11 @@ assert.equal(
     role: 'manager',
   }),
   false
+);
+
+assert.deepEqual(
+  GROUP_WORKSPACE_TABS.map((tab) => tab.id),
+  ['overview', 'training', 'members', 'progress', 'settings']
 );
 
 console.log('group architecture checks passed');
