@@ -1,13 +1,6 @@
 'use client';
 
-export type TeamWorkspaceTab = 'members' | 'programs' | 'progress' | 'settings';
-
-const TABS: { id: TeamWorkspaceTab; label: string }[] = [
-  { id: 'members', label: 'Members' },
-  { id: 'programs', label: 'Programs' },
-  { id: 'progress', label: 'Group status' },
-  { id: 'settings', label: 'Settings' },
-];
+import { GROUP_WORKSPACE_TABS, type TeamWorkspaceTab } from '../../../lib/groups/workspaceTabs';
 
 type TeamWorkspaceTabsProps = {
   active: TeamWorkspaceTab;
@@ -17,7 +10,7 @@ type TeamWorkspaceTabsProps = {
 export default function TeamWorkspaceTabs({ active, onChange }: TeamWorkspaceTabsProps) {
   return (
     <div className="team-workspace-tabs" role="tablist" aria-label="Group workspace">
-      {TABS.map((tab) => (
+      {GROUP_WORKSPACE_TABS.map((tab) => (
         <button
           key={tab.id}
           type="button"
@@ -32,3 +25,5 @@ export default function TeamWorkspaceTabs({ active, onChange }: TeamWorkspaceTab
     </div>
   );
 }
+
+export type { TeamWorkspaceTab };

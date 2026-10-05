@@ -10,7 +10,10 @@ import {
 import type { AssignProgramTarget } from './TeamAssignProgramModal';
 import TeamAssignProgramModal from './TeamAssignProgramModal';
 import TeamCreateJoinSheet, { type CreateGroupPayload } from './TeamCreateJoinSheet';
+import GroupAssignWorkoutPanel from './GroupAssignWorkoutPanel';
+import GroupClassificationsPanel from './GroupClassificationsPanel';
 import GroupInviteMembersPanel from './GroupInviteMembersPanel';
+import GroupOverview from './GroupOverview';
 import TeamMemberDetail from './TeamMemberDetail';
 import TeamMembersTab from './TeamMembersTab';
 import TeamProgressTab from './TeamProgressTab';
@@ -18,6 +21,7 @@ import TeamProgramsTab from './TeamProgramsTab';
 import TeamSelector from './TeamSelector';
 import TeamSettingsTab from './TeamSettingsTab';
 import TeamWorkspaceTabs, { type TeamWorkspaceTab } from './TeamWorkspaceTabs';
+import type { GroupPermissionFlags } from '../../../lib/groups/groupPermissions';
 
 export type GroupsHubProps = {
   sessionUserId: string;
@@ -105,6 +109,8 @@ export type GroupsHubProps = {
   restoreTeamHistoryBusy?: boolean;
   onLeaveTeam: () => Promise<void>;
   onDeleteTeam: () => Promise<void>;
+  onSaveGroupPermissions?: (flags: GroupPermissionFlags) => Promise<void>;
+  onTransferOwnership?: (userId: string) => Promise<void>;
   sectionExercises: (workout: any, section: string) => any[];
   statusLabel: (s: string) => string;
 };
@@ -181,16 +187,18 @@ export default function GroupsHub(props: GroupsHubProps) {
     restoreTeamHistoryBusy = false,
     onLeaveTeam,
     onDeleteTeam,
+    onSaveGroupPermissions,
+    onTransferOwnership,
     sectionExercises,
     statusLabel,
   } = props;
 
-  const [workspaceTab, setWorkspaceTab] = useState<TeamWorkspaceTab>('members');
+  const [workspaceTab, setWorkspaceTab] = useState<TeamWorkspaceTab>('overview');
   const [sheetMode, setSheetMode] = useState<'create' | 'join' | null>(null);
   const [assignProgramId, setAssignProgramId] = useState<string | null>(null);
 
   useEffect(() => {
-    setWorkspaceTab('members');
+    setWorkspaceTab('overview');
   }, [activeTeam?.id]);
 
   const programRows = useMemo(
@@ -244,7 +252,26 @@ export default function GroupsHub(props: GroupsHubProps) {
     onWorkspaceTabChange?.(tab);
   };
 
+  const openMember = (member: any) => {
+    setWorkspaceTab('members');
+    onOpenMember(member);
+  };
+
   const renderWorkspaceContent = () => {
+    if (workspaceTab === 'overview' && activeTeam) {
+      return (
+        <GroupOverview
+          groupName={activeTeam.name}
+          role={activeTeam.my_role}
+          memberCount={members.length}
+          activeThisWeek={teamActiveCount}
+          setsThisWeek={teamTotalSets}
+          planName={groupProgramForAssign?.name}
+          onOpen={handleWorkspaceTabChange}
+        />
+      );
+    }
+
     if (workspaceTab === 'members') {
       if (memberWorkoutPanel) return memberWorkoutPanel;
       if (memberDashboard && canManage) {
@@ -324,32 +351,53 @@ export default function GroupsHub(props: GroupsHubProps) {
             onToggleMemberClassification={onToggleMemberClassification}
           />
           {canManage && activeTeam && (
-            <GroupInviteMembersPanel
-              teamId={activeTeam.id}
-              teamName={activeTeam.name}
-              inviteCode={activeTeam.invite_code}
-              accessToken={accessToken}
-              canManage={canManage}
-            />
+            <>
+              <GroupInviteMembersPanel
+                teamId={activeTeam.id}
+                teamName={activeTeam.name}
+                inviteCode={activeTeam.invite_code}
+                accessToken={accessToken}
+                canManage={canManage}
+              />
+              <GroupClassificationsPanel
+                classifications={classifications}
+                members={members}
+                memberClassificationIds={memberClassificationIds}
+                onCreate={onCreateClassification}
+                onDelete={onDeleteClassification}
+              />
+            </>
           )}
         </>
       );
     }
 
-    if (workspaceTab === 'programs') {
+    if (workspaceTab === 'training') {
       return (
-        <TeamProgramsTab
-          canManage={canManage}
-          programRows={programRows}
-          groupName={activeTeam?.name}
-          onOpenPrograms={() => onOpenGroupsProgramWizard('create')}
-          onDuplicate={(id) => onDuplicateProgram(id)}
-          onEdit={onEditTeamProgram}
-          onPublish={onPublishTeamProgram}
-          onAssign={(id) => setAssignProgramId(id)}
-          onDelete={onDeleteProgram}
-          defaultProgramId={activeTeam?.default_program_id}
-        />
+        <>
+          <TeamProgramsTab
+            canManage={canManage}
+            programRows={programRows}
+            groupName={activeTeam?.name}
+            onOpenPrograms={() => onOpenGroupsProgramWizard('create')}
+            onDuplicate={(id) => onDuplicateProgram(id)}
+            onEdit={onEditTeamProgram}
+            onPublish={onPublishTeamProgram}
+            onAssign={(id) => setAssignProgramId(id)}
+            onDelete={onDeleteProgram}
+            defaultProgramId={activeTeam?.default_program_id}
+          />
+          {canManage && (
+            <GroupAssignWorkoutPanel
+              groupProgram={groupProgramForAssign}
+              publishedTeamPrograms={assignWorkoutPrograms}
+              members={members}
+              classifications={classifications}
+              memberClassificationIds={memberClassificationIds}
+              onAssign={onAssignWorkout}
+            />
+          )}
+        </>
       );
     }
 
@@ -378,15 +426,10 @@ export default function GroupsHub(props: GroupsHubProps) {
           canManage={canManage}
           isOwner={isOwner}
           isSelfOwner={activeTeam.my_role === 'owner'}
-          classifications={classifications}
-          groupProgramForAssign={groupProgramForAssign}
-          publishedTeamPrograms={assignWorkoutPrograms}
-          memberClassificationIds={memberClassificationIds}
-          onCreateClassification={onCreateClassification}
-          onDeleteClassification={onDeleteClassification}
-          onAssignWorkout={onAssignWorkout}
           onLeaveTeam={onLeaveTeam}
           onDeleteTeam={onDeleteTeam}
+          onSaveGroupPermissions={onSaveGroupPermissions}
+          onTransferOwnership={onTransferOwnership}
         />
       );
     }
