@@ -51,8 +51,9 @@ export function runCatalogCleanupChecks() {
 
   const mapped = mappedByName();
   const catalog = mapped.map((row) => row.catalog);
-  assert(expectedMasterCatalogCount() === 262, `active master count should be 262, got ${expectedMasterCatalogCount()}`);
-  assert(catalog.length === 262, `mapped master count should be 262, got ${catalog.length}`);
+  const masterCount = expectedMasterCatalogCount();
+  assert(masterCount === 263, `active master count should be 263, got ${masterCount}`);
+  assert(catalog.length === masterCount, `mapped master count should be ${masterCount}, got ${catalog.length}`);
 
   assert(!textHasToken('Prowler Push', 'row'), 'word-boundary: Prowler does not match row');
   assert(textHasToken('Bent-Over Row', 'row'), 'word-boundary: Bent-Over Row matches row');
@@ -127,14 +128,20 @@ export function runCatalogCleanupChecks() {
 
   const diverging = mapped.find((row) => row.record.id === '261');
   const converging = mapped.find((row) => row.record.id === '262');
+  const seatedOhp = mapped.find((row) => row.record.id === '263');
+  const standingOhp = mapped.find((row) => row.record.id === '29');
   assert(diverging?.record.name === 'Diverging Row', 'master 261 is Diverging Row');
   assert(converging?.record.name === 'Converging Chest Press', 'master 262 is Converging Chest Press');
+  assert(seatedOhp?.record.name === 'Seated Overhead Press', 'master 263 is Seated Overhead Press');
   assert(diverging?.catalog.exercise_type === 'strength', 'Diverging Row is strength');
   assert(converging?.catalog.exercise_type === 'strength', 'Converging Chest Press is strength');
+  assert(seatedOhp?.catalog.exercise_type === 'strength', 'Seated Overhead Press is strength');
   const divMeta = diverging!.catalog.coaching_metadata;
   const convMeta = converging!.catalog.coaching_metadata;
+  const seatedMeta = seatedOhp!.catalog.coaching_metadata;
   assert(divMeta.exercise_kind === 'compound' && divMeta.movement_pattern === 'horizontal_pull', '261 movement/kind');
   assert(convMeta.exercise_kind === 'compound' && convMeta.movement_pattern === 'horizontal_push', '262 movement/kind');
+  assert(seatedMeta.exercise_kind === 'compound' && seatedMeta.movement_pattern === 'vertical_push', '263 movement/kind');
   assert(
     JSON.stringify(divMeta.hypertrophy_volume_credits) === JSON.stringify(NEW_MASTER_CLASSIFICATIONS['261'].hypertrophy_volume_credits),
     '261 volume credits'
@@ -143,6 +150,14 @@ export function runCatalogCleanupChecks() {
     JSON.stringify(convMeta.hypertrophy_volume_credits) === JSON.stringify(NEW_MASTER_CLASSIFICATIONS['262'].hypertrophy_volume_credits),
     '262 volume credits'
   );
+  assert(
+    JSON.stringify(seatedMeta.hypertrophy_volume_credits) === JSON.stringify(NEW_MASTER_CLASSIFICATIONS['263'].hypertrophy_volume_credits),
+    '263 volume credits'
+  );
+  const seatedEq = compatibleEquipmentOptions(seatedOhp!.catalog).map((eq) => eq.toLowerCase()).sort();
+  const standingEq = compatibleEquipmentOptions(standingOhp?.catalog).map((eq) => eq.toLowerCase()).sort();
+  assert(standingEq.length > 0, 'Overhead Press has compatible equipment');
+  assert(JSON.stringify(seatedEq) === JSON.stringify(standingEq), `Seated OHP equipment ${seatedEq.join(', ')} must match Overhead Press ${standingEq.join(', ')}`);
 
   const liveShaped = catalog.map((item) => ({
     ...item,
@@ -159,16 +174,18 @@ export function runCatalogCleanupChecks() {
     user_id: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
   };
   const archived = { ...liveShaped[0], id: 'archived-1', is_archived: true, name: 'Archived Master' };
-  assert(liveShaped.every(isAiGenerationEligibleRow), 'all 262 mapped masters are AI-eligible');
-  assert(selectAiGenerationCatalogRows([...liveShaped, custom, archived]).length === 262, 'AI candidates stay 262');
+  assert(liveShaped.every(isAiGenerationEligibleRow), `all ${masterCount} mapped masters are AI-eligible`);
+  assert(selectAiGenerationCatalogRows([...liveShaped, custom, archived]).length === masterCount, `AI candidates stay ${masterCount}`);
   assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '261')), 'Diverging Row is generation-eligible');
   assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '262')), 'Converging Chest Press is generation-eligible');
+  assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '263')), 'Seated Overhead Press is generation-eligible');
   assert(!isAiGenerationEligibleRow(archived), 'archived cards cannot enter generation');
   assert(!isAiGenerationEligibleRow(custom), 'user customs cannot enter generation');
   const adapted = adaptGenerationCatalog([...liveShaped, custom, archived], { allowFallback: false });
-  assert(adapted.length === 262, `adapted generation catalog is 262, got ${adapted.length}`);
+  assert(adapted.length === masterCount, `adapted generation catalog is ${masterCount}, got ${adapted.length}`);
   assert(adapted.some((ex) => ex.name === 'Diverging Row'), 'adapted catalog includes Diverging Row');
   assert(adapted.some((ex) => ex.name === 'Converging Chest Press'), 'adapted catalog includes Converging Chest Press');
+  assert(adapted.some((ex) => ex.name === 'Seated Overhead Press'), 'adapted catalog includes Seated Overhead Press');
   assert(adaptGenerationCatalog([], {}).length === FALLBACK_CATALOG.length, 'fallback still works on empty catalog');
 
   console.log('BIQ-0235 catalog cleanup checks passed.');

@@ -248,6 +248,22 @@ const ADD_ON_ROWS: MasterLibraryRecord[] = [
     design_notes: 'Distinct from linear Machine Chest Press (140) and Bench Press (1). Do not merge.',
     active: 'Yes',
   },
+  {
+    id: '263',
+    name: 'Seated Overhead Press',
+    aliases: 'Seated Shoulder Press; Seated Military Press; Seated Dumbbell Overhead Press; Seated Barbell Overhead Press',
+    primary_muscle: 'Shoulders',
+    secondary_muscles: 'Triceps; Side Delts',
+    movement_pattern: 'Vertical Push',
+    category: 'Compound',
+    default_equipment: 'Dumbbell',
+    compatible_equipment: 'Dumbbell; Barbell; Machine; Kettlebell; Smith Machine',
+    setup: 'Sit tall on a bench with back support if available, hands at shoulder level, ribs down.',
+    execution: 'Press overhead until the arms lock, then lower to the shoulders under control.',
+    form_cues: 'Stay seated tall; Ribs down; Wrists stacked',
+    design_notes: 'Distinct from standing Overhead Press (29) and Machine Shoulder Press (141). Same implements as Overhead Press.',
+    active: 'Yes',
+  },
 ];
 
 function splitList(raw?: string): string[] {
@@ -348,6 +364,28 @@ export function loadMasterLibraryRecords(): MasterLibraryRecord[] {
       ...reverseLunge,
       aliases: Array.from(aliases).join('; '),
       compatible_equipment: Array.from(compatible).join('; '),
+    });
+  }
+
+  const overheadPress = byId.get('29');
+  if (overheadPress) {
+    const compatible = new Set(splitList(overheadPress.compatible_equipment));
+    compatible.add(overheadPress.default_equipment || 'Dumbbell');
+    ['Dumbbell', 'Barbell', 'Machine', 'Kettlebell', 'Smith Machine'].forEach((item) => compatible.add(item));
+    byId.set('29', {
+      ...overheadPress,
+      default_equipment: overheadPress.default_equipment || 'Dumbbell',
+      compatible_equipment: Array.from(compatible).join('; '),
+    });
+  }
+
+  const seatedOverheadPress = byId.get('263');
+  const syncedOhp = byId.get('29');
+  if (seatedOverheadPress && syncedOhp) {
+    byId.set('263', {
+      ...seatedOverheadPress,
+      default_equipment: syncedOhp.default_equipment || seatedOverheadPress.default_equipment,
+      compatible_equipment: syncedOhp.compatible_equipment,
     });
   }
 

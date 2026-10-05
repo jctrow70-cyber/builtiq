@@ -1,0 +1,53 @@
+{
+  "generated_at": "2026-10-03T02:34:05.744Z",
+  "change": "BIQ-0237",
+  "status": "applied",
+  "schema_migration": false,
+  "phase_2b": "not_started",
+  "rollback_path": "C:\\Users\\JesseTrowbridge\\OneDrive - Tegria\\Documents\\GitHub\\builtiq\\docs\\catalog-overhaul\\seated-ohp-rollback.json",
+  "live_active_master_before": 262,
+  "live_active_master_after": 263,
+  "expected_local_count": 263,
+  "ai_candidates": 263,
+  "seated_overhead_press": {
+    "id": "0591301a-3655-43bc-9cbc-ba806c7345bd",
+    "name": "Seated Overhead Press",
+    "external_id": "263",
+    "exercise_type": "strength",
+    "equipment": "Dumbbell",
+    "compatible_equipment": [
+      "Dumbbell",
+      "Barbell",
+      "Machine",
+      "Kettlebell",
+      "Smith Machine"
+    ],
+    "aliases": [
+      "Seated Shoulder Press",
+      "Seated Military Press",
+      "Seated Dumbbell Overhead Press",
+      "Seated Barbell Overhead Press"
+    ],
+    "movement_pattern": "vertical_push",
+    "hypertrophy_volume_credits": [
+      {
+        "credit": 1,
+        "muscle": "front_delts"
+      },
+      {
+        "credit": 0.5,
+        "muscle": "triceps"
+      }
+    ],
+    "generation_eligible": true
+  },
+  "overhead_press_equipment": [
+    "Dumbbell",
+    "Barbell",
+    "Machine",
+    "Kettlebell",
+    "Smith Machine"
+  ],
+  "archived_modified": 0,
+  "custom_modified": 0
+}
