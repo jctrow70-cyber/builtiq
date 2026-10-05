@@ -337,8 +337,12 @@ drop policy if exists "programs_update_editor" on public.st_programs;
 create policy "programs_update_editor" on public.st_programs
   for update
   using (
-    owner_user_id = auth.uid()
-    or public.st_user_can_edit_shared_program(team_id)
+    (visibility = 'personal' and owner_user_id = auth.uid())
+    or (visibility = 'team' and public.st_user_can_edit_shared_program(team_id))
+  )
+  with check (
+    (visibility = 'personal' and owner_user_id = auth.uid())
+    or (visibility = 'team' and public.st_user_can_edit_shared_program(team_id))
   );
 
 -- Managers (and members only when the assign flag is on) may set the group default.

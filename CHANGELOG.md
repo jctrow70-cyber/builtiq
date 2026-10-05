@@ -11,6 +11,56 @@ Branch:
 Status:
 ```
 
+## BIQ-0239 - Group Program Edits Follow Current Membership
+
+Date: 2026-10-05
+Branch: main
+Status: Local / in progress
+
+### Summary
+
+A group program can no longer be updated just because `st_programs.owner_user_id` still names the person. Group template edits require the person's current Owner, Manager, or shared-edit membership. Personal programs, including just-me forks, stay with the personal owner.
+
+### Purpose
+
+After a demotion, removal, or ownership transfer, the old program owner field was still enough to pass the program update policy.
+
+### Changes
+
+- `programs_update_editor` checks visibility. Personal rows require `owner_user_id`. Team rows require `st_user_can_edit_shared_program`.
+- `st_user_can_edit_program` uses the same split. Muscle-target writes use that function.
+- Program generation refuses a group program when the caller is only a former owner or an ordinary member.
+
+### Files Changed
+
+- `supabase/migrations/20261005_054_group_architecture_phase1.sql`
+- `supabase/migrations/20261005_055_group_program_edit_auth.sql`
+- `lib/groups/permissions.ts`
+- `app/api/programs/generate/route.ts`
+- `app/components/programDesign/ProgramDesignHome.tsx`
+- `scripts/test-group-architecture.ts`
+
+### Database Changes
+
+If `20261005_054` has not been applied, apply the revised file. It has no `is_primary` column. If `054` was already applied, apply `20261005_055_group_program_edit_auth.sql`. Do not apply these from the app.
+
+### Testing Steps
+
+- `node .\node_modules\tsx\dist\cli.mjs scripts/test-group-architecture.ts`
+- Owner and Manager can edit a group program. An ordinary Member cannot.
+- A Manager demoted to Member cannot. A removed member cannot.
+- A former Owner who is now only a Member cannot edit, even if `owner_user_id` still names them. A former Owner who is now a Manager can edit, and cannot transfer ownership.
+- A Member can edit only when `members_can_edit_shared_workouts` is on.
+- A person can edit their own personal fork and cannot edit someone else's.
+
+### Known Issues
+
+- Invitation tokens, notifications, and chat are not built. See the Phase 1.1 audit.
+
+### Recommended Commit Message
+
+BIQ-0239: Authorize group program edits from current membership.
+
 ## BIQ-0238 - Group Architecture Phase 1
 
 Date: 2026-10-05

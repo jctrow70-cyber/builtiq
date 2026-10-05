@@ -681,7 +681,7 @@ export default function ProgramDesignHome({
           program={editing}
           programs={programs}
           ownerUserId={userId}
-          canEdit={!followBusy && canEditProgramRecord(editing, editingRole, groupPermissionFlags(teams.find((t) => t.id === editing.team_id)))}
+          canEdit={!followBusy && canEditProgramRecord(editing, editingRole, groupPermissionFlags(teams.find((t) => t.id === editing.team_id)), userId)}
           canEditGroupTemplate={canEditGroup}
           isFollowing={followingThis}
           groups={teams}

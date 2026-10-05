@@ -19,6 +19,31 @@ Impact:
 
 ---
 
+## Decision 083 - Group Program Edits Follow Current Membership
+
+Date: 2026-10-05
+Status: Accepted
+Category: Groups
+
+### Decision
+
+A group program is editable by the current Group Owner, the current Manager, or a Member only when that group has shared-edit permission. `st_programs.owner_user_id` does not authorize a group template. A personal program, including a just-me fork, remains editable by its personal owner. `source_program_id` does not turn that fork into the shared template.
+
+### Reason
+
+The program update policy allowed anyone still named in `owner_user_id` to change the row after they had been demoted, removed, or replaced as owner.
+
+### Alternatives Considered
+
+- Clear `owner_user_id` on every role change — rejected; the column still identifies who created a personal program
+- Treat every program with `source_program_id` as a group template — rejected; that would lock people out of their own forks
+
+### Impact
+
+Apply `20261005_055` when `054` is already on the database. Otherwise the revised `054` is enough.
+
+---
+
 ## Decision 082 - Participation Slots Are Not the Training Calendar
 
 Date: 2026-10-05

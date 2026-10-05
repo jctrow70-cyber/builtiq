@@ -139,15 +139,43 @@ export function editTargetVisibility(
   return null;
 }
 
+/**
+ * Group templates follow the actor's current membership.
+ * Personal programs, including just-me forks, follow owner_user_id.
+ * source_program_id does not make a personal fork a shared template.
+ */
+export function canEditProgramByRelationship(input: {
+  visibility?: string | null;
+  ownerUserId?: string | null;
+  actorUserId?: string | null;
+  membershipStatus?: string | null;
+  role?: string | null;
+  flags?: GroupPermissionFlags | null;
+}): boolean {
+  if ((input.visibility || 'personal') === 'team') {
+    if (input.membershipStatus && input.membershipStatus !== 'active') return false;
+    return canEditSharedGroupProgram(input.role, input.flags);
+  }
+  if (input.ownerUserId && input.actorUserId) return input.ownerUserId === input.actorUserId;
+  return true;
+}
+
 /** Members may log a group plan. Shared template edits follow Edit Shared rules. */
 export function canEditProgramRecord(
-  program: { visibility?: string | null } | null | undefined,
+  program: { visibility?: string | null; owner_user_id?: string | null } | null | undefined,
   role: string | null | undefined,
-  flags?: GroupPermissionFlags | null
+  flags?: GroupPermissionFlags | null,
+  actorUserId?: string | null
 ): boolean {
   if (!program) return false;
-  if (program.visibility === 'team') return canEditSharedGroupProgram(role, flags);
-  return true;
+  return canEditProgramByRelationship({
+    visibility: program.visibility,
+    ownerUserId: program.owner_user_id,
+    actorUserId,
+    role,
+    flags,
+    membershipStatus: 'active',
+  });
 }
 
 /** Role value to persist — BIQ-0043-P2 stores `manager` in DB (editor backfilled). */

@@ -19,9 +19,42 @@ import { adaptGenerationCatalog } from '../../../../lib/scienceEngine/generation
 import { runGenerationPipeline } from '../../../../lib/scienceEngine/generation';
 import { attachGenerationRunProgram } from '../../../../lib/scienceEngine/generation/log';
 import type { GenerationMode } from '../../../../lib/scienceEngine/generation/types';
+import { canCreateSharedGroupProgram, canEditSharedGroupProgram } from '../../../../lib/groups/permissions';
+import { groupPermissionFlags } from '../../../../lib/groups/groupPermissions';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
+
+type ProgramAuthRow = {
+  owner_user_id?: string | null;
+  team_id?: string | null;
+  visibility?: string | null;
+};
+
+/** Group edits follow current membership. Personal forks follow owner_user_id. */
+async function actorCanEditProgram(
+  supabase: { from: (table: string) => any },
+  userId: string,
+  program: ProgramAuthRow
+): Promise<boolean> {
+  if (program.visibility !== 'team') return program.owner_user_id === userId;
+  if (!program.team_id) return false;
+  const { data: membership } = await supabase
+    .from('st_team_members')
+    .select('role, status')
+    .eq('team_id', program.team_id)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (!membership || membership.status !== 'active') return false;
+  const { data: team } = await supabase
+    .from('st_teams')
+    .select(
+      'members_can_create_shared_workouts, members_can_edit_shared_workouts, members_can_assign_workouts, members_can_view_member_progress'
+    )
+    .eq('id', program.team_id)
+    .maybeSingle();
+  return canEditSharedGroupProgram(membership.role, groupPermissionFlags(team));
+}
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -125,19 +158,7 @@ async function generateProgramPost(request: Request) {
       return NextResponse.json({ error: 'Program not found' }, { status: 404 });
     }
     existingProgram = existing;
-    const owns = existingProgram.owner_user_id === user.id;
-    if (!owns && existingProgram.visibility === 'team' && existingProgram.team_id) {
-      const { data: membership } = await supabase
-        .from('st_team_members')
-        .select('role')
-        .eq('team_id', existingProgram.team_id)
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .maybeSingle();
-      if (!membership || !['owner', 'editor', 'manager'].includes(membership.role)) {
-        return NextResponse.json({ error: 'You cannot edit this program' }, { status: 403 });
-      }
-    } else if (!owns) {
+    if (!(await actorCanEditProgram(supabase, user.id, existingProgram))) {
       return NextResponse.json({ error: 'You cannot edit this program' }, { status: 403 });
     }
     if (existingProgram.visibility === 'team' && existingProgram.team_id) {
@@ -167,19 +188,7 @@ async function generateProgramPost(request: Request) {
       if (workoutProgramError || !workoutProgram) {
         return NextResponse.json({ error: 'Program not found' }, { status: 404 });
       }
-      const owns = workoutProgram.owner_user_id === user.id;
-      if (!owns && workoutProgram.visibility === 'team' && workoutProgram.team_id) {
-        const { data: membership } = await supabase
-          .from('st_team_members')
-          .select('role')
-          .eq('team_id', workoutProgram.team_id)
-          .eq('user_id', user.id)
-          .eq('status', 'active')
-          .maybeSingle();
-        if (!membership || !['owner', 'editor', 'manager'].includes(membership.role)) {
-          return NextResponse.json({ error: 'You cannot edit this workout' }, { status: 403 });
-        }
-      } else if (!owns) {
+      if (!(await actorCanEditProgram(supabase, user.id, workoutProgram))) {
         return NextResponse.json({ error: 'You cannot edit this workout' }, { status: 403 });
       }
     }
@@ -200,17 +209,26 @@ async function generateProgramPost(request: Request) {
   // Single-workout generate stays one day and does not rewrite the parent program.
   let weeks = targetWorkout ? 1 : generationWeeksOf(existingProgram, body?.weeks);
 
-  if (mode === 'team') {
+  if (mode === 'team' && !existingProgram) {
     if (!teamId) return NextResponse.json({ error: 'teamId required for team programs' }, { status: 400 });
-    const { data: membership } = await supabase
-      .from('st_team_members')
-      .select('role')
-      .eq('team_id', teamId)
-      .eq('user_id', user.id)
-      .eq('status', 'active')
-      .maybeSingle();
-    if (!membership || !['owner', 'editor', 'manager'].includes(membership.role)) {
-      return NextResponse.json({ error: 'Only group owners and managers can create group programs' }, { status: 403 });
+    const [{ data: membership }, { data: team }] = await Promise.all([
+      supabase
+        .from('st_team_members')
+        .select('role, status')
+        .eq('team_id', teamId)
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .maybeSingle(),
+      supabase
+        .from('st_teams')
+        .select(
+          'members_can_create_shared_workouts, members_can_edit_shared_workouts, members_can_assign_workouts, members_can_view_member_progress'
+        )
+        .eq('id', teamId)
+        .maybeSingle(),
+    ]);
+    if (!membership || !canCreateSharedGroupProgram(membership.role, groupPermissionFlags(team))) {
+      return NextResponse.json({ error: 'You cannot create a group program' }, { status: 403 });
     }
   }
 

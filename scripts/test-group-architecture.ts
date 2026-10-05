@@ -9,6 +9,7 @@ import {
   canAdministerGroup,
   canAssignInGroup,
   canCustomizeGroupProgramForMe,
+  canEditProgramByRelationship,
   canEditProgramRecord,
   canEditSharedGroupProgram,
   canSetGroupDefaultProgram,
@@ -411,5 +412,77 @@ assert.equal(
 );
 assert.equal(groupSourceKey('basketball'), 'group:basketball');
 assert.doesNotMatch(migration, /source_kind in \('personal', 'group', 'workout'\)/);
+
+const authMigration = readFileSync(
+  new URL('../supabase/migrations/20261005_055_group_program_edit_auth.sql', import.meta.url),
+  'utf8'
+);
+assert.match(migration, /visibility = 'team' and public\.st_user_can_edit_shared_program\(team_id\)/);
+assert.match(migration, /visibility = 'personal' and owner_user_id = auth\.uid\(\)/);
+assert.doesNotMatch(migration, /is_primary boolean/);
+assert.match(authMigration, /visibility = 'team' and public\.st_user_can_edit_shared_program\(team_id\)/);
+assert.doesNotMatch(migration, /owner_user_id = auth\.uid\(\)\s+or public\.st_user_can_edit_shared_program/);
+assert.doesNotMatch(authMigration, /owner_user_id = auth\.uid\(\)\s+or public\.st_user_can_edit_team/);
+
+const flagsOn = { ...DEFAULT_GROUP_PERMISSIONS, members_can_edit_shared_workouts: true };
+assert.equal(
+  canEditProgramByRelationship({ visibility: 'team', ownerUserId: 'former', actorUserId: 'owner', membershipStatus: 'active', role: 'owner' }),
+  true
+);
+assert.equal(
+  canEditProgramByRelationship({ visibility: 'team', ownerUserId: 'former', actorUserId: 'manager', membershipStatus: 'active', role: 'manager' }),
+  true
+);
+assert.equal(
+  canEditProgramByRelationship({ visibility: 'team', ownerUserId: 'member', actorUserId: 'member', membershipStatus: 'active', role: 'member' }),
+  false
+);
+assert.equal(
+  canEditProgramByRelationship({ visibility: 'team', ownerUserId: 'demoted', actorUserId: 'demoted', membershipStatus: 'active', role: 'member' }),
+  false
+);
+assert.equal(
+  canEditProgramByRelationship({ visibility: 'team', ownerUserId: 'gone', actorUserId: 'gone', membershipStatus: 'removed', role: 'manager' }),
+  false
+);
+assert.equal(canAdministerGroup('manager'), false);
+assert.equal(
+  canEditProgramByRelationship({ visibility: 'team', ownerUserId: 'old-owner', actorUserId: 'old-owner', membershipStatus: 'active', role: 'manager' }),
+  true
+);
+assert.equal(
+  canEditProgramByRelationship({ visibility: 'team', ownerUserId: 'old-owner', actorUserId: 'old-owner', membershipStatus: 'active', role: 'member' }),
+  false
+);
+assert.equal(
+  canEditProgramByRelationship({
+    visibility: 'team',
+    ownerUserId: 'someone-else',
+    actorUserId: 'member',
+    membershipStatus: 'active',
+    role: 'member',
+    flags: flagsOn,
+  }),
+  true
+);
+assert.equal(
+  canEditProgramByRelationship({
+    visibility: 'personal',
+    ownerUserId: 'jesse',
+    actorUserId: 'jesse',
+    role: 'member',
+  }),
+  true
+);
+assert.equal(
+  canEditProgramByRelationship({
+    visibility: 'personal',
+    ownerUserId: 'amy',
+    actorUserId: 'jesse',
+    membershipStatus: 'active',
+    role: 'manager',
+  }),
+  false
+);
 
 console.log('group architecture checks passed');
