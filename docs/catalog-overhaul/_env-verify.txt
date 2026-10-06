@@ -1,0 +1,24 @@
+main
+67c0cc3fac59d674265a6ed3188a0ddd2c300da0
+67c0cc3fac59d674265a6ed3188a0ddd2c300da0
+BIQ-0243: Add BuildIQ notification foundation
+2026-10-05 22:32:50 -0400
+---STATUS--- 
+## main...origin/main
+ M app/components/groups/GroupsHub.tsx
+ M app/components/groups/TeamMemberDetail.tsx
+ M app/components/groups/TeamSettingsTab.tsx
+ M app/globals.css
+ M app/page.tsx
+ M lib/groups/index.ts
+ M package.json
+?? app/components/groups/GroupMessages.tsx
+?? docs/catalog-overhaul/_env-verify.cmd
+?? docs/catalog-overhaul/_env-verify.txt
+?? lib/groups/communication.ts
+?? supabase/migrations/20261005_058_group_communication.sql
+---REMOTE--- 
+67c0cc3fac59d674265a6ed3188a0ddd2c300da0
+origin/develop
+main:67c0cc3BIQ-0243: Add BuildIQ notification foundation
+---BIQ0235--- 

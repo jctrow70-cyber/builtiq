@@ -1,0 +1,35 @@
+===BUNDLE=== 
+contextScore=true
+opts.section=true
+section: panel.section=true
+sec === "strength"=false
+strengthLike ? 90=true
+compatibleEquipmentOptions=true
+contextScore_idx=12991736
+function contextScore(item, section) {\n    const sec = String(section || \"\").toLowerCase();\n    if (!sec) return 0;\n    const cardio = catalogItemIsCardio(item);\n    const strengthLike = (0,_exerciseTypes__WEBPACK_IMPORTED_MODULE_3__.isStrengthLike)(resolvedExerciseType(item)) && !cardio;\n    if (sec === \"cardio\") return cardio ? 90 : -50;\n    if (sec === \"strength\") return strengthLike ? 90 : cardio ? -8
+panel.section_idx=8761969
+er)(equipment) ? equipment : undefined\n        },\n        limit: 60,\n        section: panel.section\n    };\n    const filterOptions = (0,_lib_training_catal
+===PROD_HTML=== 
+html_len=6848
+===PROD_BUILDID=== 
+HTTP/1.1 404 Not Found
+Accept-Ranges: bytes
+Access-Control-Allow-Origin: *
+Age: 0
+Cache-Control: public, max-age=0, must-revalidate
+Content-Disposition: inline; filename="not-found.txt"
+Content-Length: 9
+Content-Type: text/plain; charset=utf-8
+Date: Tue, 06 Oct 2026 13:01:40 GMT
+Etag: "9d1ead73e678fa2f51a70a933b0bf017"
+Last-Modified: Tue, 06 Oct 2026 13:01:40 GMT
+Server: Vercel
+Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+X-Matched-Path: /_next/static/not-found.txt
+X-Vercel-Cache: MISS
+X-Vercel-Id: iad1::f5gr4-1791291700722-9f6e245b780a
+
+Not Found 
+===LOCAL_BUILDID=== 
+ 
+DONE 

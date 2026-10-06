@@ -1,0 +1,90 @@
+===LOG=== 
+67c0cc3 BIQ-0243: Add BuildIQ notification foundation
+265ccea BIQ-0242: Secure Group invitations and Quick Join
+c114b44 BIQ-0241: Refine Groups workspace around daily training and member activity
+c174c32 BIQ-0240: Give Groups an Overview, Training, Members, Progress, and Settings workspace.
+bff4e79 test
+c0a466d BIQ-0239: Authorize group program edits from current membership.
+45070d8 test
+7661906 test
+5fb9108 BIQ-0238: Record group participation without a second current-program flag.
+af08704 BIQ-0238: Separate group ownership, manager permissions, and multi-source training enrollment.
+ce9c7d6 test
+b0d98d4 test
+fd96b37 BIQ 235
+a61d25f 0482e61 — BIQ-0234 Use power-family rest in the effective duration estimate
+0482e61 BIQ-0234 Use power-family rest in the effective duration estimate
+737bc58 test
+b6dd1dc test
+ec19e13 update
+aaca322 fix
+0ace67b test
+===BRANCHES=== 
+  Develop
+  cursor/biq-0005-exercise-catalog
+  cursor/superset-catalog-collapse-23ec
+  cursor/team-coach-architecture-7d3b
+  cursor/workout-log-persist-23ec
+  feature/workout-logging-redesign
+* main
+  preview/groups-v2-biq-0043
+  preview/nutrition-ux-biq-0135
+  preview/workout-logging-biq-0047
+  remotes/origin/Develop
+  remotes/origin/HEAD -> origin/main
+  remotes/origin/cursor/ai-activity-setup-wizard-eaa7
+  remotes/origin/cursor/attach-program-from-activity-sheet-eaa7
+  remotes/origin/cursor/biq-0005-exercise-catalog
+  remotes/origin/cursor/biq-0021-changelog-complete-976f
+  remotes/origin/cursor/body-progress-measurements-0e59
+  remotes/origin/cursor/branch-consolidation-976f
+  remotes/origin/cursor/bridge-strength-workouts-eaa7
+  remotes/origin/cursor/exercise-form-guide-thumbnails-8e87
+  remotes/origin/cursor/fix-catalog-sources-migration-23ec
+  remotes/origin/cursor/fix-custom-weeks-generation-c29a
+  remotes/origin/cursor/fix-import-column-fallback-eaa7
+  remotes/origin/cursor/fix-import-missing-columns-eaa7
+  remotes/origin/cursor/fix-individual-assign-team-default-964e
+  remotes/origin/cursor/fix-logging-week-dates-976f
+  remotes/origin/cursor/fix-member-live-program-visibility-0e59
+  remotes/origin/cursor/fix-mobile-load-flash-e5c1
+  remotes/origin/cursor/fix-nutrition-macro-rounding-0e59
+  remotes/origin/cursor/fix-progress-nav-e1bd
+  remotes/origin/cursor/fix-same-day-deadlift-c29a
+  remotes/origin/cursor/fix-set-spread-build-eaa7
+  remotes/origin/cursor/fix-signout-crash-bf79
+  remotes/origin/cursor/fix-training-calendar-day-click-f329
+  remotes/origin/cursor/group-member-invites-f329
+  remotes/origin/cursor/group-personal-follow-rules-f329
+  remotes/origin/cursor/group-push-to-members-eaa7
+  remotes/origin/cursor/groups-progress-restore-assign-workout-964e
+  remotes/origin/cursor/plan-gen-bug-report-bf79
+  remotes/origin/cursor/progress-nav-and-history-964e
+  remotes/origin/cursor/setup-dev-environment-1f6d
+  remotes/origin/cursor/superset-catalog-collapse-23ec
+  remotes/origin/cursor/team-coach-architecture-7d3b
+  remotes/origin/cursor/training-log-date-customize-168f
+  remotes/origin/cursor/workout-log-persist-23ec
+  remotes/origin/feature/workout-logging-redesign
+  remotes/origin/main
+  remotes/origin/preview/groups-v2-biq-0043
+  remotes/origin/preview/nutrition-ux-biq-0135
+  remotes/origin/preview/workout-logging-biq-0047
+===FILE_HEAD=== 
+7661906 test
+ce9c7d6 test
+fd96b37 BIQ 235
+abc83af BIQ-0207 Add Olympic lift cards to the master library
+a959a81 test
+===SHOW_261=== 
+HEAD:lib/training/masterCatalog.ts:221:    name: 'Diverging Row',
+===SHOW_SECTION=== 
+HEAD:lib/training/catalogSearch.ts:96:  section?: string;
+HEAD:lib/training/catalogSearch.ts:151:function contextScore(item: any, section?: string) {
+HEAD:lib/training/catalogSearch.ts:162:function relevanceScore(item: any, tokens: string[], section?: string): number {
+===DIFF_SEARCH=== 
+===BLAME_COUNT=== 
+    id: '261',
+    id: '262',
+    id: '263',
+export function expectedMasterCatalogCount() {

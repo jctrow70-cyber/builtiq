@@ -1,0 +1,144 @@
+BIQ-0235 catalog cleanup checks passed.
+Strength row top: Row, Bent-Over Row, Cable Row to Neck, Chest-Supported Row, Diverging Row, High Row, Landmine Row, Low Row, Machine Row, Meadows Row
+Cardio row top: Row Ergometer, Row, Bent-Over Row, Cable Row to Neck, Chest-Supported Row, Diverging Row, High Row, Landmine Row
+{
+  "host": "qruiwfzzrylrirlxzdqx.supabase.co",
+  "active": 263,
+  "has_261": true,
+  "has_262": true,
+  "has_263": true,
+  "cleanup": "passed",
+  "top": [
+    {
+      "rank": 1,
+      "name": "Row",
+      "external_id": "12",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "aliases": [
+        "Seated Row"
+      ]
+    },
+    {
+      "rank": 2,
+      "name": "Bent-Over Row",
+      "external_id": "13",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "aliases": [
+        "Barbell Row",
+        "Bent Row"
+      ]
+    },
+    {
+      "rank": 3,
+      "name": "Cable Row to Neck",
+      "external_id": "156",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "aliases": [
+        "High Rope Row"
+      ]
+    },
+    {
+      "rank": 4,
+      "name": "Chest-Supported Row",
+      "external_id": "15",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "aliases": [
+        "Supported Row"
+      ]
+    },
+    {
+      "rank": 5,
+      "name": "Diverging Row",
+      "external_id": "261",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "aliases": [
+        "Iso-Lateral Row",
+        "Hammer Strength Row",
+        "Diverging Machine Row",
+        "Independent Row"
+      ]
+    },
+    {
+      "rank": 6,
+      "name": "High Row",
+      "external_id": "18",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "aliases": [
+        "High Cable Row"
+      ]
+    },
+    {
+      "rank": 7,
+      "name": "Landmine Row",
+      "external_id": "16",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "aliases": [
+        "T-Bar Landmine Row"
+      ]
+    },
+    {
+      "rank": 8,
+      "name": "Low Row",
+      "external_id": "19",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "aliases": [
+        "Low Cable Row"
+      ]
+    },
+    {
+      "rank": 9,
+      "name": "Machine Row",
+      "external_id": "142",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "aliases": [
+        "Seated Row Machine"
+      ]
+    },
+    {
+      "rank": 10,
+      "name": "Meadows Row",
+      "external_id": "189",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "aliases": [
+        "Landmine One-Arm Row"
+      ]
+    }
+  ],
+  "reverse_eq": [
+    "Dumbbell",
+    "Bodyweight",
+    "Barbell",
+    "Kettlebell",
+    "Smith Machine"
+  ]
+}

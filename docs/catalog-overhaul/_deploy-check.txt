@@ -1,0 +1,12 @@
+===DEVELOP=== 
+50061c02dfdb0a0cf71049b85b46c81232eef5a6
+50061c0Update lifts
+2026-07-04 14:50:18 -0400
+===MAIN_HAS_ROW=== 
+HEAD:app/page.tsx:2744: const panelSearchOpts=addExercisePanel?{query:addExercisePanel.query||'',filters:{...(addExercisePanel.filters||emptyAddPanelFilters()),availableEquipment:hasEquipmentFilter(equipmentForSearch)?equipmentForSearch:undefined},limit:60,section:addExercisePanel.section}:null;
+HEAD:app/components/training/AddExercisePanel.tsx:51:    section: panel.section,
+===HEAD_PAGE_DIFF=== 
+ app/page.tsx | 11 +++++++++--
+ 1 file changed, 9 insertions(+), 2 deletions(-)
+===GH=== 
+===DEPLOYMENTS=== 

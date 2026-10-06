@@ -1,0 +1,384 @@
+{
+  "generated_at": "2026-10-06T12:57:41.707Z",
+  "wrote_supabase": false,
+  "supabase_host": "qruiwfzzrylrirlxzdqx.supabase.co",
+  "active_master_count": 263,
+  "archived_master_count": 0,
+  "requested": {
+    "13": {
+      "id": "b4bbb290-e036-4981-9318-5eda3021f8d1",
+      "name": "Bent-Over Row",
+      "external_id": "13",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "master_category": "Compound",
+      "exercise_kind": "compound",
+      "movement_pattern": "horizontal_pull",
+      "aliases": [
+        "Barbell Row",
+        "Bent Row"
+      ],
+      "compatible_equipment": [
+        "Barbell",
+        "Dumbbell",
+        "Kettlebell"
+      ],
+      "is_archived": false,
+      "user_id": null,
+      "external_source": "builtiq_master"
+    },
+    "14": {
+      "id": "103403c0-4e2e-4aa6-a2b6-4e2002746e78",
+      "name": "One-Arm Row",
+      "external_id": "14",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "master_category": "Compound",
+      "exercise_kind": "compound",
+      "movement_pattern": "horizontal_pull",
+      "aliases": [
+        "Single-Arm Row"
+      ],
+      "compatible_equipment": [
+        "Dumbbell",
+        "Cable",
+        "Kettlebell"
+      ],
+      "is_archived": false,
+      "user_id": null,
+      "external_source": "builtiq_master"
+    },
+    "15": {
+      "id": "1695e444-3146-42aa-af3b-ebc2e9b110f4",
+      "name": "Chest-Supported Row",
+      "external_id": "15",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "master_category": "Compound",
+      "exercise_kind": "compound",
+      "movement_pattern": "horizontal_pull",
+      "aliases": [
+        "Supported Row"
+      ],
+      "compatible_equipment": [
+        "Dumbbell",
+        "Machine",
+        "Barbell"
+      ],
+      "is_archived": false,
+      "user_id": null,
+      "external_source": "builtiq_master"
+    },
+    "63": {
+      "id": "a42ebeaf-d52e-431c-9494-e01a7f54d92e",
+      "name": "Reverse Lunge",
+      "external_id": "63",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "master_category": "Unilateral",
+      "exercise_kind": "compound",
+      "movement_pattern": "lunge",
+      "aliases": [
+        "Backward Lunge",
+        "Rear Lunge"
+      ],
+      "compatible_equipment": [
+        "Dumbbell",
+        "Bodyweight",
+        "Barbell",
+        "Kettlebell",
+        "Smith Machine"
+      ],
+      "is_archived": false,
+      "user_id": null,
+      "external_source": "builtiq_master"
+    },
+    "142": {
+      "id": "3dbe8693-4929-42ab-b23c-e401ccc5e2d6",
+      "name": "Machine Row",
+      "external_id": "142",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "master_category": "Compound",
+      "exercise_kind": "compound",
+      "movement_pattern": "horizontal_pull",
+      "aliases": [
+        "Seated Row Machine"
+      ],
+      "compatible_equipment": [
+        "Machine"
+      ],
+      "is_archived": false,
+      "user_id": null,
+      "external_source": "builtiq_master"
+    },
+    "216": {
+      "id": "bd6018c5-3bde-4217-ab37-54cc0809d1a5",
+      "name": "Bicycle Crunch",
+      "external_id": "216",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "master_category": "Core",
+      "exercise_kind": "isolation",
+      "movement_pattern": "core_flexion",
+      "aliases": [
+        "Bicycles"
+      ],
+      "compatible_equipment": [
+        "Bodyweight"
+      ],
+      "is_archived": false,
+      "user_id": null,
+      "external_source": "builtiq_master"
+    },
+    "242": {
+      "id": "eae46ace-0eab-41c7-9568-5a4683d2fc46",
+      "name": "Row Ergometer",
+      "external_id": "242",
+      "exercise_type": "cardio",
+      "category": "cardio",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "master_category": "Cardio",
+      "exercise_kind": "compound",
+      "movement_pattern": "horizontal_pull",
+      "aliases": [
+        "Indoor Rowing"
+      ],
+      "compatible_equipment": [
+        "Rower"
+      ],
+      "is_archived": false,
+      "user_id": null,
+      "external_source": "builtiq_master"
+    },
+    "261": {
+      "id": "9518a05d-4b70-435b-bf9f-833a165ff3da",
+      "name": "Diverging Row",
+      "external_id": "261",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "master_category": "Compound",
+      "exercise_kind": "compound",
+      "movement_pattern": "horizontal_pull",
+      "aliases": [
+        "Iso-Lateral Row",
+        "Hammer Strength Row",
+        "Diverging Machine Row",
+        "Independent Row"
+      ],
+      "compatible_equipment": [
+        "Machine"
+      ],
+      "is_archived": false,
+      "user_id": null,
+      "external_source": "builtiq_master"
+    },
+    "262": {
+      "id": "1a40cfc5-7aae-4960-bd27-d46f869e42a2",
+      "name": "Converging Chest Press",
+      "external_id": "262",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "master_category": "Compound",
+      "exercise_kind": "compound",
+      "movement_pattern": "horizontal_push",
+      "aliases": [
+        "Converging Machine Chest Press",
+        "Iso-Lateral Chest Press",
+        "Hammer Strength Chest Press"
+      ],
+      "compatible_equipment": [
+        "Machine"
+      ],
+      "is_archived": false,
+      "user_id": null,
+      "external_source": "builtiq_master"
+    },
+    "263": {
+      "id": "0591301a-3655-43bc-9cbc-ba806c7345bd",
+      "name": "Seated Overhead Press",
+      "external_id": "263",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "master_category": "Compound",
+      "exercise_kind": "compound",
+      "movement_pattern": "vertical_push",
+      "aliases": [
+        "Seated Shoulder Press",
+        "Seated Military Press",
+        "Seated Dumbbell Overhead Press",
+        "Seated Barbell Overhead Press"
+      ],
+      "compatible_equipment": [
+        "Dumbbell",
+        "Barbell",
+        "Machine",
+        "Kettlebell",
+        "Smith Machine"
+      ],
+      "is_archived": false,
+      "user_id": null,
+      "external_source": "builtiq_master"
+    }
+  },
+  "strength_row_top10": [
+    {
+      "rank": 1,
+      "name": "Row",
+      "external_id": "12",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "aliases": [
+        "Seated Row"
+      ]
+    },
+    {
+      "rank": 2,
+      "name": "Bent-Over Row",
+      "external_id": "13",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "aliases": [
+        "Barbell Row",
+        "Bent Row"
+      ]
+    },
+    {
+      "rank": 3,
+      "name": "Cable Row to Neck",
+      "external_id": "156",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "aliases": [
+        "High Rope Row"
+      ]
+    },
+    {
+      "rank": 4,
+      "name": "Chest-Supported Row",
+      "external_id": "15",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "aliases": [
+        "Supported Row"
+      ]
+    },
+    {
+      "rank": 5,
+      "name": "Diverging Row",
+      "external_id": "261",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "aliases": [
+        "Iso-Lateral Row",
+        "Hammer Strength Row",
+        "Diverging Machine Row",
+        "Independent Row"
+      ]
+    },
+    {
+      "rank": 6,
+      "name": "High Row",
+      "external_id": "18",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "aliases": [
+        "High Cable Row"
+      ]
+    },
+    {
+      "rank": 7,
+      "name": "Landmine Row",
+      "external_id": "16",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "aliases": [
+        "T-Bar Landmine Row"
+      ]
+    },
+    {
+      "rank": 8,
+      "name": "Low Row",
+      "external_id": "19",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "aliases": [
+        "Low Cable Row"
+      ]
+    },
+    {
+      "rank": 9,
+      "name": "Machine Row",
+      "external_id": "142",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "aliases": [
+        "Seated Row Machine"
+      ]
+    },
+    {
+      "rank": 10,
+      "name": "Meadows Row",
+      "external_id": "189",
+      "exercise_type": "strength",
+      "category": "strength",
+      "progression_type": "weight",
+      "measurement_type": "reps",
+      "aliases": [
+        "Landmine One-Arm Row"
+      ]
+    }
+  ],
+  "reverse_lunge_equipment": [
+    "Dumbbell",
+    "Bodyweight",
+    "Barbell",
+    "Kettlebell",
+    "Smith Machine"
+  ],
+  "reverse_lunge_aliases": [
+    "Backward Lunge",
+    "Rear Lunge"
+  ],
+  "has_261": true,
+  "has_262": true,
+  "has_263": true,
+  "catalog_cleanup_check": "passed"
+}
