@@ -12,3 +12,4 @@ export * from './invitationSecurity';
 export * from './trainingSources';
 export * from './progressScope';
 export * from './workspaceTabs';
+export * from './communication';

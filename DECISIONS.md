@@ -19,6 +19,39 @@ Impact:
 
 ---
 
+## Decision 088 - Group Chat Is Separate From Notifications and Activity
+
+Date: 2026-10-06
+Status: Accepted
+Category: Groups
+
+### Decision
+
+A group has one primary group conversation and any number of direct conversations. Direct conversations belong to one group and one pair of people. The same two people can have a different direct conversation in another group. Ordinary member-to-member messages stay off until the owner turns them on.
+
+Unread chat state is `last_read_at` on `st_conversation_members`. The Messages badge counts conversations with unread messages. Each row in the list shows that conversation’s unread message count. The notification bell is not the source of either number.
+
+A new message publishes one `group_message` or `direct_message` notification per recipient per conversation. Later messages update that same notification instead of adding another bell row. Opening the conversation marks the chat read and marks that notification read. Marking the bell notification read does not mark the chat read.
+
+Access is current group membership. A leftover conversation-member row does not keep a removed person in the chat. Turning off Group Chat hides it from members and blocks send and read. Owners and managers still use it. Turning off manager messages blocks new sends and leaves existing history readable while the member remains in the group. Soft delete clears the message body. The sender is always `auth.uid()`.
+
+### Reason
+
+Chat, alerts, and system activity answer different questions. One message table can hold group and direct text now, and a classification conversation later, without copying workouts into the transcript. A timestamp read cursor stays valid when a message is edited or deleted. One bell row per unread conversation is calmer than one row per message. Checking active membership on every read closes the hole where a removed person would keep access through an old membership row.
+
+### Alternatives Considered
+
+- Separate message tables for group and direct chat — rejected; both are text in a conversation
+- `last_read_message_id` — rejected; a deleted message makes that cursor awkward, and a timestamp answers “what arrived after I looked”
+- One notification per message — rejected; rapid messages would fill the bell
+- Use notification read state as chat unread — rejected; acknowledging an alert is not the same as reading the thread
+- Delete history when a permission is turned off — rejected; members keep history they already received, and Group Chat is hidden rather than erased
+- Hard-delete messages — rejected; the row remains and the body is cleared so normal reads cannot return the text
+
+### Impact
+
+Apply migration 20261005_058 after 057. Existing workout permission defaults stay false. Communication defaults are a new capability: group chat and manager messages start on, member-to-member stays off. `st_publish_notification` still ignores duplicates. Conversation alerts use a separate upsert.
+
 ## Decision 087 - Notifications Are Per User, Not Chat or the Group Feed
 
 Date: 2026-10-05

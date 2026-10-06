@@ -48,6 +48,7 @@ type TeamMemberDetailProps = {
   onSetParticipation?: (member: any, active: boolean) => void;
   onRemoveMember?: (member: any) => void;
   onToggleMemberClassification?: (member: any, classificationId: string, active: boolean) => void;
+  onMessageMember?: (member: any) => void;
 };
 
 export default function TeamMemberDetail(props: TeamMemberDetailProps) {
@@ -75,6 +76,7 @@ export default function TeamMemberDetail(props: TeamMemberDetailProps) {
     onSetParticipation,
     onRemoveMember,
     onToggleMemberClassification,
+    onMessageMember,
   } = props;
   const teamPrograms = programs.filter((p: any) => p.visibility === 'team');
   const memberName = member.display_name || 'Member';
@@ -89,6 +91,11 @@ export default function TeamMemberDetail(props: TeamMemberDetailProps) {
           Back
         </button>
       </div>
+      {onMessageMember && (
+        <button type="button" className="btn small secondary" style={{ marginTop: 12 }} onClick={() => onMessageMember(member)}>
+          Message member
+        </button>
+      )}
       {canManage && (
         <div className="team-member-manage" style={{ marginTop: 12 }}>
           <p className="muted">Membership</p>

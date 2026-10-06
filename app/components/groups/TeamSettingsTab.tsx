@@ -7,6 +7,10 @@ import {
   groupPermissionFlags,
   type GroupPermissionFlags,
 } from '../../../lib/groups/groupPermissions';
+import {
+  groupCommunicationFlags,
+  type GroupCommunicationFlags,
+} from '../../../lib/groups/communication';
 import { groupSettingsAccess } from '../../../lib/groups/workspaceTabs';
 
 type TeamSettingsTabProps = {
@@ -17,6 +21,24 @@ type TeamSettingsTabProps = {
   onSaveGroupPermissions?: (flags: GroupPermissionFlags) => Promise<void>;
   onTransferOwnership?: (userId: string) => Promise<void>;
 };
+
+const COMMUNICATION_FIELDS: { key: keyof GroupCommunicationFlags; label: string; help: string }[] = [
+  {
+    key: 'members_can_use_group_chat',
+    label: 'Members can use Group Chat',
+    help: 'Off hides Group Chat from members. Owners and managers can still use it. History stays.',
+  },
+  {
+    key: 'members_can_message_managers',
+    label: 'Members can message managers',
+    help: 'Off stops new messages to the Owner and Managers. Members can still read messages already sent.',
+  },
+  {
+    key: 'members_can_message_members',
+    label: 'Members can message members',
+    help: 'Off by default. Leave this off for trainer groups.',
+  },
+];
 
 const PERMISSION_FIELDS: { key: keyof GroupPermissionFlags; label: string; help: string }[] = [
   {
@@ -52,6 +74,7 @@ export default function TeamSettingsTab({
   const access = groupSettingsAccess(activeTeam?.my_role);
   const transferCandidates = members.filter((m: any) => m.user_id !== activeTeam?.owner_user_id);
   const [flags, setFlags] = useState<GroupPermissionFlags>(() => groupPermissionFlags(activeTeam));
+  const [communication, setCommunication] = useState<GroupCommunicationFlags>(() => groupCommunicationFlags(activeTeam));
   const [managersCanInviteManagers, setManagersCanInviteManagers] = useState(!!activeTeam?.managers_can_invite_managers);
   const [quickJoinEnabled, setQuickJoinEnabled] = useState(true);
   const [quickJoinCode, setQuickJoinCode] = useState('');
@@ -61,6 +84,7 @@ export default function TeamSettingsTab({
 
   useEffect(() => {
     setFlags(groupPermissionFlags(activeTeam));
+    setCommunication(groupCommunicationFlags(activeTeam));
     setManagersCanInviteManagers(!!activeTeam?.managers_can_invite_managers);
   }, [activeTeam]);
 
@@ -88,6 +112,14 @@ export default function TeamSettingsTab({
       if (error && !/managers_can_invite_managers|schema cache|does not exist/i.test(error.message || '')) {
         window.alert(error.message);
         return;
+      }
+      const { error: communicationError } = await supabase.from('st_teams').update(communication).eq('id', activeTeam.id);
+      if (communicationError) {
+        window.alert(
+          /members_can_|schema cache|does not exist/i.test(communicationError.message || '')
+            ? 'Run migration 20261005_058_group_communication.sql in Supabase first.'
+            : communicationError.message
+        );
       }
       await onSaveGroupPermissions(flags);
     } finally {
@@ -197,6 +229,22 @@ export default function TeamSettingsTab({
               <p className="muted">Off by default. Managers can always invite Members. Save permissions to keep this choice.</p>
             </>
           )}
+
+          <h3 style={{ marginTop: 16 }}>Communication</h3>
+          {COMMUNICATION_FIELDS.map((field) => (
+            <label key={field.key} className="remember-row" style={{ display: 'block', marginTop: 10 }}>
+              <input
+                type="checkbox"
+                checked={communication[field.key]}
+                disabled={saving}
+                onChange={(e) => setCommunication((prev) => ({ ...prev, [field.key]: e.target.checked }))}
+              />{' '}
+              {field.label}
+              <span className="muted" style={{ display: 'block', marginLeft: 22 }}>
+                {field.help}
+              </span>
+            </label>
+          ))}
 
           <h3 style={{ marginTop: 16 }}>Member permissions</h3>
           {PERMISSION_FIELDS.map((field) => (

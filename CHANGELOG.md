@@ -11,6 +11,57 @@ Branch:
 Status:
 ```
 
+## BIQ-0244 - Group Communication
+
+Date: 2026-10-06
+Branch: main
+Status: Local / in progress
+
+### Summary
+
+Groups can now hold one primary Group Chat and private Owner/Manager conversations with members. Messages are text, live through Supabase Realtime, and keep their own unread state. A new message updates one bell notification for that conversation.
+
+### Purpose
+
+People in a group need a place to talk that is separate from workout history and from the notification bell. This phase covers that conversation, without attachments, threads, or a cross-group inbox.
+
+### Files changed
+
+- supabase/migrations/20261005_058_group_communication.sql
+- lib/groups/communication.ts
+- lib/groups/index.ts
+- app/components/groups/GroupMessages.tsx
+- app/components/groups/GroupsHub.tsx
+- app/components/groups/TeamMemberDetail.tsx
+- app/components/groups/TeamSettingsTab.tsx
+- app/page.tsx
+- app/globals.css
+- scripts/test-group-communication.ts
+- package.json
+- DECISIONS.md
+
+### Database changes
+
+Migration 058 adds `members_can_use_group_chat` (default true), `members_can_message_managers` (default true), and `members_can_message_members` (default false) on `st_teams`. It adds `st_conversations`, `st_conversation_members`, and `st_messages`. Writes go through security definer functions. `st_messages` is added to the `supabase_realtime` publication. Apply after 057. Do not apply from the app.
+
+### Testing steps
+
+- `node ./node_modules/typescript/bin/tsc --noEmit --pretty false`
+- `node ./node_modules/tsx/dist/cli.mjs scripts/test-group-communication.ts`
+- Existing group, invitation, notification, unfollow, and customize-for-me scripts
+- After 058 is applied and you are signed in: open a group, confirm Messages sits beside Settings, send a Group Chat message, open a direct conversation from a member, edit and delete your own message, and confirm the header badge counts conversations
+- At about 390px, check the header, message list, thread, and composer
+- Confirm a removed member cannot load messages
+- Login, logout, and history views are unchanged by this phase
+
+### Known issues
+
+Migration 058 is not applied remotely. Signed-in chat cannot be exercised until that migration is applied and a session exists. Realtime delivery needs the publication step in 058. Attachments, reactions, threads, typing, presence, voice, video, classification chat, a global inbox, and the group activity feed are not in this phase.
+
+### Recommended commit message
+
+BIQ-0244: Add Group communication and realtime messaging
+
 ## BIQ-0243 - BuildIQ Notification Foundation
 
 Date: 2026-10-05

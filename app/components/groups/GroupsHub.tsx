@@ -22,7 +22,10 @@ import TeamProgramsTab from './TeamProgramsTab';
 import TeamSelector from './TeamSelector';
 import TeamSettingsTab from './TeamSettingsTab';
 import TeamWorkspaceTabs, { type TeamWorkspaceTab } from './TeamWorkspaceTabs';
+import GroupMessages, { MessageIconMark } from './GroupMessages';
 import type { GroupPermissionFlags } from '../../../lib/groups/groupPermissions';
+import { canStartDirectConversation, groupCommunicationFlags } from '../../../lib/groups/communication';
+import { supabase } from '../../../lib/supabaseClient';
 
 export type GroupsHubProps = {
   sessionUserId: string;
@@ -112,6 +115,8 @@ export type GroupsHubProps = {
   onDeleteTeam: () => Promise<void>;
   onSaveGroupPermissions?: (flags: GroupPermissionFlags) => Promise<void>;
   onTransferOwnership?: (userId: string) => Promise<void>;
+  pendingConversation?: { teamId: string; conversationId: string } | null;
+  onPendingConversationHandled?: () => void;
   sectionExercises: (workout: any, section: string) => any[];
   statusLabel: (s: string) => string;
 };
@@ -190,6 +195,8 @@ export default function GroupsHub(props: GroupsHubProps) {
     onDeleteTeam,
     onSaveGroupPermissions,
     onTransferOwnership,
+    pendingConversation = null,
+    onPendingConversationHandled,
     sectionExercises,
     statusLabel,
   } = props;
@@ -197,6 +204,10 @@ export default function GroupsHub(props: GroupsHubProps) {
   const [workspaceTab, setWorkspaceTab] = useState<TeamWorkspaceTab>('overview');
   const [sheetMode, setSheetMode] = useState<'create' | 'join' | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [messagesOpen, setMessagesOpen] = useState(false);
+  const [unreadConversations, setUnreadConversations] = useState(0);
+  const [composeUserId, setComposeUserId] = useState<string | null>(null);
+  const [openedConversationId, setOpenedConversationId] = useState<string | null>(null);
   const [managePlans, setManagePlans] = useState(false);
   const [assignProgramId, setAssignProgramId] = useState<string | null>(null);
   const [pendingInvites, setPendingInvites] = useState(0);
@@ -205,7 +216,42 @@ export default function GroupsHub(props: GroupsHubProps) {
     setWorkspaceTab('overview');
     setSettingsOpen(false);
     setManagePlans(false);
+    setMessagesOpen(false);
+    setComposeUserId(null);
+    setOpenedConversationId(null);
   }, [activeTeam?.id]);
+
+  useEffect(() => {
+    if (!activeTeam?.id) {
+      setUnreadConversations(0);
+      return;
+    }
+    let cancelled = false;
+    const teamId = activeTeam.id;
+    async function refreshUnread() {
+      const { data, error } = await supabase.rpc('st_group_unread_conversation_count', { p_team_id: teamId });
+      if (!cancelled && !error) setUnreadConversations(Number(data) || 0);
+    }
+    void refreshUnread();
+    const channel = supabase
+      .channel(`group-unread:${teamId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'st_messages' }, () => {
+        void refreshUnread();
+      })
+      .subscribe();
+    return () => {
+      cancelled = true;
+      void supabase.removeChannel(channel);
+    };
+  }, [activeTeam?.id]);
+
+  useEffect(() => {
+    if (!pendingConversation || pendingConversation.teamId !== activeTeam?.id) return;
+    setComposeUserId(null);
+    setOpenedConversationId(pendingConversation.conversationId);
+    setMessagesOpen(true);
+    onPendingConversationHandled?.();
+  }, [pendingConversation, activeTeam?.id, onPendingConversationHandled]);
 
   useEffect(() => {
     if (!canManage || !accessToken || !activeTeam?.id) {
@@ -359,6 +405,23 @@ export default function GroupsHub(props: GroupsHubProps) {
             onSetParticipation={onSetParticipation}
             onRemoveMember={memberDashboard.user_id === sessionUserId ? undefined : onRemoveMember}
             onToggleMemberClassification={onToggleMemberClassification}
+            onMessageMember={
+              memberDashboard.user_id !== sessionUserId &&
+              canStartDirectConversation({
+                callerRole: activeTeam?.my_role,
+                callerActive: true,
+                targetRole: memberDashboard.role,
+                targetActive: true,
+                samePerson: false,
+                flags: groupCommunicationFlags(activeTeam),
+              })
+                ? (member) => {
+                    setOpenedConversationId(null);
+                    setComposeUserId(member.user_id);
+                    setMessagesOpen(true);
+                  }
+                : undefined
+            }
           />
         );
       }
@@ -479,6 +542,24 @@ export default function GroupsHub(props: GroupsHubProps) {
             <div className="team-header-actions">
               <button
                 type="button"
+                className="btn secondary team-header-messages"
+                aria-label={
+                  unreadConversations > 0
+                    ? `Messages, ${unreadConversations} conversations with unread messages`
+                    : 'Messages'
+                }
+                onClick={() => {
+                  setComposeUserId(null);
+                  setOpenedConversationId(null);
+                  setMessagesOpen(true);
+                }}
+              >
+                <MessageIconMark />
+                <span className="team-header-messages-label">Messages</span>
+                {unreadConversations > 0 && <span className="team-message-badge">{unreadConversations}</span>}
+              </button>
+              <button
+                type="button"
                 className="btn secondary team-header-settings"
                 aria-label="Group settings"
                 onClick={() => setSettingsOpen(true)}
@@ -516,6 +597,29 @@ export default function GroupsHub(props: GroupsHubProps) {
             />
           </div>
         </div>
+      )}
+
+      {messagesOpen && activeTeam && (
+        <GroupMessages
+          teamId={activeTeam.id}
+          teamName={activeTeam.name || 'Group'}
+          currentUserId={sessionUserId}
+          role={activeTeam.my_role}
+          team={activeTeam}
+          members={members}
+          initialConversationId={openedConversationId}
+          initialUserId={composeUserId}
+          onClose={() => {
+            setMessagesOpen(false);
+            setComposeUserId(null);
+            setOpenedConversationId(null);
+          }}
+          onUnreadChange={() => {
+            void supabase.rpc('st_group_unread_conversation_count', { p_team_id: activeTeam.id }).then(({ data, error }) => {
+              if (!error) setUnreadConversations(Number(data) || 0);
+            });
+          }}
+        />
       )}
 
       <TeamCreateJoinSheet
