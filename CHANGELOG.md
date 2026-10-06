@@ -11,6 +11,63 @@ Branch:
 Status:
 ```
 
+## BIQ-0242 - Secure Group Invitations and Quick Join
+
+Date: 2026-10-05
+Branch: main
+Status: Local / in progress
+
+### Summary
+
+Email invitations are one-time links tied to the invited address. Quick Join stays a separate member-only code the owner can turn off or regenerate.
+
+### Purpose
+
+The old email contained the permanent group code, and joining with that code could apply a pending Manager invite without proving the email belonged to the signed-in account.
+
+### Files changed
+
+- supabase/migrations/20261005_056_secure_group_invitations.sql
+- lib/groups/invitationSecurity.ts
+- lib/groups/invitationToken.ts
+- lib/groups/invites.ts
+- lib/email/groupInviteEmail.ts
+- app/api/groups/invite/route.ts
+- app/api/groups/invite/resend/route.ts
+- app/api/groups/invite/revoke/route.ts
+- app/invite/[token]/page.tsx
+- app/components/groups/GroupInviteMembersPanel.tsx
+- app/components/groups/TeamSettingsTab.tsx
+- app/components/groups/TeamCreateJoinSheet.tsx
+- app/components/groups/GroupsHub.tsx
+- app/page.tsx
+- scripts/test-group-invitations.ts
+- DECISIONS.md
+
+### Database changes
+
+Apply manually after 054 and 055: supabase/migrations/20261005_056_secure_group_invitations.sql
+
+Extends st_group_invites with token_hash, expires_at, accepted_by_user_id, updated_at, and classification_ids. Adds st_group_quick_join and st_teams.managers_can_invite_managers. Revokes existing pending invites that have no token. Does not apply remotely from the app.
+
+### Testing steps
+
+- Owner invites a Member and a Manager from Members. The email has a Join Group link and does not include the group code.
+- A Manager can invite a Member and cannot invite a Manager unless the owner turns that on.
+- The invited account can open the link, sign in or create an account, and join. A different account cannot.
+- Resend, cancel, expired, and already-used links behave as labeled.
+- Owner can turn Quick Join off and regenerate the code. The old code stops working. Quick Join joins as Member.
+- Joining does not change the personal training enrollment or followed program.
+- Mobile: invitation review and the pending list stay usable at a narrow width.
+
+### Known issues
+
+The signed-in invitation flow cannot be exercised until migration 056 is applied. Approval-required Quick Join is not in this phase. Group chat and the notification center are not in this phase.
+
+### Recommended commit message
+
+BIQ-0242: Secure Group invitations and Quick Join
+
 ## BIQ-0241 - Refine the Groups Workspace
 
 Date: 2026-10-05

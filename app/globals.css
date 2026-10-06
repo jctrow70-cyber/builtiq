@@ -157,7 +157,9 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .team-invite-code-box{margin:10px 0;padding:12px;border-radius:12px;border:1px solid var(--line);background:#0b1119;font-size:15px}
 .team-invite-mailto-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
 .team-invite-pending h3{margin:0 0 8px;font-size:14px}
-.team-invite-pending-row{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.team-invite-pending-row{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line)}
+.team-invite-pending-row .actions{display:flex;gap:8px;flex-wrap:wrap}
+.team-invite-pending-row .btn{min-height:44px}
 .team-invite-pending-row b{display:block}
 .team-invite-pending-row .muted{display:block;font-size:11px;margin-top:2px}
 .team-assign-target-chips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}

@@ -295,6 +295,13 @@ export default function Page(){
  const planEditRef=useRef<{workout:any,program:any}|null>(null);
 
  useEffect(()=>{
+  if(typeof window!=='undefined'&&window.location.pathname==='/'){
+   const pendingInvite=sessionStorage.getItem('biq_group_invite_token');
+   if(pendingInvite){
+    window.location.replace('/invite/'+encodeURIComponent(pendingInvite));
+    return;
+   }
+  }
   supabase.auth.getSession().then(({data})=>{setSession(data.session);setAuthReady(true);});
   const{data}=supabase.auth.onAuthStateChange((_e,s)=>setSession(s));
   return()=>data.subscription.unsubscribe();
@@ -535,10 +542,10 @@ export default function Page(){
     const data=await res.json().catch(()=>({}));
     if(!res.ok){
      inviteSummary=data?.error||'Team created, but invites could not be sent.';
-    } else if(data.sent){
-     inviteSummary=`Sent ${data.sent} email invite${data.sent===1?'':'s'}.`;
-    } else if(data.saved){
-     inviteSummary=`Saved ${data.saved} invite${data.saved===1?'':'s'}. Share code ${code} if email is not configured.`;
+    } else if(data.emailed){
+     inviteSummary=`Sent ${data.emailed} invitation email${data.emailed===1?'':'s'}.`;
+    } else if(data.created){
+     inviteSummary=`Saved ${data.created} invitation${data.created===1?'':'s'}, but the email was not sent. Open Members and use Resend.`;
     }
    }catch(e:any){
     inviteSummary=e?.message||'Team created, but invites could not be sent.';
@@ -556,9 +563,6 @@ export default function Page(){
   const{data:t,error}=await supabase.rpc('st_join_team_by_invite',{p_invite_code:inviteCode,p_display_name:displayName});
   if(error||!t)throw new Error(error?.message||'Team not found');
   const teamId=typeof t==='object'&&t&&'id' in t?String((t as any).id):null;
-  if(teamId&&session?.user?.email){
-   try{await supabase.rpc('st_mark_group_invite_accepted',{p_team_id:teamId,p_email:session.user.email});}catch(_){/* optional until migration applied */}
-  }
   await loadTeams();
   setMode('team');
   setSelectedTeamId(teamId||(t as any)?.id);

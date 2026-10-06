@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { roleLabel } from '../../../lib/groups';
+import { supabase } from '../../../lib/supabaseClient';
 import {
   groupPermissionFlags,
   type GroupPermissionFlags,
@@ -51,21 +52,78 @@ export default function TeamSettingsTab({
   const access = groupSettingsAccess(activeTeam?.my_role);
   const transferCandidates = members.filter((m: any) => m.user_id !== activeTeam?.owner_user_id);
   const [flags, setFlags] = useState<GroupPermissionFlags>(() => groupPermissionFlags(activeTeam));
+  const [managersCanInviteManagers, setManagersCanInviteManagers] = useState(!!activeTeam?.managers_can_invite_managers);
+  const [quickJoinEnabled, setQuickJoinEnabled] = useState(true);
+  const [quickJoinCode, setQuickJoinCode] = useState('');
   const [transferUserId, setTransferUserId] = useState('');
   const [saving, setSaving] = useState(false);
+  const [quickJoinNote, setQuickJoinNote] = useState('');
 
   useEffect(() => {
     setFlags(groupPermissionFlags(activeTeam));
+    setManagersCanInviteManagers(!!activeTeam?.managers_can_invite_managers);
   }, [activeTeam]);
 
+  useEffect(() => {
+    if (!access.showAdministration || !activeTeam?.id) return;
+    let cancelled = false;
+    supabase.rpc('st_group_quick_join_info', { p_team_id: activeTeam.id }).then(({ data, error }) => {
+      if (cancelled || error || !data) return;
+      setQuickJoinEnabled(!!data.enabled);
+      setQuickJoinCode(data.code ? String(data.code) : '');
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTeam?.id, access.showAdministration]);
+
   async function savePermissions() {
-    if (!onSaveGroupPermissions) return;
+    if (!onSaveGroupPermissions || !activeTeam?.id) return;
     setSaving(true);
     try {
+      const { error } = await supabase
+        .from('st_teams')
+        .update({ managers_can_invite_managers: managersCanInviteManagers })
+        .eq('id', activeTeam.id);
+      if (error && !/managers_can_invite_managers|schema cache|does not exist/i.test(error.message || '')) {
+        window.alert(error.message);
+        return;
+      }
       await onSaveGroupPermissions(flags);
     } finally {
       setSaving(false);
     }
+  }
+
+  async function setQuickJoin(enabled: boolean) {
+    if (!activeTeam?.id) return;
+    setSaving(true);
+    setQuickJoinNote('');
+    const { error } = await supabase.rpc('st_set_group_quick_join', { p_team_id: activeTeam.id, p_enabled: enabled });
+    setSaving(false);
+    if (error) {
+      window.alert(/could not find the function|schema cache/i.test(error.message || '')
+        ? 'Run migration 20261005_056_secure_group_invitations.sql in Supabase first.'
+        : error.message);
+      return;
+    }
+    setQuickJoinEnabled(enabled);
+    setQuickJoinNote(enabled ? 'Quick Join is on.' : 'Quick Join is off. New members need an email invitation.');
+  }
+
+  async function regenerateCode() {
+    if (!activeTeam?.id) return;
+    if (!window.confirm('Regenerate the group code? The current code will stop working immediately.')) return;
+    setSaving(true);
+    setQuickJoinNote('');
+    const { data, error } = await supabase.rpc('st_regenerate_group_code', { p_team_id: activeTeam.id });
+    setSaving(false);
+    if (error) {
+      window.alert(error.message);
+      return;
+    }
+    setQuickJoinCode(String(data || ''));
+    setQuickJoinNote('New code saved. The previous code no longer works.');
   }
 
   async function transfer() {
@@ -104,11 +162,39 @@ export default function TeamSettingsTab({
 
           {access.showInviteCode && (
             <>
-              <label style={{ marginTop: 12 }}>Group code</label>
-              <p>
-                <b>{activeTeam?.invite_code || '—'}</b>
-              </p>
-              <p className="muted">Anyone with this code can join as a Member. Managers can also share it from Members → Invite.</p>
+              <h3 style={{ marginTop: 16 }}>Quick Join</h3>
+              <label className="remember-row" style={{ display: 'block', marginTop: 10 }}>
+                <input
+                  type="checkbox"
+                  checked={quickJoinEnabled}
+                  disabled={saving}
+                  onChange={(e) => void setQuickJoin(e.target.checked)}
+                />{' '}
+                Allow Quick Join
+              </label>
+              <p className="muted">People with the code join as Members. Turn this off for invitation-only groups.</p>
+              {quickJoinEnabled && quickJoinCode && (
+                <>
+                  <label style={{ marginTop: 12 }}>Group code</label>
+                  <p>
+                    <b>{quickJoinCode}</b>
+                  </p>
+                </>
+              )}
+              <button type="button" className="btn small secondary" style={{ marginTop: 8 }} disabled={saving} onClick={() => void regenerateCode()}>
+                Regenerate code
+              </button>
+              {quickJoinNote && <p className="muted">{quickJoinNote}</p>}
+              <label className="remember-row" style={{ display: 'block', marginTop: 10 }}>
+                <input
+                  type="checkbox"
+                  checked={managersCanInviteManagers}
+                  disabled={saving}
+                  onChange={(e) => setManagersCanInviteManagers(e.target.checked)}
+                />{' '}
+                Managers can invite Managers
+              </label>
+              <p className="muted">Off by default. Managers can always invite Members. Save permissions to keep this choice.</p>
             </>
           )}
 

@@ -4,6 +4,7 @@ export type GroupInviteDraft = {
   email: string;
   displayName: string;
   role: GroupInviteRole;
+  classificationId?: string | null;
 };
 
 export type GroupInviteRecord = {
@@ -13,6 +14,9 @@ export type GroupInviteRecord = {
   display_name?: string | null;
   role: string;
   status: string;
+  display_status?: string;
+  classification_ids?: string[] | null;
+  expires_at?: string | null;
   last_sent_at?: string | null;
   accepted_at?: string | null;
   created_at?: string | null;
@@ -34,10 +38,12 @@ export function normalizeInviteDrafts(drafts: GroupInviteDraft[]): GroupInviteDr
     const email = normalizeInviteEmail(draft.email);
     if (!isValidInviteEmail(email) || seen.has(email)) continue;
     seen.add(email);
+    const classificationId = String(draft.classificationId || '').trim();
     out.push({
       email,
       displayName: String(draft.displayName || '').trim(),
       role: draft.role === 'manager' ? 'manager' : 'member',
+      classificationId: classificationId || null,
     });
   }
   return out;
@@ -50,19 +56,13 @@ export function emptyInviteDraft(): GroupInviteDraft {
 export function inviteMailtoHref(input: {
   email: string;
   groupName: string;
-  inviteCode: string;
+  joinUrl: string;
   inviterName?: string | null;
-  appUrl?: string | null;
 }): string {
-  const app = (input.appUrl || '').replace(/\/$/, '') || 'BuildIQ Health';
   const inviter = input.inviterName?.trim() || 'A BuildIQ Health member';
-  const subject = encodeURIComponent(`Join ${input.groupName} on BuildIQ Health`);
+  const subject = encodeURIComponent(`${inviter} invited you to join ${input.groupName} on BuildIQ Health`);
   const body = encodeURIComponent(
-    `${inviter} invited you to join "${input.groupName}" on BuildIQ Health.\n\n` +
-      `1. Open ${app}\n` +
-      `2. Sign in or create an account\n` +
-      `3. Go to Groups → Join Group\n` +
-      `4. Enter invite code: ${input.inviteCode}\n`
+    `${inviter} invited you to join ${input.groupName} on BuildIQ Health.\n\nJoin Group: ${input.joinUrl}\n`
   );
   return `mailto:${encodeURIComponent(input.email)}?subject=${subject}&body=${body}`;
 }

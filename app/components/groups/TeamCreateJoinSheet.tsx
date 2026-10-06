@@ -1,10 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { roleLabel } from '../../../lib/groups';
 import {
   emptyInviteDraft,
-  inviteMailtoHref,
   isValidInviteEmail,
   normalizeInviteDrafts,
   type GroupInviteDraft,
@@ -248,28 +246,11 @@ export default function TeamCreateJoinSheet({ mode, onClose, onCreate, onJoin }:
             </p>
             {createdCode && (
               <p className="team-invite-code-box">
-                Invite code: <b>{createdCode}</b>
+                Quick Join code: <b>{createdCode}</b>
               </p>
             )}
+            <p className="muted">Anyone with this code can join as a Member. Email invitations use a private link instead of this code.</p>
             {inviteSummary && <p className="muted">{inviteSummary}</p>}
-            {normalizeInviteDrafts(inviteDrafts).length > 0 && createdCode && (
-              <div className="team-invite-mailto-list">
-                <p className="muted">Open a mail draft if email sending is not configured:</p>
-                {normalizeInviteDrafts(inviteDrafts).map((invite) => (
-                  <a
-                    key={invite.email}
-                    className="btn small secondary"
-                    href={inviteMailtoHref({
-                      email: invite.email,
-                      groupName: name.trim(),
-                      inviteCode: createdCode,
-                    })}
-                  >
-                    Email {invite.displayName || invite.email} ({roleLabel(invite.role)})
-                  </a>
-                ))}
-              </div>
-            )}
             <button type="button" className="btn green full" style={{ marginTop: 12 }} onClick={resetAndClose}>
               Done
             </button>

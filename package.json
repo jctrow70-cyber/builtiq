@@ -19,7 +19,7 @@
     "import:convert:free-exercise-db": "tsx scripts/import-exercises/convertFreeExerciseDb.ts",
     "import:convert:spreadsheet": "tsx scripts/import-exercises/convertSpreadsheet.ts",
     "test:science": "tsx lib/scienceEngine/acceptanceCheck.ts",
-    "test:groups": "tsx scripts/test-group-architecture.ts && tsx scripts/test-unfollow-training.ts && tsx scripts/test-customize-for-me.ts"
+    "test:groups": "tsx scripts/test-group-architecture.ts && tsx scripts/test-unfollow-training.ts && tsx scripts/test-customize-for-me.ts && tsx scripts/test-group-invitations.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

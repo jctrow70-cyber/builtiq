@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { sendGroupInviteEmail } from '../../../../lib/email/groupInviteEmail';
 import { hasEmailConfig } from '../../../../lib/email/sendEmail';
 import { canManageGroup, roleLabel } from '../../../../lib/groups';
+import { canInviteGroupRole, deriveInviteStatus, recordGroupInvitationEvent } from '../../../../lib/groups/invitationSecurity';
 import {
   isValidInviteEmail,
   normalizeInviteDrafts,
@@ -18,6 +19,9 @@ type InviteBody = {
   appUrl?: string;
 };
 
+const INVITE_COLUMNS =
+  'id, team_id, email, display_name, role, status, classification_ids, expires_at, accepted_at, accepted_by_user_id, last_sent_at, created_at, updated_at';
+
 async function requireTeamManager(supabase: ReturnType<typeof createSupabaseFromRequest>['supabase'], userId: string, teamId: string) {
   const { data: membership, error } = await supabase
     .from('st_team_members')
@@ -25,14 +29,30 @@ async function requireTeamManager(supabase: ReturnType<typeof createSupabaseFrom
     .eq('team_id', teamId)
     .eq('user_id', userId)
     .maybeSingle();
-  if (error) return { error: error.message, membership: null as any };
+  if (error) return { error: error.message, membership: null as null };
   if (!membership || membership.status !== 'active' || !canManageGroup(membership.role)) {
-    return { error: 'Only owners and managers can invite members.', membership: null as any };
+    return { error: 'Only owners and managers can invite members.', membership: null as null };
   }
   return { error: null, membership };
 }
 
-/** POST — create/update pending invites and email them. */
+function migrationHint(message: string): string | null {
+  if (/st_create_group_invite|st_group_quick_join|schema cache|does not exist|could not find the function/i.test(message)) {
+    return 'Run migration 20261005_056_secure_group_invitations.sql in Supabase first.';
+  }
+  return null;
+}
+
+function appOrigin(request: Request, bodyUrl?: string): string {
+  const fromBody = String(bodyUrl || '').trim().replace(/\/$/, '');
+  if (fromBody) return fromBody;
+  const envUrl = String(process.env.NEXT_PUBLIC_APP_URL || '').trim().replace(/\/$/, '');
+  if (envUrl) return envUrl;
+  const host = request.headers.get('origin') || '';
+  return host.replace(/\/$/, '');
+}
+
+/** POST — create a secure invitation and email a one-time link. */
 export async function POST(request: Request) {
   const { supabase, token } = createSupabaseFromRequest(request);
   const { user, error: authError } = await requireAuthUser(supabase, token);
@@ -56,23 +76,23 @@ export async function POST(request: Request) {
   }
 
   const { error: manageError, membership } = await requireTeamManager(supabase, user.id, teamId);
-  if (manageError) return NextResponse.json({ error: manageError }, { status: 403 });
+  if (manageError || !membership) return NextResponse.json({ error: manageError || 'Not allowed' }, { status: 403 });
 
   const { data: team, error: teamError } = await supabase
     .from('st_teams')
-    .select('id, name, invite_code')
+    .select('id, name, managers_can_invite_managers, is_archived')
     .eq('id', teamId)
     .maybeSingle();
   if (teamError || !team) {
     return NextResponse.json({ error: teamError?.message || 'Group not found' }, { status: 404 });
   }
 
-  const inviterName = membership?.display_name || user.email || 'A BuildIQ Health member';
-  const appUrl = String(body?.appUrl || process.env.NEXT_PUBLIC_APP_URL || '').trim() || undefined;
-
+  const inviterName = membership.display_name || 'A group member';
+  const origin = appOrigin(request, body?.appUrl);
   const results: Array<{
     email: string;
     ok: boolean;
+    created: boolean;
     emailed: boolean;
     inviteId?: string;
     error?: string;
@@ -81,75 +101,87 @@ export async function POST(request: Request) {
   for (const invite of invites) {
     const email = normalizeInviteEmail(invite.email);
     if (!isValidInviteEmail(email)) {
-      results.push({ email, ok: false, emailed: false, error: 'Invalid email' });
+      results.push({ email, ok: false, created: false, emailed: false, error: 'Invalid email' });
+      continue;
+    }
+    if (
+      !canInviteGroupRole({
+        callerRole: membership.role,
+        targetRole: invite.role,
+        managersCanInviteManagers: !!team.managers_can_invite_managers,
+      })
+    ) {
+      results.push({ email, ok: false, created: false, emailed: false, error: 'You cannot invite that role.' });
       continue;
     }
 
-    const row = {
-      team_id: teamId,
-      email,
-      display_name: invite.displayName || null,
-      role: invite.role,
-      invited_by: user.id,
-      status: 'pending',
-      last_sent_at: new Date().toISOString(),
-    };
+    const classificationIds =
+      invite.classificationId && /^[0-9a-f-]{36}$/i.test(invite.classificationId) ? [invite.classificationId] : [];
+    const { data: created, error: createError } = await supabase.rpc('st_create_group_invite', {
+      p_team_id: teamId,
+      p_email: email,
+      p_display_name: invite.displayName || null,
+      p_role: invite.role,
+      p_classification_ids: classificationIds,
+    });
 
-    const { data: upserted, error: upsertError } = await supabase
-      .from('st_group_invites')
-      .upsert(row, { onConflict: 'team_id,email' })
-      .select('id, email')
-      .maybeSingle();
-
-    if (upsertError) {
-      const missingTable = /st_group_invites|schema cache|does not exist/i.test(upsertError.message || '');
+    if (createError || !created?.token || !created?.id) {
+      const message = createError?.message || 'Could not create the invitation';
       results.push({
         email,
         ok: false,
+        created: false,
         emailed: false,
-        error: missingTable
-          ? 'Invite table is not set up yet. Run migration 20250904_044_group_member_invites.sql in Supabase.'
-          : upsertError.message,
+        error: migrationHint(message) || message,
       });
       continue;
     }
 
+    recordGroupInvitationEvent({ type: 'group_invitation', inviteId: created.id, teamId });
+    const joinUrl = `${origin}/invite/${created.token}`;
     const emailResult = await sendGroupInviteEmail({
       to: email,
       groupName: team.name,
-      inviteCode: team.invite_code,
       inviterName,
       inviteeName: invite.displayName || null,
       roleLabel: roleLabel(invite.role),
-      appUrl,
+      joinUrl,
+      expiresAt: created.expires_at,
     });
 
     results.push({
       email,
-      ok: emailResult.ok,
+      ok: true,
+      created: true,
       emailed: !!emailResult.emailed,
-      inviteId: upserted?.id,
-      error: emailResult.error,
+      inviteId: created.id,
+      error: emailResult.emailed ? undefined : emailResult.error || 'Invitation saved, but the email was not sent.',
     });
   }
 
-  const sent = results.filter((r) => r.ok && r.emailed).length;
-  const saved = results.filter((r) => r.ok).length;
-  const failed = results.filter((r) => !r.ok).length;
+  const emailed = results.filter((r) => r.created && r.emailed).length;
+  const created = results.filter((r) => r.created).length;
+  const failed = results.filter((r) => !r.created).length;
 
   return NextResponse.json({
     ok: failed === 0,
     emailConfigured: hasEmailConfig(),
-    inviteCode: team.invite_code,
     groupName: team.name,
-    sent,
-    saved,
+    emailed,
+    created,
     failed,
-    results,
+    results: results.map(({ email, ok, created: wasCreated, emailed: wasEmailed, inviteId, error }) => ({
+      email,
+      ok,
+      created: wasCreated,
+      emailed: wasEmailed,
+      inviteId,
+      error,
+    })),
   });
 }
 
-/** GET — list pending invites for a team. */
+/** GET — invitations for managers. Token hashes are not selected. */
 export async function GET(request: Request) {
   const { supabase, token } = createSupabaseFromRequest(request);
   const { user, error: authError } = await requireAuthUser(supabase, token);
@@ -166,22 +198,26 @@ export async function GET(request: Request) {
 
   const { data, error } = await supabase
     .from('st_group_invites')
-    .select('id, team_id, email, display_name, role, status, last_sent_at, accepted_at, created_at')
+    .select(INVITE_COLUMNS)
     .eq('team_id', teamId)
     .order('created_at', { ascending: false });
 
   if (error) {
+    const hint = migrationHint(error.message);
     const missingTable = /st_group_invites|schema cache|does not exist/i.test(error.message || '');
     return NextResponse.json(
       {
         invites: [],
-        error: missingTable
-          ? 'Invite table is not set up yet. Run migration 20250904_044_group_member_invites.sql in Supabase.'
-          : error.message,
+        error: hint || (missingTable ? 'Run migration 20261005_056_secure_group_invitations.sql in Supabase first.' : error.message),
       },
       { status: missingTable ? 200 : 500 }
     );
   }
 
-  return NextResponse.json({ invites: data || [], emailConfigured: hasEmailConfig() });
+  const invites = (data || []).map((row) => ({
+    ...row,
+    display_status: deriveInviteStatus(row.status, row.expires_at),
+  }));
+
+  return NextResponse.json({ invites, emailConfigured: hasEmailConfig() });
 }

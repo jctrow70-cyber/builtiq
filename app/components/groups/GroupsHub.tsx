@@ -382,9 +382,10 @@ export default function GroupsHub(props: GroupsHubProps) {
               <GroupInviteMembersPanel
                 teamId={activeTeam.id}
                 teamName={activeTeam.name}
-                inviteCode={activeTeam.invite_code}
                 accessToken={accessToken}
                 canManage={canManage}
+                canInviteManagers={isOwner || !!activeTeam.managers_can_invite_managers}
+                classifications={classifications}
               />
               <GroupClassificationsPanel
                 classifications={classifications}

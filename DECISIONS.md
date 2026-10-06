@@ -19,6 +19,31 @@ Impact:
 
 ---
 
+## Decision 086 - Secure Email Invitations Are Separate from Quick Join
+
+Date: 2026-10-05
+Status: Accepted
+Category: Groups
+
+### Decision
+
+A group has two ways to add people. A secure email invitation is a one-time link for a specific address, hashed in the database, expiring after 7 days. Quick Join is the group code. It always adds a Member, and the owner can turn it off or replace the code. Owners can invite Members and Managers. Managers can invite Members unless the owner allows them to invite Managers. An invitation cannot create an Owner. One classification can be attached now, stored in a list so more than one can be added later without a new invitation table.
+
+### Reason
+
+Emailing the permanent group code let anyone with the code join, and a pending Manager invite could be applied without checking that the signed-in account owned that email.
+
+### Alternatives Considered
+
+- Keep emailing the group code — rejected; a forwarded code is not a personal invitation
+- A second invitation table — rejected; st_group_invites already holds the invite history
+- A required approval step for Quick Join — deferred; families and friends need a direct join
+- Expire invitations with a scheduled job — rejected; acceptance and the pending list can read expires_at
+
+### Impact
+
+Existing pending invites that have no token are revoked so they cannot become secure Manager grants. Accepted history stays. Apply migration 20261005_056 before using the new invitation screen. Chat and the notification center are unchanged. Successful invite and accept actions are marked so a later notification phase can subscribe without rewriting membership.
+
 ## Decision 085 - Group Progress Shows Activity Until the Calendar Knows the Plan
 
 Date: 2026-10-05
