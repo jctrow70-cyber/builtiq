@@ -11,6 +11,66 @@ Branch:
 Status:
 ```
 
+## BIQ-0241 - Refine the Groups Workspace
+
+Date: 2026-10-05
+Branch: main
+Status: Local / in progress
+
+### Summary
+
+Groups now uses Overview, Training, Members, and Progress. Settings opens from the group header. Overview is a snapshot and a needs-attention list for Owners and Managers, and a personal week for Members. Training leads with the current group program. Progress is labeled activity, not adherence.
+
+### Purpose
+
+The first workspace pass put Settings in the daily tab row and treated any logged set as compliance. This follow-up matches the approved review without building invites, chat, or notifications.
+
+### Changes
+
+- Four primary tabs. Settings is a header button. The header row can take a messages control later.
+- Owner settings contain Group administration. Managers and Members do not see those controls. Members do not see the group code there.
+- A Member progress load requests only that member’s user id.
+- Roster rows show activity, PRs, and assignment counts. Role, tags, and removal live in member detail.
+- Plan drafts, publish, duplicate, and delete sit behind Manage plans.
+
+### Files Changed
+
+- `lib/groups/workspaceTabs.ts`
+- `app/components/groups/GroupsHub.tsx`
+- `app/components/groups/GroupOverview.tsx`
+- `app/components/groups/GroupTrainingHome.tsx`
+- `app/components/groups/TeamSettingsTab.tsx`
+- `app/components/groups/TeamMembersTab.tsx`
+- `app/components/groups/TeamMemberDetail.tsx`
+- `app/components/groups/TeamProgressTab.tsx`
+- `app/components/groups/MemberPerformancePanel.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `scripts/test-group-architecture.ts`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+- `node .\node_modules\typescript\bin\tsc --noEmit --pretty false --incremental false`
+- `node .\node_modules\tsx\dist\cli.mjs scripts/test-group-architecture.ts`
+- `node .\node_modules\tsx\dist\cli.mjs scripts/test-unfollow-training.ts`
+- `node .\node_modules\tsx\dist\cli.mjs scripts/test-customize-for-me.ts`
+- On a phone-width Groups screen, the four tabs fit and Settings sits in the header.
+- As a Member, Overview shows your sets. As an Owner, Settings includes Group administration and the code.
+
+### Known Issues
+
+- True adherence waits for the multi-source Training calendar.
+- Invitation tokens, chat, and notifications are not in this change.
+- Managers still see the permanent code on Members → Invite.
+
+### Recommended Commit Message
+
+BIQ-0241: Refine Groups workspace around daily training and member activity
+
 ## BIQ-0240 - Group Workspace Navigation
 
 Date: 2026-10-05

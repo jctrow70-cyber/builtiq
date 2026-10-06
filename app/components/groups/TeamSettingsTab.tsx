@@ -6,12 +6,11 @@ import {
   groupPermissionFlags,
   type GroupPermissionFlags,
 } from '../../../lib/groups/groupPermissions';
+import { groupSettingsAccess } from '../../../lib/groups/workspaceTabs';
 
 type TeamSettingsTabProps = {
   activeTeam: any;
   members: any[];
-  isOwner: boolean;
-  isSelfOwner: boolean;
   onLeaveTeam: () => Promise<void>;
   onDeleteTeam: () => Promise<void>;
   onSaveGroupPermissions?: (flags: GroupPermissionFlags) => Promise<void>;
@@ -44,15 +43,12 @@ const PERMISSION_FIELDS: { key: keyof GroupPermissionFlags; label: string; help:
 export default function TeamSettingsTab({
   activeTeam,
   members,
-  isOwner,
-  isSelfOwner,
   onLeaveTeam,
   onDeleteTeam,
   onSaveGroupPermissions,
   onTransferOwnership,
 }: TeamSettingsTabProps) {
-  const owners = members.filter((m: any) => m.role === 'owner');
-  const editors = members.filter((m: any) => m.role === 'manager' || m.role === 'editor');
+  const access = groupSettingsAccess(activeTeam?.my_role);
   const transferCandidates = members.filter((m: any) => m.user_id !== activeTeam?.owner_user_id);
   const [flags, setFlags] = useState<GroupPermissionFlags>(() => groupPermissionFlags(activeTeam));
   const [transferUserId, setTransferUserId] = useState('');
@@ -91,95 +87,82 @@ export default function TeamSettingsTab({
   return (
     <>
       <div className="card">
-        <h2>Group settings</h2>
-        <label>Group name</label>
-        <p>
-          <b>{activeTeam?.name}</b>
-        </p>
-        <label>Invite code</label>
-        <p>
-          <b>{activeTeam?.invite_code}</b>
-          <span className="muted"> · Anyone with this code can join as a Member</span>
-        </p>
-        <label>Owner</label>
-        <p className="muted">{owners.map((m: any) => m.display_name || 'Owner').join(', ') || '—'}</p>
-        {editors.length > 0 && (
-          <>
-            <label>Managers</label>
-            <p className="muted">{editors.map((m: any) => m.display_name || 'Manager').join(', ')}</p>
-          </>
-        )}
+        <h2>{activeTeam?.name || 'Group'}</h2>
         <label>Your role</label>
         <p className="muted">{roleLabel(activeTeam?.my_role)}</p>
-      </div>
-
-      <div className="card">
-        <h2>Member permissions</h2>
-        <p className="muted">Owners and Managers can always create, edit, assign, and view group progress.</p>
-        {PERMISSION_FIELDS.map((field) => (
-          <label key={field.key} className="remember-row" style={{ display: 'block', marginTop: 10 }}>
-            <input
-              type="checkbox"
-              checked={flags[field.key]}
-              disabled={!isOwner || saving}
-              onChange={(e) => setFlags((prev) => ({ ...prev, [field.key]: e.target.checked }))}
-            />{' '}
-            {field.label}
-            <span className="muted" style={{ display: 'block', marginLeft: 22 }}>
-              {field.help}
-            </span>
-          </label>
-        ))}
-        {isOwner && onSaveGroupPermissions && (
-          <button type="button" className="btn green" style={{ marginTop: 12 }} disabled={saving} onClick={() => void savePermissions()}>
-            {saving ? 'Saving…' : 'Save permissions'}
-          </button>
-        )}
-        {!isOwner && <p className="muted" style={{ marginTop: 8 }}>Only the Owner can change these.</p>}
-      </div>
-
-      {isOwner && onTransferOwnership && (
-        <div className="card">
-          <h2>Transfer ownership</h2>
-          <p className="muted">The new Owner takes owner-only actions. You stay in the group as a Manager.</p>
-          <select value={transferUserId} onChange={(e) => setTransferUserId(e.target.value)} disabled={saving}>
-            <option value="">Choose a member</option>
-            {transferCandidates.map((m: any) => (
-              <option key={m.user_id} value={m.user_id}>
-                {m.display_name || 'Member'} · {roleLabel(m.role)}
-              </option>
-            ))}
-          </select>
-          <button
-            type="button"
-            className="btn secondary"
-            style={{ marginTop: 8 }}
-            disabled={!transferUserId || saving}
-            onClick={() => void transfer()}
-          >
-            Transfer ownership
-          </button>
-        </div>
-      )}
-
-      <div className="card">
-        <h2>Membership</h2>
-        {!isSelfOwner && (
-          <button type="button" className="btn secondary full" style={{ marginTop: 8 }} onClick={() => onLeaveTeam()}>
+        {access.showLeave && (
+          <button type="button" className="btn secondary full" style={{ marginTop: 12 }} onClick={() => onLeaveTeam()}>
             Leave group
           </button>
         )}
-        {isOwner && (
-          <button type="button" className="btn red full" style={{ marginTop: 8 }} onClick={() => onDeleteTeam()}>
+      </div>
+
+      {access.showAdministration && (
+        <div className="card">
+          <h2>Group administration</h2>
+          <p className="muted">Only the Owner can change these.</p>
+
+          {access.showInviteCode && (
+            <>
+              <label style={{ marginTop: 12 }}>Group code</label>
+              <p>
+                <b>{activeTeam?.invite_code || '—'}</b>
+              </p>
+              <p className="muted">Anyone with this code can join as a Member. Managers can also share it from Members → Invite.</p>
+            </>
+          )}
+
+          <h3 style={{ marginTop: 16 }}>Member permissions</h3>
+          {PERMISSION_FIELDS.map((field) => (
+            <label key={field.key} className="remember-row" style={{ display: 'block', marginTop: 10 }}>
+              <input
+                type="checkbox"
+                checked={flags[field.key]}
+                disabled={saving}
+                onChange={(e) => setFlags((prev) => ({ ...prev, [field.key]: e.target.checked }))}
+              />{' '}
+              {field.label}
+              <span className="muted" style={{ display: 'block', marginLeft: 22 }}>
+                {field.help}
+              </span>
+            </label>
+          ))}
+          {onSaveGroupPermissions && (
+            <button type="button" className="btn green" style={{ marginTop: 12 }} disabled={saving} onClick={() => void savePermissions()}>
+              {saving ? 'Saving…' : 'Save permissions'}
+            </button>
+          )}
+
+          {onTransferOwnership && (
+            <>
+              <h3 style={{ marginTop: 16 }}>Transfer ownership</h3>
+              <p className="muted">The new Owner takes owner-only actions. You stay in the group as a Manager.</p>
+              <select value={transferUserId} onChange={(e) => setTransferUserId(e.target.value)} disabled={saving}>
+                <option value="">Choose a member</option>
+                {transferCandidates.map((m: any) => (
+                  <option key={m.user_id} value={m.user_id}>
+                    {m.display_name || 'Member'} · {roleLabel(m.role)}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="btn secondary"
+                style={{ marginTop: 8 }}
+                disabled={!transferUserId || saving}
+                onClick={() => void transfer()}
+              >
+                Transfer ownership
+              </button>
+            </>
+          )}
+
+          <h3 style={{ marginTop: 16 }}>Delete group</h3>
+          <button type="button" className="btn red" style={{ marginTop: 8 }} onClick={() => onDeleteTeam()}>
             Delete group
           </button>
-        )}
-        {isSelfOwner && (
-          <p className="muted" style={{ marginTop: 8 }}>
-            Owners stay until they transfer ownership or delete the group.
-          </p>
-        )}
-      </div>
+        </div>
+      )}
     </>
   );
 }

@@ -5,6 +5,7 @@ import GroupMemberDashboard from './GroupMemberDashboard';
 import MemberPerformancePanel from './MemberPerformancePanel';
 import type { AssignmentComplianceSummary, MemberWorkoutHistoryDay } from '../../../lib/groups/memberPerformance';
 import { emptyAssignmentCompliance } from '../../../lib/groups/memberPerformance';
+import { roleForUi, type GroupClassification } from '../../../lib/groups';
 
 type MemberDetailTab = 'overview' | 'assigned' | 'history' | 'progress';
 
@@ -39,6 +40,14 @@ type TeamMemberDetailProps = {
   onRefreshPerformance?: () => void;
   onRestoreMemberHistory?: () => void;
   restoreBusy?: boolean;
+  isOwner?: boolean;
+  classifications?: GroupClassification[];
+  memberClassificationIds?: Record<string, string[]>;
+  onSetMemberTrainingSource?: (member: any, source: string) => void;
+  onSetMemberRole?: (member: any, role: string) => void;
+  onSetParticipation?: (member: any, active: boolean) => void;
+  onRemoveMember?: (member: any) => void;
+  onToggleMemberClassification?: (member: any, classificationId: string, active: boolean) => void;
 };
 
 export default function TeamMemberDetail(props: TeamMemberDetailProps) {
@@ -58,10 +67,19 @@ export default function TeamMemberDetail(props: TeamMemberDetailProps) {
     onRefreshPerformance,
     onRestoreMemberHistory,
     restoreBusy = false,
+    isOwner = false,
+    classifications = [],
+    memberClassificationIds = {},
+    onSetMemberTrainingSource,
+    onSetMemberRole,
+    onSetParticipation,
+    onRemoveMember,
+    onToggleMemberClassification,
   } = props;
   const teamPrograms = programs.filter((p: any) => p.visibility === 'team');
   const memberName = member.display_name || 'Member';
-  const compliance = assignmentCompliance || emptyAssignmentCompliance();
+  const assignments = assignmentCompliance || emptyAssignmentCompliance();
+  const participating = member.is_active_participant !== false;
 
   return (
     <div className="team-member-detail card">
@@ -71,6 +89,64 @@ export default function TeamMemberDetail(props: TeamMemberDetailProps) {
           Back
         </button>
       </div>
+      {canManage && (
+        <div className="team-member-manage" style={{ marginTop: 12 }}>
+          <p className="muted">Membership</p>
+          <div className="actions" style={{ flexWrap: 'wrap', marginTop: 8 }}>
+            {onSetMemberTrainingSource && (
+              <select
+                className="team-member-plan"
+                value={member.training_source || 'team'}
+                onChange={(e) => onSetMemberTrainingSource(member, e.target.value)}
+                aria-label={`Plan source for ${memberName}`}
+              >
+                <option value="team">Group plan</option>
+                <option value="personal">Personal</option>
+              </select>
+            )}
+            {isOwner && onSetMemberRole && member.role !== 'owner' && (
+              <select
+                className="team-member-plan"
+                value={roleForUi(member.role)}
+                onChange={(e) => onSetMemberRole(member, e.target.value)}
+                aria-label={`Role for ${memberName}`}
+              >
+                <option value="manager">Manager</option>
+                <option value="member">Member</option>
+              </select>
+            )}
+            {onSetParticipation && (
+              <label className="remember-row">
+                <input
+                  type="checkbox"
+                  checked={participating}
+                  onChange={(e) => onSetParticipation(member, e.target.checked)}
+                />{' '}
+                Active participant
+              </label>
+            )}
+            {onRemoveMember && (
+              <button type="button" className="btn small red" onClick={() => onRemoveMember(member)}>
+                Remove
+              </button>
+            )}
+          </div>
+          {classifications.length > 0 && onToggleMemberClassification && (
+            <div className="member-classification-picks" style={{ marginTop: 8 }}>
+              {classifications.map((c) => (
+                <label key={c.id} className="classification-chip-toggle remember-row">
+                  <input
+                    type="checkbox"
+                    checked={(memberClassificationIds[member.id] || []).includes(c.id)}
+                    onChange={(e) => onToggleMemberClassification(member, c.id, e.target.checked)}
+                  />
+                  {c.name}
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       <div className="team-member-detail-tabs">
         {(['overview', 'assigned', 'history', 'progress'] as MemberDetailTab[]).map((id) => (
           <button key={id} type="button" className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>
@@ -182,7 +258,7 @@ export default function TeamMemberDetail(props: TeamMemberDetailProps) {
             <p className="muted">Loading progress…</p>
           ) : (
             <MemberPerformancePanel
-              assignmentCompliance={compliance}
+              assignmentCompliance={assignments}
               history={workoutHistory}
               performanceLogs={performanceLogs}
               weightUnit={weightUnit}

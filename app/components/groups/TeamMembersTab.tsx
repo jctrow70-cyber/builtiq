@@ -3,7 +3,6 @@
 import {
   classificationNamesForMember,
   memberAssignedProgramLabel,
-  roleForUi,
   roleLabel,
   type GroupClassification,
   type MemberRosterMeta,
@@ -19,15 +18,8 @@ type TeamMembersTabProps = {
   classifications: GroupClassification[];
   memberClassificationIds: Record<string, string[]>;
   canManage: boolean;
-  isOwner: boolean;
-  statusLabel: (s: string) => string;
   onRefresh: () => void;
   onOpenMember: (member: any) => void;
-  onSetMemberTrainingSource: (member: any, source: string) => void;
-  onSetMemberRole: (member: any, role: string) => void;
-  onRemoveMember: (member: any) => void;
-  onSetParticipation: (member: any, active: boolean) => void;
-  onToggleMemberClassification: (member: any, classificationId: string, active: boolean) => void;
 };
 
 export default function TeamMembersTab({
@@ -40,15 +32,8 @@ export default function TeamMembersTab({
   classifications,
   memberClassificationIds,
   canManage,
-  isOwner,
-  statusLabel,
   onRefresh,
   onOpenMember,
-  onSetMemberTrainingSource,
-  onSetMemberRole,
-  onRemoveMember,
-  onSetParticipation,
-  onToggleMemberClassification,
 }: TeamMembersTabProps) {
   return (
     <div className="card team-roster-card">
@@ -59,7 +44,7 @@ export default function TeamMembersTab({
         </button>
       </div>
       <p className="muted">
-        {canManage ? 'Tap a member for details and program actions.' : 'Tap your name to open Training.'}
+        {canManage ? 'Tap a member to manage their role, tags, and participation.' : 'Tap your name to open Training.'}
       </p>
       {members.length === 0 && <p className="muted">No members yet. Invite people below or share your group invite code.</p>}
       {members.map((m: any) => {
@@ -70,98 +55,34 @@ export default function TeamMembersTab({
           assignmentOverdue: 0,
         };
         const isSelf = m.user_id === sessionUserId;
-        const participating = m.is_active_participant !== false;
         const memberTags = classificationNamesForMember(m.id, classifications, memberClassificationIds);
         const programLabel = memberAssignedProgramLabel(m, memberAssignments, defaultProgram);
-        const weekStatus =
-          stats.days > 0 ? `${stats.days} active day${stats.days === 1 ? '' : 's'}` : 'Not started this week';
+        const activity =
+          stats.days > 0 ? `${stats.days} active day${stats.days === 1 ? '' : 's'}` : 'No activity this week';
 
         return (
-          <div key={m.id} className="team-member-row">
-            <button type="button" className="team-member-main" onClick={() => onOpenMember(m)}>
-              <div>
-                <b>
-                  {m.display_name || 'Member'}
-                  {isSelf ? ' (you)' : ''}
-                </b>
-                <span className="muted">
-                  {roleLabel(m.role)} · {programLabel} · {weekStatus}
-                  {!participating ? ' · observer' : ''}
-                  {memberTags.length ? ` · ${memberTags.join(', ')}` : ''}
-                </span>
-              </div>
-              <div className="member-roster-badges">
-                {rosterMeta.recentPr && <span className="badge progress-pr-badge">New PR</span>}
-                {stats.sets > 0 && <span className="badge">{stats.sets} sets</span>}
-              </div>
-            </button>
-            {canManage && (
-              <div className="team-member-actions">
-                {!isSelf && (
-                  <select
-                    className="team-member-plan"
-                    value={m.training_source || 'team'}
-                    onChange={(e) => onSetMemberTrainingSource(m, e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
-                    aria-label={`Plan for ${m.display_name || 'member'}`}
-                  >
-                    <option value="team">Group plan</option>
-                    <option value="personal">Personal</option>
-                  </select>
-                )}
-                {isOwner && !isSelf && (
-                  <select
-                    className="team-member-plan"
-                    value={roleForUi(m.role)}
-                    onChange={(e) => onSetMemberRole(m, e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
-                    aria-label={`Role for ${m.display_name || 'member'}`}
-                  >
-                    <option value="manager">Manager</option>
-                    <option value="member">Member</option>
-                  </select>
-                )}
-                {!isSelf && (
-                  <>
-                    <label className="team-member-participation remember-row">
-                      <input
-                        type="checkbox"
-                        checked={participating}
-                        onChange={(e) => onSetParticipation(m, e.target.checked)}
-                        onClick={(e) => e.stopPropagation()}
-                      />
-                      Active
-                    </label>
-                    <button
-                      type="button"
-                      className="btn small red"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onRemoveMember(m);
-                      }}
-                    >
-                      Remove
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
-            {canManage && classifications.length > 0 && (
-              <div className="member-classification-picks" style={{ gridColumn: '1 / -1' }}>
-                {classifications.map((c) => (
-                  <label key={c.id} className="classification-chip-toggle remember-row">
-                    <input
-                      type="checkbox"
-                      checked={(memberClassificationIds[m.id] || []).includes(c.id)}
-                      onChange={(e) => onToggleMemberClassification(m, c.id, e.target.checked)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    {c.name}
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
+          <button key={m.id} type="button" className="team-member-row team-member-main" onClick={() => onOpenMember(m)}>
+            <div>
+              <b>
+                {m.display_name || 'Member'}
+                {isSelf ? ' (you)' : ''}
+              </b>
+              <span className="muted">
+                {roleLabel(m.role)} · {programLabel} · {activity}
+                {stats.sets > 0 ? ` · ${stats.sets} sets` : ''}
+                {memberTags.length ? ` · ${memberTags.join(', ')}` : ''}
+              </span>
+            </div>
+            <div className="member-roster-badges">
+              {rosterMeta.recentPr && <span className="badge progress-pr-badge">PR</span>}
+              {rosterMeta.assignmentOverdue > 0 && (
+                <span className="badge member-overdue-badge">{rosterMeta.assignmentOverdue} overdue</span>
+              )}
+              {rosterMeta.assignmentPending > 0 && (
+                <span className="badge">{rosterMeta.assignmentPending} pending</span>
+              )}
+            </div>
+          </button>
         );
       })}
     </div>

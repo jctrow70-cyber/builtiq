@@ -14,6 +14,7 @@ import GroupAssignWorkoutPanel from './GroupAssignWorkoutPanel';
 import GroupClassificationsPanel from './GroupClassificationsPanel';
 import GroupInviteMembersPanel from './GroupInviteMembersPanel';
 import GroupOverview from './GroupOverview';
+import GroupTrainingHome from './GroupTrainingHome';
 import TeamMemberDetail from './TeamMemberDetail';
 import TeamMembersTab from './TeamMembersTab';
 import TeamProgressTab from './TeamProgressTab';
@@ -51,7 +52,7 @@ export type GroupsHubProps = {
   assignWorkoutPrograms?: any[];
   classifications: GroupClassification[];
   memberClassificationIds: Record<string, string[]>;
-  compliancePct: number;
+  canViewGroupProgress: boolean;
   teamActiveCount: number;
   teamTotalSets: number;
   teamPlanCount: number;
@@ -143,7 +144,7 @@ export default function GroupsHub(props: GroupsHubProps) {
     classifications,
     memberClassificationIds,
     memberAssignments,
-    compliancePct,
+    canViewGroupProgress,
     teamActiveCount,
     teamTotalSets,
     canManage,
@@ -195,11 +196,39 @@ export default function GroupsHub(props: GroupsHubProps) {
 
   const [workspaceTab, setWorkspaceTab] = useState<TeamWorkspaceTab>('overview');
   const [sheetMode, setSheetMode] = useState<'create' | 'join' | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [managePlans, setManagePlans] = useState(false);
   const [assignProgramId, setAssignProgramId] = useState<string | null>(null);
+  const [pendingInvites, setPendingInvites] = useState(0);
 
   useEffect(() => {
     setWorkspaceTab('overview');
+    setSettingsOpen(false);
+    setManagePlans(false);
   }, [activeTeam?.id]);
+
+  useEffect(() => {
+    if (!canManage || !accessToken || !activeTeam?.id) {
+      setPendingInvites(0);
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/groups/invite?teamId=${encodeURIComponent(activeTeam.id)}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+      .then((res) => res.json().catch(() => ({})))
+      .then((data) => {
+        if (cancelled) return;
+        const rows = Array.isArray(data?.invites) ? data.invites : [];
+        setPendingInvites(rows.filter((row: { status?: string }) => row.status === 'pending').length);
+      })
+      .catch(() => {
+        if (!cancelled) setPendingInvites(0);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [canManage, accessToken, activeTeam?.id]);
 
   const programRows = useMemo(
     () =>
@@ -259,15 +288,30 @@ export default function GroupsHub(props: GroupsHubProps) {
 
   const renderWorkspaceContent = () => {
     if (workspaceTab === 'overview' && activeTeam) {
+      const current = programRows.find((row) => row.isDefault) || programRows.find((row) => row.status !== 'draft') || null;
+      const quiet = members
+        .filter((m: any) => (memberStats[m.user_id]?.sets || 0) === 0)
+        .map((m: any) => m.display_name || 'Member');
+      const overdueAssignments = Object.values(memberRosterMeta).reduce((sum, meta) => sum + (meta?.assignmentOverdue || 0), 0);
+      const pendingAssignments = Object.values(memberRosterMeta).reduce((sum, meta) => sum + (meta?.assignmentPending || 0), 0);
+      const selfPlan = memberAssignments[sessionUserId];
       return (
         <GroupOverview
-          groupName={activeTeam.name}
-          role={activeTeam.my_role}
+          canManage={canManage}
           memberCount={members.length}
           activeThisWeek={teamActiveCount}
           setsThisWeek={teamTotalSets}
-          planName={groupProgramForAssign?.name}
-          onOpen={handleWorkspaceTabChange}
+          planName={current?.name || groupProgramForAssign?.name}
+          planStatus={current?.statusLabel}
+          planWeeks={current?.weeks}
+          noActivityNames={quiet}
+          overdueAssignments={overdueAssignments}
+          pendingAssignments={pendingAssignments}
+          pendingInvites={pendingInvites}
+          selfSets={selfStats.sets}
+          selfDays={selfStats.days}
+          selfPlanName={selfPlan?.st_programs?.name || groupProgramForAssign?.name}
+          onViewTraining={() => handleWorkspaceTabChange('training')}
         />
       );
     }
@@ -307,29 +351,19 @@ export default function GroupsHub(props: GroupsHubProps) {
             onRefreshPerformance={onRefreshMemberPerformance}
             onRestoreMemberHistory={onRestoreMemberHistory}
             restoreBusy={restoreMemberHistoryBusy}
+            isOwner={isOwner}
+            classifications={classifications}
+            memberClassificationIds={memberClassificationIds}
+            onSetMemberTrainingSource={onSetMemberTrainingSource}
+            onSetMemberRole={memberDashboard.role === 'owner' ? undefined : onSetMemberRole}
+            onSetParticipation={onSetParticipation}
+            onRemoveMember={memberDashboard.user_id === sessionUserId ? undefined : onRemoveMember}
+            onToggleMemberClassification={onToggleMemberClassification}
           />
         );
       }
       return (
         <>
-          {!canManage && selfMember && (
-            <div className="card">
-              <h2>Your activity</h2>
-              <div className="dash-metrics">
-                <div>
-                  <b>{selfStats.sets}</b>
-                  <span className="muted">Sets this week</span>
-                </div>
-                <div>
-                  <b>{selfStats.days}</b>
-                  <span className="muted">Active days</span>
-                </div>
-              </div>
-              <p className="muted" style={{ marginTop: 8 }}>
-                Log workouts in Training.
-              </p>
-            </div>
-          )}
           <TeamMembersTab
             sessionUserId={sessionUserId}
             members={members}
@@ -340,15 +374,8 @@ export default function GroupsHub(props: GroupsHubProps) {
             classifications={classifications}
             memberClassificationIds={memberClassificationIds}
             canManage={canManage}
-            isOwner={isOwner}
-            statusLabel={statusLabel}
             onRefresh={onRefreshMembers}
             onOpenMember={onOpenMember}
-            onSetMemberTrainingSource={onSetMemberTrainingSource}
-            onSetMemberRole={onSetMemberRole}
-            onRemoveMember={onRemoveMember}
-            onSetParticipation={onSetParticipation}
-            onToggleMemberClassification={onToggleMemberClassification}
           />
           {canManage && activeTeam && (
             <>
@@ -373,21 +400,30 @@ export default function GroupsHub(props: GroupsHubProps) {
     }
 
     if (workspaceTab === 'training') {
+      const current = programRows.find((row) => row.isDefault) || programRows.find((row) => row.status !== 'draft') || null;
       return (
-        <>
-          <TeamProgramsTab
-            canManage={canManage}
-            programRows={programRows}
-            groupName={activeTeam?.name}
-            onOpenPrograms={() => onOpenGroupsProgramWizard('create')}
-            onDuplicate={(id) => onDuplicateProgram(id)}
-            onEdit={onEditTeamProgram}
-            onPublish={onPublishTeamProgram}
-            onAssign={(id) => setAssignProgramId(id)}
-            onDelete={onDeleteProgram}
-            defaultProgramId={activeTeam?.default_program_id}
-          />
-          {canManage && (
+        <GroupTrainingHome
+          canManage={canManage}
+          current={current}
+          managingPlans={managePlans}
+          onView={current ? () => onEditTeamProgram(current.id) : undefined}
+          onAssign={current ? () => setAssignProgramId(current.id) : undefined}
+          onManagePlans={canManage ? () => setManagePlans((open) => !open) : undefined}
+          planLibrary={
+            <TeamProgramsTab
+              canManage={canManage}
+              programRows={programRows}
+              groupName={activeTeam?.name}
+              onOpenPrograms={() => onOpenGroupsProgramWizard('create')}
+              onDuplicate={(id) => onDuplicateProgram(id)}
+              onEdit={onEditTeamProgram}
+              onPublish={onPublishTeamProgram}
+              onAssign={(id) => setAssignProgramId(id)}
+              onDelete={onDeleteProgram}
+              defaultProgramId={activeTeam?.default_program_id}
+            />
+          }
+          assignmentTools={
             <GroupAssignWorkoutPanel
               groupProgram={groupProgramForAssign}
               publishedTeamPrograms={assignWorkoutPrograms}
@@ -396,39 +432,24 @@ export default function GroupsHub(props: GroupsHubProps) {
               memberClassificationIds={memberClassificationIds}
               onAssign={onAssignWorkout}
             />
-          )}
-        </>
+          }
+        />
       );
     }
 
     if (workspaceTab === 'progress') {
       return (
         <TeamProgressTab
-          canManage={canManage}
+          canViewGroupProgress={canViewGroupProgress}
+          sessionUserId={sessionUserId}
           members={members}
           memberStats={memberStats}
           memberRosterMeta={memberRosterMeta}
-          compliancePct={compliancePct}
           teamActiveCount={teamActiveCount}
           teamTotalSets={teamTotalSets}
           onOpenMember={openMember}
           onRestoreHistory={onRestoreTeamHistory}
           restoreBusy={restoreTeamHistoryBusy}
-        />
-      );
-    }
-
-    if (workspaceTab === 'settings' && activeTeam) {
-      return (
-        <TeamSettingsTab
-          activeTeam={activeTeam}
-          members={members}
-          isOwner={isOwner}
-          isSelfOwner={activeTeam.my_role === 'owner'}
-          onLeaveTeam={onLeaveTeam}
-          onDeleteTeam={onDeleteTeam}
-          onSaveGroupPermissions={onSaveGroupPermissions}
-          onTransferOwnership={onTransferOwnership}
         />
       );
     }
@@ -439,24 +460,62 @@ export default function GroupsHub(props: GroupsHubProps) {
   return (
     <section className="groups-hub teams-workspace">
       <div className="card team-workspace-head">
-        <TeamSelector
-          teams={teams}
-          activeTeam={activeTeam}
-          defaultTeamId={defaultTeamId}
-          memberCount={members.length}
-          onSelectTeam={(id) => {
-            onSelectTeam(id);
-            onSetModeTeam();
-          }}
-          onSetDefaultTeam={onSetDefaultTeam}
-          onCreateTeam={() => setSheetMode('create')}
-          onJoinTeam={() => setSheetMode('join')}
-        />
+        <div className="team-workspace-head-row">
+          <TeamSelector
+            teams={teams}
+            activeTeam={activeTeam}
+            defaultTeamId={defaultTeamId}
+            memberCount={members.length}
+            onSelectTeam={(id) => {
+              onSelectTeam(id);
+              onSetModeTeam();
+            }}
+            onSetDefaultTeam={onSetDefaultTeam}
+            onCreateTeam={() => setSheetMode('create')}
+            onJoinTeam={() => setSheetMode('join')}
+          />
+          {activeTeam && (
+            <div className="team-header-actions">
+              <button
+                type="button"
+                className="btn secondary team-header-settings"
+                aria-label="Group settings"
+                onClick={() => setSettingsOpen(true)}
+              >
+                Settings
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <TeamWorkspaceTabs active={workspaceTab} onChange={handleWorkspaceTabChange} />
 
       {renderWorkspaceContent()}
+
+      {settingsOpen && activeTeam && (
+        <div className="team-sheet-backdrop" onClick={() => setSettingsOpen(false)}>
+          <div className="team-sheet-panel card" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Group settings">
+            <div className="topline" style={{ justifyContent: 'space-between' }}>
+              <h2>Settings</h2>
+              <button type="button" className="btn small secondary" onClick={() => setSettingsOpen(false)}>
+                Close
+              </button>
+            </div>
+            <TeamSettingsTab
+              activeTeam={activeTeam}
+              members={members}
+              onLeaveTeam={async () => {
+                await onLeaveTeam();
+                setSettingsOpen(false);
+              }}
+              onDeleteTeam={onDeleteTeam}
+              onSaveGroupPermissions={onSaveGroupPermissions}
+              onTransferOwnership={onTransferOwnership}
+            />
+          </div>
+        </div>
+      )}
 
       <TeamCreateJoinSheet
         mode={sheetMode}

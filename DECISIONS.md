@@ -19,6 +19,31 @@ Impact:
 
 ---
 
+## Decision 085 - Group Progress Shows Activity Until the Calendar Knows the Plan
+
+Date: 2026-10-05
+Status: Accepted
+Category: Groups
+
+### Decision
+
+A count of members with at least one completed set this week is activity. It is not adherence. Group Progress labels that number Activity. Assigned-workout pending and overdue counts stay separate. Adherence, meaning expected workouts compared with completed workouts, waits until the multi-source Training calendar can say what was scheduled.
+
+### Reason
+
+One logged set was being shown as a compliance percent. That treated a person who was not scheduled the same as a person who missed a planned workout.
+
+### Alternatives Considered
+
+- Compute adherence from the current single followed program — rejected; group participation can point at a different plan than the Training calendar
+- Hide the activity numbers — rejected; coaches still need to see who has logged
+
+### Impact
+
+BIQ-0241 renames the group progress summary and stops requesting other members’ logs when the viewer cannot see group progress.
+
+---
+
 ## Decision 084 - Group Workspace Uses Five Sections
 
 Date: 2026-10-05
@@ -40,7 +65,7 @@ The previous tabs mixed programming, assignment, and settings. A fifth permanent
 
 ### Impact
 
-Owners save collaboration flags with a direct team update. Ownership transfer uses `st_transfer_group_ownership`.
+Owners save collaboration flags with a direct team update. Ownership transfer uses `st_transfer_group_ownership`. BIQ-0241 moves Settings out of the primary tab row.
 
 ---
 

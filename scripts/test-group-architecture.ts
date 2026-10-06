@@ -10,6 +10,7 @@ import {
   canAssignInGroup,
   canCustomizeGroupProgramForMe,
   canEditProgramByRelationship,
+  canManageGroup,
   canEditProgramRecord,
   canEditSharedGroupProgram,
   canSetGroupDefaultProgram,
@@ -19,7 +20,7 @@ import {
   roleLabel,
 } from '../lib/groups/permissions';
 import { DEFAULT_GROUP_PERMISSIONS, groupPermissionFlags } from '../lib/groups/groupPermissions';
-import { GROUP_WORKSPACE_TABS } from '../lib/groups/workspaceTabs';
+import { GROUP_WORKSPACE_TABS, groupProgressSubjectIds, groupSettingsAccess } from '../lib/groups/workspaceTabs';
 import { classifySetLogScope } from '../lib/groups/progressScope';
 import {
   groupEnrollmentProvenance,
@@ -488,7 +489,32 @@ assert.equal(
 
 assert.deepEqual(
   GROUP_WORKSPACE_TABS.map((tab) => tab.id),
-  ['overview', 'training', 'members', 'progress', 'settings']
+  ['overview', 'training', 'members', 'progress']
 );
+assert.equal(GROUP_WORKSPACE_TABS.some((tab) => tab.id === 'settings'), false);
+assert.deepEqual(groupProgressSubjectIds('amy', ['jesse', 'amy', 'mike'], false), ['amy']);
+assert.deepEqual(groupProgressSubjectIds('amy', ['jesse', 'mike'], false), []);
+assert.deepEqual(groupProgressSubjectIds('amy', ['jesse', 'amy'], true), ['jesse', 'amy']);
+assert.equal(groupSettingsAccess('owner').showAdministration, true);
+assert.equal(groupSettingsAccess('owner').showInviteCode, true);
+assert.equal(groupSettingsAccess('owner').showLeave, false);
+assert.equal(groupSettingsAccess('manager').showAdministration, false);
+assert.equal(groupSettingsAccess('manager').showInviteCode, false);
+assert.equal(groupSettingsAccess('member').showAdministration, false);
+assert.equal(groupSettingsAccess('member').showInviteCode, false);
+assert.equal(groupSettingsAccess('member').showLeave, true);
+assert.equal(canManageGroup('member'), false);
+assert.equal(canManageGroup('manager'), true);
+assert.equal(canManageGroup('owner'), true);
+
+const progressUi = readFileSync(new URL('../app/components/groups/TeamProgressTab.tsx', import.meta.url), 'utf8');
+assert.doesNotMatch(progressUi, /compliance|adherence/i);
+assert.match(progressUi, /Activity/);
+const trainingUi = readFileSync(new URL('../app/components/groups/GroupTrainingHome.tsx', import.meta.url), 'utf8');
+assert.match(trainingUi, /Manage plans/);
+assert.match(trainingUi, /\{canManage &&/);
+const settingsUi = readFileSync(new URL('../app/components/groups/TeamSettingsTab.tsx', import.meta.url), 'utf8');
+assert.match(settingsUi, /Group administration/);
+assert.match(settingsUi, /groupSettingsAccess/);
 
 console.log('group architecture checks passed');

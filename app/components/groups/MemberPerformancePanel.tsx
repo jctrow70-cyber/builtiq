@@ -24,8 +24,7 @@ export default function MemberPerformancePanel({
     <div className="member-performance-panel">
       <div className="card member-assignment-compliance">
         <div className="topline" style={{ justifyContent: 'space-between' }}>
-          <h3>Assignment compliance</h3>
-          {hasAssignments && <span className="badge">{assignmentCompliance.completionPct}%</span>}
+          <h3>Assigned workouts</h3>
         </div>
         {hasAssignments ? (
           <>
