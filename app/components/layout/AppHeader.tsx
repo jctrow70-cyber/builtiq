@@ -1,38 +1,13 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import IconButton from '../ui/IconButton';
-
-function BellIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22Zm7-6V11a7 7 0 1 0-14 0v5l-2 2v1h18v-1l-2-2Z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function UserIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.6" />
-      <path
-        d="M5 20c0-3.314 3.134-6 7-6s7 2.686 7 6"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
+import NotificationCenter from '../notifications/NotificationCenter';
 
 type AppHeaderProps = {
   displayName: string;
   contextLabel: string;
+  userId?: string | null;
+  onOpenNotification?: (row: { destination_kind?: string | null }) => void;
   onOpenSettings: () => void;
   onOpenProgress: () => void;
   onOpenAiCoach: () => void;
@@ -44,6 +19,8 @@ type AppHeaderProps = {
 export default function AppHeader({
   displayName,
   contextLabel,
+  userId,
+  onOpenNotification,
   onOpenSettings,
   onOpenProgress,
   onOpenAiCoach,
@@ -75,9 +52,7 @@ export default function AppHeader({
           <p className="app-header-v2-sub">{contextLabel}</p>
         </div>
         <div className="app-header-v2-actions">
-          <IconButton label="Notifications (coming soon)" variant="soft" size="sm" disabled>
-            <BellIcon />
-          </IconButton>
+          {userId && <NotificationCenter userId={userId} onOpen={onOpenNotification} />}
           <div className="app-header-v2-menu-wrap" ref={menuRef}>
             <button
               type="button"

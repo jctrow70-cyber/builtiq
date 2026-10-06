@@ -19,6 +19,30 @@ Impact:
 
 ---
 
+## Decision 087 - Notifications Are Per User, Not Chat or the Group Feed
+
+Date: 2026-10-05
+Status: Accepted
+Category: Notifications
+
+### Decision
+
+A domain action may publish one notification for a specific user. The notification stores a short title, a short body, and a reference to the group, member, conversation, program, workout, progress item, or invitation. It does not store the workout or program. In-app delivery defaults on. Email for these categories defaults off and is not sent in this phase. Group invitation email stays on its own path. Push is not delivered. Chat unread state will live on conversation membership later, not on this table. A group activity feed is a separate concept and is not built here.
+
+### Reason
+
+Each feature calling Resend, or stuffing system events into chat, would make later messages, reminders, and assignments inconsistent and noisy.
+
+### Alternatives Considered
+
+- Email every new notification — rejected; people should not start receiving mail for assignments before preferences are proven
+- A delivery queue and bounce tracking now — deferred; nothing in this phase sends category email, so the queue would be empty
+- Use the notification read flag as chat unread — rejected; a conversation can be unread without a new notification, and the reverse is also true
+
+### Impact
+
+Apply migration 20261005_057 after 056. Existing invitation email behavior stays. An invitation creates an in-app notification only when the address already belongs to an account. Assignment retries with the same dedupe key do not add a second row. A later chat phase can publish group_message and direct_message through the same publisher.
+
 ## Decision 086 - Secure Email Invitations Are Separate from Quick Join
 
 Date: 2026-10-05

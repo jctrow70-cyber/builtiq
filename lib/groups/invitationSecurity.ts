@@ -96,8 +96,9 @@ export type GroupInvitationEvent =
   | { type: 'group_invitation_accepted'; inviteId: string; teamId: string; userId: string };
 
 /**
- * Single place a later notification phase can subscribe.
- * This phase records nothing and sends nothing beyond the invitation email.
+ * App-level marker for a successful invitation action.
+ * The in-app notification is published by the database trigger on st_group_invites.
+ * The invitation email stays in the invitation route and is not sent from here.
  */
 export function recordGroupInvitationEvent(event: GroupInvitationEvent): GroupInvitationEvent {
   return event;

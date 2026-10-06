@@ -720,6 +720,15 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .app-header-v2-brand{font-size:18px;font-weight:900;letter-spacing:-.02em;line-height:1.1}
 .app-header-v2-sub{margin:3px 0 0;font-size:12px;color:var(--textSecondary);line-height:1.3}
 .app-header-v2-actions{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.notification-center{position:relative}
+.notification-badge{position:absolute;top:2px;right:2px;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#15803d;color:#fff;font-size:11px;font-weight:800;line-height:18px;text-align:center}
+.notification-panel{position:absolute;right:0;top:calc(100% + 8px);width:min(360px,calc(100vw - 24px));max-height:min(70vh,480px);overflow:auto;padding:12px;border-radius:14px;border:1px solid var(--borderSubtle);background:var(--surfaceElevated);box-shadow:var(--shadowElevated);z-index:45}
+.notification-panel-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
+.notification-list{display:flex;flex-direction:column;gap:6px}
+.notification-row{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;text-align:left;border:0;background:transparent;color:var(--textPrimary);padding:10px;border-radius:10px;min-height:44px}
+.notification-row.unread{background:var(--accentSoft)}
+.notification-row-title{font-weight:800;font-size:14px}
+.notification-row-body{font-size:13px;color:var(--textSecondary)}
 .app-header-v2-menu-wrap{position:relative}
 .app-header-v2-avatar{min-width:44px;min-height:44px;border-radius:999px;border:1px solid var(--borderSubtle);background:var(--accentSoft);color:var(--textPrimary);font-weight:900;font-size:15px;cursor:pointer}
 .app-header-v2-menu{position:absolute;right:0;top:calc(100% + 6px);min-width:200px;padding:8px;border-radius:14px;border:1px solid var(--borderSubtle);background:var(--surfaceElevated);box-shadow:var(--shadowElevated);z-index:40}

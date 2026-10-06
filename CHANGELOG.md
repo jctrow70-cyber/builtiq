@@ -11,6 +11,58 @@ Branch:
 Status:
 ```
 
+## BIQ-0243 - BuildIQ Notification Foundation
+
+Date: 2026-10-05
+Branch: main
+Status: Local / in progress
+
+### Summary
+
+BuildIQ now has one private in-app notification system. Invitations and training assignments can publish into it. Category email and push are modeled and not sent.
+
+### Purpose
+
+Future messages, assignments, reminders, and progress events need one place to tell a specific person something happened, without each feature calling email directly and without turning system events into chat.
+
+### Files changed
+
+- supabase/migrations/20261005_057_notification_foundation.sql
+- lib/notifications/policy.ts
+- lib/notifications/deliver.ts
+- app/components/notifications/NotificationCenter.tsx
+- app/components/notifications/NotificationPreferences.tsx
+- app/components/layout/AppHeader.tsx
+- app/page.tsx
+- app/globals.css
+- lib/groups/invitationSecurity.ts
+- scripts/test-notifications.ts
+- DECISIONS.md
+- package.json
+
+### Database changes
+
+Apply manually after 056: supabase/migrations/20261005_057_notification_foundation.sql
+
+Adds st_notifications and st_notification_preferences. Replaces program and workout assignment functions so one assignment creates one notification per recipient. Does not apply remotely from the app.
+
+### Testing steps
+
+- Sign in and confirm the header bell shows an unread count only for your notifications.
+- Open the panel, mark one read, and mark all read. The badge follows.
+- Settings → Notifications saves in-app categories for the signed-in user.
+- Invite an existing BuildIQ email and confirm that person gets an in-app invitation. A new email still gets only the invitation email.
+- Assign a program or workout and confirm the recipient gets one notification, not one per exercise.
+- Mobile width around 390px: the panel stays on screen and the bell does not cover the account menu.
+
+### Known issues
+
+Category email is stored as a preference default of off and is not delivered. Push is not implemented. The signed-in bell could not be click-tested until migration 057 is applied. Group chat is not in this change.
+
+### Recommended commit message
+
+BIQ-0243: Add BuildIQ notification foundation
+
 ## BIQ-0242 - Secure Group Invitations and Quick Join
 
 Date: 2026-10-05
