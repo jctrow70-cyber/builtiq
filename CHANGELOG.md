@@ -11,6 +11,62 @@ Branch:
 Status:
 ```
 
+## BIQ-0246 - GHD Sit-Up Master Card
+
+Date: 2026-10-07
+Branch: main
+Status: Local / in progress
+
+### Summary
+
+Added master 264 GHD Sit-Up as its own card. Equipment is GHD. The card carries the programming fields the generator reads: core flexion, abs and hip flexors, core volume credit, isolation accessory role, and an 8–15 rep range. Active generation library is 264.
+
+### Purpose
+
+The catalog had a floor sit-up and no anchored GHD sit-up, so AI programs could not prescribe the movement or match a GHD.
+
+### Changes
+
+- New enriched `builtiq_master` card 264 GHD Sit-Up
+- Equipment and compatible equipment are GHD
+- Aliases: GHD Situp, GHD Sit Up, Glute Ham Developer Sit-Up, Glute-Ham Developer Sit-Up
+- Profile equipment list includes GHD so filters and generation can select it
+- Distinct from Sit-Up (215) and Back Extension (80)
+
+### Files Changed
+
+- `lib/training/masterCatalog.ts`
+- `lib/training/masterCatalogEnrichment.ts`
+- `lib/training/equipmentFilter.ts`
+- `lib/training/catalogCleanupCheck.ts`
+- `scripts/apply-ghd-sit-up.ts`
+- `scripts/verify-catalog-env.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database Changes
+
+No schema migration. Data-only insert of active master 264. Existing IDs and history are unchanged. Sit-Up (215) is not modified.
+
+### Testing Steps
+
+1. Run `npm run test:science`
+2. Search `ghd situp` in Strength and confirm GHD Sit-Up appears as strength
+3. Confirm the equipment dropdown is GHD
+4. Confirm it stays distinct from Sit-Up
+5. With GHD selected and Full gym off, confirm the card still matches the equipment filter
+6. With only Dumbbell selected, confirm it does not match
+
+### Known Issues
+
+- The live catalog row appears after `npx tsx scripts/apply-ghd-sit-up.ts` or a Settings master import
+- Phase 2B is not started
+
+### Recommended Commit Message
+
+`BIQ-0246 Add GHD Sit-Up with GHD equipment`
+
 ## BIQ-0245 - Unified Training Schedule
 
 Date: 2026-10-07

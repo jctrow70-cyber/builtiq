@@ -19,6 +19,33 @@ Impact:
 
 ---
 
+## Decision 090 - GHD Sit-Up Is Its Own Master Card
+
+Date: 2026-10-07
+Status: Accepted
+Category: Exercise Library
+
+### Decision
+
+Add master 264 GHD Sit-Up. Equipment is GHD only. Store the same programming fields the generator already reads for other core cards: core flexion, abs primary, hip flexors secondary, core volume credit on abs, isolation accessory, reps. Do not merge it with floor Sit-Up (215) or Back Extension (80).
+
+### Reason
+
+A GHD sit-up is an anchored, long-range sit-up. The floor sit-up does not describe the setup or the equipment, so the AI cannot prescribe it.
+
+### Alternatives Considered
+
+- Alias GHD Sit-Up onto Sit-Up (215) — rejected; the pad, the range, and the equipment are the point of the card
+- Store equipment as Machine — rejected; GHD is the implement the user selects
+
+### Impact
+
+- Active BuiltIQ master library is 264 generation-eligible cards
+- Profiles can select GHD so equipment filters include this card
+- Existing IDs and history are unchanged
+
+---
+
 ## Decision 089 - Today Is Due, Not Missed, Until the Local Day Ends
 
 Date: 2026-10-07
