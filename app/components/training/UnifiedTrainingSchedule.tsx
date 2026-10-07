@@ -124,7 +124,10 @@ export default function UnifiedTrainingSchedule({ userId, teams, onStartWorkout 
           .order('source_kind', { ascending: true });
     const rows = ((refreshed.data || []) as EnrollmentRow[]).filter((row) => row.status !== 'ended');
     setEnrollments(rows);
-    const programIds = [...new Set(rows.map((row) => row.program_id).filter(Boolean))] as string[];
+    const programIds = rows.reduce<string[]>((ids, row) => {
+      if (row.program_id && ids.indexOf(row.program_id) === -1) ids.push(row.program_id);
+      return ids;
+    }, []);
     if (programIds.length) {
       const programs = await supabase.from('st_programs').select('id, name').in('id', programIds);
       const names: Record<string, string> = {};
