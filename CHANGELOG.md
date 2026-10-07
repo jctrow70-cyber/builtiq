@@ -11,6 +11,67 @@ Branch:
 Status:
 ```
 
+## BIQ-0245 - Unified Training Schedule
+
+Date: 2026-10-07
+Branch: main
+Status: Local / in progress
+
+### Summary
+
+Training now answers what you are doing across every visible program. Today, this week, and the next week list each workout with its source. A workout due today does not lower adherence until the local day ends. Group grades use only that group's schedule.
+
+### Purpose
+
+One followed program could not show a personal plan and two groups on the same day, and an unfinished workout this morning was already counting as missed. Expectations record who was supposed to train, from which source, on which date, without copying the workout.
+
+### Files changed
+
+- supabase/migrations/20261007_059_unified_training_schedule.sql
+- lib/training/unifiedSchedule.ts
+- lib/training/scheduleActions.ts
+- lib/training/workoutSessions.ts
+- lib/programDesign/followProgram.ts
+- lib/groups/trainingSources.ts
+- app/components/training/UnifiedTrainingSchedule.tsx
+- app/components/groups/GroupScheduleAdherence.tsx
+- app/components/groups/GroupTrainingHome.tsx
+- app/components/groups/GroupsHub.tsx
+- app/page.tsx
+- app/globals.css
+- scripts/test-unified-schedule.ts
+- package.json
+- CHANGELOG.md
+- DECISIONS.md
+
+### Database changes
+
+Apply manually in order when those files are not already on the database: 054, 055, 056, 057, 058, then 20261007_059_unified_training_schedule.sql.
+
+059 adds schedule visibility, expectation, start, and end on enrollments. It adds program segments and training expectations. Workout sessions can point at the expectation they fulfill. Group adherence is `st_group_schedule_adherence`. Existing rows stay hidden except the enrollment that matches `followed_program_id`, which is shown, expected, and filled from the database date forward. `followed_program_id` stays.
+
+### Testing steps
+
+- Sign in and open Training. Today lists every visible workout for the local day, each with its source and Start Workout.
+- Confirm two workouts on the same day both appear.
+- Hide a group source. Its future rows leave the calendar, and the source explains that expected training still counts for the group.
+- Stop expected participation on a flexible group. Membership stays. Past expectations stay.
+- Complete a workout from Today and confirm the set log for a group source keeps that group's id, including a just-me copy.
+- On the group Training tab, adherence uses that group only. A personal workout does not change the percentage. An unfinished workout today shows as due today.
+- Apply 059 before expecting rows. Until then Training explains that the migration is required.
+- Run `node .\node_modules\tsx\dist\cli.mjs scripts/test-unified-schedule.ts` and the existing group tests.
+
+### Known issues
+
+- Program edits made outside the Training week controls use the database date as the effective date unless the save also sends the local date. Members in another timezone can be one day apart on a shared template.
+- Excused workouts have a column. There is no vacation screen in this phase.
+- Opening Training repairs a followed program that has no visible enrollment. It does not grade other hidden groups.
+- The migration is not applied from the app.
+
+### Recommended commit message
+
+BIQ-0245: Add the unified training schedule
+
 ## BIQ-0244 - Group Communication
 
 Date: 2026-10-06

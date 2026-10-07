@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import type { TeamProgramRow } from '../../../lib/groups/programRoster';
+import GroupScheduleAdherence from './GroupScheduleAdherence';
 
 type GroupTrainingHomeProps = {
   canManage: boolean;
@@ -12,6 +13,8 @@ type GroupTrainingHomeProps = {
   managingPlans: boolean;
   planLibrary?: ReactNode;
   assignmentTools?: ReactNode;
+  teamId?: string | null;
+  members?: Array<{ user_id?: string; display_name?: string | null }>;
 };
 
 export default function GroupTrainingHome({
@@ -23,6 +26,8 @@ export default function GroupTrainingHome({
   managingPlans,
   planLibrary,
   assignmentTools,
+  teamId,
+  members,
 }: GroupTrainingHomeProps) {
   return (
     <>
@@ -64,11 +69,12 @@ export default function GroupTrainingHome({
         )}
       </div>
       {canManage && managingPlans && planLibrary}
+      {teamId && <GroupScheduleAdherence teamId={teamId} members={members || []} />}
       <div className="card">
         <h2>This week&apos;s training</h2>
         <p className="muted">
           {current
-            ? 'The group is on the program above. One-off workouts are assigned separately.'
+            ? 'The group is on the program above. One-off workouts from this group count on this grade.'
             : 'Assign a group program before scheduling one-off workouts.'}
         </p>
       </div>

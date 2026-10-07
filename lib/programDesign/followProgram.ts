@@ -17,6 +17,7 @@ import { decideGroupEnrollmentSync } from './enrollmentSync';
 import { fetchDesignPrograms, updateDesignProgram } from './programDesignApi';
 import type { ProgramDesignRecord } from './types';
 import { groupSourceKey, upsertTrainingEnrollment } from '../groups/trainingSources';
+import { activateFollowedProgram } from '../training/scheduleActions';
 
 export { alreadyFollowing, findPersonalCopyOf };
 
@@ -143,6 +144,7 @@ export async function followProgram(
   }
   const { error } = await setFollowedProgramId(supabase, input.userId, programId);
   if (error) return { programId: null, copied, error };
+  await activateFollowedProgram(supabase, programId);
   return { programId, copied, error: null };
 }
 

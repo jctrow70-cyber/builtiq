@@ -19,6 +19,36 @@ Impact:
 
 ---
 
+## Decision 089 - Today Is Due, Not Missed, Until the Local Day Ends
+
+Date: 2026-10-07
+Status: Accepted
+Category: Training
+
+### Decision
+
+Historical adherence is completed past expectations divided by non-excused past expectations. Past means `scheduled_date` is before the member's local today. A workout scheduled for today is due today. Completing it is reported separately and does not change the historical rate. Partial and skipped stay incomplete. Excused rows stay out of the denominator.
+
+An enrollment has three separate fields: participation status, whether it shows on the personal Training calendar, and whether future training should create expectations. Hiding a source leaves the expectation rows in place. Stopping future expectation does not end group membership and does not delete history.
+
+Expectations are written in the same database transaction that makes training effective. They name the person, source, workout, and local date. They do not copy exercises. A performed workout stores the expectation it fulfills. A group set log uses that group's id even when the program is a personal just-me copy.
+
+Only the enrollment that already matches `followed_program_id` is shown and expected during the migration. Other existing group enrollments stay active and hidden, with no expectation rows, until the member turns them on. New joins and assignments turn both switches on and materialize the remaining program cycle. The cycle stops after its final week.
+
+### Reason
+
+BuildIQ has no required workout time, so a Wednesday morning grade was treating Wednesday as already missed. Members also needed one calendar for personal training and every group, while a group grade stays limited to that group.
+
+### Alternatives Considered
+
+Counting today in the denominator as soon as the day starts. Copying each workout onto the expectation row. A rolling job that creates the next few weeks when someone opens Training. Treating a just-me fork as personal training. Making hide also stop the grade.
+
+### Impact
+
+Apply `20261007_059_unified_training_schedule.sql` after 054 through 058. Personal Training shows Today, This week, Upcoming, and Programs. Group Training shows this group's adherence. `followed_program_id` remains. Authoritative trainer control of the schedule is not in this phase.
+
+---
+
 ## Decision 088 - Group Chat Is Separate From Notifications and Activity
 
 Date: 2026-10-06

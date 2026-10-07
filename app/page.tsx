@@ -54,6 +54,7 @@ import { canRewritePlannedSetPrescription } from '../lib/training/plannedSetGuar
 import { deriveSessionStatus } from '../lib/training/sessionOutcome';
 import { extraLogsFromSetLogs, extraSetInsertPayload, extraSetsForExercise, nextExtraSetNumber, type ExtraSetLog } from '../lib/training/extraSets';
 import { normalizePainFlag, upsertExerciseSession, upsertWorkoutFeel, upsertWorkoutSession } from '../lib/training/workoutSessions';
+import { refreshProgramExpectations, withdrawAssignmentExpectation } from '../lib/training/scheduleActions';
 import { applyProgressionForCompletedExercise, patchProgramPlannedWeights } from '../lib/training/adaptationApply';
 import type { AdaptationApplicationResult } from '../lib/scienceEngine/adaptation/apply/types';
 import { prescriptionColumnsFromSources } from '../lib/training/prescriptionMeta';
@@ -61,7 +62,7 @@ import type { PainFlag, SessionStatus, SkipReason, WorkoutFeel } from '../lib/sc
 import GroupsHub from './components/groups/GroupsHub';
 import AssignedWorkoutsPanel from './components/groups/AssignedWorkoutsPanel';
 import ProgramDesignHome from './components/programDesign/ProgramDesignHome';
-import TrainingExecution from './components/training/TrainingExecution';
+import UnifiedTrainingSchedule, { type ScheduleStartItem } from './components/training/UnifiedTrainingSchedule';
 import WorkoutPlanSheet from './components/training/WorkoutPlanSheet';
 import MoveWorkoutSheet from './components/training/MoveWorkoutSheet';
 import { cycleLengthOf } from '../lib/programDesign/cycle';
@@ -214,6 +215,9 @@ export default function Page(){
  const [trainingCalendarView,setTrainingCalendarView]=useState<'day'|'week'|'month'>('month');
  const [trainingCalendarMonth,setTrainingCalendarMonth]=useState(()=>yearMonthOf(todayYmd()));
  const [trainingSessionOpen,setTrainingSessionOpen]=useState(false);
+ const [activeExpectationId,setActiveExpectationId]=useState<string|null>(null);
+ const [activeExpectationSource,setActiveExpectationSource]=useState<string|null>(null);
+ const [activeExpectationDate,setActiveExpectationDate]=useState<string|null>(null);
  const [trainingActivities,setTrainingActivities]=useState<ProgramActivity[]>([]);
  const [userCalendarActivities,setUserCalendarActivities]=useState<UserCalendarActivity[]>([]);
  const [trainingAddActivityOpen,setTrainingAddActivityOpen]=useState(false);
@@ -1163,6 +1167,7 @@ export default function Page(){
   try{
    const{error}=await supabase.from('st_assignment_recipients').update({status:'skipped'}).eq('id',row.id).eq('user_id',session.user.id);
    if(error)return alert(error.message);
+   await withdrawAssignmentExpectation(supabase, row.id, todayYmd());
    if(activeAssignedRecipient?.id===row.id)await closeAssignedWorkout();
    await loadAssignedWorkouts();
   }finally{
@@ -2076,7 +2081,8 @@ export default function Page(){
   const uid=logUserId();
   if(!session?.user||!uid)return;
   const coachLogging=uid!==session.user.id;
-  const logTeamId=activeAssignedRecipient?.st_workout_assignments?.team_id||(mode==='team'&&activeTeam?activeTeam.id:null);
+  const expectationTeam=activeExpectationSource?.startsWith('group:')?activeExpectationSource.slice('group:'.length):null;
+  const logTeamId=activeAssignedRecipient?.st_workout_assignments?.team_id||expectationTeam||(activeExpectationId?null:(mode==='team'&&activeTeam?activeTeam.id:null));
   const updatingCompleted=Object.prototype.hasOwnProperty.call(fieldUpdates,'completed')||opts?.completed!==undefined;
   const markComplete=updatingCompleted
     ?(opts?.completed!==undefined?!!opts.completed:!!fieldUpdates.completed)
@@ -2198,6 +2204,9 @@ export default function Page(){
     skip_reason:skipReason||null,
     duration_minutes:null,
     feedback_id:feelRes.id,
+    expectation_id:activeExpectationId,
+    source_key:activeExpectationSource,
+    scheduled_date:activeExpectationDate,
   });
   if(saved.pendingMigration)setPhase2a1Pending(true);
   else if(saved.error)alert(saved.error);
@@ -2351,6 +2360,7 @@ function onSelectTrainingDay(date:string){
   }
   setProgram({...program,start_date:anchor});
   setProgramStartDate(anchor);
+  await refreshProgramExpectations(supabase, program.id, todayYmd());
   if(draftEditProgramId&&activeWorkout)alignEditorCalendar({...program,start_date:anchor},activeWorkout);
   else {
   const aligned=weekForDate(anchor,logDate,program.weeks||weeks||6);
@@ -2368,10 +2378,12 @@ function onSelectTrainingDay(date:string){
    if(fallbackError)return alert(fallbackError.message);
    setProgram({...program,weeks:w});
    setWeeks(w);
+   await refreshProgramExpectations(supabase, program.id, todayYmd());
    return;
   }
   setProgram({...program,weeks:w,cycle_length_weeks:w,end_date:end});
   setWeeks(w);
+  await refreshProgramExpectations(supabase, program.id, todayYmd());
  }
  async function reloadKeepDay(){
   const keep = planEditRef.current?.workout?.id || activeWorkout;
@@ -2384,7 +2396,27 @@ function onSelectTrainingDay(date:string){
   }
 }
  function openManageProgram(){setMemberDashboard(null);setViewingMember(null);setTrainingSessionOpen(false);setTrainingSubNav('personal');setDraftEditProgramId(null);setAppNav('Programs');}
+ async function startScheduledWorkout(item:ScheduleStartItem){
+  let nextProgram=program;
+  if(item.programId&&program?.id!==item.programId){
+   const{data:full,error}=await fetchFullProgram(supabase,item.programId);
+   if(error||!full){alert(error||'Could not open that workout.');return;}
+   nextProgram=full;
+   setProgram(full);
+  }
+  await startTrainingSession(item.workoutId,item.scheduledDate,'log');
+  setActiveExpectationId(item.expectationId);
+  setActiveExpectationSource(item.sourceKey);
+  setActiveExpectationDate(item.scheduledDate);
+  if(nextProgram){
+   const start=resolveProgramStartDate(nextProgram);
+   setWeek(weekForDate(start,item.scheduledDate,nextProgram.weeks||weeks||6));
+  }
+ }
  async function startTrainingSession(workoutId:string|null,dateYmd:string,intent:'log'|'edit'='log'){
+  setActiveExpectationId(null);
+  setActiveExpectationSource(null);
+  setActiveExpectationDate(null);
   if(program){
    const start=resolveProgramStartDate(program);
    const nextWeek=weekForDate(start,dateYmd,program.weeks||weeks||6);
@@ -2867,41 +2899,11 @@ function matchingSet(targetExercise:any, sourceSet:any){
       />
     </div>
     {!viewingMember&&!trainingSessionOpen&&<AssignedWorkoutsPanel assignments={assignedWorkouts} activeRecipientId={activeAssignedRecipient?.id||null} onOpen={openAssignedWorkout} onCloseActive={activeAssignedRecipient?closeAssignedWorkout:undefined} onCopyToPersonal={copyAssignedWorkoutToPersonal} onDismiss={dismissAssignedWorkout} copyingRecipientId={assignmentCopyBusy} dismissingRecipientId={assignmentDismissBusy} getWorkoutStatus={assignmentPanelStatus} statusLabel={statusLabel}/>}
-    {!viewingMember&&!activeAssignedRecipient&&!trainingSessionOpen&&<TrainingExecution
-      programName={program?.name||null}
-      followedFromGroup={followedFromGroup}
-      followingGroupTemplate={followingGroupTemplate}
-      personalizedCopy={personalizedCopy}
-      onCustomizeForMe={canCustomizeForMe?()=>void customizeFollowedProgramForMeHandler():undefined}
-      customizeBusy={customizeForMeBusy}
-      today={trainingTodayPlan}
-      tomorrow={trainingTomorrowPlan}
-      weekDays={trainingWeekPlans}
-      monthCells={trainingMonthCells}
-      monthLabel={trainingMonthLabel}
-      selectedDate={logDate}
-      weekNumber={week}
-      totalWeeks={cycleLengthOf(program||{weeks})}
-      calendarView={trainingCalendarView}
-      onCalendarViewChange={(view)=>{setTrainingCalendarView(view);if(view==='month')setTrainingCalendarMonth(yearMonthOf(logDate));}}
-      onPrevWeek={()=>{const next=addDaysYmd(mondayOfWeek(logDate),-7);setLogDate(next);setTrainingCalendarMonth(yearMonthOf(next));if(program)setWeek(weekForDate(resolveProgramStartDate(program),next,program.weeks||weeks||6));}}
-      onNextWeek={()=>{const next=addDaysYmd(mondayOfWeek(logDate),7);setLogDate(next);setTrainingCalendarMonth(yearMonthOf(next));if(program)setWeek(weekForDate(resolveProgramStartDate(program),next,program.weeks||weeks||6));}}
-      onThisWeek={()=>{const now=todayYmd();setLogDate(now);setTrainingCalendarMonth(yearMonthOf(now));if(program)setWeek(weekForDate(resolveProgramStartDate(program),now,program.weeks||weeks||6));}}
-      onPrevMonth={()=>setTrainingCalendarMonth((m)=>shiftYearMonth(m,-1))}
-      onNextMonth={()=>setTrainingCalendarMonth((m)=>shiftYearMonth(m,1))}
-      onThisMonth={()=>{const now=todayYmd();setTrainingCalendarMonth(yearMonthOf(now));setLogDate(now);}}
-      onSelectDay={onSelectTrainingDay}
-      onStartWorkout={(id,date)=>startTrainingSession(id,date,'log')}
-      onViewWorkout={(id,date)=>{setLogDate(date);setViewingWorkoutId(id);if(program){const start=resolveProgramStartDate(program);const nextWeek=weekForDate(start,date,program.weeks||weeks||6);setWeek(nextWeek);setActiveWorkout(id);}}}
-      onOpenPrograms={()=>goNav('Programs')}
-      onAddActivity={()=>setTrainingAddActivityOpen(true)}
-      onEditActivity={(activityId,date)=>setTrainingEditActivity({id:activityId,date})}
-      onSetupWorkout={(activityId,date)=>void setupExistingStrengthActivity(activityId,date)}
-      onCompleteItem={(item,date)=>void toggleTrainingItemComplete(item,date)}
-      onMoveItem={(item,date)=>setTrainingMoveItem({item,date})}
-      completingItemId={trainingCompleteBusy}
-      completedDates={trainingCompletedDates}
-    />}
+    {!viewingMember&&!activeAssignedRecipient&&!trainingSessionOpen&&session?.user&&<>
+      {canCustomizeForMe&&<div className="card"><p className="muted">This group plan is shared. A private copy stays on the group schedule under the group name.</p><button type="button" className="btn small secondary" disabled={customizeForMeBusy} onClick={()=>void customizeFollowedProgramForMeHandler()}>{customizeForMeBusy?'Making your copy…':'Edit just for me'}</button></div>}
+      <UnifiedTrainingSchedule userId={session.user.id} teams={teams} onStartWorkout={(item)=>void startScheduledWorkout(item)}/>
+    </>}
+    {!viewingMember&&!trainingSessionOpen&&!session?.user&&<div className="card"><p className="muted">Sign in to see your training schedule.</p></div>}
     {viewingWorkoutId&&<WorkoutPlanSheet
       workout={findWorkoutAnywhere(viewingWorkoutId)}
       dateLabel={formatDisplayDate(logDate)}

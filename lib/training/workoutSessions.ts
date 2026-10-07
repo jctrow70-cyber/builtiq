@@ -12,6 +12,9 @@ export type WorkoutSessionRow = {
   completed_at?: string | null;
   duration_minutes?: number | null;
   feedback_id?: string | null;
+  expectation_id?: string | null;
+  source_key?: string | null;
+  scheduled_date?: string | null;
 };
 
 export type WorkoutFeedbackDraft = {
@@ -45,11 +48,24 @@ export async function upsertWorkoutSession(
     duration_minutes: row.duration_minutes ?? null,
     feedback_id: row.feedback_id || null,
   };
-  const { data, error } = await supabase
+  const linked = {
+    ...payload,
+    expectation_id: row.expectation_id || null,
+    source_key: row.source_key || null,
+    scheduled_date: row.scheduled_date || null,
+  };
+  let { data, error } = await supabase
     .from('st_workout_sessions')
-    .upsert(payload, { onConflict: 'user_id,workout_id,log_date' })
+    .upsert(linked, { onConflict: 'user_id,workout_id,log_date' })
     .select()
     .maybeSingle();
+  if (error && /expectation_id|source_key|scheduled_date/i.test(error.message || '')) {
+    ({ data, error } = await supabase
+      .from('st_workout_sessions')
+      .upsert(payload, { onConflict: 'user_id,workout_id,log_date' })
+      .select()
+      .maybeSingle());
+  }
   if (missingTable(error)) return { data: null, error: error?.message || 'st_workout_sessions missing', pendingMigration: true };
   if (error) return { data: null, error: error.message, pendingMigration: false };
   return { data: (data as WorkoutSessionRow) || null, error: null, pendingMigration: false };

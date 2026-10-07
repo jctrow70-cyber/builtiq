@@ -155,6 +155,8 @@ export async function upsertTrainingEnrollment(
     return { error: 'Group enrollment requires a group id', pending: false };
   }
   const sourceKey = row.sourceKind === 'personal' ? personalSourceKey() : groupSourceKey(row.teamId as string);
+  // schedule_visible and expectation_enabled are omitted so a sync cannot
+  // hide, reveal, or regrade an enrollment the member already set.
   const { error } = await supabase.from('st_training_enrollments').upsert(
     {
       user_id: row.userId,
