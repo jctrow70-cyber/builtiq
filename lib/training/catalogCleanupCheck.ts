@@ -4,6 +4,7 @@
 import { inferExerciseType } from './exerciseTypes';
 import { catalogItemIsCardio, searchCatalog, textHasToken } from './catalogSearch';
 import { compatibleEquipmentOptions } from './exerciseEquipment';
+import { exerciseMatchesEquipment } from './equipmentFilter';
 import {
   expectedMasterCatalogCount,
   loadMasterLibraryRecords,
@@ -52,7 +53,7 @@ export function runCatalogCleanupChecks() {
   const mapped = mappedByName();
   const catalog = mapped.map((row) => row.catalog);
   const masterCount = expectedMasterCatalogCount();
-  assert(masterCount === 263, `active master count should be 263, got ${masterCount}`);
+  assert(masterCount === 264, `active master count should be 264, got ${masterCount}`);
   assert(catalog.length === masterCount, `mapped master count should be ${masterCount}, got ${catalog.length}`);
 
   assert(!textHasToken('Prowler Push', 'row'), 'word-boundary: Prowler does not match row');
@@ -159,6 +160,29 @@ export function runCatalogCleanupChecks() {
   assert(standingEq.length > 0, 'Overhead Press has compatible equipment');
   assert(JSON.stringify(seatedEq) === JSON.stringify(standingEq), `Seated OHP equipment ${seatedEq.join(', ')} must match Overhead Press ${standingEq.join(', ')}`);
 
+  const ghdSitUp = mapped.find((row) => row.record.id === '264');
+  assert(ghdSitUp?.record.name === 'GHD Sit-Up', 'master 264 is GHD Sit-Up');
+  assert(ghdSitUp?.catalog.exercise_type === 'strength', 'GHD Sit-Up is strength');
+  assert(ghdSitUp?.catalog.movement_pattern === 'isolation', 'GHD Sit-Up first-class pattern is isolation');
+  assert(ghdSitUp?.catalog.equipment === 'GHD', 'GHD Sit-Up equipment is GHD');
+  const ghdEq = compatibleEquipmentOptions(ghdSitUp!.catalog);
+  assert(ghdEq.length === 1 && ghdEq[0] === 'GHD', `GHD Sit-Up compatible equipment should be GHD, got ${ghdEq.join(', ')}`);
+  const ghdMeta = ghdSitUp!.catalog.coaching_metadata;
+  assert(ghdMeta.movement_pattern === 'core_flexion' && ghdMeta.exercise_kind === 'isolation', '264 movement/kind');
+  assert(ghdMeta.volume_policy === 'core' && ghdMeta.measurement_type === 'reps' && ghdMeta.laterality === 'bilateral', '264 programming fields');
+  assert(ghdMeta.fatigue_cost === 'moderate' && ghdMeta.skill_demand === 'moderate', '264 fatigue and skill');
+  assert(ghdMeta.warmup_eligible === false && ghdMeta.power_eligible === false && ghdMeta.ramp_eligible === false, '264 is not warmup, power, or ramp');
+  assert(
+    JSON.stringify(ghdMeta.hypertrophy_volume_credits) === JSON.stringify(NEW_MASTER_CLASSIFICATIONS['264'].hypertrophy_volume_credits),
+    '264 volume credits'
+  );
+  assert(JSON.stringify(ghdMeta.primary_muscles) === JSON.stringify(['abs']), '264 primary muscles');
+  assert(JSON.stringify(ghdMeta.secondary_muscles) === JSON.stringify(['hip_flexors']), '264 secondary muscles');
+  assert(exerciseMatchesEquipment(ghdSitUp!.catalog, ['ghd']), 'GHD equipment filter includes GHD Sit-Up');
+  assert(!exerciseMatchesEquipment(ghdSitUp!.catalog, ['dumbbell']), 'dumbbell-only filter excludes GHD Sit-Up');
+  const ghdSearch = searchCatalog(catalog, { query: 'ghd situp', section: 'strength', limit: 5 });
+  assert(ghdSearch[0]?.name === 'GHD Sit-Up', 'ghd situp search finds GHD Sit-Up');
+
   const liveShaped = catalog.map((item) => ({
     ...item,
     is_system: true,
@@ -179,6 +203,7 @@ export function runCatalogCleanupChecks() {
   assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '261')), 'Diverging Row is generation-eligible');
   assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '262')), 'Converging Chest Press is generation-eligible');
   assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '263')), 'Seated Overhead Press is generation-eligible');
+  assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '264')), 'GHD Sit-Up is generation-eligible');
   assert(!isAiGenerationEligibleRow(archived), 'archived cards cannot enter generation');
   assert(!isAiGenerationEligibleRow(custom), 'user customs cannot enter generation');
   const adapted = adaptGenerationCatalog([...liveShaped, custom, archived], { allowFallback: false });
@@ -186,6 +211,14 @@ export function runCatalogCleanupChecks() {
   assert(adapted.some((ex) => ex.name === 'Diverging Row'), 'adapted catalog includes Diverging Row');
   assert(adapted.some((ex) => ex.name === 'Converging Chest Press'), 'adapted catalog includes Converging Chest Press');
   assert(adapted.some((ex) => ex.name === 'Seated Overhead Press'), 'adapted catalog includes Seated Overhead Press');
+  const adaptedGhd = adapted.find((ex) => ex.name === 'GHD Sit-Up');
+  assert(adaptedGhd, 'adapted catalog includes GHD Sit-Up');
+  assert(adaptedGhd?.movementPattern === 'core_flexion', 'AI reads GHD Sit-Up as core flexion');
+  assert(adaptedGhd?.exerciseType === 'isolation', 'AI reads GHD Sit-Up as isolation');
+  assert(adaptedGhd?.primaryMuscles.includes('abs') && adaptedGhd?.secondaryMuscles.includes('hip_flexors'), 'AI reads GHD Sit-Up muscles');
+  assert(adaptedGhd?.equipment.some((eq) => eq.toLowerCase() === 'ghd'), 'AI reads GHD equipment');
+  assert(adaptedGhd?.fatigueCost === 'medium' && adaptedGhd?.defaultRepMin === 8 && adaptedGhd?.defaultRepMax === 15, 'AI reads GHD Sit-Up demand and reps');
+  assert(adaptedGhd?.programRoles.includes('accessory') && adaptedGhd?.warmupSuitable === false, 'AI reads GHD Sit-Up as accessory, not warmup');
   assert(adaptGenerationCatalog([], {}).length === FALLBACK_CATALOG.length, 'fallback still works on empty catalog');
 
   console.log('BIQ-0235 catalog cleanup checks passed.');

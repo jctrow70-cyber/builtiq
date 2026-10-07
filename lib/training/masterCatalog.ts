@@ -264,6 +264,22 @@ const ADD_ON_ROWS: MasterLibraryRecord[] = [
     design_notes: 'Distinct from standing Overhead Press (29) and Machine Shoulder Press (141). Same implements as Overhead Press.',
     active: 'Yes',
   },
+  {
+    id: '264',
+    name: 'GHD Sit-Up',
+    aliases: 'GHD Situp; GHD Sit Up; Glute Ham Developer Sit-Up; Glute-Ham Developer Sit-Up',
+    primary_muscle: 'Abs',
+    secondary_muscles: 'Hip Flexors',
+    movement_pattern: 'Spinal/Hip Flexion',
+    category: 'Core',
+    default_equipment: 'GHD',
+    compatible_equipment: 'GHD',
+    setup: 'Lock the feet in the GHD pads with the hips on the pad and the torso free to lower behind the pad.',
+    execution: 'Lower the torso into a controlled extension, then sit up until the chest comes toward the thighs.',
+    form_cues: 'Hips stay on the pad; Own the range; Do not bounce out of the bottom',
+    design_notes: 'Anchored long-range sit-up. Distinct from floor Sit-Up (215) and Back Extension (80). Not a glute-ham raise.',
+    active: 'Yes',
+  },
 ];
 
 function splitList(raw?: string): string[] {

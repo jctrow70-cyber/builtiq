@@ -6,6 +6,7 @@ export const EQUIPMENT_OPTIONS = [
   { id: 'dumbbell', label: 'Dumbbell' },
   { id: 'cable', label: 'Cable' },
   { id: 'machine', label: 'Machines' },
+  { id: 'ghd', label: 'GHD' },
   { id: 'kettlebell', label: 'Kettlebell' },
   { id: 'bands', label: 'Bands' },
   { id: 'pull-up bar', label: 'Pull-up bar' },
