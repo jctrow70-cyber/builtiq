@@ -4,7 +4,7 @@ import { logHasPerformance, type PerformanceLike } from './plannedSetGuard';
 export function deriveExerciseStatus(opts: {
   plannedSets?: Array<{ id?: string; is_deleted?: boolean; set_type?: string }>;
   logs?: Record<string, PerformanceLike | undefined>;
-  explicit?: { status?: ExerciseSessionStatus | null; attempt_outcome?: ExerciseAttemptOutcome | null } | null;
+  explicit?: { status?: string | null; attempt_outcome?: string | null } | null;
 }): { status: ExerciseSessionStatus; attempt: ExerciseAttemptOutcome } {
   if (opts.explicit?.status === 'skipped') {
     return { status: 'skipped', attempt: 'did_not_perform' };

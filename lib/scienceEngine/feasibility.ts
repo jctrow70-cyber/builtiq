@@ -101,7 +101,7 @@ function minimumSessionMinutes(profile: TrainingProfile, movementCount: number):
     potentiation: includePrimer ? [workingLift('Vertical Jump', 75, 2, 'power')] : [],
     rampCount,
     exercises,
-    cooldownItems: [{ name: 'Easy stretch', sets: 1, reps: '30 sec' }],
+    cooldownItems: [{ sets: 1, reps: '30 sec' }],
   });
 }
 

@@ -110,12 +110,13 @@ export async function runGenerationPipeline(opts: {
   const classified = classifyModelResult(call);
   const rawAiProgram = classified.program;
   if (classified.stage !== 'parsed_program' || !classified.program) {
-    const issue = errIssue(classified.stage, classified.message);
+    const outcome: GenerationOutcome = classified.stage === 'parsed_program' ? 'empty_response' : classified.stage;
+    const issue = errIssue(outcome, classified.message);
     return finish({
       science,
       context,
       method: 'science_fallback',
-      outcome: classified.stage,
+      outcome,
       validation: { ok: false, issues: [issue] },
       initialValidation: { ok: false, issues: [issue] },
       program: null,

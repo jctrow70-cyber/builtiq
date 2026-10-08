@@ -11,6 +11,46 @@ Branch:
 Status:
 ```
 
+## BIQ-0257 - Unblock production typecheck on missing-RIR assertion
+
+Date: 2026-10-08
+Branch: main
+Status: Local / in progress
+
+### Summary
+
+The production typecheck stopped on comparisons TypeScript had already narrowed, a cooldown estimate field the duration helper does not accept, a generation outcome that included `parsed_program`, and database strings passed into adaptation unions. Those checks now typecheck. A missing-RIR result still cannot become a load increase unless a performance reason is present.
+
+### Purpose
+
+Vercel compile of `cd6dac5` stopped before the app could deploy. The first error was in `phase2b1Check.ts`. The same typecheck also rejected the next files in line.
+
+### Files changed
+
+- lib/scienceEngine/adaptation/phase2b1Check.ts
+- lib/scienceEngine/feasibility.ts
+- lib/scienceEngine/generation/orchestrator.ts
+- lib/training/exerciseOutcome.ts
+- lib/training/adaptationOrchestration.ts
+- CHANGELOG.md
+
+### Database changes
+
+None.
+
+### Testing steps
+
+1. Run `npm run build` and confirm typecheck passes this assertion.
+2. Run `npm run test:science` and confirm the Phase 2B.1 checks still pass.
+
+### Known issues
+
+None from this change.
+
+### Recommended commit message
+
+`BIQ-0257 Fix the missing-RIR assertion so production typecheck passes`
+
 ## BIQ-0256 - Adaptive Volume, Rest, Ramps, and Duration
 
 Date: 2026-10-08

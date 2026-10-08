@@ -63,6 +63,11 @@ export type AdaptationOrchestrationInput = {
   liveSetsById?: Record<string, { id: string; exercise_id?: string; set_type?: string | null; set_number?: number | null; target_weight?: string | number | null; target_reps?: string | null; rep_min?: number | null; rep_max?: number | null; target_rir?: number | null; is_deleted?: boolean | null }>;
 };
 
+function asPainFlag(value: string | null | undefined): PainFlag | null {
+  if (value === 'none' || value === 'discomfort' || value === 'pain_limiting' || value === 'stopped_due_to_pain') return value;
+  return null;
+}
+
 export function shouldTriggerCompletedWorkoutAdaptation(status?: SessionStatus | string | null): boolean {
   return status === 'completed' || status === 'partial';
 }
@@ -432,7 +437,7 @@ export async function runCompletedWorkoutAdaptation(opts: {
   });
 
   const logsByPlannedSetId = flattenLogs(logs);
-  const painFlag = (feedback && feedback[0]?.pain_flag) || null;
+  const painFlag = asPainFlag(feedback && feedback[0]?.pain_flag);
   const { data: liveSetRows } = allPlannedIds.length
     ? await opts.supabase
         .from('st_planned_sets')

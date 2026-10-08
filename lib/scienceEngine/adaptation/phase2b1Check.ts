@@ -341,7 +341,10 @@ export async function runPhase2b1OrchestrationChecks() {
       })),
     },
   });
-  assert(rirDecision.decision !== 'progress_load' || rirDecision.reason_codes.join('').includes('PERFORMANCE') || rirDecision.decision === 'build_reps' || rirDecision.decision === 'hold' || rirDecision.decision === 'review_required' || rirDecision.decision === 'insufficient_data', '13: missing RIR is not fabricated into high-confidence progress');
+  assert(
+    rirDecision.decision !== 'progress_load' || rirDecision.reason_codes.join('').includes('PERFORMANCE'),
+    '13: missing RIR is not fabricated into high-confidence progress'
+  );
   assert(missingRir.results[0]?.decision !== 'progress_load' || missingRir.results[0]?.reason_codes.some((c) => /PERFORMANCE|RIR|INSUFFICIENT|HOLD|BUILD/i.test(String(c))), '13: orchestration does not invent RIR');
 
   const extraProgram = personalProgram([
