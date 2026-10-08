@@ -1,5 +1,30 @@
 import { DESIGNER_PROMPT_VERSION, SCIENCE_ENGINE_VERSION } from '../version';
+import { outputBudgetSnapshot } from './failureStage';
 import type { GenerationRun } from './types';
+
+export function generationRunDiagnostics(run: GenerationRun) {
+  return {
+    ok: run.validation?.ok ?? false,
+    outcome: run.outcome,
+    initial_failure_stage: run.initialFailureStage,
+    issues: run.validation?.issues || [],
+    initial: run.initialValidation,
+    repairs: run.repairs || [],
+    schema_issues: run.schemaIssues || [],
+    response_status: run.responseStatus,
+    incomplete_reason: run.incompleteReason,
+    finish_reason: run.finishReason,
+    openai_calls: run.openaiCalls ?? null,
+    ai_latency_ms: run.aiLatencyMs ?? null,
+    wall_ms: run.latencyMs ?? null,
+    reasoning_effort: run.reasoningEffort,
+    reasoning_tokens: run.reasoningTokens,
+    output_budget: outputBudgetSnapshot({
+      outputTokens: run.outputTokens,
+      reasoningTokens: run.reasoningTokens,
+    }),
+  };
+}
 
 export function sanitizeGenerationInput(input: unknown): unknown {
   if (!input || typeof input !== 'object') return input;
@@ -36,17 +61,7 @@ export async function persistGenerationRun(
         ok: !run.validation || run.validation.ok || run.method === 'science_fallback',
         input_json: sanitizeGenerationInput(run.context),
         output_json: run.program,
-        validation_json: {
-          ok: run.validation?.ok ?? false,
-          issues: run.validation?.issues || [],
-          initial: run.initialValidation,
-          repairs: run.repairs || [],
-          openai_calls: run.openaiCalls ?? null,
-          ai_latency_ms: run.aiLatencyMs ?? null,
-          wall_ms: run.latencyMs ?? null,
-          reasoning_effort: run.reasoningEffort,
-          reasoning_tokens: run.reasoningTokens,
-        },
+        validation_json: generationRunDiagnostics(run),
         error_text: run.aiError,
       })
       .select('id')

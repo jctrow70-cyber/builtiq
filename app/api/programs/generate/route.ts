@@ -447,6 +447,7 @@ async function generateProgramPost(request: Request) {
     program_name: programName || plan.program_name || defaultProgramName,
     workout_count: targetWorkout ? 1 : plan.workouts.length,
     generation_method: pipeline.method,
+    generation_outcome: pipeline.outcome,
     generation_run_id: pipeline.generationRunId,
     science_version: SCIENCE_ENGINE_VERSION,
     volume_targets: pipeline.program.volumeTargets,

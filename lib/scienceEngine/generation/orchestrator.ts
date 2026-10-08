@@ -9,6 +9,7 @@ import { applyRequestToProfile } from './hardRequirements';
 import { libraryById } from './library';
 import { persistGenerationRun } from './log';
 import { mapAiWeekToScience } from './mapper';
+import { classifyModelResult, finalOutcome, outcomeMessage } from './failureStage';
 import { programModelName, requestWeekProgram, type ModelCallResult } from './openaiClient';
 import { buildDesignerInstructions, buildDesignerUserContent } from './prompt';
 import { applyDurationEfficiency, enforceSessionConstraints, repairAiProgram } from './repairAiProgram';
@@ -19,6 +20,7 @@ import type {
   GenerationContext,
   GenerationMethod,
   GenerationMode,
+  GenerationOutcome,
   GenerationRun,
   ValidationIssue,
   ValidationResult,
@@ -33,6 +35,7 @@ export type OrchestratorResult = {
   repairs: DeterministicRepair[];
   openaiCalls: number;
   aiError: string | null;
+  outcome: GenerationOutcome;
   replacedDays: number;
   run: GenerationRun;
   generationRunId: string | null;
@@ -78,10 +81,11 @@ export async function runGenerationPipeline(opts: {
       science,
       context,
       method: 'science_fallback',
+      outcome: 'science_fallback',
       validation: { ok: true, issues: [] },
       initialValidation: { ok: false, issues: [] },
       program: null,
-      aiError: 'AI is not configured; used the science template.',
+      aiError: outcomeMessage('science_fallback'),
       repairs: [],
       openaiCalls: 0,
       aiLatencyMs: 0,
@@ -100,9 +104,39 @@ export async function runGenerationPipeline(opts: {
     user: buildDesignerUserContent(context),
   });
   const aiLatencyMs = Date.now() - aiStarted;
-  const lastError = call.error;
-  const rawAiProgram = call.program;
-  let working = call.program;
+  const classified = classifyModelResult(call);
+  const rawAiProgram = classified.program;
+  if (classified.stage !== 'parsed_program' || !classified.program) {
+    const issue = errIssue(classified.stage, classified.message);
+    return finish({
+      science,
+      context,
+      method: 'science_fallback',
+      outcome: classified.stage,
+      validation: { ok: false, issues: [issue] },
+      initialValidation: { ok: false, issues: [issue] },
+      program: null,
+      aiError: classified.message,
+      repairs: [],
+      openaiCalls: 1,
+      aiLatencyMs,
+      latencyMs: Date.now() - started,
+      raw: call.raw,
+      tokens: { in: call.inputTokens, out: call.outputTokens, reasoning: call.reasoningTokens },
+      model: call.model,
+      api: call.api,
+      reasoningEffort: call.reasoningEffort,
+      responseStatus: call.responseStatus ?? null,
+      incompleteReason: call.incompleteReason ?? null,
+      finishReason: call.finishReason ?? null,
+      schemaIssues: classified.schemaIssues,
+      supabase: opts.supabase,
+      userId: opts.userId,
+      rawAiProgram: null,
+    });
+  }
+
+  let working: AiWeekProgram | null = classified.program;
   let repairs: DeterministicRepair[] = [];
   if (working) {
     const constrained = enforceSessionConstraints(working, context, catalogById);
@@ -126,13 +160,20 @@ export async function runGenerationPipeline(opts: {
     }
   }
 
-  const unusable = !working || !validation.ok || Boolean(lastError);
-  if (!unusable && working) {
+  const outcome = finalOutcome({
+    stage: 'parsed_program',
+    initialOk: initialValidation.ok,
+    finalOk: Boolean(working) && validation.ok,
+    repairAttempted: !initialValidation.ok || repairs.length > 0,
+  });
+  const initialFailureStage = initialValidation.ok ? null : ('programming_validation_failure' as const);
+  if (working && validation.ok) {
     const mapped = mapAiWeekToScience(working, science, profile, catalogById, library);
     return finish({
       science: mapped,
       context,
-      method: repairs.length ? 'ai_repaired' : 'ai',
+      method: outcome === 'ai_repaired' ? 'ai_repaired' : 'ai',
+      outcome,
       validation,
       initialValidation,
       program: working,
@@ -148,18 +189,30 @@ export async function runGenerationPipeline(opts: {
       reasoningEffort: call.reasoningEffort,
       supabase: opts.supabase,
       userId: opts.userId,
+      responseStatus: call.responseStatus ?? null,
+      incompleteReason: call.incompleteReason ?? null,
+      finishReason: call.finishReason ?? null,
+      schemaIssues: [],
+      initialFailureStage,
       rawAiProgram,
     });
   }
 
+  const failedOutcome = finalOutcome({
+    stage: 'parsed_program',
+    initialOk: initialValidation.ok,
+    finalOk: false,
+    repairAttempted: true,
+  });
   return finish({
     science,
     context,
     method: 'science_fallback',
+    outcome: failedOutcome,
     validation,
     initialValidation,
     program: working,
-    aiError: lastError || 'AI week failed validation after deterministic repair; used the science template.',
+    aiError: outcomeMessage(failedOutcome),
     repairs,
     openaiCalls: 1,
     aiLatencyMs,
@@ -171,14 +224,24 @@ export async function runGenerationPipeline(opts: {
     reasoningEffort: call.reasoningEffort,
     supabase: opts.supabase,
     userId: opts.userId,
+    responseStatus: call.responseStatus ?? null,
+    incompleteReason: call.incompleteReason ?? null,
+    finishReason: call.finishReason ?? null,
+    schemaIssues: [],
+    initialFailureStage,
     rawAiProgram,
   });
+}
+
+function errIssue(code: string, message: string): ValidationIssue {
+  return { code: code.toUpperCase(), severity: 'error', message };
 }
 
 async function finish(opts: {
   science: ScienceProgram;
   context: GenerationContext;
   method: GenerationMethod;
+  outcome: GenerationOutcome;
   validation: ValidationResult;
   initialValidation: ValidationResult;
   program: GenerationRun['program'];
@@ -192,12 +255,18 @@ async function finish(opts: {
   model?: string;
   api?: 'responses' | 'chat.completions' | null;
   reasoningEffort?: string | null;
+  responseStatus?: string | null;
+  incompleteReason?: string | null;
+  finishReason?: string | null;
+  schemaIssues?: string[];
+  initialFailureStage?: GenerationOutcome | null;
   supabase?: any;
   userId?: string | null;
   rawAiProgram?: AiWeekProgram | null;
 }): Promise<OrchestratorResult> {
   const run: GenerationRun = {
     method: opts.method,
+    outcome: opts.outcome,
     model: opts.model || programModelName(),
     promptVersion: DESIGNER_PROMPT_VERSION,
     scienceVersion: SCIENCE_ENGINE_VERSION,
@@ -216,6 +285,11 @@ async function finish(opts: {
     reasoningTokens: opts.tokens?.reasoning ?? null,
     api: opts.api ?? null,
     reasoningEffort: opts.reasoningEffort ?? null,
+    responseStatus: opts.responseStatus ?? null,
+    incompleteReason: opts.incompleteReason ?? null,
+    finishReason: opts.finishReason ?? null,
+    schemaIssues: opts.schemaIssues || [],
+    initialFailureStage: opts.initialFailureStage ?? null,
     rawOutput: opts.raw,
   };
   const generationRunId = await persistGenerationRun(opts.supabase, opts.userId || null, null, run);
@@ -228,6 +302,7 @@ async function finish(opts: {
     repairs: opts.repairs,
     openaiCalls: opts.openaiCalls,
     aiError: opts.aiError,
+    outcome: opts.outcome,
     replacedDays: opts.method === 'science_fallback' ? 0 : opts.science.split.length,
     run,
     generationRunId,

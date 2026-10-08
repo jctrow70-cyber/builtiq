@@ -281,6 +281,7 @@ async function main() {
     const logs = await logWorkingSets(clientA, userA, week1, ex1, ex1.st_planned_sets, today, [10, 10, 10], [2, 2, 2]);
 
     const firstApply = await applyProgressionForCompletedExercise({
+      allowDirectApply: true,
       supabase: clientA,
       userId: userA,
       program: tree,
@@ -374,6 +375,7 @@ async function main() {
     }
 
     const secondApply = await applyProgressionForCompletedExercise({
+      allowDirectApply: true,
       supabase: clientA,
       userId: userA,
       program: afterTree,
@@ -491,6 +493,7 @@ async function main() {
       if (edited.error) throw new Error(edited.error.message);
     }
     const staleApply = await applyProgressionForCompletedExercise({
+      allowDirectApply: true,
       supabase: clientA,
       userId: userA,
       program: staleTree,
@@ -506,6 +509,7 @@ async function main() {
     }
     const restoredTree = await loadProgramTree(clientA, staleProg.program.id);
     const restoreApply = await applyProgressionForCompletedExercise({
+      allowDirectApply: true,
       supabase: clientA,
       userId: userA,
       program: restoredTree,
@@ -547,6 +551,7 @@ async function main() {
     const histLogs = await logWorkingSets(clientA, userA, histW1, histW1.st_exercises[0], histW1.st_exercises[0].st_planned_sets, today, [10, 10, 10], [2, 2, 2]);
     await logWorkingSets(clientA, userA, histW2, histW2.st_exercises[0], histW2.st_exercises[0].st_planned_sets, today, [8, 8, 8], [2, 2, 2]);
     const histApply = await applyProgressionForCompletedExercise({
+      allowDirectApply: true,
       supabase: clientA,
       userId: userA,
       program: histTree,
@@ -563,6 +568,7 @@ async function main() {
     const lockedTree = await loadProgramTree(clientA, locked.program.id);
     const lockedLogs = await logWorkingSets(clientA, userA, lockedTree.st_workouts[0], lockedTree.st_workouts[0].st_exercises[0], lockedTree.st_workouts[0].st_exercises[0].st_planned_sets, today, [10, 10, 10], [2, 2, 2]);
     const lockedApply = await applyProgressionForCompletedExercise({
+      allowDirectApply: true,
       supabase: clientA,
       userId: userA,
       program: lockedTree,
@@ -577,6 +583,7 @@ async function main() {
     const completedTree = await loadProgramTree(clientA, completed.program.id);
     const completedLogs = await logWorkingSets(clientA, userA, completedTree.st_workouts[0], completedTree.st_workouts[0].st_exercises[0], completedTree.st_workouts[0].st_exercises[0].st_planned_sets, today, [10, 10, 10], [2, 2, 2]);
     const completedApply = await applyProgressionForCompletedExercise({
+      allowDirectApply: true,
       supabase: clientA,
       userId: userA,
       program: completedTree,
@@ -590,6 +597,7 @@ async function main() {
     programIds.push(otherProg.program.id);
     const otherTree = await loadProgramTree(clientA, otherProg.program.id);
     const otherApply = await applyProgressionForCompletedExercise({
+      allowDirectApply: true,
       supabase: clientA,
       userId: userA,
       program: afterIdem,
@@ -602,6 +610,7 @@ async function main() {
     const otherUserWrite = await clientB.from('st_planned_sets').update({ target_weight: '999' }).eq('id', after2.st_exercises[0].st_planned_sets.find((s: any) => s.set_type === 'working').id).select('id');
     const otherUserLedger = await clientB.from('st_adaptation_events').select('id').eq('user_id', userA);
     const otherUserApply = await applyProgressionForCompletedExercise({
+      allowDirectApply: true,
       supabase: clientB,
       userId: userB,
       program: afterIdem,
@@ -639,6 +648,7 @@ async function main() {
     const holdTree = await loadProgramTree(clientA, holdProg.program.id);
     const holdLogs = await logWorkingSets(clientA, userA, holdTree.st_workouts[0], holdTree.st_workouts[0].st_exercises[0], holdTree.st_workouts[0].st_exercises[0].st_planned_sets, today, [6, 6, 6], [1, 1, 1]);
     const holdApply = await applyProgressionForCompletedExercise({
+      allowDirectApply: true,
       supabase: clientA,
       userId: userA,
       program: holdTree,
@@ -653,6 +663,7 @@ async function main() {
     const buildTree = await loadProgramTree(clientA, buildProg.program.id);
     const buildLogs = await logWorkingSets(clientA, userA, buildTree.st_workouts[0], buildTree.st_workouts[0].st_exercises[0], buildTree.st_workouts[0].st_exercises[0].st_planned_sets, today, [8, 8, 8], [2, 2, 2]);
     const buildApply = await applyProgressionForCompletedExercise({
+      allowDirectApply: true,
       supabase: clientA,
       userId: userA,
       program: buildTree,
@@ -736,6 +747,7 @@ async function main() {
     programIds.push(insuffProg.program.id);
     const insuffTree = await loadProgramTree(clientA, insuffProg.program.id);
     const insuffApply = await applyProgressionForCompletedExercise({
+      allowDirectApply: true,
       supabase: clientA,
       userId: userA,
       program: insuffTree,

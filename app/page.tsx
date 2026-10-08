@@ -46,15 +46,15 @@ import ProgressScreen from './components/progress/ProgressScreen';
 import BodyDashboardCard from './components/BodyDashboardCard';
 import WorkoutSetLogger from './components/WorkoutSetLogger';
 import SessionOutcomeCard from './components/training/SessionOutcomeCard';
-import NextExposureCard from './components/training/NextExposureCard';
+import AdaptationSummaryCard from './components/training/AdaptationSummaryCard';
 import { snapshotForLog as buildSetLogSnapshot, stripUnavailableLogColumns } from '../lib/training/setLogSnapshots';
 import { canRewritePlannedSetPrescription } from '../lib/training/plannedSetGuard';
 import { deriveSessionStatus } from '../lib/training/sessionOutcome';
 import { extraLogsFromSetLogs, extraSetInsertPayload, extraSetsForExercise, nextExtraSetNumber, type ExtraSetLog } from '../lib/training/extraSets';
 import { normalizePainFlag, upsertExerciseSession, upsertWorkoutFeel, upsertWorkoutSession } from '../lib/training/workoutSessions';
 import { refreshProgramExpectations, withdrawAssignmentExpectation } from '../lib/training/scheduleActions';
-import { applyProgressionForCompletedExercise, patchProgramPlannedWeights } from '../lib/training/adaptationApply';
-import type { AdaptationApplicationResult } from '../lib/scienceEngine/adaptation/apply/types';
+import { patchProgramPlannedWeights } from '../lib/training/adaptationApply';
+import { shouldTriggerCompletedWorkoutAdaptation, type AdaptationOrchestrationResult } from '../lib/training/adaptationOrchestration';
 import { prescriptionColumnsFromSources } from '../lib/training/prescriptionMeta';
 import type { PainFlag, SessionStatus, SkipReason, WorkoutFeel } from '../lib/scienceEngine/adaptation/types';
 import GroupsHub from './components/groups/GroupsHub';
@@ -237,7 +237,7 @@ export default function Page(){
  const [sessionSkipReason,setSessionSkipReason]=useState<SkipReason|''>('');
  const [skippedExerciseIds,setSkippedExerciseIds]=useState<Record<string,boolean>>({});
  const [phase2a1Pending,setPhase2a1Pending]=useState(false);
- const [nextAdaptation,setNextAdaptation]=useState<AdaptationApplicationResult|null>(null);
+ const [adaptationSummary,setAdaptationSummary]=useState<AdaptationOrchestrationResult|null>(null);
  const [customizeForMeBusy,setCustomizeForMeBusy]=useState(false);
  const [addExercisePanel,setAddExercisePanel]=useState<any>(null);
  const [exerciseSwapPrompt,setExerciseSwapPrompt]=useState<any>(null);
@@ -1495,6 +1495,7 @@ export default function Page(){
     } else {
       setSessionOutcome(deriveSessionStatus({workout:workoutOnDay,logs:by}));
     }
+    setAdaptationSummary(null);
     const {data:exSessions,error:exSessErr}=await supabase.from('st_exercise_sessions').select('exercise_id,status').eq('user_id',uid).eq('log_date',day);
     if(exSessErr && /st_exercise_sessions|does not exist/i.test(exSessErr.message||'')) setPhase2a1Pending(true);
     const skipped:Record<string,boolean>={};
@@ -2143,25 +2144,6 @@ export default function Page(){
     const celebration=detectSetPersonalRecord(data,priorCompletedLogsForPr(sid,logDay),weightUnit);
     if(celebration)showPrCelebration(celebration);
    }
-   const working=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted&&String(s.set_type||'working')!=='warmup'&&String(s.set_type||'')!=='ramp');
-   if(working.length&&working.every((s:any)=>nextLogs[s.id]?.completed)&&session?.user?.id){
-    const liveProgram=planEditRef.current?.program||program;
-    void applyProgressionForCompletedExercise({
-      supabase,
-      userId:uid,
-      program:liveProgram,
-      workout:located.workout,
-      exercise:ex,
-      logsByPlannedSetId:nextLogs,
-      extraWorkouts:extraWorkoutsForLogging(),
-    }).then((result)=>{
-      if(!result)return;
-      setNextAdaptation(result);
-      if(result.mutated){
-        setProgram((prev:any)=>patchProgramPlannedWeights(prev,result.mutations));
-      }
-    }).catch(()=>{});
-   }
   }
   return data;
   };
@@ -2194,10 +2176,13 @@ export default function Page(){
  }
  async function saveSessionOutcome(next:SessionStatus, extras?:{feel?:WorkoutFeel|'';pain?:PainFlag;notes?:string;skipReason?:SkipReason|''}){
   if(!session?.user||!workout)return;
+  const previousOutcome=sessionOutcome;
   const feel=extras?.feel??sessionFeel;
   const pain=extras?.pain??sessionPain;
   const notes=extras?.notes??sessionNotes;
   const skipReason=extras?.skipReason??sessionSkipReason;
+  const pendingLogs=Object.values(upsertQueueRef.current);
+  if(pendingLogs.length)await Promise.all(pendingLogs.map((p)=>p.catch(()=>{})));
   setSessionOutcome(next);
   if(extras?.feel!==undefined)setSessionFeel(extras.feel);
   if(extras?.pain!==undefined)setSessionPain(extras.pain);
@@ -2219,7 +2204,45 @@ export default function Page(){
     scheduled_date:activeExpectationDate,
   });
   if(saved.pendingMigration)setPhase2a1Pending(true);
-  else if(saved.error)alert(saved.error);
+  if(saved.error){
+    setSessionOutcome(previousOutcome);
+    alert(saved.error);
+    return;
+  }
+  if(saved.pendingMigration)return;
+  if(extras)return;
+  if(!shouldTriggerCompletedWorkoutAdaptation(next)||!session.access_token)return;
+  try{
+    const res=await fetch('/api/training/adapt-completed-workout',{
+      method:'POST',
+      headers:{'Content-Type':'application/json',Authorization:`Bearer ${session.access_token}`},
+      body:JSON.stringify({workout_id:workout.id,log_date:activeLogDateForLogging()}),
+    });
+    const data=await res.json().catch(()=>({}));
+    const summary=data as AdaptationOrchestrationResult;
+    if(summary?.summary)setAdaptationSummary(summary);
+    if(summary?.mutations?.length){
+      setProgram((prev:any)=>patchProgramPlannedWeights(prev,summary.mutations));
+    }
+  }catch{
+    setAdaptationSummary({
+      triggered:true,
+      skipped_reason:null,
+      limitation:null,
+      evaluated:0,
+      updated:0,
+      held:0,
+      review:0,
+      failed:1,
+      already_applied:0,
+      pending_retry:true,
+      summary:'Workout complete. Adaptation could not finish and can retry safely.',
+      mutations:[],
+      results:[],
+      error:'Adaptation request failed',
+      orchestration_version:'2b1.0.0',
+    });
+  }
  }
  async function addExtraWorkingSet(ex:any){
   if(!session?.user||!workout||!canLog())return;
@@ -3031,7 +3054,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
     {!viewingMember&&!activeAssignedRecipient&&program&&isDraftProgram(program)&&canEdit()&&<div className="card program-draft-banner"><div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}><div><h2>Draft program</h2><p className="muted"><b>{program.name}</b> is a draft — it will not appear here for logging until you publish it in Programs.</p></div><button type="button" className="btn small green" onClick={()=>{setTrainingSubNav('personal');setDraftEditProgramId(null);setAppNav('Programs');}}>Open in Programs</button></div></div>}
     {showEditScope&&<div className="applybox-compact"><label htmlFor="apply-scope">Apply this change to</label><select id="apply-scope" value={applyScope} onChange={e=>setApplyScope(e.target.value as any)}><option value="current">Just today</option><option value="future">Rest of program</option></select></div>}
     {trainingSessionOpen&&trainingSessionIntent==='log'&&workout&&<SessionOutcomeCard status={sessionOutcome} feel={sessionFeel} pain={sessionPain} notes={sessionNotes} skipReason={sessionSkipReason} canEdit={canLog()} pendingMigration={phase2a1Pending} onStatus={(s)=>void saveSessionOutcome(s)} onFeel={(v)=>void saveSessionOutcome(sessionOutcome,{feel:v})} onPain={(v)=>void saveSessionOutcome(sessionOutcome,{pain:v})} onNotes={(v)=>void saveSessionOutcome(sessionOutcome,{notes:v})} onSkipReason={(v)=>void saveSessionOutcome('skipped',{skipReason:v})}/>}
-    {trainingSessionOpen&&trainingSessionIntent==='log'&&nextAdaptation&&<NextExposureCard result={nextAdaptation}/>}
+    {trainingSessionOpen&&trainingSessionIntent==='log'&&adaptationSummary&&<AdaptationSummaryCard result={adaptationSummary}/>}
     {(trainingSessionOpen||!!activeAssignedRecipient)&&workoutExerciseSections}
   </section>}
   {addExercisePanel&&<div className="panel-overlay" onClick={()=>{setPendingAddScope(null);setAddExercisePanel(null);}}><div className="add-exercise-panel card" onClick={e=>e.stopPropagation()}><div className="topline" style={{justifyContent:'space-between'}}><h2>{addExercisePanel.replaceTarget?'Replace exercise':'Add Exercise'} · {addPanelSectionLabel(addExercisePanel.section)}</h2><button type="button" className="btn small secondary" onClick={()=>{setPendingAddScope(null);setAddExercisePanel(null);}}>Cancel</button></div>

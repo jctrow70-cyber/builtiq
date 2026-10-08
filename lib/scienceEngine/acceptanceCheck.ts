@@ -15,12 +15,14 @@ import { evaluateProgression } from './progression';
 import { validateProgram } from './validator';
 import { runInstructionAdherenceChecks } from './generation/instructionAdherenceCheck';
 import { runGenerationCriteriaChecks } from '../programDesign/generationCriteriaCheck';
+import { runFailureStageChecks } from './generation/failureStageCheck';
 import { runPhase1GenerationChecks } from './generation/phase1Check';
 import { runGenerationCatalogPolicyChecks } from './generation/catalogEligibilityCheck';
 import { runCatalogCleanupChecks } from '../training/catalogCleanupCheck';
 import { runPhase2a1FoundationChecks } from './adaptation/phase2a1Check';
 import { runPhase2a2DecisionChecks } from './adaptation/phase2a2Check';
 import { runPhase2a3ApplyChecks } from './adaptation/apply/phase2a3Check';
+import { runPhase2b1OrchestrationChecks } from './adaptation/phase2b1Check';
 import type { TrainingProfile } from './types';
 
 function assert(cond: unknown, message: string) {
@@ -549,12 +551,14 @@ async function run() {
   console.log(`Ramp: ${upperA!.rampSets.map((r) => `${r.weight || r.percent} x ${r.reps}`).join(', ')}`);
   runCatalogCleanupChecks();
   runGenerationCatalogPolicyChecks();
+  await runFailureStageChecks();
   await runPhase1GenerationChecks();
   await runInstructionAdherenceChecks();
   runGenerationCriteriaChecks();
   runPhase2a1FoundationChecks();
   runPhase2a2DecisionChecks();
   runPhase2a3ApplyChecks();
+  await runPhase2b1OrchestrationChecks();
 }
 
 run().catch((err) => {

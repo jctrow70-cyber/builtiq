@@ -210,7 +210,11 @@ Goal: Prepare BuildIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
-**BIQ-0221** live-verified Phase 2A.3 on the current Supabase project after 053 was applied. The 2A.2 → 2A.3 loop wrote Week 2 template Bench 185 → 190, left Week 3 at 185, and the unique success index blocked a second apply. Do not start Phase 2B.
+**BIQ-0254 Phase 2B.1** connects workout completion to the existing 2A.2 / 2A.3 engines for personal programs. Next is **Phase 2B.2**: the coaching review surface (show `review_required` / pain holds, retry state, and why a next session changed or did not). Do not start Phase 2B.2 or 2B.3 until that is requested.
+
+Apply migration `20261008_061_phase2b1_adaptation_orchestration.sql` after review so workout-level adaptation runs persist.
+
+Program generation Stage 2A (BIQ-0255, Decision 098) records the model failure stage on `st_generation_runs.validation_json`. The 6,000 output-token cap is unchanged. Stages 2B–2E are not started.
 
 ### Recently completed
 

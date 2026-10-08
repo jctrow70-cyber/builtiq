@@ -4,6 +4,21 @@ export const GENERATION_SCHEMA_VERSION = '2.1';
 
 export type GenerationMode = 'full_program' | 'single_session';
 export type GenerationMethod = 'ai' | 'ai_repaired' | 'science_fallback';
+
+/** Saved method stays ai / ai_repaired / science_fallback. Outcome names the actual stage. */
+export type GenerationOutcome =
+  | 'ai'
+  | 'ai_repaired'
+  | 'science_fallback'
+  | 'api_timeout'
+  | 'api_error'
+  | 'empty_response'
+  | 'incomplete_response'
+  | 'output_token_exhaustion'
+  | 'json_parse_failure'
+  | 'schema_validation_failure'
+  | 'programming_validation_failure'
+  | 'repair_failure';
 export type ValidationSeverity = 'error' | 'warning' | 'info';
 export type Laterality = 'bilateral' | 'unilateral' | 'alternating';
 export type MeasurementType = 'reps' | 'time' | 'distance';
@@ -203,6 +218,7 @@ export type ValidationResult = {
 
 export type GenerationRun = {
   method: GenerationMethod;
+  outcome: GenerationOutcome;
   model: string;
   promptVersion: string;
   scienceVersion: string;
@@ -221,5 +237,11 @@ export type GenerationRun = {
   reasoningTokens: number | null;
   api: 'responses' | 'chat.completions' | null;
   reasoningEffort: string | null;
+  responseStatus: string | null;
+  incompleteReason: string | null;
+  finishReason: string | null;
+  schemaIssues: string[];
+  /** Set when the parsed week failed programming rules before repair. */
+  initialFailureStage: GenerationOutcome | null;
   rawOutput: unknown;
 };

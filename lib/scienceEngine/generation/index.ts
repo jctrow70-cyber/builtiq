@@ -7,6 +7,7 @@ export { repairAiProgram } from './repairAiProgram';
 export { slimContextForPrompt } from './prompt';
 export { mapAiWeekToScience } from './mapper';
 export { findByExerciseId } from './matchById';
-export { parseWeekProgram } from './openaiClient';
+export { classifyModelResult, measureRepresentativeOutputBudget, outcomeMessage } from './failureStage';
+export { parseWeekProgram, programMaxOutputTokens } from './openaiClient';
 export { WEEK_PROGRAM_JSON_SCHEMA } from './schema';
 export { DESIGNER_PROMPT_VERSION } from '../version';

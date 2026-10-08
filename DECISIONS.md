@@ -19,6 +19,54 @@ Impact:
 
 ---
 
+## Decision 098 - Name the Generation Failure Stage
+
+Date: 2026-10-08
+Status: Accepted
+Category: Training / Program generation
+
+### Decision
+
+Stage 2A keeps the current generator, validator, and science fallback. A model call is classified before programming validation. The stored outcome is one of: `ai`, `ai_repaired`, `science_fallback`, `api_timeout`, `api_error`, `empty_response`, `incomplete_response`, `output_token_exhaustion`, `json_parse_failure`, `schema_validation_failure`, `programming_validation_failure`, or `repair_failure`. The repair-validation sentence is used only after a schema-valid week was parsed and repair left a hard error. The 6,000 output-token cap stays. A representative 2-day and 4-day week, including a 1,500-token reasoning allowance, fits that cap. The exercise catalog counts as input tokens, not output tokens. Live runs record actual output and reasoning tokens in `validation_json`.
+
+### Reason
+
+An empty or truncated reply was reported as “AI week failed validation after deterministic repair.” That hid timeouts, token exhaustion, and parse failures behind a programming conclusion.
+
+### Alternatives Considered
+
+Raise the output cap immediately. Add a database column for the outcome. Start a second generator. Treat every non-success as `science_fallback` with one message.
+
+### Impact
+
+Generate responses include `generation_outcome`. Existing programs, logs, catalog rows, and the Program Design UI are unchanged. Stages 2B–2E are not started.
+
+---
+
+## Decision 097 - Complete Workout Then Adapt on the Server
+
+Date: 2026-10-08
+Status: Accepted
+Category: Training / Science engine
+
+### Decision
+
+Phase 2B.1 runs after an explicit personal workout completion or partial session, on a server endpoint, using the existing 2A.2 decisions and 2A.3 apply rules. Set logging alone does not adapt. `review_required`, `pain_hold`, and `insufficient_data` are recorded and not auto-applied. Group and trainer-assigned programs are excluded until an authorization policy exists. Completion remains saved if adaptation fails. The version-independent `application_key` success index stays the apply lock; a new `st_adaptation_runs` row is the workout-level retry lock.
+
+### Reason
+
+The engines already existed. The gap was the trigger, scoping, and a completion-safe place to run them. Client-only apply after each finished exercise could race and was not the product meaning of “workout complete.”
+
+### Alternatives Considered
+
+Keep applying when the last working set is checked. Invent new progression formulas. Auto-adapt shared group templates. Build the coaching dashboard in this change.
+
+### Impact
+
+Personal programs can prepare the next comparable exposure after Completed/Partial. Phase 2B.2 can display review recommendations. Phase 1 generation and the 263-card catalog are unchanged.
+
+---
+
 ## Decision 096 - Training Opens on the Week Calendar
 
 Date: 2026-10-08

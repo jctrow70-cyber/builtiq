@@ -11,6 +11,115 @@ Branch:
 Status:
 ```
 
+## BIQ-0255 - Generation Failure Classification
+
+Date: 2026-10-08
+Branch: main
+Status: Local / in progress
+
+### Summary
+
+Generation runs now name the stage that stopped an AI week. An empty, incomplete, truncated, or unparsed model reply is no longer described as a programming validation failure. The science template is still saved. The 6,000 output-token cap is unchanged.
+
+### Purpose
+
+Phase 1 showed that a missing model program and a week that failed repair shared one sentence. Diagnostics need to say which of those happened before volume, duration, and repair behavior change.
+
+### Files changed
+
+- lib/scienceEngine/generation/failureStage.ts
+- lib/scienceEngine/generation/failureStageCheck.ts
+- lib/scienceEngine/generation/openaiClient.ts
+- lib/scienceEngine/generation/orchestrator.ts
+- lib/scienceEngine/generation/types.ts
+- lib/scienceEngine/generation/log.ts
+- lib/scienceEngine/generation/index.ts
+- lib/scienceEngine/acceptanceCheck.ts
+- app/api/programs/generate/route.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+### Database changes
+
+None. Outcome, response status, incomplete reason, schema issues, and output-budget usage are stored in the existing `st_generation_runs.validation_json` column. `generation_method` is still `ai`, `ai_repaired`, or `science_fallback`.
+
+### Testing steps
+
+1. Run `npm run test:science`. The Stage 2A checks must pass, including the empty-response case.
+2. Generate a program with `OPENAI_API_KEY` unset. The API `generation_outcome` is `science_fallback`, and the message says AI is not configured.
+3. After a live generate, open `st_generation_runs.validation_json` and confirm `outcome`, `response_status`, `incomplete_reason`, and `output_budget`.
+4. Confirm an empty model body would show `empty_response`, not the repair-validation sentence.
+5. Confirm a parsed week that still fails repair still uses the repair-validation sentence and records `initial_failure_stage` of `programming_validation_failure`.
+
+### Known issues
+
+- Stage 2B (adaptive volume, duration, rest, and ramps) is not started.
+- The output-budget check is a character estimate of a representative week, plus a 1,500-token reasoning allowance. It is not a live tokenizer count.
+- The generate response adds `generation_outcome`. The Program Design screens are unchanged and still show `ai_error`.
+
+### Recommended commit message
+
+`BIQ-0255 Classify AI generation failures before calling them validation errors`
+
+## BIQ-0254 - Phase 2B.1 Adaptive Coaching Orchestration
+
+Date: 2026-10-08
+Branch: main
+Status: Local / in progress
+
+### Summary
+
+Completing a personal workout now runs the existing Phase 2A.2 decision engine and Phase 2A.3 apply engine on the server. Future comparable prescriptions can update automatically. Workout completion is saved even if adaptation fails. Group and trainer programs are not auto-adapted yet.
+
+### Purpose
+
+Phase 2A could decide and apply, but it ran from the client when working sets were checked off. Phase 2B.1 connects that loop to explicit workout completion, with authorization, idempotency, and a short next-session summary.
+
+### Files changed
+
+- lib/training/adaptationOrchestration.ts
+- lib/training/adaptationApply.ts
+- lib/scienceEngine/adaptation/phase2b1Check.ts
+- lib/scienceEngine/acceptanceCheck.ts
+- app/api/training/adapt-completed-workout/route.ts
+- app/components/training/AdaptationSummaryCard.tsx
+- app/page.tsx
+- app/globals.css
+- supabase/migrations/20261008_061_phase2b1_adaptation_orchestration.sql
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+### Database changes
+
+New table `st_adaptation_runs` (one row per user + workout + log date) in `supabase/migrations/20261008_061_phase2b1_adaptation_orchestration.sql`. Not applied yet. Apply after review. Existing 052/053 adaptation event tables are unchanged. No catalog writes.
+
+### Testing steps
+
+1. Log in on localhost. Open a personal program in Training.
+2. Log working sets, then tap Session → Completed. The workout stays completed even if adaptation errors.
+3. Confirm the summary: evaluated / updated / held / review.
+4. Open the next comparable week. Eligible strength loads that 2A.3 permits should match the summary.
+5. Complete the same workout again. Counts may say already applied. Loads must not increment twice.
+6. Mark a workout Partial with some sets logged. Adaptation uses those logs, not invented values.
+7. Skip an exercise, then complete. The skipped lift is not treated as a failed set.
+8. Report pain, then complete. The next load is not auto-progressed; review is counted.
+9. Open a group program workout, complete it. Completion saves. The summary says group/trainer programs are not auto-adapted.
+10. Check mobile: the summary sits under the Session card and remains readable.
+
+### Known issues
+
+- Migration 061 is not applied until review. Workout-level run lock degrades until then. Exercise `application_key` uniqueness still blocks a second successful apply when 053 is live.
+- Automatic writes are disabled if 053 is missing.
+- Group and trainer-assigned programs are excluded on purpose.
+- Pain entered after the Completed tap is not used for that pass. Set pain before marking complete.
+- If the ledger insert succeeds and the planned-set write fails, retry will see already-applied. That case is rare and reported as pending retry.
+
+### Recommended commit message
+
+`BIQ-0254 Orchestrate Phase 2A adaptation after personal workout completion`
+
 ## BIQ-0253 - Restore Training Calendar
 
 Date: 2026-10-08

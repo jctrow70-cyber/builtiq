@@ -12,6 +12,9 @@ export type ModelCallResult = {
   outputTokens: number | null;
   reasoningTokens: number | null;
   error: string | null;
+  responseStatus?: string | null;
+  incompleteReason?: string | null;
+  finishReason?: string | null;
 };
 
 /** Reasoning-capable default. Override with OPENAI_PROGRAM_MODEL after the access spike. */
@@ -38,6 +41,10 @@ export function modelUsesReasoning(model: string): boolean {
 const MODEL_FALLBACKS = ['gpt-5.4', 'gpt-5', 'gpt-4o-mini'];
 
 /** One design call must finish below the Vercel 120s route budget after catalog + persist. */
+export function programMaxOutputTokens(): number {
+  return MAX_OUTPUT_TOKENS;
+}
+
 export function programRequestTimeoutMs(): number {
   const n = Number(process.env.OPENAI_PROGRAM_TIMEOUT_MS);
   return Number.isFinite(n) && n >= MIN_TIMEOUT_MS ? Math.min(n, MAX_TIMEOUT_MS) : DEFAULT_TIMEOUT_MS;
@@ -63,6 +70,7 @@ export async function requestWeekProgram(opts: {
       if (last.program && !last.error) return last;
       if (last.error && isAiTimeoutError(last.error)) return last;
       if (last.error && /model|not found|does not exist|invalid model/i.test(last.error)) continue;
+      if (!last.program && !last.error) return last;
       if (last.program) return last;
       if (last.error && !/structured|json_schema|text\.format|unsupported/i.test(last.error) && model === preferred) {
         return last;
@@ -103,6 +111,8 @@ async function requestViaResponses(
       },
     });
     const raw = response.output_text || extractResponsesText(response);
+    const responseError = response.error?.message ? String(response.error.message) : '';
+    const status = response.status ? String(response.status) : null;
     return {
       program: parseWeekProgram(raw),
       raw,
@@ -112,7 +122,10 @@ async function requestViaResponses(
       inputTokens: response.usage?.input_tokens ?? null,
       outputTokens: response.usage?.output_tokens ?? null,
       reasoningTokens: response.usage?.output_tokens_details?.reasoning_tokens ?? null,
-      error: null,
+      responseStatus: status,
+      incompleteReason: response.incomplete_details?.reason ? String(response.incomplete_details.reason) : null,
+      finishReason: null,
+      error: status === 'failed' ? responseError || 'OpenAI Responses request failed' : null,
     };
   } catch (err: any) {
     return {
@@ -124,6 +137,9 @@ async function requestViaResponses(
       inputTokens: null,
       outputTokens: null,
       reasoningTokens: null,
+      responseStatus: null,
+      incompleteReason: null,
+      finishReason: null,
       error: err?.message || 'OpenAI Responses request failed',
     };
   }
@@ -148,7 +164,10 @@ async function requestViaChat(openai: OpenAI, model: string, system: string, use
         { role: 'user', content: user },
       ],
     });
-    const raw = completion.choices[0]?.message?.content || '';
+    const choice = completion.choices[0];
+    const raw = choice?.message?.content || '';
+    const finishReason = choice?.finish_reason ? String(choice.finish_reason) : null;
+    const refusal = (choice?.message as { refusal?: string } | undefined)?.refusal;
     return {
       program: parseWeekProgram(raw),
       raw,
@@ -158,7 +177,10 @@ async function requestViaChat(openai: OpenAI, model: string, system: string, use
       inputTokens: completion.usage?.prompt_tokens ?? null,
       outputTokens: completion.usage?.completion_tokens ?? null,
       reasoningTokens: (completion.usage as any)?.completion_tokens_details?.reasoning_tokens ?? 0,
-      error: null,
+      responseStatus: finishReason === 'stop' ? 'completed' : finishReason,
+      incompleteReason: null,
+      finishReason,
+      error: refusal ? String(refusal) : null,
     };
   } catch (err: any) {
     return {
@@ -170,6 +192,9 @@ async function requestViaChat(openai: OpenAI, model: string, system: string, use
       inputTokens: null,
       outputTokens: null,
       reasoningTokens: null,
+      responseStatus: null,
+      incompleteReason: null,
+      finishReason: null,
       error: err?.message || 'OpenAI Chat Completions request failed',
     };
   }

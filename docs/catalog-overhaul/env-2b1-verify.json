@@ -1,0 +1,84 @@
+{
+  "generated_at": "2026-10-08T17:47:42.984Z",
+  "wrote_supabase": false,
+  "expected_master_count": 264,
+  "supabase_host": "qruiwfzzrylrirlxzdqx.supabase.co",
+  "phase2a3_ledger": {
+    "ready": true,
+    "reason": null
+  },
+  "active_master_count": 264,
+  "count_error": null,
+  "master_264": {
+    "external_id": "264",
+    "name": "GHD Sit-Up",
+    "exercise_type": "strength",
+    "category": "strength",
+    "movement_pattern": "isolation",
+    "equipment": "GHD",
+    "is_archived": false,
+    "coaching_metadata": {
+      "aliases": [
+        "GHD Situp",
+        "GHD Sit Up",
+        "Glute Ham Developer Sit-Up",
+        "Glute-Ham Developer Sit-Up"
+      ],
+      "laterality": "bilateral",
+      "demand_notes": "isolation core flexion; medium fatigue; medium skill; bilateral; reps measurement; volume policy core; hypertrophy credits abs:1; GHD with feet anchored; distinct from floor Sit-Up and glute-ham raise",
+      "design_notes": "Anchored long-range sit-up. Distinct from floor Sit-Up (215) and Back Extension (80). Not a glute-ham raise.",
+      "fatigue_cost": "moderate",
+      "skill_demand": "moderate",
+      "coaching_cues": [
+        "Hips stay on the pad",
+        "Own the range",
+        "Do not bounce out of the bottom"
+      ],
+      "exercise_kind": "isolation",
+      "program_roles": [
+        "isolation",
+        "accessory"
+      ],
+      "ramp_eligible": false,
+      "volume_policy": "core",
+      "power_eligible": false,
+      "default_rep_max": 15,
+      "default_rep_min": 8,
+      "master_category": "Core",
+      "master_movement": "Spinal/Hip Flexion",
+      "primary_muscles": [
+        "abs"
+      ],
+      "warmup_eligible": false,
+      "involved_muscles": [
+        "abs",
+        "hip_flexors"
+      ],
+      "measurement_type": "reps",
+      "movement_pattern": "core_flexion",
+      "cooldown_eligible": false,
+      "default_equipment": "GHD",
+      "secondary_muscles": [
+        "hip_flexors"
+      ],
+      "enrichment_version": "BIQ-0213",
+      "primary_assignment": "assigned",
+      "compatible_equipment": [
+        "GHD"
+      ],
+      "demand_characteristics": [],
+      "hypertrophy_volume_credits": [
+        {
+          "credit": 1,
+          "muscle": "abs"
+        }
+      ]
+    }
+  },
+  "master_264_error": null,
+  "adaptation_runs_table": {
+    "ready": false,
+    "reason": "Could not find the table 'public.st_adaptation_runs' in the schema cache"
+  },
+  "application_key_readable": true
+}

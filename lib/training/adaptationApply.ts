@@ -66,6 +66,12 @@ export function exposureFromLoggedExercise(opts: {
   exercise: any;
   workout: any;
   logsByPlannedSetId: Record<string, any>;
+  extraLogs?: any[];
+  workoutStatus?: ExerciseExposureInput['workout_status'];
+  exerciseStatus?: ExerciseExposureInput['exercise_status'];
+  attemptOutcome?: ExerciseExposureInput['attempt_outcome'];
+  painFlag?: ExerciseExposureInput['pain_flag'];
+  painAssociated?: boolean;
 }): ExerciseExposureInput {
   const planned = (opts.exercise.st_planned_sets || []).filter((s: any) => !s.is_deleted);
   const working = planned.filter((s: any) => {
@@ -73,8 +79,49 @@ export function exposureFromLoggedExercise(opts: {
     return type !== 'warmup' && type !== 'warm-up' && type !== 'ramp' && type !== 'ramp_up';
   });
   const rx = working[0] || planned[0];
+  const plannedSets = planned.map((s: any) => {
+    const log = opts.logsByPlannedSetId[s.id] || {};
+    return {
+      planned_set_id: s.id,
+      is_extra_set: log.is_extra_set === true,
+      completed: !!log.completed,
+      set_type: s.set_type,
+      snapshot_set_type: log.snapshot_set_type || s.set_type,
+      snapshot_section: log.snapshot_section || opts.exercise.section,
+      snapshot_rep_min: log.snapshot_rep_min ?? s.rep_min,
+      snapshot_rep_max: log.snapshot_rep_max ?? s.rep_max,
+      snapshot_target_rir: log.snapshot_target_rir ?? s.target_rir,
+      snapshot_program_role: log.snapshot_program_role || opts.exercise.program_role,
+      snapshot_catalog_exercise_id: log.snapshot_catalog_exercise_id || opts.exercise.catalog_exercise_id,
+      actual_weight: log.actual_weight,
+      actual_reps: log.actual_reps,
+      actual_rir: log.actual_rir,
+      actual_rpe: log.actual_rpe,
+    };
+  });
+  const extraSets = (opts.extraLogs || []).map((log: any) => ({
+    planned_set_id: null,
+    is_extra_set: true,
+    completed: !!log.completed,
+    set_type: log.set_type || 'working',
+    snapshot_set_type: log.snapshot_set_type || log.set_type || 'working',
+    snapshot_section: log.snapshot_section || opts.exercise.section,
+    snapshot_rep_min: log.snapshot_rep_min,
+    snapshot_rep_max: log.snapshot_rep_max,
+    snapshot_target_rir: log.snapshot_target_rir,
+    snapshot_program_role: log.snapshot_program_role || opts.exercise.program_role,
+    snapshot_catalog_exercise_id: log.snapshot_catalog_exercise_id || opts.exercise.catalog_exercise_id,
+    actual_weight: log.actual_weight,
+    actual_reps: log.actual_reps,
+    actual_rir: log.actual_rir,
+    actual_rpe: log.actual_rpe,
+  }));
+  const logDate =
+    planned.map((s: any) => opts.logsByPlannedSetId[s.id]?.log_date).find(Boolean) ||
+    opts.extraLogs?.[0]?.log_date ||
+    new Date().toISOString().slice(0, 10);
   return {
-    log_date: Object.values(opts.logsByPlannedSetId)[0]?.log_date || new Date().toISOString().slice(0, 10),
+    log_date: logDate,
     catalog_exercise_id: opts.exercise.catalog_exercise_id,
     exercise_name: opts.exercise.name,
     program_role: opts.exercise.program_role,
@@ -87,38 +134,21 @@ export function exposureFromLoggedExercise(opts: {
       target_rir: rx?.target_rir,
       working_set_count: working.length,
     },
-    sets: planned.map((s: any) => {
-      const log = opts.logsByPlannedSetId[s.id] || {};
-      return {
-        planned_set_id: s.id,
-        is_extra_set: log.is_extra_set === true,
-        completed: !!log.completed,
-        set_type: s.set_type,
-        snapshot_set_type: log.snapshot_set_type || s.set_type,
-        snapshot_rep_min: log.snapshot_rep_min ?? s.rep_min,
-        snapshot_rep_max: log.snapshot_rep_max ?? s.rep_max,
-        snapshot_target_rir: log.snapshot_target_rir ?? s.target_rir,
-        snapshot_program_role: log.snapshot_program_role || opts.exercise.program_role,
-        snapshot_catalog_exercise_id: log.snapshot_catalog_exercise_id || opts.exercise.catalog_exercise_id,
-        actual_weight: log.actual_weight,
-        actual_reps: log.actual_reps,
-        actual_rir: log.actual_rir,
-        actual_rpe: log.actual_rpe,
-      };
-    }),
+    sets: [...plannedSets, ...extraSets],
+    workout_status: opts.workoutStatus,
+    exercise_status: opts.exerciseStatus,
+    attempt_outcome: opts.attemptOutcome,
+    pain_flag: opts.painFlag,
+    pain_associated: opts.painAssociated,
   };
 }
 
 export async function persistAdaptationApplication(
   supabase: SupabaseClient,
   result: AdaptationApplicationResult
-): Promise<{ persistError: string | null; pendingMigration: boolean }> {
+): Promise<{ persistError: string | null; pendingMigration: boolean; alreadyApplied: boolean }> {
   if (result.abort_reason === 'ALREADY_APPLIED') {
-    return { persistError: null, pendingMigration: false };
-  }
-  for (const mutation of result.mutations) {
-    const { error } = await supabase.from('st_planned_sets').update({ target_weight: mutation.to }).eq('id', mutation.planned_set_id);
-    if (error) return { persistError: error.message, pendingMigration: false };
+    return { persistError: null, pendingMigration: false, alreadyApplied: true };
   }
   const row: Record<string, unknown> = {
     user_id: result.event.user_id,
@@ -147,14 +177,22 @@ export async function persistAdaptationApplication(
     confidence: result.event.confidence,
     adaptation_engine_version: result.event.adaptation_engine_version,
   };
+  const claimFirst = result.status === 'mutated' || result.status === 'recorded_no_change';
   const inserted = await supabase.from('st_adaptation_events').insert(row).select('id').maybeSingle();
   if (inserted.error && /source_workout_id|application_key|application_status|target_fingerprint|adaptation_engine_version/i.test(inserted.error.message || '')) {
-    return { persistError: null, pendingMigration: true };
+    return { persistError: null, pendingMigration: true, alreadyApplied: false };
   }
-  if (inserted.error && /duplicate key|application_key/i.test(inserted.error.message || '')) {
-    return { persistError: null, pendingMigration: false };
+  if (inserted.error && /duplicate key|application_key|23505/i.test(`${inserted.error.code || ''} ${inserted.error.message || ''}`)) {
+    return { persistError: null, pendingMigration: false, alreadyApplied: true };
   }
-  return { persistError: inserted.error?.message || null, pendingMigration: false };
+  if (inserted.error) return { persistError: inserted.error.message, pendingMigration: false, alreadyApplied: false };
+  if (claimFirst) {
+    for (const mutation of result.mutations) {
+      const { error } = await supabase.from('st_planned_sets').update({ target_weight: mutation.to }).eq('id', mutation.planned_set_id);
+      if (error) return { persistError: error.message, pendingMigration: false, alreadyApplied: false };
+    }
+  }
+  return { persistError: null, pendingMigration: false, alreadyApplied: false };
 }
 
 export function patchProgramPlannedWeights(program: any, mutations: Array<{ planned_set_id: string; to: string }>) {
@@ -181,7 +219,10 @@ export async function applyProgressionForCompletedExercise(opts: {
   logsByPlannedSetId: Record<string, any>;
   extraWorkouts?: any[];
   historyExposures?: ExerciseExposureInput[];
+  /** Required write opt-in. Phase 2B.1 disabled set-level client apply. */
+  allowDirectApply?: boolean;
 }): Promise<AdaptationApplicationResult | null> {
+  if (opts.allowDirectApply !== true) return null;
   if (!opts.program?.id || !opts.exercise?.catalog_exercise_id) return null;
   const current = exposureFromLoggedExercise({
     exercise: opts.exercise,
