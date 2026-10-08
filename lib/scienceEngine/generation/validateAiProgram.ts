@@ -523,11 +523,11 @@ function validateWeeklyVolume(
     const tier = muscleTier(target.muscle, target.priority);
     const over = ratio > 1.6;
 
-    if (required.has(target.muscle) && got < 1) {
+    if (required.has(target.muscle as MuscleId) && got < 1) {
       issues.push(err('VOLUME_OFF', `Required emphasis ${target.muscle} has no working-set credit.`));
       return;
     }
-    if (waived.has(target.muscle)) {
+    if (waived.has(target.muscle as MuscleId)) {
       if (got < 1 || ratio < 0.5 || over) {
         issues.push(warn('VOLUME_OFF', `${target.muscle} is outside the requested emphasis (${got} vs ${target.target_working_sets}).`));
       }

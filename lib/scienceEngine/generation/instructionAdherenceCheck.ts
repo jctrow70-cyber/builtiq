@@ -105,8 +105,9 @@ export async function runInstructionAdherenceChecks() {
   assert(signature(week[0]) === signature(week[1]), `Identical request must reuse one session:\n${signature(week[0])}\n${signature(week[1])}`);
   assert(week[0].name === week[1].name, `Both days should share a name, got ${week[0].name} and ${week[1].name}`);
   const patterns = new Set(week[0].exercises.map((ex) => ex.movementPattern));
-  assert(patterns.has('horizontal_push') || patterns.has('vertical_push'), `Session should keep an upper push, got ${[...patterns].join(', ')}`);
-  assert(patterns.has('hinge'), `Session should keep a lower pull, got ${[...patterns].join(', ')}`);
+  const patternList = Array.from(patterns).join(', ');
+  assert(patterns.has('horizontal_push') || patterns.has('vertical_push'), `Session should keep an upper push, got ${patternList}`);
+  assert(patterns.has('hinge'), `Session should keep a lower pull, got ${patternList}`);
   week.forEach((workout) => {
     const names = workout.warmup.map((item) => item.name);
     assert(names.length >= 2 && names.length <= 4, `${workout.dayLabel} warm-up count ${names.length} (${names.join(', ')})`);

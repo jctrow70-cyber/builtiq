@@ -11,6 +11,43 @@ Branch:
 Status:
 ```
 
+## BIQ-0248 - Fix Identical-Day Check Compile
+
+Date: 2026-10-07
+Branch: main
+Status: Local / in progress
+
+### Summary
+
+The production type check failed because the identical-day regression printed a Set with spread syntax, and volume checks compared a string muscle name with a muscle-id set. The message now uses Array.from, and the volume check casts the target muscle before the lookup.
+
+### Purpose
+
+Vercel compiled the app, then stopped on `instructionAdherenceCheck.ts` with a downlevelIteration error. The check itself was already passing locally under tsx.
+
+### Files Changed
+
+- `lib/scienceEngine/generation/instructionAdherenceCheck.ts`
+- `lib/scienceEngine/generation/validateAiProgram.ts`
+- `CHANGELOG.md`
+
+### Database Changes
+
+None.
+
+### Testing Steps
+
+1. Run `npm run build` and confirm type checking passes the identical-day check
+2. Confirm the assertion text still lists the session’s movement patterns when a push or hinge is missing
+
+### Known Issues
+
+None for this compile fix.
+
+### Recommended Commit Message
+
+`BIQ-0248 Print movement patterns without spreading a Set`
+
 ## BIQ-0247 - Identical Days and Warm-Up Limits
 
 Date: 2026-10-07
