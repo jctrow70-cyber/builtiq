@@ -214,7 +214,7 @@ Goal: Prepare BuildIQ Health for iOS and Android users.
 
 Apply migration `20261008_061_phase2b1_adaptation_orchestration.sql` after review so workout-level adaptation runs persist.
 
-Program generation Stage 2A (BIQ-0255, Decision 098) records the model failure stage on `st_generation_runs.validation_json`. The 6,000 output-token cap is unchanged. Stages 2B–2E are not started.
+Program generation Stage 2A (BIQ-0255, Decision 098) records the model failure stage on `st_generation_runs.validation_json`. Stage 2B (BIQ-0256, Decision 099) makes volume, rest, ramp-up, and session duration adaptive and returns a structured conflict when explicit requirements cannot fit. The 6,000 output-token cap is unchanged. Stages 2C and 2D are not started.
 
 ### Recently completed
 

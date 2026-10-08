@@ -272,8 +272,8 @@ export function generateProgram(profile: TrainingProfile, catalogRows?: any[]): 
     workouts,
     explanations: [
       chest
-        ? `Chest weekly target is ${chest.targetSets} effective sets because volume starts at the productive end of the ${profile.experienceLevel} range and ${chest.priority === 'high_priority' ? 'priority increases that dose by 20%' : 'volume is not maximized automatically'}.`
-        : 'Weekly muscle targets start at the low productive end of each experience band.',
+        ? `Chest preferred weekly target is ${chest.preferredSets} effective sets (useful minimum ${chest.minimumSets}, practical max ${chest.practicalMaxSets}) for this goal, experience, and schedule.`
+        : 'Weekly muscle targets are preferred ranges for this goal, experience, and schedule.',
       profile.hardRequirements?.identicalDays
         ? 'Identical workouts were required, so each training day uses the same session.'
         : 'Exercises persist across weeks so progress can be measured. Full-body days rotate different sessions (A/B/C) inside the week; novelty is not used as week-to-week progression.',
@@ -356,6 +356,12 @@ function buildWorkout(opts: {
 
   slots.forEach((slot) => {
     if (exercises.length >= maxMoves) return;
+    const unmetQuotas = quotaMusclesForDay(profile, day).filter((muscle) => {
+      const need = muscleQuotaForDay(profile, day, muscle);
+      const have = exercises.filter((exercise) => isDedicatedForMuscle(exercise, muscle)).length;
+      return have < need;
+    });
+    if (exercises.length + unmetQuotas.length >= maxMoves && !unmetQuotas.includes(slot.muscle)) return;
     const remainingForMuscle = opts.remaining[slot.muscle] ?? 0;
     if (remainingForMuscle < 1.5 && slot.role !== 'primary' && !shouldFillSession(profile, day.workoutType)) return;
     if (skipIsolationForStrength(profile, slot.role, exercises, day.workoutType)) return;
@@ -370,8 +376,10 @@ function buildWorkout(opts: {
     });
     if (!picked) return;
     const cursor = opts.sessionCursor[slot.muscle] || 0;
-    const budget = (opts.sessionBudget[slot.muscle] || [3])[cursor] || 3;
-    const sets = Math.max(2, Math.min(4, slot.role === 'isolation' ? Math.min(3, budget) : Math.min(3, budget)));
+    const allocated = opts.sessionBudget[slot.muscle];
+    const budget = allocated ? Number(allocated[cursor] ?? 0) : 3;
+    if (budget < 2 && slot.role !== 'primary') return;
+    const sets = Math.max(2, Math.min(3, budget >= 2 ? budget : 2));
     const prescribed = prescribeExercise({
       exercise: picked,
       role: slot.role,
@@ -457,7 +465,7 @@ function buildWorkout(opts: {
     maxMoves,
   });
   trimmed.exercises = applyIntakeSupersets(trimmed.exercises, profile, day.dayLabel);
-  return trimmed;
+  return trimForDuration(trimmed, profile);
 }
 
 function dayTrainsMuscle(type: SplitDay['workoutType'], muscle: MuscleId): boolean {
@@ -562,7 +570,11 @@ function slotPoolForMuscle(muscle: MuscleId, variantIndex: number): DaySlot[] {
 function muscleQuotaForDay(profile: TrainingProfile, day: SplitDay, muscle: MuscleId): number {
   const fromNotes = Number(profile.sessionMuscleQuotas?.[muscle] || 0);
   if (fromNotes > 0) return fromNotes;
-  if (profile.priorityMuscles.includes(muscle) && dayTrainsMuscle(day.workoutType, muscle)) return 2;
+  if (profile.priorityMuscles.includes(muscle) && dayTrainsMuscle(day.workoutType, muscle)) {
+    const minutes = profile.preferredSessionMinutes || 60;
+    if (minutes <= 45 || maxStrengthMoves(minutes) <= 5) return 1;
+    return 2;
+  }
   return 0;
 }
 
@@ -706,6 +718,10 @@ function applyIntakeSupersets(exercises: ExercisePrescription[], profile: Traini
     b.supersetGroupId = groupId;
     b.supersetLabel = label;
     b.supersetOrder = 2;
+    if (a.role !== 'isolation' && b.role !== 'isolation' && a.role !== 'accessory' && b.role !== 'accessory') {
+      a.restSeconds = Math.max(a.restSeconds, 90);
+      b.restSeconds = Math.max(b.restSeconds, 90);
+    }
     i += 2;
   }
   return result;

@@ -174,7 +174,7 @@ function validateWorkout(
         )
       );
     }
-    validateRest(ex, hit, context.athlete.primary_goal, supersetIds.has(ex.exercise_id), workout.day_label, issues);
+    validateRest(ex, hit, context.athlete.primary_goal, supersetIds.has(ex.exercise_id), workout.day_label, issues, context.athlete.experience_level);
   });
 
   workout.strength.forEach((block) => {
@@ -257,7 +257,8 @@ function validateRest(
   goal: string,
   inSuperset: boolean,
   day: string,
-  issues: ValidationIssue[]
+  issues: ValidationIssue[],
+  experience?: string
 ) {
   const band = restBand({
     role: ex.role,
@@ -266,6 +267,7 @@ function validateRest(
     repMax: ex.rep_max,
     goal,
     inSuperset,
+    experience,
   });
   if (ex.rest_seconds < band.compromiseBelow) {
     issues.push(
@@ -534,11 +536,12 @@ function validateWeeklyVolume(
       return;
     }
 
+    const floor = target.minimum_working_sets ?? 1;
     if (tier === 'major') {
       if (got < 1) {
         issues.push(err('VOLUME_OFF', `Major hypertrophy target ${target.muscle} has no meaningful working-set credit.`));
-      } else if (hypertrophy && ratio < 0.5) {
-        issues.push(err('VOLUME_OFF', `${target.muscle} working sets (${got}) are severely below the ${target.target_working_sets} target.`));
+      } else if (hypertrophy && got < floor) {
+        issues.push(err('VOLUME_OFF', `${target.muscle} working sets (${got}) are below the useful minimum of ${floor}.`));
       } else if (ratio < 0.7 || over) {
         issues.push(warn('VOLUME_OFF', `${target.muscle} working sets (${got}) vs target ${target.target_working_sets}.`));
       } else if (ratio < 0.85 || ratio > 1.25) {

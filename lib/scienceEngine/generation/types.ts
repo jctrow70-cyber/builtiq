@@ -99,6 +99,8 @@ export type GenerationContext = {
     target_working_sets: number;
     min_sets: number;
     max_sets: number;
+    minimum_working_sets: number;
+    practical_max_sets: number;
     priority: string;
     preferred_exposures: [number, number];
   }>;

@@ -18,6 +18,7 @@ import {
 } from '../../../../lib/scienceEngine';
 import { adaptGenerationCatalog } from '../../../../lib/scienceEngine/generation/catalogEligibility';
 import { runGenerationPipeline } from '../../../../lib/scienceEngine/generation';
+import { ProgrammingConflictError } from '../../../../lib/scienceEngine/feasibility';
 import { attachGenerationRunProgram } from '../../../../lib/scienceEngine/generation/log';
 import type { GenerationMode } from '../../../../lib/scienceEngine/generation/types';
 import { canCreateSharedGroupProgram, canEditSharedGroupProgram } from '../../../../lib/groups/permissions';
@@ -291,6 +292,12 @@ async function generateProgramPost(request: Request) {
       apiKey: canCallAi ? apiKey : null,
     });
   } catch (err: any) {
+    if (err instanceof ProgrammingConflictError || err?.conflict?.code === 'INFEASIBLE_REQUIREMENTS') {
+      return NextResponse.json(
+        { error: err.message, conflict: err.conflict },
+        { status: 422 }
+      );
+    }
     return NextResponse.json({ error: err?.message || 'Could not generate your training program. Please try again.' }, { status: 500 });
   }
 

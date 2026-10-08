@@ -11,6 +11,72 @@ Branch:
 Status:
 ```
 
+## BIQ-0256 - Adaptive Volume, Rest, Ramps, and Duration
+
+Date: 2026-10-08
+Branch: main
+Status: Local / in progress
+
+### Summary
+
+Weekly set targets, rest, and ramp-up sets now follow the goal, experience, schedule, and session length. A requested duration uses one tolerance on both the AI validator and the science fallback. A session that cannot fit explicit movement requirements at that duration returns a structured conflict instead of a stripped workout. Science engine version is `1.4.11`. The model, output-token cap, catalog, and Program Design UI are unchanged.
+
+### Purpose
+
+Stage 2A showed that athletic 45-minute sessions were being judged against hypertrophy-sized volume, a universal 180-second primary rest, and a fixed ramp pattern, while the science fallback was allowed a larger duration overrun than the AI week. Those constraints needed to become guidelines before prompt or repair rewrites.
+
+### Files changed
+
+- lib/scienceEngine/volume.ts
+- lib/scienceEngine/types.ts
+- lib/scienceEngine/prescription.ts
+- lib/scienceEngine/rampUp.ts
+- lib/scienceEngine/duration.ts
+- lib/scienceEngine/validator.ts
+- lib/scienceEngine/feasibility.ts
+- lib/scienceEngine/generateProgram.ts
+- lib/scienceEngine/version.ts
+- lib/scienceEngine/generation/qualityRules.ts
+- lib/scienceEngine/generation/ramps.ts
+- lib/scienceEngine/generation/context.ts
+- lib/scienceEngine/generation/types.ts
+- lib/scienceEngine/generation/validateAiProgram.ts
+- lib/scienceEngine/generation/repairAiProgram.ts
+- lib/scienceEngine/generation/orchestrator.ts
+- lib/scienceEngine/generation/stage2bCheck.ts
+- lib/scienceEngine/generation/phase1Check.ts
+- lib/scienceEngine/acceptanceCheck.ts
+- app/api/programs/generate/route.ts
+- docs/catalog-overhaul/diagnose-volume-credits.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+### Database changes
+
+None.
+
+### Testing steps
+
+1. Run `npm run test:science`. Stage 2A outcome checks and Stage 2B scenarios A–E must pass.
+2. Confirm the 4-day intermediate hypertrophy acceptance case still targets about 12 weekly chest sets.
+3. Generate the intermediate athletic case: 2 identical days, 45 minutes, upper-body push and lower-body pull. Chest preferred volume should be about 5 sets, heavy-primary rest 150 seconds, opener ramps 3, and the estimated session about 45 minutes.
+4. Request a 20-minute athletic session with an extended warm-up plus both push and hinge emphasis. The API should return HTTP 422 and a `conflict` object. No program should be saved.
+5. Confirm Program Design screens are unchanged.
+
+### Known issues
+
+- Stage 2C still owns the designer prompt text. The payload now includes useful minimums and practical maximums, but the written instructions are unchanged.
+- Stage 2D still owns repair that adds sets and a later duration pass that can remove them. Repair now stops at the useful minimum.
+- The science template stores ramp sets on the first recognized primary lift. A day led by another lift can show zero template ramps even though AI validation infers them.
+- Beginner science primers can still use Goblet Squat, which the AI validator rejects as not power-eligible.
+- Recent training history is still context for the model only. It does not scale the weekly targets.
+- Direct and indirect muscle credit stays at the existing catalog weights.
+
+### Recommended commit message
+
+`BIQ-0256 Adapt volume, rest, ramps, and session duration to the athlete`
+
 ## BIQ-0255 - Generation Failure Classification
 
 Date: 2026-10-08

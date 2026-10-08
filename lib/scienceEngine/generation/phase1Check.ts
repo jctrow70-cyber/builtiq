@@ -881,17 +881,17 @@ export async function runPhase1GenerationChecks() {
     library,
     'intermediate'
   );
-  assert(slotRamps[0].ramp_sets.length === 4, `Opener heavy squat should get 4 ramps, got ${slotRamps[0].ramp_sets.length}`);
-  assert(slotRamps[1].ramp_sets.length === 2, `Later bench should get abbreviated 2 ramps, got ${slotRamps[1].ramp_sets.length}`);
+  assert(slotRamps[0].ramp_sets.length === 3, `Intermediate opener at 6 reps should get 3 ramps, got ${slotRamps[0].ramp_sets.length}`);
+  assert(slotRamps[1].ramp_sets.length === 2, `Later heavy bench should get 2 ramps, got ${slotRamps[1].ramp_sets.length}`);
   const effectiveTwo = buildEffectiveWorkout(twoPrimary.workouts[0], library, { experienceLevel: 'intermediate' });
-  assert(effectiveTwo.strength[0].ramp_sets.length === 4 && effectiveTwo.strength[1].ramp_sets.length === 2, 'Effective workout must use the same session ramp plan');
+  assert(effectiveTwo.strength[0].ramp_sets.length === 3 && effectiveTwo.strength[1].ramp_sets.length === 2, 'Effective workout must use the same session ramp plan');
   const mappedTwo = mapAiWeekToScience(twoPrimary, science, profile, catalogById, library);
   const mappedMonTwo = mappedTwo.workouts.find((w) => w.week === 1 && w.dayLabel === 'Mon');
   const squatRamps = (mappedMonTwo?.exercises[0].setDetails || []).filter((s) => s.setType === 'warmup').length;
   const benchRamps = (mappedMonTwo?.exercises[1].setDetails || []).filter((s) => s.setType === 'warmup').length;
-  assert(squatRamps === 4 && benchRamps === 2, `Mapper ramps must match effective plan, got squat ${squatRamps} bench ${benchRamps}`);
+  assert(squatRamps === 3 && benchRamps === 2, `Mapper ramps must match effective plan, got squat ${squatRamps} bench ${benchRamps}`);
   const pre = estimateSessionBreakdownFromAi(twoPrimary.workouts[0], library, { experienceLevel: 'intermediate' });
-  assert(pre.rampCount === 6, `Authoritative duration must count 4+2 ramps, got ${pre.rampCount}`);
+  assert(pre.rampCount === 5, `Authoritative duration must count 3+2 ramps, got ${pre.rampCount}`);
 
   const fatWeek: AiWeekProgram = {
     ...week,

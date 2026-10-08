@@ -15,6 +15,7 @@ import { buildEffectiveWorkout, estimateEffectiveBreakdown, estimateEffectiveMin
 import type { AiWorkoutPlan, DesignerExercise } from './generation/types';
 import { powerRestSecondsFor } from './powerPrescription';
 import { prepItemSeconds } from './prescriptionTime';
+import type { MuscleId } from './taxonomy';
 import type { ExercisePrescription, ScienceWorkout, TrainingProfile, WarmupItem } from './types';
 
 export type { WorkoutDurationBreakdown } from './durationConstants';
@@ -186,29 +187,60 @@ export function estimateSessionBreakdownFromAi(
   return estimateEffectiveBreakdown(buildEffectiveWorkout(workout, library, opts));
 }
 
+export function scienceRampCount(workout: Pick<ScienceWorkout, 'rampSets' | 'exercises'>): number {
+  const fromDetails = workout.exercises.reduce(
+    (sum, ex) => sum + (ex.setDetails || []).filter((set) => set.setType === 'warmup').length,
+    0
+  );
+  return Math.max(fromDetails, workout.rampSets?.length || 0);
+}
+
 export function trimForDuration(workout: ScienceWorkout, profile: TrainingProfile): ScienceWorkout {
   const limit = profile.preferredSessionMinutes || 60;
+  const { errorDelta } = sessionDurationTolerance(limit);
   const minMoves = minStrengthMoves(limit);
   let next = { ...workout, exercises: workout.exercises.slice() };
-  next.estimatedMinutes = estimateWorkoutMinutes({
-    warmupItems: next.warmup,
-    potentiation: next.potentiation,
-    rampCount: next.exercises.reduce((sum, ex) => sum + (ex.setDetails || []).filter((s) => s.setType === 'warmup').length, 0),
-    exercises: next.exercises,
-    cooldownItems: next.cooldown,
-  });
-
-  while (next.estimatedMinutes > limit + 8 && next.exercises.length > minMoves) {
-    const idx = next.exercises.map((ex, i) => ({ ex, i })).reverse().find((row) => row.ex.role === 'isolation' || row.ex.role === 'accessory')?.i;
-    if (idx == null) break;
-    next.exercises.splice(idx, 1);
+  const refresh = () => {
     next.estimatedMinutes = estimateWorkoutMinutes({
       warmupItems: next.warmup,
       potentiation: next.potentiation,
-      rampCount: next.exercises.reduce((sum, ex) => sum + (ex.setDetails || []).filter((s) => s.setType === 'warmup').length, 0),
+      rampCount: scienceRampCount(next),
       exercises: next.exercises,
       cooldownItems: next.cooldown,
     });
+  };
+  refresh();
+
+  while (next.estimatedMinutes > limit + errorDelta && next.exercises.length > minMoves) {
+    const idx = next.exercises
+      .map((ex, i) => ({ ex, i }))
+      .reverse()
+      .find((row) => (row.ex.role === 'isolation' || row.ex.role === 'accessory') && !keepsExplicitQuota(profile, next.exercises, row.ex))?.i;
+    if (idx == null) break;
+    next.exercises.splice(idx, 1);
+    refresh();
   }
   return next;
+}
+
+function countsTowardQuota(exercise: ExercisePrescription, muscle: string): boolean {
+  if (exercise.primaryMuscles.includes(muscle as MuscleId)) return true;
+  const name = exercise.name;
+  if (muscle === 'glutes') return /hip thrust|glute|kickback|hip abduction|step-?up|frog pump|pull-through/i.test(name);
+  if (muscle === 'chest') return /bench|chest|fly|crossover|pec|dip/i.test(name);
+  if (muscle === 'hamstrings') return /rdl|deadlift|leg curl|hamstring/i.test(name);
+  if (muscle === 'quads') return /squat|lunge|leg press|leg extension/i.test(name);
+  if (muscle === 'biceps') return /curl/i.test(name) && !/leg curl/i.test(name);
+  if (muscle === 'triceps') return /triceps|pushdown|skull crusher/i.test(name);
+  return false;
+}
+
+function keepsExplicitQuota(profile: TrainingProfile, exercises: ExercisePrescription[], exercise: ExercisePrescription): boolean {
+  const quotas = profile.sessionMuscleQuotas || {};
+  return Object.entries(quotas).some(([muscle, count]) => {
+    const need = Number(count) || 0;
+    if (need < 1 || !countsTowardQuota(exercise, muscle)) return false;
+    const dedicated = exercises.filter((row) => countsTowardQuota(row, muscle)).length;
+    return dedicated <= need;
+  });
 }

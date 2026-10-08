@@ -1,3 +1,4 @@
+import { assessProgrammingFeasibility, ProgrammingConflictError } from '../feasibility';
 import { generateProgram } from '../generateProgram';
 import { validateProgram } from '../validator';
 import { DESIGNER_PROMPT_VERSION, SCIENCE_ENGINE_VERSION } from '../version';
@@ -58,6 +59,8 @@ export async function runGenerationPipeline(opts: {
   const mode = opts.mode || 'full_program';
   const catalog = adaptGenerationCatalog(opts.catalog);
   const profile = applyRequestToProfile(opts.profile, opts.userPrompt);
+  const conflict = assessProgrammingFeasibility(profile);
+  if (conflict) throw new ProgrammingConflictError(conflict);
   const science = generateProgram(profile, catalog);
   const scienceCheck = validateProgram(science, profile);
   if (!scienceCheck.ok) {

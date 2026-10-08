@@ -290,7 +290,7 @@ async function main() {
     value: targets.find((t) => t.muscle === 'upper_back')?.targetSets,
     lats_value: targets.find((t) => t.muscle === 'lats')?.targetSets,
     formula:
-      'calculateWeeklyVolume: intermediate.major.start (10) * normal priority (1.0) = 10. Same formula as chest/lats/quads/hamstrings/glutes.',
+      'calculateWeeklyVolume: experience-band start, times priority, goal, session length, and days per week. Preferred sets are a guideline. Waived muscles use 0.',
     definition:
       'targetSets are equivalent working sets after contribution weighting. A 3-set row at upper_back 1.0 = 3. A 3-set chin-up at upper_back 0.5 = 1.5.',
     validator:

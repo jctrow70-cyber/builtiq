@@ -83,11 +83,13 @@ export function buildGenerationContext(opts: {
     },
     weekly_volume_targets: volume.map((t) => ({
       muscle: t.muscle,
-      target_working_sets: t.targetSets,
-      min_sets: t.minSets,
-      max_sets: t.maxSets,
+      target_working_sets: t.preferredSets ?? t.targetSets,
+      min_sets: t.minimumSets ?? t.minSets,
+      max_sets: t.practicalMaxSets ?? t.maxSets,
+      minimum_working_sets: t.minimumSets ?? t.minSets,
+      practical_max_sets: t.practicalMaxSets ?? t.maxSets,
       priority: t.priority,
-      preferred_exposures: preferredExposuresPerWeek(t.targetSets),
+      preferred_exposures: preferredExposuresPerWeek(t.preferredSets ?? t.targetSets),
     })),
     recent_training: {
       window_days: 56,

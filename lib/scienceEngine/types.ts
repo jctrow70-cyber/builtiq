@@ -128,9 +128,15 @@ export type MuscleContribution = {
 export type VolumeTarget = {
   muscle: MuscleId;
   priority: MusclePriority;
+  /** Experience-band floor kept for reporting. Programming uses minimumSets. */
   minSets: number;
+  /** Experience-band ceiling kept for reporting. Programming uses practicalMaxSets. */
   maxSets: number;
+  /** Preferred weekly direct-equivalent sets. Guidelines, not a hard dose. */
   targetSets: number;
+  minimumSets: number;
+  preferredSets: number;
+  practicalMaxSets: number;
 };
 
 export type SplitDay = {

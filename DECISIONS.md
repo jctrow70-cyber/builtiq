@@ -19,6 +19,36 @@ Impact:
 
 ---
 
+## Decision 099 - Treat Volume, Rest, and Duration as Adaptive Guidelines
+
+Date: 2026-10-08
+Status: Accepted
+Category: Training / Program generation
+
+### Decision
+
+Stage 2B keeps the current generator, model, 6,000 output-token cap, exercise catalog, enrollments, and Program Design UI. Weekly muscle targets are a useful minimum, a preferred target, and a practical maximum. They scale with goal, experience, training days, session length, muscle priority, and a recovery reduction when injury limitations are present. Waived muscles are not given a hypertrophy target. Athletic and strength work keeps quality sets and recovery ahead of hypertrophy volume. Hypertrophy still weights weekly working sets, and the existing 4-day intermediate chest case stays near 12 sets.
+
+Rest comes from the lift, goal, rep range, fatigue, and experience. A 180-second floor remains for advanced or intermediate heavy strength work at low reps. Athletic primaries in the 3–6 range use about 150 seconds. Accessories and isolations stay shorter. Superset pairs of compound lifts keep a longer shared rest than isolation pairs. Rest is not cut to force a duration.
+
+Ramp-up sets stay separate from working sets. Beginners use 1–2 preparation sets. Intermediate openers in a heavier rep range use 3. Advanced heavy openers can use 4. A later lift in the same session uses fewer. The bench 185 example used by acceptance stays as written.
+
+AI validation, repair, science fallback, and preview duration all use `sessionDurationTolerance`. A 60-minute request still warns past 5 minutes and errors past 9. Other lengths use about 10 percent to warn and 15 percent to error, with floors of 5 and 8 minutes. The science fallback uses that same error line. Explicit movement requirements that cannot fit, including warm-up and quality rest, return `INFEASIBLE_REQUIREMENTS` and HTTP 422. Preferred volume may drop. Required patterns are not removed to make the clock fit.
+
+### Reason
+
+The athletic 45-minute case was failing because preferred volume, rest, and ramps were universal doses, and the science template was allowed to run long after the AI week was rejected. Those doses are programming choices for a person and a time budget.
+
+### Alternatives Considered
+
+Keep the 10–12 set floors and only shorten rest to hit 45 minutes. Give the science fallback a wider duration allowance than the AI week. Drop a requested push or hinge when the session is short. Start the Stage 2C prompt rewrite in the same change.
+
+### Impact
+
+Science engine version is `1.4.11`. Stage 2A outcome names are unchanged. No migration. Stages 2C and 2D are not started. The prompt wording, a second model revision, and per-exercise science ramps on every primary remain open.
+
+---
+
 ## Decision 098 - Name the Generation Failure Stage
 
 Date: 2026-10-08

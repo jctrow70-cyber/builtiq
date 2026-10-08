@@ -374,6 +374,7 @@ function repairStrengthItem(
     repMax: ex.rep_max,
     goal: context.athlete.primary_goal,
     inSuperset,
+    experience: context.athlete.experience_level,
   });
   if (ex.rest_seconds < band.min) {
     const from = ex.rest_seconds;
@@ -870,8 +871,8 @@ function repairWeeklyVolume(
     for (let step = 0; step < 4; step += 1) {
       const credits = weeklyCredits(scope, library, catalogById);
       const got = (credits[target.muscle] || 0) * sessions;
-      const ratio = target.target_working_sets > 0 ? got / target.target_working_sets : 1;
-      if (got >= 1 && ratio >= 0.5) return;
+      const floor = target.minimum_working_sets ?? Math.max(1, Math.round((target.target_working_sets || 0) * 0.5));
+      if (got >= floor) return;
 
       const existing = findExistingCreditExercise(scope, library, catalogById, target.muscle);
       const existingMeta = existing ? library.get(existing.ex.exercise_id) : null;

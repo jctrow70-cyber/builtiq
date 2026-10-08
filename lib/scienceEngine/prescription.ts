@@ -1,4 +1,5 @@
 import { lateralityOf, measurementTypeOf } from './generation/library';
+import { restBand } from './generation/qualityRules';
 import { classifyPowerExercise, powerPrescriptionFor } from './powerPrescription';
 import { getScienceRules, goalUsesHypertrophyBias, goalUsesStrengthBias } from './rules';
 import type { CatalogExercise, ExercisePrescription, PrimaryGoal, ProgramRole, TrainingProfile } from './types';
@@ -42,15 +43,24 @@ export function targetRirFor(role: ProgramRole, profile: TrainingProfile): numbe
   return band.compound;
 }
 
-export function restSecondsFor(role: ProgramRole, profile: TrainingProfile, exercise: CatalogExercise): number {
-  const rules = getScienceRules();
+export function restSecondsFor(
+  role: ProgramRole,
+  profile: TrainingProfile,
+  exercise: CatalogExercise,
+  repMax = role === 'primary' ? 6 : 12
+): number {
   if (role === 'power') return 60;
   if (role === 'warmup') return 20;
-  if (role === 'primary' && (goalUsesStrengthBias(profile.primaryGoal) || exercise.fatigueCost === 'high')) {
-    return rules.restSeconds.heavyCompound[0];
-  }
-  if (role === 'isolation' || exercise.exerciseType === 'isolation') return rules.restSeconds.isolation[0];
-  return rules.restSeconds.moderateCompound[0];
+  const kind = exercise.exerciseType === 'isolation' || role === 'isolation' ? 'isolation' : 'compound';
+  return restBand({
+    role: role === 'accessory' ? 'accessory' : role === 'isolation' ? 'isolation' : role === 'secondary' ? 'secondary' : 'primary',
+    kind,
+    fatigue: exercise.fatigueCost || (kind === 'isolation' ? 'low' : 'medium'),
+    repMax,
+    goal: profile.primaryGoal,
+    inSuperset: false,
+    experience: profile.experienceLevel,
+  }).min;
 }
 
 export function loadIncrementFor(exercise: CatalogExercise): number {
@@ -111,7 +121,7 @@ export function prescribeExercise(opts: {
     repMin: range.min,
     repMax: range.max,
     targetRir: rir,
-    restSeconds: restSecondsFor(role, profile, exercise),
+    restSeconds: restSecondsFor(role, profile, exercise, range.max),
     loadIncrement: loadIncrementFor(exercise),
     why,
     laterality: lateralityOf(exercise),

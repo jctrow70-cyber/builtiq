@@ -1,3 +1,4 @@
+import { classifySessionDuration } from './duration';
 import { warmupExerciseBounds } from './generation/hardRequirements';
 import type { ScienceProgram, TrainingProfile, ValidationIssue, ValidationResult } from './types';
 import { preferredExposuresPerWeek } from './volume';
@@ -15,8 +16,12 @@ export function validateProgram(program: ScienceProgram, profile: TrainingProfil
   week1.forEach((workout) => {
     const addonDay = workout.workoutType === 'Cardio' || workout.workoutType === 'Mobility';
     if (!workout.exercises.length) issues.push(err('EMPTY_STRENGTH', `${workout.dayLabel} has no working exercises.`));
-    if (workout.estimatedMinutes > (profile.preferredSessionMinutes || 60) + 15) {
-      issues.push(warn('DURATION', `${workout.name} may exceed the ${profile.preferredSessionMinutes} minute cap.`));
+    const requestedMinutes = profile.preferredSessionMinutes || 60;
+    const durationFit = classifySessionDuration(workout.estimatedMinutes, requestedMinutes);
+    if (durationFit.over === 'error') {
+      issues.push(err('DURATION', `${workout.name} is estimated at ${workout.estimatedMinutes} min vs ${requestedMinutes}.`));
+    } else if (durationFit.over === 'warning') {
+      issues.push(warn('DURATION', `${workout.name} is estimated at ${workout.estimatedMinutes} min vs ${requestedMinutes}.`));
     }
     const warmupBounds = profile.hardRequirements
       ? { min: profile.hardRequirements.warmupMin, max: profile.hardRequirements.warmupMax }
@@ -47,6 +52,25 @@ export function validateProgram(program: ScienceProgram, profile: TrainingProfil
       }
     });
   });
+
+  const requirements = profile.hardRequirements;
+  if (requirements?.upperPush || requirements?.lowerPull || requirements?.identicalDays) {
+    const strengthDays = week1.filter((workout) => workout.workoutType !== 'Cardio' && workout.workoutType !== 'Mobility');
+    const patterns = new Set(strengthDays.flatMap((workout) => workout.exercises.map((exercise) => exercise.movementPattern)));
+    if (requirements.upperPush && !patterns.has('horizontal_push') && !patterns.has('vertical_push')) {
+      issues.push(err('REQUIRED_PATTERN', 'The requested upper-body push is missing.'));
+    }
+    if (requirements.lowerPull && !patterns.has('hinge')) {
+      issues.push(err('REQUIRED_PATTERN', 'The requested lower-body pull is missing.'));
+    }
+    if (requirements.identicalDays && strengthDays.length >= 2) {
+      const signature = (workout: (typeof strengthDays)[number]) => workout.exercises.map((exercise) => exercise.name).join('|');
+      const first = signature(strengthDays[0]);
+      if (strengthDays.some((workout) => signature(workout) !== first)) {
+        issues.push(err('IDENTICAL_DAYS', 'The requested identical sessions are different.'));
+      }
+    }
+  }
 
   program.volumeTargets.forEach((target) => {
     const exposures = program.split.filter((d) => d.targetMuscles.includes(target.muscle)).length;

@@ -83,30 +83,41 @@ export function restBand(opts: {
   repMax: number;
   goal: string;
   inSuperset: boolean;
+  experience?: string;
 }): { min: number; max: number; compromiseBelow: number } {
   const goal = opts.goal.toLowerCase();
-  const strengthBias = /strength|power|athletic/.test(goal);
+  const experience = String(opts.experience || 'intermediate').toLowerCase();
+  const beginner = experience === 'beginner';
+  const strengthGoal = goal === 'strength' || goal === 'strength_hypertrophy';
   const heavyPrimary = opts.role === 'primary' && opts.kind === 'compound' && opts.fatigue === 'high';
-  const lowReps = opts.repMax <= 6;
-  if (heavyPrimary && (strengthBias || lowReps)) {
-    return { min: 180, max: 300, compromiseBelow: 150 };
+  if (heavyPrimary && opts.repMax <= 4 && !beginner) {
+    return { min: 180, max: 240, compromiseBelow: 150 };
+  }
+  if (opts.role === 'primary' && opts.kind === 'compound' && opts.repMax <= 6 && strengthGoal && !beginner) {
+    return { min: 180, max: 240, compromiseBelow: 150 };
+  }
+  if (heavyPrimary && opts.repMax <= 6) {
+    return { min: beginner ? 120 : 150, max: 210, compromiseBelow: 120 };
   }
   if (heavyPrimary) {
-    return { min: 150, max: 240, compromiseBelow: 120 };
+    return { min: 150, max: 210, compromiseBelow: 120 };
   }
   if (opts.role === 'primary' && opts.kind === 'compound') {
-    return { min: 120, max: 210, compromiseBelow: 90 };
+    return { min: 120, max: 180, compromiseBelow: 90 };
   }
   if (opts.kind === 'compound' && opts.fatigue === 'high') {
-    return { min: 120, max: 210, compromiseBelow: 75 };
+    return { min: 120, max: 180, compromiseBelow: 75 };
+  }
+  if (opts.inSuperset && (opts.kind === 'isolation' || opts.role === 'isolation' || opts.fatigue === 'low')) {
+    return { min: 45, max: 120, compromiseBelow: 30 };
   }
   if (opts.inSuperset) {
-    return { min: 45, max: 150, compromiseBelow: 30 };
+    return { min: 90, max: 150, compromiseBelow: 60 };
   }
   if (opts.kind === 'isolation' || opts.role === 'isolation') {
     return { min: 45, max: 120, compromiseBelow: 30 };
   }
-  return { min: 75, max: 180, compromiseBelow: 45 };
+  return { min: 75, max: 150, compromiseBelow: 45 };
 }
 
 export function musclesMentionedInWhy(why: string): string[] {
