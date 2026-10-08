@@ -19,6 +19,33 @@ Impact:
 
 ---
 
+## Decision 093 - Progress History Is the Analytics Source
+
+Date: 2026-10-08
+Status: Accepted
+Category: Progress
+
+### Decision
+
+Completed sets snapshot exercise, equipment, variant, movement pattern, and muscle credits on insert. Later edits update the performed values only. Strength series are exercise + equipment + variant. Missing equipment stays an unspecified series. The Strength Index uses one representative series per movement pattern, chosen for repeated comparable history rather than set count. Four or more of the six patterns can be labeled Overall Strength. Fewer are labeled Strength Trend. Explicit catalog muscle credits stay authoritative. Otherwise primary is 1.0, strong secondary is 0.5, and minor is 0.25, from `SCIENCE_RULES_V1`. Estimated 1RM is one Epley function for loaded working sets of 1–10 reps.
+
+### Reason
+
+Progress was combining implements that share a catalog movement, and it was recalculating history from the live exercise definition.
+
+### Alternatives Considered
+
+- Weight every exercise in a pattern by current working sets — rejected because accessories would dominate the headline
+- Prefer barbell whenever it exists — rejected because the representative series should follow what the user actually repeats
+- Treat a day with no meals as zero calories — rejected
+- Build a second adherence formula inside Progress — rejected; Progress reads training expectations
+
+### Impact
+
+Apply `supabase/migrations/20261008_060_progress_snapshot_foundation.sql`. The Progress dashboard layout is unchanged until the analytics foundation is reviewed. Group Progress is unchanged.
+
+---
+
 ## Decision 092 - Program Criteria Stay on the Program
 
 Date: 2026-10-07

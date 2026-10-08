@@ -1,0 +1,14 @@
+export { estimateE1rm, DEFAULT_E1RM_CONFIG, isWorkingSet } from '../training/estimated1Rm';
+export { inferSnapshotEquipment } from './equipmentBackfill';
+export { seriesKey, seriesIdentityFromLog, displaySeriesName, UNSPECIFIED_EQUIPMENT } from './identity';
+export { buildProgressReport } from './report';
+export { loadProgressReport, fetchSeriesFacts } from './queries';
+export { buildStrengthIndex, selectRepresentativeSeries, DEFAULT_STRENGTH_INDEX_CONFIG } from './strengthIndex';
+export { muscleVolumeReport, PROGRESS_MUSCLE_GROUPS } from './muscleVolume';
+export { nutritionReport } from './nutrition';
+export { bodyTrends } from './bodyTrends';
+export { progressAdherence, expectationFactsFromSchedule } from './adherence';
+export type { ProgressReport } from './report';
+export type { StrengthIndexResult, RepresentativeSeriesSelector, StrengthIndexConfig } from './strengthIndex';
+export type { ProgressSetFact } from './setFacts';
+export type { ProgressRange } from './ranges';

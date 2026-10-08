@@ -1,4 +1,6 @@
+import { displaySeriesName, seriesIdentityFromLog, seriesKey } from '../progress/identity';
 import { isStrengthLike, type ExerciseType } from './exerciseTypes';
+import { estimateE1rm, isWorkingSet } from './estimated1Rm';
 import { formatDisplayDate, mondayOfWeek } from './programCalendar';
 
 export type PersonalRecord = {
@@ -34,9 +36,7 @@ export type ProgressInsightsSummary = {
 };
 
 export function exerciseKeyFromLog(row: any): string {
-  const catalogId = String(row?.snapshot_catalog_exercise_id || '').trim();
-  const name = String(row?.snapshot_exercise_name || '').toLowerCase().trim();
-  return catalogId || name;
+  return seriesKey(seriesIdentityFromLog(row));
 }
 
 export function parseNumeric(value: unknown): number | null {
@@ -55,10 +55,14 @@ export function parseReps(value: unknown): number | null {
   return m ? Number(m[1]) : null;
 }
 
-function est1rm(weight: number, reps: number): number {
-  if (reps <= 0) return weight;
-  if (reps === 1) return weight;
-  return Math.round(weight * (1 + reps / 30));
+function est1rm(row: any, weight: number | null, reps: number | null): number | null {
+  const estimate = estimateE1rm({
+    weight,
+    reps,
+    setType: row?.snapshot_set_type,
+    exerciseType: row?.snapshot_exercise_type,
+  });
+  return estimate == null ? null : Math.round(estimate);
 }
 
 function isRecentDate(ymd: string, withinDays = 14): boolean {
@@ -88,7 +92,7 @@ export type SetPrCelebration = {
 
 /** True when a newly completed set beats prior personal bests for that exercise. */
 export function detectSetPersonalRecord(newRow: any, priorLogs: any[], weightUnit = 'lb'): SetPrCelebration | null {
-  if (!newRow?.completed || !isStrengthLog(newRow)) return null;
+  if (!newRow?.completed || !isStrengthLog(newRow) || !isWorkingSet(newRow.snapshot_set_type)) return null;
   const weight = parseNumeric(newRow.actual_weight);
   const reps = parseReps(newRow.actual_reps);
   if (weight == null && reps == null) return null;
@@ -97,7 +101,7 @@ export function detectSetPersonalRecord(newRow: any, priorLogs: any[], weightUni
   const key = exerciseKeyFromLog(newRow);
   const prior = computePersonalRecords(priorLogs).find((p) => p.key === key);
   const volume = weight != null && reps != null ? weight * reps : null;
-  const oneRm = weight != null && reps != null ? est1rm(weight, reps) : null;
+  const oneRm = est1rm(newRow, weight, reps);
 
   const formatPerf = () => {
     const parts: string[] = [];
@@ -148,18 +152,18 @@ export function computePersonalRecords(logs: any[]): PersonalRecord[] {
   const byKey = new Map<string, PersonalRecord>();
 
   for (const row of logs || []) {
-    if (!row?.completed || !isStrengthLog(row)) continue;
+    if (!row?.completed || !isStrengthLog(row) || !isWorkingSet(row.snapshot_set_type)) continue;
     const weight = parseNumeric(row.actual_weight);
     const reps = parseReps(row.actual_reps);
     if (weight == null && reps == null) continue;
 
     const key = exerciseKeyFromLog(row);
     if (!key) continue;
-    const name = String(row.snapshot_exercise_name || 'Exercise').trim();
+    const name = displaySeriesName(seriesIdentityFromLog(row));
     const muscleGroup = String(row.snapshot_muscle_group || '').trim();
     const date = String(row.log_date || '').slice(0, 10);
     const volume = weight != null && reps != null ? weight * reps : null;
-    const oneRm = weight != null && reps != null ? est1rm(weight, reps) : null;
+    const oneRm = est1rm(row, weight, reps);
 
     let pr = byKey.get(key);
     if (!pr) {

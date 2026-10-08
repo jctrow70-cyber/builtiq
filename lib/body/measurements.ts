@@ -8,10 +8,59 @@ export type BodyMeasurementRow = {
   measured_on: string;
   weight_lbs: number | null;
   waist_inches: number | null;
+  chest_inches?: number | null;
+  arm_inches?: number | null;
+  thigh_inches?: number | null;
+  hip_inches?: number | null;
+  neck_inches?: number | null;
+  body_fat_percent?: number | null;
+  measurement_extras?: Record<string, number | null> | null;
   notes: string | null;
   created_at?: string;
   updated_at?: string;
 };
+
+export type BodyMeasurementKey = 'weight' | 'waist' | 'chest' | 'arm' | 'thigh' | 'hip' | 'neck' | 'body_fat';
+
+export type BodyMeasurementDefinition = {
+  key: BodyMeasurementKey;
+  label: string;
+  column: keyof BodyMeasurementRow;
+  kind: 'weight' | 'length' | 'percent';
+};
+
+/**
+ * Add a future measurement by appending a column and one entry here.
+ * Progress trends iterate this list, so the screen does not need a new formula.
+ */
+export const BODY_MEASUREMENT_DEFINITIONS: BodyMeasurementDefinition[] = [
+  { key: 'weight', label: 'Weight', column: 'weight_lbs', kind: 'weight' },
+  { key: 'waist', label: 'Waist', column: 'waist_inches', kind: 'length' },
+  { key: 'chest', label: 'Chest', column: 'chest_inches', kind: 'length' },
+  { key: 'arm', label: 'Arm', column: 'arm_inches', kind: 'length' },
+  { key: 'thigh', label: 'Thigh', column: 'thigh_inches', kind: 'length' },
+  { key: 'hip', label: 'Hip', column: 'hip_inches', kind: 'length' },
+  { key: 'neck', label: 'Neck', column: 'neck_inches', kind: 'length' },
+  { key: 'body_fat', label: 'Body fat', column: 'body_fat_percent', kind: 'percent' },
+];
+
+export function readBodyMeasurement(row: BodyMeasurementRow, key: BodyMeasurementKey): number | null {
+  const definition = BODY_MEASUREMENT_DEFINITIONS.find((item) => item.key === key);
+  if (!definition) return null;
+  const stored = row[definition.column];
+  if (typeof stored === 'number' && Number.isFinite(stored)) return stored;
+  const extra = row.measurement_extras?.[key];
+  if (typeof extra === 'number' && Number.isFinite(extra)) return extra;
+  return null;
+}
+
+export function hasAnyBodyMeasurement(row: Partial<BodyMeasurementRow> | null | undefined): boolean {
+  if (!row) return false;
+  return BODY_MEASUREMENT_DEFINITIONS.some((definition) => {
+    const stored = row[definition.column];
+    return typeof stored === 'number' && Number.isFinite(stored) && stored > 0;
+  });
+}
 
 export type BodyMeasurementDraft = {
   measured_on: string;

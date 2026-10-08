@@ -11,6 +11,91 @@ Branch:
 Status:
 ```
 
+## BIQ-0250 - Progress Analytics Foundation
+
+Date: 2026-10-08
+Branch: main
+Status: Local / in progress
+
+### Summary
+
+Progress analytics now keep exercise, equipment, variant, movement pattern, and muscle credits on the completed set. Strength series stay separate by equipment. The Strength Index uses one representative series per movement pattern. The Progress screen itself is not redesigned yet.
+
+### Purpose
+
+Personal records were grouped by exercise and ignored the implement. A Smith machine bench could look like a barbell bench gain. Older logs also did not store the muscle credits or movement pattern that were true at the time of the workout.
+
+### Changes
+
+- Add snapshot columns and provenance on `st_set_logs`
+- Backfill equipment only from an existing snapshot, a named implement, or a single legal implement
+- Freeze snapshot fields on later edits
+- Give extra sets the same snapshot as planned sets
+- Add chest, arm, thigh, hip, neck, and body-fat columns, plus a measurement registry
+- Centralize Epley estimated 1RM for loaded working sets of 1–10 reps
+- Add primary `1.0`, secondary `0.5`, and minor `0.25` on `SCIENCE_RULES_V1`
+- Add a typed progress engine for strength, muscle volume, nutrition, body trends, and expectation-based adherence
+- Leave the Progress dashboard redesign for the next pass
+
+### Files Changed
+
+- `supabase/migrations/20261008_060_progress_snapshot_foundation.sql`
+- `lib/progress/`
+- `lib/training/estimated1Rm.ts`
+- `lib/training/setLogSnapshots.ts`
+- `lib/training/extraSets.ts`
+- `lib/training/progressAnalytics.ts`
+- `lib/scienceEngine/rules.ts`
+- `lib/scienceEngine/contributions.ts`
+- `lib/scienceEngine/progression.ts`
+- `lib/body/measurements.ts`
+- `lib/body/api.ts`
+- `app/page.tsx`
+- `scripts/test-progress-analytics.ts`
+- `package.json`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+
+### Database Changes
+
+Additive. Apply `supabase/migrations/20261008_060_progress_snapshot_foundation.sql` in Supabase before expecting the new snapshots to persist.
+
+The migration adds snapshot and body-measurement columns, backfills blank equipment conservatively, and blocks ordinary updates from rewriting snapshot identity. It does not delete logs or invent body measurements.
+
+After it runs, this query shows how equipment was classified:
+
+```sql
+select provenance, detail, sets
+from public.st_progress_snapshot_provenance_counts()
+where field = 'equipment';
+```
+
+### Testing Steps
+
+1. Apply the migration
+2. Run `node .\node_modules\tsx\dist\cli.mjs scripts\test-progress-analytics.ts`
+3. Log a barbell bench set and a smith machine bench set for the same movement
+4. Confirm the existing Progress list treats them as separate records
+5. Edit the logged weight and confirm the stored equipment does not change
+6. Add an extra set and confirm it stores equipment
+7. Log a body weight check-in and confirm the Body tab still saves
+8. Run `node .\node_modules\tsx\dist\cli.mjs scripts\test-body-measurements.ts`
+
+### Known Issues
+
+- The migration has not been applied from this session, so live backfill counts are not available yet
+- The current Progress screen still loads the latest 800 set rows for its existing charts. The new report loader is the source for the redesign and is not wired into that screen yet
+- Older movement patterns and muscle credits copied from the current catalog are marked estimated, not as a snapshot from the workout day
+- Generic exercise names with more than one legal implement stay unspecified
+- Rows logged before the equipment column existed cannot recover an implement when the name does not say which one
+- Catalog dedupe can no longer rewrite `snapshot_catalog_exercise_id` on old logs
+- Adherence is read from training expectations. Progress does not invent a second required-workout rule
+- All-time reports still page set facts through the client to run the engine. The page receives the aggregate, not a larger raw dump
+
+### Recommended Commit Message
+
+`BIQ-0250 Keep equipment-aware progress history and analytics`
+
 ## BIQ-0249 - Program Criteria Snapshot
 
 Date: 2026-10-07

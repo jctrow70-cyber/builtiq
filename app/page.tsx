@@ -49,7 +49,7 @@ import SegmentedControl from './components/ui/SegmentedControl';
 import WorkoutSetLogger from './components/WorkoutSetLogger';
 import SessionOutcomeCard from './components/training/SessionOutcomeCard';
 import NextExposureCard from './components/training/NextExposureCard';
-import { snapshotForLog as buildSetLogSnapshot, stripMissingSnapshotColumns } from '../lib/training/setLogSnapshots';
+import { snapshotForLog as buildSetLogSnapshot, stripUnavailableLogColumns } from '../lib/training/setLogSnapshots';
 import { canRewritePlannedSetPrescription } from '../lib/training/plannedSetGuard';
 import { deriveSessionStatus } from '../lib/training/sessionOutcome';
 import { extraLogsFromSetLogs, extraSetInsertPayload, extraSetsForExercise, nextExtraSetNumber, type ExtraSetLog } from '../lib/training/extraSets';
@@ -2088,27 +2088,38 @@ export default function Page(){
     ?(opts?.completed!==undefined?!!opts.completed:!!fieldUpdates.completed)
     :!!old.completed;
   const logDay=activeLogDateForLogging();
+  const snapshots=snapshotForLog(ex,ps,workoutRef,catItem);
   const payload:any={
     planned_set_id:sid,
     user_id:uid,
     logged_by_user_id:uuidOrNull(coachLogging?session.user.id:null),
     team_id:uuidOrNull(logTeamId),
     log_date:logDay,
-    completed:markComplete,
-    ...snapshotForLog(ex,ps,workoutRef,catItem)
+    completed:markComplete
   };
   const allKeys=Array.from(new Set([...fieldKeys,'actual_weight','actual_reps','actual_rpe','actual_rir','actual_duration','actual_distance','actual_pace','actual_hr','actual_calories','log_notes']));
   allKeys.forEach((k:string)=>{
     const raw=Object.prototype.hasOwnProperty.call(fieldUpdates,k)?fieldUpdates[k]:old[k];
     payload[k]=coerceSetLogValue(k,raw);
   });
-  let{data,error}=await supabase.from('st_set_logs').upsert(payload,{onConflict:'planned_set_id,user_id,log_date'}).select().single();
-  if(error && /actual_rir|pain_score|snapshot_equipment|snapshot_target_rir|snapshot_rep_min|snapshot_rep_max|snapshot_program_role|snapshot_rest_seconds|invalid input syntax for type (smallint|integer|numeric|uuid)/i.test(error.message||'')){
-    delete payload.actual_rir;
-    delete payload.pain_score;
-    delete payload.snapshot_equipment;
-    Object.assign(payload, stripMissingSnapshotColumns(payload, error.message));
-    ({data,error}=await supabase.from('st_set_logs').upsert(payload,{onConflict:'planned_set_id,user_id,log_date'}).select().single());
+  const missingColumn=/actual_rir|pain_score|snapshot_|invalid input syntax for type (smallint|integer|numeric|uuid)/i;
+  let body:any=old?.id?{...payload}:{...payload,...snapshots};
+  let{data,error}=old?.id
+    ?await supabase.from('st_set_logs').update(payload).eq('id',old.id).eq('user_id',uid).select().single()
+    :await supabase.from('st_set_logs').insert(body).select().single();
+  if(!old?.id && error && /duplicate key|23505/i.test(`${error.code||''} ${error.message||''}`)){
+    ({data,error}=await supabase.from('st_set_logs').update(payload).eq('planned_set_id',sid).eq('user_id',uid).eq('log_date',logDay).select().single());
+  }
+  for(let attempt=0;error && missingColumn.test(error.message||'') && attempt<8;attempt++){
+    body=stripUnavailableLogColumns(body, error.message);
+    if(old?.id){
+      ({data,error}=await supabase.from('st_set_logs').update(stripUnavailableLogColumns(payload, error.message)).eq('id',old.id).eq('user_id',uid).select().single());
+    }else{
+      ({data,error}=await supabase.from('st_set_logs').insert(body).select().single());
+      if(error && /duplicate key|23505/i.test(`${error.code||''} ${error.message||''}`)){
+        ({data,error}=await supabase.from('st_set_logs').update(payload).eq('planned_set_id',sid).eq('user_id',uid).eq('log_date',logDay).select().single());
+      }
+    }
   }
   if(error){alert(error.message);return;}
   setLogs((prev:any)=>{
@@ -2215,19 +2226,17 @@ export default function Page(){
   if(!session?.user||!workout||!canLog())return;
   const date=activeLogDateForLogging();
   const existing=extraSetsForExercise(extraSetLogs,ex.id,date);
+  const setNumber=nextExtraSetNumber(existing);
+  const catItem=catalog.find((c:any)=>c.id===ex.catalog_exercise_id);
+  const snapshots=snapshotForLog(ex,{set_type:'working',set_number:setNumber},workout,catItem,{equipment:resolveExerciseEquipment(ex,catItem)||'',exerciseType:exerciseTypeOf(ex,catItem),section:exerciseSection(ex)});
   const row:ExtraSetLog={
     user_id:session.user.id,
     exercise_id:ex.id,
     catalog_exercise_id:ex.catalog_exercise_id||null,
     log_date:date,
-    extra_set_number:nextExtraSetNumber(existing),
+    extra_set_number:setNumber,
     set_type:'working',
-    snapshot_exercise_name:ex.name||'',
-    snapshot_program_role:ex.program_role||null,
-    snapshot_catalog_exercise_id:ex.catalog_exercise_id||null,
-    snapshot_week:workout.week??null,
-    snapshot_day_label:workout.day_label||'',
-    snapshot_workout_type:workout.workout_type||'',
+    ...snapshots
   };
   const {data,error}=await supabase.from('st_set_logs').insert(extraSetInsertPayload(row)).select().single();
   if(error){
@@ -2237,6 +2246,7 @@ export default function Page(){
   setExtraSetLogs((prev)=>[...prev,data as ExtraSetLog]);
  }
  async function saveExtraSetField(extraId:string,field:string,value:string,opts?:{completed?:boolean}){
+  if(String(field).startsWith('snapshot_'))return;
   const patch:any={[field]:value};
   if(opts?.completed!==undefined)patch.completed=opts.completed;
   if(field==='completed')patch.completed=opts?.completed??value==='true';

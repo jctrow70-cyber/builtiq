@@ -1,10 +1,16 @@
+import { estimateE1rm } from '../training/estimated1Rm';
 import type { PerWorkingSet, ProgressionInput, ProgressionResult } from './types';
 
 export type { ProgressionResult };
 
-export function estimated1Rm(weight: number, reps: number): number {
-  if (reps > 12 || weight <= 0 || reps <= 0) return weight;
-  return weight * (1 + reps / 30);
+/** Shared Epley estimate. Returns null when the set is outside the configured rep range or has no load. */
+export function estimated1Rm(weight: number, reps: number): number | null {
+  return estimateE1rm({
+    weight,
+    reps,
+    setType: 'working',
+    exerciseType: 'strength',
+  });
 }
 
 export function evaluateProgression(input: ProgressionInput): ProgressionResult {

@@ -19,6 +19,14 @@ export type ExtraSetLog = {
   snapshot_exercise_name?: string;
   snapshot_program_role?: string | null;
   snapshot_catalog_exercise_id?: string | null;
+  snapshot_equipment?: string | null;
+  snapshot_variant?: string | null;
+  snapshot_movement_pattern?: string | null;
+  snapshot_muscle_credits?: { muscle: string; contribution: number }[] | null;
+  snapshot_muscle_group?: string | null;
+  snapshot_provenance?: Record<string, unknown> | null;
+  snapshot_section?: string | null;
+  snapshot_exercise_type?: string | null;
   snapshot_set_type?: string;
   snapshot_set_number?: number;
   snapshot_week?: number | null;
@@ -61,6 +69,14 @@ export function extraSetInsertPayload(row: ExtraSetLog): Record<string, unknown>
     completed: !!row.completed,
     log_notes: row.log_notes || '',
     snapshot_exercise_name: row.snapshot_exercise_name || '',
+    snapshot_exercise_type: row.snapshot_exercise_type || 'strength',
+    snapshot_equipment: row.snapshot_equipment || '',
+    snapshot_variant: row.snapshot_variant || null,
+    snapshot_movement_pattern: row.snapshot_movement_pattern || null,
+    snapshot_muscle_credits: row.snapshot_muscle_credits || null,
+    snapshot_muscle_group: row.snapshot_muscle_group || '',
+    snapshot_provenance: row.snapshot_provenance || null,
+    snapshot_section: row.snapshot_section || 'strength',
     snapshot_program_role: row.snapshot_program_role || null,
     snapshot_catalog_exercise_id: row.snapshot_catalog_exercise_id || row.catalog_exercise_id || null,
     snapshot_set_type: row.set_type || 'working',

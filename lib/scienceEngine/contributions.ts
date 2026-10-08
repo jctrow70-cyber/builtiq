@@ -47,7 +47,8 @@ const NAME_DEFAULTS: { match: RegExp; contributions: MuscleContribution[] }[] = 
 
 export function contributionsForExercise(
   exercise: Pick<CatalogExercise, 'name' | 'primaryMuscles' | 'secondaryMuscles'> & { raw?: any },
-  stored?: { muscle_group?: string; contribution?: number }[]
+  stored?: { muscle_group?: string; contribution?: number }[],
+  options?: { allowNameDefaults?: boolean }
 ): MuscleContribution[] {
   if (stored?.length) {
     return stored
@@ -77,19 +78,23 @@ export function contributionsForExercise(
         if (!muscle) return null;
         const pct = Number(t.percentage);
         const contribution =
-          t.role === 'secondary'
-            ? SCIENCE_RULES_V1.secondaryContribution
-            : pct >= 50 || t.role === 'primary'
-              ? SCIENCE_RULES_V1.primaryContribution
-              : SCIENCE_RULES_V1.secondaryContribution;
+          t.role === 'minor'
+            ? SCIENCE_RULES_V1.minorContribution
+            : t.role === 'secondary'
+              ? SCIENCE_RULES_V1.secondaryContribution
+              : pct >= 50 || t.role === 'primary'
+                ? SCIENCE_RULES_V1.primaryContribution
+                : SCIENCE_RULES_V1.secondaryContribution;
         return { muscle, contribution };
       })
       .filter((row): row is MuscleContribution => !!row);
     if (fromTargets.length) return dedupeContributions(fromTargets);
   }
 
-  const named = NAME_DEFAULTS.find((row) => row.match.test(exercise.name));
-  if (named) return named.contributions;
+  if (options?.allowNameDefaults !== false) {
+    const named = NAME_DEFAULTS.find((row) => row.match.test(exercise.name));
+    if (named) return named.contributions;
+  }
 
   const out: MuscleContribution[] = [];
   exercise.primaryMuscles.forEach((muscle) => out.push({ muscle, contribution: SCIENCE_RULES_V1.primaryContribution }));
@@ -98,7 +103,25 @@ export function contributionsForExercise(
       out.push({ muscle, contribution: SCIENCE_RULES_V1.secondaryContribution });
     }
   });
+  muscleList(exercise.raw?.coaching_metadata?.minor_muscles).forEach((muscle) => {
+    if (!out.some((row) => row.muscle === muscle)) {
+      out.push({ muscle, contribution: SCIENCE_RULES_V1.minorContribution });
+    }
+  });
   return out;
+}
+
+function muscleList(raw: unknown): MuscleId[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => {
+      if (typeof item === 'string') return normalizeMuscleId(item);
+      if (item && typeof item === 'object' && 'muscle' in item) {
+        return normalizeMuscleId(String((item as { muscle?: string }).muscle || ''));
+      }
+      return null;
+    })
+    .filter((muscle): muscle is MuscleId => !!muscle);
 }
 
 export function creditSets(contributions: MuscleContribution[], workingSets: number): Record<MuscleId, number> {

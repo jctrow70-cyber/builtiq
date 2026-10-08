@@ -8,6 +8,7 @@ export type ScienceRules = {
   version: string;
   primaryContribution: number;
   secondaryContribution: number;
+  minorContribution: number;
   priorityMultiplier: Record<'high_priority' | 'normal' | 'maintenance', number>;
   volumeBands: Record<ExperienceLevel, { major: VolumeBand; smaller: VolumeBand }>;
   sessionMuscleSets: { min: number; max: number };
@@ -31,6 +32,7 @@ export const SCIENCE_RULES_V1: ScienceRules = {
   version: SCIENCE_ENGINE_VERSION,
   primaryContribution: 1,
   secondaryContribution: 0.5,
+  minorContribution: 0.25,
   priorityMultiplier: {
     high_priority: 1.2,
     normal: 1,
