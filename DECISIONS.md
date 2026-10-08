@@ -19,6 +19,30 @@ Impact:
 
 ---
 
+## Decision 096 - Training Opens on the Week Calendar
+
+Date: 2026-10-08
+Status: Accepted
+Category: Training
+
+### Decision
+
+The Training tab opens on the existing Monday–Sunday calendar. Day and month stay available from that same calendar. Visible enrollments, personal and group, are drawn onto the dates they are scheduled. Schedule visibility controls what appears. Expectation history stays when a source is hidden. Added activities stay on `st_user_calendar_activities` and do not replace a program workout. Program Design remains the builder.
+
+### Reason
+
+The list of Today, This week, and Upcoming replaced the calendar during the unified schedule work. Members still need to pick a day, see everything on that day, and add an activity without building a program.
+
+### Alternatives Considered
+
+Leave the list as the Training home. Rebuild a new calendar. Show only the single followed program and drop other visible groups.
+
+### Impact
+
+No migration. `followed_program_id`, enrollments, expectations, and workout history stay. Trainer-client sources are still Phase 4B.
+
+---
+
 ## Decision 095 - Compare Progress Domains Without Claiming Cause
 
 Date: 2026-10-08

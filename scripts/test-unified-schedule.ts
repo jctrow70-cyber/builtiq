@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { emptyDayPlan, overlayVisibleExpectations, type TrainingDayItem } from '../lib/programDesign/trainingSchedule';
 import { weekForDate } from '../lib/training/programCalendar';
 import {
   adherenceCounts,
@@ -227,5 +228,92 @@ assert.match(sql, /e\.program_id = pr\.followed_program_id/);
 assert.match(sql, /source_key = \('group:' \|\| p_team_id::text\)/);
 assert.doesNotMatch(sql, /assigned_schedule_is_authoritative/);
 assert.doesNotMatch(sql, /scheduled_date <= p_local_today/);
+
+const mondayPlan = emptyDayPlan(monday, wednesday);
+const personalItem: TrainingDayItem = {
+  id: 'legacy-p-mon',
+  title: 'Full Body',
+  typeLabel: 'Strength',
+  activityType: 'strength',
+  duration: '',
+  workoutId: 'p-mon',
+  activityId: null,
+  isRest: false,
+  source: 'program',
+};
+const cardioItem: TrainingDayItem = {
+  id: 'cal-cardio',
+  title: 'Easy run',
+  typeLabel: 'Cardio',
+  activityType: 'cardio',
+  duration: '30 min',
+  workoutId: null,
+  activityId: 'cal-cardio',
+  isRest: false,
+  source: 'calendar',
+};
+mondayPlan.items = [personalItem, cardioItem];
+mondayPlan.primary = personalItem;
+const overlaidMonday = overlayVisibleExpectations(
+  mondayPlan,
+  [
+    {
+      id: 'exp-personal',
+      workoutId: 'p-mon',
+      programId: 'prog-p',
+      scheduledDate: monday,
+      title: 'Full Body',
+      sourceKey: 'personal',
+      teamId: null,
+      sourceName: 'Personal',
+      excused: false,
+      sessionStatus: null,
+    },
+    {
+      id: 'exp-group',
+      workoutId: 'b-tue',
+      programId: 'prog-g',
+      scheduledDate: monday,
+      title: 'Jump Technique',
+      sourceKey: 'group:team',
+      teamId: 'team',
+      sourceName: 'Basketball',
+      excused: false,
+      sessionStatus: null,
+    },
+  ],
+  wednesday
+);
+assert.equal(overlaidMonday.items.filter((item) => item.workoutId === 'p-mon').length, 1);
+assert.equal(overlaidMonday.items.find((item) => item.workoutId === 'p-mon')?.statusLabel, 'Missed');
+assert.equal(overlaidMonday.items.find((item) => item.workoutId === 'p-mon')?.expectationId, 'exp-personal');
+assert.equal(overlaidMonday.items.find((item) => item.title === 'Easy run')?.statusLabel, 'Scheduled');
+assert.equal(overlaidMonday.items.find((item) => item.workoutId === 'b-tue')?.sourceName, 'Basketball');
+assert.equal(overlaidMonday.items.find((item) => item.workoutId === 'b-tue')?.canMove, false);
+assert.equal(overlaidMonday.items.filter((item) => !item.isRest).length, 3);
+
+const hiddenMonday = overlayVisibleExpectations(mondayPlan, [], wednesday);
+assert.equal(hiddenMonday.items.some((item) => item.workoutId === 'b-tue'), false);
+
+const completedMonday = overlayVisibleExpectations(
+  mondayPlan,
+  [
+    {
+      id: 'exp-personal',
+      workoutId: 'p-mon',
+      programId: 'prog-p',
+      scheduledDate: monday,
+      title: 'Full Body',
+      sourceKey: 'personal',
+      teamId: null,
+      sourceName: 'Personal',
+      excused: false,
+      sessionStatus: 'completed',
+    },
+  ],
+  wednesday
+);
+assert.equal(completedMonday.items.find((item) => item.workoutId === 'p-mon')?.statusLabel, 'Completed');
+assert.equal(completedMonday.items.find((item) => item.workoutId === 'p-mon')?.completed, true);
 
 console.log('unified schedule tests passed');

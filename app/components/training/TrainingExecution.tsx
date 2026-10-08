@@ -33,8 +33,8 @@ type TrainingExecutionProps = {
   onNextMonth: () => void;
   onThisMonth: () => void;
   onSelectDay: (date: string) => void;
-  onStartWorkout: (workoutId: string | null, date: string) => void;
-  onViewWorkout?: (workoutId: string, date: string) => void;
+  onStartWorkout: (item: TrainingDayItem, date: string) => void;
+  onViewWorkout?: (item: TrainingDayItem, date: string) => void;
   onOpenPrograms: () => void;
   onAddActivity?: (date: string) => void;
   onEditActivity?: (activityId: string, date: string) => void;
@@ -59,8 +59,8 @@ function DayItems({
   onMove,
 }: {
   plan: TrainingDayPlan;
-  onStart: (workoutId: string | null) => void;
-  onView?: (workoutId: string) => void;
+  onStart: (item: TrainingDayItem) => void;
+  onView?: (item: TrainingDayItem) => void;
   onEdit?: (activityId: string) => void;
   onSetup?: (activityId: string) => void;
   onComplete?: (item: TrainingDayItem) => void;
@@ -98,7 +98,7 @@ function DayItems({
         const busy = completingItemId === item.id;
         const canStart = !item.isRest && !!item.workoutId;
         const canSetup = !item.isRest && item.activityType === 'strength' && !item.workoutId && item.source === 'calendar' && !!item.activityId && !!onSetup;
-        const showMove = !item.isRest && !!onMove;
+        const showMove = !item.isRest && !!onMove && item.canMove !== false;
         const showEdit = item.source === 'calendar' && !!item.activityId && !!onEdit;
         const hasMore = showComplete || showMove || showEdit;
         const moreOpen = moreId === item.id;
@@ -111,13 +111,17 @@ function DayItems({
               className="te-item-title"
               disabled={!item.workoutId || (!onView && !onStart)}
               onClick={() => {
-                if (item.workoutId && onStart) onStart(item.workoutId);
-                else if (item.workoutId) onView?.(item.workoutId);
+                if (item.workoutId && onStart) onStart(item);
+                else if (item.workoutId) onView?.(item);
               }}
             >
               <b>{item.title}</b>
             </button>
+            {item.sourceName && <span className="muted">{item.sourceName}</span>}
             {item.duration && <span className="muted">{item.duration}</span>}
+            {item.statusLabel && (
+              <span className={`te-status te-status--${item.statusLabel.toLowerCase()}`}>{item.statusLabel}</span>
+            )}
             {item.movedFrom && (
               <span className="muted te-item-moved">Moved from {formatLongWeekday(item.movedFrom)}</span>
             )}
@@ -125,7 +129,7 @@ function DayItems({
           </div>
           <div className="actions te-item-actions">
             {canStart && (
-              <button type="button" className={`btn ${idx === 0 ? 'green' : 'secondary'} small`} onClick={() => onStart(item.workoutId)}>
+              <button type="button" className={`btn ${idx === 0 ? 'green' : 'secondary'} small`} onClick={() => onStart(item)}>
                 {item.completed ? 'Review' : 'Start'}
               </button>
             )}
@@ -238,8 +242,8 @@ export default function TrainingExecution({
   const dayItemHandlers = today
     ? {
         plan: today,
-        onStart: (workoutId: string | null) => onStartWorkout(workoutId, today.date),
-        onView: onViewWorkout ? (workoutId: string) => onViewWorkout(workoutId, today.date) : undefined,
+        onStart: (item: TrainingDayItem) => onStartWorkout(item, today.date),
+        onView: onViewWorkout ? (item: TrainingDayItem) => onViewWorkout(item, today.date) : undefined,
         onEdit: onEditActivity ? (activityId: string) => onEditActivity(activityId, today.date) : undefined,
         onSetup: onSetupWorkout ? (activityId: string) => onSetupWorkout(activityId, today.date) : undefined,
         onComplete: onCompleteItem ? (item: TrainingDayItem) => onCompleteItem(item, today.date) : undefined,
@@ -336,7 +340,7 @@ export default function TrainingExecution({
                     {item.duration ? ` · ${item.duration}` : ''}
                   </p>
                   {item.workoutId && (
-                    <button type="button" className="btn small secondary" onClick={() => onStartWorkout(item.workoutId, today.date)}>
+                    <button type="button" className="btn small secondary" onClick={() => onStartWorkout(item, today.date)}>
                       Start
                     </button>
                   )}
@@ -382,20 +386,29 @@ export default function TrainingExecution({
           </p>
           <div className="te-week-grid">
             {weekDays.map((day) => {
-              const done = completedDates.includes(day.date);
+              const actionable = day.items.filter((item) => !item.isRest);
+              const done = actionable.length > 0 ? actionable.every((item) => item.completed) : completedDates.includes(day.date);
+              const missed = actionable.some((item) => item.statusLabel === 'Missed');
               return (
                 <button
                   key={day.date}
                   type="button"
-                  className={`te-week-day${day.isToday ? ' te-week-day--today' : ''}${done ? ' te-week-day--done' : ''}${day.date === selectedDate ? ' te-week-day--selected' : ''}`}
+                  className={`te-week-day${day.isToday ? ' te-week-day--today' : ''}${done ? ' te-week-day--done' : ''}${missed ? ' te-week-day--missed' : ''}${day.date === selectedDate ? ' te-week-day--selected' : ''}`}
                   onClick={() => onSelectDay(day.date)}
                 >
                   <span className="te-week-dow">{day.dayLabel}</span>
                   <span className="muted">{formatMediumDate(day.date)}</span>
-                  <b>{day.primary ? day.primary.title : '—'}</b>
-                  <span className="te-week-meta">
-                    {day.isToday ? 'Today' : done ? '✓' : day.primary?.typeLabel || ''}
-                  </span>
+                  {actionable.length === 0 && <b>—</b>}
+                  {actionable.slice(0, 3).map((item) => (
+                    <span key={item.id} className="te-week-activity">
+                      <b>{item.title}</b>
+                      {item.statusLabel && (
+                        <span className={`te-status te-status--${item.statusLabel.toLowerCase()}`}>{item.statusLabel}</span>
+                      )}
+                    </span>
+                  ))}
+                  {actionable.length > 3 && <span className="muted">+{actionable.length - 3} more</span>}
+                  {day.isToday && <span className="te-week-meta">Today</span>}
                 </button>
               );
             })}
@@ -431,8 +444,10 @@ export default function TrainingExecution({
             </div>
             <div className="te-month-grid">
               {monthCells.map((cell) => {
-                const done = completedDates.includes(cell.date);
                 const items = cell.plan?.items || [];
+                const actionable = items.filter((item) => !item.isRest);
+                const done = actionable.length > 0 ? actionable.every((item) => item.completed) : completedDates.includes(cell.date);
+                const missed = actionable.some((item) => item.statusLabel === 'Missed');
                 return (
                   <button
                     key={cell.date}
@@ -440,10 +455,11 @@ export default function TrainingExecution({
                     className={[
                       'te-month-cell',
                       !cell.inMonth ? 'te-month-cell--out' : '',
-                      !cell.inProgram ? 'te-month-cell--off' : '',
+                      !cell.inProgram && actionable.length === 0 ? 'te-month-cell--off' : '',
                       cell.plan?.isToday ? 'te-month-cell--today' : '',
                       cell.date === selectedDate ? 'te-month-cell--selected' : '',
                       done ? 'te-month-cell--done' : '',
+                      missed ? 'te-month-cell--missed' : '',
                     ].filter(Boolean).join(' ')}
                     onClick={() => onSelectDay(cell.date)}
                     aria-label={cell.plan?.primary ? `${cell.date} ${cell.plan.primary.title}` : cell.date}

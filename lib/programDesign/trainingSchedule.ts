@@ -1,3 +1,4 @@
+import { expectationDisplayState, type ExpectationSessionStatus } from '../training/unifiedSchedule';
 import { addDaysYmd, dayLabelFromYmd, formatYmd, mondayOfWeek, sundayOfWeek, todayYmd, weekForDate } from '../training/programCalendar';
 import { activityTypeShortLabel, formatDuration } from './activityTypes';
 import { activitiesFromLegacyWorkouts } from './programDesignApi';
@@ -26,6 +27,14 @@ export type TrainingDayItem = {
   completed?: boolean;
   /** Original program date when this item was moved onto another day. */
   movedFrom?: string | null;
+  statusLabel?: string;
+  expectationId?: string | null;
+  programId?: string | null;
+  sourceKey?: string | null;
+  teamId?: string | null;
+  sourceName?: string | null;
+  /** False for a workout that belongs to another visible source and cannot be moved from this calendar. */
+  canMove?: boolean;
 };
 
 export type TrainingDayPlan = {
@@ -272,4 +281,84 @@ export function monthCalendarCells(
     cursor = addDaysYmd(cursor, 1);
   }
   return cells;
+}
+
+export type VisibleScheduleExpectation = {
+  id: string;
+  workoutId: string | null;
+  programId: string | null;
+  scheduledDate: string;
+  title: string;
+  sourceKey: string;
+  teamId: string | null;
+  sourceName: string;
+  excused: boolean;
+  sessionStatus: ExpectationSessionStatus;
+};
+
+function calendarStatusLabel(state: string, completed: boolean): string {
+  if (completed || state === 'Completed') return 'Completed';
+  if (state === 'Today' || state === 'Upcoming') return 'Scheduled';
+  return state;
+}
+
+function withStatus(item: TrainingDayItem): TrainingDayItem {
+  if (item.statusLabel || item.isRest) return item;
+  return { ...item, statusLabel: item.completed ? 'Completed' : 'Scheduled' };
+}
+
+/** Place visible enrollment workouts on the calendar without duplicating a workout already on that date. */
+export function overlayVisibleExpectations(
+  plan: TrainingDayPlan,
+  rows: VisibleScheduleExpectation[],
+  localToday: string
+): TrainingDayPlan {
+  const mine = rows.filter((row) => row.scheduledDate === plan.date);
+  let items = plan.items.map((item) => ({ ...item }));
+  for (const row of mine) {
+    const state = expectationDisplayState({
+      scheduledDate: row.scheduledDate,
+      localToday,
+      excused: row.excused,
+      sessionStatus: row.sessionStatus,
+    });
+    const index = row.workoutId ? items.findIndex((item) => item.workoutId === row.workoutId) : -1;
+    if (index >= 0) {
+      const prev = items[index];
+      const completed = !!prev.completed || state === 'Completed';
+      items[index] = {
+        ...prev,
+        completed,
+        statusLabel: calendarStatusLabel(state, completed),
+        expectationId: row.id,
+        programId: row.programId,
+        sourceKey: row.sourceKey,
+        teamId: row.teamId,
+        sourceName: row.sourceName,
+      };
+      continue;
+    }
+    const completed = state === 'Completed';
+    items.push({
+      id: `expectation-${row.id}`,
+      title: row.title || 'Workout',
+      typeLabel: 'Strength',
+      activityType: 'strength',
+      duration: '',
+      workoutId: row.workoutId,
+      activityId: null,
+      isRest: false,
+      source: 'program',
+      completed,
+      statusLabel: calendarStatusLabel(state, completed),
+      expectationId: row.id,
+      programId: row.programId,
+      sourceKey: row.sourceKey,
+      teamId: row.teamId,
+      sourceName: row.sourceName,
+      canMove: false,
+    });
+  }
+  items = items.map(withStatus);
+  return withPrimary({ ...plan, isToday: plan.date === localToday }, items);
 }

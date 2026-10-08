@@ -210,7 +210,7 @@ export default function Page(){
  const [bodyDashRefreshKey,setBodyDashRefreshKey]=useState(0);
  const [historyRestoreBusy,setHistoryRestoreBusy]=useState(false);
  const [trainingSubNav,setTrainingSubNav]=useState<'personal'|'setup'>('personal');
- const [trainingCalendarView,setTrainingCalendarView]=useState<'day'|'week'|'month'>('month');
+ const [trainingCalendarView,setTrainingCalendarView]=useState<'day'|'week'|'month'>('week');
  const [trainingCalendarMonth,setTrainingCalendarMonth]=useState(()=>yearMonthOf(todayYmd()));
  const [trainingSessionOpen,setTrainingSessionOpen]=useState(false);
  const [activeExpectationId,setActiveExpectationId]=useState<string|null>(null);
@@ -296,6 +296,7 @@ export default function Page(){
  const prCelebrationTimerRef=useRef<ReturnType<typeof setTimeout>|null>(null);
  const [prCelebration,setPrCelebration]=useState<{exerciseName:string;message:string;subtext:string}|null>(null);
  const syncingCalendarRef=useRef(false);
+ const schedulePreviewRef=useRef<ScheduleStartItem|null>(null);
  const planEditRef=useRef<{workout:any,program:any}|null>(null);
 
  useEffect(()=>{
@@ -2333,7 +2334,6 @@ function onSelectTrainingDay(date:string){
     if(match)setActiveWorkout(match.id);
     queueMicrotask(()=>{syncingCalendarRef.current=false;});
   }
-  if(trainingCalendarView!=='month')setTrainingCalendarView('day');
 }
  function onSelectWorkoutDay(w:any){
   setActiveWorkout(w.id);
@@ -2404,6 +2404,38 @@ function onSelectTrainingDay(date:string){
   }
 }
  function openManageProgram(){setMemberDashboard(null);setViewingMember(null);setTrainingSessionOpen(false);setTrainingSubNav('personal');setDraftEditProgramId(null);setAppNav('Programs');}
+ function restoreFollowedCalendar(){
+  schedulePreviewRef.current=null;
+  const followedId=profile?.followed_program_id||null;
+  if((followedId||'')!==(program?.id||''))void loadPrograms('training');
+ }
+ function scheduleStartFromItem(item:TrainingDayItem,date:string):ScheduleStartItem|null{
+  if(!item.expectationId||!item.sourceKey)return null;
+  return {expectationId:item.expectationId,workoutId:item.workoutId,programId:item.programId||null,scheduledDate:date,sourceKey:item.sourceKey,teamId:item.teamId??null};
+ }
+ function beginTrainingItem(item:TrainingDayItem,date:string){
+  const scheduled=scheduleStartFromItem(item,date);
+  if(scheduled){void startScheduledWorkout(scheduled);return;}
+  void startTrainingSession(item.workoutId,date,'log');
+ }
+ async function previewTrainingItem(item:TrainingDayItem,date:string){
+  const scheduled=scheduleStartFromItem(item,date);
+  schedulePreviewRef.current=scheduled;
+  let nextProgram=program;
+  if(scheduled?.programId&&program?.id!==scheduled.programId){
+   const{data:full,error}=await fetchFullProgram(supabase,scheduled.programId);
+   if(error||!full){alert(error||'Could not open that workout.');return;}
+   nextProgram=full;
+   setProgram(full);
+  }
+  if(nextProgram&&item.workoutId){
+   const start=resolveProgramStartDate(nextProgram);
+   setWeek(weekForDate(start,date,nextProgram.weeks||weeks||6));
+   setActiveWorkout(item.workoutId);
+  }
+  setLogDate(date);
+  if(item.workoutId)setViewingWorkoutId(item.workoutId);
+ }
  async function startScheduledWorkout(item:ScheduleStartItem){
   let nextProgram=program;
   if(item.programId&&program?.id!==item.programId){
@@ -2543,7 +2575,7 @@ function onSelectTrainingDay(date:string){
  }
  async function toggleTrainingItemComplete(item:TrainingDayItem,dateYmd:string){
   if(item.workoutId){
-   startTrainingSession(item.workoutId,dateYmd,'log');
+   beginTrainingItem(item,dateYmd);
    return;
   }
   if(!session?.user||!itemAllowsCheckoff(item)||!item.activityId)return;
@@ -2707,10 +2739,12 @@ function matchingSet(targetExercise:any, sourceSet:any){
   ||(!trainingSessionOpen?weekWorkouts[0]:null);
  const trainingCompletionWorkouts=(()=>{const byId=new Map<string,any>();[...(program?.st_workouts||[]),...calendarWorkouts,workout].forEach((w:any)=>{if(!w?.id)return;const prev=byId.get(w.id);if(!prev||(w.st_exercises||[]).length>=(prev.st_exercises||[]).length)byId.set(w.id,w);});return Array.from(byId.values());})();
  const workoutDayMoves=workoutDayMovesFromActivities(userCalendarActivities);
- const trainingTodayPlan=decorateDayPlanCompletion(planForCalendarDate(program,trainingActivities,userCalendarActivities,logDate,todayYmd(),workoutDayMoves),{activities:userCalendarActivities,workouts:trainingCompletionWorkouts,progressLogs,sessionLogs:logs,selectedDate:logDate});
- const trainingTomorrowPlan=planForCalendarDate(program,trainingActivities,userCalendarActivities,tomorrowDate(logDate),todayYmd(),workoutDayMoves);
- const trainingWeekPlans=weekPlansForMonday(mondayOfWeek(logDate),program,trainingActivities,userCalendarActivities,todayYmd(),workoutDayMoves);
- const trainingMonthCells=monthCalendarCells(program,trainingActivities,trainingCalendarMonth,todayYmd(),userCalendarActivities,workoutDayMoves);
+ const trainingCompletionOpts={activities:userCalendarActivities,workouts:trainingCompletionWorkouts,progressLogs,sessionLogs:logs,selectedDate:logDate};
+ const trainingTodayPlan=decorateDayPlanCompletion(planForCalendarDate(program,trainingActivities,userCalendarActivities,logDate,todayYmd(),workoutDayMoves),trainingCompletionOpts);
+ const trainingTomorrowPlan=decorateDayPlanCompletion(planForCalendarDate(program,trainingActivities,userCalendarActivities,tomorrowDate(logDate),todayYmd(),workoutDayMoves),trainingCompletionOpts);
+ const trainingWeekPlans=weekPlansForMonday(mondayOfWeek(logDate),program,trainingActivities,userCalendarActivities,todayYmd(),workoutDayMoves).map((plan)=>decorateDayPlanCompletion(plan,trainingCompletionOpts));
+ const trainingMonthCells=monthCalendarCells(program,trainingActivities,trainingCalendarMonth,todayYmd(),userCalendarActivities,workoutDayMoves).map((cell)=>({...cell,plan:cell.plan?decorateDayPlanCompletion(cell.plan,trainingCompletionOpts):cell.plan}));
+ const trainingExpectationRange=(()=>{const weekFrom=mondayOfWeek(logDate);const weekTo=addDaysYmd(weekFrom,6);const month=monthWindow(trainingCalendarMonth);const tomorrow=addDaysYmd(logDate,1);const from=weekFrom<month.from?weekFrom:month.from;const to=[weekTo,month.to,tomorrow].sort().slice(-1)[0]||weekTo;return {from,to};})();
  const trainingCalendarEditing=trainingEditActivity?userCalendarActivities.find((a)=>a.id===trainingEditActivity.id)||null:null;
  const trainingMonthLabel=monthLabel(trainingCalendarMonth);
  const trainingCompletedDates=mergeTrainingCompletedDates(progressLogs.filter((row:any)=>row.completed).map((row:any)=>String(row.log_date||'').slice(0,10)),userCalendarActivities);
@@ -2890,22 +2924,53 @@ function matchingSet(targetExercise:any, sourceSet:any){
       <SectionHeader
         title={trainingSessionOpen?(trainingSessionIntent==='edit'?'Edit workout':'Workout'):'Training'}
         actions={trainingSessionOpen?(
-          <button type="button" className="btn small secondary" onClick={()=>{setTrainingSessionOpen(false);setTrainingSessionIntent('log');}}>Back to calendar</button>
+          <button type="button" className="btn small secondary" onClick={()=>{setTrainingSessionOpen(false);setTrainingSessionIntent('log');restoreFollowedCalendar();}}>Back to calendar</button>
         ):undefined}
       />
     </div>
     {!viewingMember&&!trainingSessionOpen&&<AssignedWorkoutsPanel assignments={assignedWorkouts} activeRecipientId={activeAssignedRecipient?.id||null} onOpen={openAssignedWorkout} onCloseActive={activeAssignedRecipient?closeAssignedWorkout:undefined} onCopyToPersonal={copyAssignedWorkoutToPersonal} onDismiss={dismissAssignedWorkout} copyingRecipientId={assignmentCopyBusy} dismissingRecipientId={assignmentDismissBusy} getWorkoutStatus={assignmentPanelStatus} statusLabel={statusLabel}/>}
-    {!viewingMember&&!activeAssignedRecipient&&!trainingSessionOpen&&session?.user&&<>
-      {canCustomizeForMe&&<div className="card"><p className="muted">This group plan is shared. A private copy stays on the group schedule under the group name.</p><button type="button" className="btn small secondary" disabled={customizeForMeBusy} onClick={()=>void customizeFollowedProgramForMeHandler()}>{customizeForMeBusy?'Making your copy…':'Edit just for me'}</button></div>}
-      <UnifiedTrainingSchedule userId={session.user.id} teams={teams} onStartWorkout={(item)=>void startScheduledWorkout(item)}/>
-    </>}
+    {!viewingMember&&!activeAssignedRecipient&&!trainingSessionOpen&&session?.user&&<UnifiedTrainingSchedule userId={session.user.id} teams={teams} rangeFrom={trainingExpectationRange.from} rangeTo={trainingExpectationRange.to} calendar={{
+      programName:program?.name||null,
+      followedFromGroup,
+      followingGroupTemplate,
+      personalizedCopy,
+      onCustomizeForMe:canCustomizeForMe?()=>void customizeFollowedProgramForMeHandler():undefined,
+      customizeBusy:customizeForMeBusy,
+      today:trainingTodayPlan,
+      tomorrow:trainingTomorrowPlan,
+      weekDays:trainingWeekPlans,
+      monthCells:trainingMonthCells,
+      monthLabel:trainingMonthLabel,
+      selectedDate:logDate,
+      weekNumber:week,
+      totalWeeks:cycleLengthOf(program||{weeks}),
+      calendarView:trainingCalendarView,
+      onCalendarViewChange:(view)=>{setTrainingCalendarView(view);if(view==='month')setTrainingCalendarMonth(yearMonthOf(logDate));},
+      onPrevWeek:()=>{const next=addDaysYmd(mondayOfWeek(logDate),-7);setLogDate(next);setTrainingCalendarMonth(yearMonthOf(next));if(program)setWeek(weekForDate(resolveProgramStartDate(program),next,program.weeks||weeks||6));},
+      onNextWeek:()=>{const next=addDaysYmd(mondayOfWeek(logDate),7);setLogDate(next);setTrainingCalendarMonth(yearMonthOf(next));if(program)setWeek(weekForDate(resolveProgramStartDate(program),next,program.weeks||weeks||6));},
+      onThisWeek:()=>{const now=todayYmd();setLogDate(now);setTrainingCalendarMonth(yearMonthOf(now));if(program)setWeek(weekForDate(resolveProgramStartDate(program),now,program.weeks||weeks||6));},
+      onPrevMonth:()=>setTrainingCalendarMonth((m)=>shiftYearMonth(m,-1)),
+      onNextMonth:()=>setTrainingCalendarMonth((m)=>shiftYearMonth(m,1)),
+      onThisMonth:()=>{const now=todayYmd();setTrainingCalendarMonth(yearMonthOf(now));setLogDate(now);},
+      onSelectDay:onSelectTrainingDay,
+      onStartWorkout:(item,date)=>beginTrainingItem(item,date),
+      onViewWorkout:(item,date)=>{void previewTrainingItem(item,date);},
+      onOpenPrograms:()=>goNav('Programs'),
+      onAddActivity:(date)=>{setLogDate(date);setTrainingAddActivityOpen(true);},
+      onEditActivity:(activityId,date)=>setTrainingEditActivity({id:activityId,date}),
+      onSetupWorkout:(activityId,date)=>void setupExistingStrengthActivity(activityId,date),
+      onCompleteItem:(item,date)=>void toggleTrainingItemComplete(item,date),
+      onMoveItem:(item,date)=>setTrainingMoveItem({item,date}),
+      completingItemId:trainingCompleteBusy,
+      completedDates:trainingCompletedDates,
+    }}/>}
     {!viewingMember&&!trainingSessionOpen&&!session?.user&&<div className="card"><p className="muted">Sign in to see your training schedule.</p></div>}
     {viewingWorkoutId&&<WorkoutPlanSheet
       workout={findWorkoutAnywhere(viewingWorkoutId)}
       dateLabel={formatDisplayDate(logDate)}
       canEdit={canEdit()||isPersonalCalendarWorkout(viewingWorkoutId)||(isLiveGroupProgram(program)&&appNav==='Training')}
-      onClose={()=>setViewingWorkoutId(null)}
-      onStart={()=>startTrainingSession(viewingWorkoutId,logDate,'log')}
+      onClose={()=>{setViewingWorkoutId(null);restoreFollowedCalendar();}}
+      onStart={()=>{const pending=schedulePreviewRef.current;if(pending&&pending.workoutId===viewingWorkoutId)void startScheduledWorkout(pending);else startTrainingSession(viewingWorkoutId,logDate,'log');}}
       onEdit={()=>startTrainingSession(viewingWorkoutId,logDate,'edit')}
     />}
     {trainingSessionOpen&&trainingSessionIntent==='log'&&followingGroupTemplate&&!activeAssignedRecipient&&<div className="card program-draft-banner"><p className="muted">Logging is only yours. If you change exercises or planned sets, BuildIQ makes a private copy so the group plan stays the same.</p></div>}

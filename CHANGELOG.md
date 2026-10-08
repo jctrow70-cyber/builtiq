@@ -11,6 +11,58 @@ Branch:
 Status:
 ```
 
+## BIQ-0253 - Restore Training Calendar
+
+Date: 2026-10-08
+Branch: main
+Status: Local / in progress
+
+### Summary
+
+Training opens on the Monday–Sunday calendar again. Visible personal and group programs show on their dates, with scheduled, completed, and missed labels. Add activity is on that calendar. Hiding a source removes it from the calendar and leaves expectation history in place.
+
+### Purpose
+
+BIQ-0245 replaced the calendar with a Today / This week list. The calendar components, activity sheets, and enrollment data were still in the app. Training should perform and track activities. Program Design stays the place that builds programs.
+
+### Files changed
+
+- app/page.tsx
+- app/components/training/TrainingExecution.tsx
+- app/components/training/UnifiedTrainingSchedule.tsx
+- app/globals.css
+- lib/programDesign/trainingSchedule.ts
+- scripts/test-unified-schedule.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+### Database changes
+
+None.
+
+### Testing steps
+
+1. Open Training. The week calendar is showing, Monday through Sunday, with today highlighted.
+2. Use Previous, This week, and Next. Scheduled workouts stay on their dates.
+3. Select a day. That day's activities show under the week, including more than one activity on the same date.
+4. Add an activity on the selected day. It appears immediately. Refresh and confirm it is still there. Scheduled workouts on that day are still there.
+5. Confirm a personal program and an enabled group program both appear. Hide a group source. It leaves the calendar. Group adherence history is unchanged.
+6. Complete a workout and confirm the day shows Completed. An expected workout before today with no log shows Missed.
+7. Open Programs and confirm creating and editing a program still works there.
+8. Check the week on a narrow screen. Days stack, and Previous / Next / Add activity remain usable.
+
+### Known issues
+
+- A workout that belongs only to another visible source can be started and reviewed. It cannot be moved from this calendar, because the expectation date is the source schedule.
+- Added activities that are not expected workouts show Scheduled or Completed. They are not marked Missed.
+- The unified schedule migration is still required before group sources appear. Until it is applied, the followed plan and added activities still show.
+- Closing a workout from another program reloads the followed plan so the calendar does not stay on that other program.
+
+### Recommended commit message
+
+`BIQ-0253 Restore the Training week calendar`
+
 ## BIQ-0252 - Nutrition and Body Progress
 
 Date: 2026-10-08

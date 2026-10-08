@@ -1,8 +1,16 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
-import { addDaysYmd, formatDisplayDate, mondayOfWeek, todayYmd } from '../../../lib/training/programCalendar';
+import TrainingExecution from './TrainingExecution';
+import {
+  overlayVisibleExpectations,
+  type TrainingDayItem,
+  type TrainingDayPlan,
+  type TrainingMonthCell,
+  type VisibleScheduleExpectation,
+} from '../../../lib/programDesign/trainingSchedule';
+import { todayYmd } from '../../../lib/training/programCalendar';
 import {
   repairFollowedTrainingSchedule,
   scheduleSetupMissing,
@@ -10,7 +18,6 @@ import {
   setEnrollmentScheduleVisible,
 } from '../../../lib/training/scheduleActions';
 import {
-  expectationDisplayState,
   sourceLabel,
   type ExpectationDisplayState,
   type ExpectationSessionStatus,
@@ -54,13 +61,49 @@ type SessionRow = {
   status?: string | null;
 };
 
+type CalendarProps = {
+  programName: string | null;
+  followedFromGroup?: string | null;
+  followingGroupTemplate?: boolean;
+  personalizedCopy?: boolean;
+  onCustomizeForMe?: () => void;
+  customizeBusy?: boolean;
+  today: TrainingDayPlan | null;
+  tomorrow: TrainingDayPlan | null;
+  weekDays: TrainingDayPlan[];
+  monthCells: TrainingMonthCell[];
+  monthLabel: string;
+  selectedDate: string;
+  weekNumber: number;
+  totalWeeks: number;
+  calendarView: 'day' | 'week' | 'month';
+  onCalendarViewChange: (view: 'day' | 'week' | 'month') => void;
+  onPrevWeek: () => void;
+  onNextWeek: () => void;
+  onThisWeek: () => void;
+  onPrevMonth: () => void;
+  onNextMonth: () => void;
+  onThisMonth: () => void;
+  onSelectDay: (date: string) => void;
+  onStartWorkout: (item: TrainingDayItem, date: string) => void;
+  onViewWorkout?: (item: TrainingDayItem, date: string) => void;
+  onOpenPrograms: () => void;
+  onAddActivity?: (date: string) => void;
+  onEditActivity?: (activityId: string, date: string) => void;
+  onSetupWorkout?: (activityId: string, date: string) => void;
+  onCompleteItem?: (item: TrainingDayItem, date: string) => void;
+  onMoveItem?: (item: TrainingDayItem, date: string) => void;
+  completingItemId?: string | null;
+  completedDates?: string[];
+};
+
 type Props = {
   userId: string;
   teams: Array<{ id: string; name?: string | null }>;
-  onStartWorkout: (item: ScheduleStartItem) => void;
+  rangeFrom: string;
+  rangeTo: string;
+  calendar: CalendarProps;
 };
-
-const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
 function sessionFor(expectation: ExpectationRow, sessions: SessionRow[]): ExpectationSessionStatus {
   const match = sessions.find(
@@ -75,7 +118,7 @@ function sessionFor(expectation: ExpectationRow, sessions: SessionRow[]): Expect
   return null;
 }
 
-export default function UnifiedTrainingSchedule({ userId, teams, onStartWorkout }: Props) {
+export default function UnifiedTrainingSchedule({ userId, teams, rangeFrom, rangeTo, calendar }: Props) {
   const [enrollments, setEnrollments] = useState<EnrollmentRow[]>([]);
   const [programNames, setProgramNames] = useState<Record<string, string>>({});
   const [expectations, setExpectations] = useState<ExpectationRow[]>([]);
@@ -85,9 +128,6 @@ export default function UnifiedTrainingSchedule({ userId, teams, onStartWorkout 
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const today = todayYmd();
-  const weekStart = mondayOfWeek(today);
-  const weekEnd = addDaysYmd(weekStart, 6);
-  const upcomingEnd = addDaysYmd(weekStart, 13);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -141,8 +181,8 @@ export default function UnifiedTrainingSchedule({ userId, teams, onStartWorkout 
       .from('st_training_expectations')
       .select('id, source_key, team_id, program_id, workout_id, scheduled_date, title, excused')
       .eq('user_id', userId)
-      .gte('scheduled_date', weekStart)
-      .lte('scheduled_date', upcomingEnd)
+      .gte('scheduled_date', rangeFrom)
+      .lte('scheduled_date', rangeTo)
       .order('scheduled_date', { ascending: true });
     if (expectationResult.error && !scheduleSetupMissing(expectationResult.error.message)) {
       setError(expectationResult.error.message);
@@ -153,12 +193,12 @@ export default function UnifiedTrainingSchedule({ userId, teams, onStartWorkout 
       .from('st_workout_sessions')
       .select('expectation_id, workout_id, log_date, status')
       .eq('user_id', userId)
-      .gte('log_date', weekStart)
-      .lte('log_date', upcomingEnd);
+      .gte('log_date', rangeFrom)
+      .lte('log_date', rangeTo);
     setSessions((sessionResult.data || []) as SessionRow[]);
     setPending(false);
     setLoading(false);
-  }, [userId, today, weekStart, upcomingEnd]);
+  }, [userId, today, rangeFrom, rangeTo]);
 
   useEffect(() => {
     void load();
@@ -169,7 +209,28 @@ export default function UnifiedTrainingSchedule({ userId, teams, onStartWorkout 
     return teams.find((team) => team.id === teamId)?.name || sourceLabel(sourceKey);
   };
 
-  const itemsFor = (date: string) => expectations.filter((row) => row.scheduled_date === date);
+  const visibleExpectations = useMemo<VisibleScheduleExpectation[]>(() => {
+    return expectations.map((row) => ({
+      id: row.id,
+      workoutId: row.workout_id,
+      programId: row.program_id,
+      scheduledDate: row.scheduled_date,
+      title: row.title,
+      sourceKey: row.source_key,
+      teamId: row.team_id,
+      sourceName: teamName(row.team_id, row.source_key),
+      excused: row.excused,
+      sessionStatus: sessionFor(row, sessions),
+    }));
+  }, [expectations, sessions, teams]);
+
+  const calendarToday = calendar.today ? overlayVisibleExpectations(calendar.today, visibleExpectations, today) : null;
+  const calendarTomorrow = calendar.tomorrow ? overlayVisibleExpectations(calendar.tomorrow, visibleExpectations, today) : null;
+  const calendarWeek = calendar.weekDays.map((day) => overlayVisibleExpectations(day, visibleExpectations, today));
+  const calendarMonth = calendar.monthCells.map((cell) => ({
+    ...cell,
+    plan: cell.plan ? overlayVisibleExpectations(cell.plan, visibleExpectations, today) : cell.plan,
+  }));
 
   async function toggleVisible(row: EnrollmentRow) {
     setBusyId(row.id);
@@ -201,95 +262,22 @@ export default function UnifiedTrainingSchedule({ userId, teams, onStartWorkout 
     await load();
   }
 
-  function renderItem(row: ExpectationRow, showStart: boolean) {
-    const state = expectationDisplayState({
-      scheduledDate: row.scheduled_date,
-      localToday: today,
-      excused: row.excused,
-      sessionStatus: sessionFor(row, sessions),
-    });
-    return (
-      <div key={row.id} className="schedule-item">
-        <div>
-          <b>{row.title}</b>
-          <div className="muted">{teamName(row.team_id, row.source_key)}</div>
-        </div>
-        <div className="schedule-item-actions">
-          <span className={`schedule-state schedule-state--${state.toLowerCase()}`}>{state}</span>
-          {showStart && state !== 'Completed' && state !== 'Excused' && (
-            <button
-              type="button"
-              className="btn small green"
-              onClick={() =>
-                onStartWorkout({
-                  expectationId: row.id,
-                  workoutId: row.workout_id,
-                  programId: row.program_id,
-                  scheduledDate: row.scheduled_date,
-                  sourceKey: row.source_key,
-                  teamId: row.team_id,
-                })
-              }
-            >
-              Start Workout
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  if (pending) {
-    return (
-      <div className="card">
-        <h2>Training</h2>
-        <p className="muted">Apply the unified training schedule migration to see today, this week, and each program together.</p>
-      </div>
-    );
-  }
-
-  const todayItems = itemsFor(today);
-  const upcomingStart = addDaysYmd(weekEnd, 1);
-
   return (
     <div className="unified-schedule">
+      {pending && (
+        <div className="card">
+          <p className="muted">Apply the unified training schedule migration to show every personal and group program on this calendar. Your followed plan and added activities still appear.</p>
+        </div>
+      )}
       {error && <div className="card"><p className="muted">{error}</p></div>}
-      <div className="card">
-        <h2>Today</h2>
-        {loading && <p className="muted">Loading your schedule…</p>}
-        {!loading && todayItems.length === 0 && <p className="muted">Nothing scheduled today.</p>}
-        {todayItems.map((row) => renderItem(row, true))}
-      </div>
-      <div className="card">
-        <h2>This week</h2>
-        {WEEKDAYS.map((label, index) => {
-          const date = addDaysYmd(weekStart, index);
-          const items = itemsFor(date);
-          return (
-            <div key={date} className="schedule-day">
-              <div className="schedule-day-label">
-                {label}
-                <span className="muted"> {formatDisplayDate(date)}</span>
-              </div>
-              {items.length === 0 && <p className="muted">Rest</p>}
-              {items.map((row) => renderItem(row, date === today))}
-            </div>
-          );
-        })}
-      </div>
-      <div className="card">
-        <h2>Upcoming</h2>
-        <p className="muted">Next week. Later weeks stay on the program and are not loaded here.</p>
-        {Array.from({ length: 7 }, (_, index) => addDaysYmd(upcomingStart, index))
-          .filter((date) => itemsFor(date).length > 0)
-          .map((date) => (
-            <div key={date} className="schedule-day">
-              <div className="schedule-day-label">{formatDisplayDate(date)}</div>
-              {itemsFor(date).map((row) => renderItem(row, false))}
-            </div>
-          ))}
-        {!loading && expectations.every((row) => row.scheduled_date <= weekEnd) && <p className="muted">Nothing in the next week yet.</p>}
-      </div>
+      {loading && <p className="muted">Loading your schedule…</p>}
+      <TrainingExecution
+        {...calendar}
+        today={calendarToday}
+        tomorrow={calendarTomorrow}
+        weekDays={calendarWeek}
+        monthCells={calendarMonth}
+      />
       <div className="card">
         <h2>Programs</h2>
         {enrollments.length === 0 && <p className="muted">No programs yet. Follow a program or join a group to put it on this schedule.</p>}
