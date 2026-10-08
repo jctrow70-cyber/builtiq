@@ -57,6 +57,8 @@ export type ProgramDesignRecord = {
   record_kind?: string | null;
   source_program_id?: string | null;
   inclusive_plan?: boolean | null;
+  /** Intake and generation outcome saved with the program. Null on older programs. */
+  generation_criteria?: unknown;
   /** Present when the row is loaded with nested workouts (fetchFullProgram). */
   st_workouts?: Array<{
     id?: string;

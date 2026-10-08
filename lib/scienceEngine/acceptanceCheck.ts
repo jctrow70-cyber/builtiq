@@ -14,6 +14,7 @@ import { summarizeRecentLogs } from './recentTraining';
 import { evaluateProgression } from './progression';
 import { validateProgram } from './validator';
 import { runInstructionAdherenceChecks } from './generation/instructionAdherenceCheck';
+import { runGenerationCriteriaChecks } from '../programDesign/generationCriteriaCheck';
 import { runPhase1GenerationChecks } from './generation/phase1Check';
 import { runGenerationCatalogPolicyChecks } from './generation/catalogEligibilityCheck';
 import { runCatalogCleanupChecks } from '../training/catalogCleanupCheck';
@@ -550,6 +551,7 @@ async function run() {
   runGenerationCatalogPolicyChecks();
   await runPhase1GenerationChecks();
   await runInstructionAdherenceChecks();
+  runGenerationCriteriaChecks();
   runPhase2a1FoundationChecks();
   runPhase2a2DecisionChecks();
   runPhase2a3ApplyChecks();

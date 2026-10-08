@@ -30,6 +30,7 @@ const PROGRAM_FIELDS = [
   'source_program_id',
   'inclusive_plan',
   'generation_method',
+  'generation_criteria',
 ];
 
 function isMissingRelation(error: { message?: string } | null | undefined): boolean {

@@ -656,6 +656,12 @@ export default function ProgramDesignHome({
             if (result?.coachMessage) setBuildBanner(result.coachMessage);
             else if (result?.workoutCount) setBuildBanner(`Built ${result.workoutCount} workouts.`);
             else setBuildBanner('Your workouts are ready. Review and edit them below.');
+            const loaded = await fetchFullProgram(supabase, editing.id);
+            if (!loaded.error && loaded.data) {
+              const next = loaded.data as ProgramDesignRecord;
+              setEditing(next);
+              setPrograms((prev) => prev.map((p) => (p.id === next.id ? next : p)));
+            }
             setView('editor');
           }}
           onFollow={async () => {

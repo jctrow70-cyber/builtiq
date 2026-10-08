@@ -8,6 +8,7 @@ import AddActivitySheet from './AddActivitySheet';
 import ImportWorkoutsSheet from './ImportWorkoutsSheet';
 import PushToMembersSheet from './PushToMembersSheet';
 import ProgramWorkoutPlan from './ProgramWorkoutPlan';
+import ProgramCriteriaPanel from './ProgramCriteriaPanel';
 import SegmentedControl from '../ui/SegmentedControl';
 import { cycleLengthOf, formatProgramRange, programDateRange } from '../../../lib/programDesign/cycle';
 import { lifecycleLabel, lifecycleStatusOf } from '../../../lib/programDesign/lifecycle';
@@ -272,6 +273,8 @@ export default function ProgramCalendarEditor({
         subtitle={`${formatProgramRange(start, end)} · Week ${week} of ${totalWeeks}${inclusive ? ' · All-inclusive' : ' · Training'}`}
         actions={<span className="ui-badge">{lifecycleLabel(status)}</span>}
       />
+
+      <ProgramCriteriaPanel value={program.generation_criteria} />
 
       {audience === 'group' && onEditAudienceChange && (
         <fieldset className="pd-scope">

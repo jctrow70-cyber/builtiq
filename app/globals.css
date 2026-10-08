@@ -949,6 +949,12 @@ label{color:var(--textSecondary)}
 .pd-training-using h2{margin:0 0 10px}
 .pd-empty{margin:0;line-height:1.5}
 .pd-note{margin:8px 0 0;padding:10px 12px;border-radius:12px;background:var(--surfaceInset);border:1px solid var(--borderSubtle);font-size:13px;line-height:1.45}
+.pd-criteria{margin:8px 0 12px;padding:12px 14px;border-radius:14px;background:var(--surfaceInset);border:1px solid var(--borderSubtle)}
+.pd-criteria h3{margin:0 0 4px;font-size:15px}
+.pd-criteria h4{margin:10px 0 4px;font-size:13px}
+.pd-criteria p,.pd-criteria li{font-size:13px;line-height:1.45}
+.pd-criteria ul{margin:0;padding-left:18px}
+.pd-criteria-status{margin:0;font-weight:700}
 .pd-error{margin:10px 0 0;color:#fca5a5;font-size:13px;font-weight:700}
 .pd-group-picker{margin-top:12px}
 .pd-program-row{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;padding:14px 16px;margin:0 0 8px;border-radius:16px;border:1px solid var(--borderSubtle);background:var(--surfaceElevated);color:inherit;text-align:left;min-height:64px}

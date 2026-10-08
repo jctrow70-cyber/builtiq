@@ -11,6 +11,73 @@ Branch:
 Status:
 ```
 
+## BIQ-0249 - Program Criteria Snapshot
+
+Date: 2026-10-07
+Branch: main
+Status: Local / in progress
+
+### Summary
+
+A generated program now stores the intake and the outcome on the program row, and the program editor shows that section. The section says whether AI, repaired AI, or the science template built the week, and which hard requirements were kept.
+
+### Purpose
+
+Intake lived on the user profile and was overwritten by the next generate. The program itself did not keep a reviewable copy, so a fallback week could replace the request without a clear record on the program.
+
+### Changes
+
+- Add nullable `st_programs.generation_criteria`
+- Save it on full-program create and regenerate
+- Show it at the top of the program editor
+- Copy it when a program is duplicated, including a just-me copy
+- Leave older programs blank until they are generated again
+- Leave validation codes and the repair list on `st_generation_runs`
+
+### Files Changed
+
+- `supabase/migrations/20261007_056_program_generation_criteria.sql`
+- `lib/programDesign/generationCriteria.ts`
+- `lib/programDesign/generationCriteriaCheck.ts`
+- `lib/programDesign/types.ts`
+- `lib/programDesign/programDesignApi.ts`
+- `lib/programDesign/followProgram.ts`
+- `lib/scienceEngine/acceptanceCheck.ts`
+- `app/api/programs/generate/route.ts`
+- `app/components/programDesign/ProgramCriteriaPanel.tsx`
+- `app/components/programDesign/ProgramCalendarEditor.tsx`
+- `app/components/programDesign/ProgramDesignHome.tsx`
+- `app/globals.css`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+
+### Database Changes
+
+Additive. Apply `supabase/migrations/20261007_056_program_generation_criteria.sql`.
+
+The migration adds `generation_criteria jsonb` and updates `st_duplicate_program` so copies include that column. Existing rows stay null. Workouts, planned sets, and set logs are not updated.
+
+### Testing Steps
+
+1. Apply the migration in Supabase
+2. Run `node .\node_modules\tsx\dist\cli.mjs lib\scienceEngine\acceptanceCheck.ts`
+3. Generate a new program and confirm the editor shows the request, the requirements, and Built with AI, adjusted, or the science template
+4. Open a program created before this change and confirm the section is absent
+5. Regenerate a draft with no logged sets and confirm the section updates
+6. Confirm a program with logged sets still cannot be replaced
+7. On a phone-width screen, confirm the criteria section wraps inside the editor
+
+### Known Issues
+
+- The migration has to be applied before new snapshots persist. Until then, generation still saves and the section stays hidden.
+- A program with logged sets is still blocked from regeneration. This change does not create a new draft for that case.
+- Trainer-client programs are unchanged.
+- The criteria section is on the program editor. Training does not repeat it.
+
+### Recommended Commit Message
+
+`BIQ-0249 Save program criteria and show how the week was built`
+
 ## BIQ-0248 - Fix Identical-Day Check Compile
 
 Date: 2026-10-07

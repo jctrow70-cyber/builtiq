@@ -3,6 +3,7 @@ import { createSupabaseFromRequest, requireAuthUser } from '../../../../lib/supa
 import { persistAiProgramPlan, persistExercisesOntoWorkout, persistWorkoutsOntoProgram, type GenerationConfig } from '../../../../lib/training/aiProgramPlan';
 import { missingProgramColumnFromError } from '../../../../lib/training/programStatus';
 import { focusMusclesForSingleDayType, inferScheduleFromPrompt, inferSessionMinutesFromPrompt, inferSingleDayTypeFromPrompt } from '../../../../lib/programDesign/inferSchedule';
+import { buildGenerationCriteria } from '../../../../lib/programDesign/generationCriteria';
 import { createActivitiesFromWorkouts, updateDesignProgram } from '../../../../lib/programDesign/programDesignApi';
 import { cycleEndDate, generationWeeksOf, snapStartToMonday } from '../../../../lib/programDesign/cycle';
 import { fetchAllExerciseCatalog } from '../../../../lib/training/catalogFetch';
@@ -402,6 +403,27 @@ async function generateProgramPost(request: Request) {
   }
 
   await attachGenerationRunProgram(supabase, pipeline.generationRunId, programId);
+
+  if (!targetWorkout && pipeline.run.context?.hard_requirements) {
+    await updateDesignProgram(supabase, programId, {
+      generation_criteria: buildGenerationCriteria({
+        method: pipeline.method,
+        program: scienceProgram,
+        requirements: pipeline.run.context.hard_requirements,
+        request: {
+          goal: body?.primaryGoal || scienceProfile.primaryGoal,
+          split: body?.trainingSplit,
+          experience: body?.experienceLevel || scienceProfile.experienceLevel,
+          days,
+          sessionMinutes: scienceProfile.preferredSessionMinutes,
+          notes: body?.notes,
+          focusMuscles,
+        },
+      }),
+      ...(prompt ? { generation_prompt: prompt.slice(0, 6000) } : {}),
+      ...(focusMuscles.length ? { focus_muscles: focusMuscles } : {}),
+    });
+  }
 
   try {
     await supabase.from('st_muscle_weekly_targets').insert(

@@ -373,6 +373,7 @@ export async function customizeFollowedProgramForMe(
   if (liveProgram.end_date) patch.end_date = liveProgram.end_date;
   if (liveProgram.cycle_length_weeks) patch.cycle_length_weeks = liveProgram.cycle_length_weeks;
   if (liveProgram.inclusive_plan != null) patch.inclusive_plan = liveProgram.inclusive_plan;
+  if (liveProgram.generation_criteria) patch.generation_criteria = liveProgram.generation_criteria;
 
   const { error: patchError } = await updateDesignProgram(supabase, copyId, patch);
   const loaded = await followAndLoadProgram(supabase, userId, copyId);

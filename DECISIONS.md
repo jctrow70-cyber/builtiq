@@ -19,6 +19,32 @@ Impact:
 
 ---
 
+## Decision 092 - Program Criteria Stay on the Program
+
+Date: 2026-10-07
+Status: Accepted
+Category: Program Generation
+
+### Decision
+
+Save a program-level criteria snapshot when a full program is generated. Show that snapshot on the program: the request, the hard requirements, whether AI, repaired AI, or the science template built the week, and which requirements were kept or missed. Leave rule codes and repairs on `st_generation_runs`.
+
+### Reason
+
+The training profile is one row per user and is overwritten on the next generate. The October 7 program did not keep a reviewable copy of the request that produced its workouts.
+
+### Alternatives Considered
+
+- Read criteria only from `st_generation_runs` — rejected; that log is a troubleshooting record, not the program details view
+- Store the raw validation payload on the program — rejected; the program should show the request and the outcome
+- Fork a new draft whenever a logged program is regenerated — deferred; logged programs still cannot be replaced
+
+### Impact
+
+Existing programs stay unchanged until someone generates them again. Copies of a program keep the snapshot. No workout history is rewritten.
+
+---
+
 ## Decision 091 - Identical Days and Warm-Up Count Are Hard Constraints
 
 Date: 2026-10-07
