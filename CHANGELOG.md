@@ -11,6 +11,73 @@ Branch:
 Status:
 ```
 
+## BIQ-0251 - Progress Dashboard Shell
+
+Date: 2026-10-08
+Branch: main
+Status: Local / in progress
+
+### Summary
+
+Personal Progress now opens on an Overview, with Strength and Training sections beside it. A shared date range stays selected while moving between those sections. Nutrition and Body keep a place in the navigation. Their full trend screens are not built yet.
+
+### Purpose
+
+The analytics report was ready, but Progress still showed a strength list and a body check-in form. The first screen should answer whether the user is progressing, where, and what else moved during the same period.
+
+### Changes
+
+- Add a Progress shell with Overview, Strength, Training, Nutrition, and Body
+- Keep one date range across those sections: 7D, 4W, 3M, 6M, 1Y, All
+- Overview summarizes available strength, body, and adherence data and shows four cards plus up to four insights
+- Strength shows the movement-pattern index, separate equipment histories, an exercise chart, and one best performance per series
+- Training shows adherence when expectations exist, effective and direct muscle exposure, weekly balance, and volume as supporting context
+- Missing metrics stay blank. They are not shown as zero
+- Personal Progress reads `loadProgressReport`. Opening one exercise loads that series only
+- Nutrition is a holding state. Body still uses the existing check-in form
+
+### Files changed
+
+- `app/components/progress/ProgressScreen.tsx`
+- `app/components/progress/ProgressOverview.tsx`
+- `app/components/progress/ProgressStrength.tsx`
+- `app/components/progress/ProgressSeriesDetail.tsx`
+- `app/components/progress/ProgressTraining.tsx`
+- `app/components/progress/ProgressTrendChart.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `lib/progress/progressView.ts`
+- `lib/progress/seriesChart.ts`
+- `lib/progress/queries.ts`
+- `lib/progress/setFacts.ts`
+- `scripts/test-progress-analytics.ts`
+
+### Database changes
+
+None.
+
+### Testing steps
+
+- Open Progress and confirm Overview is the default
+- Switch 7D, 4W, 3M, 6M, 1Y, and All, then move to Strength and Training and confirm the range stays
+- Open a movement pattern, then an exercise, and switch e1RM, load, reps, volume, and sets
+- Switch equipment, including Unspecified when it exists, and confirm the histories stay separate
+- On Training, switch Effective and Direct and open the effective-set explanation
+- Confirm a new account sees the baseline message instead of zero calories or 0% strength
+- Open Body and save a check-in
+- Resize to a phone width and confirm the section tabs scroll and the cards stack
+
+### Known issues
+
+- Nutrition charts, targets, and the body trend redesign are not in this pass
+- Best performances are the strongest sets in the selected range, not confirmed all-time records
+- Adherence and workout counts appear only when training expectations exist
+- The snapshot migration still has to be applied before new history columns are stored
+
+### Recommended commit message
+
+`BIQ-0251 Show personal progress by strength, training, and overview`
+
 ## BIQ-0250 - Progress Analytics Foundation
 
 Date: 2026-10-08

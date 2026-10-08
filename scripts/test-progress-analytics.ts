@@ -13,6 +13,9 @@ import { progressAdherence } from '../lib/progress/adherence';
 import { buildProgressReport } from '../lib/progress/report';
 import { comparableWindows, rangeBounds } from '../lib/progress/ranges';
 import type { ProgressSetFact } from '../lib/progress/setFacts';
+import { columnsWithoutMissing } from '../lib/progress/queries';
+import { seriesChartPoints } from '../lib/progress/seriesChart';
+import { buildOverviewInsights, headlineRecords, overviewCards, overviewSummary } from '../lib/progress/progressView';
 import { buildSeriesWindows, seriesPersonalRecords } from '../lib/progress/strengthSeries';
 import { buildStrengthIndex, selectRepresentativeSeries, type RepresentativeCandidate } from '../lib/progress/strengthIndex';
 import { seriesIdentityFromParts } from '../lib/progress/identity';
@@ -488,5 +491,55 @@ const minor = contributionsForExercise(
   { allowNameDefaults: false }
 );
 assert.equal(minor[0]?.contribution, SCIENCE_RULES_V1.minorContribution);
+
+const chartFacts = [
+  fact({ date: '2026-10-01', weight: 100, reps: 5 }),
+  fact({ date: '2026-10-01', weight: 80, reps: 8, setType: 'warmup' }),
+  fact({ date: '2026-10-03', weight: 110, reps: 5 }),
+];
+const e1rmPoints = seriesChartPoints(chartFacts, 'e1rm');
+assert.equal(e1rmPoints.length, 2);
+assert.equal(e1rmPoints[0].date, '2026-10-01');
+assert.ok(e1rmPoints[1].value > e1rmPoints[0].value);
+assert.equal(seriesChartPoints(chartFacts, 'sets')[0].value, 1);
+
+const periodRecords = seriesPersonalRecords(chartFacts);
+const headlines = headlineRecords(periodRecords);
+assert.equal(headlines.length, 1);
+assert.equal(new Set(headlines.map((record) => record.key)).size, 1);
+
+const emptyReport = buildProgressReport({ range: '4W', today: '2026-10-08' });
+const summary = overviewSummary(emptyReport, 'imperial');
+assert.equal(summary.baseline, true);
+assert.equal(summary.rows.length, 0);
+assert.equal(overviewCards(emptyReport, 'imperial').every((card) => card.value == null), true);
+
+const insights = buildOverviewInsights({
+  strength: { ...emptyReport.strengthIndex, percentChange: 4.8 },
+  muscles: emptyReport.muscles,
+  nutrition: nutritionReport(
+    [{ date: '2026-10-01', calories: 2438, protein: 158, carbs: 220, fat: 70 }],
+    { from: '2026-09-11', to: '2026-10-08' },
+    null
+  ),
+  body: [],
+  units: 'imperial',
+});
+const insightText = insights.map((insight) => `${insight.title} ${insight.body}`).join(' ').toLowerCase();
+assert.equal(insightText.includes('caused'), false);
+assert.equal(insightText.includes('surplus'), false);
+assert.equal(insightText.includes('deficit'), false);
+assert.match(insightText, /4\.8%/);
+assert.match(insightText, /158 g of protein/);
+assert.ok(insights.length <= 4);
+
+assert.equal(
+  columnsWithoutMissing('id,snapshot_movement_pattern,snapshot_equipment', "Could not find the 'snapshot_movement_pattern' column"),
+  'id,snapshot_equipment'
+);
+assert.equal(
+  columnsWithoutMissing('id,snapshot_catalog_exercise_id', "Could not find the 'snapshot_catalog_exercise_id' column"),
+  'id'
+);
 
 console.log('test-progress-analytics: ok');

@@ -1,7 +1,7 @@
 import { estimateE1rm, isWorkingSet } from '../training/estimated1Rm';
 import { parseNumeric, parseReps } from '../training/progressAnalytics';
-import { seriesIdentityFromLog, type SeriesIdentity } from './identity';
-import { provenanceFromLog, type SnapshotProvenance } from './provenance';
+import { seriesIdentityFromLog, provenanceFromLog, type SeriesIdentity } from './identity';
+import type { SnapshotProvenance } from './provenance';
 
 export type MuscleCredit = { muscle: string; contribution: number };
 

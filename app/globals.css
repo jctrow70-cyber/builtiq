@@ -403,6 +403,52 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .progress-pr-badge{background:#3b2f63;color:#e9d5ff;margin-left:6px;font-size:10px}
 .progress-pr-date{font-size:11px;white-space:nowrap}
 .progress-section{display:grid;gap:10px}
+.progress-screen{display:grid;gap:12px}
+.progress-toolbar{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.progress-title{margin:0;font-size:28px;letter-spacing:-0.03em}
+.progress-stack{display:grid;gap:10px}
+.progress-kicker{margin:0 0 4px;font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--textSecondary)}
+.progress-headline{margin:0;font-size:28px;line-height:1.15;letter-spacing:-0.03em}
+.progress-lead{margin:8px 0 0;color:var(--textSecondary);font-size:14px;line-height:1.45}
+.progress-section-title{margin:0 0 8px;font-size:18px}
+.progress-insight-title{margin:0 0 4px;font-size:16px}
+.progress-card-label{display:block;margin-top:4px;font-weight:700}
+.progress-card-line{display:block;margin-top:2px}
+.progress-hero-value{display:block;font-size:32px;font-weight:800;letter-spacing:-0.03em;line-height:1.1;margin-top:4px}
+.progress-summary-list{display:grid;gap:8px;margin-top:14px}
+.progress-summary-row{display:flex;justify-content:space-between;gap:12px;font-size:15px}
+.progress-card-grid{display:grid;gap:10px}
+.progress-nav-card{margin:0;width:100%;text-align:left;color:inherit;cursor:pointer}
+.progress-scroll-tabs{overflow-x:auto}
+.progress-scroll-tabs .ui-segmented{width:max-content;min-width:100%}
+.progress-scroll-tabs .ui-segmented-item{flex:0 0 auto;padding-inline:14px}
+.progress-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.progress-stat-grid b{display:block;font-size:18px}
+.progress-pattern,.progress-pr,.progress-series-link{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;min-height:52px;padding:10px 0;border:0;border-top:1px solid var(--borderSubtle);background:transparent;color:inherit;text-align:left;font:inherit}
+.progress-pattern>span,.progress-pr>span{display:grid;gap:2px;min-width:0}
+.progress-series-link{display:grid;border:1px solid var(--borderSubtle);border-radius:12px;padding:12px;margin-top:8px}
+.progress-bar{height:8px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;margin-top:6px}
+.progress-bar>span{display:block;height:100%;background:var(--accent);border-radius:inherit}
+.progress-muscle{padding:10px 0;border-top:1px solid var(--borderSubtle)}
+.progress-muscle-head{display:flex;justify-content:space-between;gap:8px}
+.progress-balance-row{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.3fr) auto;gap:8px;align-items:baseline;padding:10px 0;border-top:1px solid var(--borderSubtle);font-size:14px}
+.progress-balance-row span:nth-child(2){color:var(--textSecondary);text-align:right}
+.progress-section-head{display:grid;gap:10px}
+.progress-chip-row{display:flex;gap:8px;overflow-x:auto}
+.progress-chip{flex:0 0 auto;min-height:44px;border-radius:999px;border:1px solid var(--borderSubtle);background:transparent;color:inherit;padding:8px 14px;font-weight:800}
+.progress-chip--active{background:var(--accent);color:#fff;border-color:transparent}
+.progress-chart{width:100%;height:auto;color:var(--accent);display:block;margin-top:8px}
+.progress-note{margin-top:10px;color:var(--textSecondary);font-size:13px;line-height:1.45}
+.progress-note summary{cursor:pointer;font-weight:800;color:var(--textPrimary);min-height:44px;display:flex;align-items:center}
+.progress-empty h3{margin:0 0 6px;font-size:18px}
+.progress-empty p{margin:0 0 12px;color:var(--textSecondary);line-height:1.45}
+.progress-error{color:#fca5a5;margin-top:0}
+.progress-back{justify-self:start}
+@media(min-width:720px){
+  .progress-card-grid{grid-template-columns:1fr 1fr}
+  .progress-section-head{grid-template-columns:1fr auto;align-items:center}
+  .progress-stat-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
 .body-progress{display:grid;gap:10px}
 .body-progress-metrics .body-delta{display:block;font-size:11px;margin-top:2px}
 .body-progress-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:8px}

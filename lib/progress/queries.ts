@@ -124,7 +124,49 @@ async function fetchSessions(client: QueryClient, userId: string, from: string, 
   return { error: null, rows: result.data || [] };
 }
 
+/** Drop a select column only when the database error names that column. */
+export function columnsWithoutMissing(columns: string, message: string): string | null {
+  const parts = columns.split(',').map((column) => column.trim()).filter(Boolean);
+  const missing = parts.filter((column) => new RegExp(`\\b${column}\\b`, 'i').test(message));
+  if (!missing.length) return null;
+  const next = parts.filter((column) => !missing.includes(column));
+  if (!next.length || next.length === parts.length) return null;
+  return next.join(',');
+}
+
 async function fetchPaged(
+  client: QueryClient,
+  table: string,
+  columns: string,
+  userId: string,
+  dateColumn: string,
+  from: string,
+  to: string
+): Promise<any[]> {
+  return fetchPagedAttempt(client, table, columns, userId, dateColumn, from, to, 0);
+}
+
+async function fetchPagedAttempt(
+  client: QueryClient,
+  table: string,
+  columns: string,
+  userId: string,
+  dateColumn: string,
+  from: string,
+  to: string,
+  attempt: number
+): Promise<any[]> {
+  try {
+    return await fetchPagedOnce(client, table, columns, userId, dateColumn, from, to);
+  } catch (error) {
+    const message = errorText(error);
+    const next = attempt < 8 ? columnsWithoutMissing(columns, message) : null;
+    if (!next) throw error;
+    return fetchPagedAttempt(client, table, next, userId, dateColumn, from, to, attempt + 1);
+  }
+}
+
+async function fetchPagedOnce(
   client: QueryClient,
   table: string,
   columns: string,
@@ -149,6 +191,12 @@ async function fetchPaged(
     if (page.length < PAGE_SIZE) break;
   }
   return rows;
+}
+
+function errorText(error: unknown): string {
+  if (!error || typeof error !== 'object') return String(error || '');
+  const row = error as { message?: string; details?: string; hint?: string };
+  return [row.message, row.details, row.hint].filter(Boolean).join(' ');
 }
 
 function numberOrNull(value: unknown): number | null {

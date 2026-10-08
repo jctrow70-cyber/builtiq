@@ -19,6 +19,32 @@ Impact:
 
 ---
 
+## Decision 094 - Progress Shows the Report, Not the Raw Log
+
+Date: 2026-10-08
+Status: Accepted
+Category: Progress
+
+### Decision
+
+Personal Progress is organized as Overview, Strength, Training, Nutrition, and Body. Overview is the default. One date range is shared across those sections. The screen reads the progress report. An exercise chart loads that series when it is opened. Insights use the report wording and do not claim that one metric caused another. Nutrition charts and the expanded body view wait for a later pass. The existing body check-in stays available. Group Progress is unchanged.
+
+### Reason
+
+The analytics foundation can answer whether someone is progressing, but the previous screen was a set list plus a body form. The first view should make the report understandable on a phone.
+
+### Alternatives Considered
+
+- Rebuild Nutrition and Body in the same pass — deferred so the first progress experience can be reviewed on its own
+- Keep loading the 800-row set history into the Progress page — rejected
+- Label every period-best set as a new personal record — rejected, because that record is only the best inside the selected range
+
+### Impact
+
+Progress navigation, overview, strength drill-down, and training exposure change. Group Progress, program generation, and nutrition logging behavior do not.
+
+---
+
 ## Decision 093 - Progress History Is the Analytics Source
 
 Date: 2026-10-08
