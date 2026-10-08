@@ -419,6 +419,7 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .progress-summary-row{display:flex;justify-content:space-between;gap:12px;font-size:15px}
 .progress-card-grid{display:grid;gap:10px}
 .progress-nav-card{margin:0;width:100%;text-align:left;color:inherit;cursor:pointer}
+.progress-nav-card.progress-chip--active{outline:2px solid var(--accent);background:transparent;color:inherit}
 .progress-scroll-tabs{overflow-x:auto}
 .progress-scroll-tabs .ui-segmented{width:max-content;min-width:100%}
 .progress-scroll-tabs .ui-segmented-item{flex:0 0 auto;padding-inline:14px}
@@ -438,6 +439,9 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .progress-chip{flex:0 0 auto;min-height:44px;border-radius:999px;border:1px solid var(--borderSubtle);background:transparent;color:inherit;padding:8px 14px;font-weight:800}
 .progress-chip--active{background:var(--accent);color:#fff;border-color:transparent}
 .progress-chart{width:100%;height:auto;color:var(--accent);display:block;margin-top:8px}
+.progress-chart-reference{stroke:var(--textSecondary);stroke-dasharray:4 4;opacity:.75}
+.progress-chart-secondary{stroke:var(--textSecondary);opacity:.8}
+.progress-chart-point{fill:currentColor}
 .progress-note{margin-top:10px;color:var(--textSecondary);font-size:13px;line-height:1.45}
 .progress-note summary{cursor:pointer;font-weight:800;color:var(--textPrimary);min-height:44px;display:flex;align-items:center}
 .progress-empty h3{margin:0 0 6px;font-size:18px}

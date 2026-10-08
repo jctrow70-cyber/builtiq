@@ -48,4 +48,15 @@ const merged = mergeMeasurement(existing, {
 });
 assert(merged.weight_lbs === 178 && merged.waist_inches === 34, 'merge keeps prior waist');
 
+const chestOnly = draftToCanonical({ measured_on: '2026-10-01', weight: '', waist: '', chest: '40' }, 'imperial');
+assert(chestOnly?.chest_inches === 40 && chestOnly.weight_lbs == null, 'chest only check-in');
+const kept = mergeMeasurement({ ...existing, chest_inches: 40 }, {
+  measured_on: '2026-09-11',
+  weight_lbs: 178,
+  waist_inches: null,
+  notes: null,
+});
+assert(kept.chest_inches === 40, 'blank chest keeps the prior measurement');
+assert(draftToCanonical({ measured_on: '2026-10-01', weight: '180', waist: '', body_fat: '140' }, 'imperial') == null, 'reject body fat above 100');
+
 console.log('test-body-measurements: ok');

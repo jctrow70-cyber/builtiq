@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Card from '../ui/Card';
 import SegmentedControl from '../ui/SegmentedControl';
+import ProgressBody from './ProgressBody';
+import ProgressNutrition from './ProgressNutrition';
 import ProgressOverview from './ProgressOverview';
 import ProgressStrength from './ProgressStrength';
 import { clearSeriesFactCache } from './ProgressSeriesDetail';
@@ -22,7 +24,7 @@ type ProgressScreenProps = {
   section: ProgressSection;
   onSectionChange: (section: ProgressSection) => void;
   onOpenNutrition?: () => void;
-  bodySlot?: ReactNode;
+  onBodyDataChange?: () => void;
 };
 
 const SECTIONS: { value: ProgressSection; label: string }[] = [
@@ -40,7 +42,7 @@ export default function ProgressScreen({
   section,
   onSectionChange,
   onOpenNutrition,
-  bodySlot,
+  onBodyDataChange,
 }: ProgressScreenProps) {
   const units: UnitsPreference = unitsPreference === 'metric' ? 'metric' : 'imperial';
   const [range, setRange] = useState<ProgressRange>('4W');
@@ -100,7 +102,7 @@ export default function ProgressScreen({
           <h1 className="progress-title">Progress</h1>
           <p className="muted">How your strength, training, nutrition, and body are moving.</p>
         </div>
-        {userId && section !== 'body' && (
+        {userId && (
           <button type="button" className="btn small secondary" onClick={refresh} disabled={loading}>Refresh</button>
         )}
       </div>
@@ -121,8 +123,8 @@ export default function ProgressScreen({
       {!userId && (
         <Card><p className="progress-lead">Sign in to see your progress.</p></Card>
       )}
-      {userId && loading && !report && section !== 'nutrition' && section !== 'body' && <Card><p className="progress-lead">Loading your progress…</p></Card>}
-      {userId && error && !report && section !== 'nutrition' && section !== 'body' && (
+      {userId && loading && !report && section !== 'body' && <Card><p className="progress-lead">Loading your progress…</p></Card>}
+      {userId && error && !report && section !== 'body' && (
         <Card>
           <p className="progress-error">{error}</p>
           <button type="button" className="btn secondary" onClick={refresh}>Try again</button>
@@ -137,28 +139,20 @@ export default function ProgressScreen({
       {userId && report && section === 'training' && (
         <ProgressTraining report={report} weightUnit={weightUnit} />
       )}
-      {userId && section === 'nutrition' && (
-        <Card>
-          <div className="progress-empty">
-            <h3>See how nutrition supports your training</h3>
-            <p>
-              {report?.nutrition.averages
-                ? `${report.nutrition.loggedDays} logged day${report.nutrition.loggedDays === 1 ? '' : 's'} in this period. Calorie, protein, and target charts are the next progress view.`
-                : 'Log meals to compare nutrition trends with your workouts and body changes.'}
-            </p>
-            {onOpenNutrition && <button type="button" className="btn secondary" onClick={onOpenNutrition}>Log meals</button>}
-          </div>
-        </Card>
+      {userId && report && section === 'nutrition' && (
+        <ProgressNutrition report={report} units={units} onLogMeals={onOpenNutrition} />
       )}
       {userId && section === 'body' && (
-        bodySlot || (
-          <Card>
-            <div className="progress-empty">
-              <h3>Track changes beyond the scale</h3>
-              <p>Add weight, waist, or other measurements to see how your body changes over time.</p>
-            </div>
-          </Card>
-        )
+        <ProgressBody
+          report={report}
+          userId={userId}
+          units={units}
+          unitsPreference={unitsPreference}
+          onDataChange={() => {
+            refresh();
+            onBodyDataChange?.();
+          }}
+        />
       )}
     </section>
   );

@@ -15,7 +15,8 @@ import { comparableWindows, rangeBounds } from '../lib/progress/ranges';
 import type { ProgressSetFact } from '../lib/progress/setFacts';
 import { columnsWithoutMissing } from '../lib/progress/queries';
 import { seriesChartPoints } from '../lib/progress/seriesChart';
-import { buildOverviewInsights, headlineRecords, overviewCards, overviewSummary } from '../lib/progress/progressView';
+import { overviewInsights } from '../lib/progress/comparison';
+import { headlineRecords, overviewCards, overviewSummary } from '../lib/progress/progressView';
 import { buildSeriesWindows, seriesPersonalRecords } from '../lib/progress/strengthSeries';
 import { buildStrengthIndex, selectRepresentativeSeries, type RepresentativeCandidate } from '../lib/progress/strengthIndex';
 import { seriesIdentityFromParts } from '../lib/progress/identity';
@@ -357,6 +358,9 @@ assert.equal(nutrition.averages?.calories, 1000);
 assert.notEqual(nutrition.averages?.calories, 2000 / 3);
 assert.equal(nutrition.targetAdherence?.calories != null, true);
 assert.equal(nutrition.targetAdherence?.carbs, null);
+assert.equal(nutrition.days.length, 2);
+assert.equal(nutrition.days.some((day) => day.date === '2026-10-03'), false);
+assert.equal(nutrition.targetDaysMet?.protein, 1);
 
 const emptyNutrition = nutritionReport([], { from: '2026-10-01', to: '2026-10-03' });
 assert.equal(emptyNutrition.averages, null);
@@ -514,17 +518,15 @@ assert.equal(summary.baseline, true);
 assert.equal(summary.rows.length, 0);
 assert.equal(overviewCards(emptyReport, 'imperial').every((card) => card.value == null), true);
 
-const insights = buildOverviewInsights({
-  strength: { ...emptyReport.strengthIndex, percentChange: 4.8 },
-  muscles: emptyReport.muscles,
+const insights = overviewInsights({
+  ...emptyReport,
+  strengthIndex: { ...emptyReport.strengthIndex, percentChange: 4.8 },
   nutrition: nutritionReport(
     [{ date: '2026-10-01', calories: 2438, protein: 158, carbs: 220, fat: 70 }],
     { from: '2026-09-11', to: '2026-10-08' },
     null
   ),
-  body: [],
-  units: 'imperial',
-});
+}, 'imperial');
 const insightText = insights.map((insight) => `${insight.title} ${insight.body}`).join(' ').toLowerCase();
 assert.equal(insightText.includes('caused'), false);
 assert.equal(insightText.includes('surplus'), false);

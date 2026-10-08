@@ -19,6 +19,34 @@ Impact:
 
 ---
 
+## Decision 095 - Compare Progress Domains Without Claiming Cause
+
+Date: 2026-10-08
+Status: Accepted
+Category: Progress
+
+### Decision
+
+Nutrition and Body use the progress report and the shared date range. A comparison view reads that report and supplies Overview, Nutrition & Performance, and Body & Performance. It does not recalculate analytics in the screen. Logged nutrition days are averaged as logged. A day with no meals is missing. Calories are compared with the configured target and are not called a surplus or deficit. Protein attainment counts logged days that reached the configured protein target. Body shows only measurements that have samples. The check-in can store weight, waist, chest, arm, thigh, hip, neck, and body fat, and only one is required. Insights describe what moved together. They do not say one change caused another. Overview Training counts workouts and working sets. Muscle effective-set exposure stays in Training.
+
+### Reason
+
+Summing muscle exposure counts one performed set more than once. Nutrition and body only help if they line up with the same period as strength and training, and if missing data stays missing.
+
+### Alternatives Considered
+
+- Use the sum of effective sets as the Overview training total — rejected
+- Treat a day with no meals as zero calories — rejected
+- Invent a calorie range such as plus or minus 10 percent — rejected
+- Judge body change as muscle gain or fat loss without an active goal — rejected
+- Merge equipment into one strength series so body comparisons are simpler — rejected
+
+### Impact
+
+Personal Progress can show nutrition, body, strength, and training for one selected period. The comparison model is the piece a later coach can read. Group Progress, nutrition logging, and the equipment-specific strength history stay as they are.
+
+---
+
 ## Decision 094 - Progress Shows the Report, Not the Raw Log
 
 Date: 2026-10-08

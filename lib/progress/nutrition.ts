@@ -32,6 +32,10 @@ export type NutritionReport = {
   targets: NutritionTargets | null;
   /** Share of logged days that met each target. Null when that target is missing. */
   targetAdherence: NutritionAverages | null;
+  /** Logged days that reached each configured target. Null when that target is missing. */
+  targetDaysMet: NutritionAverages | null;
+  /** Logged days in the range only. Missing days are absent, not stored as zero. */
+  days: NutritionDay[];
   loggedDates: string[];
 };
 
@@ -63,6 +67,8 @@ export function nutritionReport(days: NutritionDay[], span: DateSpan, targets?: 
       averages: null,
       targets: targets || null,
       targetAdherence: null,
+      targetDaysMet: null,
+      days: [],
       loggedDates: [],
     };
   }
@@ -79,6 +85,8 @@ export function nutritionReport(days: NutritionDay[], span: DateSpan, targets?: 
     averages,
     targets: targets || null,
     targetAdherence: adherence(logged, targets),
+    targetDaysMet: daysMet(logged, targets),
+    days: logged,
     loggedDates: logged.map((day) => day.date),
   };
 }
@@ -93,9 +101,24 @@ function adherence(days: NutritionDay[], targets?: NutritionTargets | null): Nut
   };
 }
 
-function share(days: NutritionDay[], target: number | null | undefined, read: (day: NutritionDay) => number): number | null {
+function daysMet(days: NutritionDay[], targets?: NutritionTargets | null): NutritionAverages | null {
+  if (!targets) return null;
+  return {
+    calories: metCount(days, targets.calories, (day) => day.calories),
+    protein: metCount(days, targets.protein, (day) => day.protein),
+    carbs: metCount(days, targets.carbs, (day) => day.carbs),
+    fat: metCount(days, targets.fat, (day) => day.fat),
+  };
+}
+
+function metCount(days: NutritionDay[], target: number | null | undefined, read: (day: NutritionDay) => number): number | null {
   if (target == null || !(target > 0)) return null;
-  const met = days.filter((day) => read(day) + 1e-9 >= target).length;
+  return days.filter((day) => read(day) + 1e-9 >= target).length;
+}
+
+function share(days: NutritionDay[], target: number | null | undefined, read: (day: NutritionDay) => number): number | null {
+  const met = metCount(days, target, read);
+  if (met == null || !days.length) return null;
   return round((met / days.length) * 100);
 }
 

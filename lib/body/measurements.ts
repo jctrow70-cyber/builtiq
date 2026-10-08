@@ -66,6 +66,12 @@ export type BodyMeasurementDraft = {
   measured_on: string;
   weight: string;
   waist: string;
+  chest?: string;
+  arm?: string;
+  thigh?: string;
+  hip?: string;
+  neck?: string;
+  body_fat?: string;
   notes?: string;
 };
 
@@ -119,34 +125,77 @@ export function formatWaist(inches: number | null | undefined, units: UnitsPrefe
   return v == null ? '—' : `${v} ${waistUnitLabel(units)}`;
 }
 
-export function draftToCanonical(
-  draft: BodyMeasurementDraft,
+export function formatBodyMetric(
+  value: number | null | undefined,
+  kind: 'weight' | 'length' | 'percent',
   units: UnitsPreference
-): { measured_on: string; weight_lbs: number | null; waist_inches: number | null; notes: string | null } | null {
+): string {
+  if (value == null || !Number.isFinite(Number(value))) return '—';
+  if (kind === 'weight') return formatWeight(value, units);
+  if (kind === 'percent') {
+    const rounded = Math.round(Number(value) * 10) / 10;
+    return `${Number.isInteger(rounded) ? rounded : rounded.toFixed(1)}%`;
+  }
+  return formatWaist(value, units);
+}
+
+export type CanonicalBodyCheckIn = {
+  measured_on: string;
+  weight_lbs: number | null;
+  waist_inches: number | null;
+  chest_inches: number | null;
+  arm_inches: number | null;
+  thigh_inches: number | null;
+  hip_inches: number | null;
+  neck_inches: number | null;
+  body_fat_percent: number | null;
+  notes: string | null;
+};
+
+export function draftToCanonical(draft: BodyMeasurementDraft, units: UnitsPreference): CanonicalBodyCheckIn | null {
   const measured_on = String(draft.measured_on || '').slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(measured_on)) return null;
 
   const weightInput = parsePositiveNumber(draft.weight);
   const waistInput = parsePositiveNumber(draft.waist);
-  if (weightInput == null && waistInput == null) return null;
-
-  return {
+  const chestInput = parsePositiveNumber(draft.chest);
+  const armInput = parsePositiveNumber(draft.arm);
+  const thighInput = parsePositiveNumber(draft.thigh);
+  const hipInput = parsePositiveNumber(draft.hip);
+  const neckInput = parsePositiveNumber(draft.neck);
+  const fatInput = parsePositiveNumber(draft.body_fat);
+  if (fatInput != null && fatInput > 100) return null;
+  const parsed: CanonicalBodyCheckIn = {
     measured_on,
     weight_lbs: weightInput == null ? null : toCanonicalWeightLbs(weightInput, units),
     waist_inches: waistInput == null ? null : toCanonicalWaistInches(waistInput, units),
+    chest_inches: chestInput == null ? null : toCanonicalWaistInches(chestInput, units),
+    arm_inches: armInput == null ? null : toCanonicalWaistInches(armInput, units),
+    thigh_inches: thighInput == null ? null : toCanonicalWaistInches(thighInput, units),
+    hip_inches: hipInput == null ? null : toCanonicalWaistInches(hipInput, units),
+    neck_inches: neckInput == null ? null : toCanonicalWaistInches(neckInput, units),
+    body_fat_percent: fatInput,
     notes: draft.notes?.trim() ? draft.notes.trim() : null,
   };
+  if (!hasAnyBodyMeasurement(parsed)) return null;
+  return parsed;
 }
 
-/** Merge a new check-in into an existing same-day row (blank fields keep prior values). */
+/** Merge a new check-in into an existing same-day row. A blank field keeps the prior value. */
 export function mergeMeasurement(
   existing: BodyMeasurementRow | null | undefined,
-  next: { measured_on: string; weight_lbs: number | null; waist_inches: number | null; notes: string | null }
-): { measured_on: string; weight_lbs: number | null; waist_inches: number | null; notes: string | null } {
+  next: Partial<CanonicalBodyCheckIn> & { measured_on: string; weight_lbs: number | null; waist_inches: number | null; notes: string | null }
+): CanonicalBodyCheckIn {
   return {
     measured_on: next.measured_on,
     weight_lbs: next.weight_lbs ?? existing?.weight_lbs ?? null,
     waist_inches: next.waist_inches ?? existing?.waist_inches ?? null,
+    chest_inches: next.chest_inches ?? existing?.chest_inches ?? null,
+    arm_inches: next.arm_inches ?? existing?.arm_inches ?? null,
+    thigh_inches: next.thigh_inches ?? existing?.thigh_inches ?? null,
+    hip_inches: next.hip_inches ?? existing?.hip_inches ?? null,
+    neck_inches: next.neck_inches ?? existing?.neck_inches ?? null,
+    body_fat_percent: next.body_fat_percent ?? existing?.body_fat_percent ?? null,
     notes: next.notes ?? existing?.notes ?? null,
   };
 }

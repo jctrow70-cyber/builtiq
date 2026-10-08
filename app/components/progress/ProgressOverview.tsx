@@ -2,8 +2,8 @@
 
 import Card from '../ui/Card';
 import type { ProgressReport } from '../../../lib/progress/report';
+import { overviewInsights } from '../../../lib/progress/comparison';
 import {
-  buildOverviewInsights,
   overviewCards,
   overviewSummary,
   type ProgressSection,
@@ -27,13 +27,7 @@ const CARD_LABEL: Record<ProgressSection, string> = {
 export default function ProgressOverview({ report, units, onOpen }: ProgressOverviewProps) {
   const summary = overviewSummary(report, units);
   const cards = overviewCards(report, units);
-  const insights = buildOverviewInsights({
-    strength: report.strengthIndex,
-    muscles: report.muscles,
-    nutrition: report.nutrition,
-    body: report.body,
-    units,
-  });
+  const insights = overviewInsights(report, units);
   const limited = report.strengthIndex.confidence === 'estimated' || report.strengthIndex.confidence === 'mixed';
 
   return (

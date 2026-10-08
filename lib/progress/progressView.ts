@@ -1,11 +1,8 @@
 import { formatWaist, formatWeight, type UnitsPreference } from '../body/measurements';
-import type { BodyMetricTrend } from './bodyTrends';
-import type { MuscleExposure, MuscleVolumeReport } from './muscleVolume';
-import type { NutritionReport } from './nutrition';
+import type { MuscleExposure } from './muscleVolume';
 import type { ProgressReport } from './report';
 import type { ProgressRange } from './ranges';
 import type { SeriesPr } from './strengthSeries';
-import type { StrengthIndexResult } from './strengthIndex';
 
 export type ProgressSection = 'overview' | 'strength' | 'training' | 'nutrition' | 'body';
 
@@ -17,8 +14,6 @@ export type OverviewSummary = {
   rows: OverviewRow[];
   baseline: boolean;
 };
-
-export type OverviewInsight = { id: string; title: string; body: string };
 
 export type ProgressCardModel = {
   id: 'strength' | 'training' | 'nutrition' | 'body';
@@ -117,82 +112,6 @@ export function overviewSummary(report: ProgressReport, units: UnitsPreference):
   return { baseline: false, title, detail: null, rows };
 }
 
-export function buildOverviewInsights(input: {
-  strength: StrengthIndexResult;
-  muscles: MuscleVolumeReport;
-  nutrition: NutritionReport;
-  body: BodyMetricTrend[];
-  units: UnitsPreference;
-}): OverviewInsight[] {
-  const insights: OverviewInsight[] = [];
-  const percent = input.strength.percentChange;
-  if (percent != null) {
-    const magnitude = Math.abs(percent).toFixed(1);
-    if (percent > 1) {
-      insights.push({
-        id: 'strength',
-        title: 'Strength is trending upward',
-        body: `Your representative strength movements improved ${magnitude}% over this period.`,
-      });
-    } else if (percent < -1) {
-      insights.push({
-        id: 'strength',
-        title: 'Strength is trending downward',
-        body: `Your representative strength movements declined ${magnitude}% over this period.`,
-      });
-    } else {
-      insights.push({
-        id: 'strength',
-        title: 'Strength is holding steady',
-        body: `Your representative strength movements changed ${magnitude}% over this period.`,
-      });
-    }
-  }
-
-  const hamstrings = input.muscles.groups.find((group) => group.id === 'hamstrings');
-  const quads = input.muscles.groups.find((group) => group.id === 'quads');
-  if (
-    hamstrings &&
-    quads &&
-    hamstrings.rolling4WeekEffective != null &&
-    quads.rolling4WeekEffective != null &&
-    hamstrings.weeks.length >= 2 &&
-    (hamstrings.rolling4WeekEffective > 0 || quads.rolling4WeekEffective > 0)
-  ) {
-    insights.push({
-      id: 'balance',
-      title: 'Training balance',
-      body: `Hamstring exposure averaged ${formatSets(hamstrings.rolling4WeekEffective)} effective sets per week compared with ${formatSets(quads.rolling4WeekEffective)} quad sets.`,
-    });
-  }
-
-  const weight = input.body.find((metric) => metric.key === 'weight');
-  const waist = input.body.find((metric) => metric.key === 'waist');
-  if (weight?.delta != null && waist?.delta != null) {
-    insights.push({
-      id: 'body',
-      title: 'Body composition',
-      body: `Body weight ${measurementClause(weight.delta, input.units, 'weight')} while waist measurement ${measurementClause(waist.delta, input.units, 'length')}.`,
-    });
-  } else if (weight?.delta != null) {
-    insights.push({
-      id: 'body',
-      title: 'Body weight',
-      body: `Body weight ${measurementClause(weight.delta, input.units, 'weight')} during this period.`,
-    });
-  }
-
-  if (input.nutrition.averages?.protein != null && insights.length < 4) {
-    insights.push({
-      id: 'nutrition',
-      title: 'Nutrition',
-      body: `You averaged ${Math.round(input.nutrition.averages.protein)} g of protein on logged days during this period.`,
-    });
-  }
-
-  return insights.slice(0, 4);
-}
-
 export function overviewCards(report: ProgressReport, units: UnitsPreference): ProgressCardModel[] {
   const index = report.strengthIndex;
   const strengthLines: string[] = [];
@@ -202,11 +121,11 @@ export function overviewCards(report: ProgressReport, units: UnitsPreference): P
     strengthLines.push(`${performances} best performance${performances === 1 ? '' : 's'} this period`);
   }
 
-  const effective = report.muscles.groups.reduce((sum, group) => sum + group.effectiveSets, 0);
-  const workouts = completedWorkouts(report);
-  const trainingLines: string[] = [rangePeriodLabel(report.range)];
-  if (effective > 0) trainingLines.push('Estimated across muscles');
-  if (workouts != null && effective > 0) trainingLines.push(`${workouts} workout${workouts === 1 ? '' : 's'} completed`);
+  const sets = workingSetsInView(report);
+  const workouts = completedWorkouts(report) ?? (report.loggedTrainingDays > 0 ? report.loggedTrainingDays : null);
+  const trainingLines: string[] = [];
+  if (workouts != null && sets > 0) trainingLines.push(`${sets} working set${sets === 1 ? '' : 's'}`);
+  if (workouts == null && sets > 0) trainingLines.push(rangePeriodLabel(report.range));
   const adherence = report.adherence?.counts.completion_rate ?? null;
   if (adherence != null) trainingLines.push(`${formatRate(adherence)} adherence`);
 
@@ -235,11 +154,11 @@ export function overviewCards(report: ProgressReport, units: UnitsPreference): P
     },
     {
       id: 'training',
-      value: effective > 0 ? formatSets(effective) : workouts != null ? String(workouts) : null,
-      label: effective > 0 ? 'Effective sets' : 'Workouts completed',
+      value: workouts != null ? String(workouts) : sets > 0 ? String(sets) : null,
+      label: workouts != null ? (workouts === 1 ? 'Workout' : 'Workouts') : 'Working sets',
       lines: trainingLines,
       emptyTitle: 'No training in this period',
-      emptyBody: 'Completed workouts will show exposure and adherence here.',
+      emptyBody: 'Completed workouts and working sets will show here.',
     },
     {
       id: 'nutrition',
@@ -346,12 +265,6 @@ function completedPhrase(delta: number, units: UnitsPreference, kind: 'weight' |
 function measurementTrend(delta: number, units: UnitsPreference, kind: 'weight' | 'length'): string {
   if (Math.abs(delta) < 0.3) return '→ unchanged';
   return `${delta > 0 ? '↑' : '↓'} ${completedPhrase(delta, units, kind)}`;
-}
-
-function measurementClause(delta: number, units: UnitsPreference, kind: 'weight' | 'length'): string {
-  if (Math.abs(delta) < 0.3) return 'remained relatively stable';
-  const formatted = completedPhrase(delta, units, kind);
-  return delta > 0 ? `increased ${formatted}` : `decreased ${formatted}`;
 }
 
 function trendValue(value: number, formatted: string, flatAt: number): string {

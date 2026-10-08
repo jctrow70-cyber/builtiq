@@ -11,6 +11,78 @@ Branch:
 Status:
 ```
 
+## BIQ-0252 - Nutrition and Body Progress
+
+Date: 2026-10-08
+Branch: main
+Status: Local / in progress
+
+### Summary
+
+Nutrition and Body are now full Progress sections. They use the same date range and the same report as Overview, Strength, and Training. Overview Training now counts workouts and working sets. It no longer adds up muscle exposure and presents that total as performed sets.
+
+### Purpose
+
+Nutrition should show how consistently logged intake lines up with configured targets, training, and body changes. Body should show the measurements that exist, stay writable, and use the selected Progress range. Comparisons stay descriptive. They do not claim that one change caused another.
+
+### Changes
+
+- Overview Training shows workout count, working sets, and adherence when each one is available
+- Nutrition shows logged-day averages, days logged, configured targets, macro trends with gaps for missing days, protein target days, and average calories versus the configured target
+- Nutrition & Performance and Body & Performance read one comparison model built from the report
+- Body shows only measurements that have data, a trend and check-in view, and a rolling weight trend when at least three check-ins exist
+- The check-in form accepts weight, waist, chest, arm, thigh, hip, neck, and body fat. At least one is required
+- Insights stay limited to four and use the comparison wording
+- Equipment-specific strength series are unchanged
+
+### Files changed
+
+- `app/components/progress/ProgressNutrition.tsx`
+- `app/components/progress/ProgressBody.tsx`
+- `app/components/progress/ProgressScreen.tsx`
+- `app/components/progress/ProgressOverview.tsx`
+- `app/components/progress/ProgressTrendChart.tsx`
+- `app/components/BodyProgress.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `lib/progress/comparison.ts`
+- `lib/progress/progressView.ts`
+- `lib/progress/nutrition.ts`
+- `lib/progress/report.ts`
+- `lib/body/measurements.ts`
+- `lib/body/api.ts`
+- `scripts/test-progress-analytics.ts`
+- `scripts/test-progress-view.ts`
+- `scripts/test-body-measurements.ts`
+- `package.json`
+
+### Database changes
+
+None in this pass. Saving chest, arm, thigh, hip, neck, or body fat uses the columns from `20261008_060_progress_snapshot_foundation.sql`. If that migration is not applied, weight and waist still save and the form says the other measurements need the database update.
+
+### Testing steps
+
+- Open Progress and confirm the Training card shows workouts and working sets, not a sum of muscle effective sets
+- Open Nutrition with logged meals and confirm averages ignore days with no entries
+- Switch calories, protein, carbohydrates, and fat and confirm a missing day is a gap
+- Confirm target copy says below or above the configured target, and does not say deficit or surplus
+- Open Body, change the date range, and confirm older check-ins leave the summary
+- Save weight and waist, then open More measurements and save one extra field
+- Confirm Body & Performance and Nutrition & Performance describe the period without saying one metric caused another
+- Resize to a phone width and confirm the tabs scroll and the cards stack
+
+### Known issues
+
+- A configured calorie tolerance does not exist, so calorie consistency is average versus target
+- Workout count uses completed expectations when they exist, and otherwise uses distinct days with working sets
+- Expanded body columns are not stored until migration 060 is applied
+- Best performances remain the strongest sets in the selected range
+- This pass does not add wearables, AI interpretation, or body maps
+
+### Recommended commit message
+
+`BIQ-0252 Show nutrition and body progress beside training`
+
 ## BIQ-0251 - Progress Dashboard Shell
 
 Date: 2026-10-08

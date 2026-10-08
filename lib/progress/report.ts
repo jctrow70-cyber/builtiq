@@ -5,7 +5,7 @@ import { bodyTrends, type BodyMetricTrend } from './bodyTrends';
 import type { BodyMeasurementRow } from '../body/measurements';
 import { nutritionDaysFromEntries, nutritionReport, type NutritionReport, type NutritionTargets } from './nutrition';
 import { comparableWindows, earliestIsoDate, rangeBounds, type DateSpan, type ProgressRange } from './ranges';
-import { setFactFromRow, type ProgressSetFact } from './setFacts';
+import { isCountedWorkingSet, setFactFromRow, type ProgressSetFact } from './setFacts';
 import { buildSeriesWindows, seriesPersonalRecords, type SeriesPr, type SeriesWindows } from './strengthSeries';
 import { buildStrengthIndex, type StrengthIndexConfig, type StrengthIndexResult } from './strengthIndex';
 import { muscleVolumeReport, type MuscleVolumeReport } from './muscleVolume';
@@ -38,6 +38,8 @@ export type ProgressReport = {
   associations: ProgressAssociation[];
   trainingVolume: number;
   previousTrainingVolume: number | null;
+  /** Distinct dates with a counted working set in the selected range. */
+  loggedTrainingDays: number;
 };
 
 export function buildProgressReport(input: ProgressReportInput): ProgressReport {
@@ -82,6 +84,7 @@ export function buildProgressReport(input: ProgressReportInput): ProgressReport 
     }),
     trainingVolume,
     previousTrainingVolume,
+    loggedTrainingDays: new Set(viewFacts.filter(isCountedWorkingSet).map((fact) => fact.logDate)).size,
   };
 }
 

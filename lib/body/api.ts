@@ -69,27 +69,36 @@ export async function saveBodyMeasurement(
     throw new Error('Enter at least one body measurement.');
   }
 
-  const payload = {
+  const payload: Record<string, string | number | null> = {
     user_id: userId,
     measured_on: merged.measured_on,
     weight_lbs: merged.weight_lbs,
     waist_inches: merged.waist_inches,
+    chest_inches: merged.chest_inches,
+    arm_inches: merged.arm_inches,
+    thigh_inches: merged.thigh_inches,
+    hip_inches: merged.hip_inches,
+    neck_inches: merged.neck_inches,
+    body_fat_percent: merged.body_fat_percent,
     notes: merged.notes,
   };
 
-  let saved = await supabase
-    .from('st_body_measurements')
-    .upsert(payload, { onConflict: 'user_id,measured_on' })
-    .select(MEASUREMENT_COLUMNS)
-    .single();
-  if (saved.error) {
-    saved = await supabase
-      .from('st_body_measurements')
-      .upsert(payload, { onConflict: 'user_id,measured_on' })
-      .select(measurementColumnsFor(saved.error.message))
-      .single();
+  const dropped: string[] = [];
+  let saved = await supabase.from('st_body_measurements').upsert(payload, { onConflict: 'user_id,measured_on' }).select(MEASUREMENT_COLUMNS).single();
+  for (let attempt = 0; saved.error && attempt < 8; attempt += 1) {
+    const message = String(saved.error.message || '');
+    const missing = Object.keys(payload).filter((column) => column !== 'user_id' && column !== 'measured_on' && new RegExp(`\\b${column}\\b`, 'i').test(message));
+    if (!missing.length) break;
+    missing.forEach((column) => {
+      dropped.push(column);
+      delete payload[column];
+    });
+    saved = await supabase.from('st_body_measurements').upsert(payload, { onConflict: 'user_id,measured_on' }).select(measurementColumnsFor(message)).single();
   }
   if (saved.error) throw saved.error;
+  if (dropped.some((column) => parsed[column as keyof typeof parsed] != null)) {
+    throw new Error('Weight and waist were saved. Chest, arm, thigh, hip, neck, and body fat need the latest database update.');
+  }
   return saved.data as BodyMeasurementRow;
 }
 
