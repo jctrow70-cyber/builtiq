@@ -1,4 +1,5 @@
 import { inferSessionMuscleQuotasFromText } from '../programDesign/inferSchedule';
+import { resolveHardRequirements } from './generation/hardRequirements';
 import { musclesFromFocusLabels, normalizeMuscleId, type MuscleId } from './taxonomy';
 import type { ExperienceLevel, PrimaryGoal, TrainingProfile, WarmupDurationPref, WarmupStyle, PotentiationPref } from './types';
 
@@ -132,6 +133,14 @@ export function trainingProfileFromSources(input: {
     trainingSplit: String(config.trainingSplit || tp.training_split || ''),
     intakeNotes,
     sessionMuscleQuotas: quotasFromNotes(intakeNotes),
+    hardRequirements: resolveHardRequirements(intakeNotes, {
+      sessionMinutes: Number(config.sessionMinutes) > 0 ? Number(config.sessionMinutes) : Number(tp.preferred_session_minutes) || 60,
+      warmupStyle,
+      warmupDuration,
+      primaryGoal: asGoal(config.primaryGoal || tp.primary_goal || profile.primary_goal),
+      trainingFeel,
+      potentiation: potentiationPreference,
+    }),
   };
 }
 

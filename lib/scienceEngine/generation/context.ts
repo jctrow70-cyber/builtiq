@@ -3,6 +3,7 @@ import { calculateWeeklyVolume, preferredExposuresPerWeek } from '../volume';
 import { maxStrengthMoves, minStrengthMoves } from '../duration';
 import type { RecentLiftSummary } from '../recentTraining';
 import type { CatalogExercise, ScienceProgram, TrainingProfile } from '../types';
+import { resolveHardRequirements } from './hardRequirements';
 import { buildDesignerLibraries } from './library';
 import { GENERATION_SCHEMA_VERSION, type GenerationContext, type GenerationMode } from './types';
 
@@ -21,6 +22,14 @@ export function buildGenerationContext(opts: {
   const libraries = buildDesignerLibraries(catalog, profile);
   const minutes = profile.preferredSessionMinutes || 60;
   const warmupBand = rules.warmupMinutes[profile.warmupDuration] || rules.warmupMinutes.standard;
+  const hardRequirements = resolveHardRequirements([profile.intakeNotes, userPrompt].filter(Boolean).join('\n'), {
+    sessionMinutes: minutes,
+    warmupStyle: profile.warmupStyle,
+    warmupDuration: profile.warmupDuration,
+    primaryGoal: profile.primaryGoal,
+    trainingFeel: profile.trainingFeel,
+    potentiation: profile.potentiationPreference,
+  });
 
   const context: GenerationContext = {
     schema_version: GENERATION_SCHEMA_VERSION,
@@ -66,6 +75,7 @@ export function buildGenerationContext(opts: {
       working_sets_per_exercise: { min: 1, max: 6 },
       typical_strength_moves: { min: minStrengthMoves(minutes), max: maxStrengthMoves(minutes) },
       warmup_minutes: { min: warmupBand[0], max: warmupBand[1] },
+      dynamic_warmup_exercises: { min: hardRequirements.warmupMin, max: hardRequirements.warmupMax },
       no_medical_diagnosis: true,
       excluded_exercise_ids: [],
       equipment_must_match: profile.availableEquipment.length > 0,
@@ -94,6 +104,7 @@ export function buildGenerationContext(opts: {
     candidate_library: libraries.candidate_library,
     warmup_library: libraries.warmup_library,
     cooldown_library: libraries.cooldown_library,
+    hard_requirements: hardRequirements,
   };
 
   return { context, catalogById: libraries.catalogById };

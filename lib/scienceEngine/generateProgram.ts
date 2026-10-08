@@ -73,7 +73,40 @@ function fullBodySlots(variantIndex: number): DaySlot[] {
   return rotations[variantIndex % rotations.length];
 }
 
-function slotsForDay(type: SplitDay['workoutType'], variantIndex: number): DaySlot[] {
+function emphasisSlots(profile: TrainingProfile, variantIndex: number): DaySlot[] | null {
+  const req = profile.hardRequirements;
+  if (!req?.upperPush && !req?.lowerPull) return null;
+  const push: DaySlot[] =
+    variantIndex % 2 === 0
+      ? [
+          { muscle: 'chest', role: 'primary', pattern: 'horizontal_push', preferred: ['Barbell Bench Press', 'Incline Dumbbell Press'], preferPressRange: true },
+          { muscle: 'triceps', role: 'isolation', pattern: 'elbow_extension', preferred: ['Triceps Pushdown'] },
+          { muscle: 'front_delts', role: 'secondary', pattern: 'vertical_push', preferred: ['Overhead Press'] },
+        ]
+      : [
+          { muscle: 'chest', role: 'primary', pattern: 'horizontal_push', preferred: ['Incline Dumbbell Press', 'Barbell Bench Press'], preferPressRange: true },
+          { muscle: 'front_delts', role: 'secondary', pattern: 'vertical_push', preferred: ['Overhead Press'] },
+          { muscle: 'triceps', role: 'isolation', pattern: 'elbow_extension', preferred: ['Triceps Pushdown'] },
+        ];
+  const pull: DaySlot[] =
+    variantIndex % 2 === 0
+      ? [
+          { muscle: 'hamstrings', role: 'primary', pattern: 'hinge', preferred: ['Romanian Deadlift', 'Dumbbell RDL'] },
+          { muscle: 'glutes', role: 'secondary', pattern: 'hinge', preferred: ['Hip Thrust', 'Cable Kickback'] },
+        ]
+      : [
+          { muscle: 'glutes', role: 'primary', pattern: 'hinge', preferred: ['Hip Thrust', 'Single-Leg Hip Thrust'] },
+          { muscle: 'hamstrings', role: 'secondary', pattern: 'hinge', preferred: ['Dumbbell RDL', 'Romanian Deadlift'] },
+        ];
+  const core: DaySlot = { muscle: 'abs', role: 'accessory', preferred: ['Plank'] };
+  if (req.upperPush && req.lowerPull) return [...push, ...pull, core];
+  if (req.upperPush) return [...push, core];
+  return [...pull, core];
+}
+
+function slotsForDay(type: SplitDay['workoutType'], variantIndex: number, profile: TrainingProfile): DaySlot[] {
+  const emphasized = type === 'Cardio' || type === 'Mobility' ? null : emphasisSlots(profile, variantIndex);
+  if (emphasized && (type === 'Full Body' || profile.hardRequirements?.identicalDays)) return emphasized;
   if (type === 'Full Body') return fullBodySlots(variantIndex);
   if (type === 'Upper Body' || type === 'Push') {
     if (variantIndex % 2 === 0) {
@@ -206,7 +239,7 @@ export function generateProgram(profile: TrainingProfile, catalogRows?: any[]): 
     Math.min(12, Number.isFinite(profileWeeks) && profileWeeks >= 1 ? Math.floor(profileWeeks) : rules.blockWeeksDefault)
   );
   const usedThisWeek: string[] = [];
-  const week1 = split.map((day, index) => {
+  const builtWeek = split.map((day, index) => {
     const built = buildWorkout({
       profile,
       catalog,
@@ -216,11 +249,12 @@ export function generateProgram(profile: TrainingProfile, catalogRows?: any[]): 
       remaining,
       sessionBudget,
       sessionCursor,
-      alreadyThisWeek: usedThisWeek,
+      alreadyThisWeek: profile.hardRequirements?.identicalDays ? [] : usedThisWeek,
     });
     usedThisWeek.push(...built.exercises.map((ex) => ex.name));
     return built;
   });
+  const week1 = replicateIdenticalDays(builtWeek, profile);
 
   const workouts: ScienceWorkout[] = [];
   for (let week = 1; week <= weekCount; week += 1) {
@@ -240,15 +274,51 @@ export function generateProgram(profile: TrainingProfile, catalogRows?: any[]): 
       chest
         ? `Chest weekly target is ${chest.targetSets} effective sets because volume starts at the productive end of the ${profile.experienceLevel} range and ${chest.priority === 'high_priority' ? 'priority increases that dose by 20%' : 'volume is not maximized automatically'}.`
         : 'Weekly muscle targets start at the low productive end of each experience band.',
-      'Exercises persist across weeks so progress can be measured. Full-body days rotate different sessions (A/B/C) inside the week; novelty is not used as week-to-week progression.',
+      profile.hardRequirements?.identicalDays
+        ? 'Identical workouts were required, so each training day uses the same session.'
+        : 'Exercises persist across weeks so progress can be measured. Full-body days rotate different sessions (A/B/C) inside the week; novelty is not used as week-to-week progression.',
     ],
   };
+  const emphasisConflict = emphasisGap(week1[0], profile);
+  if (emphasisConflict) program.explanations.push(emphasisConflict);
 
   const validation = validateProgram(program, profile);
   if (!validation.ok) {
     program.explanations.push(`Validator warnings: ${validation.issues.map((i) => i.message).join(' ')}`);
   }
   return program;
+}
+
+function replicateIdenticalDays(days: ScienceWorkout[], profile: TrainingProfile): ScienceWorkout[] {
+  if (!profile.hardRequirements?.identicalDays || days.length < 2) return days;
+  const template = days.find((day) => day.workoutType !== 'Cardio' && day.workoutType !== 'Mobility') || days[0];
+  const name =
+    profile.hardRequirements.upperPush && profile.hardRequirements.lowerPull
+      ? 'Upper Push / Lower Pull'
+      : profile.hardRequirements.upperPush
+        ? 'Upper Push'
+        : profile.hardRequirements.lowerPull
+          ? 'Lower Pull'
+          : template.workoutType || 'Session';
+  return days.map((day) => {
+    if (day.workoutType === 'Cardio' || day.workoutType === 'Mobility') return day;
+    const copy = JSON.parse(JSON.stringify(template)) as ScienceWorkout;
+    copy.dayLabel = day.dayLabel;
+    copy.name = name;
+    return copy;
+  });
+}
+
+function emphasisGap(workout: ScienceWorkout | undefined, profile: TrainingProfile): string | null {
+  if (!workout) return null;
+  const req = profile.hardRequirements;
+  if (!req?.upperPush && !req?.lowerPull) return null;
+  const patterns = new Set(workout.exercises.map((ex) => ex.movementPattern));
+  const missing: string[] = [];
+  if (req.upperPush && !patterns.has('horizontal_push') && !patterns.has('vertical_push')) missing.push('upper-body push');
+  if (req.lowerPull && !patterns.has('hinge')) missing.push('lower-body pull');
+  if (!missing.length) return null;
+  return `Could not place the requested ${missing.join(' and ')} emphasis with the available exercises.`;
 }
 
 function buildWorkout(opts: {
@@ -279,7 +349,8 @@ function buildWorkout(opts: {
   const exercises: ExercisePrescription[] = [];
   const variantIndex =
     split.slice(0, index + 1).filter((d) => d.workoutType === day.workoutType).length - 1;
-    const slots = withPriorityMuscleSlots(slotsForDay(day.workoutType, Math.max(0, variantIndex)), day, profile, Math.max(0, variantIndex));
+    const slotVariant = profile.hardRequirements?.identicalDays ? 0 : Math.max(0, variantIndex);
+    const slots = withPriorityMuscleSlots(slotsForDay(day.workoutType, slotVariant, profile), day, profile, slotVariant);
   const maxMoves = maxStrengthMoves(profile.preferredSessionMinutes);
   const weekNames = profile.varietyPreference === 'high' ? already : sessionNames;
 
@@ -343,6 +414,14 @@ function buildWorkout(opts: {
     sessionPatterns: exercises.map((ex) => ex.movementPattern),
   });
   const primer = generatePotentiation({ profile, primary: primaryCatalog, catalog });
+  const primerNames = new Set(primer.items.map((item) => item.name.toLowerCase()));
+  const warmupSeen = new Set<string>();
+  warmup.items = warmup.items.filter((item) => {
+    const key = item.name.toLowerCase();
+    if (warmupSeen.has(key) || primerNames.has(key)) return false;
+    warmupSeen.add(key);
+    return true;
+  });
   const workingLoad = workingLoadFor(profile, primary?.name || '');
   const rampSets =
     primary && isPrimaryLift(primary.name) && /bench/i.test(primary.name) && workingLoad === 185

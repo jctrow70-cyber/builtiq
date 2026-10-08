@@ -1,3 +1,4 @@
+import type { HardRequirements } from './generation/hardRequirements';
 import type { MovementPatternId, MuscleId } from './taxonomy';
 
 export type PrimaryGoal =
@@ -90,6 +91,8 @@ export type TrainingProfile = {
   intakeNotes?: string;
   /** Per-session minimum dedicated lifts, from notes such as "2 glute exercises per day". */
   sessionMuscleQuotas?: Partial<Record<MuscleId, number>>;
+  /** Parsed from the request. Absent on older in-memory profiles. */
+  hardRequirements?: HardRequirements;
 };
 
 export type CatalogExercise = {

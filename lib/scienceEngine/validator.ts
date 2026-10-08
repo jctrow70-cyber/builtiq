@@ -1,3 +1,4 @@
+import { warmupExerciseBounds } from './generation/hardRequirements';
 import type { ScienceProgram, TrainingProfile, ValidationIssue, ValidationResult } from './types';
 import { preferredExposuresPerWeek } from './volume';
 
@@ -17,8 +18,18 @@ export function validateProgram(program: ScienceProgram, profile: TrainingProfil
     if (workout.estimatedMinutes > (profile.preferredSessionMinutes || 60) + 15) {
       issues.push(warn('DURATION', `${workout.name} may exceed the ${profile.preferredSessionMinutes} minute cap.`));
     }
-    if (!addonDay && profile.warmupStyle !== 'minimal' && workout.warmup.length < 3) {
+    const warmupBounds = profile.hardRequirements
+      ? { min: profile.hardRequirements.warmupMin, max: profile.hardRequirements.warmupMax }
+      : warmupExerciseBounds({
+          sessionMinutes: profile.preferredSessionMinutes,
+          warmupStyle: profile.warmupStyle,
+          warmupDuration: profile.warmupDuration,
+        });
+    if (!addonDay && profile.warmupStyle !== 'minimal' && workout.warmup.length < warmupBounds.min) {
       issues.push(err('WARMUP', `${workout.name} warm-up is too thin for a dynamic preparation block.`));
+    }
+    if (!addonDay && workout.warmup.length > warmupBounds.max) {
+      issues.push(err('WARMUP', `${workout.name} has ${workout.warmup.length} dynamic warm-ups; keep it to ${warmupBounds.max}.`));
     }
     if (!addonDay && profile.potentiationPreference !== 'off' && workout.exercises.some((ex) => ex.role === 'primary') && !workout.potentiation.length) {
       issues.push(warn('PRIMER', `${workout.name} is missing a Power Primer.`));

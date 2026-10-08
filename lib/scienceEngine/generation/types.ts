@@ -1,3 +1,5 @@
+import type { HardRequirements } from './hardRequirements';
+
 export const GENERATION_SCHEMA_VERSION = '2.1';
 
 export type GenerationMode = 'full_program' | 'single_session';
@@ -71,6 +73,7 @@ export type GenerationContext = {
     working_sets_per_exercise: { min: number; max: number };
     typical_strength_moves: { min: number; max: number };
     warmup_minutes: { min: number; max: number };
+    dynamic_warmup_exercises: { min: number; max: number };
     no_medical_diagnosis: true;
     excluded_exercise_ids: string[];
     equipment_must_match: boolean;
@@ -99,6 +102,7 @@ export type GenerationContext = {
   candidate_library: DesignerExercise[];
   warmup_library: DesignerExercise[];
   cooldown_library: DesignerExercise[];
+  hard_requirements: HardRequirements;
 };
 
 export type AiRampSet = {

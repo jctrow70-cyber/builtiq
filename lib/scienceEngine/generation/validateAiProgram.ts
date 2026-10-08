@@ -46,6 +46,7 @@ export function validateAiProgram(
   });
 
   validatePrimaryFrequency(week1, library, context, issues);
+  validateIdenticalDays(week1, context, issues);
   validateWeeklyVolume(week1, library, catalogById, context, issues);
   validatePatternCoverage(week1, library, context, issues);
   validateSupersetPreference(week1, context, issues);
@@ -129,6 +130,7 @@ function validateWorkout(
   };
 
   workout.warmup.forEach((item) => checkItem(item, 'warmup'));
+  validateWarmupList(workout, context, issues);
   workout.potentiation.forEach((item) => checkItem(item, 'potentiation'));
   workout.cooldown.forEach((item) => checkItem(item, 'cooldown'));
 
@@ -399,12 +401,56 @@ function validateStimulus(
   }
 }
 
+function validateWarmupList(workout: AiWorkoutPlan, context: GenerationContext, issues: ValidationIssue[]) {
+  const ids = (workout.warmup || []).map((item) => item.exercise_id).filter(Boolean);
+  const unique = new Set(ids);
+  if (ids.length !== unique.size) {
+    issues.push(err('DUPLICATE_WARMUP', `${workout.name} repeats a dynamic warm-up.`, workout.day_label));
+  }
+  const max = context.constraints.dynamic_warmup_exercises?.max ?? context.hard_requirements?.warmupMax ?? 4;
+  if (unique.size > max) {
+    issues.push(
+      err(
+        'WARMUP_COUNT',
+        `${workout.name} has ${unique.size} dynamic warm-ups; keep it to ${max}.`,
+        workout.day_label
+      )
+    );
+  }
+}
+
+function validateIdenticalDays(workouts: AiWorkoutPlan[], context: GenerationContext, issues: ValidationIssue[]) {
+  if (!context.hard_requirements?.identicalDays) return;
+  const strengthDays = workouts.filter((workout) => !isAddon(workout, context));
+  if (strengthDays.length < 2) return;
+  const signature = (workout: AiWorkoutPlan) =>
+    [
+      flattenStrength(workout)
+        .map((ex) => `${ex.exercise_id}:${ex.working_sets}:${ex.rep_min}-${ex.rep_max}:${ex.target_rir}`)
+        .join('|'),
+      (workout.warmup || []).map((item) => item.exercise_id).join('|'),
+    ].join('#');
+  const expected = signature(strengthDays[0]);
+  strengthDays.slice(1).forEach((workout) => {
+    if (signature(workout) !== expected) {
+      issues.push(
+        err(
+          'IDENTICAL_DAYS',
+          `${workout.name || workout.day_label} does not match the required identical session.`,
+          workout.day_label
+        )
+      );
+    }
+  });
+}
+
 function validatePrimaryFrequency(
   workouts: AiWorkoutPlan[],
   library: Map<string, DesignerExercise>,
   context: GenerationContext,
   issues: ValidationIssue[]
 ) {
+  if (context.hard_requirements?.identicalDays) return;
   const fullBody = workouts.filter((w) => requestedType(w, context) === 'Full Body');
   if (fullBody.length < 2) return;
   const byPrimary = new Map<string, Array<{ workout: AiWorkoutPlan; ex: AiStrengthExercise }>>();
@@ -469,11 +515,24 @@ function validateWeeklyVolume(
   });
 
   const hypertrophy = goalUsesHypertrophyBias(context.athlete.primary_goal as any);
+  const waived = new Set(context.hard_requirements?.waivedMajorMuscles || []);
+  const required = new Set(context.hard_requirements?.requiredMuscles || []);
   context.weekly_volume_targets.forEach((target) => {
     const got = credits[target.muscle] || 0;
     const ratio = target.target_working_sets > 0 ? got / target.target_working_sets : 1;
     const tier = muscleTier(target.muscle, target.priority);
     const over = ratio > 1.6;
+
+    if (required.has(target.muscle) && got < 1) {
+      issues.push(err('VOLUME_OFF', `Required emphasis ${target.muscle} has no working-set credit.`));
+      return;
+    }
+    if (waived.has(target.muscle)) {
+      if (got < 1 || ratio < 0.5 || over) {
+        issues.push(warn('VOLUME_OFF', `${target.muscle} is outside the requested emphasis (${got} vs ${target.target_working_sets}).`));
+      }
+      return;
+    }
 
     if (tier === 'major') {
       if (got < 1) {

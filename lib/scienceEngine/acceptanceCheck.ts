@@ -13,6 +13,7 @@ import { findByName } from './exerciseSelection';
 import { summarizeRecentLogs } from './recentTraining';
 import { evaluateProgression } from './progression';
 import { validateProgram } from './validator';
+import { runInstructionAdherenceChecks } from './generation/instructionAdherenceCheck';
 import { runPhase1GenerationChecks } from './generation/phase1Check';
 import { runGenerationCatalogPolicyChecks } from './generation/catalogEligibilityCheck';
 import { runCatalogCleanupChecks } from '../training/catalogCleanupCheck';
@@ -72,7 +73,7 @@ async function run() {
   assert(bench!.targetRir === 2, `Bench RIR should be 2, got ${bench!.targetRir}`);
 
   const warmupNames = upperA!.warmup.map((w) => w.name.toLowerCase()).join(' | ');
-  assert(upperA!.warmup.length >= 3, `Upper A warm-up should have at least 3 moves, got ${warmupNames}`);
+  assert(upperA!.warmup.length >= 2 && upperA!.warmup.length <= 4, `Upper A warm-up should be 2-4 moves, got ${warmupNames}`);
   assert(/push-up|row|scapular|thoracic/i.test(warmupNames), `Upper A warm-up should prep press/row patterns, got ${warmupNames}`);
 
   const primer = upperA!.potentiation[0];
@@ -548,6 +549,7 @@ async function run() {
   runCatalogCleanupChecks();
   runGenerationCatalogPolicyChecks();
   await runPhase1GenerationChecks();
+  await runInstructionAdherenceChecks();
   runPhase2a1FoundationChecks();
   runPhase2a2DecisionChecks();
   runPhase2a3ApplyChecks();

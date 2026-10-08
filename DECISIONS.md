@@ -19,6 +19,32 @@ Impact:
 
 ---
 
+## Decision 091 - Identical Days and Warm-Up Count Are Hard Constraints
+
+Date: 2026-10-07
+Status: Accepted
+Category: Program Generation
+
+### Decision
+
+When the request says the workouts must be identical, build one session and copy it onto each requested training day. That rule applies to the designer prompt, repair, and science fallback. A stated upper-body push or lower-body pull emphasis waives the hard missing-volume error only for the opposite major muscles. Standard 60-minute sessions use 2–4 unique dynamic warm-ups. Ramp sets stay on the lift. Athletic primers stay in potentiation. An extended or athletic warm-up preference may use up to 6 dynamic drills.
+
+### Reason
+
+The October 7 baseball program asked for two identical workouts and a push/pull emphasis. GPT-5.4 was called, repair could not clear an unknown exercise id, and science fallback replaced the week with different Full Body A and Full Body B sessions plus a six-move warm-up template.
+
+### Alternatives Considered
+
+- Rebuild the generator — rejected; the pipeline already validates and repairs
+- Treat every note as a hard error — rejected; most notes are preferences
+- Count primers and ramp sets inside the 2–4 warm-up cap — rejected; they are different parts of the session
+
+### Impact
+
+Normal three-day full-body programs still rotate A/B/C. Existing programs and logged sets are not rewritten. No schema change.
+
+---
+
 ## Decision 090 - GHD Sit-Up Is Its Own Master Card
 
 Date: 2026-10-07

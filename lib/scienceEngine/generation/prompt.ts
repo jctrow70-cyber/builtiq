@@ -68,6 +68,16 @@ export function slimContextForPrompt(context: GenerationContext) {
       laterality_rule: context.constraints.laterality_rule,
       equipment_must_match: context.constraints.equipment_must_match,
       no_medical_diagnosis: true,
+      warmup_minutes: context.constraints.warmup_minutes,
+      dynamic_warmup_exercises: context.constraints.dynamic_warmup_exercises,
+    },
+    hard_requirements: {
+      identical_days: context.hard_requirements.identicalDays,
+      upper_push: context.hard_requirements.upperPush,
+      lower_pull: context.hard_requirements.lowerPull,
+      required_muscles: context.hard_requirements.requiredMuscles,
+      waived_major_muscles: context.hard_requirements.waivedMajorMuscles,
+      extended_warmup: context.hard_requirements.extendedWarmup,
     },
     weekly_volume_targets: context.weekly_volume_targets.map((t) => ({
       muscle: t.muscle,
@@ -84,16 +94,35 @@ export function slimContextForPrompt(context: GenerationContext) {
 
 export function buildDesignerInstructions(context: GenerationContext): string {
   const single = context.request.mode === 'single_session';
+  const hard = context.hard_requirements;
+  const identical = Boolean(hard?.identicalDays) && !single;
+  const warmup = context.constraints.dynamic_warmup_exercises || { min: 2, max: 4 };
+  const opener = single
+    ? 'Design ONE training session for the supplied day.'
+    : identical
+      ? 'Design ONE training session and repeat that same session on every supplied day. Identical workouts are required.'
+      : 'Design ONE complete training WEEK. Sessions must complement each other as A/B/C, not cloned days.';
+  const cloneRule = identical
+    ? '- Repeat the same exercise_ids, sets, reps, RIR, warm-up, potentiation, and emphasis on every requested day. Day labels stay different.'
+    : '- Do not copy the same identical primary prescription onto every similar day.';
+  const emphasisBits = [
+    hard?.upperPush ? 'upper-body push (chest, pressing, triceps)' : '',
+    hard?.lowerPull ? 'lower-body pull (hamstrings, glutes, hinge)' : '',
+  ].filter(Boolean);
+  const emphasisRule = emphasisBits.length
+    ? `- Hard emphasis: ${emphasisBits.join('; ')}. Keep that emphasis. Major muscles outside it are optional this week.`
+    : '';
+  const warmupBand = context.constraints.warmup_minutes;
   return `You are the program designer for BuiltIQ Health (science ${SCIENCE_ENGINE_VERSION}, ${DESIGNER_PROMPT_VERSION}).
 
-${single ? 'Design ONE training session for the supplied day.' : 'Design ONE complete training WEEK. Sessions must complement each other as A/B/C, not cloned days.'}
+${opener}
 
 Use only exercise_id values from exercise_library. Warm-up IDs must be in warmup_ids. Cooldown IDs must be in cooldown_ids. Potentiation IDs must be in power_ids. Never invent IDs.
 
 You own:
 - exercise selection and order
-- complementary day structure and session emphasis
-- accessory variation across the week
+- ${identical ? 'one session repeated on each requested day' : 'complementary day structure and session emphasis'}
+- ${identical ? 'the same accessories on every day' : 'accessory variation across the week'}
 - whether/where a superset is useful
 - optional potentiation (empty array is valid)
 
@@ -105,7 +134,9 @@ Hard constraints:
 - RIR ${context.constraints.rir_min}-${context.constraints.rir_max}. Working sets per exercise ${context.constraints.working_sets_per_exercise.min}-${context.constraints.working_sets_per_exercise.max}.
 - Honor excluded exercises, pain areas, and limitations. Do not diagnose injury.
 - Equipment must match the athlete list. Bodyweight mobility is allowed.
-- Do not copy the same identical primary prescription onto every similar day.
+${cloneRule}
+${emphasisRule}
+- Dynamic warm-up: ${warmup.min}-${warmup.max} unique exercises from warmup_ids. No duplicate exercise_ids. Warm-up time target is ${warmupBand.min}-${warmupBand.max} minutes. ${hard?.extendedWarmup ? 'An extended or athletic warm-up was requested, so the top of that range is allowed.' : 'Do not add filler warm-up drills.'} Leave ramp sets out. Athletic primers belong in potentiation, not warmup.
 
 Roles (session purpose):
 - primary: 1-2 main loaded movements. A 60-minute full-body day may have two if they are different patterns.
@@ -113,7 +144,7 @@ Roles (session purpose):
 - accessory / isolation: extra work. Do not label every exercise primary.
 
 Programming intent:
-- Cover major hypertrophy muscles (chest, upper back, lats, quads, hamstrings, glutes) across the week.
+- ${emphasisBits.length ? 'Honor the hard emphasis. Do not replace it with a generic full-body checklist.' : 'Cover major hypertrophy muscles (chest, upper back, lats, quads, hamstrings, glutes) across the week.'}
 - Superset preference is "${context.athlete.superset_preference}". "sometimes" means at least one non-competing pair in the week, not a pair in every session. Never pair two high-fatigue compounds.
 - Warm-up prepares THAT day's lifts. Cooldown is stretch/mobility/breathing only.
 - Potentiation is optional neural prep, not hypertrophy work. Jumps/throws stay low-rep and explosive (about 2-3 x 3-5). Ballistic swings may use a slightly higher crisp range. Do not prescribe 8-15 or working-set RIR on primers.

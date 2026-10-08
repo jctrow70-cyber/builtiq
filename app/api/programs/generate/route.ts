@@ -316,8 +316,12 @@ async function generateProgramPost(request: Request) {
   };
 
   let plan = scienceProgramToAiPlan(scienceProgram, config);
-  if (pipeline.run.program?.summary) plan.program_summary = String(pipeline.run.program.summary);
-  if (pipeline.run.program?.coaching_notes) plan.coaching_notes = String(pipeline.run.program.coaching_notes);
+  if (pipeline.method !== 'science_fallback' && pipeline.run.program?.summary) {
+    plan.program_summary = String(pipeline.run.program.summary);
+  }
+  if (pipeline.method !== 'science_fallback' && pipeline.run.program?.coaching_notes) {
+    plan.coaching_notes = String(pipeline.run.program.coaching_notes);
+  }
   const builtinCatalog = builtinCatalogItems(catalog || []);
 
   let programId: string | null = null;

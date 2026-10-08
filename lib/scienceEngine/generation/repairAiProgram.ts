@@ -41,6 +41,23 @@ export function repairAiProgram(
   });
   repairWeeklyVolume(next, context, library, catalogById, repairs);
   (next.workouts || []).forEach((workout) => efficiencyPass(workout, context, library, repairs));
+  const constrained = enforceSessionConstraints(next, context, catalogById);
+  return { program: constrained.program, repairs: [...repairs, ...constrained.repairs] };
+}
+
+export function enforceSessionConstraints(
+  program: AiWeekProgram,
+  context: GenerationContext,
+  _catalogById: Map<string, CatalogExercise>
+): { program: AiWeekProgram; repairs: DeterministicRepair[] } {
+  const next = JSON.parse(JSON.stringify(program)) as AiWeekProgram;
+  const repairs: DeterministicRepair[] = [];
+  const library = libraryFromContext(context);
+  (next.workouts || []).forEach((workout) => {
+    dropUnknownStrength(workout, library, repairs);
+    capDynamicWarmup(workout, context, library, repairs);
+  });
+  copyIdenticalDays(next, context, repairs);
   return { program: next, repairs };
 }
 
@@ -62,6 +79,101 @@ function libraryFromContext(context: GenerationContext) {
     library.set(ex.exercise_id, ex)
   );
   return library;
+}
+
+function dropUnknownStrength(
+  workout: AiWorkoutPlan,
+  library: Map<string, DesignerExercise>,
+  repairs: DeterministicRepair[]
+) {
+  workout.strength = (workout.strength || [])
+    .map((block) => ({
+      ...block,
+      exercises: (block.exercises || []).filter((ex) => {
+        if (findDesignerById(library, ex.exercise_id)) return true;
+        repairs.push({
+          code: 'UNKNOWN_EXERCISE_ID',
+          action: `Removed unknown exercise ${ex.exercise_id}`,
+          day_label: workout.day_label,
+          exercise_id: ex.exercise_id,
+        });
+        return false;
+      }),
+    }))
+    .filter((block) => block.exercises.length);
+}
+
+function capDynamicWarmup(
+  workout: AiWorkoutPlan,
+  context: GenerationContext,
+  library: Map<string, DesignerExercise>,
+  repairs: DeterministicRepair[]
+) {
+  const max = context.constraints.dynamic_warmup_exercises?.max ?? context.hard_requirements?.warmupMax ?? 4;
+  const seen = new Set<string>();
+  const kept: AiPrepItem[] = [];
+  (workout.warmup || []).forEach((item) => {
+    if (!item?.exercise_id || seen.has(item.exercise_id)) {
+      repairs.push({
+        code: 'DUPLICATE_WARMUP',
+        action: `Removed duplicate warm-up ${library.get(item.exercise_id)?.name || item.exercise_id || 'item'}`,
+        day_label: workout.day_label,
+        exercise_id: item?.exercise_id,
+      });
+      return;
+    }
+    seen.add(item.exercise_id);
+    kept.push(item);
+  });
+  while (kept.length > max) {
+    const drop = kept.pop();
+    repairs.push({
+      code: 'WARMUP_COUNT',
+      action: `Removed extra warm-up ${library.get(drop?.exercise_id || '')?.name || drop?.exercise_id} to stay within ${max}`,
+      day_label: workout.day_label,
+      exercise_id: drop?.exercise_id,
+    });
+  }
+  workout.warmup = kept;
+}
+
+function copyIdenticalDays(program: AiWeekProgram, context: GenerationContext, repairs: DeterministicRepair[]) {
+  if (!context.hard_requirements?.identicalDays) return;
+  const days = program.workouts || [];
+  const template = days.find((workout) => !isScheduleAddon(workout, context));
+  if (!template) return;
+  days.forEach((day) => {
+    if (day === template || isScheduleAddon(day, context)) return;
+    const same =
+      strengthSignature(day) === strengthSignature(template) &&
+      (day.warmup || []).map((item) => item.exercise_id).join('|') ===
+        (template.warmup || []).map((item) => item.exercise_id).join('|');
+    day.name = template.name;
+    day.emphasis = template.emphasis;
+    day.estimated_minutes = template.estimated_minutes;
+    day.warmup = JSON.parse(JSON.stringify(template.warmup || []));
+    day.potentiation = JSON.parse(JSON.stringify(template.potentiation || []));
+    day.strength = JSON.parse(JSON.stringify(template.strength || []));
+    day.cooldown = JSON.parse(JSON.stringify(template.cooldown || []));
+    if (!same) {
+      repairs.push({
+        code: 'IDENTICAL_DAYS',
+        action: `Copied ${template.day_label} onto ${day.day_label} because identical workouts were required`,
+        day_label: day.day_label,
+      });
+    }
+  });
+}
+
+function strengthSignature(workout: AiWorkoutPlan): string {
+  return flattenStrength(workout)
+    .map((ex) => `${ex.exercise_id}:${ex.working_sets}:${ex.rep_min}-${ex.rep_max}:${ex.target_rir}`)
+    .join('|');
+}
+
+function isScheduleAddon(workout: AiWorkoutPlan, context: GenerationContext): boolean {
+  const type = context.schedule.days.find((day) => day.day_label === workout.day_label)?.requested_type || '';
+  return type === 'Cardio' || type === 'Mobility';
 }
 
 function flattenStrength(workout: AiWorkoutPlan): AiStrengthExercise[] {
@@ -743,20 +855,25 @@ function repairWeeklyVolume(
   catalogById: Map<string, CatalogExercise>,
   repairs: DeterministicRepair[]
 ) {
-  if (!goalUsesHypertrophyBias(context.athlete.primary_goal as any)) return;
+  if (!goalUsesHypertrophyBias(context.athlete.primary_goal as any) && !(context.hard_requirements?.requiredMuscles || []).length) return;
   const workouts = program.workouts || [];
   if (!workouts.length) return;
+  const identical = Boolean(context.hard_requirements?.identicalDays);
+  const scope = identical ? workouts.slice(0, 1) : workouts;
+  const sessions = identical ? Math.max(1, workouts.length) : 1;
+  const waived = new Set(context.hard_requirements?.waivedMajorMuscles || []);
 
   context.weekly_volume_targets.forEach((target) => {
     const tier = muscleTier(target.muscle, target.priority);
     if (tier !== 'major') return;
+    if (waived.has(target.muscle as MuscleId)) return;
     for (let step = 0; step < 4; step += 1) {
-      const credits = weeklyCredits(workouts, library, catalogById);
-      const got = credits[target.muscle] || 0;
+      const credits = weeklyCredits(scope, library, catalogById);
+      const got = (credits[target.muscle] || 0) * sessions;
       const ratio = target.target_working_sets > 0 ? got / target.target_working_sets : 1;
       if (got >= 1 && ratio >= 0.5) return;
 
-      const existing = findExistingCreditExercise(workouts, library, catalogById, target.muscle);
+      const existing = findExistingCreditExercise(scope, library, catalogById, target.muscle);
       const existingMeta = existing ? library.get(existing.ex.exercise_id) : null;
       const perSet = existingMeta ? creditsForExercise(existingMeta, catalogById, 1)[target.muscle] || 0 : 0;
       if (existing && existing.ex.working_sets < 6 && perSet >= 1) {
@@ -770,7 +887,7 @@ function repairWeeklyVolume(
         continue;
       }
 
-      const added = addLibraryIsolation(workouts, context, library, catalogById, target.muscle);
+      const added = addLibraryIsolation(scope, context, library, catalogById, target.muscle);
       if (!added) return;
       repairs.push({
         code: 'VOLUME_OFF',
@@ -778,11 +895,11 @@ function repairWeeklyVolume(
         day_label: added.day,
         exercise_id: added.exercise_id,
       });
-      const day = workouts.find((w) => w.day_label === added.day);
+      const day = scope.find((w) => w.day_label === added.day);
       if (day) trimDuration(day, context, library, repairs, new Set([added.exercise_id]));
     }
   });
-  workouts.forEach((workout) => trimDuration(workout, context, library, repairs));
+  scope.forEach((workout) => trimDuration(workout, context, library, repairs));
 }
 
 function findExistingCreditExercise(

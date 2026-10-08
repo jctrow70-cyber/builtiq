@@ -5,12 +5,13 @@ import type { CatalogExercise, ScienceProgram, TrainingProfile } from '../types'
 import type { RecentLiftSummary } from '../recentTraining';
 import { adaptGenerationCatalog } from './catalogEligibility';
 import { buildGenerationContext } from './context';
+import { applyRequestToProfile } from './hardRequirements';
 import { libraryById } from './library';
 import { persistGenerationRun } from './log';
 import { mapAiWeekToScience } from './mapper';
 import { programModelName, requestWeekProgram, type ModelCallResult } from './openaiClient';
 import { buildDesignerInstructions, buildDesignerUserContent } from './prompt';
-import { applyDurationEfficiency, repairAiProgram } from './repairAiProgram';
+import { applyDurationEfficiency, enforceSessionConstraints, repairAiProgram } from './repairAiProgram';
 import { validateAiProgram } from './validateAiProgram';
 import type {
   AiWeekProgram,
@@ -53,14 +54,15 @@ export async function runGenerationPipeline(opts: {
   const started = Date.now();
   const mode = opts.mode || 'full_program';
   const catalog = adaptGenerationCatalog(opts.catalog);
-  const science = generateProgram(opts.profile, catalog);
-  const scienceCheck = validateProgram(science, opts.profile);
+  const profile = applyRequestToProfile(opts.profile, opts.userPrompt);
+  const science = generateProgram(profile, catalog);
+  const scienceCheck = validateProgram(science, profile);
   if (!scienceCheck.ok) {
     throw new Error(scienceCheck.issues.map((i) => i.message).join('; ') || 'Science engine validation failed');
   }
 
   const { context, catalogById } = buildGenerationContext({
-    profile: opts.profile,
+    profile,
     program: science,
     catalog,
     userPrompt: opts.userPrompt,
@@ -101,14 +103,19 @@ export async function runGenerationPipeline(opts: {
   const lastError = call.error;
   const rawAiProgram = call.program;
   let working = call.program;
-  const initialValidation = validateAiProgram(working, context, catalogById);
   let repairs: DeterministicRepair[] = [];
+  if (working) {
+    const constrained = enforceSessionConstraints(working, context, catalogById);
+    working = constrained.program;
+    repairs = constrained.repairs;
+  }
+  const initialValidation = validateAiProgram(working, context, catalogById);
   let validation = initialValidation;
 
   if (working && !validation.ok) {
     const repaired = repairAiProgram(working, context, catalogById);
     working = repaired.program;
-    repairs = repaired.repairs;
+    repairs = [...repairs, ...repaired.repairs];
     validation = validateAiProgram(working, context, catalogById);
   } else if (working && validation.issues.some((issue) => issue.code === 'DURATION_OVER' && issue.severity === 'warning')) {
     const tightened = applyDurationEfficiency(working, context, catalogById);
@@ -121,7 +128,7 @@ export async function runGenerationPipeline(opts: {
 
   const unusable = !working || !validation.ok || Boolean(lastError);
   if (!unusable && working) {
-    const mapped = mapAiWeekToScience(working, science, opts.profile, catalogById, library);
+    const mapped = mapAiWeekToScience(working, science, profile, catalogById, library);
     return finish({
       science: mapped,
       context,

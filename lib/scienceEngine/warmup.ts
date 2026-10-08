@@ -1,3 +1,4 @@
+import { warmupExerciseBounds } from './generation/hardRequirements';
 import { getScienceRules } from './rules';
 import type { CatalogExercise, SplitDayType, TrainingProfile, WarmupItem } from './types';
 import type { MuscleId } from './taxonomy';
@@ -65,13 +66,28 @@ export function generateWarmup(opts: {
   const style = opts.profile.warmupStyle || 'dynamic';
   const durationPref = opts.profile.warmupDuration || 'standard';
   const rounds = style === 'minimal' ? 1 : durationPref === 'extended' ? 3 : rules.warmupRounds;
+  const bounds = opts.profile.hardRequirements
+    ? { min: opts.profile.hardRequirements.warmupMin, max: opts.profile.hardRequirements.warmupMax }
+    : warmupExerciseBounds({
+        sessionMinutes: opts.profile.preferredSessionMinutes,
+        warmupStyle: style,
+        warmupDuration: durationPref,
+      });
   const templateId = warmupTemplateFor(opts.workoutType, opts.muscles);
-  const fromSession = sessionPrepMoves(opts.sessionPatterns || []);
+  const fromSession = sessionPrepMoves(opts.sessionPatterns || [], Math.max(bounds.max, 5));
   // Upper/chest templates stay on upper prep. Session squat/lunge primers are for mixed or lower days.
   const useSessionPrep = templateId !== 'upper_body' && fromSession.length >= 3;
-  let moves = useSessionPrep ? fromSession : WARMUP_TEMPLATES[templateId];
-  if (style === 'minimal') moves = moves.slice(0, 3);
-  if (durationPref === 'quick') moves = moves.slice(0, 4);
+  let moves = dedupeMoves(useSessionPrep ? fromSession : WARMUP_TEMPLATES[templateId]);
+  const seen = new Set(moves.map((move) => move.name.toLowerCase()));
+  if (moves.length < bounds.min) {
+    for (const extra of WARMUP_TEMPLATES[templateId]) {
+      if (moves.length >= bounds.min) break;
+      if (seen.has(extra.name.toLowerCase())) continue;
+      seen.add(extra.name.toLowerCase());
+      moves.push(extra);
+    }
+  }
+  moves = moves.slice(0, bounds.max);
 
   const items = toWarmupItems(moves, rounds).map((item) => {
     const hit = findByName(opts.catalog, item.name);
@@ -83,17 +99,29 @@ export function generateWarmup(opts: {
   return { items, fatigueScore, durationMinutes };
 }
 
-function sessionPrepMoves(patterns: string[]): LibraryMove[] {
+function sessionPrepMoves(patterns: string[], max: number): LibraryMove[] {
   const seen = new Set<string>();
   const moves: LibraryMove[] = [];
   for (const pattern of patterns) {
     for (const move of PREP_BY_PATTERN[pattern] || []) {
-      if (seen.has(move.name) || moves.length >= 5) continue;
+      if (seen.has(move.name) || moves.length >= max) continue;
       seen.add(move.name);
       moves.push(move);
     }
   }
   return moves;
+}
+
+function dedupeMoves(moves: LibraryMove[]): LibraryMove[] {
+  const seen = new Set<string>();
+  const out: LibraryMove[] = [];
+  moves.forEach((move) => {
+    const key = move.name.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push(move);
+  });
+  return out;
 }
 
 export function warmupFatigueLabel(score: number): 'very_low' | 'low' | 'moderate' {
