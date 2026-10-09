@@ -29,7 +29,12 @@ export function validateProgramQuality(program: ScienceProgram, sessionMinutes =
     }
 
     const patternList = fullBody.flatMap((w) => w.exercises.map((e) => String(e.movementPattern)));
+    const maintenance = (muscle: string) => program.volumeTargets?.find((target) => target.muscle === muscle)?.priority === 'maintenance';
+    const skipSquat = maintenance('quads');
+    const skipPull = maintenance('upper_back') && maintenance('lats');
     ['squat', 'hinge', 'horizontal_push', 'horizontal_pull'].forEach((need) => {
+      if (need === 'squat' && skipSquat) return;
+      if (need === 'horizontal_pull' && skipPull) return;
       const hit = patternList.some((p) => {
         const value = String(p);
         if (value === need || value.includes(need)) return true;

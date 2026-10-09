@@ -643,6 +643,9 @@ function validatePatternCoverage(
   issues: ValidationIssue[]
 ) {
   if (workouts.length < 3) return;
+  const req = context.hard_requirements;
+  const skipPull = Boolean(req?.upperPush);
+  const skipSquat = Boolean(req?.lowerPull);
   const counts: Record<string, number> = {};
   workouts.forEach((w) => {
     flattenStrength(w).forEach((ex) => {
@@ -660,21 +663,26 @@ function validatePatternCoverage(
   const hypertrophy = goalUsesHypertrophyBias(context.athlete.primary_goal as any);
   const fullBody = context.schedule.days.filter((d) => d.requested_type === 'Full Body').length >= 3;
 
-  if (hypertrophy && fullBody) {
+  if (hypertrophy && fullBody && !skipPull && !skipSquat) {
     if (!squat) issues.push(err('PATTERN_GAP', 'The week has no squat or lunge pattern.'));
     if (!hinge) issues.push(err('PATTERN_GAP', 'The week has no hinge pattern.'));
     if (!push) issues.push(err('PATTERN_GAP', 'The week has no push pattern.'));
     if (!pull) issues.push(err('PATTERN_GAP', 'The week has no pull pattern.'));
-  } else {
+  } else if (!skipPull && !skipSquat) {
     ['squat', 'hinge', 'horizontal_push', 'horizontal_pull'].forEach((need) => {
       const hit =
         (counts[need] || 0) > 0 ||
         (need === 'squat' && (counts.lunge || 0) > 0);
       if (!hit) issues.push(warn('PATTERN_GAP', `The week is light on ${need.replace('_', ' ')} work.`));
     });
+  } else {
+    if (!skipSquat && !squat) issues.push(warn('PATTERN_GAP', 'The week is light on squat work.'));
+    if (!hinge) issues.push(warn('PATTERN_GAP', 'The week is light on hinge work.'));
+    if (!push) issues.push(warn('PATTERN_GAP', 'The week is light on horizontal push work.'));
+    if (!skipPull && !pull) issues.push(warn('PATTERN_GAP', 'The week is light on horizontal pull work.'));
   }
 
-  if (push >= 3 && pull > 0 && push / pull >= 2.5) {
+  if (!skipPull && push >= 3 && pull > 0 && push / pull >= 2.5) {
     issues.push(warn('PATTERN_IMBALANCE', `Push exposures (${push}) far exceed pull exposures (${pull}).`));
   }
   if (pull >= 3 && push > 0 && pull / push >= 2.5) {

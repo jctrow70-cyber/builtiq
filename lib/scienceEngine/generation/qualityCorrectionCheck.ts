@@ -11,6 +11,7 @@ import { prepItemSeconds } from '../prescriptionTime';
 import { trainingProfileFromSources } from '../profile';
 import { validateProgram } from '../validator';
 import { buildGenerationContext } from './context';
+import { buildDesignerInstructions } from './prompt';
 import { repairAiProgram } from './repairAiProgram';
 import { validateAiProgram } from './validateAiProgram';
 import type { AiStrengthExercise, AiWeekProgram, AiWorkoutPlan } from './types';
@@ -179,6 +180,14 @@ export async function runQualityCorrectionChecks() {
   assert(names[0] === names[1], `New program days diverged: ${names.join(' vs ')}`);
   week.forEach((workout) => {
     assert(classifySessionDuration(workout.estimatedMinutes, 45).over !== 'error', `${workout.dayLabel} estimated ${workout.estimatedMinutes} min`);
+    assert(
+      workout.exercises.some((exercise) => /romanian|\brdl\b/i.test(exercise.name)),
+      `${workout.dayLabel} hamstring priority used ${workout.exercises.map((exercise) => exercise.name).join(', ')}`
+    );
+    assert(
+      !workout.exercises.some((exercise) => /conventional deadlift|trap bar deadlift/i.test(exercise.name)),
+      `${workout.dayLabel} replaced the hamstring hinge with a conventional deadlift`
+    );
   });
   const context = buildGenerationContext({
     profile,
@@ -238,6 +247,42 @@ export async function runQualityCorrectionChecks() {
     catalogById
   );
   assert(excess.issues.some((issue) => issue.code === 'EMPHASIS_EXCESS' && /upper_back/.test(issue.message)), 'Meaningful upper-back volume should be detected');
+  const specializedGap = validateAiProgram(
+    {
+      schema_version: '2.0',
+      summary: 'Specialized push and hinge',
+      workouts: ['Mon', 'Wed', 'Fri'].map((label) =>
+        day(label, [
+          { type: 'straight_sets', exercises: [lift('Barbell Bench Press', 'primary')] },
+          { type: 'straight_sets', exercises: [lift('Overhead Press', 'secondary')] },
+          { type: 'straight_sets', exercises: [lift('Romanian Deadlift', 'primary')] },
+          { type: 'straight_sets', exercises: [lift('Hip Thrust', 'secondary')] },
+        ])
+      ),
+    },
+    context,
+    catalogById
+  );
+  assert(
+    !specializedGap.issues.some((issue) => issue.severity === 'error' && issue.code === 'PATTERN_GAP'),
+    `Specialized week hard-failed a pattern gap: ${specializedGap.issues.map((issue) => issue.message).join('; ')}`
+  );
+  assert(
+    !specializedGap.issues.some((issue) => issue.code === 'PATTERN_GAP' && /squat|pull/i.test(issue.message)),
+    `Specialized week treated a waived pattern as required: ${specializedGap.issues.map((issue) => issue.message).join('; ')}`
+  );
+  const prompt = buildDesignerInstructions(context);
+  assert(/do not add rows/i.test(prompt), 'Specialized prompt should leave upper-body pulling optional');
+  assert(/romanian deadlift/i.test(prompt), 'Specialized prompt should ask for hamstring-biased hinge work');
+  const generalPrompt = buildDesignerInstructions({
+    ...context,
+    hard_requirements: {
+      ...context.hard_requirements!,
+      upperPush: false,
+      lowerPull: false,
+    },
+  });
+  assert(/Spread knee-dominant/.test(generalPrompt), 'A general program should still cover the main patterns');
 
   const crowded: AiWeekProgram = {
     schema_version: '2.0',

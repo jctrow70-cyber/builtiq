@@ -214,7 +214,7 @@ Goal: Prepare BuildIQ Health for iOS and Android users.
 
 Apply migration `20261008_061_phase2b1_adaptation_orchestration.sql` after review so workout-level adaptation runs persist.
 
-Program generation Stage 2A (BIQ-0255, Decision 098) records the model failure stage on `st_generation_runs.validation_json`. Stage 2B (BIQ-0256, Decision 099) makes volume, rest, ramp-up, and session duration adaptive and returns a structured conflict when explicit requirements cannot fit. Stage 2C (BIQ-0258, Decision 100) lets the AI propose the week's programming while the science engine validates it. BIQ-0259 (Decision 101) corrects accessory classification, duration, and emphasis checks after the Et plan 4 audit. The 6,000 output-token cap is unchanged. Stage 2D is not started.
+Program generation Stage 2A (BIQ-0255, Decision 098) records the model failure stage on `st_generation_runs.validation_json`. Stage 2B (BIQ-0256, Decision 099) makes volume, rest, ramp-up, and session duration adaptive and returns a structured conflict when explicit requirements cannot fit. Stage 2C (BIQ-0258, Decision 100) lets the AI propose the week's programming while the science engine validates it. BIQ-0259 (Decision 101) corrects accessory classification, duration, and emphasis checks after the Et plan 4 audit. BIQ-0260 (Decision 102) lets an explicit push-and-hinge request omit rows and squats, and it keeps a preferred Romanian deadlift ahead of a conventional deadlift. Designer prompt version is `designer@2.5`. The 6,000 output-token cap is unchanged. Stage 2D is not started.
 
 ### Recently completed
 

@@ -140,9 +140,25 @@ export function pickExercise(
     .filter((ex) => !isWarmupOnly(ex, ctx.role))
     .filter((ex) => !sameMovementFamily(ex.name, ctx.alreadyNames))
     .filter((ex) => !conflictsInSession(ex.name, sessionNames))
-    .map((ex) => ({ ex, score: scoreExercise(ex, ctx) }))
+    .map((ex) => ({ ex, score: scoreExercise(ex, ctx) + preferredRankBonus(ex, ctx.preferredNames) }))
     .sort((a, b) => b.score - a.score);
   return ranked[0] && ranked[0].score > 0 ? ranked[0].ex : null;
+}
+
+/** Earlier names in a slot's preferred list outrank an otherwise equal pattern match. */
+function preferredRankBonus(ex: CatalogExercise, names: string[] | undefined): number {
+  if (!names?.length) return 0;
+  const index = names.findIndex((name) => namesMatch(ex.name, name));
+  if (index < 0) return 0;
+  return 28 - index * 4;
+}
+
+function namesMatch(exerciseName: string, requested: string): boolean {
+  const left = exerciseName.toLowerCase();
+  const right = requested.toLowerCase();
+  if (left === right) return true;
+  if (aliasExerciseName(requested).toLowerCase() === left) return true;
+  return aliasCandidates(requested).some((candidate) => candidate.toLowerCase() === left);
 }
 
 export function findByName(pool: CatalogExercise[], name: string): CatalogExercise | null {

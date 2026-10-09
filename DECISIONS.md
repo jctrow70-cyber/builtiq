@@ -19,6 +19,32 @@ Impact:
 
 ---
 
+## Decision 102 - Specialization Overrides Generic Balance
+
+Date: 2026-10-08
+Status: Accepted
+Category: Training / Program generation
+
+### Decision
+
+When the request explicitly asks for upper-body push, lower-body pull, or both, those patterns are the priority. Upper-body pulling is not required to balance a push emphasis. Squats and lunges are not required to balance a hinge emphasis. A missing de-emphasized pattern is not a hard error. General programs that do not specialize still use the existing pattern-coverage checks.
+
+A hamstring slot that prefers a Romanian deadlift keeps that preference when another hinge has the same score. A conventional or trap-bar deadlift is not treated as the same hamstring stimulus. Science engine version stays `1.4.13`. The designer prompt is `designer@2.5`.
+
+### Reason
+
+The designer instructions told every week to spread rows and squats, and selection only locked a preferred exercise when variety was consistent. That replaced the hamstring-biased hinge with whichever hinge appeared first in the catalog.
+
+### Alternatives Considered
+
+Add a new exercise template for this one request. Ban conventional deadlifts from every program. Turn missing rows into a warning on specialized weeks.
+
+### Impact
+
+No catalog edits, no saved-program rewrites, and no change to the model or token cap. Stage 2D is not started.
+
+---
+
 ## Decision 101 - Classify Accessories, Count the Saved Clock, and Trim by Priority
 
 Date: 2026-10-08

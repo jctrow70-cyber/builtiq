@@ -11,6 +11,51 @@ Branch:
 Status:
 ```
 
+## BIQ-0260 - Let a specialized push and hinge request stay specialized
+
+Date: 2026-10-08
+Branch: main
+Status: Local / in progress
+
+### Summary
+
+A request for upper-body push and lower-body pull no longer has to include rows or squats to pass validation. The designer prompt tells the model that those patterns are optional for that request, and a general program still asks for the usual pattern spread. Hamstring slots honor their preferred Romanian deadlift instead of treating a conventional deadlift as the same stimulus. Science engine version stays `1.4.13`. Designer prompt version is `designer@2.5`.
+
+### Purpose
+
+The previous prompt told every week to spread pulls and squats, and exercise selection ignored a slot's preferred hinge unless variety was set to consistent.
+
+### Files changed
+
+- lib/scienceEngine/exerciseSelection.ts
+- lib/scienceEngine/generation/prompt.ts
+- lib/scienceEngine/generation/validateAiProgram.ts
+- lib/scienceEngine/generation/qualityCorrectionCheck.ts
+- lib/scienceEngine/qualityCheck.ts
+- lib/scienceEngine/version.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+### Database changes
+
+None.
+
+### Testing steps
+
+1. Run `npm run test:science`.
+2. Confirm the 45-minute athletic template uses a Romanian deadlift and does not swap in a conventional deadlift.
+3. Confirm a specialized week with no row and no squat is not a pattern-gap error.
+4. Generate one real week with the Et plan 4 criteria and review the outcome.
+
+### Known issues
+
+A conventional deadlift can still appear when a slot lists it first, such as a general full-body strength day. Hip thrusts remain glute work.
+
+### Recommended commit message
+
+`BIQ-0260 Keep specialized push and hinge weeks from forced balance`
+
 ## BIQ-0259 - Correct classification, duration, and emphasis after the Et plan 4 audit
 
 Date: 2026-10-08

@@ -133,7 +133,7 @@ The engine validates safety, equipment, limitations, the requested days, feasibi
 
 ${goalGuidance(context.athlete.primary_goal)}
 
-Design the week together. Spread knee-dominant work, hip-dominant work, horizontal push, vertical push, horizontal pull, vertical pull, some unilateral work, accessories, and core across the days. Not every pattern belongs in every session. Keep primary lifts stable enough to progress. Do not vary exercises at random.
+${balanceGuidance(hard)}
 ${identical ? 'This request wants the same workout on each day. Repeat it.' : 'Use a different emphasis on each day when that serves the goal.'}
 
 Volume: minimum_working_sets is the useful floor, target_working_sets is preferred, practical_max_sets is an advisory ceiling. Preferred targets are not mandatory minimums. A small indirect-credit overage is acceptable. Do not add redundant patterns just to hit a number.
@@ -158,6 +158,24 @@ Roles: primary is 1-2 main lifts of different patterns. secondary supports them.
 Materialize week 1 only. progression.strategy is intent, not applied loads.
 
 Return the structured program only. Keep summary and coaching_notes to one or two short sentences.`;
+}
+
+function balanceGuidance(hard: GenerationContext['hard_requirements']): string {
+  if (hard?.upperPush || hard?.lowerPull) {
+    const lines = [
+      'This request is specialized. Prioritize the hard emphasis. Do not add the opposite pattern just to balance the week.',
+    ];
+    if (hard.upperPush) {
+      lines.push('Upper-body pulling is optional. Do not add rows, pulldowns, or pull-ups merely because a general program would include them.');
+    }
+    if (hard.lowerPull) {
+      lines.push('Quad-dominant squats and lunges are optional. Do not add them merely to balance a hinge emphasis.');
+      lines.push('Hamstring priority needs a hamstring-biased hinge, such as a Romanian deadlift, stiff-leg deadlift, or leg curl. A conventional or trap-bar deadlift is a different stimulus and does not replace that work. A hip thrust supports glutes; it does not replace hamstring work.');
+    }
+    lines.push('A de-emphasized muscle may be absent, or it may appear as a small accessory. It should not take the session time that the requested priorities need.');
+    return lines.join(' ');
+  }
+  return 'Design the week together. Spread knee-dominant work, hip-dominant work, horizontal push, vertical push, horizontal pull, vertical pull, some unilateral work, accessories, and core across the days. Not every pattern belongs in every session. Keep primary lifts stable enough to progress. Do not vary exercises at random.';
 }
 
 function goalGuidance(goal: string): string {
