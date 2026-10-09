@@ -187,7 +187,7 @@ function goalGuidance(goal: string): string {
     return 'Goal strength: high-quality primary lifts, strength rep ranges, enough rest to repeat the set, and the same primaries long enough to overload.';
   }
   if (value === 'athletic_performance') {
-    return 'Goal athletic performance: strength, power when it fits, unilateral work, movement quality, and fatigue management. Power work is a choice, not a requirement on every day.';
+    return 'Goal athletic performance: movement preparation, one short explosive primer when it fits, primary strength, then a secondary lift or athletic accessory, and an optional finisher if time remains. Not every session needs every piece. In a 45-minute session, use about 3 quality working sets on the heavy lifts and keep their rest. Leave room for the requested muscles, such as a glute or hamstring accessory, instead of putting 4 sets on two heavy compounds. When supersets are allowed, one pair of complementary lower-fatigue movements after the main lifts is useful. Do not superset two heavy compounds. Keep explosive work fast and low fatigue.';
   }
   if (value === 'muscular_endurance') {
     return 'Goal endurance: develop the relevant endurance quality. Do not add strength volume the session does not need.';

@@ -19,6 +19,32 @@ Impact:
 
 ---
 
+## Decision 103 - Trim Extra Primary Sets Before a Requested Accessory
+
+Date: 2026-10-09
+Status: Accepted
+Category: Training / Program generation
+
+### Decision
+
+A 45-minute athletic session should leave room for more than two heavy lifts. The designer prompt describes preparation, one explosive primer, primary strength, a secondary or athletic accessory, and an optional finisher as a preference, not a checklist. One complementary lower-fatigue superset is appropriate. Two heavy compounds stay as straight sets.
+
+When that session still runs long, repair may remove accessories that do not train a requested muscle. Before it removes an accessory that does, it reduces a primary from more than 3 working sets down to 3 and leaves that rest unchanged. Duration warning and error lines stay as they are. Science engine version stays `1.4.13`. Designer prompt version is `designer@2.6`.
+
+### Reason
+
+ET PLAN 6's draft was about 55 minutes and included a hip thrust. Repair deleted that glute accessory, and a Pallof press, while the bench and Romanian deadlift stayed at 4 sets.
+
+### Alternatives Considered
+
+Widen the 45-minute duration band. Require a fixed exercise count. Superset the Romanian deadlift with the bench.
+
+### Impact
+
+Saved programs are not rewritten. No catalog edits. Stage 2D is not started.
+
+---
+
 ## Decision 102 - Specialization Overrides Generic Balance
 
 Date: 2026-10-08

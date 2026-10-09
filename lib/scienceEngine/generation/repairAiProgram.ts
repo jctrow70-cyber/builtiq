@@ -648,6 +648,37 @@ function trimDuration(
       continue;
     }
 
+    const dropNonPriority = lowPriority.find(
+      (ex) => !trainsRequestedPriority(ex.exercise_id, context, library) && !wouldCauseAllHighFatigue(workout, ex.exercise_id, library)
+    );
+    if (dropNonPriority && (strength.length > minMoves || primaries.length >= 1)) {
+      removeStrengthExercise(workout, dropNonPriority.exercise_id);
+      repairs.push({
+        code: 'DURATION_OVER',
+        action: `Removed ${library.get(dropNonPriority.exercise_id)?.name || dropNonPriority.exercise_id} to fit the session`,
+        day_label: workout.day_label,
+        exercise_id: dropNonPriority.exercise_id,
+      });
+      guard += 1;
+      continue;
+    }
+
+    const priorityAccessoryLeft = lowPriority.some((ex) => trainsRequestedPriority(ex.exercise_id, context, library));
+    const bulkyPrimary = strictBudget
+      ? [...strength].reverse().find((ex) => ex.role === 'primary' && ex.working_sets > 3 && !protectIds.has(ex.exercise_id))
+      : undefined;
+    if (priorityAccessoryLeft && bulkyPrimary) {
+      bulkyPrimary.working_sets -= 1;
+      repairs.push({
+        code: 'DURATION_OVER',
+        action: `Reduced ${library.get(bulkyPrimary.exercise_id)?.name || bulkyPrimary.exercise_id} to ${bulkyPrimary.working_sets} sets so a requested accessory can stay`,
+        day_label: workout.day_label,
+        exercise_id: bulkyPrimary.exercise_id,
+      });
+      guard += 1;
+      continue;
+    }
+
     const dropAccessory = lowPriority.find((ex) => !wouldCauseAllHighFatigue(workout, ex.exercise_id, library));
     if (dropAccessory && (strength.length > minMoves || primaries.length >= 1)) {
       removeStrengthExercise(workout, dropAccessory.exercise_id);
@@ -823,6 +854,13 @@ function pairAccessorySuperset(
     }
   }
   return false;
+}
+
+function trainsRequestedPriority(exerciseId: string, context: GenerationContext, library: Map<string, DesignerExercise>): boolean {
+  const priorities = new Set(context.athlete.priority_muscles || []);
+  if (!priorities.size) return false;
+  const meta = library.get(exerciseId);
+  return Boolean(meta?.primary_muscles.some((muscle) => priorities.has(muscle)));
 }
 
 function removeStrengthExercise(workout: AiWorkoutPlan, exerciseId: string) {

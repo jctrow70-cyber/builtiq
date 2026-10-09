@@ -273,6 +273,7 @@ export async function runQualityCorrectionChecks() {
   );
   const prompt = buildDesignerInstructions(context);
   assert(/do not add rows/i.test(prompt), 'Specialized prompt should leave upper-body pulling optional');
+  assert(/about 3 quality working sets/i.test(prompt), 'Athletic sessions should leave room beyond two heavy 4-set lifts');
   assert(/romanian deadlift/i.test(prompt), 'Specialized prompt should ask for hamstring-biased hinge work');
   const generalPrompt = buildDesignerInstructions({
     ...context,
@@ -323,6 +324,45 @@ export async function runQualityCorrectionChecks() {
     workout.strength.flatMap((block) => block.exercises).map((exercise) => `${exercise.exercise_id}:${exercise.working_sets}:${exercise.rest_seconds}`).join('|')
   );
   assert(signatures[0] === signatures[1], `Identical days diverged after repair: ${signatures.join(' vs ')}`);
+
+  const concentrated = repairAiProgram(
+    {
+      schema_version: '2.0',
+      summary: 'Four-set primaries crowded out the glute accessory',
+      workouts: [
+        day('Mon', [
+          { type: 'straight_sets', exercises: [lift('Barbell Bench Press', 'primary', { working_sets: 4, rep_min: 5, rep_max: 7, rest_seconds: 120 })] },
+          { type: 'straight_sets', exercises: [lift('Romanian Deadlift', 'primary', { working_sets: 4, rep_min: 6, rep_max: 8, rest_seconds: 120 })] },
+          { type: 'straight_sets', exercises: [lift('Overhead Press', 'secondary', { working_sets: 2, rest_seconds: 90 })] },
+          { type: 'straight_sets', exercises: [lift('Hip Thrust', 'accessory', { working_sets: 2, rest_seconds: 75 })] },
+          { type: 'straight_sets', exercises: [lift('Pallof Press', 'accessory', { working_sets: 2, rest_seconds: 45 })] },
+        ]),
+        day('Fri', [
+          { type: 'straight_sets', exercises: [lift('Barbell Bench Press', 'primary', { working_sets: 4, rep_min: 5, rep_max: 7, rest_seconds: 120 })] },
+          { type: 'straight_sets', exercises: [lift('Romanian Deadlift', 'primary', { working_sets: 4, rep_min: 6, rep_max: 8, rest_seconds: 120 })] },
+          { type: 'straight_sets', exercises: [lift('Overhead Press', 'secondary', { working_sets: 2, rest_seconds: 90 })] },
+          { type: 'straight_sets', exercises: [lift('Hip Thrust', 'accessory', { working_sets: 2, rest_seconds: 75 })] },
+          { type: 'straight_sets', exercises: [lift('Pallof Press', 'accessory', { working_sets: 2, rest_seconds: 45 })] },
+        ]),
+      ],
+    },
+    context,
+    catalogById
+  );
+  const concentratedActions = concentrated.repairs.map((repair) => repair.action);
+  const hipRemovedAt = concentratedActions.findIndex((action) => /Removed Hip Thrust/.test(action));
+  const primaryReducedAt = concentratedActions.findIndex((action) => /Reduced (Barbell Bench Press|Romanian Deadlift) to 3 sets/.test(action));
+  assert(primaryReducedAt >= 0, `Extra primary sets should come down before a glute accessory is lost: ${concentratedActions.join('; ')}`);
+  if (hipRemovedAt >= 0) {
+    assert(primaryReducedAt < hipRemovedAt, `Hip Thrust was removed before a 4-set primary was reduced: ${concentratedActions.join('; ')}`);
+  }
+  const keptRest = concentrated.program.workouts.every((workout) =>
+    workout.strength
+      .flatMap((block) => block.exercises)
+      .filter((exercise) => exercise.role === 'primary')
+      .every((exercise) => exercise.rest_seconds === 120)
+  );
+  assert(keptRest, 'Primary rest stays at 120 seconds when extra sets are reduced');
 
   console.log('BIQ-0259 quality correction checks passed');
   console.log(`Et plan fixture duration: default ramp rest ${before.minutes} min, persisted 120s ramp rest ${after.minutes} min`);

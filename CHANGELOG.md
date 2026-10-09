@@ -11,6 +11,50 @@ Branch:
 Status:
 ```
 
+## BIQ-0261 - Keep a requested glute accessory when a 45-minute athletic session is trimmed
+
+Date: 2026-10-09
+Branch: main
+Status: Committed locally, not pushed
+
+### Summary
+
+ET PLAN 6's model draft included a hip thrust and a Pallof press and estimated 55 minutes. Duration repair kept four sets on the bench and Romanian deadlift, then deleted the hip thrust to reach 45. For a 45-minute session, extra primary sets now come down before an accessory that trains a requested muscle is removed. The athletic prompt asks for preparation, a short primer, quality primary sets, and room for one athletic accessory or a light superset. Duration limits are unchanged. Science engine stays `1.4.13`. Designer prompt is `designer@2.6`.
+
+### Purpose
+
+A technically valid three-lift session dropped the glute work the athlete asked for.
+
+### Files changed
+
+- lib/scienceEngine/generation/prompt.ts
+- lib/scienceEngine/generation/repairAiProgram.ts
+- lib/scienceEngine/generation/qualityCorrectionCheck.ts
+- lib/scienceEngine/version.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+### Database changes
+
+None. Saved programs, including ET PLAN 6, are not rewritten.
+
+### Testing steps
+
+1. Run `npm run test:science`.
+2. Confirm a 45-minute repair reduces a 4-set primary before it removes a hip thrust.
+3. Generate one new athletic week and compare it with ET PLAN 6.
+
+### Known issues
+
+A hip thrust can still be removed if the session is over after the heavy lifts are at 3 sets. Heavy compounds are still not supersetted.
+
+Follow-up: a chest fly stored at 30 seconds inside a superset with a 60-second partner still warns below the 45-second isolation floor. The duration clock uses the longer partner rest, and the workout screen does not display planned rest, so this is not a shown recovery error. Clean up that warning later without raising rest bands or dropping the superset.
+
+### Recommended commit message
+
+`BIQ-0261 Keep requested accessories ahead of extra primary sets`
+
 ## BIQ-0260 - Let a specialized push and hinge request stay specialized
 
 Date: 2026-10-08
