@@ -1,6 +1,7 @@
-import type { CatalogExercise, ExercisePrescription, PrimaryGoal, TrainingProfile } from './types';
+import type { CatalogExercise, ExercisePrescription, TrainingProfile } from './types';
 import type { MovementPatternId } from './taxonomy';
 import { findByName } from './exerciseSelection';
+import { isExplosivePrimer } from './powerPrescription';
 import { prescribeExercise } from './prescription';
 
 type PrimerPick = { name: string; sets: number; reps: string; minExp?: TrainingProfile['experienceLevel'] };
@@ -8,12 +9,15 @@ type PrimerPick = { name: string; sets: number; reps: string; minExp?: TrainingP
 const PRIMER_BY_PATTERN: Record<string, PrimerPick[]> = {
   horizontal_push: [{ name: 'Medicine-Ball Chest Pass', sets: 2, reps: '4' }],
   vertical_push: [{ name: 'Medicine-Ball Chest Pass', sets: 2, reps: '3' }],
-  squat: [{ name: 'Vertical Jump', sets: 2, reps: '3', minExp: 'novice' }, { name: 'Goblet Squat', sets: 2, reps: '5' }],
-  hinge: [{ name: 'Broad Jump', sets: 2, reps: '3', minExp: 'novice' }, { name: 'Kettlebell Swing', sets: 2, reps: '5' }],
+  squat: [{ name: 'Vertical Jump', sets: 2, reps: '3', minExp: 'novice' }],
+  hinge: [
+    { name: 'Broad Jump', sets: 2, reps: '3', minExp: 'novice' },
+    { name: 'Kettlebell Swing', sets: 2, reps: '5' },
+  ],
   jump: [{ name: 'Vertical Jump', sets: 2, reps: '3' }],
 };
 
-const BEGINNER_SAFE = ['Medicine-Ball Chest Pass', 'Kettlebell Swing', 'Goblet Squat'];
+const BEGINNER_SAFE = ['Medicine-Ball Chest Pass', 'Kettlebell Swing'];
 
 export function generatePotentiation(opts: {
   profile: TrainingProfile;
@@ -32,27 +36,8 @@ export function generatePotentiation(opts: {
   const conservative = opts.profile.primaryGoal === 'hypertrophy';
   const items = picks
     .map((pick) => {
-      const ex = findByName(opts.catalog, pick.name) || {
-        ...(opts.catalog[0] || opts.primary),
-        name: pick.name,
-        programRoles: ['power'],
-        movementPattern: pattern || 'throw',
-        primaryMuscles: opts.primary?.primaryMuscles || [],
-        secondaryMuscles: [],
-        exerciseType: 'compound',
-        equipment: [],
-        stabilityRequirement: 'medium',
-        fatigueCost: 'low',
-        skillRequirement: 'low',
-        suitableForBeginner: true,
-        unilateral: false,
-        defaultRepMin: 2,
-        defaultRepMax: 5,
-        warmupSuitable: false,
-        planes: ['sagittal'],
-        warmupFatigue: 'very_low',
-        impactLevel: 'low',
-      } as CatalogExercise;
+      const ex = findByName(opts.catalog, pick.name);
+      if (!ex || !isExplosivePrimer(ex)) return null;
       const prescribed = prescribeExercise({
         exercise: ex,
         role: 'power',
@@ -66,7 +51,7 @@ export function generatePotentiation(opts: {
       prescribed.sets = conservative ? Math.min(2, pick.sets) : pick.sets;
       return prescribed;
     })
-    .filter(Boolean);
+    .filter((item): item is ExercisePrescription => !!item);
 
   const fatigueScore = conservative ? 1 : opts.profile.primaryGoal === 'athletic_performance' ? 3 : 2;
   return { items, fatigueScore };

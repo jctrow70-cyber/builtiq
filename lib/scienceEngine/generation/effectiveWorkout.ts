@@ -35,7 +35,7 @@ export type EffectiveStrength = {
   rest_seconds: number;
   unilateral: boolean;
   supersetGroupId?: string;
-  ramp_sets: Array<{ percent_of_working: number; reps: number }>;
+  ramp_sets: Array<{ percent_of_working: number; reps: number; rest_seconds?: number }>;
   laterality?: string;
   measurement_type?: string;
 };
@@ -131,8 +131,11 @@ export function estimateEffectiveBreakdown(workout: EffectiveWorkout): WorkoutDu
     const work = setWorkSeconds(item.name, item.laterality === 'unilateral');
     return sum + item.sets * (work + (item.restSeconds || POWER_REST_SECONDS));
   }, workout.potentiation.length ? 40 : 0);
-  const rampCount = workout.strength.reduce((sum, ex) => sum + (ex.ramp_sets?.length || 0), 0);
-  const rampSeconds = rampCount * (RAMP_SET_SECONDS + RAMP_REST_SECONDS);
+  const rampRests = workout.strength.flatMap((ex) =>
+    (ex.ramp_sets || []).map((ramp) => ramp.rest_seconds ?? RAMP_REST_SECONDS)
+  );
+  const rampCount = rampRests.length;
+  const rampSeconds = rampRests.reduce((sum, rest) => sum + RAMP_SET_SECONDS + rest, 0);
 
   const groups = new Map<string, EffectiveStrength[]>();
   workout.strength.forEach((ex, i) => {

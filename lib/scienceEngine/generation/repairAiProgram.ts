@@ -69,7 +69,10 @@ export function applyDurationEfficiency(
   const next = JSON.parse(JSON.stringify(program)) as AiWeekProgram;
   const repairs: DeterministicRepair[] = [];
   const library = libraryFromContext(context);
-  (next.workouts || []).forEach((workout) => efficiencyPass(workout, context, library, repairs));
+  (next.workouts || []).forEach((workout) => {
+    if (context.constraints.session_minutes <= 45) trimDuration(workout, context, library, repairs);
+    else efficiencyPass(workout, context, library, repairs);
+  });
   return { program: next, repairs };
 }
 
@@ -376,7 +379,7 @@ function repairStrengthItem(
     inSuperset,
     experience: context.athlete.experience_level,
   });
-  if (ex.rest_seconds < band.min) {
+  if (ex.rest_seconds < band.compromiseBelow) {
     const from = ex.rest_seconds;
     ex.rest_seconds = band.min;
     repairs.push({
@@ -554,17 +557,20 @@ function trimDuration(
   protectIds: Set<string> = new Set()
 ) {
   const minutes = context.constraints.session_minutes;
+  const strictBudget = minutes <= 45;
   const minMoves = Math.min(4, minStrengthMoves(minutes));
+  const warmupMin = context.hard_requirements?.warmupMin ?? context.constraints.dynamic_warmup_exercises?.min ?? 2;
   const pref = String(context.athlete.superset_preference || '').toLowerCase();
   const allowSuperset = /sometimes|often|always|frequently|yes/.test(pref);
   let guard = 0;
   while (guard < 24) {
     normalizeLoneBlocks(workout);
-    if (sessionOver(workout, context, library).over !== 'error') break;
+    const over = sessionOver(workout, context, library).over;
+    if (strictBudget ? over === 'ok' : over !== 'error') break;
 
     // A. Unnecessary/redundant warmup volume
     const extras = (workout.warmup || []).filter((item) => !isGeneralWarmup(item, library));
-    if (extras.length > 2 && dropWarmupExtra(workout, library, repairs)) {
+    if ((workout.warmup || []).length > warmupMin && extras.length > 2 && dropWarmupExtra(workout, library, repairs)) {
       guard += 1;
       continue;
     }
@@ -610,7 +616,7 @@ function trimDuration(
       continue;
     }
 
-    if (extras.length > 1 && dropWarmupExtra(workout, library, repairs)) {
+    if ((workout.warmup || []).length > warmupMin && extras.length > 1 && dropWarmupExtra(workout, library, repairs)) {
       guard += 1;
       continue;
     }
@@ -655,6 +661,19 @@ function trimDuration(
       continue;
     }
 
+    if (strictBudget && (workout.cooldown || []).length > 1) {
+      const drop = workout.cooldown[workout.cooldown.length - 1];
+      workout.cooldown = workout.cooldown.slice(0, -1);
+      repairs.push({
+        code: 'DURATION_OVER',
+        action: `Removed optional cooldown ${library.get(drop.exercise_id)?.name || drop.exercise_id} to fit the session`,
+        day_label: workout.day_label,
+        exercise_id: drop.exercise_id,
+      });
+      guard += 1;
+      continue;
+    }
+
     // E. Reduce secondary work
     const secondary = [...strength].reverse().find((ex) => ex.role === 'secondary' && ex.working_sets > 2 && !protectIds.has(ex.exercise_id));
     if (secondary) {
@@ -683,7 +702,9 @@ function trimDuration(
       }
     }
 
-    const heavyPrimary = [...strength].reverse().find((ex) => ex.role === 'primary' && ex.working_sets > 3 && !protectIds.has(ex.exercise_id));
+    const heavyPrimary = strictBudget
+      ? undefined
+      : [...strength].reverse().find((ex) => ex.role === 'primary' && ex.working_sets > 3 && !protectIds.has(ex.exercise_id));
     if (heavyPrimary) {
       heavyPrimary.working_sets -= 1;
       repairs.push({

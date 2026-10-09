@@ -151,6 +151,7 @@ export type PrescribedSet = {
   weight?: string;
   reps: string;
   rir?: number;
+  restSeconds?: number;
 };
 
 export type ExercisePrescription = {

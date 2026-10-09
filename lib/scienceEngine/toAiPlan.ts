@@ -1,4 +1,5 @@
 import type { AiExercise, AiProgramPlan, AiWorkout, GenerationConfig } from '../training/aiProgramPlan';
+import { RAMP_REST_SECONDS } from './durationConstants';
 import { rirToRpe } from './prescription';
 import type { ExercisePrescription, ScienceProgram, ScienceWorkout, WarmupItem } from './types';
 
@@ -56,6 +57,7 @@ function withRamp(workout: ScienceWorkout, ex: ExercisePrescription): AiExercise
       weight: row.weight || '',
       reps: row.reps,
       rir: row.rir,
+      rest_seconds: row.setType === 'warmup' ? row.restSeconds ?? RAMP_REST_SECONDS : ex.restSeconds,
     }));
     return item;
   }
@@ -65,6 +67,7 @@ function withRamp(workout: ScienceWorkout, ex: ExercisePrescription): AiExercise
         set_type: 'warmup',
         weight: ramp.weight || '',
         reps: String(ramp.reps),
+        rest_seconds: RAMP_REST_SECONDS,
       })),
       ...Array.from({ length: ex.sets }, () => ({
         set_type: 'working',

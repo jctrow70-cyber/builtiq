@@ -1,4 +1,4 @@
-/** Strict Structured Output schema. Design fields only — science owns validation, ramps, and progression. */
+/** Structured output. The designer proposes the week. The engine validates it. Ramp sets stay off this payload. */
 
 const prepItem = {
   type: 'object',

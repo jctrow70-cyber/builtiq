@@ -16,6 +16,11 @@ export type PowerExerciseMeta = {
   movement_pattern?: string;
 };
 
+/** Jumps, throws, swings, and Olympic lifts. A normal strength squat is not a primer. */
+export function isExplosivePrimer(ex: PowerExerciseMeta): boolean {
+  return classifyPowerExercise(ex) !== 'general_power';
+}
+
 export function classifyPowerExercise(ex: PowerExerciseMeta): PowerFamily {
   const name = String(ex.name || '').toLowerCase();
   const pattern = String(ex.movementPattern || ex.movement_pattern || '').toLowerCase();

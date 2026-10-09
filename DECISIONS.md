@@ -19,6 +19,64 @@ Impact:
 
 ---
 
+## Decision 101 - Classify Accessories, Count the Saved Clock, and Trim by Priority
+
+Date: 2026-10-08
+Status: Accepted
+Category: Training / Program generation
+
+### Decision
+
+Science engine `1.4.13` keeps the current generator, model, and catalog card count. Movement pattern, exercise type, and program role stay separate. A stored pattern of "isolation" or "strength" is not a movement pattern. Name inference is case-insensitive and runs only when the stored pattern is generic. Authoritative `exercise_kind` still wins.
+
+Hammer Curl resolves to elbow flexion and isolation. Hanging Knee Raise resolves to core flexion and isolation. Face Pull stays a horizontal pull and is isolation unless the catalog explicitly says compound, so it is not a heavy superset partner. Hypertrophy credit numbers are not rewritten. Brachialis remains unmapped, so the existing biceps secondary credit stays.
+
+A generic "Back" label on a deadlift or Romanian deadlift is read as spinal erectors. The global alias of Back to upper back is unchanged for rows and pulldowns. Overhead press "Upper Chest" stays a chest credit. No catalog row was edited. When fatigue cost is missing, the engine uses the existing name-based fatigue rule, so an unlabeled Romanian deadlift is high fatigue.
+
+Duration uses one clock before validation and when sets are saved. Ramp sets are saved with the ramp rest constant, not a copy of the working-set rest. Timed "per side" work counts both sides. A read-only replay of Et plan 4's persisted 120-second ramp rests is an error against a 45-minute request. For a session of 45 minutes or less, repair must get inside the target band by pairing safe accessories, then removing lower-priority accessories, then optional cooldown. It does not shorten heavy-compound rest or drop primary lifts to satisfy the timer. De-emphasized muscles may receive zero direct work without a warning. Credit above the practical maximum is an excess warning. A push-and-hinge request warns when either pattern is a single exercise or the pair is less than 45 percent of weekly working sets.
+
+### Reason
+
+Et plan 4 was accepted at an estimated 53 minutes. The saved ramp sets used the working rest of 120 seconds, and per-side stretches were counted once. Face pulls and curls were compounds because the isolation check was case-sensitive. Waived lats and quads warned for having no work, while upper-back credit from the deadlift label and face pulls did not.
+
+### Alternatives Considered
+
+Edit the live catalog rows for those three exercises. Shorten primary rest to hit 45 minutes. Treat any de-emphasized muscle with zero sets as a failure. Replace the generator.
+
+### Impact
+
+Saved programs, including Et plan 4, are not rewritten. New saves write ramp rest explicitly. Stage 2A outcomes and the 6,000-token cap stay. Phase 2B adaptation is unchanged. No migration.
+
+---
+
+## Decision 100 - The AI Designs the Week; the Engine Validates It
+
+Date: 2026-10-08
+Status: Accepted
+Category: Training / Program generation
+
+### Decision
+
+Stage 2C keeps the current generation pipeline, model, 6,000 output-token cap, response schema, exercise catalog, and Program Design UI. The designer proposes exercise selection and order, session emphasis, working sets, rep ranges, RIR, rest, warm-up, power primers, supersets, accessories, and weekly balance. The science engine validates safety, equipment, limitations, the requested days, feasibility, and programming quality. A valid prescription that differs from the deterministic template is kept. The engine still applies Stage 2B ramp-up sets. Ramp sets stay off the model payload.
+
+Goal text in the prompt is specific: hypertrophy aims near preferred volume when time allows; strength keeps quality primaries, strength reps, and enough rest; athletic performance treats power as optional; general fitness stays balanced and sustainable; endurance does not add unused strength volume. A requested duration is a budget. Preferred volume is not a mandatory minimum. A practical maximum is advisory. A small indirect-credit overage is an info note. A clear overage is a warning.
+
+Power primers must be explosive: jump, throw, swing, or Olympic. A normal Goblet Squat is not a primer. If no suitable primer exists, that section is omitted. The catalog rows are unchanged. Supersets stay optional and follow the user's preference. Warm-ups are chosen for the day's patterns. Dynamic warm-up, power primer, and lift ramp-up remain separate.
+
+### Reason
+
+The previous prompt told the model that the engine owned volume, duration, rest, and ramps, so the model was mostly selecting exercises. Stage 2B also showed Goblet Squat being placed in the primer slot for a beginner.
+
+### Alternatives Considered
+
+Add prescription fields to the response schema. Rewrite repair so it never touches a valid week. Edit the master catalog so Goblet Squat loses a power flag. Start Stage 2D in the same change.
+
+### Impact
+
+Science engine version is `1.4.12`. Designer prompt version is `designer@2.4`. Stage 2A outcome names and Stage 2B adaptive floors stay. No migration. Stage 2D is not started. Repair of an invalid week can still raise rest below the compromise floor and replace model ramps with engine ramps.
+
+---
+
 ## Decision 099 - Treat Volume, Rest, and Duration as Adaptive Guidelines
 
 Date: 2026-10-08

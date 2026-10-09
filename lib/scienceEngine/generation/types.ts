@@ -125,6 +125,7 @@ export type GenerationContext = {
 export type AiRampSet = {
   percent_of_working: number;
   reps: number;
+  rest_seconds?: number;
 };
 
 export type AiStrengthExercise = {

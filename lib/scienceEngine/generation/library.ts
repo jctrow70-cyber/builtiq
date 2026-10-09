@@ -1,4 +1,5 @@
 import { filterEligibleExercises } from '../exerciseSelection';
+import { isExplosivePrimer } from '../powerPrescription';
 import { FALLBACK_CATALOG, stableFallbackId } from '../catalogAdapter';
 import { MASTER_CATALOG_SOURCE, selectAiGenerationCatalogRows } from './catalogEligibility';
 import type { CatalogExercise, TrainingProfile } from '../types';
@@ -64,7 +65,9 @@ export function toDesignerExercise(ex: CatalogExercise): DesignerExercise {
             warmup_eligible: !!row.warmupSuitable,
             rawCategory: String(row.raw?.category || row.warmupCategory || ''),
           }),
-    power_eligible: row.programRoles.includes('power') || row.raw?.coaching_metadata?.power_eligible === true,
+    power_eligible:
+      (row.programRoles.includes('power') || row.raw?.coaching_metadata?.power_eligible === true) &&
+      isExplosivePrimer({ name: row.name, movementPattern: row.movementPattern }),
     ramp_eligible: typeof row.raw?.coaching_metadata?.ramp_eligible === 'boolean' ? row.raw.coaching_metadata.ramp_eligible : undefined,
     default_rep_min: row.defaultRepMin,
     default_rep_max: row.defaultRepMax,

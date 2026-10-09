@@ -44,8 +44,8 @@ export function prepItemSeconds(opts: { prescription?: string; reps?: string; se
   const parsed = parsePrescriptionTiming(opts.prescription || opts.reps, opts.measurementType);
   const sets = Math.max(1, Number(opts.sets) || 1);
   const unilateral = opts.laterality === 'unilateral' || opts.laterality === 'alternating';
-  const sides = parsed.perSide || unilateral ? (parsed.kind === 'time' || parsed.kind === 'distance' ? 1 : 2) : 1;
-  if (parsed.kind === 'time' || parsed.kind === 'distance') return sets * parsed.seconds;
+  const sides = parsed.perSide || unilateral ? 2 : 1;
+  if (parsed.kind === 'time' || parsed.kind === 'distance') return sets * parsed.seconds * sides;
   return sets * Math.max(MIN_REP_SET_SECONDS, Math.round((parsed.reps || 8) * sides * REP_SECONDS));
 }
 

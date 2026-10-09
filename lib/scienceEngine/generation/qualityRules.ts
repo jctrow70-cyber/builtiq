@@ -37,6 +37,16 @@ const MUSCLE_WORDS: Array<{ token: string; muscle: string }> = [
   { token: 'oblique', muscle: 'obliques' },
 ];
 
+/**
+ * Emphasis is a share of the week, not a single required exercise.
+ * These are warnings unless another rule already makes the miss unsafe.
+ */
+export const EMPHASIS_POLICY = {
+  minExercisesPerRequestedEmphasis: 2,
+  minWeeklySetsPerRequestedEmphasis: 4,
+  minPriorityShare: 0.45,
+};
+
 export function muscleTier(muscle: string, priority: string): MuscleTier {
   if (priority === 'high_priority') return 'major';
   if (priority === 'maintenance') return 'minor';

@@ -83,12 +83,28 @@ export function countPersistedRampSets(
   );
 }
 
+export function rampSecondsFor(rests: number[]): number {
+  return rests.reduce((sum, rest) => sum + RAMP_SET_SECONDS + rest, 0);
+}
+
+function persistedRampRests(exercises: ExercisePrescription[]): number[] | null {
+  const rests = exercises.flatMap((exercise) =>
+    (exercise.setDetails || [])
+      .filter((set) => set.setType === 'warmup')
+      .map((set) => (set.restSeconds == null ? null : Number(set.restSeconds)))
+  );
+  if (!rests.length || rests.some((rest) => rest == null)) return null;
+  return rests as number[];
+}
+
 export function estimateWorkoutBreakdown(opts: {
   warmupItems: WarmupItem[];
   potentiation: ExercisePrescription[];
   rampCount: number;
+  /** When set, each ramp uses this rest instead of the default ramp rest. */
+  rampRests?: number[];
   exercises: ExercisePrescription[];
-  cooldownItems?: Array<{ sets?: number; reps?: string; measurementType?: string }>;
+  cooldownItems?: Array<{ sets?: number; reps?: string; measurementType?: string; laterality?: string }>;
 }): WorkoutDurationBreakdown {
   const warmupSeconds =
     SESSION_OVERHEAD_SECONDS +
@@ -112,7 +128,11 @@ export function estimateWorkoutBreakdown(opts: {
           (ex.restSeconds || powerRestSecondsFor({ name: ex.name, movementPattern: ex.movementPattern }))),
     opts.potentiation.length ? 40 : 0
   );
-  const rampSeconds = opts.rampCount * (RAMP_SET_SECONDS + RAMP_REST_SECONDS);
+  const explicitRampRests = opts.rampRests?.length ? opts.rampRests : persistedRampRests(opts.exercises);
+  const rampRests = explicitRampRests?.length
+    ? explicitRampRests
+    : Array.from({ length: opts.rampCount }, () => RAMP_REST_SECONDS);
+  const rampSeconds = rampSecondsFor(rampRests);
   const groups = new Map<string, ExercisePrescription[]>();
   opts.exercises.forEach((ex, i) => {
     const key = ex.supersetGroupId || `solo-${i}`;
@@ -143,6 +163,7 @@ export function estimateWorkoutBreakdown(opts: {
           prescription: item.reps,
           sets: item.sets,
           measurementType: item.measurementType,
+          laterality: item.laterality,
         })
       );
     }
@@ -157,7 +178,7 @@ export function estimateWorkoutBreakdown(opts: {
     cooldownSeconds,
     totalSeconds,
     minutes: Math.max(1, Math.round(totalSeconds / 60)),
-    rampCount: opts.rampCount,
+    rampCount: rampRests.length,
   };
 }
 

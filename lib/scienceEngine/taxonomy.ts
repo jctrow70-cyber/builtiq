@@ -183,6 +183,20 @@ export function normalizeMuscleId(raw?: string | null): MuscleId | null {
   return MUSCLE_ALIASES[key] || null;
 }
 
+/**
+ * Generic "Back" on a hip hinge is the erectors. Rows and pulldowns still use the
+ * upper-back alias. This does not change stored catalog credits.
+ */
+export function interpretMuscleLabel(raw?: string | null, exerciseName?: string): MuscleId | null {
+  const key = String(raw || '')
+    .toLowerCase()
+    .trim();
+  if (key === 'back' && /romanian|\brdl\b|\bdeadlift\b|good morning/.test(String(exerciseName || '').toLowerCase())) {
+    return 'spinal_erectors';
+  }
+  return normalizeMuscleId(raw);
+}
+
 export function normalizeMovementPattern(raw?: string | null): MovementPatternId {
   const key = String(raw || '')
     .toLowerCase()

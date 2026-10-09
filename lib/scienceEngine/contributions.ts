@@ -1,5 +1,5 @@
 import { SCIENCE_RULES_V1 } from './rules';
-import { normalizeMuscleId, type MuscleId } from './taxonomy';
+import { interpretMuscleLabel, normalizeMuscleId, type MuscleId } from './taxonomy';
 import type { CatalogExercise, MuscleContribution } from './types';
 
 /** Legacy safety only. Active masters use explicit hypertrophy_volume_credits. */
@@ -53,7 +53,7 @@ export function contributionsForExercise(
   if (stored?.length) {
     return stored
       .map((row) => {
-        const muscle = normalizeMuscleId(row.muscle_group);
+        const muscle = interpretMuscleLabel(row.muscle_group, exercise.name);
         return muscle ? { muscle, contribution: Number(row.contribution) || 0 } : null;
       })
       .filter((row): row is MuscleContribution => !!row);
@@ -63,7 +63,7 @@ export function contributionsForExercise(
   if (Array.isArray(credits) && credits.length) {
     const fromCredits = credits
       .map((row: any) => {
-        const muscle = normalizeMuscleId(row.muscle);
+        const muscle = interpretMuscleLabel(row.muscle, exercise.name);
         return muscle ? { muscle, contribution: Number(row.credit) || 0 } : null;
       })
       .filter((row): row is MuscleContribution => !!row);
@@ -74,7 +74,7 @@ export function contributionsForExercise(
   if (Array.isArray(targets) && targets.length) {
     const fromTargets = targets
       .map((t: any) => {
-        const muscle = normalizeMuscleId(t.muscle);
+        const muscle = interpretMuscleLabel(t.muscle, exercise.name);
         if (!muscle) return null;
         const pct = Number(t.percentage);
         const contribution =

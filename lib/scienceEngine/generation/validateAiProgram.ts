@@ -1,11 +1,12 @@
 import { creditSets, contributionsForExercise } from '../contributions';
 import { classifySessionDuration, estimateSessionFromAi } from '../duration';
-import { classifyPowerExercise, isHypertrophyStylePowerRx, parsePrepPrescription } from '../powerPrescription';
+import { classifyPowerExercise, isExplosivePrimer, isHypertrophyStylePowerRx, parsePrepPrescription } from '../powerPrescription';
 import { goalUsesHypertrophyBias } from '../rules';
 import type { CatalogExercise } from '../types';
 import type { MuscleId } from '../taxonomy';
 import { findDesignerById } from './matchById';
 import {
+  EMPHASIS_POLICY,
   isWorkingIsolationAsCooldown,
   muscleTier,
   restBand,
@@ -48,6 +49,7 @@ export function validateAiProgram(
   validatePrimaryFrequency(week1, library, context, issues);
   validateIdenticalDays(week1, context, issues);
   validateWeeklyVolume(week1, library, catalogById, context, issues);
+  validateRequestedEmphasis(week1, library, context, issues);
   validatePatternCoverage(week1, library, context, issues);
   validateSupersetPreference(week1, context, issues);
 
@@ -85,8 +87,8 @@ function validateWorkout(
     if (kind === 'warmup' && !hit.warmup_eligible) {
       issues.push(err('WARMUP_NOT_ELIGIBLE', `${hit.name} is not a warm-up movement`, workout.day_label, hit.exercise_id));
     }
-    if (kind === 'potentiation' && !hit.power_eligible) {
-      issues.push(err('PRIMER_NOT_ELIGIBLE', `${hit.name} is not power-eligible`, workout.day_label, hit.exercise_id));
+    if (kind === 'potentiation' && (!hit.power_eligible || !isExplosivePrimer(hit))) {
+      issues.push(err('PRIMER_NOT_ELIGIBLE', `${hit.name} is not an explosive power primer`, workout.day_label, hit.exercise_id));
     }
     if (kind === 'potentiation') {
       const parsed = parsePrepPrescription(item.prescription);
@@ -523,15 +525,24 @@ function validateWeeklyVolume(
     const got = credits[target.muscle] || 0;
     const ratio = target.target_working_sets > 0 ? got / target.target_working_sets : 1;
     const tier = muscleTier(target.muscle, target.priority);
-    const over = ratio > 1.6;
+    const practical = target.practical_max_sets || 0;
+    const slack = practical > 0 ? Math.max(2, Math.round(practical * 0.15)) : 0;
+    const slightOver = practical > 0 && got > practical && got <= practical + slack;
+    const over = practical > 0 ? got > practical + slack : ratio > 1.6;
 
     if (required.has(target.muscle as MuscleId) && got < 1) {
       issues.push(err('VOLUME_OFF', `Required emphasis ${target.muscle} has no working-set credit.`));
       return;
     }
     if (waived.has(target.muscle as MuscleId)) {
-      if (got < 1 || ratio < 0.5 || over) {
-        issues.push(warn('VOLUME_OFF', `${target.muscle} is outside the requested emphasis (${got} vs ${target.target_working_sets}).`));
+      const ceiling = practical > 0 ? practical : 2;
+      if (got > ceiling) {
+        issues.push(
+          warn(
+            'EMPHASIS_EXCESS',
+            `${target.muscle} was de-emphasized and still received ${got} credited sets, above the advisory ceiling of ${ceiling}.`
+          )
+        );
       }
       return;
     }
@@ -543,7 +554,9 @@ function validateWeeklyVolume(
       } else if (hypertrophy && got < floor) {
         issues.push(err('VOLUME_OFF', `${target.muscle} working sets (${got}) are below the useful minimum of ${floor}.`));
       } else if (ratio < 0.7 || over) {
-        issues.push(warn('VOLUME_OFF', `${target.muscle} working sets (${got}) vs target ${target.target_working_sets}.`));
+        issues.push(warn('VOLUME_OFF', `${target.muscle} working sets (${got}) vs preferred ${target.target_working_sets}.`));
+      } else if (slightOver) {
+        issues.push(info('VOLUME_OFF', `${target.muscle} is slightly above the practical maximum (${got} vs ${practical}).`));
       } else if (ratio < 0.85 || ratio > 1.25) {
         issues.push(info('VOLUME_OFF', `${target.muscle} planned ${got} vs target ${target.target_working_sets}.`));
       }
@@ -567,6 +580,60 @@ function validateWeeklyVolume(
       issues.push(info('VOLUME_OFF', `Optional ${target.muscle} has no direct work; indirect stimulus may be enough.`));
     }
   });
+}
+
+function validateRequestedEmphasis(
+  workouts: AiWorkoutPlan[],
+  library: Map<string, DesignerExercise>,
+  context: GenerationContext,
+  issues: ValidationIssue[]
+) {
+  const req = context.hard_requirements;
+  if (!req?.upperPush && !req?.lowerPull) return;
+  let pushSets = 0;
+  let hingeSets = 0;
+  let otherSets = 0;
+  const pushIds = new Set<string>();
+  const hingeIds = new Set<string>();
+  workouts.forEach((workout) => {
+    flattenStrength(workout).forEach((ex) => {
+      const pattern = library.get(ex.exercise_id)?.movement_pattern;
+      const sets = ex.working_sets || 0;
+      if (pattern === 'horizontal_push' || pattern === 'vertical_push') {
+        pushSets += sets;
+        pushIds.add(ex.exercise_id);
+      } else if (pattern === 'hinge') {
+        hingeSets += sets;
+        hingeIds.add(ex.exercise_id);
+      } else otherSets += sets;
+    });
+  });
+  const requestedSets = (req.upperPush ? pushSets : 0) + (req.lowerPull ? hingeSets : 0);
+  const total = pushSets + hingeSets + otherSets;
+  if (req.upperPush && (pushIds.size < EMPHASIS_POLICY.minExercisesPerRequestedEmphasis || pushSets < EMPHASIS_POLICY.minWeeklySetsPerRequestedEmphasis)) {
+    issues.push(
+      warn(
+        'EMPHASIS_THIN',
+        `Upper-body push has ${pushIds.size} exercise${pushIds.size === 1 ? '' : 's'} and ${pushSets} weekly working sets. The emphasis needs more than a single push.`
+      )
+    );
+  }
+  if (req.lowerPull && (hingeIds.size < EMPHASIS_POLICY.minExercisesPerRequestedEmphasis || hingeSets < EMPHASIS_POLICY.minWeeklySetsPerRequestedEmphasis)) {
+    issues.push(
+      warn(
+        'EMPHASIS_THIN',
+        `Lower-body hinge has ${hingeIds.size} exercise${hingeIds.size === 1 ? '' : 's'} and ${hingeSets} weekly working sets. The emphasis needs more than a single hinge.`
+      )
+    );
+  }
+  if (req.upperPush && req.lowerPull && total > 0 && requestedSets / total < EMPHASIS_POLICY.minPriorityShare) {
+    issues.push(
+      warn(
+        'EMPHASIS_SHARE',
+        `Push and hinge are ${requestedSets} of ${total} weekly working sets. The requested emphasis should hold at least ${Math.round(EMPHASIS_POLICY.minPriorityShare * 100)}% of the work.`
+      )
+    );
+  }
 }
 
 function validatePatternCoverage(

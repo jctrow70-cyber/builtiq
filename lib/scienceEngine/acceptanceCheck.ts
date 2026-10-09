@@ -17,6 +17,8 @@ import { runInstructionAdherenceChecks } from './generation/instructionAdherence
 import { runGenerationCriteriaChecks } from '../programDesign/generationCriteriaCheck';
 import { runFailureStageChecks } from './generation/failureStageCheck';
 import { runStage2bChecks } from './generation/stage2bCheck';
+import { runStage2cChecks } from './generation/stage2cCheck';
+import { runQualityCorrectionChecks } from './generation/qualityCorrectionCheck';
 import { runPhase1GenerationChecks } from './generation/phase1Check';
 import { runGenerationCatalogPolicyChecks } from './generation/catalogEligibilityCheck';
 import { runCatalogCleanupChecks } from '../training/catalogCleanupCheck';
@@ -554,6 +556,8 @@ async function run() {
   runGenerationCatalogPolicyChecks();
   await runFailureStageChecks();
   await runStage2bChecks();
+  await runStage2cChecks();
+  await runQualityCorrectionChecks();
   await runPhase1GenerationChecks();
   await runInstructionAdherenceChecks();
   runGenerationCriteriaChecks();

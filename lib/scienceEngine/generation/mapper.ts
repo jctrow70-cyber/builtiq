@@ -1,4 +1,6 @@
 import { estimateSessionFromAi } from '../duration';
+import { RAMP_REST_SECONDS } from '../durationConstants';
+import { classifyPowerExercise, isHypertrophyStylePowerRx, parsePrepPrescription } from '../powerPrescription';
 import { prescribeExercise } from '../prescription';
 import type { CatalogExercise, ExercisePrescription, ScienceProgram, ScienceWorkout, TrainingProfile, WarmupItem } from '../types';
 import { findByExerciseId } from './matchById';
@@ -129,7 +131,7 @@ function mapStrength(
 function applyRampDetails(
   prescribed: ExercisePrescription,
   raw: AiStrengthExercise,
-  ramps: Array<{ percent_of_working: number; reps: number }>
+  ramps: Array<{ percent_of_working: number; reps: number; rest_seconds?: number }>
 ) {
   if (ramps.length) {
     prescribed.setDetails = [
@@ -137,6 +139,7 @@ function applyRampDetails(
         setNumber: i + 1,
         setType: 'warmup' as const,
         reps: String(ramp.reps),
+        restSeconds: ramp.rest_seconds ?? RAMP_REST_SECONDS,
       })),
       ...Array.from({ length: prescribed.sets }, (_, i) => ({
         setNumber: ramps.length + i + 1,
@@ -185,6 +188,12 @@ function mapPrimer(item: AiPrepItem, profile: TrainingProfile, catalogById: Map<
   prescribed.exerciseId = catalog.id;
   prescribed.laterality = lateralityOf(catalog);
   prescribed.measurementType = measurementTypeOf(catalog);
+  const parsed = parsePrepPrescription(item.prescription);
+  const family = classifyPowerExercise(catalog);
+  if (parsed.min && !isHypertrophyStylePowerRx(family, prescribed.sets, parsed.min, parsed.max)) {
+    prescribed.repMin = parsed.min;
+    prescribed.repMax = Math.max(parsed.min, parsed.max || parsed.min);
+  }
   return prescribed;
 }
 

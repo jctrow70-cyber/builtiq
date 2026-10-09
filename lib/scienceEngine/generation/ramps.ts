@@ -1,3 +1,4 @@
+import { RAMP_REST_SECONDS } from '../durationConstants';
 import { generateRampSets, rampCountFor } from '../rampUp';
 import type { TrainingProfile } from '../types';
 import { isRampEligible } from './qualityRules';
@@ -31,8 +32,9 @@ export function rampSetsForSlot(input: RampSlotInput, profile?: Pick<TrainingPro
     experienceLevel: experience,
     opener: input.isFirstRampEligible,
   });
+  const withRest = (rows: AiRampSet[]) => rows.map((row) => ({ ...row, rest_seconds: RAMP_REST_SECONDS }));
   if (input.isFirstRampEligible) {
-    return standardRampSets({ experienceLevel: experience } as TrainingProfile, input.repMax).slice(0, count);
+    return withRest(standardRampSets({ experienceLevel: experience } as TrainingProfile, input.repMax).slice(0, count));
   }
   const later = heavy
     ? [
@@ -43,7 +45,7 @@ export function rampSetsForSlot(input: RampSlotInput, profile?: Pick<TrainingPro
         { percent_of_working: 0.65, reps: 5 },
         { percent_of_working: 0.85, reps: 3 },
       ];
-  return later.slice(0, Math.max(1, Math.min(count, later.length)));
+  return withRest(later.slice(0, Math.max(1, Math.min(count, later.length))));
 }
 
 export function isRampEligiblePrimary(

@@ -4,7 +4,7 @@ import type { DesignerExercise, GenerationContext } from './types';
 function durationTargetGuidance(minutes: number) {
   const requested = Math.max(1, Number(minutes) || 60);
   const targetLow = Math.max(15, requested - 5);
-  return `Aim each session at roughly ${targetLow}-${requested} minutes of training content. The engine calculates duration and rest. Do not pack filler and do not cut useful primary/secondary volume just to go shorter.`;
+  return `The ${requested}-minute request is a time budget, not a target to fill. About ${targetLow}-${requested} minutes is plenty when the work is meaningful. Do not pack filler, and do not drop useful primary or secondary work only to finish early.`;
 }
 
 export type PromptExercise = {
@@ -81,7 +81,9 @@ export function slimContextForPrompt(context: GenerationContext) {
     },
     weekly_volume_targets: context.weekly_volume_targets.map((t) => ({
       muscle: t.muscle,
+      minimum_working_sets: t.minimum_working_sets,
       target_working_sets: t.target_working_sets,
+      practical_max_sets: t.practical_max_sets,
       priority: t.priority,
     })),
     ...(context.recent_training.lifts.length ? { recent_training: context.recent_training } : {}),
@@ -113,46 +115,66 @@ export function buildDesignerInstructions(context: GenerationContext): string {
     ? `- Hard emphasis: ${emphasisBits.join('; ')}. Keep that emphasis. Major muscles outside it are optional this week.`
     : '';
   const warmupBand = context.constraints.warmup_minutes;
+  const pref = String(context.athlete.superset_preference || 'sometimes').toLowerCase();
+  const supersetRule = /frequent|often|always/.test(pref)
+    ? 'Supersets frequently: pair non-competing accessories when it helps. Leave demanding primaries as straight sets. Do not circuit the whole session.'
+    : /rare|minimal|never|off/.test(pref)
+      ? 'Supersets minimal: use a pair only when it clearly helps. Most work stays straight sets.'
+      : 'Supersets sometimes: one or two compatible pairs in the week is enough. Do not pair every session. Never pair two high-fatigue compounds.';
   return `You are the program designer for BuiltIQ Health (science ${SCIENCE_ENGINE_VERSION}, ${DESIGNER_PROMPT_VERSION}).
 
 ${opener}
 
-Use only exercise_id values from exercise_library. Warm-up IDs must be in warmup_ids. Cooldown IDs must be in cooldown_ids. Potentiation IDs must be in power_ids. Never invent IDs.
+Use only exercise_id values from exercise_library. Warm-up IDs must be in warmup_ids. Cooldown IDs must be in cooldown_ids. Potentiation IDs must be in power_ids. Never invent IDs. An empty potentiation array is valid.
 
-You own:
-- exercise selection and order
-- ${identical ? 'one session repeated on each requested day' : 'complementary day structure and session emphasis'}
-- ${identical ? 'the same accessories on every day' : 'accessory variation across the week'}
-- whether/where a superset is useful
-- optional potentiation (empty array is valid)
+You propose the week: exercise selection and order, session emphasis, working sets, rep ranges, RIR, rest_seconds, warm-up, power primers when they fit, superset pairings, accessories, and how the days balance. Prefer recognizable exercises. Change a lift only when the week, the goal, or recovery needs a different pattern.
 
-The science engine owns weekly set totals, session duration, exact rest, laterality flags, ramps, cooldown eligibility, and progression. Do not spend reasoning on those calculations. Send a reasonable rest_seconds guess; the engine will correct it. Leave ramps out. Set reps_per_side true only for unilateral/alternating lifts.
+The engine validates safety, equipment, limitations, the requested days, feasibility, and programming quality. It keeps a valid prescription that differs from a template. It corrects ineligible exercises, unsafe rest, and broken structure. It applies lift-specific ramp-up sets. Leave ramp sets out of this response. Set reps_per_side true only for unilateral or alternating lifts.
+
+${goalGuidance(context.athlete.primary_goal)}
+
+Design the week together. Spread knee-dominant work, hip-dominant work, horizontal push, vertical push, horizontal pull, vertical pull, some unilateral work, accessories, and core across the days. Not every pattern belongs in every session. Keep primary lifts stable enough to progress. Do not vary exercises at random.
+${identical ? 'This request wants the same workout on each day. Repeat it.' : 'Use a different emphasis on each day when that serves the goal.'}
+
+Volume: minimum_working_sets is the useful floor, target_working_sets is preferred, practical_max_sets is an advisory ceiling. Preferred targets are not mandatory minimums. A small indirect-credit overage is acceptable. Do not add redundant patterns just to hit a number.
+
+Duration: ${durationTargetGuidance(context.constraints.session_minutes)} Count working sets, rest, warm-up, primers, and supersets. Do not add filler to use leftover minutes.
 
 Hard constraints:
-- Keep the supplied days and requested day types.
-- ${durationTargetGuidance(context.constraints.session_minutes)}
+- Keep the supplied days and requested day types. Do not override equipment, limitations, or explicit schedule.
 - RIR ${context.constraints.rir_min}-${context.constraints.rir_max}. Working sets per exercise ${context.constraints.working_sets_per_exercise.min}-${context.constraints.working_sets_per_exercise.max}.
 - Honor excluded exercises, pain areas, and limitations. Do not diagnose injury.
 - Equipment must match the athlete list. Bodyweight mobility is allowed.
 ${cloneRule}
 ${emphasisRule}
-- Dynamic warm-up: ${warmup.min}-${warmup.max} unique exercises from warmup_ids. No duplicate exercise_ids. Warm-up time target is ${warmupBand.min}-${warmupBand.max} minutes. ${hard?.extendedWarmup ? 'An extended or athletic warm-up was requested, so the top of that range is allowed.' : 'Do not add filler warm-up drills.'} Leave ramp sets out. Athletic primers belong in potentiation, not warmup.
-
-Roles (session purpose):
-- primary: 1-2 main loaded movements. A 60-minute full-body day may have two if they are different patterns.
-- secondary: supporting compounds.
-- accessory / isolation: extra work. Do not label every exercise primary.
-
-Programming intent:
-- ${emphasisBits.length ? 'Honor the hard emphasis. Do not replace it with a generic full-body checklist.' : 'Cover major hypertrophy muscles (chest, upper back, lats, quads, hamstrings, glutes) across the week.'}
-- Superset preference is "${context.athlete.superset_preference}". "sometimes" means at least one non-competing pair in the week, not a pair in every session. Never pair two high-fatigue compounds.
-- Warm-up prepares THAT day's lifts. Cooldown is stretch/mobility/breathing only.
-- Potentiation is optional neural prep, not hypertrophy work. Jumps/throws stay low-rep and explosive (about 2-3 x 3-5). Ballistic swings may use a slightly higher crisp range. Do not prescribe 8-15 or working-set RIR on primers.
+- ${supersetRule}
+- Dynamic warm-up: ${warmup.min}-${warmup.max} unique exercises from warmup_ids that prepare THIS day's joints and patterns. No duplicate exercise_ids. Warm-up time target is ${warmupBand.min}-${warmupBand.max} minutes. ${hard?.extendedWarmup ? 'An extended warm-up was requested, so the top of that range is allowed.' : 'Do not pad the warm-up.'} ${identical ? 'The repeated day uses that same warm-up.' : 'Different training days should not share one generic warm-up.'} Dynamic warm-up, power primer, and ramp-up sets are different components.
+- Power primers are optional explosive prep (jump, throw, swing), about 2-3 x 3-5, or a short ballistic swing. Do not put a normal squat, press, or row in potentiation. Omit the primer when none fits the experience, equipment, or goal. Do not add a power exercise to every athletic session.
+- Cooldown is stretch, mobility, or breathing only.
 - why: one short clause, muscles that actually belong to the exercise.
+
+Roles: primary is 1-2 main lifts of different patterns. secondary supports them. accessory and isolation are extra work.
 
 Materialize week 1 only. progression.strategy is intent, not applied loads.
 
 Return the structured program only. Keep summary and coaching_notes to one or two short sentences.`;
+}
+
+function goalGuidance(goal: string): string {
+  const value = String(goal || '').toLowerCase();
+  if (value === 'hypertrophy' || value === 'strength_hypertrophy' || value === 'fat_loss_support') {
+    return 'Goal hypertrophy: working-set volume, exercise choice, and recovery matter. Aim near the preferred targets when the session has time, and stay inside the practical maximum.';
+  }
+  if (value === 'strength') {
+    return 'Goal strength: high-quality primary lifts, strength rep ranges, enough rest to repeat the set, and the same primaries long enough to overload.';
+  }
+  if (value === 'athletic_performance') {
+    return 'Goal athletic performance: strength, power when it fits, unilateral work, movement quality, and fatigue management. Power work is a choice, not a requirement on every day.';
+  }
+  if (value === 'muscular_endurance') {
+    return 'Goal endurance: develop the relevant endurance quality. Do not add strength volume the session does not need.';
+  }
+  return 'Goal general fitness: balanced, recognizable, sustainable training. Cover the main patterns across the week without maximizing volume.';
 }
 
 export function buildDesignerUserContent(context: GenerationContext): string {

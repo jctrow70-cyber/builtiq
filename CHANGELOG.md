@@ -11,6 +11,111 @@ Branch:
 Status:
 ```
 
+## BIQ-0259 - Correct classification, duration, and emphasis after the Et plan 4 audit
+
+Date: 2026-10-08
+Branch: main
+Status: Local / in progress
+
+### Summary
+
+Hammer curls, knee raises, and face pulls are no longer treated as heavy compounds when the catalog only says "isolation" or "strength." Duration now counts per-side time on both sides and uses the ramp rest that will be saved. A 45-minute request is trimmed by dropping lower-priority accessories before primary work or heavy-compound rest is touched. De-emphasized muscles no longer warn at zero volume, and meaningful extra volume is flagged. Science engine version is `1.4.13`. The saved Et plan 4 program, the model, the output-token cap, and the catalog card count are unchanged.
+
+### Purpose
+
+The saved athletic week was accepted at 53 minutes while the persisted ramp rests and per-side stretches were longer. Face pulls and curls were given compound rest, and waived muscles warned when they had no work.
+
+### Files changed
+
+- lib/scienceEngine/catalogAdapter.ts
+- lib/scienceEngine/taxonomy.ts
+- lib/scienceEngine/contributions.ts
+- lib/scienceEngine/prescriptionTime.ts
+- lib/scienceEngine/duration.ts
+- lib/scienceEngine/types.ts
+- lib/scienceEngine/toAiPlan.ts
+- lib/scienceEngine/version.ts
+- lib/scienceEngine/generation/qualityRules.ts
+- lib/scienceEngine/generation/validateAiProgram.ts
+- lib/scienceEngine/generation/repairAiProgram.ts
+- lib/scienceEngine/generation/mapper.ts
+- lib/scienceEngine/generation/ramps.ts
+- lib/scienceEngine/generation/effectiveWorkout.ts
+- lib/scienceEngine/generation/qualityCorrectionCheck.ts
+- lib/scienceEngine/acceptanceCheck.ts
+- lib/training/aiProgramPlan.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+### Database changes
+
+None. No catalog rows were edited.
+
+### Testing steps
+
+1. Run `npm run test:science` and confirm Stage 2B, Stage 2C, the quality checks, and Phase 2A/2B still pass.
+2. Confirm a Hammer Curl raw row resolves to elbow flexion and isolation.
+3. Confirm a 45-minute athletic week stays inside the duration error line and keeps identical Monday and Friday sessions.
+
+### Known issues
+
+Overhead press still receives a 0.5 chest credit from an "Upper Chest" label. Brachialis on hammer curls does not map to its own muscle, so biceps stay at the secondary 0.5 credit. Historical programs already saved with 120-second ramp rests are not rewritten.
+
+### Recommended commit message
+
+`BIQ-0259 Correct exercise class, duration, and emphasis checks`
+
+## BIQ-0258 - Let the AI design the week and keep the science engine as the check
+
+Date: 2026-10-08
+Branch: main
+Status: Local / in progress
+
+### Summary
+
+The designer prompt now asks the model to propose the week's exercises, order, emphasis, sets, reps, RIR, rest, warm-up, primers, supersets, and accessories. The science engine still checks safety, equipment, limitations, the schedule, feasibility, and programming quality, and it keeps a valid prescription that differs from the template. A normal goblet squat is no longer treated as a power primer. Science engine version is `1.4.12`. Designer prompt version is `designer@2.4`. The response schema, output-token cap, catalog, and Program Design UI are unchanged.
+
+### Purpose
+
+Stage 2B made volume, rest, ramps, and duration adaptive, but the prompt still told the model that the engine owned those programming choices. The model was mostly selecting exercises. A beginner science week was also placing Goblet Squat in the power-primer slot.
+
+### Files changed
+
+- lib/scienceEngine/generation/prompt.ts
+- lib/scienceEngine/generation/schema.ts
+- lib/scienceEngine/generation/validateAiProgram.ts
+- lib/scienceEngine/generation/repairAiProgram.ts
+- lib/scienceEngine/generation/mapper.ts
+- lib/scienceEngine/generation/library.ts
+- lib/scienceEngine/generation/stage2cCheck.ts
+- lib/scienceEngine/powerPrescription.ts
+- lib/scienceEngine/potentiation.ts
+- lib/scienceEngine/version.ts
+- lib/scienceEngine/acceptanceCheck.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+### Database changes
+
+None.
+
+### Testing steps
+
+1. Run `npm run test:science` and confirm Stage 2B, Stage 2C, Phase 1, and the failure-stage checks pass.
+2. Confirm a valid AI bench prescription of 4 x 8–12 at 135 seconds rest is saved as designed.
+3. Confirm a beginner general-fitness week does not use Goblet Squat as a power primer.
+4. Confirm the output-token cap remains 6,000.
+
+### Known issues
+
+Repair still raises rest that falls below the compromise floor, and it still clears model ramp sets so the engine can apply Stage 2B ramps. A pulldown-led science day can still show zero template ramps. Slight indirect-credit overages are advisory and can remain. Stage 2D is not started.
+
+### Recommended commit message
+
+`BIQ-0258 Let the AI design the week while the science engine validates it`
+
 ## BIQ-0257 - Unblock production typecheck on missing-RIR assertion
 
 Date: 2026-10-08

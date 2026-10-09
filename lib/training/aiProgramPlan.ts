@@ -1,6 +1,7 @@
 /** BIQ-0014: AI-driven program generation — prompt, validation, catalog matching */
 
 import { weekStatusForNewWorkout } from '../scienceEngine/adaptation/weekStatus';
+import { RAMP_REST_SECONDS } from '../scienceEngine/durationConstants';
 import { fetchWorkoutHasPerformance } from './plannedSetGuard';
 import { prescriptionColumnsFromSources } from './prescriptionMeta';
 import { inferExerciseType } from './exerciseTypes';
@@ -25,7 +26,7 @@ export type AiExercise = {
   program_role?: string;
   measurement_type?: string;
   laterality?: string;
-  set_details?: { set_type?: string; weight?: string; reps?: string; rir?: number }[];
+  set_details?: { set_type?: string; weight?: string; reps?: string; rir?: number; rest_seconds?: number }[];
 };
 
 export type AiWorkoutItem = AiExercise | { superset: AiExercise[] };
@@ -966,7 +967,7 @@ function buildPlannedSetRows(
     target_weight?: string;
     target_rir?: number;
     rest_seconds?: number;
-    set_details?: { set_type?: string; weight?: string; reps?: string; rir?: number }[];
+    set_details?: { set_type?: string; weight?: string; reps?: string; rir?: number; rest_seconds?: number }[];
   }
 ) {
   const details = extras?.set_details?.length ? extras.set_details : null;
@@ -984,7 +985,7 @@ function buildPlannedSetRows(
       target_reps: detail?.reps || extras?.reps || '',
       target_rpe: rampEffort ? '' : extras?.rpe || '',
       target_rir: rampEffort ? null : detail?.rir ?? extras?.target_rir ?? null,
-      rest_seconds: extras?.rest_seconds ?? null,
+      rest_seconds: detail?.rest_seconds ?? (rampEffort ? RAMP_REST_SECONDS : extras?.rest_seconds ?? null),
       rep_min: parseRepBound(detail?.reps || extras?.reps || '', 'min'),
       rep_max: parseRepBound(detail?.reps || extras?.reps || '', 'max'),
     });
@@ -1016,7 +1017,7 @@ type PendingExerciseInsert = {
     target_weight: string;
     target_rir?: number;
     rest_seconds?: number;
-    set_details?: { set_type?: string; weight?: string; reps?: string; rir?: number }[];
+    set_details?: { set_type?: string; weight?: string; reps?: string; rir?: number; rest_seconds?: number }[];
   };
 };
 
