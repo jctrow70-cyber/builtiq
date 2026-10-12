@@ -19,6 +19,30 @@ Impact:
 
 ---
 
+## Decision 104 - Group Training Phase 1 Reads the Existing Schedule
+
+Date: 2026-10-12
+Status: Accepted
+Category: Groups
+
+### Decision
+
+Group Training opens on a member list. Owners and managers see every member. A member sees only their own group training. The plan name comes from an explicit personal choice, otherwise the group enrollment, otherwise an individual assignment, otherwise the group default. Personal program names are not shown. Scheduled days come from the shared program's existing day labels. Next workout and this week's rows come from group expectations when those rows exist, and from the same program-day placement when they do not. A workout due today is due today. Needs attention uses a missed group workout in the last seven days. Paused participation and a paused enrollment show as paused, and neither is counted as needing a plan. Members who chose personal training are not counted as needing a group plan. Schedule needs review appears when a program's weeks do not share the same ordered training days. No new tables, assignment writes, or expectation generation are part of this phase.
+
+### Reason
+
+Trainers need one screen that answers who is training and who needs attention. The enrollment, expectation, and assignment records already answer that. A second assignment system, or a weekday map, would wait until the screen itself is clear.
+
+### Alternatives Considered
+
+Keep the adherence percentage list as the Training home. Add the assignment wizard in the same change. Treat a hidden expectation flag as paused. Show every member's row to ordinary members.
+
+### Impact
+
+Group Training layout, member status, and the member training detail change. Program assignment, personal enrollments, permissions, and expectation materialization stay as they are. Later phases can add the wizard, per-member weekdays, overrides, and the group calendar on this page.
+
+---
+
 ## Decision 103 - Trim Extra Primary Sets Before a Requested Accessory
 
 Date: 2026-10-09

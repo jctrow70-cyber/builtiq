@@ -11,6 +11,65 @@ Branch:
 Status:
 ```
 
+## BIQ-0262 - Group Training Workspace, Phase 1
+
+Date: 2026-10-12
+Branch: main
+Status: Committed locally, not pushed
+
+### Summary
+
+Group Training now opens on the people in the group. Owners and managers see each member's group plan, the program's training days, the next group workout, and a status. A member sees only their own row. Assign Training still uses the existing assignment flow. Program publishing and one-off workouts sit behind Program library.
+
+### Purpose
+
+The previous Training landing page led with one group program and a long adherence list. A trainer could not see who had a plan, who needed one, or open a member's group week without leaving for the member dashboard.
+
+### Files changed
+
+- app/components/groups/GroupTrainingHome.tsx
+- app/components/groups/GroupTrainingMemberList.tsx
+- app/components/groups/MemberTrainingWorkspace.tsx
+- app/components/groups/GroupPlanAssignmentForm.tsx
+- app/components/groups/GroupsHub.tsx
+- app/globals.css
+- lib/groups/trainingWorkspace.ts
+- lib/groups/loadGroupTrainingFacts.ts
+- lib/groups/index.ts
+- scripts/test-group-training-workspace.ts
+- scripts/test-group-architecture.ts
+- package.json
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+### Database changes
+
+None.
+
+### Testing steps
+
+1. Run `node .\node_modules\typescript\bin\tsc --noEmit --pretty false`.
+2. Run `npm run test:groups`.
+3. As an owner, open Groups → Training. Confirm the summary counts, the member rows, and that a row opens that member's group week.
+4. Confirm a member on Personal training is not counted as needing a plan, and their personal program name is not shown.
+5. Confirm Change plan still applies the existing assignment types, Customize workouts still forks a group program, and Message member still opens the existing conversation when allowed.
+6. Open Program library and confirm publish, assign, and one-off workout assignment still work.
+7. As a member, confirm Training shows only your row.
+8. At about 390px, confirm member rows stack, the summary stays readable, and the page does not scroll sideways.
+
+### Known issues
+
+- Assign Training still opens the existing program assignment modal, or the program library when the current program is not published. The guided wizard is Phase 2.
+- Per-member weekdays, schedule overrides, and the group calendar are not in this phase.
+- Another member's completed workout is confirmed from group set logs and the group adherence function. Workout session rows stay private to that member, so a past group workout can show "Not confirmed" when the adherence grade does not count it as missed.
+- Expectation dates require migration 059. Until it is applied, scheduled days and this week's count come from the program calendar.
+- The Calendar switch is hidden until the group week calendar is built.
+
+### Recommended commit message
+
+`BIQ-0262 Phase 1: Redesign Group Training workspace`
+
 ## BIQ-0261 - Keep a requested glute accessory when a 45-minute athletic session is trimmed
 
 Date: 2026-10-09

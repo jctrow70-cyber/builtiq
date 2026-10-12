@@ -126,6 +126,49 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .catalog-result.picked{border-color:var(--purple);background:#171628}
 .team-plan-card,.team-roster-card{margin-bottom:10px}
 .groups-hub{display:flex;flex-direction:column;gap:10px}
+.group-training{display:flex;flex-direction:column;gap:10px;min-width:0}
+.group-training-card{min-width:0}
+.group-training-head{display:flex;flex-direction:column;align-items:stretch;gap:12px}
+.group-training-assign{min-height:44px;width:100%}
+.group-training-summary{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+.group-training-summary div{min-width:0}
+.group-training-summary b{display:block;font-size:22px;letter-spacing:-0.03em}
+.group-training-notice{margin-top:10px}
+.group-training-list{display:flex;flex-direction:column}
+.group-training-member{display:grid;grid-template-columns:1fr;gap:6px;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:transparent;color:inherit;padding:12px 0;cursor:pointer;min-height:44px}
+.group-training-member-name,.group-training-member-plan,.group-training-member-next{display:flex;justify-content:space-between;align-items:baseline;gap:8px;min-width:0}
+.group-training-member-name b,.group-training-member-plan span,.group-training-member-next span{min-width:0;overflow-wrap:anywhere}
+.group-training-status{display:inline-flex;align-items:center;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;background:var(--accentSoft);color:var(--accentOnSoft);white-space:nowrap}
+.group-training-status-needs_plan,.group-training-status-needs_attention,.group-training-status-schedule_review{background:rgba(245,158,11,.16);color:#fbbf24}
+.group-training-status-on_track,.group-training-week-completed{background:rgba(34,197,94,.16);color:#4ade80}
+.group-training-status-paused,.group-training-status-personal,.group-training-week-scheduled,.group-training-week-not-confirmed{background:rgba(148,163,184,.16);color:#cbd5e1}
+.group-training-week-missed{background:rgba(239,68,68,.16);color:#fca5a5}
+.group-training-week-due-today{background:var(--accentSoft);color:var(--accentOnSoft)}
+.member-training-workspace h2{font-size:22px}
+.member-training-back{margin-bottom:12px;min-height:44px}
+.member-training-facts{margin-top:12px}
+.member-training-note{margin-top:10px}
+.member-training-actions{margin-top:12px}
+.member-training-actions .btn{min-height:44px}
+.member-training-customize{margin-top:12px}
+.member-training-plan-form{margin-top:12px}
+.member-training-week{display:flex;flex-direction:column}
+.member-training-week-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-top:1px solid var(--line);min-height:44px}
+.member-training-week-row .muted{display:block}
+.group-training-library-head{display:flex;flex-direction:column;align-items:stretch;gap:10px}
+.group-training-library-head .btn{min-height:44px}
+.group-training-current{margin-top:8px}
+@media (min-width:721px){
+ .group-training-head,.group-training-library-head{flex-direction:row;justify-content:space-between;align-items:flex-start}
+ .group-training-assign,.group-training-library-head .btn{width:auto}
+ .group-training-summary{grid-template-columns:repeat(4,minmax(0,1fr))}
+ .group-training-member{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,.9fr);align-items:center;gap:12px}
+ .group-training-member-plan,.group-training-member-next{flex-direction:column;align-items:flex-start;gap:2px}
+}
+@media (max-width:720px){
+ .group-training,.group-training-card,.group-training-list{overflow-x:hidden}
+ .group-training-member{grid-template-columns:1fr}
+}
 .teams-workspace{gap:12px}
 .team-workspace-head{padding:12px 14px}
 .team-workspace-head-row{display:flex;align-items:flex-start;gap:8px}

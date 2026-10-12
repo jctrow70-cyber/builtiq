@@ -511,8 +511,10 @@ const progressUi = readFileSync(new URL('../app/components/groups/TeamProgressTa
 assert.doesNotMatch(progressUi, /compliance|adherence/i);
 assert.match(progressUi, /Activity/);
 const trainingUi = readFileSync(new URL('../app/components/groups/GroupTrainingHome.tsx', import.meta.url), 'utf8');
-assert.match(trainingUi, /Manage plans/);
+assert.match(trainingUi, /Assign Training/);
+assert.match(trainingUi, /Program library/);
 assert.match(trainingUi, /\{canManage &&/);
+assert.doesNotMatch(trainingUi, /GroupScheduleAdherence/);
 const settingsUi = readFileSync(new URL('../app/components/groups/TeamSettingsTab.tsx', import.meta.url), 'utf8');
 assert.match(settingsUi, /Group administration/);
 assert.match(settingsUi, /groupSettingsAccess/);

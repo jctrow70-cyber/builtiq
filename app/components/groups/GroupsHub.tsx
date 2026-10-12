@@ -14,6 +14,7 @@ import GroupAssignWorkoutPanel from './GroupAssignWorkoutPanel';
 import GroupClassificationsPanel from './GroupClassificationsPanel';
 import GroupInviteMembersPanel from './GroupInviteMembersPanel';
 import GroupOverview from './GroupOverview';
+import GroupPlanAssignmentForm from './GroupPlanAssignmentForm';
 import GroupTrainingHome from './GroupTrainingHome';
 import TeamMemberDetail from './TeamMemberDetail';
 import TeamMembersTab from './TeamMembersTab';
@@ -471,8 +472,49 @@ export default function GroupsHub(props: GroupsHubProps) {
           current={current}
           managingPlans={managePlans}
           onView={current ? () => onEditTeamProgram(current.id) : undefined}
-          onAssign={current ? () => setAssignProgramId(current.id) : undefined}
+          onAssign={current && current.status === 'published' ? () => setAssignProgramId(current.id) : undefined}
           onManagePlans={canManage ? () => setManagePlans((open) => !open) : undefined}
+          teamName={activeTeam?.name}
+          sessionUserId={sessionUserId}
+          memberAssignments={memberAssignments}
+          programs={[...(assignWorkoutPrograms || []), ...(teamPrograms || []), groupProgramForAssign].filter(Boolean)}
+          defaultProgramId={activeTeam?.default_program_id}
+          onPrepareAssignment={onOpenMember}
+          assignmentMemberId={memberDashboard?.user_id || null}
+          customizePrograms={programs
+            .filter((program: any) => program?.visibility === 'team' && program?.id)
+            .map((program: any) => ({ id: program.id, name: program.name || 'Program' }))}
+          onCustomize={onCustomizeProgramForMember}
+          canMessageMember={
+            activeTeam
+              ? (member) =>
+                  canStartDirectConversation({
+                    callerRole: activeTeam.my_role,
+                    callerActive: true,
+                    targetRole: member.role,
+                    targetActive: true,
+                    samePerson: member.user_id === sessionUserId,
+                    flags: groupCommunicationFlags(activeTeam),
+                  })
+              : undefined
+          }
+          onMessageMember={
+            activeTeam
+              ? (member) => {
+                  setOpenedConversationId(null);
+                  setComposeUserId(member.user_id);
+                  setMessagesOpen(true);
+                }
+              : undefined
+          }
+          planEditor={
+            <GroupPlanAssignmentForm
+              assignDraft={assignDraft}
+              programs={assignableTeamPrograms?.length ? assignableTeamPrograms : programs}
+              onAssignDraftChange={onAssignDraftChange}
+              onApply={onApplyAssignment}
+            />
+          }
           planLibrary={
             <TeamProgramsTab
               canManage={canManage}
