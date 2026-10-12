@@ -40,6 +40,14 @@ export type ProgramsLaunchIntent = {
   action: 'library' | 'create' | 'edit';
   programId?: string | null;
   hint?: string | null;
+  /** Members already chosen in Assign Training. Publishing returns to that wizard. */
+  assignmentReturn?: {
+    teamId: string;
+    whoMode: 'members' | 'all' | 'classification';
+    memberUserIds: string[];
+    classificationId?: string | null;
+    creation: 'ai' | 'manual';
+  } | null;
 };
 
 export type ProgramDesignRecord = {

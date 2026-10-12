@@ -95,7 +95,7 @@ export default function PushToMembersSheet({
           : `Assigned to ${result.pushed} member${result.pushed !== 1 ? 's' : ''}`
       );
     }
-    if (makeTeamDefault) parts.push('Set as group default for Follow Group Plan');
+    if (makeTeamDefault) parts.push('Set as the group plan for members who use it');
     if (result.errors.length) parts.push(`Notes: ${result.errors.join('; ')}`);
     setSuccess(parts.join('. ') + '.');
     onPushed?.();
@@ -147,7 +147,7 @@ export default function PushToMembersSheet({
             checked={makeTeamDefault}
             onChange={(e) => setMakeTeamDefault(e.target.checked)}
           />
-          Also set as group default (everyone on Follow Group Plan)
+          Also set as the group plan for members who use it
         </label>
 
         <div className="topline" style={{ justifyContent: 'space-between', marginTop: 12 }}>

@@ -132,10 +132,10 @@ export default function GroupMemberDashboard({
             value={assignDraft.type}
             onChange={(e) => onAssignDraftChange({ ...assignDraft, type: e.target.value })}
           >
-            <option value="team">Follow Group Plan</option>
-            <option value="personal">Use Personal Plan</option>
-            <option value="individual_team">Individual Group Plan</option>
-            <option value="manual">Manual Assignment</option>
+            <option value="team">Use Group Plan</option>
+            <option value="personal">Use Personal Training</option>
+            <option value="individual_team">Assign Different Plan</option>
+            <option value="manual">Assign Different Plan</option>
           </select>
           {(assignDraft.type === 'individual_team' || assignDraft.type === 'manual') && (
             <>

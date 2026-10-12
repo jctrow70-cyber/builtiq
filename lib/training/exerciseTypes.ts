@@ -87,11 +87,10 @@ export function isMobilityStretchExercise(ex: any, catalogItem?: any, exType?: E
 }
 
 export function assignmentTypeLabel(t: string) {
-  if (t === 'team') return 'Group Plan';
-  if (t === 'personal') return 'Personal Plan';
-  if (t === 'individual_team') return 'Individual Group Plan';
-  if (t === 'manual') return 'Manual';
-  return t || 'Group Plan';
+  if (t === 'team') return 'Use Group Plan';
+  if (t === 'personal') return 'Use Personal Training';
+  if (t === 'individual_team' || t === 'manual') return 'Assign Different Plan';
+  return t || 'Use Group Plan';
 }
 
 function exerciseSection(ex: any) {

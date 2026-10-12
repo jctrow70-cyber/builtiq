@@ -158,6 +158,21 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .group-training-library-head{display:flex;flex-direction:column;align-items:stretch;gap:10px}
 .group-training-library-head .btn{min-height:44px}
 .group-training-current{margin-top:8px}
+.assign-wizard-head,.assign-wizard-actions{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.assign-wizard-kicker{margin:0 0 4px;font-size:13px}
+.assign-wizard-steps{display:flex;gap:8px;list-style:none;padding:0;margin:12px 0}
+.assign-wizard-steps li{width:28px;height:28px;border-radius:999px;display:grid;place-items:center;background:var(--surfaceInset);color:var(--textSecondary);font-size:12px;font-weight:800}
+.assign-wizard-steps li.is-current{background:var(--accent);color:#fff}
+.assign-wizard-step{display:flex;flex-direction:column;gap:12px}
+.assign-wizard-choices{display:flex;flex-wrap:wrap;gap:8px}
+.assign-wizard-choices button{min-height:44px;border-radius:999px;border:1px solid var(--borderSubtle);background:transparent;color:var(--textPrimary);padding:8px 12px;font-weight:700}
+.assign-wizard-choices button.is-current{background:var(--accentSoft);color:var(--accentOnSoft);border-color:transparent}
+.assign-wizard-list{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.assign-wizard-person{display:flex;align-items:flex-start;gap:10px;min-height:44px}
+.assign-wizard-person span,.assign-wizard-list li{display:flex;flex-direction:column;min-width:0}
+.assign-wizard-preview{display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:12px;background:var(--surfaceInset)}
+.assign-wizard-create{display:flex;flex-direction:column;gap:8px}
+.assign-wizard-actions .btn{min-height:44px}
 @media (min-width:721px){
  .group-training-head,.group-training-library-head{flex-direction:row;justify-content:space-between;align-items:flex-start}
  .group-training-assign,.group-training-library-head .btn{width:auto}
@@ -166,8 +181,10 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
  .group-training-member-plan,.group-training-member-next{flex-direction:column;align-items:flex-start;gap:2px}
 }
 @media (max-width:720px){
- .group-training,.group-training-card,.group-training-list{overflow-x:hidden}
+ .group-training,.group-training-card,.group-training-list,.assign-wizard{overflow-x:hidden}
  .group-training-member{grid-template-columns:1fr}
+ .assign-wizard-actions{flex-direction:column}
+ .assign-wizard-actions .btn{width:100%;min-height:44px}
 }
 .teams-workspace{gap:12px}
 .team-workspace-head{padding:12px 14px}

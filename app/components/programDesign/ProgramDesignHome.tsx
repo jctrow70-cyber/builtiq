@@ -52,6 +52,7 @@ type ProgramDesignHomeProps = {
   onFollowed?: (programId: string | null, opts?: { openTraining?: boolean }) => void;
   launch?: ProgramsLaunchIntent | null;
   onLaunchConsumed?: () => void;
+  onAssignmentProgramReady?: (program: { id: string; name: string }) => void;
 };
 
 type View = 'home' | 'create' | 'ai-setup' | 'editor';
@@ -128,9 +129,11 @@ export default function ProgramDesignHome({
   onFollowed,
   launch = null,
   onLaunchConsumed,
+  onAssignmentProgramReady,
 }: ProgramDesignHomeProps) {
   const [scope, setScope] = useState<ProgramScope>(launch?.scope || 'personal');
   const [handoffHint, setHandoffHint] = useState<string | null>(launch?.hint || null);
+  const [assignmentReturn, setAssignmentReturn] = useState(launch?.assignmentReturn || null);
   const [programs, setPrograms] = useState<ProgramDesignRecord[]>([]);
   const [sharedPrograms, setSharedPrograms] = useState<(ProgramDesignRecord & { groupName?: string; groupRole?: string | null })[]>([]);
   const [personalPrograms, setPersonalPrograms] = useState<ProgramDesignRecord[]>([]);
@@ -339,6 +342,7 @@ export default function ProgramDesignHome({
     onLaunchConsumed?.();
     setScope(next.scope);
     if (next.hint) setHandoffHint(next.hint);
+    if (next.assignmentReturn) setAssignmentReturn(next.assignmentReturn);
     if (next.action === 'create') void beginCreate(next.scope);
     else if (next.action === 'edit' && next.programId) void openProgramById(next.programId);
   }, [launchKey, loading]);
@@ -378,7 +382,7 @@ export default function ProgramDesignHome({
         setLiveGroupPrograms((prev) => [data, ...prev.filter((p) => p.id !== data.id)]);
       }
       setEditing(data);
-      setView('ai-setup');
+      setView(assignmentReturn?.creation === 'manual' ? 'editor' : 'ai-setup');
     } catch (e: any) {
       setError(e?.message || 'Could not create program');
     } finally {
@@ -682,6 +686,9 @@ export default function ProgramDesignHome({
     const showGroupAudience = programEditAudience(editing) === 'group';
     return (
       <section className="pd-screen">
+        {assignmentReturn && (
+          <p className="pd-note">Publish this program to return to Assign Training. The members you selected are kept.</p>
+        )}
         <ProgramCalendarEditor
           supabase={supabase}
           program={editing}
@@ -705,6 +712,10 @@ export default function ProgramDesignHome({
             void reload();
           }}
           onProgramChange={(next) => {
+            const assignable = next.status === 'active' || next.status === 'scheduled' || next.status === 'published';
+            if (assignmentReturn && editing.status === 'draft' && assignable) {
+              onAssignmentProgramReady?.({ id: next.id, name: next.name || 'Program' });
+            }
             setEditing(next);
             setPrograms((prev) => prev.map((p) => (p.id === next.id ? next : p)));
           }}

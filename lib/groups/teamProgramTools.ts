@@ -48,16 +48,19 @@ export async function leaveTeam(
   return { error: error?.message || null };
 }
 
-/** Sets the group default program. Does not change anyone's personal follow. */
+/** Sets the group default program and updates members who currently follow it. */
 export async function setGroupDefaultProgram(
   supabase: SupabaseClient,
   teamId: string,
-  programId: string | null
+  programId: string | null,
+  startsOn?: string | null
 ): Promise<{ error: string | null }> {
-  const { error } = await supabase.rpc('st_set_group_default_program', {
+  const args: { p_team_id: string; p_program_id: string | null; p_starts_on?: string } = {
     p_team_id: teamId,
     p_program_id: programId,
-  });
+  };
+  if (startsOn) args.p_starts_on = startsOn;
+  const { error } = await supabase.rpc('st_set_group_default_program', args);
   return { error: error?.message || null };
 }
 

@@ -19,6 +19,30 @@ Impact:
 
 ---
 
+## Decision 105 - Group Assignment Is One Transaction
+
+Date: 2026-10-12
+Status: Accepted
+Category: Groups
+
+### Decision
+
+Assign Training is a four-step wizard. The selected start date is written onto the new assignment. If that date is still in the future, the current group program stays in effect and a program segment records the upcoming program. Setting the group default updates enrollments for members who follow the group plan, and it leaves personal training, individual plans, and customized forks in place. Bulk assignment validates every recipient first and commits in one database transaction. A repeated request key does not insert a second assignment. One-off workouts still use the existing assignment tables. Training days still come from the program. Custom weekdays are not part of this change.
+
+### Reason
+
+A browser loop could assign some members and then fail. The group default previously changed only `st_teams.default_program_id`, so followers stayed on the old program until a client sync. Reassignment also kept the previous `starts_on`, so the chosen start date did not take effect.
+
+### Alternatives Considered
+
+Keep the per-member loop and only restyle the modal. Switch the enrollment program immediately on a future start date. Treat every member, including personal training and customized forks, as a follower of the new group default.
+
+### Impact
+
+Owners, managers, and members with the assign permission use the wizard. Ordinary members still cannot assign. Personal enrollments are not written. The migration must be applied manually before the new save succeeds. Later phases can add per-member weekdays, overrides, and the group calendar without replacing this wizard.
+
+---
+
 ## Decision 104 - Group Training Phase 1 Reads the Existing Schedule
 
 Date: 2026-10-12

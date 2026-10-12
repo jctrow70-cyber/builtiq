@@ -11,6 +11,73 @@ Branch:
 Status:
 ```
 
+## BIQ-0262 - Assign Training Wizard, Phase 2
+
+Date: 2026-10-12
+Branch: main
+Status: Committed locally, not pushed
+
+### Summary
+
+Assign Training is now a four-step wizard: who, what, when, and review. One server transaction assigns the selected members, or nobody. Setting the group plan also updates members who follow that plan. A future start date keeps the current program until that date. Creating a program with AI or by hand returns to the wizard with the same members selected.
+
+### Purpose
+
+The old assignment window updated one member at a time in the browser, and changing the group default did not move the people already following it. Trainers need one reliable flow for one person, several people, the whole group, or a classification.
+
+### Files changed
+
+- app/components/groups/AssignTrainingWizard.tsx
+- app/components/groups/GroupTrainingHome.tsx
+- app/components/groups/GroupsHub.tsx
+- app/components/groups/GroupPlanAssignmentForm.tsx
+- app/components/groups/GroupMemberDashboard.tsx
+- app/components/programDesign/ProgramDesignHome.tsx
+- app/components/programDesign/PushToMembersSheet.tsx
+- app/page.tsx
+- app/globals.css
+- lib/groups/assignmentWizard.ts
+- lib/groups/assignGroupTraining.ts
+- lib/groups/teamProgramTools.ts
+- lib/groups/loadGroupTrainingFacts.ts
+- lib/groups/index.ts
+- lib/programDesign/types.ts
+- lib/training/exerciseTypes.ts
+- scripts/test-assignment-wizard.ts
+- package.json
+- supabase/migrations/20261012_062_group_assignment_wizard.sql
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+### Database changes
+
+Apply `supabase/migrations/20261012_062_group_assignment_wizard.sql` manually in the Supabase SQL Editor after migration 059. It adds `st_group_assignment_requests` for retry protection, replaces group assignment and group-default functions, and teaches schedule refresh to honor a future program segment. It does not add custom weekdays, overrides, or a group calendar. Personal enrollments are not updated.
+
+### Testing steps
+
+- As an owner or manager, open Groups → Training → Assign Training.
+- Select one member, several members, all eligible members, and a classification. Confirm someone who already has a group plan is labeled.
+- Choose a published program, set a start date, review replacements, and assign. Confirm every selected member shows the new plan, or that a failure changes nobody.
+- Set a future start date and confirm the current plan remains until that date.
+- Set the group plan and confirm a customized fork and a member using personal training stay on those choices.
+- Create a program with AI and manually, publish it, and confirm Assign Training reopens on When with the same members.
+- Assign a one-off workout from the wizard.
+- Repeat the same assignment and confirm it does not create a second copy.
+- On a phone-width screen, move Back and Next without sideways scrolling.
+- Apply the migration before expecting the new save to succeed.
+
+### Known issues
+
+- The migration is not applied from the app. Until it is applied, Assign reports that and keeps the selections.
+- The member dashboard still has the older per-person assignment controls. Program library still has the one-off form. Both stay until a later cleanup.
+- Push to members inside Program Design can still assign on its own if used during the create handoff.
+- Per-member weekdays, schedule overrides, and the group calendar are not in this phase.
+
+### Recommended commit message
+
+BIQ-0262 Phase 2: Add Group Training assignment wizard
+
 ## BIQ-0262 - Group Training Workspace, Phase 1
 
 Date: 2026-10-12

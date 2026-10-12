@@ -13,4 +13,5 @@ export * from './trainingSources';
 export * from './progressScope';
 export * from './workspaceTabs';
 export * from './trainingWorkspace';
+export * from './assignmentWizard';
 export * from './communication';

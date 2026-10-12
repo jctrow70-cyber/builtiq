@@ -17,6 +17,8 @@ type GroupTrainingHomeProps = {
   current: TeamProgramRow | null;
   onView?: () => void;
   onAssign?: () => void;
+  onOpenAssignWizard?: (seed?: { memberUserId?: string | null; programId?: string | null }) => void;
+  canAssign?: boolean;
   onManagePlans?: () => void;
   managingPlans: boolean;
   planLibrary?: ReactNode;
@@ -73,6 +75,8 @@ export default function GroupTrainingHome({
   current,
   onView,
   onAssign,
+  onOpenAssignWizard,
+  canAssign = false,
   onManagePlans,
   managingPlans,
   planLibrary,
@@ -185,7 +189,8 @@ export default function GroupTrainingHome({
   const selectedSource = members.find((member) => member.user_id === selectedUserId) || null;
 
   function assignTraining() {
-    if (current && current.status === 'published' && onAssign) onAssign();
+    if (onOpenAssignWizard) onOpenAssignWizard();
+    else if (current && current.status === 'published' && onAssign) onAssign();
     else onManagePlans?.();
   }
 
@@ -197,7 +202,7 @@ export default function GroupTrainingHome({
             <h2>Training</h2>
             <p className="muted">Who is training, which plan they follow, and who needs attention.</p>
           </div>
-          {canManage && (
+          {(canManage || canAssign) && (
             <button type="button" className="btn green group-training-assign" onClick={assignTraining}>
               Assign Training
             </button>
@@ -245,11 +250,8 @@ export default function GroupTrainingHome({
               setEditingPlan(false);
             }}
             onChangePlan={
-              canManage && selectedSource
-                ? () => {
-                    setEditingPlan(true);
-                    onPrepareAssignment?.(selectedSource);
-                  }
+              (canManage || canAssign) && selectedSource
+                ? () => onOpenAssignWizard?.({ memberUserId: selected.userId })
                 : undefined
             }
             onCustomize={

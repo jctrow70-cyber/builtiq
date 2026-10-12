@@ -3,12 +3,15 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   buildTeamProgramRows,
+  groupPermissionFlags,
   type GroupClassification,
   type MemberPerformanceBundle,
   type MemberRosterMeta,
 } from '../../../lib/groups';
 import type { AssignProgramTarget } from './TeamAssignProgramModal';
-import TeamAssignProgramModal from './TeamAssignProgramModal';
+import AssignTrainingWizard, { type AssignTrainingSubmit } from './AssignTrainingWizard';
+import type { AssignmentWizardResume } from '../../../lib/groups/assignmentWizard';
+import { canAssignInGroup } from '../../../lib/groups/permissions';
 import TeamCreateJoinSheet, { type CreateGroupPayload } from './TeamCreateJoinSheet';
 import GroupAssignWorkoutPanel from './GroupAssignWorkoutPanel';
 import GroupClassificationsPanel from './GroupClassificationsPanel';
@@ -106,6 +109,10 @@ export type GroupsHubProps = {
     programId: string,
     payload: { target: AssignProgramTarget; memberUserIds: string[]; setAsTeamDefault: boolean }
   ) => Promise<void>;
+  assignmentResume?: AssignmentWizardResume | null;
+  onAssignmentResumeConsumed?: () => void;
+  onCreateAssignmentProgram?: (draft: AssignmentWizardResume) => void;
+  onSubmitAssignment?: (payload: AssignTrainingSubmit) => Promise<void>;
   onCustomizeProgramForMember: (memberUserId: string, sourceProgramId: string) => Promise<void>;
   onGenerateProgramForMember: (memberUserId: string) => void;
   onRefreshMemberPerformance?: () => void;
@@ -186,6 +193,10 @@ export default function GroupsHub(props: GroupsHubProps) {
     onPublishTeamProgram,
     onDeleteProgram,
     onAssignTeamProgram,
+    assignmentResume = null,
+    onAssignmentResumeConsumed,
+    onCreateAssignmentProgram,
+    onSubmitAssignment,
     onCustomizeProgramForMember,
     onGenerateProgramForMember,
     onRefreshMemberPerformance,
@@ -210,7 +221,8 @@ export default function GroupsHub(props: GroupsHubProps) {
   const [composeUserId, setComposeUserId] = useState<string | null>(null);
   const [openedConversationId, setOpenedConversationId] = useState<string | null>(null);
   const [managePlans, setManagePlans] = useState(false);
-  const [assignProgramId, setAssignProgramId] = useState<string | null>(null);
+  const [wizardSeed, setWizardSeed] = useState<{ memberUserId?: string | null; programId?: string | null } | null>(null);
+  const [wizardOpen, setWizardOpen] = useState(false);
   const [pendingInvites, setPendingInvites] = useState(0);
 
   useEffect(() => {
@@ -288,9 +300,14 @@ export default function GroupsHub(props: GroupsHubProps) {
     [teamPrograms, activeTeam?.default_program_id, memberAssignments, members]
   );
 
-  const assignProgram = assignProgramId
-    ? programRows.find((p) => p.id === assignProgramId) || teamPrograms.find((p: any) => p.id === assignProgramId)
-    : null;
+  useEffect(() => {
+    if (!assignmentResume || assignmentResume.teamId !== activeTeam?.id) return;
+    setWizardSeed(null);
+    setWizardOpen(true);
+    setWorkspaceTab('training');
+  }, [assignmentResume, activeTeam?.id]);
+
+  const canAssign = canAssignInGroup(activeTeam?.my_role, activeTeam ? groupPermissionFlags(activeTeam) : null);
 
   if (teams.length === 0) {
     return (
@@ -472,7 +489,11 @@ export default function GroupsHub(props: GroupsHubProps) {
           current={current}
           managingPlans={managePlans}
           onView={current ? () => onEditTeamProgram(current.id) : undefined}
-          onAssign={current && current.status === 'published' ? () => setAssignProgramId(current.id) : undefined}
+          canAssign={canAssign}
+          onOpenAssignWizard={(seed) => {
+            setWizardSeed(seed || null);
+            setWizardOpen(true);
+          }}
           onManagePlans={canManage ? () => setManagePlans((open) => !open) : undefined}
           teamName={activeTeam?.name}
           sessionUserId={sessionUserId}
@@ -524,7 +545,10 @@ export default function GroupsHub(props: GroupsHubProps) {
               onDuplicate={(id) => onDuplicateProgram(id)}
               onEdit={onEditTeamProgram}
               onPublish={onPublishTeamProgram}
-              onAssign={(id) => setAssignProgramId(id)}
+              onAssign={(id) => {
+                setWizardSeed({ programId: id });
+                setWizardOpen(true);
+              }}
               onDelete={onDeleteProgram}
               defaultProgramId={activeTeam?.default_program_id}
             />
@@ -673,12 +697,25 @@ export default function GroupsHub(props: GroupsHubProps) {
         onJoin={onJoinGroup}
       />
 
-      {assignProgram && (
-        <TeamAssignProgramModal
-          program={{ id: assignProgram.id, name: assignProgram.name }}
+      {wizardOpen && activeTeam && onSubmitAssignment && onCreateAssignmentProgram && (
+        <AssignTrainingWizard
+          teamId={activeTeam.id}
           members={members}
-          onClose={() => setAssignProgramId(null)}
-          onAssign={(payload) => onAssignTeamProgram(assignProgram.id, payload)}
+          programs={[...(assignWorkoutPrograms || []), ...(teamPrograms || []), ...(programs || []), groupProgramForAssign].filter(Boolean)}
+          classifications={classifications}
+          memberClassificationIds={memberClassificationIds}
+          memberAssignments={memberAssignments}
+          defaultProgramId={activeTeam.default_program_id}
+          defaultProgramName={programRows.find((row) => row.isDefault)?.name || null}
+          resume={assignmentResume}
+          seed={wizardSeed}
+          onClose={() => {
+            setWizardOpen(false);
+            setWizardSeed(null);
+            onAssignmentResumeConsumed?.();
+          }}
+          onCreateProgram={onCreateAssignmentProgram}
+          onSubmit={onSubmitAssignment}
         />
       )}
     </section>
