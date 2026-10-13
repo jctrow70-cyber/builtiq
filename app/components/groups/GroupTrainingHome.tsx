@@ -26,7 +26,6 @@ type GroupTrainingHomeProps = {
   onManagePlans?: () => void;
   managingPlans: boolean;
   planLibrary?: ReactNode;
-  assignmentTools?: ReactNode;
   teamId?: string | null;
   teamName?: string | null;
   sessionUserId?: string | null;
@@ -39,12 +38,11 @@ type GroupTrainingHomeProps = {
   }>;
   classifications?: GroupClassification[];
   memberClassificationIds?: Record<string, string[]>;
+  focusUserId?: string | null;
+  onFocusHandled?: () => void;
   memberAssignments?: Record<string, any>;
   programs?: any[];
   defaultProgramId?: string | null;
-  onPrepareAssignment?: (member: any) => void;
-  assignmentMemberId?: string | null;
-  planEditor?: ReactNode;
   customizePrograms?: Array<{ id: string; name: string }>;
   onCustomize?: (memberUserId: string, programId: string) => void;
   canMessageMember?: (member: any) => boolean;
@@ -88,19 +86,17 @@ export default function GroupTrainingHome({
   onManagePlans,
   managingPlans,
   planLibrary,
-  assignmentTools,
   teamId,
   teamName,
   sessionUserId,
+  focusUserId,
+  onFocusHandled,
   members = [],
   classifications = [],
   memberClassificationIds = {},
   memberAssignments = {},
   programs = [],
   defaultProgramId,
-  onPrepareAssignment,
-  assignmentMemberId,
-  planEditor,
   customizePrograms = [],
   onCustomize,
   canMessageMember,
@@ -109,7 +105,6 @@ export default function GroupTrainingHome({
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [facts, setFacts] = useState<GroupTrainingFacts | null>(null);
   const [factsTick, setFactsTick] = useState(0);
-  const [editingPlan, setEditingPlan] = useState(false);
   const [trainingView, setTrainingView] = useState<'members' | 'calendar'>('members');
 
   const assignmentKey = useMemo(
@@ -125,8 +120,14 @@ export default function GroupTrainingHome({
 
   useEffect(() => {
     setSelectedUserId(null);
-    setEditingPlan(false);
   }, [teamId]);
+
+  useEffect(() => {
+    if (!focusUserId) return;
+    setSelectedUserId(focusUserId);
+    setTrainingView('members');
+    onFocusHandled?.();
+  }, [focusUserId, onFocusHandled]);
 
   const memberUserIds = useMemo(
     () => members.map((member) => member.user_id).filter((id): id is string => !!id),
@@ -160,7 +161,7 @@ export default function GroupTrainingHome({
     return buildGroupTrainingBoard({
       teamId,
       today: todayYmd(),
-      canManage,
+      canManage: canManage || canAssign,
       viewerUserId: sessionUserId || '',
       defaultProgramId,
       programs: asPrograms(programs),
@@ -199,7 +200,7 @@ export default function GroupTrainingHome({
           };
         }),
     });
-  }, [teamId, facts, canManage, sessionUserId, defaultProgramId, programs, members, memberAssignments]);
+  }, [teamId, facts, canManage, canAssign, sessionUserId, defaultProgramId, programs, members, memberAssignments]);
 
   const selected = board?.members.find((member) => member.userId === selectedUserId) || null;
   const selectedSource = members.find((member) => member.user_id === selectedUserId) || null;
@@ -252,18 +253,8 @@ export default function GroupTrainingHome({
             member={selected}
             canManage={canManage}
             customizePrograms={customizePrograms}
-            planEditor={
-              editingPlan ? (
-                assignmentMemberId === selected.userId ? (
-                  planEditor
-                ) : (
-                  <p className="muted">Loading the current assignment…</p>
-                )
-              ) : null
-            }
             onBack={() => {
               setSelectedUserId(null);
-              setEditingPlan(false);
             }}
             onChangePlan={
               (canManage || canAssign) && selectedSource
@@ -397,7 +388,7 @@ export default function GroupTrainingHome({
               <GroupTrainingCalendar
                 teamId={teamId}
                 teamName={teamName}
-                canSeeAll={canManage}
+                canSeeAll={canManage || canAssign}
                 canEdit={!!canAssign}
                 viewerUserId={sessionUserId || ''}
                 reloadKey={factsTick}
@@ -411,7 +402,6 @@ export default function GroupTrainingHome({
                 classifications={classifications}
                 memberClassificationIds={memberClassificationIds}
                 onOpenMember={(userId) => {
-                  setEditingPlan(false);
                   setSelectedUserId(userId);
                 }}
                 onMoveWorkout={
@@ -471,7 +461,6 @@ export default function GroupTrainingHome({
                     members={board.members}
                     sessionUserId={sessionUserId}
                     onOpenMember={(userId) => {
-                      setEditingPlan(false);
                       setSelectedUserId(userId);
                     }}
                   />
@@ -487,7 +476,7 @@ export default function GroupTrainingHome({
           <div className="group-training-library-head">
             <div>
               <h2>Program library</h2>
-              <p className="muted">Publish, assign, and send a one-off workout. Building a program stays in Programs.</p>
+              <p className="muted">Publish plans here. Assign Training adds a plan or a workout. Building a program stays in Programs.</p>
             </div>
             {onManagePlans && (
               <button type="button" className="btn secondary" onClick={onManagePlans}>
@@ -508,7 +497,6 @@ export default function GroupTrainingHome({
           {managingPlans && (
             <div className="group-training-library">
               {planLibrary}
-              {assignmentTools}
             </div>
           )}
         </div>

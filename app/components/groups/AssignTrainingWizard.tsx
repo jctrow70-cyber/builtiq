@@ -520,7 +520,7 @@ export default function AssignTrainingWizard({
                     Existing program
                   </button>
                   <button type="button" className={whatKind === 'workout' ? 'is-current' : ''} onClick={() => setWhatKind('workout')}>
-                    One-off workout
+                    Add Workout
                   </button>
                 </div>
                 <label>

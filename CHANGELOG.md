@@ -11,6 +11,57 @@ Branch:
 Status:
 ```
 
+## BIQ-0262 - Group Training Finalization, Phase 6
+
+Date: 2026-10-12
+Branch: main
+Status: Committed locally, not pushed
+
+### Summary
+
+Group Training keeps one place to assign and manage workouts. The older per-member assignment form and the extra assign-workout panel are no longer shown, because Assign Training and the member workspace already cover plans, training days, and added workouts. Progress uses the same group adherence function as the calendar, for the current week. An authorized assigner can see other members’ group schedules after migration 065. Personal training stays private.
+
+### Purpose
+
+The new training flow should be the one trainers use, and the calendar, member list, and progress counts should describe the same scheduled workouts.
+
+### Files changed
+
+- `supabase/migrations/20261012_065_assigner_schedule_read.sql`
+- `app/components/groups/GroupTrainingHome.tsx`
+- `app/components/groups/GroupsHub.tsx`
+- `app/components/groups/TeamMemberDetail.tsx`
+- `app/components/groups/TeamProgressTab.tsx`
+- `app/components/groups/GroupScheduleAdherence.tsx`
+- `app/components/groups/AssignTrainingWizard.tsx`
+- `app/components/groups/MemberTrainingWorkspace.tsx`
+- `app/globals.css`
+- `scripts/test-group-training-workflow.ts`
+- `scripts/test-group-architecture.ts`
+- `scripts/test-assignment-wizard.ts`
+- `package.json`
+
+### Database changes
+
+Apply `20261012_065_assigner_schedule_read.sql` manually after 064. It only widens select access for group enrollments and group expectations to `st_user_can_assign_in_group`. It does not grant writes and does not expose personal rows. Do not run it from the app. Migrations 059, 062, 063, and 064 are still required and were not applied from this change.
+
+### Testing steps
+
+- Open Group → Training. Assign Training is the main action. Members and Calendar are the two views.
+- Confirm the program library no longer shows a second assign-workout form.
+- From Members, open a person and use Change Plan. It opens that person in Training.
+- Assign one shared program with different days for three members. Confirm the calendar dates.
+- Move, excuse, pause, and add a workout. Confirm Progress → Scheduled training uses the current week and does not count excused workouts or a paused period as missed.
+- Sign in as a member who can assign workouts, after 065 is applied, and confirm the group calendar shows the other members’ group workouts only.
+
+### Known issues
+
+No local database was available, so 059 through 065 were not executed. The workflow test is an in-memory model, not a live SQL run. Signed-in browser testing was blocked by the sign-in screen. Group Progress still shows completed sets as activity, separate from scheduled training.
+
+### Recommended commit message
+
+BIQ-0262 Phase 6: Finalize Group Training experience
+
 ## BIQ-0262 - Group Training Calendar, Phase 5
 
 Date: 2026-10-12

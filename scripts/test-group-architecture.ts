@@ -508,8 +508,8 @@ assert.equal(canManageGroup('manager'), true);
 assert.equal(canManageGroup('owner'), true);
 
 const progressUi = readFileSync(new URL('../app/components/groups/TeamProgressTab.tsx', import.meta.url), 'utf8');
-assert.doesNotMatch(progressUi, /compliance|adherence/i);
 assert.match(progressUi, /Activity/);
+assert.match(progressUi, /GroupScheduleAdherence/);
 const trainingUi = readFileSync(new URL('../app/components/groups/GroupTrainingHome.tsx', import.meta.url), 'utf8');
 assert.match(trainingUi, /Assign Training/);
 assert.match(trainingUi, /Program library/);

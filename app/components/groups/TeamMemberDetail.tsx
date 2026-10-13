@@ -47,6 +47,7 @@ type TeamMemberDetailProps = {
   onSetMemberRole?: (member: any, role: string) => void;
   onSetParticipation?: (member: any, active: boolean) => void;
   onRemoveMember?: (member: any) => void;
+  onOpenTraining?: () => void;
   onToggleMemberClassification?: (member: any, classificationId: string, active: boolean) => void;
   onMessageMember?: (member: any) => void;
 };
@@ -75,6 +76,7 @@ export default function TeamMemberDetail(props: TeamMemberDetailProps) {
     onSetMemberRole,
     onSetParticipation,
     onRemoveMember,
+    onOpenTraining,
     onToggleMemberClassification,
     onMessageMember,
   } = props;
@@ -169,6 +171,11 @@ export default function TeamMemberDetail(props: TeamMemberDetailProps) {
       </div>
       {canManage && tab === 'assigned' && (
         <div className="actions" style={{ marginTop: 10, flexWrap: 'wrap' }}>
+          {onOpenTraining && (
+            <button type="button" className="btn small secondary" onClick={onOpenTraining}>
+              Change Plan
+            </button>
+          )}
           {onOpenProgramsToCreate && (
             <button type="button" className="btn small green" onClick={onOpenProgramsToCreate}>
               Create a plan in Programs
@@ -201,7 +208,7 @@ export default function TeamMemberDetail(props: TeamMemberDetailProps) {
           onBack={onBack}
           performanceLogs={[]}
           workoutHistory={[]}
-          showAssignmentPanel={tab === 'assigned' || tab === 'overview'}
+          showAssignmentPanel={false}
           hideHeader
           hidePerformance
         />

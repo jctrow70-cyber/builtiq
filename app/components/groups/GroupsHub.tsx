@@ -13,11 +13,9 @@ import AssignTrainingWizard, { type AssignTrainingSubmit } from './AssignTrainin
 import type { AssignmentWizardResume } from '../../../lib/groups/assignmentWizard';
 import { canAssignInGroup } from '../../../lib/groups/permissions';
 import TeamCreateJoinSheet, { type CreateGroupPayload } from './TeamCreateJoinSheet';
-import GroupAssignWorkoutPanel from './GroupAssignWorkoutPanel';
 import GroupClassificationsPanel from './GroupClassificationsPanel';
 import GroupInviteMembersPanel from './GroupInviteMembersPanel';
 import GroupOverview from './GroupOverview';
-import GroupPlanAssignmentForm from './GroupPlanAssignmentForm';
 import GroupTrainingHome from './GroupTrainingHome';
 import TeamMemberDetail from './TeamMemberDetail';
 import TeamMembersTab from './TeamMembersTab';
@@ -223,6 +221,7 @@ export default function GroupsHub(props: GroupsHubProps) {
   const [managePlans, setManagePlans] = useState(false);
   const [wizardSeed, setWizardSeed] = useState<{ memberUserId?: string | null; programId?: string | null } | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
+  const [trainingFocusUserId, setTrainingFocusUserId] = useState<string | null>(null);
   const [pendingInvites, setPendingInvites] = useState(0);
 
   useEffect(() => {
@@ -422,6 +421,10 @@ export default function GroupsHub(props: GroupsHubProps) {
             onSetMemberRole={memberDashboard.role === 'owner' ? undefined : onSetMemberRole}
             onSetParticipation={onSetParticipation}
             onRemoveMember={memberDashboard.user_id === sessionUserId ? undefined : onRemoveMember}
+            onOpenTraining={() => {
+              setTrainingFocusUserId(memberDashboard.user_id);
+              setWorkspaceTab('training');
+            }}
             onToggleMemberClassification={onToggleMemberClassification}
             onMessageMember={
               memberDashboard.user_id !== sessionUserId &&
@@ -501,8 +504,6 @@ export default function GroupsHub(props: GroupsHubProps) {
           memberAssignments={memberAssignments}
           programs={[...(assignWorkoutPrograms || []), ...(teamPrograms || []), groupProgramForAssign].filter(Boolean)}
           defaultProgramId={activeTeam?.default_program_id}
-          onPrepareAssignment={onOpenMember}
-          assignmentMemberId={memberDashboard?.user_id || null}
           customizePrograms={programs
             .filter((program: any) => program?.visibility === 'team' && program?.id)
             .map((program: any) => ({ id: program.id, name: program.name || 'Program' }))}
@@ -529,14 +530,6 @@ export default function GroupsHub(props: GroupsHubProps) {
                 }
               : undefined
           }
-          planEditor={
-            <GroupPlanAssignmentForm
-              assignDraft={assignDraft}
-              programs={assignableTeamPrograms?.length ? assignableTeamPrograms : programs}
-              onAssignDraftChange={onAssignDraftChange}
-              onApply={onApplyAssignment}
-            />
-          }
           planLibrary={
             <TeamProgramsTab
               canManage={canManage}
@@ -555,19 +548,11 @@ export default function GroupsHub(props: GroupsHubProps) {
             />
           }
           teamId={activeTeam?.id || null}
+          focusUserId={trainingFocusUserId}
+          onFocusHandled={() => setTrainingFocusUserId(null)}
           members={members}
           classifications={classifications}
           memberClassificationIds={memberClassificationIds}
-          assignmentTools={
-            <GroupAssignWorkoutPanel
-              groupProgram={groupProgramForAssign}
-              publishedTeamPrograms={assignWorkoutPrograms}
-              members={members}
-              classifications={classifications}
-              memberClassificationIds={memberClassificationIds}
-              onAssign={onAssignWorkout}
-            />
-          }
         />
       );
     }
@@ -575,6 +560,7 @@ export default function GroupsHub(props: GroupsHubProps) {
     if (workspaceTab === 'progress') {
       return (
         <TeamProgressTab
+          teamId={activeTeam.id}
           canViewGroupProgress={canViewGroupProgress}
           sessionUserId={sessionUserId}
           members={members}

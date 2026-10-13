@@ -2,8 +2,10 @@
 
 import type { MemberRosterMeta } from '../../../lib/groups/memberPerformance';
 import { roleLabel } from '../../../lib/groups';
+import GroupScheduleAdherence from './GroupScheduleAdherence';
 
 type TeamProgressTabProps = {
+  teamId?: string | null;
   canViewGroupProgress: boolean;
   sessionUserId: string;
   members: any[];
@@ -17,6 +19,7 @@ type TeamProgressTabProps = {
 };
 
 export default function TeamProgressTab({
+  teamId,
   canViewGroupProgress,
   sessionUserId,
   members,
@@ -84,6 +87,13 @@ export default function TeamProgressTab({
           )}
         </div>
       </div>
+
+      {teamId && (
+        <GroupScheduleAdherence
+          teamId={teamId}
+          members={visible.map((member) => ({ user_id: member.user_id, display_name: member.display_name }))}
+        />
+      )}
 
       {showAssignments && (
         <div className="card">

@@ -149,7 +149,7 @@ export default function MemberTrainingWorkspace({
           )}
           {canEditSchedule && onAddWorkout && (
             <button type="button" className="btn secondary" onClick={() => setAddingWorkout((open) => !open)}>
-              Add workout
+              Add Workout
             </button>
           )}
           {onEditSharedProgram && (

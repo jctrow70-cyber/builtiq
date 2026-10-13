@@ -19,6 +19,30 @@ Impact:
 
 ---
 
+## Decision 109 - Assigners Can Read the Group Schedule They Are Allowed to Change
+
+Date: 2026-10-12
+Status: Accepted
+Category: Groups
+
+### Decision
+
+A member with assign permission sees the group member list and group calendar, not only their own row. Migration 065 lets that person select group enrollments and group expectations. Personal enrollments and personal expectations stay limited to the member and to owners and managers. Progress for the current week comes from `st_group_schedule_adherence`, the same rules as the calendar. The older assignment form in the member screen and the extra assign-workout panel in the program library are not shown.
+
+### Reason
+
+The assign permission already allowed writes to another member’s group schedule, while the screen and the select policies hid those rows. Two assignment forms also described the same job with different labels.
+
+### Alternatives Considered
+
+Leave assigners able to write schedules they cannot see. Show them personal workouts. Keep both assignment forms.
+
+### Impact
+
+Apply 065 after 064 before an authorized assigner can see other members on the calendar. Owners and managers are unchanged. Ordinary members still see only themselves.
+
+---
+
 ## Decision 108 - The Group Calendar Reads Expectation Dates
 
 Date: 2026-10-12

@@ -459,7 +459,7 @@ assert.match(wizard, /When/);
 assert.match(wizard, /Review/);
 assert.match(wizard, /Create with AI/);
 assert.match(wizard, /Create manually/);
-assert.match(wizard, /One-off workout/);
+assert.match(wizard, /Add Workout/);
 assert.match(wizard, /Assigning…/);
 assert.match(wizard, /Your selections are still here/);
 assert.match(wizard, /assign-wizard-actions/);
