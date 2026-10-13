@@ -5,6 +5,9 @@ import DateInput from '../DateInput';
 import { formatDisplayDate, todayYmd } from '../../../lib/training/programCalendar';
 import { supabase } from '../../../lib/supabaseClient';
 import { groupSourceKey, workoutLabel } from '../../../lib/groups';
+import { orderedWeekSessions } from '../../../lib/groups/trainingWorkspace';
+import { customWeekdayError, materializeMemberSchedule, programCycleAnchor } from '../../../lib/groups/memberSchedule';
+import type { MemberScheduleInput } from '../../../lib/groups/assignGroupTraining';
 import {
   INDIVIDUAL_SCHEDULE_NOTE,
   buildAssignmentReview,
@@ -37,6 +40,7 @@ export type AssignTrainingSubmit =
       notes: string;
       requestKey: string;
       setAsGroupPlan: boolean;
+      schedules: MemberScheduleInput[];
     }
   | {
       mode: 'workout';
@@ -137,6 +141,11 @@ export default function AssignTrainingWizard({
   const [notes, setNotes] = useState('');
   const [showNotes, setShowNotes] = useState(false);
   const [setAsGroupPlan, setSetAsGroupPlan] = useState(resume?.setAsGroupPlan || false);
+  const [scheduleChoice, setScheduleChoice] = useState<'program' | 'custom'>(resume?.scheduleChoice || 'program');
+  const [scheduleScope, setScheduleScope] = useState<'same' | 'individual'>(resume?.scheduleScope || 'same');
+  const [sameWeekdays, setSameWeekdays] = useState<string[]>(resume?.sameWeekdays || []);
+  const [memberWeekdays, setMemberWeekdays] = useState<Record<string, string[]>>(resume?.memberWeekdays || {});
+  const [openScheduleUserId, setOpenScheduleUserId] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -248,7 +257,44 @@ export default function AssignTrainingWizard({
       creation: null,
       whatKind,
       setAsGroupPlan,
+      scheduleChoice,
+      scheduleScope,
+      sameWeekdays,
+      memberWeekdays,
     };
+  }
+
+  const scheduleSessions = selectedProgram
+    ? orderedWeekSessions(
+        selectedProgram.workouts || [],
+        (selectedProgram.workouts || []).map((workout) => Number(workout.week)).find((week) => orderedWeekSessions(selectedProgram.workouts || [], week).length > 0) || 1
+      )
+    : [];
+
+  function weekdaysFor(userId: string): string[] {
+    if (scheduleChoice !== 'custom') return [];
+    if (scheduleScope === 'individual' && chosenMembers.length > 1) return memberWeekdays[userId] || [];
+    return sameWeekdays;
+  }
+
+  function schedules(): MemberScheduleInput[] {
+    return chosenMembers.map((member) => ({
+      userId: member.userId,
+      mode: scheduleChoice === 'custom' ? 'custom_weekdays' : 'program_days',
+      weekdays: weekdaysFor(member.userId),
+    }));
+  }
+
+  function previewFor(userId: string) {
+    if (!selectedProgram || !startsOn || whatKind !== 'program') return [];
+    return materializeMemberSchedule({
+      mode: scheduleChoice === 'custom' ? 'custom_weekdays' : 'program_days',
+      weekdays: weekdaysFor(userId),
+      program: selectedProgram,
+      startsOn,
+      effectiveOn: startsOn,
+      cycleAnchor: scheduleChoice === 'custom' ? programCycleAnchor(selectedProgram, startsOn) : null,
+    });
   }
 
   function goNext() {
@@ -265,6 +311,18 @@ export default function AssignTrainingWizard({
     if (problem) {
       setError(problem);
       return;
+    }
+    if (step === 'when' && whatKind === 'program' && scheduleChoice === 'custom' && selectedProgram) {
+      const lists = scheduleScope === 'individual' && chosenMembers.length > 1
+        ? chosenMembers.map((member) => weekdaysFor(member.userId))
+        : [sameWeekdays];
+      for (const days of lists) {
+        const scheduleProblem = customWeekdayError(selectedProgram.workouts, days);
+        if (scheduleProblem) {
+          setError(scheduleProblem);
+          return;
+        }
+      }
     }
     const next = nextWizardStep(step);
     if (!next) return;
@@ -290,6 +348,7 @@ export default function AssignTrainingWizard({
       return;
     }
     const saved = keepWizardDraftOnError(draft('review'));
+    const savedSchedules = schedules();
     setBusy(true);
     setError('');
     try {
@@ -316,6 +375,7 @@ export default function AssignTrainingWizard({
           notes,
           requestKey: requestKey.current,
           setAsGroupPlan: true,
+          schedules: savedSchedules,
         });
         setDone('The group plan is updated for members who use it.');
       } else {
@@ -327,6 +387,7 @@ export default function AssignTrainingWizard({
           notes,
           requestKey: requestKey.current,
           setAsGroupPlan,
+          schedules: savedSchedules,
         });
         setDone(`Assigned training to ${saved.memberUserIds.length} ${saved.memberUserIds.length === 1 ? 'member' : 'members'}.`);
       }
@@ -532,13 +593,71 @@ export default function AssignTrainingWizard({
                 ) : (
                   preview && (
                     <div className="assign-wizard-preview">
-                      <p>Training days · {preview.weekdayLabel}</p>
+                      <p>Training days · {scheduleChoice === 'custom' ? 'Custom' : preview.weekdayLabel}</p>
                       <p>Duration · {preview.durationLabel}</p>
-                      <p>First workout · {preview.firstWorkout ? formatDisplayDate(preview.firstWorkout) : '—'}</p>
+                      <p>
+                        First workout ·{' '}
+                        {previewFor(chosenMembers[0]?.userId || '')[0]
+                          ? formatDisplayDate(previewFor(chosenMembers[0]?.userId || '')[0].scheduledDate)
+                          : '—'}
+                      </p>
                       <p>Final workout · {preview.finalWorkout ? formatDisplayDate(preview.finalWorkout) : '—'}</p>
                       <p className="muted">{INDIVIDUAL_SCHEDULE_NOTE}</p>
                     </div>
                   )
+                )}
+                {whatKind === 'program' && (
+                  <div className="assign-wizard-days">
+                    <button
+                      type="button"
+                      className="btn secondary"
+                      onClick={() => {
+                        if (scheduleChoice === 'custom') {
+                          setScheduleChoice('program');
+                          return;
+                        }
+                        const seeded = scheduleSessions.map((session) => session.dayLabel || '');
+                        if (!sameWeekdays.length) setSameWeekdays(seeded);
+                        setScheduleChoice('custom');
+                      }}
+                    >
+                      {scheduleChoice === 'custom' ? 'Use the program’s days' : 'Customize training days'}
+                    </button>
+                    {scheduleChoice === 'custom' && chosenMembers.length > 1 && (
+                      <div className="assign-wizard-choices">
+                        <button type="button" className={scheduleScope === 'same' ? 'is-current' : ''} onClick={() => setScheduleScope('same')}>
+                          Same schedule for everyone
+                        </button>
+                        <button type="button" className={scheduleScope === 'individual' ? 'is-current' : ''} onClick={() => setScheduleScope('individual')}>
+                          Different schedule for selected members
+                        </button>
+                      </div>
+                    )}
+                    {scheduleChoice === 'custom' && scheduleScope === 'same' && (
+                      <WeekdayChoices sessions={scheduleSessions} weekdays={sameWeekdays} onChange={setSameWeekdays} />
+                    )}
+                    {scheduleChoice === 'custom' && scheduleScope === 'individual' &&
+                      chosenMembers.map((member) => (
+                        <details key={member.userId} open={openScheduleUserId === member.userId} onToggle={(event) => setOpenScheduleUserId((event.target as HTMLDetailsElement).open ? member.userId : null)}>
+                          <summary>{member.name}</summary>
+                          <WeekdayChoices
+                            sessions={scheduleSessions}
+                            weekdays={memberWeekdays[member.userId] || scheduleSessions.map((session) => session.dayLabel || '')}
+                            onChange={(next) => setMemberWeekdays((current) => ({ ...current, [member.userId]: next }))}
+                          />
+                        </details>
+                      ))}
+                    {scheduleChoice === 'custom' && chosenMembers[0] && (
+                      <ul className="assign-wizard-list">
+                        {previewFor(chosenMembers[0].userId).slice(0, 4).map((row) => (
+                          <li key={`${row.workoutId}-${row.scheduledDate}`}>
+                            <b>{formatDisplayDate(row.scheduledDate)}</b>
+                            <span className="muted">{row.title}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                 )}
                 <button type="button" className="btn small secondary" onClick={() => setShowNotes((open) => !open)}>
                   {showNotes ? 'Hide notes' : 'Add notes'}
@@ -561,10 +680,26 @@ export default function AssignTrainingWizard({
                   <p>{whatKind === 'workout' ? 'Date' : 'Start'} · {formatDisplayDate(startsOn)}</p>
                   {whatKind === 'program' && preview && (
                     <>
-                      <p>Training days · {preview.weekdayLabel}</p>
+                      <p>Training days · {scheduleChoice === 'custom' ? 'Custom for each member below' : preview.weekdayLabel}</p>
                       <p>Duration · {preview.durationLabel}</p>
                     </>
                   )}
+                  {whatKind === 'program' &&
+                    chosenMembers.map((member) => (
+                      <div key={member.userId}>
+                        <p>
+                          {member.name} · {scheduleChoice === 'custom' ? weekdaysFor(member.userId).join(' / ') : preview?.weekdayLabel}
+                        </p>
+                        <ul className="assign-wizard-list">
+                          {previewFor(member.userId).slice(0, 4).map((row) => (
+                            <li key={`${member.userId}-${row.scheduledDate}-${row.workoutId}`}>
+                              <b>{formatDisplayDate(row.scheduledDate)}</b>
+                              <span className="muted">{row.title}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
                   <p className="muted">{review.scheduleNote}</p>
                 </div>
                 {!!review.replaced.length && (
@@ -641,6 +776,42 @@ export default function AssignTrainingWizard({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function WeekdayChoices({
+  sessions,
+  weekdays,
+  onChange,
+}: {
+  sessions: Array<{ id?: string | null; title?: string | null; dayLabel?: string | null }>;
+  weekdays: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  return (
+    <div className="assign-wizard-day-grid">
+      {sessions.map((session, index) => (
+        <label key={session.id || index}>
+          {session.title || session.dayLabel || `Workout ${index + 1}`}
+          <select
+            value={weekdays[index] || ''}
+            onChange={(event) => {
+              const next = sessions.map((_, item) => weekdays[item] || '');
+              next[index] = event.target.value;
+              onChange(next);
+            }}
+          >
+            <option value="">Select day</option>
+            {days.map((day) => (
+              <option key={day} value={day}>
+                {day}
+              </option>
+            ))}
+          </select>
+        </label>
+      ))}
     </div>
   );
 }

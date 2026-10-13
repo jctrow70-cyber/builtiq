@@ -52,6 +52,10 @@ export type AssignmentWizardResume = {
   creation: 'ai' | 'manual' | null;
   whatKind: WizardWhatKind;
   setAsGroupPlan: boolean;
+  scheduleChoice?: 'program' | 'custom';
+  scheduleScope?: 'same' | 'individual';
+  sameWeekdays?: string[];
+  memberWeekdays?: Record<string, string[]>;
 };
 
 export type MemberPlanKind = 'personal' | 'fork' | 'individual' | 'group' | 'none';
@@ -170,7 +174,7 @@ export function previewProgramSchedule(program: WizardProgram, startsOn: string)
 }
 
 export const INDIVIDUAL_SCHEDULE_NOTE =
-  'Each member follows this program’s training days. Choosing different days for one member comes in a later update.';
+  'Training days normally come from the program. Custom days change only when this member trains. The shared workouts stay the same.';
 
 export type ScheduleChange =
   | { kind: 'immediate'; startsOn: string }

@@ -53,13 +53,22 @@ export async function setGroupDefaultProgram(
   supabase: SupabaseClient,
   teamId: string,
   programId: string | null,
-  startsOn?: string | null
+  startsOn?: string | null,
+  schedules?: Array<{ userId: string; mode: 'program_days' | 'custom_weekdays'; weekdays: string[] }> | null
 ): Promise<{ error: string | null }> {
-  const args: { p_team_id: string; p_program_id: string | null; p_starts_on?: string } = {
+  const args: {
+    p_team_id: string;
+    p_program_id: string | null;
+    p_starts_on?: string;
+    p_schedules?: Array<{ user_id: string; mode: string; weekdays: string[] }>;
+  } = {
     p_team_id: teamId,
     p_program_id: programId,
   };
   if (startsOn) args.p_starts_on = startsOn;
+  if (schedules) {
+    args.p_schedules = schedules.map((row) => ({ user_id: row.userId, mode: row.mode, weekdays: row.weekdays }));
+  }
   const { error } = await supabase.rpc('st_set_group_default_program', args);
   return { error: error?.message || null };
 }

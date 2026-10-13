@@ -1,5 +1,11 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+export type MemberScheduleInput = {
+  userId: string;
+  mode: 'program_days' | 'custom_weekdays';
+  weekdays: string[];
+};
+
 export type GroupProgramAssignInput = {
   teamId: string;
   memberUserIds: string[];
@@ -9,6 +15,7 @@ export type GroupProgramAssignInput = {
   requestKey: string;
   setAsGroupPlan?: boolean;
   assignmentType?: 'individual_team' | 'manual';
+  schedules?: MemberScheduleInput[];
 };
 
 export type GroupWorkoutAssignInput = {
@@ -27,7 +34,7 @@ export type GroupWorkoutAssignInput = {
 function assignmentError(message: string | undefined, fallback: string): string {
   const raw = message || fallback;
   if (/could not find the function|schema cache/i.test(raw)) {
-    return 'Assign Training needs a Supabase update. In the SQL Editor, run migration 20261012_062_group_assignment_wizard.sql, then try again.';
+    return 'Assign Training needs a Supabase update. In the SQL Editor, run migration 20261012_062_group_assignment_wizard.sql, then 20261012_063_member_training_schedules.sql, and try again.';
   }
   if (/not authorized/i.test(raw)) return 'You do not have permission to assign training in this group.';
   if (/member not found/i.test(raw)) return 'One of the selected people is not an active member of this group. Nothing was assigned.';
@@ -49,6 +56,11 @@ export async function assignGroupPrograms(
     p_request_key: input.requestKey,
     p_assignment_type: input.assignmentType || 'individual_team',
     p_set_as_group_default: !!input.setAsGroupPlan,
+    p_schedules: (input.schedules || []).map((row) => ({
+      user_id: row.userId,
+      mode: row.mode,
+      weekdays: row.weekdays,
+    })),
   });
   if (error) return { error: assignmentError(error.message, 'Could not assign training.'), memberCount: 0 };
   const count = Number((data as { member_count?: number } | null)?.member_count);
@@ -73,5 +85,29 @@ export async function assignGroupWorkout(
     p_request_key: input.requestKey,
   });
   if (error) return { error: assignmentError(error.message, 'Could not assign that workout.') };
+  return { error: null };
+}
+
+/** Changes one member's future group training days. The shared program is not copied. */
+export async function setMemberTrainingSchedule(
+  supabase: SupabaseClient,
+  input: {
+    teamId: string;
+    memberUserId: string;
+    mode: 'program_days' | 'custom_weekdays';
+    weekdays: string[];
+    effectiveOn: string;
+    localToday: string;
+  }
+): Promise<{ error: string | null }> {
+  const { error } = await supabase.rpc('st_set_member_training_schedule', {
+    p_team_id: input.teamId,
+    p_member_user_id: input.memberUserId,
+    p_mode: input.mode,
+    p_weekdays: input.weekdays,
+    p_effective_on: input.effectiveOn,
+    p_local_today: input.localToday,
+  });
+  if (error) return { error: assignmentError(error.message, 'Could not update that schedule.') };
   return { error: null };
 }

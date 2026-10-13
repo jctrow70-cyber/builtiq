@@ -6,10 +6,13 @@ import { groupSourceKey } from './trainingSources';
 import { attachExpectationCompletion, type GroupTrainingExpectationInput } from './trainingWorkspace';
 
 export type GroupTrainingEnrollmentFact = {
+  id: string | null;
   userId: string;
   programId: string | null;
   status: string;
   startsOn: string | null;
+  scheduleMode: 'program_days' | 'custom_weekdays';
+  scheduleWeekdays: string[];
 };
 
 export type GroupTrainingFacts = {
@@ -47,7 +50,7 @@ export async function loadGroupTrainingFacts(
   const [enrollmentResult, expectationResult, adherenceResult] = await Promise.all([
     supabase
       .from('st_training_enrollments')
-      .select('user_id, program_id, status, starts_on, source_kind, source_key, team_id')
+      .select('id, user_id, program_id, status, starts_on, source_kind, source_key, team_id')
       .eq('team_id', input.teamId)
       .eq('source_kind', 'group')
       .eq('source_key', sourceKey),
@@ -69,12 +72,35 @@ export async function loadGroupTrainingFacts(
   const expectationMissing = scheduleSetupMissing(expectationResult.error?.message);
   const enrollments: GroupTrainingEnrollmentFact[] = (enrollmentResult.data || [])
     .filter((row: { source_kind?: string; source_key?: string }) => row.source_kind === 'group' && row.source_key === sourceKey)
-    .map((row: { user_id: string; program_id?: string | null; status?: string | null; starts_on?: string | null }) => ({
+    .map((row: { id?: string; user_id: string; program_id?: string | null; status?: string | null; starts_on?: string | null }) => ({
+      id: row.id || null,
       userId: row.user_id,
       programId: row.program_id || null,
       status: row.status || 'active',
       startsOn: row.starts_on || null,
+      scheduleMode: 'program_days' as const,
+      scheduleWeekdays: [] as string[],
     }));
+
+  const enrollmentIds = enrollments.map((row) => row.id).filter((id): id is string => !!id);
+  if (enrollmentIds.length) {
+    const profileResult = await supabase
+      .from('st_training_schedule_profiles')
+      .select('enrollment_id, mode, weekdays')
+      .in('enrollment_id', enrollmentIds);
+    if (!profileResult.error) {
+      const byEnrollment = new Map(
+        (profileResult.data || []).map((row: { enrollment_id: string; mode?: string; weekdays?: string[] | null }) => [row.enrollment_id, row])
+      );
+      enrollments.forEach((row) => {
+        const profile = row.id ? byEnrollment.get(row.id) : null;
+        if (profile?.mode === 'custom_weekdays') {
+          row.scheduleMode = 'custom_weekdays';
+          row.scheduleWeekdays = profile.weekdays || [];
+        }
+      });
+    }
+  }
 
   let expectations: GroupTrainingExpectationInput[] = (expectationResult.data || [])
     .filter((row: { source_key?: string }) => row.source_key === sourceKey)

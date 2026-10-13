@@ -1314,7 +1314,7 @@ export default function Page(){
    });
    if(error)throw new Error(error);
   }else if(payload.mode==='group_default'){
-   const{error}=await setGroupDefaultProgram(supabase,activeTeam.id,payload.programId,payload.startsOn);
+   const{error}=await setGroupDefaultProgram(supabase,activeTeam.id,payload.programId,payload.startsOn,payload.schedules);
    if(error)throw new Error(error);
   }else{
    const{error}=await assignGroupPrograms(supabase,{
@@ -1325,6 +1325,7 @@ export default function Page(){
     notes:payload.notes,
     requestKey:payload.requestKey,
     setAsGroupPlan:payload.setAsGroupPlan,
+    schedules:payload.schedules,
    });
    if(error)throw new Error(error);
   }

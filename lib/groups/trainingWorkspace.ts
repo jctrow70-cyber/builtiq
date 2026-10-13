@@ -84,6 +84,10 @@ export type GroupTrainingMemberInput = {
     status?: string | null;
     startsOn?: string | null;
   } | null;
+  schedule?: {
+    mode?: 'program_days' | 'custom_weekdays' | null;
+    weekdays?: string[] | null;
+  } | null;
 };
 
 export type GroupTrainingExpectationInput = {
@@ -132,6 +136,7 @@ export type GroupTrainingMemberRow = {
   programId: string | null;
   scheduleDays: string;
   scheduleNeedsReview: boolean;
+  scheduleReviewDetail: string | null;
   nextWorkout: GroupTrainingNextWorkout | null;
   status: GroupTrainingStatus;
   statusLabel: string;
@@ -200,6 +205,37 @@ export function orderedProgramSessions(workouts: GroupTrainingWorkoutRef[], week
     .filter((workout) => Number(workout.week) === week && normalizeProgramDayLabel(workout.dayLabel))
     .slice()
     .sort(compareProgramSessions);
+}
+
+/** Every session in a week, including rows without a day label. Order is day_order, weekday, then workout id. */
+export function orderedWeekSessions(workouts: GroupTrainingWorkoutRef[], week: number): GroupTrainingWorkoutRef[] {
+  return workouts
+    .filter((workout) => Number(workout.week) === week)
+    .slice()
+    .sort(compareProgramSessions);
+}
+
+function applicableWeeks(workouts: GroupTrainingWorkoutRef[]): number[] {
+  return weeksInProgram(workouts).filter((week) => orderedWeekSessions(workouts, week).length > 0);
+}
+
+/** Why custom weekdays cannot be applied. Null means the program structure is usable. */
+export function customScheduleStructureError(workouts: GroupTrainingWorkoutRef[] | null | undefined): string | null {
+  const rows = workouts || [];
+  const weeks = applicableWeeks(rows);
+  if (!weeks.length) return 'This program has no workouts to schedule.';
+  const counts = weeks.map((week) => orderedWeekSessions(rows, week).length);
+  if (new Set(counts).size > 1) {
+    return 'This program’s weeks do not have the same number of workouts, so custom days cannot be applied.';
+  }
+  for (const week of weeks) {
+    const sessions = orderedWeekSessions(rows, week);
+    const keys = new Set(sessions.map((session) => `${sessionOrder(session.dayOrder)}:${programWeekdayIndex(session.dayLabel)}`));
+    if (keys.size < sessions.length) {
+      return 'Two workouts in the same week do not have a clear order. Set their order in Program Design before choosing custom days.';
+    }
+  }
+  return null;
 }
 
 function weeksInProgram(workouts: GroupTrainingWorkoutRef[]): number[] {
@@ -442,8 +478,24 @@ export function buildGroupTrainingBoard(input: {
       if (a.scheduledDate !== b.scheduledDate) return a.scheduledDate < b.scheduledDate ? -1 : 1;
       return a.title.localeCompare(b.title);
     });
-    const scheduleNeedsReview = plan.program ? programScheduleNeedsReview(plan.program.workouts) : false;
-    const scheduleDays = formatScheduledDays(plan.program ? programScheduledDayLabels(plan.program.workouts) : []);
+    const programReview = plan.program ? programScheduleNeedsReview(plan.program.workouts) : false;
+    const customDays =
+      member.schedule?.mode === 'custom_weekdays'
+        ? (member.schedule.weekdays || []).map((day) => normalizeProgramDayLabel(day)).filter(Boolean)
+        : [];
+    const customCount = customDays.length;
+    const structureError = customCount && plan.program ? customScheduleStructureError(plan.program.workouts) : null;
+    const sessionCount = plan.program ? orderedWeekSessions(plan.program.workouts || [], applicableWeeks(plan.program.workouts || [])[0] || 0).length : 0;
+    const countMismatch = customCount > 0 && sessionCount > 0 && customCount !== sessionCount;
+    const scheduleNeedsReview = programReview || !!structureError || countMismatch;
+    const scheduleReviewDetail = countMismatch
+      ? `This schedule has ${customCount} days and the program now has ${sessionCount} workouts each week. Future workouts stay as they are until the schedule is updated.`
+      : structureError
+        ? `${structureError} Future workouts stay as they are until the schedule is updated.`
+        : programReview
+          ? 'This program’s weeks do not share the same training days.'
+          : null;
+    const scheduleDays = formatScheduledDays(customDays.length ? customDays : plan.program ? programScheduledDayLabels(plan.program.workouts) : []);
     const userMissed = input.missedByUser ? Number(input.missedByUser[member.userId] || 0) : null;
     const missed =
       userMissed != null
@@ -517,6 +569,7 @@ export function buildGroupTrainingBoard(input: {
       programId: plan.programId,
       scheduleDays,
       scheduleNeedsReview,
+      scheduleReviewDetail,
       nextWorkout,
       status,
       statusLabel: STATUS_LABEL[status],

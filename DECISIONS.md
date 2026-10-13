@@ -19,6 +19,30 @@ Impact:
 
 ---
 
+## Decision 106 - Member Schedules Stay on the Group Enrollment
+
+Date: 2026-10-12
+Status: Accepted
+Category: Groups
+
+### Decision
+
+Program Design still owns the shared workouts. A group member’s training days live on `st_training_schedule_profiles`, one row per group enrollment. `program_days` keeps today’s day-label placement. `custom_weekdays` maps each week’s sessions, ordered by day order, weekday, then workout id, onto that member’s selected days. The cycle anchor is the shared program’s Monday, so a member who joins later stays on the current program week. The profile is written inside the Phase 2 assignment transaction. If a later program edit changes the number of weekly sessions, future expectations are left as they are and the member is marked Schedule needs review. Personal enrollments are not given custom group days.
+
+### Reason
+
+Assigning one program to Amy, Mike, and Sarah should not create three copies. Their dates differ. Their workout IDs do not. A stale three-day schedule must not be guessed onto a four-day program.
+
+### Alternatives Considered
+
+Copy the program for each weekday pattern. Store the days on the shared program. Remap a mismatched weekday list onto the new session count without confirmation.
+
+### Impact
+
+Owners, managers, and members with the assign permission can set days in Assign Training and edit one member’s future schedule. Historical expectations and logged sessions stay. Schedule overrides and the group calendar are still later phases.
+
+---
+
 ## Decision 105 - Group Assignment Is One Transaction
 
 Date: 2026-10-12

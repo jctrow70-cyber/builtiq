@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { TeamProgramRow } from '../../../lib/groups/programRoster';
+import { setMemberTrainingSchedule } from '../../../lib/groups/assignGroupTraining';
 import { loadGroupTrainingFacts, type GroupTrainingFacts } from '../../../lib/groups/loadGroupTrainingFacts';
 import {
   buildGroupTrainingBoard,
@@ -98,6 +99,7 @@ export default function GroupTrainingHome({
 }: GroupTrainingHomeProps) {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [facts, setFacts] = useState<GroupTrainingFacts | null>(null);
+  const [factsTick, setFactsTick] = useState(0);
   const [editingPlan, setEditingPlan] = useState(false);
 
   const assignmentKey = useMemo(
@@ -140,7 +142,7 @@ export default function GroupTrainingHome({
     return () => {
       cancelled = true;
     };
-  }, [teamId, sessionUserId, memberUserIds]);
+  }, [teamId, sessionUserId, memberUserIds, factsTick]);
 
   const board = useMemo(() => {
     if (!teamId || !facts) return null;
@@ -179,6 +181,9 @@ export default function GroupTrainingHome({
                   status: enrollment.status,
                   startsOn: enrollment.startsOn,
                 }
+              : null,
+            schedule: enrollment
+              ? { mode: enrollment.scheduleMode, weekdays: enrollment.scheduleWeekdays }
               : null,
           };
         }),
@@ -252,6 +257,24 @@ export default function GroupTrainingHome({
             onChangePlan={
               (canManage || canAssign) && selectedSource
                 ? () => onOpenAssignWizard?.({ memberUserId: selected.userId })
+                : undefined
+            }
+            canEditSchedule={!!(canAssign && teamId && selected.planKind !== 'personal' && selected.programId)}
+            scheduleProgram={asPrograms(programs).find((program) => program.id === selected.programId) || null}
+            onSaveSchedule={
+              teamId
+                ? async (input) => {
+                    const { error } = await setMemberTrainingSchedule(supabase, {
+                      teamId,
+                      memberUserId: selected.userId,
+                      mode: input.mode,
+                      weekdays: input.weekdays,
+                      effectiveOn: input.effectiveOn,
+                      localToday: todayYmd(),
+                    });
+                    if (error) throw new Error(error);
+                    setFactsTick((value) => value + 1);
+                  }
                 : undefined
             }
             onCustomize={

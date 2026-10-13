@@ -171,6 +171,9 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .assign-wizard-person{display:flex;align-items:flex-start;gap:10px;min-height:44px}
 .assign-wizard-person span,.assign-wizard-list li{display:flex;flex-direction:column;min-width:0}
 .assign-wizard-preview{display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:12px;background:var(--surfaceInset)}
+.assign-wizard-day-grid{display:grid;gap:8px}
+.assign-wizard-day-grid label,.member-schedule-editor label{display:flex;flex-direction:column;gap:4px}
+.member-schedule-editor{display:flex;flex-direction:column;gap:10px;margin:12px 0;padding:12px;border-radius:12px;background:var(--surfaceInset)}
 .assign-wizard-create{display:flex;flex-direction:column;gap:8px}
 .assign-wizard-actions .btn{min-height:44px}
 @media (min-width:721px){

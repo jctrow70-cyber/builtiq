@@ -11,6 +11,63 @@ Branch:
 Status:
 ```
 
+## BIQ-0262 - Per-Member Group Training Schedules, Phase 3
+
+Date: 2026-10-12
+Branch: main
+Status: Committed locally, not pushed
+
+### Summary
+
+A trainer can assign one shared program and give each member different training days. The schedule is stored on the member’s group enrollment. The program and its workout IDs stay shared. Assign Training can set the same days for everyone or different days per member. Edit Schedule changes only that member’s future workouts.
+
+### Purpose
+
+Program Design decides what someone trains. The group schedule decides when they train. Copying the program for each weekday pattern would split future edits.
+
+### Files changed
+
+- `supabase/migrations/20261012_063_member_training_schedules.sql`
+- `lib/groups/memberSchedule.ts`
+- `lib/groups/trainingWorkspace.ts`
+- `lib/groups/loadGroupTrainingFacts.ts`
+- `lib/groups/assignGroupTraining.ts`
+- `lib/groups/assignmentWizard.ts`
+- `lib/groups/teamProgramTools.ts`
+- `app/components/groups/AssignTrainingWizard.tsx`
+- `app/components/groups/MemberTrainingWorkspace.tsx`
+- `app/components/groups/GroupTrainingHome.tsx`
+- `app/page.tsx`
+- `app/globals.css`
+- `scripts/test-member-schedule.ts`
+- `package.json`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+### Database changes
+
+Apply `20261012_063_member_training_schedules.sql` manually in the Supabase SQL Editor after migration 062. It adds `st_training_schedule_profiles`, teaches expectation refresh to place custom weekdays, and extends the Phase 2 assignment functions so the profile is saved in the same transaction. Existing group enrollments are backfilled as `program_days`. Personal enrollments are not updated. Do not run this from the app.
+
+### Testing steps
+
+- Assign one program to three members with different weekdays and confirm the member list shows those days.
+- Confirm all three still use the same program.
+- Change one member’s schedule and confirm the others stay put.
+- Try a program whose weeks have different session counts and confirm custom days are rejected.
+- Save a custom schedule, refresh, and confirm past workouts and today’s logged workout stay.
+- Change the shared program’s exercises without changing the number of weekly sessions and confirm the weekdays stay.
+- Change the session count and confirm Schedule needs review, with future expectations left in place until the schedule is updated.
+
+### Known issues
+
+- The new save does not succeed until migration 063 is applied.
+- Moving one workout, vacation days, and the group calendar are not in this phase.
+- A signed-in browser pass of the wizard was not completed from this environment.
+
+### Recommended commit message
+
+BIQ-0262 Phase 3: Add per-member Group training schedules
+
 ## BIQ-0262 - Assign Training Wizard, Phase 2
 
 Date: 2026-10-12
