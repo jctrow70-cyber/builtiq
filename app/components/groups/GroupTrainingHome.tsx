@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { TeamProgramRow } from '../../../lib/groups/programRoster';
-import { setMemberTrainingSchedule } from '../../../lib/groups/assignGroupTraining';
+import { assignGroupWorkout, excuseMemberWorkout, moveMemberWorkout, restoreMemberWorkout, setMemberGroupExpectation, setMemberTrainingSchedule } from '../../../lib/groups/assignGroupTraining';
 import { loadGroupTrainingFacts, type GroupTrainingFacts } from '../../../lib/groups/loadGroupTrainingFacts';
 import {
   buildGroupTrainingBoard,
@@ -17,6 +17,7 @@ type GroupTrainingHomeProps = {
   canManage: boolean;
   current: TeamProgramRow | null;
   onView?: () => void;
+  onEditProgram?: (programId: string) => void;
   onAssign?: () => void;
   onOpenAssignWizard?: (seed?: { memberUserId?: string | null; programId?: string | null }) => void;
   canAssign?: boolean;
@@ -75,6 +76,7 @@ export default function GroupTrainingHome({
   canManage,
   current,
   onView,
+  onEditProgram,
   onAssign,
   onOpenAssignWizard,
   canAssign = false,
@@ -180,6 +182,7 @@ export default function GroupTrainingHome({
                   programId: enrollment.programId,
                   status: enrollment.status,
                   startsOn: enrollment.startsOn,
+                  expectationEnabled: enrollment.expectationEnabled,
                 }
               : null,
             schedule: enrollment
@@ -276,6 +279,90 @@ export default function GroupTrainingHome({
                     setFactsTick((value) => value + 1);
                   }
                 : undefined
+            }
+            onMoveWorkout={
+              teamId
+                ? async (input) => {
+                    const { error } = await moveMemberWorkout(supabase, {
+                      teamId,
+                      memberUserId: selected.userId,
+                      workoutId: input.workoutId,
+                      originalDate: input.originalDate,
+                      newDate: input.newDate,
+                      localToday: todayYmd(),
+                    });
+                    if (error) throw new Error(error);
+                    setFactsTick((value) => value + 1);
+                  }
+                : undefined
+            }
+            onExcuseWorkout={
+              teamId
+                ? async (input) => {
+                    const { error } = await excuseMemberWorkout(supabase, {
+                      teamId,
+                      memberUserId: selected.userId,
+                      workoutId: input.workoutId,
+                      originalDate: input.originalDate,
+                      localToday: todayYmd(),
+                    });
+                    if (error) throw new Error(error);
+                    setFactsTick((value) => value + 1);
+                  }
+                : undefined
+            }
+            onRestoreWorkout={
+              teamId
+                ? async (input) => {
+                    const { error } = await restoreMemberWorkout(supabase, {
+                      teamId,
+                      memberUserId: selected.userId,
+                      workoutId: input.workoutId,
+                      originalDate: input.originalDate,
+                      localToday: todayYmd(),
+                    });
+                    if (error) throw new Error(error);
+                    setFactsTick((value) => value + 1);
+                  }
+                : undefined
+            }
+            onSetExpectations={
+              teamId
+                ? async (enabled) => {
+                    const today = todayYmd();
+                    const { error } = await setMemberGroupExpectation(supabase, {
+                      teamId,
+                      memberUserId: selected.userId,
+                      enabled,
+                      effectiveOn: today,
+                      localToday: today,
+                    });
+                    if (error) throw new Error(error);
+                    setFactsTick((value) => value + 1);
+                  }
+                : undefined
+            }
+            onAddWorkout={
+              teamId && selected.programId
+                ? async (input) => {
+                    const { error } = await assignGroupWorkout(supabase, {
+                      teamId,
+                      workoutId: input.workoutId,
+                      programId: selected.programId,
+                      targetType: 'members',
+                      memberUserIds: [selected.userId],
+                      scheduledDate: input.scheduledDate,
+                      requestKey: crypto.randomUUID(),
+                    });
+                    if (error) throw new Error(error);
+                    setFactsTick((value) => value + 1);
+                  }
+                : undefined
+            }
+            onEditSharedProgram={
+              selected.programId && onEditProgram
+                ? () => onEditProgram(selected.programId as string)
+                : onView
             }
             onCustomize={
               canManage && onCustomize && selectedSource?.user_id

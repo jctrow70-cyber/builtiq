@@ -13,6 +13,7 @@ export type GroupTrainingEnrollmentFact = {
   startsOn: string | null;
   scheduleMode: 'program_days' | 'custom_weekdays';
   scheduleWeekdays: string[];
+  expectationEnabled: boolean;
 };
 
 export type GroupTrainingFacts = {
@@ -50,7 +51,7 @@ export async function loadGroupTrainingFacts(
   const [enrollmentResult, expectationResult, adherenceResult] = await Promise.all([
     supabase
       .from('st_training_enrollments')
-      .select('id, user_id, program_id, status, starts_on, source_kind, source_key, team_id')
+      .select('id, user_id, program_id, status, starts_on, source_kind, source_key, team_id, expectation_enabled')
       .eq('team_id', input.teamId)
       .eq('source_kind', 'group')
       .eq('source_key', sourceKey),
@@ -72,7 +73,7 @@ export async function loadGroupTrainingFacts(
   const expectationMissing = scheduleSetupMissing(expectationResult.error?.message);
   const enrollments: GroupTrainingEnrollmentFact[] = (enrollmentResult.data || [])
     .filter((row: { source_kind?: string; source_key?: string }) => row.source_kind === 'group' && row.source_key === sourceKey)
-    .map((row: { id?: string; user_id: string; program_id?: string | null; status?: string | null; starts_on?: string | null }) => ({
+    .map((row: { id?: string; user_id: string; program_id?: string | null; status?: string | null; starts_on?: string | null; expectation_enabled?: boolean | null }) => ({
       id: row.id || null,
       userId: row.user_id,
       programId: row.program_id || null,
@@ -80,6 +81,7 @@ export async function loadGroupTrainingFacts(
       startsOn: row.starts_on || null,
       scheduleMode: 'program_days' as const,
       scheduleWeekdays: [] as string[],
+      expectationEnabled: row.expectation_enabled !== false,
     }));
 
   const enrollmentIds = enrollments.map((row) => row.id).filter((id): id is string => !!id);

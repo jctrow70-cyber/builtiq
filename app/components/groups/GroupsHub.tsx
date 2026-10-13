@@ -489,6 +489,7 @@ export default function GroupsHub(props: GroupsHubProps) {
           current={current}
           managingPlans={managePlans}
           onView={current ? () => onEditTeamProgram(current.id) : undefined}
+          onEditProgram={onEditTeamProgram}
           canAssign={canAssign}
           onOpenAssignWizard={(seed) => {
             setWizardSeed(seed || null);

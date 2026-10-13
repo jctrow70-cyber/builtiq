@@ -15,4 +15,5 @@ export * from './workspaceTabs';
 export * from './trainingWorkspace';
 export * from './assignmentWizard';
 export * from './memberSchedule';
+export * from './scheduleOverrides';
 export * from './communication';

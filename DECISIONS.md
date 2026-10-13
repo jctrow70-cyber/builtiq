@@ -19,6 +19,30 @@ Impact:
 
 ---
 
+## Decision 107 - One Workout Change Is an Override, Not a Program Edit
+
+Date: 2026-10-12
+Status: Accepted
+Category: Groups
+
+### Decision
+
+Moving or excusing one group workout writes `st_training_schedule_overrides` on that member’s group enrollment. Expectation refresh still builds the program dates, then puts the saved move or excuse back. Pause and resume change only `expectation_enabled`. A one-off workout still uses `st_workout_assignments` and `st_assignment_recipients`. The shared program is opened in Program Design when the trainer means to change it for everyone.
+
+### Reason
+
+Changing an expectation date alone would be lost the next time the program schedule is rebuilt. Pausing by enrollment status or hiding the schedule would also change membership or visibility, which are different decisions.
+
+### Alternatives Considered
+
+Update the expectation date in place. Copy the program for the member. Treat pause as enrollment status `paused` or turn off `schedule_visible`.
+
+### Impact
+
+Past expectations and logged sessions stay. An excused workout leaves the adherence denominator. A skipped workout stays incomplete. Other members and personal training are not rewritten. Apply migration 064 after 063 before using these actions.
+
+---
+
 ## Decision 106 - Member Schedules Stay on the Group Enrollment
 
 Date: 2026-10-12

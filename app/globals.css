@@ -154,6 +154,7 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .member-training-plan-form{margin-top:12px}
 .member-training-week{display:flex;flex-direction:column}
 .member-training-week-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-top:1px solid var(--line);min-height:44px}
+button.member-training-week-row{width:100%;background:transparent;border-left:0;border-right:0;border-bottom:0;color:inherit;text-align:left;cursor:pointer;font:inherit}
 .member-training-week-row .muted{display:block}
 .group-training-library-head{display:flex;flex-direction:column;align-items:stretch;gap:10px}
 .group-training-library-head .btn{min-height:44px}

@@ -83,6 +83,7 @@ export type GroupTrainingMemberInput = {
     programId?: string | null;
     status?: string | null;
     startsOn?: string | null;
+    expectationEnabled?: boolean | null;
   } | null;
   schedule?: {
     mode?: 'program_days' | 'custom_weekdays' | null;
@@ -119,6 +120,10 @@ export type GroupTrainingWeekItem = {
   title: string;
   dayLabel: string;
   state: GroupTrainingWeekState;
+  workoutId: string | null;
+  origin: 'program' | 'assignment';
+  excused: boolean;
+  hasSession: boolean;
 };
 
 export type GroupTrainingNextWorkout = {
@@ -137,6 +142,7 @@ export type GroupTrainingMemberRow = {
   scheduleDays: string;
   scheduleNeedsReview: boolean;
   scheduleReviewDetail: string | null;
+  expectationsEnabled: boolean;
   nextWorkout: GroupTrainingNextWorkout | null;
   status: GroupTrainingStatus;
   statusLabel: string;
@@ -521,6 +527,10 @@ export function buildGroupTrainingBoard(input: {
           title: row.title || 'Workout',
           dayLabel: normalizeProgramDayLabel(row.dayLabel),
           state: weekState(row, input.today, input.completionKnown, userMissed),
+          workoutId: row.workoutId || null,
+          origin: row.origin === 'assignment' ? 'assignment' as const : 'program' as const,
+          excused: !!row.excused,
+          hasSession: !!row.sessionStatus && row.sessionStatus !== 'not_started',
         }));
       const next = ownExpectations.find((row) => {
         if (row.excused || row.scheduledDate < input.today) return false;
@@ -549,6 +559,10 @@ export function buildGroupTrainingBoard(input: {
           title: row.title,
           dayLabel: normalizeProgramDayLabel(row.dayLabel),
           state: 'Scheduled' as const,
+          workoutId: row.workoutId || null,
+          origin: 'program' as const,
+          excused: false,
+          hasSession: false,
         }));
       const next = derived.find((row) => row.date >= input.today);
       if (next) {
@@ -570,6 +584,7 @@ export function buildGroupTrainingBoard(input: {
       scheduleDays,
       scheduleNeedsReview,
       scheduleReviewDetail,
+      expectationsEnabled: member.enrollment?.expectationEnabled !== false,
       nextWorkout,
       status,
       statusLabel: STATUS_LABEL[status],

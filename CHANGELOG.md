@@ -11,6 +11,62 @@ Branch:
 Status:
 ```
 
+## BIQ-0262 - Individual Workout Rescheduling, Phase 4
+
+Date: 2026-10-12
+Branch: main
+Status: Committed locally, not pushed
+
+### Summary
+
+A group owner, manager, or authorized assigner can move, excuse, or restore one member’s future workout, pause and resume that member’s expected group schedule, and add a one-off workout. Those changes are stored as schedule overrides and put back after expectation refresh. The shared program, other members, personal training, and past or logged workouts stay as they are.
+
+### Purpose
+
+Rescheduling one person should not copy or edit the shared program, and a later refresh should not put the workout back on the program date.
+
+### Files changed
+
+- `supabase/migrations/20261012_064_workout_reschedule.sql`
+- `lib/groups/scheduleOverrides.ts`
+- `lib/groups/assignGroupTraining.ts`
+- `lib/groups/loadGroupTrainingFacts.ts`
+- `lib/groups/trainingWorkspace.ts`
+- `lib/groups/index.ts`
+- `app/components/groups/MemberTrainingWorkspace.tsx`
+- `app/components/groups/GroupTrainingHome.tsx`
+- `app/components/groups/GroupsHub.tsx`
+- `app/globals.css`
+- `scripts/test-workout-reschedule.ts`
+- `scripts/test-member-schedule.ts`
+- `package.json`
+
+### Database changes
+
+Apply `20261012_064_workout_reschedule.sql` manually in the Supabase SQL Editor after `20261012_063_member_training_schedules.sql`. Do not run it from the app. It adds `st_training_schedule_overrides` and the move, excuse, restore, and pause functions. It depends on the expectation ledger and enrollment flags from `20261007_059_unified_training_schedule.sql`, the assignment transaction from `062`, and the schedule profiles from `063`.
+
+### Testing steps
+
+- Move one future group workout and confirm the new date.
+- Move a workout onto a day that already has a different workout.
+- Confirm another member and the shared program are unchanged.
+- Refresh expectations and confirm the override remains and is not duplicated.
+- Try to move a past workout and a workout that already has a session.
+- Excuse a future workout and confirm it leaves adherence. Restore it.
+- Confirm an ordinary skip still counts as incomplete.
+- Pause expected training, then resume, and confirm paused dates are not backfilled.
+- Add a one-off workout from the member workspace.
+- Sign in as a member and confirm another member’s schedule cannot be edited.
+- Check the member workspace on a phone-width screen.
+
+### Known issues
+
+Migration 064 is not applied from the app. Signed-in browser verification was not available from this session when the app was on the sign-in screen. Retroactive exceptions for past missed workouts are out of scope. The group weekly calendar is a later phase.
+
+### Recommended commit message
+
+BIQ-0262 Phase 4: Add individual workout rescheduling
+
 ## BIQ-0262 - Per-Member Group Training Schedules, Phase 3
 
 Date: 2026-10-12

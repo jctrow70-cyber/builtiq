@@ -237,7 +237,7 @@ assert.match(migration, /not public.st_expectation_has_session\(e.id\)/);
 assert.match(migration, /row_number\(\) over/);
 assert.doesNotMatch(migration, /st_training_schedule_overrides/);
 assert.match(readFileSync(new URL('../app/components/groups/AssignTrainingWizard.tsx', import.meta.url), 'utf8'), /materializeMemberSchedule/);
-assert.match(readFileSync(new URL('../app/components/groups/MemberTrainingWorkspace.tsx', import.meta.url), 'utf8'), /Edit schedule/);
+assert.match(readFileSync(new URL('../app/components/groups/MemberTrainingWorkspace.tsx', import.meta.url), 'utf8'), /Edit Training Days/);
 assert.match(readFileSync(new URL('../app/components/groups/GroupTrainingHome.tsx', import.meta.url), 'utf8'), /scheduleMode/);
 
 console.log('member schedule checks passed');

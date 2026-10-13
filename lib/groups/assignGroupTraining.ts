@@ -111,3 +111,75 @@ export async function setMemberTrainingSchedule(
   if (error) return { error: assignmentError(error.message, 'Could not update that schedule.') };
   return { error: null };
 }
+
+function scheduleEditError(message: string | undefined, fallback: string): string {
+  if (/could not find the function|schema cache/i.test(message || '')) {
+    return 'Workout rescheduling needs a Supabase update. In the SQL Editor, run migration 20261012_064_workout_reschedule.sql after 063, and try again.';
+  }
+  const raw = assignmentError(message, fallback);
+  if (/past workouts stay in history/i.test(raw)) return 'Past workouts stay in history.';
+  if (/logged workout stays/i.test(raw)) return 'A logged workout stays on its date.';
+  if (/not authorized/i.test(raw)) return 'You do not have permission to change this schedule.';
+  return raw;
+}
+
+export async function moveMemberWorkout(
+  supabase: SupabaseClient,
+  input: { teamId: string; memberUserId: string; workoutId: string; originalDate: string; newDate: string; localToday: string }
+): Promise<{ error: string | null }> {
+  const { error } = await supabase.rpc('st_move_member_workout', {
+    p_team_id: input.teamId,
+    p_member_user_id: input.memberUserId,
+    p_workout_id: input.workoutId,
+    p_original_date: input.originalDate,
+    p_new_date: input.newDate,
+    p_local_today: input.localToday,
+  });
+  if (error) return { error: scheduleEditError(error.message, 'Could not move that workout.') };
+  return { error: null };
+}
+
+export async function excuseMemberWorkout(
+  supabase: SupabaseClient,
+  input: { teamId: string; memberUserId: string; workoutId: string; originalDate: string; localToday: string }
+): Promise<{ error: string | null }> {
+  const { error } = await supabase.rpc('st_excuse_member_workout', {
+    p_team_id: input.teamId,
+    p_member_user_id: input.memberUserId,
+    p_workout_id: input.workoutId,
+    p_original_date: input.originalDate,
+    p_local_today: input.localToday,
+  });
+  if (error) return { error: scheduleEditError(error.message, 'Could not excuse that workout.') };
+  return { error: null };
+}
+
+export async function restoreMemberWorkout(
+  supabase: SupabaseClient,
+  input: { teamId: string; memberUserId: string; workoutId: string; originalDate: string; localToday: string }
+): Promise<{ error: string | null }> {
+  const { error } = await supabase.rpc('st_restore_member_workout', {
+    p_team_id: input.teamId,
+    p_member_user_id: input.memberUserId,
+    p_workout_id: input.workoutId,
+    p_original_date: input.originalDate,
+    p_local_today: input.localToday,
+  });
+  if (error) return { error: scheduleEditError(error.message, 'Could not restore that workout.') };
+  return { error: null };
+}
+
+export async function setMemberGroupExpectation(
+  supabase: SupabaseClient,
+  input: { teamId: string; memberUserId: string; enabled: boolean; effectiveOn: string; localToday: string }
+): Promise<{ error: string | null }> {
+  const { error } = await supabase.rpc('st_set_member_group_expectation', {
+    p_team_id: input.teamId,
+    p_member_user_id: input.memberUserId,
+    p_enabled: input.enabled,
+    p_effective_on: input.effectiveOn,
+    p_local_today: input.localToday,
+  });
+  if (error) return { error: scheduleEditError(error.message, 'Could not update expected training.') };
+  return { error: null };
+}
