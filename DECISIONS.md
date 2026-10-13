@@ -19,6 +19,30 @@ Impact:
 
 ---
 
+## Decision 108 - The Group Calendar Reads Expectation Dates
+
+Date: 2026-10-12
+Status: Accepted
+Category: Groups
+
+### Decision
+
+The Group Training calendar is a Monday–Sunday view of `st_training_expectations` for that group. It does not calculate columns from the shared program’s weekday labels. Move, excuse, and restore stay on the Phase 4 functions. A paused expected schedule (`expectation_enabled = false`) is labeled Schedule paused. Personal training stays a separate status. Ordinary members see only their own group workouts.
+
+### Reason
+
+Custom weekdays and moved workouts already live on the expectation date. A second calendar would drift from that ledger. Pausing expected training is not the same as choosing Personal training or leaving the group.
+
+### Alternatives Considered
+
+Build a calendar table. Place workouts by the program’s original day label. Add Calendar as another top-level Group tab. Treat `expectation_enabled = false` as the membership Paused badge.
+
+### Impact
+
+The calendar queries one week at a time. Filters change the visible rows and the week’s counts only. No database migration is added in this phase.
+
+---
+
 ## Decision 107 - One Workout Change Is an Override, Not a Program Edit
 
 Date: 2026-10-12

@@ -4,12 +4,14 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { TeamProgramRow } from '../../../lib/groups/programRoster';
 import { assignGroupWorkout, excuseMemberWorkout, moveMemberWorkout, restoreMemberWorkout, setMemberGroupExpectation, setMemberTrainingSchedule } from '../../../lib/groups/assignGroupTraining';
 import { loadGroupTrainingFacts, type GroupTrainingFacts } from '../../../lib/groups/loadGroupTrainingFacts';
+import type { GroupClassification } from '../../../lib/groups/schema';
 import {
   buildGroupTrainingBoard,
   type GroupTrainingProgramRef,
 } from '../../../lib/groups/trainingWorkspace';
 import { todayYmd } from '../../../lib/training/programCalendar';
 import { supabase } from '../../../lib/supabaseClient';
+import GroupTrainingCalendar from './GroupTrainingCalendar';
 import GroupTrainingMemberList from './GroupTrainingMemberList';
 import MemberTrainingWorkspace from './MemberTrainingWorkspace';
 
@@ -29,11 +31,14 @@ type GroupTrainingHomeProps = {
   teamName?: string | null;
   sessionUserId?: string | null;
   members?: Array<{
+    id?: string;
     user_id?: string;
     display_name?: string | null;
     training_source?: string | null;
     is_active_participant?: boolean;
   }>;
+  classifications?: GroupClassification[];
+  memberClassificationIds?: Record<string, string[]>;
   memberAssignments?: Record<string, any>;
   programs?: any[];
   defaultProgramId?: string | null;
@@ -88,6 +93,8 @@ export default function GroupTrainingHome({
   teamName,
   sessionUserId,
   members = [],
+  classifications = [],
+  memberClassificationIds = {},
   memberAssignments = {},
   programs = [],
   defaultProgramId,
@@ -103,6 +110,7 @@ export default function GroupTrainingHome({
   const [facts, setFacts] = useState<GroupTrainingFacts | null>(null);
   const [factsTick, setFactsTick] = useState(0);
   const [editingPlan, setEditingPlan] = useState(false);
+  const [trainingView, setTrainingView] = useState<'members' | 'calendar'>('members');
 
   const assignmentKey = useMemo(
     () =>
@@ -377,18 +385,98 @@ export default function GroupTrainingHome({
           />
         ) : (
           <>
-            <h2>Members</h2>
-            {!board ? (
-              <p className="muted">Loading training…</p>
-            ) : (
-              <GroupTrainingMemberList
-                members={board.members}
-                sessionUserId={sessionUserId}
+            <div className="group-training-view-switch" role="tablist" aria-label="Training view">
+              <button type="button" className={trainingView === 'members' ? 'is-current' : ''} onClick={() => setTrainingView('members')}>
+                Members
+              </button>
+              <button type="button" className={trainingView === 'calendar' ? 'is-current' : ''} onClick={() => setTrainingView('calendar')}>
+                Calendar
+              </button>
+            </div>
+            {trainingView === 'calendar' && teamId ? (
+              <GroupTrainingCalendar
+                teamId={teamId}
+                teamName={teamName}
+                canSeeAll={canManage}
+                canEdit={!!canAssign}
+                viewerUserId={sessionUserId || ''}
+                reloadKey={factsTick}
+                members={members
+                  .filter((member) => member.user_id)
+                  .map((member) => ({
+                    id: member.id,
+                    userId: member.user_id as string,
+                    name: member.display_name || 'Member',
+                  }))}
+                classifications={classifications}
+                memberClassificationIds={memberClassificationIds}
                 onOpenMember={(userId) => {
                   setEditingPlan(false);
                   setSelectedUserId(userId);
                 }}
+                onMoveWorkout={
+                  teamId
+                    ? async (input) => {
+                        const { error } = await moveMemberWorkout(supabase, {
+                          teamId,
+                          memberUserId: input.memberUserId,
+                          workoutId: input.workoutId,
+                          originalDate: input.originalDate,
+                          newDate: input.newDate,
+                          localToday: todayYmd(),
+                        });
+                        if (error) throw new Error(error);
+                        setFactsTick((value) => value + 1);
+                      }
+                    : undefined
+                }
+                onExcuseWorkout={
+                  teamId
+                    ? async (input) => {
+                        const { error } = await excuseMemberWorkout(supabase, {
+                          teamId,
+                          memberUserId: input.memberUserId,
+                          workoutId: input.workoutId,
+                          originalDate: input.originalDate,
+                          localToday: todayYmd(),
+                        });
+                        if (error) throw new Error(error);
+                        setFactsTick((value) => value + 1);
+                      }
+                    : undefined
+                }
+                onRestoreWorkout={
+                  teamId
+                    ? async (input) => {
+                        const { error } = await restoreMemberWorkout(supabase, {
+                          teamId,
+                          memberUserId: input.memberUserId,
+                          workoutId: input.workoutId,
+                          originalDate: input.originalDate,
+                          localToday: todayYmd(),
+                        });
+                        if (error) throw new Error(error);
+                        setFactsTick((value) => value + 1);
+                      }
+                    : undefined
+                }
               />
+            ) : (
+              <>
+                <h2>Members</h2>
+                {!board ? (
+                  <p className="muted">Loading training…</p>
+                ) : (
+                  <GroupTrainingMemberList
+                    members={board.members}
+                    sessionUserId={sessionUserId}
+                    onOpenMember={(userId) => {
+                      setEditingPlan(false);
+                      setSelectedUserId(userId);
+                    }}
+                  />
+                )}
+              </>
             )}
           </>
         )}

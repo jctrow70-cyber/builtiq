@@ -16,4 +16,5 @@ export * from './trainingWorkspace';
 export * from './assignmentWizard';
 export * from './memberSchedule';
 export * from './scheduleOverrides';
+export * from './groupCalendar';
 export * from './communication';

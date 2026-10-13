@@ -21,7 +21,7 @@
     "test:science": "tsx lib/scienceEngine/acceptanceCheck.ts",
     "test:progress": "tsx scripts/test-progress-analytics.ts",
     "test:progress-view": "tsx scripts/test-progress-view.ts",
-    "test:groups": "tsx scripts/test-group-architecture.ts && tsx scripts/test-group-training-workspace.ts && tsx scripts/test-assignment-wizard.ts && tsx scripts/test-member-schedule.ts && tsx scripts/test-workout-reschedule.ts && tsx scripts/test-unfollow-training.ts && tsx scripts/test-customize-for-me.ts && tsx scripts/test-group-invitations.ts && tsx scripts/test-notifications.ts && tsx scripts/test-group-communication.ts && tsx scripts/test-unified-schedule.ts"
+    "test:groups": "tsx scripts/test-group-architecture.ts && tsx scripts/test-group-training-workspace.ts && tsx scripts/test-assignment-wizard.ts && tsx scripts/test-member-schedule.ts && tsx scripts/test-workout-reschedule.ts && tsx scripts/test-group-calendar.ts && tsx scripts/test-unfollow-training.ts && tsx scripts/test-customize-for-me.ts && tsx scripts/test-group-invitations.ts && tsx scripts/test-notifications.ts && tsx scripts/test-group-communication.ts && tsx scripts/test-unified-schedule.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

@@ -11,6 +11,58 @@ Branch:
 Status:
 ```
 
+## BIQ-0262 - Group Training Calendar, Phase 5
+
+Date: 2026-10-12
+Branch: main
+Status: Committed locally, not pushed
+
+### Summary
+
+Group Training has a Members view and a Calendar view. The calendar is a Monday–Sunday board of saved group expectation dates, including custom weekdays, moved workouts, excused workouts, and one-off assignments. Filters and week navigation do not change membership. Workout actions reuse the Phase 4 move, excuse, and restore functions. A group enrollment with expected training turned off shows Schedule paused, which is separate from Personal training.
+
+### Purpose
+
+Trainers need to see the whole group week and change one workout without a second calendar system or a program edit.
+
+### Files changed
+
+- `lib/groups/groupCalendar.ts`
+- `lib/groups/loadGroupTrainingFacts.ts`
+- `lib/groups/trainingWorkspace.ts`
+- `lib/groups/index.ts`
+- `app/components/groups/GroupTrainingCalendar.tsx`
+- `app/components/groups/GroupTrainingHome.tsx`
+- `app/components/groups/GroupsHub.tsx`
+- `app/components/groups/MemberTrainingWorkspace.tsx`
+- `app/components/groups/WorkoutScheduleActions.tsx`
+- `app/globals.css`
+- `scripts/test-group-calendar.ts`
+- `package.json`
+
+### Database changes
+
+None. The calendar reads `st_training_expectations` for one week. Scheduling writes stay on the Phase 4 functions in migration 064. Apply 059, 062, 063, and 064 manually before expecting live dates. The calendar shows a dependency message when those tables are missing and does not invent dates from program weekday labels.
+
+### Testing steps
+
+- Open Group → Training and switch between Members and Calendar.
+- Confirm several members, a moved workout, an excused workout, and two workouts on one day.
+- Filter by one member and by a classification. Confirm the workout count changes and membership does not.
+- Use Previous week, Next week, and Today. On a phone-width screen, use the day strip instead of seven columns.
+- Move, excuse, or restore a workout and confirm the calendar and the member workspace reload.
+- Open a member name and confirm Change plan, Edit Training Days, Add workout, and Pause Schedule are still there.
+- Pause expected training and confirm the member list says Schedule paused. A personal-training member still says Personal training.
+- Sign in as a member and confirm other members’ workouts and personal training are not shown.
+
+### Known issues
+
+There is no new migration. Live dates require 059, 062, 063, and 064 to be applied in Supabase. These tests check the calendar model and the query bounds. They do not run against a live database. Signed-in browser use was not available from the sign-in screen. The group weekly calendar does not add a new top-level Group tab.
+
+### Recommended commit message
+
+BIQ-0262 Phase 5: Add Group Training calendar
+
 ## BIQ-0262 - Individual Workout Rescheduling, Phase 4
 
 Date: 2026-10-12

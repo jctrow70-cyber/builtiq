@@ -141,7 +141,7 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .group-training-status{display:inline-flex;align-items:center;border-radius:999px;padding:3px 8px;font-size:11px;font-weight:800;background:var(--accentSoft);color:var(--accentOnSoft);white-space:nowrap}
 .group-training-status-needs_plan,.group-training-status-needs_attention,.group-training-status-schedule_review{background:rgba(245,158,11,.16);color:#fbbf24}
 .group-training-status-on_track,.group-training-week-completed{background:rgba(34,197,94,.16);color:#4ade80}
-.group-training-status-paused,.group-training-status-personal,.group-training-week-scheduled,.group-training-week-not-confirmed{background:rgba(148,163,184,.16);color:#cbd5e1}
+.group-training-status-paused,.group-training-status-schedule_paused,.group-training-status-personal,.group-training-week-scheduled,.group-training-week-upcoming,.group-training-week-not-confirmed{background:rgba(148,163,184,.16);color:#cbd5e1}
 .group-training-week-missed{background:rgba(239,68,68,.16);color:#fca5a5}
 .group-training-week-due-today{background:var(--accentSoft);color:var(--accentOnSoft)}
 .member-training-workspace h2{font-size:22px}
@@ -156,6 +156,27 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .member-training-week-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-top:1px solid var(--line);min-height:44px}
 button.member-training-week-row{width:100%;background:transparent;border-left:0;border-right:0;border-bottom:0;color:inherit;text-align:left;cursor:pointer;font:inherit}
 .member-training-week-row .muted{display:block}
+.group-training-view-switch{display:flex;gap:8px;margin-bottom:12px}
+.group-training-view-switch button{min-height:44px;border-radius:999px;border:1px solid var(--borderSubtle);background:transparent;color:inherit;padding:8px 14px;font-weight:800}
+.group-training-view-switch button.is-current{background:var(--accentSoft);color:var(--accentOnSoft);border-color:transparent}
+.group-calendar-nav,.group-calendar-filters{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.group-calendar-nav .btn,.group-calendar-filters select,.group-calendar-more,.group-calendar-day-strip button{min-height:44px}
+.group-calendar-filters label{display:flex;flex-direction:column;gap:4px;flex:1;min-width:140px}
+.group-calendar-board{display:none}
+.group-calendar-mobile{display:flex;flex-direction:column;gap:8px}
+.group-calendar-day-strip{display:flex;gap:8px;overflow-x:auto}
+.group-calendar-day-strip button{min-width:64px;border-radius:12px;border:1px solid var(--borderSubtle);background:transparent;color:inherit;padding:8px}
+.group-calendar-day-strip button.is-current{background:var(--accentSoft);color:var(--accentOnSoft);border-color:transparent}
+.group-calendar-day-strip button b,.group-calendar-day-strip button span{display:block}
+.group-calendar-card{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:8px 0;border-top:1px solid var(--line)}
+.group-calendar-card-open,.group-calendar-name,.group-calendar-more{width:100%;text-align:left;background:transparent;border:0;color:inherit;font:inherit;cursor:pointer;min-height:44px}
+.group-calendar-card-open b,.group-calendar-card-open span{display:block}
+.group-calendar-name{color:var(--muted);font-size:13px}
+@media (min-width:721px){
+ .group-calendar-board{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
+ .group-calendar-mobile{display:none}
+ .group-calendar-day{min-width:0;padding:8px;border-radius:12px;background:var(--surfaceInset)}
+}
 .group-training-library-head{display:flex;flex-direction:column;align-items:stretch;gap:10px}
 .group-training-library-head .btn{min-height:44px}
 .group-training-current{margin-top:8px}

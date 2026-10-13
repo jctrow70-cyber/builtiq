@@ -44,6 +44,7 @@ export type GroupTrainingStatus =
   | 'needs_plan'
   | 'schedule_review'
   | 'paused'
+  | 'schedule_paused'
   | 'needs_attention'
   | 'on_track'
   | 'personal';
@@ -112,6 +113,7 @@ export type GroupTrainingWeekState =
   | 'Missed'
   | 'Due today'
   | 'Scheduled'
+  | 'Upcoming'
   | 'Excused'
   | 'Not confirmed';
 
@@ -163,6 +165,7 @@ const STATUS_LABEL: Record<GroupTrainingStatus, string> = {
   needs_plan: 'Needs plan',
   schedule_review: 'Schedule needs review',
   paused: 'Paused',
+  schedule_paused: 'Schedule paused',
   needs_attention: 'Needs attention',
   on_track: 'On track',
   personal: 'Personal training',
@@ -365,11 +368,13 @@ function groupExpectationsFor(
   return expectations.filter((row) => row.userId === userId && row.sourceKey === sourceKey);
 }
 
-function weekState(
-  row: GroupTrainingExpectationInput,
+/** Same completion rules as the unified schedule. Today's incomplete workout stays Due today. */
+export function groupExpectationState(
+  row: Pick<GroupTrainingExpectationInput, 'scheduledDate' | 'excused' | 'sessionStatus'>,
   today: string,
   completionKnown: boolean,
-  userMissed: number | null
+  userMissed: number | null = null,
+  upcoming: 'Scheduled' | 'Upcoming' = 'Scheduled'
 ): GroupTrainingWeekState {
   const display = expectationDisplayState({
     scheduledDate: row.scheduledDate,
@@ -378,13 +383,22 @@ function weekState(
     sessionStatus: row.sessionStatus,
   });
   if (display === 'Today') return 'Due today';
-  if (display === 'Upcoming') return 'Scheduled';
+  if (display === 'Upcoming') return upcoming;
   if (display === 'Missed') {
     if (!completionKnown && !row.sessionStatus) return 'Not confirmed';
     if (userMissed === 0) return 'Not confirmed';
     return 'Missed';
   }
   return display;
+}
+
+function weekState(
+  row: GroupTrainingExpectationInput,
+  today: string,
+  completionKnown: boolean,
+  userMissed: number | null
+): GroupTrainingWeekState {
+  return groupExpectationState(row, today, completionKnown, userMissed, 'Scheduled');
 }
 
 function missedInWindow(rows: GroupTrainingExpectationInput[], today: string): number {
@@ -443,6 +457,7 @@ function derivedProgramDates(input: {
 
 function chooseStatus(input: {
   paused: boolean;
+  expectationsEnabled: boolean;
   planKind: GroupTrainingPlanKind;
   scheduleNeedsReview: boolean;
   missed: number;
@@ -450,6 +465,7 @@ function chooseStatus(input: {
   if (input.paused) return 'paused';
   if (input.planKind === 'personal') return 'personal';
   if (input.planKind === 'none') return 'needs_plan';
+  if (!input.expectationsEnabled && (input.planKind === 'group_program' || input.planKind === 'custom_fork')) return 'schedule_paused';
   if (input.missed > 0) return 'needs_attention';
   if (input.scheduleNeedsReview) return 'schedule_review';
   return 'on_track';
@@ -509,8 +525,10 @@ export function buildGroupTrainingBoard(input: {
         : input.completionKnown
           ? missedInWindow(ownExpectations, input.today)
           : 0;
+    const expectationsEnabled = member.enrollment?.expectationEnabled !== false;
     const status = chooseStatus({
       paused,
+      expectationsEnabled,
       planKind: plan.kind,
       scheduleNeedsReview,
       missed,
@@ -584,7 +602,7 @@ export function buildGroupTrainingBoard(input: {
       scheduleDays,
       scheduleNeedsReview,
       scheduleReviewDetail,
-      expectationsEnabled: member.enrollment?.expectationEnabled !== false,
+      expectationsEnabled,
       nextWorkout,
       status,
       statusLabel: STATUS_LABEL[status],

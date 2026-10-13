@@ -251,7 +251,7 @@ const css = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8')
 assert.match(home, /Assign Training/);
 assert.match(home, /Program library/);
 assert.doesNotMatch(home, /GroupScheduleAdherence/);
-assert.doesNotMatch(home, />\s*Calendar\s*</);
+assert.match(home, />\s*Calendar\s*</);
 assert.match(loader, /source_kind', 'group'/);
 assert.match(loader, /source_key', sourceKey/);
 assert.doesNotMatch(loader, /source_key', 'personal'/);

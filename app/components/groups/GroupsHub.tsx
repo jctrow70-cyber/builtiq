@@ -556,6 +556,8 @@ export default function GroupsHub(props: GroupsHubProps) {
           }
           teamId={activeTeam?.id || null}
           members={members}
+          classifications={classifications}
+          memberClassificationIds={memberClassificationIds}
           assignmentTools={
             <GroupAssignWorkoutPanel
               groupProgram={groupProgramForAssign}

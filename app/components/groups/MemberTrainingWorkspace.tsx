@@ -6,6 +6,7 @@ import type { GroupTrainingMemberRow, GroupTrainingProgramRef } from '../../../l
 import { orderedWeekSessions } from '../../../lib/groups/trainingWorkspace';
 import { customWeekdayError, materializeMemberSchedule, programCycleAnchor } from '../../../lib/groups/memberSchedule';
 import { formatDisplayDate, todayYmd } from '../../../lib/training/programCalendar';
+import WorkoutScheduleActions from './WorkoutScheduleActions';
 
 type MemberTrainingWorkspaceProps = {
   groupName: string;
@@ -56,10 +57,6 @@ export default function MemberTrainingWorkspace({
   const [scheduleError, setScheduleError] = useState('');
   const [scheduleBusy, setScheduleBusy] = useState(false);
   const [selectedWorkout, setSelectedWorkout] = useState<GroupTrainingMemberRow['weekItems'][number] | null>(null);
-  const [moveDate, setMoveDate] = useState('');
-  const [confirmMove, setConfirmMove] = useState(false);
-  const [confirmExcuse, setConfirmExcuse] = useState(false);
-  const [confirmRestore, setConfirmRestore] = useState(false);
   const [confirmPause, setConfirmPause] = useState(false);
   const [actionError, setActionError] = useState('');
   const [actionBusy, setActionBusy] = useState(false);
@@ -338,10 +335,6 @@ export default function MemberTrainingWorkspace({
               className="member-training-week-row"
               onClick={() => {
                 setSelectedWorkout(item);
-                setMoveDate(item.date);
-                setConfirmMove(false);
-                setConfirmExcuse(false);
-                setConfirmRestore(false);
                 setActionError('');
               }}
             >
@@ -357,106 +350,16 @@ export default function MemberTrainingWorkspace({
         </div>
       )}
       {selectedWorkout && (
-        <div className="member-schedule-editor">
-          <p>
-            <b>{selectedWorkout.title}</b> · {formatDisplayDate(selectedWorkout.date)}
-          </p>
-          <p className="muted">This workout only. Training days and the shared program stay the same.</p>
-          {actionError && <p className="team-sheet-error">{actionError}</p>}
-          <div className="actions member-training-actions">
-            <button type="button" className="btn secondary" onClick={() => setSelectedWorkout(null)}>
-              View Workout
-            </button>
-            {canEditSchedule && onMoveWorkout && selectedWorkout.workoutId && !selectedWorkout.hasSession && selectedWorkout.date >= todayYmd() && (
-              <button type="button" className="btn secondary" onClick={() => setConfirmMove(true)}>
-                Move Workout
-              </button>
-            )}
-            {canEditSchedule && onExcuseWorkout && selectedWorkout.workoutId && !selectedWorkout.excused && !selectedWorkout.hasSession && selectedWorkout.date >= todayYmd() && (
-              <button type="button" className="btn secondary" onClick={() => setConfirmExcuse(true)}>
-                Excuse Workout
-              </button>
-            )}
-            {canEditSchedule && onRestoreWorkout && selectedWorkout.workoutId && selectedWorkout.excused && selectedWorkout.date >= todayYmd() && (
-              <button type="button" className="btn secondary" onClick={() => setConfirmRestore(true)}>
-                Restore Workout
-              </button>
-            )}
-          </div>
-          {confirmMove && onMoveWorkout && selectedWorkout.workoutId && (
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                setActionBusy(true);
-                setActionError('');
-                void onMoveWorkout({ workoutId: selectedWorkout.workoutId!, originalDate: selectedWorkout.date, newDate: moveDate })
-                  .then(() => setSelectedWorkout(null))
-                  .catch((error: Error) => setActionError(error.message || 'Could not move that workout.'))
-                  .finally(() => setActionBusy(false));
-              }}
-            >
-              <label>
-                Move to
-                <DateInput value={moveDate} onChange={setMoveDate} />
-              </label>
-              <p>
-                {member.name} — {selectedWorkout.title}
-                <br />
-                Originally: {formatDisplayDate(selectedWorkout.date)}
-                <br />
-                Move to: {formatDisplayDate(moveDate)}
-              </p>
-              {member.weekItems
-                .filter((item) => item.date === moveDate && item.title !== selectedWorkout.title)
-                .map((item) => (
-                  <p key={item.title} className="muted">
-                    Also on that day: {item.title}
-                  </p>
-                ))}
-              <button type="submit" className="btn green" disabled={actionBusy || moveDate < todayYmd()}>
-                {actionBusy ? 'Saving…' : 'Confirm move'}
-              </button>
-            </form>
-          )}
-          {confirmExcuse && onExcuseWorkout && selectedWorkout.workoutId && (
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                setActionBusy(true);
-                setActionError('');
-                void onExcuseWorkout({ workoutId: selectedWorkout.workoutId!, originalDate: selectedWorkout.date })
-                  .then(() => setSelectedWorkout(null))
-                  .catch((error: Error) => setActionError(error.message || 'Could not excuse that workout.'))
-                  .finally(() => setActionBusy(false));
-              }}
-            >
-              <p>
-                Excuse {selectedWorkout.title} on {formatDisplayDate(selectedWorkout.date)}. It leaves the adherence count and stays in history.
-              </p>
-              <button type="submit" className="btn green" disabled={actionBusy}>
-                {actionBusy ? 'Saving…' : 'Confirm excuse'}
-              </button>
-            </form>
-          )}
-          {confirmRestore && onRestoreWorkout && selectedWorkout.workoutId && (
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                setActionBusy(true);
-                setActionError('');
-                void onRestoreWorkout({ workoutId: selectedWorkout.workoutId!, originalDate: selectedWorkout.date })
-                  .then(() => setSelectedWorkout(null))
-                  .catch((error: Error) => setActionError(error.message || 'Could not restore that workout.'))
-                  .finally(() => setActionBusy(false));
-              }}
-            >
-              <p>Restore {selectedWorkout.title} on {formatDisplayDate(selectedWorkout.date)} to the expected schedule.</p>
-              <button type="submit" className="btn green" disabled={actionBusy}>
-                {actionBusy ? 'Saving…' : 'Confirm restore'}
-              </button>
-            </form>
-          )}
-        </div>
+        <WorkoutScheduleActions
+          memberName={member.name}
+          workout={selectedWorkout}
+          canEdit={!!canEditSchedule}
+          sameSchedule={member.weekItems}
+          onClose={() => setSelectedWorkout(null)}
+          onMoveWorkout={onMoveWorkout}
+          onExcuseWorkout={onExcuseWorkout}
+          onRestoreWorkout={onRestoreWorkout}
+        />
       )}
     </div>
   );
