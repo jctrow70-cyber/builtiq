@@ -21,6 +21,7 @@ yarn-error.log*
 Thumbs.db
 *.swp
 *.swo
+~$*
 
 # TypeScript
 *.tsbuildinfo

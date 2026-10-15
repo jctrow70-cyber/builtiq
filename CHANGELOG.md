@@ -11,6 +11,50 @@ Branch:
 Status:
 ```
 
+## BIQ-0262 - Ignore Office lock files in migrations
+
+Date: 2026-10-14
+Branch: main
+Status: Committed locally, not pushed
+
+### Summary
+
+Tracked Microsoft Office lock files under `supabase/migrations/` are removed from git. A `~$*` ignore rule keeps those temporary files out of future commits. Real migration SQL files stay in place.
+
+### Purpose
+
+Office lock files are not database migrations. Leaving them tracked makes the migration folder look like it has extra SQL changes.
+
+### Files changed
+
+- `.gitignore`
+- `supabase/migrations/~$250713_017_exercise_alternatives_seed.sql` (removed from git)
+- `supabase/migrations/~$250722_027_program_draft_status.sql` (removed from git)
+- `supabase/migrations/~$250917_049_intake_cardio_mobility_days.sql` (removed from git)
+- `supabase/migrations/~$260922_051_generation_runs.sql` (removed from git)
+- `supabase/migrations/~$260923_052_phase2a1_training_foundation.sql` (removed from git)
+- `supabase/migrations/~$260924_053_phase2a3_adaptation_application.sql` (removed from git)
+- `supabase/migrations/~$261008_061_phase2b1_adaptation_orchestration.sql` (removed from git)
+- `supabase/migrations/~$261012_064_workout_reschedule.sql` (removed from git)
+
+### Database changes
+
+None. No migration was applied.
+
+### Testing steps
+
+- Confirm `git ls-files -- "supabase/migrations/~*"` returns nothing.
+- Confirm the real `20261012_065_assigner_schedule_read.sql` file is still tracked.
+- Create or leave a `~$` file under `supabase/migrations/` and confirm `git status` does not list it.
+
+### Known issues
+
+None.
+
+### Recommended commit message
+
+Stop tracking Office lock files in migrations
+
 ## BIQ-0262 - Group Training Finalization, Phase 6
 
 Date: 2026-10-12
