@@ -110,12 +110,20 @@ const missedEarlier = boardFor([amy], {
   expectations: [expectation('amy', '2026-10-12', 'Full Body A', { dayLabel: 'Mon', sessionStatus: null })],
 });
 assert.equal(missedEarlier.members[0].status, 'needs_attention');
+assert.equal(missedEarlier.members[0].statusLabel, 'Missed 1 workout');
+assert.deepEqual(missedEarlier.members[0].missedDates, ['2026-10-12']);
 assert.equal(missedEarlier.members[0].weekItems[0].state, 'Missed');
 
 const oldMiss = boardFor([amy], {
   expectations: [expectation('amy', '2026-10-04', 'Full Body A', { sessionStatus: null })],
 });
 assert.equal(oldMiss.members[0].status, 'on_track');
+
+const excusedPast = boardFor([amy], {
+  expectations: [expectation('amy', '2026-10-12', 'Full Body A', { excused: true })],
+});
+assert.equal(excusedPast.members[0].status, 'on_track');
+assert.equal(excusedPast.members[0].missedCount, 0);
 
 const sarah: GroupTrainingMemberInput = {
   userId: 'sarah',
@@ -125,6 +133,7 @@ const sarah: GroupTrainingMemberInput = {
 };
 const needsPlan = boardFor([sarah], { defaultProgramId: null, programs: [] });
 assert.equal(needsPlan.members[0].status, 'needs_plan');
+assert.equal(needsPlan.members[0].statusLabel, 'No program assigned');
 assert.equal(needsPlan.members[0].planName, 'Not assigned');
 assert.equal(needsPlan.summary.needsPlan, 1);
 assert.equal(needsPlan.summary.assigned, 0);
@@ -259,7 +268,10 @@ assert.match(css, /@media \(max-width:720px\)\{[\s\S]*\.group-training-member\{g
 assert.match(css, /\.group-training[\s\S]*overflow-x:hidden/);
 const profile = readFileSync(new URL('../app/components/groups/MemberTrainingWorkspace.tsx', import.meta.url), 'utf8');
 assert.match(profile, /Add Activity/);
-assert.match(profile, /Change Plan/);
+assert.match(profile, /Change Program/);
+assert.match(profile, /View Full Plan/);
+assert.match(profile, />\s*Manage\s*</);
+assert.match(profile, /Members/);
 assert.match(profile, /Edit Training Days/);
 assert.match(profile, /Calendar/);
 assert.match(profile, /Progress/);

@@ -70,12 +70,13 @@ function asPrograms(programs: any[] | undefined): GroupTrainingProgramRef[] {
         id: exercise.id,
         name: exercise.name || exercise.exercise_name || 'Exercise',
         sortOrder: exercise.sort_order ?? exercise.sortOrder ?? 0,
-        sets: (exercise.st_planned_sets || exercise.sets || [])
+            sets: (exercise.st_planned_sets || exercise.sets || [])
           .filter((set: any) => !set.is_deleted)
           .map((set: any) => ({
             setNumber: set.set_number ?? set.setNumber,
             reps: set.target_reps || set.reps || '',
             weight: set.target_weight || set.weight || '',
+            restSeconds: set.rest_seconds ?? set.restSeconds ?? null,
           })),
       })),
     }));
@@ -131,6 +132,7 @@ export default function GroupTrainingHome({
   const [profileWeekStart, setProfileWeekStart] = useState(() => mondayOfWeek(todayYmd()));
   const [memberWeek, setMemberWeek] = useState<GroupCalendarWeekFacts | null>(null);
   const [memberQuery, setMemberQuery] = useState('');
+  const [explainUserId, setExplainUserId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [facts, setFacts] = useState<GroupTrainingFacts | null>(null);
   const [factsTick, setFactsTick] = useState(0);
@@ -275,6 +277,7 @@ export default function GroupTrainingHome({
   const profileWeekLabel = `${formatDisplayDate(mondayOfWeek(profileWeekStart))} – ${formatDisplayDate(sundayOfWeek(profileWeekStart))}`;
 
   function openProfile(userId: string, section: MemberProfileSection) {
+    setExplainUserId(null);
     setSelectedUserId(userId);
     setProfileSection(section);
     setTrainingView('members');
@@ -289,40 +292,14 @@ export default function GroupTrainingHome({
 
   return (
     <div className="group-training">
-      {!selected && (
-      <div className="card group-training-card">
-        <div className="group-training-head">
-          <div>
-            <h2>Training</h2>
-            <p className="muted">Who is training, which plan they follow, and who needs attention.</p>
-          </div>
-          {(canManage || canAssign) && (
-            <button type="button" className="btn green group-training-assign" onClick={assignTraining}>
-              Assign Training
-            </button>
-          )}
+      {!selected && (canManage || canAssign) && (
+        <div className="group-training-assign-row">
+          <button type="button" className="btn secondary" onClick={assignTraining}>
+            Assign Training
+          </button>
         </div>
-        <div className="group-training-summary" aria-label="Group training summary">
-          <div>
-            <b>{board ? board.summary.members : '—'}</b>
-            <span className="muted">Members</span>
-          </div>
-          <div>
-            <b>{board ? board.summary.assigned : '—'}</b>
-            <span className="muted">With a group plan</span>
-          </div>
-          <div>
-            <b>{board ? board.summary.needsPlan : '—'}</b>
-            <span className="muted">Need a plan</span>
-          </div>
-          <div>
-            <b>{board ? board.summary.workoutsThisWeek : '—'}</b>
-            <span className="muted">Workouts this week</span>
-          </div>
-        </div>
-        {facts?.notice && <p className="muted group-training-notice">{facts.notice}</p>}
-      </div>
       )}
+      {facts?.notice && !selected && <p className="muted group-training-notice">{facts.notice}</p>}
 
       <div className="card group-training-card">
         {selected && board ? (
@@ -341,6 +318,8 @@ export default function GroupTrainingHome({
             onThisWeek={() => setProfileWeekStart(mondayOfWeek(todayYmd()))}
             switchMembers={(board?.members || []).map((member) => ({ userId: member.userId, name: member.name }))}
             onSwitchMember={(userId) => openProfile(userId, profileSection)}
+            explainStatus={explainUserId === selected.userId}
+            onShowDate={(date) => setProfileWeekStart(mondayOfWeek(date))}
             progressPanel={panelUserId === selected.userId ? progressPanel : panelUserId ? <p className="muted">Loading progress…</p> : undefined}
             detailsPanel={panelUserId === selected.userId ? detailsPanel : panelUserId ? <p className="muted">Loading details…</p> : undefined}
             customizePrograms={customizePrograms}
@@ -543,7 +522,6 @@ export default function GroupTrainingHome({
             ) : (
               <>
                 <div className="member-profile-filters">
-                  <h2>Members</h2>
                   <label>
                     Search
                     <input value={memberQuery} onChange={(event) => setMemberQuery(event.target.value)} placeholder="Name" />
@@ -553,9 +531,9 @@ export default function GroupTrainingHome({
                     <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
                       <option value="all">All statuses</option>
                       <option value="on_track">On track</option>
-                      <option value="needs_attention">Needs attention</option>
+                      <option value="needs_attention">Missed workouts</option>
                       <option value="schedule_paused">Schedule paused</option>
-                      <option value="needs_plan">Needs a plan</option>
+                      <option value="needs_plan">No program assigned</option>
                       <option value="schedule_review">Schedule needs review</option>
                       <option value="personal">Personal training</option>
                       <option value="paused">Paused</option>
@@ -571,6 +549,12 @@ export default function GroupTrainingHome({
                     members={visibleMembers}
                     sessionUserId={sessionUserId}
                     onOpenMember={(userId) => openProfile(userId, 'calendar')}
+                    onExplainStatus={(userId) => {
+                      setExplainUserId(userId);
+                      setSelectedUserId(userId);
+                      setProfileSection('calendar');
+                      setTrainingView('members');
+                    }}
                   />
                 )}
               </>

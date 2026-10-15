@@ -11,7 +11,7 @@ Branch:
 Status:
 ```
 
-## BIQ-0263 - Member calendar mobile correction
+## BIQ-0263 - Member profile usability refinement
 
 Date: 2026-10-15
 Branch: main
@@ -19,19 +19,21 @@ Status: In progress, not committed
 
 ### Summary
 
-The group member week is a seven-day strip with arrow controls, matching the shape of Personal Training. The member name opens a name picker. A workout card shows its name, date, status, and exercise count, and expands only when tapped. Add Activity uses the selected member and the selected day through the existing group workout assignment. Group totals stay on the member list.
+The member profile shows the assigned program name, frequency, duration, and current week when those values exist, plus a read-only View Full Plan. Status text uses the existing missed-workout count instead of “Needs attention.” Member switching is a name control with arrows, and Members returns to the list. Add Activity sits with the selected day as a secondary action. Manage holds Change Program, Edit Training Days, and Pause or Resume.
 
 ### Purpose
 
-The first profile layout put dates, counts, and full-width controls ahead of the workout. On a phone that pushed the training day off the screen.
+The profile hid the assigned program, labeled every past miss as “Needs attention,” and put a large Add Activity button ahead of the calendar.
 
 ### Files changed
 
 - `app/components/groups/MemberTrainingWorkspace.tsx`
 - `app/components/groups/GroupTrainingHome.tsx`
-- `app/components/groups/GroupTrainingCalendar.tsx`
+- `app/components/groups/GroupTrainingMemberList.tsx`
 - `app/globals.css`
+- `lib/groups/trainingWorkspace.ts`
 - `scripts/test-group-training-workspace.ts`
+- `CHANGELOG.md`
 
 ### Database changes
 
@@ -39,22 +41,20 @@ None.
 
 ### Testing steps
 
-- Open a member on a phone-width screen. The week is seven days with previous and next arrows.
-- Tap the member name. A small group lists names. A long group asks for a name before showing matches.
-- Tap a workout card. Exercises open and close without starting a session.
-- Add Activity uses that member and the selected day.
-- Select a day and confirm the workout and exercises show under the strip.
-- Confirm group member counts are not on that screen.
-- Open Plan and confirm Change Plan, Edit Training Days, and Pause Schedule are still there.
-- Switch members and confirm the same week stays selected.
+- Open a member. The program summary is under the name. View Full Plan shows weeks, days, workouts, and stored prescription details without starting a session.
+- Tap the status. A missed workout explains the count and can open that calendar date. A later-today workout stays due, not missed.
+- Switch members with the name control and confirm the same week stays selected. Members returns to the list.
+- Add Activity is beside the selected day and assigns that member on that date.
+- Open Manage and confirm Change Program, Edit Training Days, and Pause or Resume are still there.
+- On the member list, long titles wrap. Group-wide counts stay off that screen.
 
 ### Known issues
 
-Signed-in browser testing still needs an authenticated session. This entry is the layout correction for Phase 1, not Phase 2.
+Signed-in browser testing still needs an authenticated session. “No recent activity” is not shown because the board has no activity metric. A program stored only as “Custom group plan” does not include weeks or exercises to display. This entry is the Phase 1 refinement, not Phase 2.
 
 ### Recommended commit message
 
-BIQ-0263 Phase 1: Fit the member week on a phone
+BIQ-0263 Phase 1: Show the assigned plan and the real missed count
 
 ## BIQ-0263 - Calendar-first member profile, Phase 1
 

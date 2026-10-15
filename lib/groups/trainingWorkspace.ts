@@ -1,5 +1,5 @@
 import { isExplicitIndividualAssignment } from './trainingSources';
-import { addDaysYmd, mondayOfWeek, sundayOfWeek } from '../training/programCalendar';
+import { addDaysYmd, mondayOfWeek, programEndDate, sundayOfWeek, weekForDate } from '../training/programCalendar';
 import {
   buildProgramExpectationDates,
   expectationDisplayState,
@@ -55,7 +55,7 @@ export type GroupTrainingExerciseRef = {
   id?: string | null;
   name?: string | null;
   sortOrder?: number | null;
-  sets?: Array<{ setNumber?: number | null; reps?: string | null; weight?: string | null }>;
+  sets?: Array<{ setNumber?: number | null; reps?: string | null; weight?: string | null; restSeconds?: number | null }>;
 };
 
 export type GroupTrainingWorkoutRef = {
@@ -156,6 +156,12 @@ export type GroupTrainingMemberRow = {
   nextWorkout: GroupTrainingNextWorkout | null;
   status: GroupTrainingStatus;
   statusLabel: string;
+  missedCount: number;
+  missedDates: string[];
+  programWeeks: number | null;
+  programStart: string | null;
+  currentProgramWeek: number | null;
+  programEndsOn: string | null;
   weekItems: GroupTrainingWeekItem[];
 };
 
@@ -170,14 +176,18 @@ export type GroupTrainingBoard = {
 };
 
 const STATUS_LABEL: Record<GroupTrainingStatus, string> = {
-  needs_plan: 'Needs plan',
+  needs_plan: 'No program assigned',
   schedule_review: 'Schedule needs review',
   paused: 'Paused',
   schedule_paused: 'Schedule paused',
-  needs_attention: 'Needs attention',
+  needs_attention: 'Missed workout',
   on_track: 'On track',
   personal: 'Personal training',
 };
+
+function missedStatusLabel(missed: number): string {
+  return missed === 1 ? 'Missed 1 workout' : `Missed ${missed} workouts`;
+}
 
 export function normalizeProgramDayLabel(value: string | null | undefined): string {
   const raw = String(value || '').trim();
@@ -533,6 +543,14 @@ export function buildGroupTrainingBoard(input: {
         : input.completionKnown
           ? missedInWindow(ownExpectations, input.today)
           : 0;
+    const missedWindowStart = userMissed != null ? mondayOfWeek(input.today) : addDaysYmd(input.today, -7);
+    const missedDates = ownExpectations
+      .filter((row) => row.scheduledDate < input.today && row.scheduledDate >= missedWindowStart)
+      .filter(
+        (row) =>
+          groupExpectationState(row, input.today, input.completionKnown || userMissed != null, userMissed, 'Upcoming') === 'Missed'
+      )
+      .map((row) => row.scheduledDate);
     const expectationsEnabled = member.enrollment?.expectationEnabled !== false;
     const status = chooseStatus({
       paused,
@@ -541,6 +559,15 @@ export function buildGroupTrainingBoard(input: {
       scheduleNeedsReview,
       missed,
     });
+    const programStart = member.enrollment?.startsOn || plan.program?.startDate || null;
+    const programWeeks = plan.program?.weeks ? Number(plan.program.weeks) : null;
+    const currentProgramWeek = programStart && programWeeks ? weekForDate(programStart, input.today, programWeeks) : null;
+    const programEndsOn = programStart && programWeeks ? programEndDate(programStart, programWeeks) : null;
+    const endingSoon =
+      status === 'on_track' &&
+      !!programEndsOn &&
+      programEndsOn >= input.today &&
+      programEndsOn <= addDaysYmd(input.today, 7);
 
     let weekItems: GroupTrainingWeekItem[] = [];
     let nextWorkout: GroupTrainingNextWorkout | null = null;
@@ -613,7 +640,13 @@ export function buildGroupTrainingBoard(input: {
       expectationsEnabled,
       nextWorkout,
       status,
-      statusLabel: STATUS_LABEL[status],
+      statusLabel: status === 'needs_attention' ? missedStatusLabel(missed) : endingSoon ? 'Program ending soon' : STATUS_LABEL[status],
+      missedCount: missed,
+      missedDates,
+      programWeeks,
+      programStart,
+      currentProgramWeek,
+      programEndsOn,
       weekItems,
     };
   });
