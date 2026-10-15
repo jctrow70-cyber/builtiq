@@ -289,6 +289,7 @@ export default function GroupTrainingHome({
 
   return (
     <div className="group-training">
+      {!selected && (
       <div className="card group-training-card">
         <div className="group-training-head">
           <div>
@@ -321,6 +322,7 @@ export default function GroupTrainingHome({
         </div>
         {facts?.notice && <p className="muted group-training-notice">{facts.notice}</p>}
       </div>
+      )}
 
       <div className="card group-training-card">
         {selected && board ? (
@@ -331,12 +333,13 @@ export default function GroupTrainingHome({
             section={profileSection}
             onSection={(section) => openProfile(selected.userId, section)}
             weekItems={memberWeek ? profileWeekItems : selected.weekItems}
+            weekStart={profileWeekStart}
             weekRangeLabel={profileWeekLabel}
             weekNotice={memberWeek?.notice}
             onPreviousWeek={() => setProfileWeekStart((current) => addDaysYmd(mondayOfWeek(current), -7))}
             onNextWeek={() => setProfileWeekStart((current) => addDaysYmd(mondayOfWeek(current), 7))}
             onThisWeek={() => setProfileWeekStart(mondayOfWeek(todayYmd()))}
-            switchMembers={visibleMembers.map((member) => ({ userId: member.userId, name: member.name }))}
+            switchMembers={(board?.members || []).map((member) => ({ userId: member.userId, name: member.name }))}
             onSwitchMember={(userId) => openProfile(userId, profileSection)}
             progressPanel={panelUserId === selected.userId ? progressPanel : panelUserId ? <p className="muted">Loading progress…</p> : undefined}
             detailsPanel={panelUserId === selected.userId ? detailsPanel : panelUserId ? <p className="muted">Loading details…</p> : undefined}
@@ -576,7 +579,7 @@ export default function GroupTrainingHome({
         )}
       </div>
 
-      {canManage && (
+      {!selected && canManage && (
         <div className="card group-training-card">
           <div className="group-training-library-head">
             <div>

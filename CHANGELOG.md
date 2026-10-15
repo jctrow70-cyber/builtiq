@@ -11,6 +11,51 @@ Branch:
 Status:
 ```
 
+## BIQ-0263 - Member calendar mobile correction
+
+Date: 2026-10-15
+Branch: main
+Status: In progress, not committed
+
+### Summary
+
+The group member week is a seven-day strip with arrow controls, matching the shape of Personal Training. The member name opens a name picker. A workout card shows its name, date, status, and exercise count, and expands only when tapped. Add Activity uses the selected member and the selected day through the existing group workout assignment. Group totals stay on the member list.
+
+### Purpose
+
+The first profile layout put dates, counts, and full-width controls ahead of the workout. On a phone that pushed the training day off the screen.
+
+### Files changed
+
+- `app/components/groups/MemberTrainingWorkspace.tsx`
+- `app/components/groups/GroupTrainingHome.tsx`
+- `app/components/groups/GroupTrainingCalendar.tsx`
+- `app/globals.css`
+- `scripts/test-group-training-workspace.ts`
+
+### Database changes
+
+None.
+
+### Testing steps
+
+- Open a member on a phone-width screen. The week is seven days with previous and next arrows.
+- Tap the member name. A small group lists names. A long group asks for a name before showing matches.
+- Tap a workout card. Exercises open and close without starting a session.
+- Add Activity uses that member and the selected day.
+- Select a day and confirm the workout and exercises show under the strip.
+- Confirm group member counts are not on that screen.
+- Open Plan and confirm Change Plan, Edit Training Days, and Pause Schedule are still there.
+- Switch members and confirm the same week stays selected.
+
+### Known issues
+
+Signed-in browser testing still needs an authenticated session. This entry is the layout correction for Phase 1, not Phase 2.
+
+### Recommended commit message
+
+BIQ-0263 Phase 1: Fit the member week on a phone
+
 ## BIQ-0263 - Calendar-first member profile, Phase 1
 
 Date: 2026-10-14

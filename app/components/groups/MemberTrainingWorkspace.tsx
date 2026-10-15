@@ -1,15 +1,40 @@
 'use client';
 
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import DateInput from '../DateInput';
 import type { GroupTrainingMemberRow, GroupTrainingProgramRef, GroupTrainingWeekItem } from '../../../lib/groups/trainingWorkspace';
 import { orderedWeekSessions } from '../../../lib/groups/trainingWorkspace';
 import { customWeekdayError, materializeMemberSchedule, programCycleAnchor } from '../../../lib/groups/memberSchedule';
 import { formatWarmupPrescription } from '../training/WarmupExerciseCard';
-import { formatDisplayDate, todayYmd } from '../../../lib/training/programCalendar';
+import { addDaysYmd, formatDisplayDate, mondayOfWeek, parseYmd, todayYmd } from '../../../lib/training/programCalendar';
 import WorkoutScheduleActions from './WorkoutScheduleActions';
 
 export type MemberProfileSection = 'calendar' | 'progress' | 'details';
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function shortWeekRange(start: string) {
+  const end = addDaysYmd(start, 6);
+  const left = parseYmd(start);
+  const right = parseYmd(end);
+  const startLabel = `${MONTHS[left.getMonth()]} ${left.getDate()}`;
+  const endLabel = left.getMonth() === right.getMonth() ? String(right.getDate()) : `${MONTHS[right.getMonth()]} ${right.getDate()}`;
+  return `${startLabel} – ${endLabel}`;
+}
+
+function dayHeading(date: string) {
+  const value = parseYmd(date);
+  return `${WEEKDAYS[value.getDay()]}, ${MONTHS[value.getMonth()]} ${value.getDate()}`;
+}
+
+function dayMark(items: GroupTrainingWeekItem[]) {
+  if (!items.length) return '';
+  if (items.some((item) => item.state === 'Due today')) return 'is-due';
+  if (items.every((item) => item.state === 'Completed')) return 'is-done';
+  if (items.some((item) => item.state === 'Missed')) return 'is-missed';
+  return 'is-scheduled';
+}
 
 type MemberTrainingWorkspaceProps = {
   groupName: string;
@@ -33,6 +58,7 @@ type MemberTrainingWorkspaceProps = {
   section?: MemberProfileSection;
   onSection?: (section: MemberProfileSection) => void;
   weekItems?: GroupTrainingWeekItem[];
+  weekStart?: string;
   weekRangeLabel?: string;
   onPreviousWeek?: () => void;
   onNextWeek?: () => void;
@@ -66,6 +92,7 @@ export default function MemberTrainingWorkspace({
   section = 'calendar',
   onSection,
   weekItems,
+  weekStart,
   weekRangeLabel,
   onPreviousWeek,
   onNextWeek,
@@ -92,7 +119,20 @@ export default function MemberTrainingWorkspace({
   const [oneOffId, setOneOffId] = useState('');
   const [oneOffDate, setOneOffDate] = useState(todayYmd());
   const [memberQuery, setMemberQuery] = useState('');
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(todayYmd());
   const days = weekItems || member.weekItems;
+  const resolvedWeekStart = mondayOfWeek(weekStart || days[0]?.date || todayYmd());
+  const weekCells = useMemo(
+    () =>
+      Array.from({ length: 7 }, (_, index) => {
+        const date = addDaysYmd(resolvedWeekStart, index);
+        return { date, items: days.filter((item) => item.date === date) };
+      }),
+    [resolvedWeekStart, days]
+  );
+  const selectedItems = weekCells.find((cell) => cell.date === selectedDate)?.items || [];
+  const currentWeek = resolvedWeekStart === mondayOfWeek(todayYmd());
   const sessions = useMemo(() => {
     const workouts = scheduleProgram?.workouts || [];
     const week = workouts.map((workout) => Number(workout.week)).find((value) => orderedWeekSessions(workouts, value).length > 0) || 1;
@@ -110,9 +150,33 @@ export default function MemberTrainingWorkspace({
     }).slice(0, 4);
   }, [scheduleProgram, scheduleMode, weekdays, effectiveOn]);
   const switchIndex = switchMembers.findIndex((item) => item.userId === member.userId);
-  const matches = switchMembers.filter((item) => item.name.toLowerCase().includes(memberQuery.trim().toLowerCase()));
-  const completed = days.filter((item) => item.state === 'Completed').length;
-  const due = days.filter((item) => item.state === 'Due today').length;
+  const pickerQuery = memberQuery.trim().toLowerCase();
+  const pickerMatches = switchMembers.filter((item) => item.name.toLowerCase().includes(pickerQuery));
+  const largeGroup = switchMembers.length > 8;
+  const pickerList = largeGroup ? (pickerQuery ? pickerMatches.slice(0, 12) : []) : switchMembers;
+
+  useEffect(() => {
+    const end = addDaysYmd(resolvedWeekStart, 6);
+    setSelectedDate((current) => {
+      if (current >= resolvedWeekStart && current <= end) return current;
+      const today = todayYmd();
+      if (today >= resolvedWeekStart && today <= end) return today;
+      const weekday = parseYmd(current).getDay();
+      const index = weekday === 0 ? 6 : weekday - 1;
+      return addDaysYmd(resolvedWeekStart, index);
+    });
+  }, [resolvedWeekStart]);
+
+  useEffect(() => {
+    setExpandedKey(null);
+    setAddingWorkout(false);
+    setPickerOpen(false);
+    setMemberQuery('');
+  }, [member.userId]);
+
+  useEffect(() => {
+    if (addingWorkout) setOneOffDate(selectedDate);
+  }, [selectedDate, addingWorkout]);
 
   function exercisesFor(workoutId: string | null) {
     if (!workoutId) return [];
@@ -129,59 +193,78 @@ export default function MemberTrainingWorkspace({
   }
 
   return (
-    <div className="member-training-workspace member-profile">
+    <div className="member-training-workspace member-profile" aria-label={groupName ? `${member.name}, ${groupName}` : member.name}>
       <div className="member-profile-toolbar">
-        <button type="button" className="btn secondary member-training-back" onClick={onBack}>
-          Back to members
+        <button type="button" className="member-icon-btn" aria-label="Back to members" onClick={onBack}>
+          ‹
         </button>
+        <h2 className="member-profile-title">
+          <button
+            type="button"
+            className="member-name-btn"
+            aria-expanded={pickerOpen}
+            aria-label={`Choose a member, ${member.name}`}
+            onClick={() => onSwitchMember && setPickerOpen((open) => !open)}
+          >
+            {member.name}
+          </button>
+        </h2>
         {onSwitchMember && switchMembers.length > 1 && (
           <div className="member-profile-switch">
             <button
               type="button"
-              className="btn secondary"
+              className="member-icon-btn"
+              aria-label="Previous member"
               disabled={switchIndex <= 0}
               onClick={() => switchIndex > 0 && onSwitchMember(switchMembers[switchIndex - 1].userId)}
             >
-              Previous
+              ‹
             </button>
             <button
               type="button"
-              className="btn secondary"
+              className="member-icon-btn"
+              aria-label="Next member"
               disabled={switchIndex < 0 || switchIndex >= switchMembers.length - 1}
               onClick={() => switchIndex >= 0 && switchIndex < switchMembers.length - 1 && onSwitchMember(switchMembers[switchIndex + 1].userId)}
             >
-              Next
+              ›
             </button>
           </div>
         )}
       </div>
-      <h2>
-        {member.name}
-        {groupName ? <span className="muted"> · {groupName}</span> : null}
-      </h2>
-      <p className="muted member-profile-planline">
-        {member.planName} · {member.scheduleDays} · {member.statusLabel}
-      </p>
-      {onSwitchMember && switchMembers.length > 5 && (
-        <label className="member-profile-search">
-          Find a member
-          <input
-            value={memberQuery}
-            onChange={(event) => setMemberQuery(event.target.value)}
-            placeholder="Search members"
-          />
-        </label>
-      )}
-      {memberQuery.trim() && onSwitchMember && (
-        <div className="member-profile-search-results">
-          {matches.slice(0, 8).map((item) => (
-            <button key={item.userId} type="button" className="btn small secondary" onClick={() => onSwitchMember(item.userId)}>
+      {pickerOpen && onSwitchMember && (
+        <div className="member-picker" role="listbox" aria-label="Group members">
+          {largeGroup && (
+            <input
+              value={memberQuery}
+              onChange={(event) => setMemberQuery(event.target.value)}
+              placeholder="Find a member"
+              aria-label="Find a member"
+            />
+          )}
+          {largeGroup && !pickerQuery && <p className="muted">Type a name. Training details load after you choose someone.</p>}
+          {pickerList.map((item) => (
+            <button
+              key={item.userId}
+              type="button"
+              role="option"
+              aria-selected={item.userId === member.userId}
+              className={item.userId === member.userId ? 'is-current' : ''}
+              onClick={() => onSwitchMember(item.userId)}
+            >
               {item.name}
             </button>
           ))}
-          {matches.length === 0 && <p className="muted">No member matches that search.</p>}
+          {largeGroup && pickerQuery && pickerMatches.length === 0 && <p className="muted">No member matches that search.</p>}
+          {largeGroup && pickerQuery && pickerMatches.length > pickerList.length && (
+            <p className="muted">Showing {pickerList.length} of {pickerMatches.length}.</p>
+          )}
         </div>
       )}
+      <p className="muted member-profile-planline">
+        {member.planName}
+        {member.statusLabel ? ` · ${member.statusLabel}` : ''}
+      </p>
       <div className="member-profile-tabs" role="tablist" aria-label="Member profile">
         {(['calendar', 'progress', 'details'] as MemberProfileSection[]).map((id) => (
           <button
@@ -224,12 +307,20 @@ export default function MemberTrainingWorkspace({
           )}
           <div className="member-profile-actions">
             {canEditSchedule && onAddWorkout && (
-              <button type="button" className="btn green" onClick={() => { closePlanTools(); setAddingWorkout(true); }}>
+              <button
+                type="button"
+                className="btn green"
+                onClick={() => {
+                  closePlanTools();
+                  setOneOffDate(selectedDate);
+                  setAddingWorkout(true);
+                }}
+              >
                 Add Activity
               </button>
             )}
             {(onChangePlan || canEditSchedule || onEditSharedProgram || onCustomize || onMessage) && (
-              <button type="button" className="btn secondary" aria-expanded={planMenuOpen} onClick={() => setPlanMenuOpen((open) => !open)}>
+              <button type="button" className="member-plan-toggle" aria-expanded={planMenuOpen} onClick={() => setPlanMenuOpen((open) => !open)}>
                 Plan
               </button>
             )}
@@ -237,14 +328,14 @@ export default function MemberTrainingWorkspace({
           {planMenuOpen && (
             <div className="member-plan-menu">
               {canManage && onChangePlan && (
-                <button type="button" className="btn secondary" onClick={onChangePlan}>
+                <button type="button" className="member-plan-item" onClick={onChangePlan}>
                   Change Plan
                 </button>
               )}
               {canEditSchedule && onSaveSchedule && (
                 <button
                   type="button"
-                  className="btn secondary"
+                  className="member-plan-item"
                   onClick={() => {
                     setEditingSchedule((open) => !open);
                     setScheduleMode('custom_weekdays');
@@ -257,22 +348,22 @@ export default function MemberTrainingWorkspace({
                 </button>
               )}
               {canEditSchedule && onSetExpectations && (
-                <button type="button" className="btn secondary" onClick={() => setConfirmPause((open) => !open)}>
+                <button type="button" className="member-plan-item" onClick={() => setConfirmPause((open) => !open)}>
                   {member.expectationsEnabled ? 'Pause Schedule' : 'Resume Schedule'}
                 </button>
               )}
               {canManage && onCustomize && customizePrograms.length > 0 && (
-                <button type="button" className="btn secondary" onClick={() => setShowCustomize((open) => !open)}>
+                <button type="button" className="member-plan-item" onClick={() => setShowCustomize((open) => !open)}>
                   Customize workouts
                 </button>
               )}
               {onEditSharedProgram && (
-                <button type="button" className="btn secondary" onClick={onEditSharedProgram}>
+                <button type="button" className="member-plan-item" onClick={onEditSharedProgram}>
                   Edit shared program
                 </button>
               )}
               {onMessage && (
-                <button type="button" className="btn secondary" onClick={onMessage}>
+                <button type="button" className="member-plan-item" onClick={onMessage}>
                   Message member
                 </button>
               )}
@@ -414,7 +505,7 @@ export default function MemberTrainingWorkspace({
                   .finally(() => setActionBusy(false));
               }}
             >
-              <p>Add one workout for {member.name}. This does not change the shared program or their training days.</p>
+              <p>Add one group workout for {member.name} on {dayHeading(oneOffDate)}. This stays on the group schedule. Personal training is not changed.</p>
               <label>
                 Workout
                 <select value={oneOffId} onChange={(event) => setOneOffId(event.target.value)}>
@@ -437,41 +528,71 @@ export default function MemberTrainingWorkspace({
             </form>
           )}
           {!member.expectationsEnabled && <p className="muted member-training-note">Schedule paused. Past workouts stay. Personal training is unchanged.</p>}
-          <div className="member-profile-weekbar">
-            <button type="button" className="btn secondary" onClick={onPreviousWeek}>Previous week</button>
-            <div>
-              <b>{weekRangeLabel || 'This week'}</b>
-              <span className="muted">{completed} completed · {due} due today · {days.length} scheduled</span>
+          <div className="member-week-nav">
+            <button type="button" className="member-icon-btn" aria-label="Previous week" onClick={onPreviousWeek}>
+              ‹
+            </button>
+            <div className="member-week-heading">
+              <b>{shortWeekRange(resolvedWeekStart)}</b>
+              {weekRangeLabel ? <span className="visually-hidden">{weekRangeLabel}</span> : null}
+              {!currentWeek && (
+                <button type="button" className="member-text-btn" onClick={onThisWeek}>
+                  Today
+                </button>
+              )}
             </div>
-            <button type="button" className="btn secondary" onClick={onThisWeek}>Today</button>
-            <button type="button" className="btn secondary" onClick={onNextWeek}>Next week</button>
+            <button type="button" className="member-icon-btn" aria-label="Next week" onClick={onNextWeek}>
+              ›
+            </button>
           </div>
           {weekNotice && <p className="muted group-training-notice">{weekNotice}</p>}
-          {days.length === 0 ? (
-            <p className="muted">Nothing from this group is scheduled this week.</p>
-          ) : (
-            <div className="training-workout-days member-profile-days" role="tablist" aria-label="Workout days this week">
-              {days.map((item) => {
-                const key = `${item.date}-${item.workoutId || item.title}`;
-                const open = expandedKey === key;
+          <div className="member-week-strip" role="tablist" aria-label="Workout days this week">
+            {weekCells.map((cell) => {
+              const value = parseYmd(cell.date);
+              const selected = cell.date === selectedDate;
+              return (
+                <button
+                  key={cell.date}
+                  type="button"
+                  role="tab"
+                  aria-selected={selected}
+                  aria-label={`${WEEKDAYS[value.getDay()]} ${value.getDate()}${cell.items.length ? `, ${cell.items.map((item) => item.title).join(', ')}` : ''}`}
+                  className={`member-week-cell${selected ? ' is-selected' : ''}${cell.date === todayYmd() ? ' is-today' : ''}`}
+                  onClick={() => {
+                    setSelectedDate(cell.date);
+                    setExpandedKey(null);
+                    setActionError('');
+                  }}
+                >
+                  <span>{WEEKDAYS[value.getDay()]}</span>
+                  <b>{value.getDate()}</b>
+                  <i className={dayMark(cell.items)} />
+                </button>
+              );
+            })}
+          </div>
+          <section className="member-day-detail" aria-label={dayHeading(selectedDate)}>
+            <h3>{dayHeading(selectedDate)}</h3>
+            {selectedItems.length === 0 ? (
+              <p className="muted">Nothing from this group is scheduled this day.</p>
+            ) : (
+              selectedItems.map((item, index) => {
+                const key = `${item.date}-${item.workoutId || item.title}-${index}`;
                 const exercises = exercisesFor(item.workoutId);
+                const open = expandedKey === key;
+                const countLabel = exercises.length === 1 ? '1 exercise' : exercises.length > 1 ? `${exercises.length} exercises` : '';
                 return (
-                  <div key={key} className="member-profile-day">
+                  <article key={key} className="member-day-workout">
                     <button
                       type="button"
-                      role="tab"
-                      aria-selected={open}
-                      className={`training-workout-day${open ? ' training-workout-day--active' : ''}${item.state === 'Due today' ? ' training-workout-day--today' : ''}`}
-                      onClick={() => {
-                        setExpandedKey(open ? null : key);
-                        setActionError('');
-                      }}
+                      className="member-day-workout-open"
+                      aria-expanded={open}
+                      onClick={() => setExpandedKey(open ? null : key)}
                     >
-                      <span className="training-workout-day-label">
-                        {item.dayLabel || formatDisplayDate(item.date)} · {item.title}
-                      </span>
-                      <span className="training-workout-day-date">
-                        {formatDisplayDate(item.date)} · {item.state}
+                      <b>{item.title}</b>
+                      <span className="muted">
+                        {dayHeading(item.date)} · {item.state}
+                        {countLabel ? ` · ${countLabel}` : ''}
                       </span>
                     </button>
                     {open && (
@@ -496,24 +617,26 @@ export default function MemberTrainingWorkspace({
                             ))}
                           </ul>
                         )}
-                        <WorkoutScheduleActions
-                          memberName={member.name}
-                          workout={item}
-                          canEdit={!!canEditSchedule}
-                          sameSchedule={days}
-                          hideViewButton
-                          onClose={() => setExpandedKey(null)}
-                          onMoveWorkout={onMoveWorkout}
-                          onExcuseWorkout={onExcuseWorkout}
-                          onRestoreWorkout={onRestoreWorkout}
-                        />
+                        {canEditSchedule && (
+                          <WorkoutScheduleActions
+                            memberName={member.name}
+                            workout={item}
+                            canEdit
+                            sameSchedule={days}
+                            hideViewButton
+                            onClose={() => setExpandedKey(null)}
+                            onMoveWorkout={onMoveWorkout}
+                            onExcuseWorkout={onExcuseWorkout}
+                            onRestoreWorkout={onRestoreWorkout}
+                          />
+                        )}
                       </div>
                     )}
-                  </div>
+                  </article>
                 );
-              })}
-            </div>
-          )}
+              })
+            )}
+          </section>
         </>
       )}
     </div>

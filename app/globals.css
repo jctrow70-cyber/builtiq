@@ -159,15 +159,11 @@ button.member-training-week-row{width:100%;background:transparent;border-left:0;
 .group-training-view-switch{display:flex;gap:8px;margin-bottom:12px}
 .group-training-view-switch button{min-height:44px;border-radius:999px;border:1px solid var(--borderSubtle);background:transparent;color:inherit;padding:8px 14px;font-weight:800}
 .group-training-view-switch button.is-current{background:var(--accentSoft);color:var(--accentOnSoft);border-color:transparent}
-.group-calendar-nav,.group-calendar-filters{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
-.group-calendar-nav .btn,.group-calendar-filters select,.group-calendar-more,.group-calendar-day-strip button{min-height:44px}
-.group-calendar-filters label{display:flex;flex-direction:column;gap:4px;flex:1;min-width:140px}
+.group-calendar-filters{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.group-calendar-filters select,.group-calendar-more{min-height:44px}
+.group-calendar-filters label{display:flex;flex-direction:column;gap:4px;flex:1;min-width:0}
 .group-calendar-board{display:none}
-.group-calendar-mobile{display:flex;flex-direction:column;gap:8px}
-.group-calendar-day-strip{display:flex;gap:8px;overflow-x:auto}
-.group-calendar-day-strip button{min-width:64px;border-radius:12px;border:1px solid var(--borderSubtle);background:transparent;color:inherit;padding:8px}
-.group-calendar-day-strip button.is-current{background:var(--accentSoft);color:var(--accentOnSoft);border-color:transparent}
-.group-calendar-day-strip button b,.group-calendar-day-strip button span{display:block}
+.group-calendar-mobile{display:flex;flex-direction:column;gap:8px;min-width:0}
 .group-calendar-card{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:8px 0;border-top:1px solid var(--line)}
 .group-calendar-card-open,.group-calendar-name,.group-calendar-more{width:100%;text-align:left;background:transparent;border:0;color:inherit;font:inherit;cursor:pointer;min-height:44px}
 .group-calendar-card-open b,.group-calendar-card-open span{display:block}
@@ -196,21 +192,57 @@ button.member-training-week-row{width:100%;background:transparent;border-left:0;
 .assign-wizard-day-grid{display:grid;gap:8px}
 .assign-wizard-day-grid label,.member-schedule-editor label{display:flex;flex-direction:column;gap:4px}
 .member-schedule-editor{display:flex;flex-direction:column;gap:10px;margin:12px 0;padding:12px;border-radius:12px;background:var(--surfaceInset)}
-.member-profile-toolbar,.member-profile-switch,.member-profile-actions,.member-profile-weekbar,.member-plan-menu,.member-profile-filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.member-profile-toolbar,.member-profile-weekbar,.member-profile-filters{justify-content:space-between}
-.member-profile-tabs{display:flex;gap:6px;overflow-x:auto;margin:12px 0}
-.member-profile-tabs button,.member-profile-actions .btn,.member-profile-weekbar .btn,.member-profile-switch .btn{min-height:44px}
-.member-profile-tabs button{flex:1;border:1px solid var(--line);background:#0f172a;color:var(--muted);border-radius:999px;padding:8px 12px;font-weight:700}
+.member-profile{min-width:0}
+.member-profile-toolbar,.member-profile-switch,.member-profile-actions,.member-profile-filters{display:flex;gap:8px;align-items:center;min-width:0}
+.member-profile-toolbar{justify-content:space-between}
+.member-profile-title{flex:1;min-width:0;margin:0;font-size:18px;line-height:1.2}
+.member-name-btn{border:0;background:transparent;color:inherit;padding:0;text-align:left;min-width:0;max-width:100%;font:inherit;font-weight:800;overflow-wrap:anywhere}
+.member-picker{display:flex;flex-direction:column;margin:8px 0;border:1px solid var(--line);border-radius:12px;overflow:auto;max-height:220px}
+.member-picker input{width:100%;min-height:40px;border:0;border-bottom:1px solid var(--line);background:transparent;color:inherit;padding:8px 12px}
+.member-picker button{width:100%;min-height:40px;text-align:left;border:0;border-top:1px solid var(--line);background:transparent;color:inherit;padding:8px 12px}
+.member-picker button.is-current{background:var(--accentSoft)}
+.member-picker p{margin:0;padding:8px 12px}
+.member-profile-planline{margin:2px 0 0;overflow-wrap:anywhere}
+.member-icon-btn,.member-plan-toggle,.member-text-btn{border:1px solid var(--line);background:transparent;color:inherit;border-radius:999px}
+.member-icon-btn{width:36px;height:36px;min-width:36px;padding:0;font-size:22px;line-height:1;display:inline-flex;align-items:center;justify-content:center}
+.member-icon-btn:disabled{opacity:.35}
+.member-plan-toggle,.member-text-btn{min-height:36px;padding:6px 12px;font-size:13px;font-weight:800}
+.member-profile-actions{margin:8px 0}
+.member-profile-actions .btn{min-height:40px;flex:1}
+.member-profile-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:10px 0}
+.member-profile-tabs button{min-height:36px;min-width:0;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:6px 4px;font-size:13px;font-weight:700}
 .member-profile-tabs button.is-current{border-color:var(--purple);background:#1b1634;color:#fff}
 .member-profile-search,.member-profile-filters label{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
-.member-profile-search input,.member-profile-filters input,.member-profile-filters select{min-height:44px}
-.member-profile-planline{margin-top:0}
-.member-profile-weekbar{margin:8px 0 12px}
-.member-profile-weekbar div{display:flex;flex-direction:column;min-width:0;flex:1}
-.member-profile-day{display:flex;flex-direction:column;gap:8px}
-.member-profile-exercises{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
-.member-profile-exercises li{display:flex;flex-direction:column}
-.member-profile-search-results{display:flex;flex-wrap:wrap;gap:8px}
+.member-profile-filters{flex-wrap:wrap}
+.member-profile-search input,.member-profile-filters input,.member-profile-filters select{min-height:40px;width:100%;min-width:0}
+.member-plan-menu{display:flex;flex-direction:column;margin:0 0 8px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.member-plan-item{width:100%;min-height:40px;text-align:left;background:transparent;border:0;border-top:1px solid var(--line);color:inherit;padding:8px 12px;font-weight:700}
+.member-plan-menu .member-plan-item:first-child{border-top:0}
+.member-week-nav,.group-calendar-nav{display:grid;grid-template-columns:36px minmax(0,1fr) 36px;align-items:center;gap:8px;margin:4px 0 8px}
+.member-week-heading{display:flex;flex-direction:column;align-items:center;min-width:0;text-align:center;gap:2px}
+.member-week-heading b{font-size:15px;line-height:1.2}
+.member-week-strip,.group-calendar-day-strip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;min-width:0;overflow:hidden}
+.member-week-cell,.group-calendar-day-strip button{min-width:0;min-height:52px;padding:4px 0;border:0;border-radius:10px;background:transparent;color:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
+.member-week-cell span,.group-calendar-day-strip button span{font-size:10px;font-weight:700;letter-spacing:.02em;color:var(--muted);line-height:1}
+.member-week-cell b,.group-calendar-day-strip button b{font-size:14px;line-height:1.1}
+.member-week-cell i{width:5px;height:5px;border-radius:50%;background:transparent}
+.member-week-cell i.is-scheduled,.member-week-cell i.is-due{background:var(--accent)}
+.member-week-cell i.is-done{background:#4ade80}
+.member-week-cell i.is-missed{background:#f87171}
+.member-week-cell.is-selected,.group-calendar-day-strip button.is-current{background:var(--accentSoft);color:var(--accentOnSoft)}
+.member-week-cell.is-today b{box-shadow:inset 0 0 0 1px var(--accent);border-radius:999px;min-width:22px;padding:1px 0}
+.member-day-detail h3{margin:12px 0 6px;font-size:16px}
+.member-day-workout{border-top:1px solid var(--line);padding:8px 0}
+.member-day-workout-open{width:100%;display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:36px;padding:4px 0;border:0;background:transparent;color:inherit;text-align:left}
+.member-day-workout-open b{min-width:0;overflow-wrap:anywhere}
+.member-profile-workout .member-schedule-editor{margin:8px 0 0;padding:0;background:transparent}
+.member-profile-workout .member-training-actions{display:flex;flex-wrap:wrap;gap:6px}
+.member-profile-workout .member-training-actions .btn{min-height:36px;width:auto;padding:6px 10px;font-size:13px}
+.member-profile-exercises{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.member-profile-exercises li{display:flex;flex-direction:column;min-width:0}
+.member-profile-search-results{display:flex;flex-direction:column;gap:4px}
+.member-profile-search-results .btn{min-height:36px;width:100%;text-align:left}
+.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .assign-wizard-create{display:flex;flex-direction:column;gap:8px}
 .assign-wizard-actions .btn{min-height:44px}
 @media (min-width:721px){

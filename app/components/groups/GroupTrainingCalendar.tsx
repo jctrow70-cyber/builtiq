@@ -161,20 +161,24 @@ export default function GroupTrainingCalendar({
   return (
     <div className="group-calendar">
       <div className="group-calendar-nav">
-        <button type="button" className="btn secondary" onClick={() => showWeek(adjacentCalendarWeek(weekStart, -1))}>
-          Previous week
+        <button type="button" className="member-icon-btn" aria-label="Previous week" onClick={() => showWeek(adjacentCalendarWeek(weekStart, -1))}>
+          ‹
         </button>
-        <button type="button" className="btn secondary" onClick={() => showWeek(mondayOfWeek(today))}>
-          Today
-        </button>
-        <button type="button" className="btn secondary" onClick={() => showWeek(adjacentCalendarWeek(weekStart, 1))}>
-          Next week
+        <div className="member-week-heading">
+          <b>
+            {formatDisplayDate(weekStart)} – {formatDisplayDate(week?.weekEnd || weekStart)}
+          </b>
+          {weekStart !== mondayOfWeek(today) && (
+            <button type="button" className="member-text-btn" onClick={() => showWeek(mondayOfWeek(today))}>
+              Today
+            </button>
+          )}
+          {week ? <span className="muted">{week.workoutCount} workouts · {week.memberCount} members</span> : null}
+        </div>
+        <button type="button" className="member-icon-btn" aria-label="Next week" onClick={() => showWeek(adjacentCalendarWeek(weekStart, 1))}>
+          ›
         </button>
       </div>
-      <p className="muted">
-        {formatDisplayDate(weekStart)} – {formatDisplayDate(week?.weekEnd || weekStart)}
-        {week ? ` · ${week.workoutCount} workouts · ${week.memberCount} members` : ''}
-      </p>
       <div className="group-calendar-filters">
         <label>
           Member
@@ -217,8 +221,8 @@ export default function GroupTrainingCalendar({
                   className={day.date === mobileDay?.date ? 'is-current' : ''}
                   onClick={() => setSelectedDay(day.date)}
                 >
-                  <b>{day.weekday}</b>
-                  <span>{formatDisplayDate(day.date).slice(0, 5)}</span>
+                  <span>{day.weekday}</span>
+                  <b>{Number(day.date.slice(8, 10))}</b>
                 </button>
               ))}
             </div>
