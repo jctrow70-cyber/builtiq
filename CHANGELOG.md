@@ -11,6 +11,54 @@ Branch:
 Status:
 ```
 
+## BIQ-0263 - Calendar-first member profile, Phase 1
+
+Date: 2026-10-14
+Branch: main
+Status: Committed locally, not pushed
+
+### Summary
+
+Opening a group member shows that person’s week first, using the same day layout as Personal Training and the saved group expectation dates. Calendar, Progress, and Details are one profile. Add Activity is the main action. Change Plan, Edit Training Days, and Pause or Resume sit in a Plan menu. Move, Excuse, and Restore appear only on the open workout. Training loads the current week for the list and the selected member’s week after that.
+
+### Purpose
+
+Group training should feel like a week of workouts, for a small group or a long member list, without another schedule system.
+
+### Files changed
+
+- `app/components/groups/MemberTrainingWorkspace.tsx`
+- `app/components/groups/GroupTrainingHome.tsx`
+- `app/components/groups/GroupsHub.tsx`
+- `app/components/groups/TeamMemberDetail.tsx`
+- `app/components/groups/WorkoutScheduleActions.tsx`
+- `lib/groups/loadGroupTrainingFacts.ts`
+- `lib/groups/trainingWorkspace.ts`
+- `app/globals.css`
+- `scripts/test-group-training-workspace.ts`
+
+### Database changes
+
+None. No migration was applied.
+
+### Testing steps
+
+- Open Group → Training and search or filter members. Open a member. The week is the first thing on the screen.
+- Switch members and move to another week. The week stays when the member changes.
+- Expand a workout and confirm exercises show. Move, Excuse, and Restore are on that workout.
+- Open Plan and use Change Plan, Edit Training Days, and Pause Schedule.
+- From Members, open someone. The profile opens on Details.
+- From the group calendar, open a name. The profile opens on Calendar.
+- Confirm a personal program is not changed by Add Activity.
+
+### Known issues
+
+Signed-in browser testing still depends on an authenticated session. Server-side paging for 200 members is Phase 3. Migration 065 and the override trigger were not applied.
+
+### Recommended commit message
+
+BIQ-0263 Phase 1: Open group members on their training week
+
 ## BIQ-0262 - Ignore Office lock files in migrations
 
 Date: 2026-10-14

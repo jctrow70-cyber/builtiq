@@ -45,9 +45,9 @@ export async function loadGroupTrainingFacts(
   const today = input.today || todayYmd();
   const sourceKey = groupSourceKey(input.teamId);
   await supabase.rpc('st_apply_group_due_segments', { p_team_id: input.teamId, p_today: today });
-  const from = addDaysYmd(today, -7);
-  const to = addDaysYmd(sundayOfWeek(today), 84);
-  const weekFrom = mondayOfWeek(from);
+  const from = mondayOfWeek(today);
+  const to = sundayOfWeek(today);
+  const weekFrom = from;
 
   const [enrollmentResult, expectationResult, adherenceResult] = await Promise.all([
     supabase
@@ -209,6 +209,102 @@ export type GroupCalendarWeekFacts = {
   from: string;
   to: string;
 };
+
+/**
+ * Loads one member's Monday–Sunday group expectations.
+ * Personal expectations are not queried, and other members are not included.
+ */
+export async function loadMemberTrainingWeek(
+  supabase: SupabaseClient,
+  input: { teamId: string; userId: string; weekStart: string; today?: string; viewerUserId?: string | null }
+): Promise<GroupCalendarWeekFacts> {
+  const today = input.today || todayYmd();
+  const sourceKey = groupSourceKey(input.teamId);
+  const from = mondayOfWeek(input.weekStart);
+  const to = sundayOfWeek(from);
+  const expectationResult = await supabase
+    .from('st_training_expectations')
+    .select('id, user_id, source_key, team_id, origin, scheduled_date, title, day_label, workout_id, excused')
+    .eq('source_key', sourceKey)
+    .eq('user_id', input.userId)
+    .gte('scheduled_date', from)
+    .lte('scheduled_date', to)
+    .order('scheduled_date', { ascending: true });
+
+  let expectations: GroupTrainingExpectationInput[] = (expectationResult.data || [])
+    .filter((row: { source_key?: string; user_id?: string }) => row.source_key === sourceKey && row.source_key !== 'personal' && row.user_id === input.userId)
+    .map(
+      (row: {
+        id: string;
+        user_id: string;
+        source_key: string;
+        team_id?: string | null;
+        origin?: string | null;
+        scheduled_date: string;
+        title?: string | null;
+        day_label?: string | null;
+        workout_id?: string | null;
+        excused?: boolean | null;
+      }) => ({
+        id: row.id,
+        userId: row.user_id,
+        sourceKey: row.source_key,
+        teamId: row.team_id,
+        origin: row.origin === 'assignment' ? 'assignment' as const : 'program' as const,
+        scheduledDate: String(row.scheduled_date).slice(0, 10),
+        title: row.title || 'Workout',
+        dayLabel: row.day_label,
+        workoutId: row.workout_id,
+        excused: !!row.excused,
+      })
+    );
+
+  let completionKnown = false;
+  if (!expectationResult.error) {
+    const [sessions, logs] = await Promise.all([
+      input.viewerUserId && input.viewerUserId === input.userId
+        ? supabase
+            .from('st_workout_sessions')
+            .select('user_id, workout_id, log_date, status, expectation_id')
+            .eq('user_id', input.userId)
+            .gte('log_date', from)
+            .lte('log_date', to)
+        : Promise.resolve({ data: [], error: null }),
+      fetchGroupScopedSetLogs(supabase, input.teamId, [input.userId], { from, to, limit: 80 }),
+    ]);
+    completionKnown = !sessions.error || !logs.error;
+    if (completionKnown) {
+      expectations = attachExpectationCompletion(
+        expectations,
+        (sessions.data || []).map(
+          (row: { user_id: string; workout_id?: string | null; log_date?: string | null; expectation_id?: string | null; status?: string | null }) => ({
+            userId: row.user_id,
+            workoutId: row.workout_id,
+            logDate: row.log_date ? String(row.log_date).slice(0, 10) : null,
+            expectationId: row.expectation_id,
+            status: mapSessionStatus(row.status),
+          })
+        ),
+        (logs.data || [])
+          .filter((row: { completed?: boolean; user_id?: string; log_date?: string }) => row.completed !== false && row.user_id && row.log_date)
+          .map((row: { user_id: string; log_date: string }) => ({
+            userId: row.user_id,
+            date: String(row.log_date).slice(0, 10),
+          }))
+      );
+    }
+  }
+
+  const missing = scheduleSetupMissing(expectationResult.error?.message);
+  return {
+    expectations,
+    expectationsAvailable: !expectationResult.error,
+    completionKnown,
+    notice: missing || expectationResult.error ? CALENDAR_DEPENDENCY_NOTICE : null,
+    from,
+    to,
+  };
+}
 
 /**
  * Loads one Monday–Sunday group schedule.

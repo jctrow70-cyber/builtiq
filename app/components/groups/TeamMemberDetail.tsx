@@ -50,6 +50,7 @@ type TeamMemberDetailProps = {
   onOpenTraining?: () => void;
   onToggleMemberClassification?: (member: any, classificationId: string, active: boolean) => void;
   onMessageMember?: (member: any) => void;
+  embedded?: boolean;
 };
 
 export default function TeamMemberDetail(props: TeamMemberDetailProps) {
@@ -79,6 +80,7 @@ export default function TeamMemberDetail(props: TeamMemberDetailProps) {
     onOpenTraining,
     onToggleMemberClassification,
     onMessageMember,
+    embedded = false,
   } = props;
   const teamPrograms = programs.filter((p: any) => p.visibility === 'team');
   const memberName = member.display_name || 'Member';
@@ -86,13 +88,15 @@ export default function TeamMemberDetail(props: TeamMemberDetailProps) {
   const participating = member.is_active_participant !== false;
 
   return (
-    <div className="team-member-detail card">
-      <div className="topline" style={{ justifyContent: 'space-between' }}>
-        <h2>{memberName}</h2>
-        <button type="button" className="btn small secondary" onClick={onBack}>
-          Back
-        </button>
-      </div>
+    <div className={embedded ? 'team-member-detail' : 'team-member-detail card'}>
+      {!embedded && (
+        <div className="topline" style={{ justifyContent: 'space-between' }}>
+          <h2>{memberName}</h2>
+          <button type="button" className="btn small secondary" onClick={onBack}>
+            Back
+          </button>
+        </div>
+      )}
       {onMessageMember && (
         <button type="button" className="btn small secondary" style={{ marginTop: 12 }} onClick={() => onMessageMember(member)}>
           Message member
@@ -156,6 +160,7 @@ export default function TeamMemberDetail(props: TeamMemberDetailProps) {
           )}
         </div>
       )}
+      {!embedded && (
       <div className="team-member-detail-tabs">
         {(['overview', 'assigned', 'history', 'progress'] as MemberDetailTab[]).map((id) => (
           <button key={id} type="button" className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>
@@ -169,7 +174,8 @@ export default function TeamMemberDetail(props: TeamMemberDetailProps) {
           </button>
         ))}
       </div>
-      {canManage && tab === 'assigned' && (
+      )}
+      {canManage && (embedded || tab === 'assigned') && (
         <div className="actions" style={{ marginTop: 10, flexWrap: 'wrap' }}>
           {onOpenTraining && (
             <button type="button" className="btn small secondary" onClick={onOpenTraining}>

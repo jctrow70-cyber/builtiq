@@ -51,12 +51,20 @@ export type GroupTrainingStatus =
 
 export type GroupTrainingPlanKind = 'group_program' | 'custom_fork' | 'personal' | 'none';
 
+export type GroupTrainingExerciseRef = {
+  id?: string | null;
+  name?: string | null;
+  sortOrder?: number | null;
+  sets?: Array<{ setNumber?: number | null; reps?: string | null; weight?: string | null }>;
+};
+
 export type GroupTrainingWorkoutRef = {
   id?: string | null;
   week?: number | null;
   dayLabel?: string | null;
   dayOrder?: number | null;
   title?: string | null;
+  exercises?: GroupTrainingExerciseRef[];
 };
 
 export type GroupTrainingProgramRef = {

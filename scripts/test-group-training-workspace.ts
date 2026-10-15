@@ -257,5 +257,18 @@ assert.match(loader, /source_key', sourceKey/);
 assert.doesNotMatch(loader, /source_key', 'personal'/);
 assert.match(css, /@media \(max-width:720px\)\{[\s\S]*\.group-training-member\{grid-template-columns:1fr\}/);
 assert.match(css, /\.group-training[\s\S]*overflow-x:hidden/);
+const profile = readFileSync(new URL('../app/components/groups/MemberTrainingWorkspace.tsx', import.meta.url), 'utf8');
+assert.match(profile, /Add Activity/);
+assert.match(profile, /Change Plan/);
+assert.match(profile, /Edit Training Days/);
+assert.match(profile, /Calendar/);
+assert.match(profile, /Progress/);
+assert.match(profile, /Details/);
+assert.match(profile, /hideViewButton/);
+assert.match(loader, /loadMemberTrainingWeek/);
+assert.match(loader, /\.eq\('user_id', input\.userId\)/);
+assert.doesNotMatch(loader, /84/);
+assert.match(home, /setProfileWeekStart/);
+assert.match(home, /statusFilter/);
 
 console.log('group training workspace checks passed');

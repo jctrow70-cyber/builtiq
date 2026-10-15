@@ -21,6 +21,7 @@ type WorkoutScheduleActionsProps = {
   onMoveWorkout?: (input: { workoutId: string; originalDate: string; newDate: string }) => Promise<void>;
   onExcuseWorkout?: (input: { workoutId: string; originalDate: string }) => Promise<void>;
   onRestoreWorkout?: (input: { workoutId: string; originalDate: string }) => Promise<void>;
+  hideViewButton?: boolean;
 };
 
 /** Phase 4 actions for one scheduled group workout. The shared program is not edited here. */
@@ -33,6 +34,7 @@ export default function WorkoutScheduleActions({
   onMoveWorkout,
   onExcuseWorkout,
   onRestoreWorkout,
+  hideViewButton = false,
 }: WorkoutScheduleActionsProps) {
   const [moveDate, setMoveDate] = useState(workout.date);
   const [confirmMove, setConfirmMove] = useState(false);
@@ -51,9 +53,11 @@ export default function WorkoutScheduleActions({
       <p className="muted">This workout only. Training days and the shared program stay the same.</p>
       {actionError && <p className="team-sheet-error">{actionError}</p>}
       <div className="actions member-training-actions">
-        <button type="button" className="btn secondary" onClick={onClose}>
-          View Workout
-        </button>
+        {!hideViewButton && (
+          <button type="button" className="btn secondary" onClick={onClose}>
+            View Workout
+          </button>
+        )}
         {canEdit && onMoveWorkout && future && (
           <button type="button" className="btn secondary" onClick={() => setConfirmMove(true)}>
             Move Workout

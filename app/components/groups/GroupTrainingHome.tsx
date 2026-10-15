@@ -3,17 +3,19 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { TeamProgramRow } from '../../../lib/groups/programRoster';
 import { assignGroupWorkout, excuseMemberWorkout, moveMemberWorkout, restoreMemberWorkout, setMemberGroupExpectation, setMemberTrainingSchedule } from '../../../lib/groups/assignGroupTraining';
-import { loadGroupTrainingFacts, type GroupTrainingFacts } from '../../../lib/groups/loadGroupTrainingFacts';
+import { loadGroupTrainingFacts, loadMemberTrainingWeek, type GroupCalendarWeekFacts, type GroupTrainingFacts } from '../../../lib/groups/loadGroupTrainingFacts';
 import type { GroupClassification } from '../../../lib/groups/schema';
 import {
   buildGroupTrainingBoard,
+  groupExpectationState,
   type GroupTrainingProgramRef,
+  type GroupTrainingWeekItem,
 } from '../../../lib/groups/trainingWorkspace';
-import { todayYmd } from '../../../lib/training/programCalendar';
+import { addDaysYmd, formatDisplayDate, mondayOfWeek, sundayOfWeek, todayYmd } from '../../../lib/training/programCalendar';
 import { supabase } from '../../../lib/supabaseClient';
 import GroupTrainingCalendar from './GroupTrainingCalendar';
 import GroupTrainingMemberList from './GroupTrainingMemberList';
-import MemberTrainingWorkspace from './MemberTrainingWorkspace';
+import MemberTrainingWorkspace, { type MemberProfileSection } from './MemberTrainingWorkspace';
 
 type GroupTrainingHomeProps = {
   canManage: boolean;
@@ -39,7 +41,12 @@ type GroupTrainingHomeProps = {
   classifications?: GroupClassification[];
   memberClassificationIds?: Record<string, string[]>;
   focusUserId?: string | null;
+  focusSection?: MemberProfileSection;
   onFocusHandled?: () => void;
+  onMemberFocus?: (userId: string, section: MemberProfileSection) => void;
+  panelUserId?: string | null;
+  progressPanel?: ReactNode;
+  detailsPanel?: ReactNode;
   memberAssignments?: Record<string, any>;
   programs?: any[];
   defaultProgramId?: string | null;
@@ -59,6 +66,18 @@ function asPrograms(programs: any[] | undefined): GroupTrainingProgramRef[] {
       dayLabel: workout.day_label || workout.dayLabel,
       dayOrder: workout.day_order ?? workout.dayOrder,
       title: workout.workout_type || workout.title,
+      exercises: (workout.st_exercises || workout.exercises || []).map((exercise: any) => ({
+        id: exercise.id,
+        name: exercise.name || exercise.exercise_name || 'Exercise',
+        sortOrder: exercise.sort_order ?? exercise.sortOrder ?? 0,
+        sets: (exercise.st_planned_sets || exercise.sets || [])
+          .filter((set: any) => !set.is_deleted)
+          .map((set: any) => ({
+            setNumber: set.set_number ?? set.setNumber,
+            reps: set.target_reps || set.reps || '',
+            weight: set.target_weight || set.weight || '',
+          })),
+      })),
     }));
     const existing = byId.get(program.id);
     byId.set(program.id, {
@@ -90,7 +109,12 @@ export default function GroupTrainingHome({
   teamName,
   sessionUserId,
   focusUserId,
+  focusSection = 'calendar',
   onFocusHandled,
+  onMemberFocus,
+  panelUserId,
+  progressPanel,
+  detailsPanel,
   members = [],
   classifications = [],
   memberClassificationIds = {},
@@ -103,6 +127,11 @@ export default function GroupTrainingHome({
   onMessageMember,
 }: GroupTrainingHomeProps) {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [profileSection, setProfileSection] = useState<MemberProfileSection>('calendar');
+  const [profileWeekStart, setProfileWeekStart] = useState(() => mondayOfWeek(todayYmd()));
+  const [memberWeek, setMemberWeek] = useState<GroupCalendarWeekFacts | null>(null);
+  const [memberQuery, setMemberQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [facts, setFacts] = useState<GroupTrainingFacts | null>(null);
   const [factsTick, setFactsTick] = useState(0);
   const [trainingView, setTrainingView] = useState<'members' | 'calendar'>('members');
@@ -120,14 +149,36 @@ export default function GroupTrainingHome({
 
   useEffect(() => {
     setSelectedUserId(null);
+    setProfileWeekStart(mondayOfWeek(todayYmd()));
   }, [teamId]);
 
   useEffect(() => {
     if (!focusUserId) return;
     setSelectedUserId(focusUserId);
+    setProfileSection(focusSection);
     setTrainingView('members');
     onFocusHandled?.();
-  }, [focusUserId, onFocusHandled]);
+  }, [focusUserId, focusSection, onFocusHandled]);
+
+  useEffect(() => {
+    if (!teamId || !selectedUserId) {
+      setMemberWeek(null);
+      return;
+    }
+    let cancelled = false;
+    void loadMemberTrainingWeek(supabase, {
+      teamId,
+      userId: selectedUserId,
+      weekStart: profileWeekStart,
+      today: todayYmd(),
+      viewerUserId: sessionUserId,
+    }).then((next) => {
+      if (!cancelled) setMemberWeek(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [teamId, selectedUserId, profileWeekStart, sessionUserId, factsTick]);
 
   const memberUserIds = useMemo(
     () => members.map((member) => member.user_id).filter((id): id is string => !!id),
@@ -204,6 +255,31 @@ export default function GroupTrainingHome({
 
   const selected = board?.members.find((member) => member.userId === selectedUserId) || null;
   const selectedSource = members.find((member) => member.user_id === selectedUserId) || null;
+  const visibleMembers = (board?.members || []).filter((member) => {
+    const nameMatch = member.name.toLowerCase().includes(memberQuery.trim().toLowerCase());
+    const statusMatch = statusFilter === 'all' || member.status === statusFilter;
+    return nameMatch && statusMatch;
+  });
+  const profileWeekItems: GroupTrainingWeekItem[] = (memberWeek?.expectations || [])
+    .filter((row) => row.userId === selectedUserId)
+    .map((row) => ({
+      date: row.scheduledDate,
+      title: row.title || 'Workout',
+      dayLabel: row.dayLabel || '',
+      state: groupExpectationState(row, todayYmd(), !!memberWeek?.completionKnown, null, 'Upcoming'),
+      workoutId: row.workoutId || null,
+      origin: row.origin === 'assignment' ? 'assignment' : 'program',
+      excused: !!row.excused,
+      hasSession: !!row.sessionStatus && row.sessionStatus !== 'not_started',
+    }));
+  const profileWeekLabel = `${formatDisplayDate(mondayOfWeek(profileWeekStart))} – ${formatDisplayDate(sundayOfWeek(profileWeekStart))}`;
+
+  function openProfile(userId: string, section: MemberProfileSection) {
+    setSelectedUserId(userId);
+    setProfileSection(section);
+    setTrainingView('members');
+    onMemberFocus?.(userId, section);
+  }
 
   function assignTraining() {
     if (onOpenAssignWizard) onOpenAssignWizard();
@@ -252,6 +328,18 @@ export default function GroupTrainingHome({
             groupName={teamName || ''}
             member={selected}
             canManage={canManage}
+            section={profileSection}
+            onSection={(section) => openProfile(selected.userId, section)}
+            weekItems={memberWeek ? profileWeekItems : selected.weekItems}
+            weekRangeLabel={profileWeekLabel}
+            weekNotice={memberWeek?.notice}
+            onPreviousWeek={() => setProfileWeekStart((current) => addDaysYmd(mondayOfWeek(current), -7))}
+            onNextWeek={() => setProfileWeekStart((current) => addDaysYmd(mondayOfWeek(current), 7))}
+            onThisWeek={() => setProfileWeekStart(mondayOfWeek(todayYmd()))}
+            switchMembers={visibleMembers.map((member) => ({ userId: member.userId, name: member.name }))}
+            onSwitchMember={(userId) => openProfile(userId, profileSection)}
+            progressPanel={panelUserId === selected.userId ? progressPanel : panelUserId ? <p className="muted">Loading progress…</p> : undefined}
+            detailsPanel={panelUserId === selected.userId ? detailsPanel : panelUserId ? <p className="muted">Loading details…</p> : undefined}
             customizePrograms={customizePrograms}
             onBack={() => {
               setSelectedUserId(null);
@@ -401,9 +489,7 @@ export default function GroupTrainingHome({
                   }))}
                 classifications={classifications}
                 memberClassificationIds={memberClassificationIds}
-                onOpenMember={(userId) => {
-                  setSelectedUserId(userId);
-                }}
+                onOpenMember={(userId) => openProfile(userId, 'calendar')}
                 onMoveWorkout={
                   teamId
                     ? async (input) => {
@@ -453,16 +539,35 @@ export default function GroupTrainingHome({
               />
             ) : (
               <>
-                <h2>Members</h2>
+                <div className="member-profile-filters">
+                  <h2>Members</h2>
+                  <label>
+                    Search
+                    <input value={memberQuery} onChange={(event) => setMemberQuery(event.target.value)} placeholder="Name" />
+                  </label>
+                  <label>
+                    Status
+                    <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+                      <option value="all">All statuses</option>
+                      <option value="on_track">On track</option>
+                      <option value="needs_attention">Needs attention</option>
+                      <option value="schedule_paused">Schedule paused</option>
+                      <option value="needs_plan">Needs a plan</option>
+                      <option value="schedule_review">Schedule needs review</option>
+                      <option value="personal">Personal training</option>
+                      <option value="paused">Paused</option>
+                    </select>
+                  </label>
+                </div>
                 {!board ? (
                   <p className="muted">Loading training…</p>
+                ) : visibleMembers.length === 0 ? (
+                  <p className="muted">No members match that search.</p>
                 ) : (
                   <GroupTrainingMemberList
-                    members={board.members}
+                    members={visibleMembers}
                     sessionUserId={sessionUserId}
-                    onOpenMember={(userId) => {
-                      setSelectedUserId(userId);
-                    }}
+                    onOpenMember={(userId) => openProfile(userId, 'calendar')}
                   />
                 )}
               </>

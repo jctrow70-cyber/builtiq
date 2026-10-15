@@ -196,6 +196,21 @@ button.member-training-week-row{width:100%;background:transparent;border-left:0;
 .assign-wizard-day-grid{display:grid;gap:8px}
 .assign-wizard-day-grid label,.member-schedule-editor label{display:flex;flex-direction:column;gap:4px}
 .member-schedule-editor{display:flex;flex-direction:column;gap:10px;margin:12px 0;padding:12px;border-radius:12px;background:var(--surfaceInset)}
+.member-profile-toolbar,.member-profile-switch,.member-profile-actions,.member-profile-weekbar,.member-plan-menu,.member-profile-filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.member-profile-toolbar,.member-profile-weekbar,.member-profile-filters{justify-content:space-between}
+.member-profile-tabs{display:flex;gap:6px;overflow-x:auto;margin:12px 0}
+.member-profile-tabs button,.member-profile-actions .btn,.member-profile-weekbar .btn,.member-profile-switch .btn{min-height:44px}
+.member-profile-tabs button{flex:1;border:1px solid var(--line);background:#0f172a;color:var(--muted);border-radius:999px;padding:8px 12px;font-weight:700}
+.member-profile-tabs button.is-current{border-color:var(--purple);background:#1b1634;color:#fff}
+.member-profile-search,.member-profile-filters label{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
+.member-profile-search input,.member-profile-filters input,.member-profile-filters select{min-height:44px}
+.member-profile-planline{margin-top:0}
+.member-profile-weekbar{margin:8px 0 12px}
+.member-profile-weekbar div{display:flex;flex-direction:column;min-width:0;flex:1}
+.member-profile-day{display:flex;flex-direction:column;gap:8px}
+.member-profile-exercises{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.member-profile-exercises li{display:flex;flex-direction:column}
+.member-profile-search-results{display:flex;flex-wrap:wrap;gap:8px}
 .assign-wizard-create{display:flex;flex-direction:column;gap:8px}
 .assign-wizard-actions .btn{min-height:44px}
 @media (min-width:721px){

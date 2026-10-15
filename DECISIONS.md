@@ -19,6 +19,28 @@ Impact:
 
 ---
 
+## Decision 110 - The group member profile opens on the training week
+
+Date: 2026-10-14
+Status: Accepted
+Category: Groups
+
+### Decision
+
+A group member profile has Calendar, Progress, and Details. Calendar is the default from Training and the group calendar. Members opens Details. The week uses saved group expectation dates. Add Activity is the primary action. Plan changes and pause sit in a Plan menu. Move, Excuse, and Restore appear on the open workout. The member list loads the current week, and the profile loads only that member’s selected week.
+
+### Reason
+
+The previous member screen led with forms. Trainers need the week first, and a long group cannot download months of expectations before a person is chosen.
+
+### Alternatives Considered
+
+Keep the form-first member screen. Reuse the Personal Training day strip’s program-label dates. Load every member’s next twelve weeks up front.
+
+### Impact
+
+Phases 2–4 are not included. Personal training data is not written. Progress and membership controls stay on the existing manager views. Migration 065 is unchanged.
+
 ## Decision 109 - Assigners Can Read the Group Schedule They Are Allowed to Change
 
 Date: 2026-10-12
