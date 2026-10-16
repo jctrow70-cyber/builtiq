@@ -55,7 +55,14 @@ export type GroupTrainingExerciseRef = {
   id?: string | null;
   name?: string | null;
   sortOrder?: number | null;
-  sets?: Array<{ setNumber?: number | null; reps?: string | null; weight?: string | null; restSeconds?: number | null }>;
+  sets?: Array<{
+    setNumber?: number | null;
+    reps?: string | null;
+    weight?: string | null;
+    restSeconds?: number | null;
+    setType?: string | null;
+    rir?: string | null;
+  }>;
 };
 
 export type GroupTrainingWorkoutRef = {
@@ -77,6 +84,62 @@ export type GroupTrainingProgramRef = {
   sourceProgramId?: string | null;
   workouts?: GroupTrainingWorkoutRef[];
 };
+
+/** Map one complete program row. Empty workout arrays stay empty so a later stub cannot fill them. */
+export function programRefFromRecord(program: {
+  id?: string | null;
+  name?: string | null;
+  start_date?: string | null;
+  startDate?: string | null;
+  weeks?: number | null;
+  cycle_length_weeks?: number | null;
+  cycleLengthWeeks?: number | null;
+  visibility?: string | null;
+  source_program_id?: string | null;
+  sourceProgramId?: string | null;
+  st_workouts?: unknown[] | null;
+  workouts?: unknown[] | null;
+} | null | undefined): GroupTrainingProgramRef | null {
+  if (!program?.id) return null;
+  const workouts = (program.st_workouts || program.workouts || []) as Array<Record<string, unknown>>;
+  return {
+    id: program.id,
+    name: program.name || 'Program',
+    startDate: program.start_date || program.startDate || null,
+    weeks: program.weeks ?? null,
+    cycleLengthWeeks: program.cycle_length_weeks ?? program.cycleLengthWeeks ?? null,
+    visibility: program.visibility || null,
+    sourceProgramId: program.source_program_id || program.sourceProgramId || null,
+    workouts: workouts.map((workout) => {
+      const exercises = (workout.st_exercises || workout.exercises || []) as Array<Record<string, unknown>>;
+      return {
+        id: (workout.id as string) || null,
+        week: (workout.week as number) ?? null,
+        dayLabel: (workout.day_label || workout.dayLabel) as string | null,
+        dayOrder: (workout.day_order ?? workout.dayOrder) as number | null,
+        title: (workout.workout_type || workout.title) as string | null,
+        exercises: exercises.map((exercise) => {
+          const sets = ((exercise.st_planned_sets || exercise.sets || []) as Array<Record<string, unknown>>).filter(
+            (set) => !set.is_deleted
+          );
+          return {
+            id: (exercise.id as string) || null,
+            name: (exercise.name || exercise.exercise_name || 'Exercise') as string,
+            sortOrder: (exercise.sort_order ?? exercise.sortOrder ?? 0) as number,
+            sets: sets.map((set) => ({
+              setNumber: (set.set_number ?? set.setNumber) as number | null,
+              reps: (set.target_reps || set.reps || '') as string,
+              weight: (set.target_weight || set.weight || '') as string,
+              restSeconds: (set.rest_seconds ?? set.restSeconds ?? null) as number | null,
+              setType: (set.set_type || set.setType || null) as string | null,
+              rir: set.target_rir == null && set.rir == null ? null : String(set.target_rir ?? set.rir),
+            })),
+          };
+        }),
+      };
+    }),
+  };
+}
 
 export type GroupTrainingMemberInput = {
   userId: string;

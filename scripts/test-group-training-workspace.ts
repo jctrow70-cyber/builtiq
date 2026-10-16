@@ -9,6 +9,7 @@ import {
   buildGroupTrainingBoard,
   compareProgramSessions,
   orderedProgramSessions,
+  programRefFromRecord,
   programScheduleNeedsReview,
   type GroupTrainingExpectationInput,
   type GroupTrainingMemberInput,
@@ -270,6 +271,53 @@ const profile = readFileSync(new URL('../app/components/groups/MemberTrainingWor
 assert.match(profile, /Add Activity/);
 assert.match(profile, /Change Program/);
 assert.match(profile, /View Full Plan/);
+assert.match(profile, /fetchFullProgram\(supabase, programId\)/);
+assert.match(profile, /member\.programId/);
+assert.match(profile, /You do not have permission to view this program/);
+assert.match(profile, /program=\{fullProgram\}/);
+assert.doesNotMatch(profile, /ProgramTemplate program=\{scheduleProgram\}/);
+const loaded = programRefFromRecord({
+  id: 'enrolled',
+  name: 'Enrolled plan',
+  weeks: 6,
+  st_workouts: [
+    {
+      id: 'wo',
+      week: 1,
+      day_label: 'Mon',
+      day_order: 1,
+      workout_type: 'Full Body A',
+      st_exercises: [
+        {
+          id: 'ex',
+          name: 'Squat',
+          sort_order: 1,
+          st_planned_sets: [
+            { set_number: 1, target_reps: '8', target_weight: '100', rest_seconds: 90, set_type: 'working', is_deleted: false },
+            { set_number: 2, target_reps: '8', is_deleted: true },
+          ],
+        },
+      ],
+    },
+  ],
+});
+assert.equal(loaded?.name, 'Enrolled plan');
+assert.equal(loaded?.workouts?.length, 1);
+assert.equal(loaded?.workouts?.[0].exercises?.length, 1);
+assert.equal(loaded?.workouts?.[0].exercises?.[0].sets?.length, 1);
+assert.equal(loaded?.workouts?.[0].exercises?.[0].sets?.[0].restSeconds, 90);
+const enrollmentWins = boardFor(
+  [
+    {
+      ...amy,
+      assignment: { assignmentType: 'individual_team', programId: 'other-plan', programName: 'Other plan' },
+      enrollment: { programId: strength.id, status: 'active', startsOn: '2026-10-05' },
+    },
+  ],
+  { programs: [strength], defaultProgramId: 'other-plan' }
+);
+assert.equal(enrollmentWins.members[0].programId, strength.id);
+assert.equal(enrollmentWins.members[0].planName, 'Full Body Strength');
 assert.match(profile, />\s*Manage\s*</);
 assert.match(profile, /Members/);
 assert.match(profile, /Edit Training Days/);

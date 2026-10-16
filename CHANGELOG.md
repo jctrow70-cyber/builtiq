@@ -11,6 +11,45 @@ Branch:
 Status:
 ```
 
+## BIQ-0263 - Load the enrolled program for View Full Plan
+
+Date: 2026-10-16
+Branch: main
+Status: In progress, not committed
+
+### Summary
+
+View Full Plan loads the group enrollment’s program through `fetchFullProgram`. That result is kept separate from the lightweight assignment payload. If the viewer cannot read the program, the screen says so. A read-only function for personal copies assigned to a group is proposed and not applied.
+
+### Purpose
+
+The profile was describing stored programs as empty because Group Training did not load the enrollment program tree.
+
+### Files changed
+
+- `app/components/groups/MemberTrainingWorkspace.tsx`
+- `lib/groups/trainingWorkspace.ts`
+- `scripts/test-group-training-workspace.ts`
+- `CHANGELOG.md`
+
+### Database changes
+
+None applied. Proposed function `st_read_group_assigned_program` is in the review notes and is not a migration.
+
+### Testing steps
+
+- Open View Full Plan for a team program the viewer can read. The stored name, weeks, workouts, exercises, and prescription appear. The calendar dates stay the member’s saved dates.
+- Open View Full Plan for a personal copy owned by another member. The screen says permission is missing. It does not say the program has no workouts.
+- Confirm opening the plan does not start a workout or change training records.
+
+### Known issues
+
+Mary and Ethan stay unreadable until the proposed read function is approved. Missed counts still follow workout sessions, not set logs. Signed-in browser testing still needs an authenticated session. This is not Phase 2.
+
+### Recommended commit message
+
+BIQ-0263 Phase 1: Load the enrolled program in View Full Plan
+
 ## BIQ-0263 - Member profile usability refinement
 
 Date: 2026-10-15

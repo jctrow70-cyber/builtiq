@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import DateInput from '../DateInput';
 import type { GroupTrainingMemberRow, GroupTrainingProgramRef, GroupTrainingWeekItem } from '../../../lib/groups/trainingWorkspace';
-import { orderedWeekSessions } from '../../../lib/groups/trainingWorkspace';
+import { orderedWeekSessions, programRefFromRecord } from '../../../lib/groups/trainingWorkspace';
+import { fetchFullProgram } from '../../../lib/training/programFetch';
+import { supabase } from '../../../lib/supabaseClient';
 import { customWeekdayError, materializeMemberSchedule, programCycleAnchor } from '../../../lib/groups/memberSchedule';
 import { formatWarmupPrescription } from '../training/WarmupExerciseCard';
 import { addDaysYmd, formatDisplayDate, mondayOfWeek, parseYmd, todayYmd } from '../../../lib/training/programCalendar';
@@ -48,19 +50,42 @@ function statusExplanation(member: GroupTrainingMemberRow): string {
   return 'No missed workouts before today in the current adherence window.';
 }
 
-function ProgramTemplate({ program, planName }: { program: GroupTrainingProgramRef | null; planName: string }) {
-  if (!program?.workouts?.length) {
+function ProgramTemplate({
+  program,
+  planName,
+  load,
+}: {
+  program: GroupTrainingProgramRef | null;
+  planName: string;
+  load: 'loading' | 'ready' | 'denied' | 'empty';
+}) {
+  if (load === 'loading') {
+    return (
+      <div className="member-plan-template">
+        <p className="muted">Loading the assigned program…</p>
+      </div>
+    );
+  }
+  if (load === 'denied') {
     return (
       <div className="member-plan-template">
         <p>This is the assigned program, not this member’s calendar.</p>
-        <p className="muted">{planName} does not include weeks, workouts, or exercises in the program data loaded for this group.</p>
+        <p className="muted">You do not have permission to view this program. It remains the program on this group enrollment. Opening this view does not change the calendar or start a workout.</p>
+      </div>
+    );
+  }
+  if (load === 'empty' || !program?.workouts?.length) {
+    return (
+      <div className="member-plan-template">
+        <p>This is the program template. The calendar uses this member’s saved dates, including moved and one-off workouts.</p>
+        <p className="muted">{program?.name || planName} has no workouts stored on the program.</p>
       </div>
     );
   }
   const weeks = Array.from(new Set(program.workouts.map((workout) => Number(workout.week || 1)))).sort((a, b) => a - b);
   return (
     <div className="member-plan-template">
-      <p>This is the program template. The calendar uses this member’s saved dates, including moved and one-off workouts.</p>
+      <p>This is the program template, {program.name}. The calendar uses this member’s saved dates, including moved and one-off workouts.</p>
       {weeks.map((week) => (
         <section key={week}>
           <h3>Week {week}</h3>
@@ -76,6 +101,10 @@ function ProgramTemplate({ program, planName }: { program: GroupTrainingProgramR
                   <ul className="member-profile-exercises">
                     {(workout.exercises || []).map((exercise) => {
                       const rest = (exercise.sets || []).map((set) => Number(set.restSeconds || 0)).find((value) => value > 0);
+                      const rir = (exercise.sets || []).map((set) => String(set.rir || '').trim()).find(Boolean);
+                      const setTypes = Array.from(
+                        new Set((exercise.sets || []).map((set) => String(set.setType || '').trim()).filter((value) => value && value !== 'working'))
+                      );
                       return (
                         <li key={exercise.id || exercise.name}>
                           <b>{exercise.name}</b>
@@ -87,6 +116,8 @@ function ProgramTemplate({ program, planName }: { program: GroupTrainingProgramR
                                 target_weight: set.weight || '',
                               }))
                             )}
+                            {setTypes.length ? ` · ${setTypes.join(', ')}` : ''}
+                            {rir ? ` · RIR ${rir}` : ''}
                             {rest ? ` · Rest ${rest}s` : ''}
                           </span>
                         </li>
@@ -199,6 +230,8 @@ export default function MemberTrainingWorkspace({
   const [memberQuery, setMemberQuery] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
   const [planOpen, setPlanOpen] = useState(false);
+  const [fullProgram, setFullProgram] = useState<GroupTrainingProgramRef | null>(null);
+  const [planLoad, setPlanLoad] = useState<'loading' | 'ready' | 'denied' | 'empty'>('empty');
   const [statusOpen, setStatusOpen] = useState(explainStatus);
   const [selectedDate, setSelectedDate] = useState(todayYmd());
   const days = weekItems || member.weekItems;
@@ -252,6 +285,8 @@ export default function MemberTrainingWorkspace({
     setAddingWorkout(false);
     setPickerOpen(false);
     setPlanOpen(false);
+    setFullProgram(null);
+    setPlanLoad('empty');
     setStatusOpen(false);
     setMemberQuery('');
   }, [member.userId]);
@@ -261,12 +296,39 @@ export default function MemberTrainingWorkspace({
   }, [explainStatus, member.userId]);
 
   useEffect(() => {
+    if (!planOpen) return;
+    const programId = member.programId;
+    if (!programId) {
+      setFullProgram(null);
+      setPlanLoad('empty');
+      return;
+    }
+    let cancelled = false;
+    setPlanLoad('loading');
+    void fetchFullProgram(supabase, programId).then(({ data, error }) => {
+      if (cancelled) return;
+      const mapped = !error && data?.id === programId ? programRefFromRecord(data) : null;
+      if (!mapped) {
+        setFullProgram(null);
+        setPlanLoad('denied');
+        return;
+      }
+      setFullProgram(mapped);
+      setPlanLoad(mapped.workouts?.length ? 'ready' : 'empty');
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [planOpen, member.programId]);
+
+  useEffect(() => {
     if (addingWorkout) setOneOffDate(selectedDate);
   }, [selectedDate, addingWorkout]);
 
   function exercisesFor(workoutId: string | null) {
     if (!workoutId) return [];
-    const workout = scheduleProgram?.workouts?.find((item) => item.id === workoutId);
+    const source = fullProgram?.workouts?.length ? fullProgram : scheduleProgram;
+    const workout = source?.workouts?.find((item) => item.id === workoutId);
     return [...(workout?.exercises || [])].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
   }
 
@@ -349,11 +411,11 @@ export default function MemberTrainingWorkspace({
       )}
       <div className="member-program-summary">
         <button type="button" className="member-program-open" onClick={() => setPlanOpen((open) => !open)} aria-expanded={planOpen}>
-          <b>{member.planName}</b>
+          <b>{fullProgram?.name || member.planName}</b>
           <span className="muted">
             {[
               member.scheduleDays,
-              member.programWeeks ? `${member.programWeeks} weeks` : '',
+              member.programWeeks || fullProgram?.weeks ? `${member.programWeeks || fullProgram?.weeks} weeks` : '',
               member.currentProgramWeek && member.programWeeks ? `Week ${member.currentProgramWeek} of ${member.programWeeks}` : '',
             ]
               .filter(Boolean)
@@ -396,7 +458,13 @@ export default function MemberTrainingWorkspace({
           )}
         </div>
       )}
-      {planOpen && <ProgramTemplate program={scheduleProgram} planName={member.planName} />}
+      {planOpen && (
+        <ProgramTemplate
+          program={fullProgram}
+          planName={fullProgram?.name || member.planName}
+          load={planLoad}
+        />
+      )}
       <div className="member-profile-tabs" role="tablist" aria-label="Member profile">
         {(['calendar', 'progress', 'details'] as MemberProfileSection[]).map((id) => (
           <button
