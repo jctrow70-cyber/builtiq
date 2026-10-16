@@ -3,6 +3,7 @@ import { addDaysYmd, mondayOfWeek, programEndDate, sundayOfWeek, weekForDate } f
 import {
   buildProgramExpectationDates,
   expectationDisplayState,
+  pickFulfillingSession,
   scheduleCycleWeeks,
   type ExpectationSessionStatus,
 } from '../training/unifiedSchedule';
@@ -175,6 +176,8 @@ export type GroupTrainingExpectationInput = {
   workoutId?: string | null;
   excused?: boolean;
   sessionStatus?: ExpectationSessionStatus;
+  assignmentRecipientId?: string | null;
+  recipientStatus?: string | null;
 };
 
 export type GroupTrainingWeekState =
@@ -734,10 +737,10 @@ export function sessionMatchesExpectation(
   expectation: GroupTrainingExpectationInput
 ): boolean {
   if (session.userId !== expectation.userId) return false;
-  if (session.expectationId && expectation.id && session.expectationId === expectation.id) return true;
-  return !!session.workoutId && session.workoutId === expectation.workoutId && session.logDate === expectation.scheduledDate;
+  return !!pickFulfillingSession([session], expectation);
 }
 
+/** Matches st_group_schedule_adherence. A set log on the same date does not complete the workout. */
 export function attachExpectationCompletion(
   expectations: GroupTrainingExpectationInput[],
   sessions: Array<{
@@ -746,19 +749,19 @@ export function attachExpectationCompletion(
     logDate?: string | null;
     expectationId?: string | null;
     status?: string | null;
-  }>,
-  completedLogKeys: Array<{ userId: string; date: string }>
+    completedAt?: string | null;
+  }>
 ): GroupTrainingExpectationInput[] {
-  const logs = new Set(completedLogKeys.map((row) => `${row.userId}|${row.date}`));
   return expectations.map((row) => {
-    const session = sessions.find((item) =>
-      sessionMatchesExpectation(item, row)
+    const session = pickFulfillingSession(
+      sessions.filter((item) => item.userId === row.userId),
+      row
     );
     if (session?.status) {
       return { ...row, sessionStatus: session.status as ExpectationSessionStatus };
     }
-    if (logs.has(`${row.userId}|${row.scheduledDate}`)) {
-      return { ...row, sessionStatus: 'completed' };
+    if (row.recipientStatus === 'skipped') {
+      return { ...row, sessionStatus: 'skipped' };
     }
     return row;
   });

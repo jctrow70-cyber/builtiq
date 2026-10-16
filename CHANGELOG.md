@@ -11,7 +11,7 @@ Branch:
 Status:
 ```
 
-## BIQ-0263 - Load the enrolled program for View Full Plan
+## BIQ-0263 - Finalize completed workout sessions
 
 Date: 2026-10-16
 Branch: main
@@ -19,36 +19,91 @@ Status: In progress, not committed
 
 ### Summary
 
-View Full Plan loads the group enrollment’s program through `fetchFullProgram`. That result is kept separate from the lightweight assignment payload. If the viewer cannot read the program, the screen says so. A read-only function for personal copies assigned to a group is proposed and not applied.
+Logging the last required working set now saves one completed workout session for that workout, date, expectation, and training source. Partial and skipped stay on the Session card. Empty logs still do not become skipped. The assigned-program read proposal no longer returns `source_program_id`. A separate unread status function is proposed and not applied.
 
 ### Purpose
 
-The profile was describing stored programs as empty because Group Training did not load the enrollment program tree.
+Members can finish every planned set and still have no workout session, so Group status cannot see the workout as completed.
 
 ### Files changed
 
-- `app/components/groups/MemberTrainingWorkspace.tsx`
-- `lib/groups/trainingWorkspace.ts`
+- `lib/training/sessionOutcome.ts`
+- `app/page.tsx`
+- `scripts/test-session-finalization.ts`
 - `scripts/test-group-training-workspace.ts`
+- `supabase/migrations/20261016_066_group_assigned_program_read.sql`
+- `supabase/migrations/20261016_067_group_expectation_status.sql`
 - `CHANGELOG.md`
 
 ### Database changes
 
-None applied. Proposed function `st_read_group_assigned_program` is in the review notes and is not a migration.
+None applied. Do not apply 066 or 067 until approved.
 
 ### Testing steps
 
-- Open View Full Plan for a team program the viewer can read. The stored name, weeks, workouts, exercises, and prescription appear. The calendar dates stay the member’s saved dates.
-- Open View Full Plan for a personal copy owned by another member. The screen says permission is missing. It does not say the program has no workouts.
-- Confirm opening the plan does not start a workout or change training records.
+- Complete every working set on a workout and confirm one completed session exists for that workout and date.
+- Leave a set incomplete, choose Partial, and confirm no automatic completed session replaces it.
+- Choose Skipped with no logs and confirm no session is inferred from the empty logs.
+- Save the last set again and confirm a second session row is not created.
+- Complete a moved Group workout and confirm the saved expectation id and scheduled date are stored.
+- Complete a personal workout on a Group workout’s date and confirm the Group workout stays unfinished.
+- Complete only one of two workouts scheduled that day.
 
 ### Known issues
 
-Mary and Ethan stay unreadable until the proposed read function is approved. Missed counts still follow workout sessions, not set logs. Signed-in browser testing still needs an authenticated session. This is not Phase 2.
+Historical sessions are not repaired. Mary and Ethan stay unreadable until 066 is approved. Per-day status for other members still needs 067 before the calendar can read it. This is not Phase 2.
 
 ### Recommended commit message
 
-BIQ-0263 Phase 1: Load the enrolled program in View Full Plan
+BIQ-0263 Phase 1: Save a completed session when the workout is finished
+
+## BIQ-0263 - Program access review and workout status consistency
+
+Date: 2026-10-16
+Branch: main
+Status: In progress, not committed
+
+### Summary
+
+Group calendar statuses now match a workout session to the saved expectation by expectation id, or by the same workout and session date. A completed set log on that date does not mark the Group workout completed. View Full Plan still loads the enrollment program through `fetchFullProgram`. The read function for personal copies is written as an unapplied migration for review.
+
+### Purpose
+
+The calendar was treating any completed set log on the same date as the scheduled Group workout. Coaches still cannot read another member’s personal program until the new read function is approved.
+
+### Files changed
+
+- `lib/groups/trainingWorkspace.ts`
+- `lib/groups/loadGroupTrainingFacts.ts`
+- `lib/training/unifiedSchedule.ts`
+- `lib/progress/adherence.ts`
+- `app/components/groups/MemberTrainingWorkspace.tsx`
+- `scripts/test-group-training-workspace.ts`
+- `supabase/migrations/20261016_066_group_assigned_program_read.sql`
+- `CHANGELOG.md`
+
+### Database changes
+
+None applied. `20261016_066_group_assigned_program_read.sql` is the review copy of `st_read_group_assigned_program`. Do not apply it until approved. Rollback is `drop function if exists public.st_read_group_assigned_program(uuid, uuid, uuid);`.
+
+### Testing steps
+
+- A personal workout logged on the same date as a missed Group workout stays missed.
+- Set logs, or a session, for a different program copy do not complete the enrolled workout.
+- A session for the scheduled workout and date shows completed.
+- Two workouts on one date are judged separately.
+- Excused dates stay excused. A session on the old date does not complete a moved date.
+- Partial and skipped sessions stay partial and skipped.
+- Open View Full Plan for Turbo’s team program. Confirm the stored tree appears and no workout row changes.
+- Mary and Ethan still show the permission message.
+
+### Known issues
+
+Mary and Ethan stay unreadable until the proposed read function is approved and applied. Coaches still cannot see another member’s session row, so per-day Completed, Partial, and Skipped for other members follow the adherence count when those rows are hidden. Signed-in browser testing still needs an authenticated session. This is not Phase 2.
+
+### Recommended commit message
+
+BIQ-0263 Phase 1: Match group workout status to saved sessions
 
 ## BIQ-0263 - Member profile usability refinement
 

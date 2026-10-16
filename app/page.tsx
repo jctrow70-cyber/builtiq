@@ -49,7 +49,7 @@ import SessionOutcomeCard from './components/training/SessionOutcomeCard';
 import AdaptationSummaryCard from './components/training/AdaptationSummaryCard';
 import { snapshotForLog as buildSetLogSnapshot, stripUnavailableLogColumns } from '../lib/training/setLogSnapshots';
 import { canRewritePlannedSetPrescription } from '../lib/training/plannedSetGuard';
-import { deriveSessionStatus } from '../lib/training/sessionOutcome';
+import { completedSessionDraft, deriveSessionStatus } from '../lib/training/sessionOutcome';
 import { extraLogsFromSetLogs, extraSetInsertPayload, extraSetsForExercise, nextExtraSetNumber, type ExtraSetLog } from '../lib/training/extraSets';
 import { normalizePainFlag, upsertExerciseSession, upsertWorkoutFeel, upsertWorkoutSession } from '../lib/training/workoutSessions';
 import { refreshProgramExpectations, withdrawAssignmentExpectation } from '../lib/training/scheduleActions';
@@ -297,6 +297,7 @@ export default function Page(){
  const namePickRef=useRef(false);
  const logsRef=useRef<any>({});
  const upsertQueueRef=useRef<Record<string,Promise<any>>>({});
+ const completedSessionKeyRef=useRef<string|null>(null);
  const prCelebrationTimerRef=useRef<ReturnType<typeof setTimeout>|null>(null);
  const [prCelebration,setPrCelebration]=useState<{exerciseName:string;message:string;subtext:string}|null>(null);
  const syncingCalendarRef=useRef(false);
@@ -1561,8 +1562,10 @@ export default function Page(){
     if(sessionRow){
       setSessionOutcome(sessionRow.status||'not_started');
       setSessionSkipReason(sessionRow.skip_reason||'');
+      completedSessionKeyRef.current=sessionRow.status==='completed'&&sessionWorkoutId?`${uid}|${sessionWorkoutId}|${day}`:null;
     } else {
       setSessionOutcome(deriveSessionStatus({workout:workoutOnDay,logs:by}));
+      completedSessionKeyRef.current=null;
     }
     setAdaptationSummary(null);
     const {data:exSessions,error:exSessErr}=await supabase.from('st_exercise_sessions').select('exercise_id,status').eq('user_id',uid).eq('log_date',day);
@@ -2206,6 +2209,40 @@ export default function Page(){
     await maybeCompleteAssignedWorkout(located.workout,nextLogs);
   }
   const nextLogs={...logsRef.current,[sid]:data};
+  if(updatingCompleted&&markComplete&&located?.workout&&trainingSessionIntent==='log'&&uid===session.user.id){
+    const sessionKey=`${uid}|${located.workout.id}|${logDay}`;
+    const explicit=completedSessionKeyRef.current===sessionKey?'completed':(sessionOutcome==='partial'||sessionOutcome==='skipped'?sessionOutcome:null);
+    const draft=completedSessionDraft({
+      intent:trainingSessionIntent,
+      workout:located.workout,
+      logs:nextLogs,
+      logDate:logDay,
+      expectationId:activeExpectationId,
+      sourceKey:activeExpectationSource,
+      scheduledDate:activeExpectationDate,
+      existingStatus:explicit,
+    });
+    if(draft&&completedSessionKeyRef.current!==sessionKey){
+      completedSessionKeyRef.current=sessionKey;
+      const savedSession=await upsertWorkoutSession(supabase,{
+        user_id:uid,
+        workout_id:draft.workoutId,
+        program_id:program?.id||null,
+        log_date:draft.logDate,
+        status:'completed',
+        expectation_id:draft.expectationId,
+        source_key:draft.sourceKey,
+        scheduled_date:draft.scheduledDate,
+      });
+      if(savedSession.pendingMigration)setPhase2a1Pending(true);
+      if(savedSession.error||savedSession.pendingMigration){
+        if(completedSessionKeyRef.current===sessionKey)completedSessionKeyRef.current=null;
+        if(savedSession.error)alert(savedSession.error);
+      }else if(workout?.id===draft.workoutId){
+        setSessionOutcome('completed');
+      }
+    }
+  }
   if(updatingCompleted&&markComplete){
    maybeAutoAdvanceExercise(ex,nextLogs,located.workout);
    if(!old.completed){
@@ -2278,6 +2315,9 @@ export default function Page(){
     alert(saved.error);
     return;
   }
+  const savedKey=`${session.user.id}|${workout.id}|${activeLogDateForLogging()}`;
+  if(next==='completed')completedSessionKeyRef.current=savedKey;
+  else if(completedSessionKeyRef.current===savedKey)completedSessionKeyRef.current=null;
   if(saved.pendingMigration)return;
   if(extras)return;
   if(!shouldTriggerCompletedWorkoutAdaptation(next)||!session.access_token)return;

@@ -1,4 +1,4 @@
-import { adherenceCounts, sessionFulfillsExpectation, type AdherenceCounts, type ExpectationFact, type ExpectationSessionStatus } from '../training/unifiedSchedule';
+import { adherenceCounts, pickFulfillingSession, type AdherenceCounts, type ExpectationFact, type ExpectationSessionStatus } from '../training/unifiedSchedule';
 
 export type ProgressAdherence = {
   source: 'training_expectations';
@@ -28,11 +28,14 @@ type SessionRow = {
  */
 export function expectationFactsFromSchedule(expectations: ExpectationRow[], sessions: SessionRow[]): ExpectationFact[] {
   return expectations.map((row) => {
-    const match = sessions.find((session) =>
-      sessionFulfillsExpectation(
-        { expectationId: session.expectation_id, workoutId: session.workout_id, logDate: session.log_date },
-        { id: row.id, workoutId: row.workout_id, scheduledDate: row.scheduled_date }
-      )
+    const match = pickFulfillingSession(
+      sessions.map((session) => ({
+        ...session,
+        expectationId: session.expectation_id,
+        workoutId: session.workout_id,
+        logDate: session.log_date,
+      })),
+      { id: row.id, workoutId: row.workout_id, scheduledDate: row.scheduled_date }
     );
     return {
       id: row.id,

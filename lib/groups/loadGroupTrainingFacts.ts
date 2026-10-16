@@ -1,7 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { addDaysYmd, mondayOfWeek, sundayOfWeek, todayYmd } from '../training/programCalendar';
 import { scheduleSetupMissing } from '../training/scheduleActions';
-import { fetchGroupScopedSetLogs } from './memberPerformance';
 import { groupSourceKey } from './trainingSources';
 import { attachExpectationCompletion, type GroupTrainingExpectationInput } from './trainingWorkspace';
 import { CALENDAR_DEPENDENCY_NOTICE } from './groupCalendar';
@@ -38,6 +37,22 @@ function mapSessionStatus(value: string | null | undefined): string | null {
  * Reads this group's enrollments and expectations only.
  * Personal enrollments are not queried.
  */
+
+async function applyRecipientStatus(
+  supabase: SupabaseClient,
+  expectations: GroupTrainingExpectationInput[]
+): Promise<GroupTrainingExpectationInput[]> {
+  const recipientIds = Array.from(new Set(expectations.map((row) => row.assignmentRecipientId).filter((id): id is string => !!id)));
+  if (!recipientIds.length) return expectations;
+  const recipients = await supabase.from('st_assignment_recipients').select('id, status').in('id', recipientIds);
+  if (recipients.error) return expectations;
+  const byId = new Map((recipients.data || []).map((row: { id: string; status?: string | null }) => [row.id, row.status || null]));
+  return expectations.map((row) => ({
+    ...row,
+    recipientStatus: row.assignmentRecipientId ? byId.get(row.assignmentRecipientId) || null : row.recipientStatus || null,
+  }));
+}
+
 export async function loadGroupTrainingFacts(
   supabase: SupabaseClient,
   input: { teamId: string; today?: string; viewerUserId?: string | null; memberUserIds?: string[] }
@@ -58,7 +73,7 @@ export async function loadGroupTrainingFacts(
       .eq('source_key', sourceKey),
     supabase
       .from('st_training_expectations')
-      .select('id, user_id, source_key, team_id, origin, scheduled_date, title, day_label, workout_id, excused')
+      .select('id, user_id, source_key, team_id, origin, scheduled_date, title, day_label, workout_id, excused, assignment_recipient_id')
       .eq('source_key', sourceKey)
       .gte('scheduled_date', from)
       .lte('scheduled_date', to),
@@ -119,6 +134,7 @@ export async function loadGroupTrainingFacts(
         day_label?: string | null;
         workout_id?: string | null;
         excused?: boolean | null;
+        assignment_recipient_id?: string | null;
       }) => ({
         id: row.id,
         userId: row.user_id,
@@ -130,6 +146,7 @@ export async function loadGroupTrainingFacts(
         dayLabel: row.day_label,
         workoutId: row.workout_id,
         excused: !!row.excused,
+        assignmentRecipientId: row.assignment_recipient_id || null,
       })
     );
 
@@ -144,40 +161,30 @@ export async function loadGroupTrainingFacts(
   let completionKnown = false;
   const memberIds = input.memberUserIds || [];
   if (input.viewerUserId || memberIds.length) {
-    const [sessions, logs] = await Promise.all([
+    const sessions = await (
       input.viewerUserId
         ? supabase
             .from('st_workout_sessions')
-            .select('user_id, workout_id, log_date, status, expectation_id')
+            .select('user_id, workout_id, log_date, status, expectation_id, completed_at')
             .eq('user_id', input.viewerUserId)
             .gte('log_date', weekFrom)
             .lte('log_date', sundayOfWeek(today))
-        : Promise.resolve({ data: [], error: null }),
-      memberIds.length
-        ? fetchGroupScopedSetLogs(supabase, input.teamId, memberIds, { from: weekFrom, to: sundayOfWeek(today), limit: 400 })
-        : Promise.resolve({ data: [], pending: false, error: null }),
-    ]);
-    const sessionOk = !sessions.error;
-    const logOk = !logs.error;
-    completionKnown = sessionOk || logOk;
+        : Promise.resolve({ data: [], error: null })
+    );
+    completionKnown = !sessions.error;
     if (completionKnown) {
       expectations = attachExpectationCompletion(
-        expectations,
+        await applyRecipientStatus(supabase, expectations),
         (sessions.data || []).map(
-          (row: { user_id: string; workout_id?: string | null; log_date?: string | null; expectation_id?: string | null; status?: string | null }) => ({
+          (row: { user_id: string; workout_id?: string | null; log_date?: string | null; expectation_id?: string | null; status?: string | null; completed_at?: string | null }) => ({
             userId: row.user_id,
             workoutId: row.workout_id,
             logDate: row.log_date ? String(row.log_date).slice(0, 10) : null,
             expectationId: row.expectation_id,
             status: mapSessionStatus(row.status),
+            completedAt: row.completed_at || null,
           })
-        ),
-        (logs.data || [])
-          .filter((row: { completed?: boolean; user_id?: string; log_date?: string }) => row.completed !== false && row.user_id && row.log_date)
-          .map((row: { user_id: string; log_date: string }) => ({
-            userId: row.user_id,
-            date: String(row.log_date).slice(0, 10),
-          }))
+        )
       );
     }
   }
@@ -224,7 +231,7 @@ export async function loadMemberTrainingWeek(
   const to = sundayOfWeek(from);
   const expectationResult = await supabase
     .from('st_training_expectations')
-    .select('id, user_id, source_key, team_id, origin, scheduled_date, title, day_label, workout_id, excused')
+    .select('id, user_id, source_key, team_id, origin, scheduled_date, title, day_label, workout_id, excused, assignment_recipient_id')
     .eq('source_key', sourceKey)
     .eq('user_id', input.userId)
     .gte('scheduled_date', from)
@@ -245,6 +252,7 @@ export async function loadMemberTrainingWeek(
         day_label?: string | null;
         workout_id?: string | null;
         excused?: boolean | null;
+        assignment_recipient_id?: string | null;
       }) => ({
         id: row.id,
         userId: row.user_id,
@@ -256,41 +264,36 @@ export async function loadMemberTrainingWeek(
         dayLabel: row.day_label,
         workoutId: row.workout_id,
         excused: !!row.excused,
+        assignmentRecipientId: row.assignment_recipient_id || null,
       })
     );
 
   let completionKnown = false;
   if (!expectationResult.error) {
-    const [sessions, logs] = await Promise.all([
+    const sessions = await (
       input.viewerUserId && input.viewerUserId === input.userId
         ? supabase
             .from('st_workout_sessions')
-            .select('user_id, workout_id, log_date, status, expectation_id')
+            .select('user_id, workout_id, log_date, status, expectation_id, completed_at')
             .eq('user_id', input.userId)
             .gte('log_date', from)
             .lte('log_date', to)
-        : Promise.resolve({ data: [], error: null }),
-      fetchGroupScopedSetLogs(supabase, input.teamId, [input.userId], { from, to, limit: 80 }),
-    ]);
-    completionKnown = !sessions.error || !logs.error;
+        : Promise.resolve({ data: [], error: null })
+    );
+    completionKnown = !sessions.error;
     if (completionKnown) {
       expectations = attachExpectationCompletion(
-        expectations,
+        await applyRecipientStatus(supabase, expectations),
         (sessions.data || []).map(
-          (row: { user_id: string; workout_id?: string | null; log_date?: string | null; expectation_id?: string | null; status?: string | null }) => ({
+          (row: { user_id: string; workout_id?: string | null; log_date?: string | null; expectation_id?: string | null; status?: string | null; completed_at?: string | null }) => ({
             userId: row.user_id,
             workoutId: row.workout_id,
             logDate: row.log_date ? String(row.log_date).slice(0, 10) : null,
             expectationId: row.expectation_id,
             status: mapSessionStatus(row.status),
+            completedAt: row.completed_at || null,
           })
-        ),
-        (logs.data || [])
-          .filter((row: { completed?: boolean; user_id?: string; log_date?: string }) => row.completed !== false && row.user_id && row.log_date)
-          .map((row: { user_id: string; log_date: string }) => ({
-            userId: row.user_id,
-            date: String(row.log_date).slice(0, 10),
-          }))
+        )
       );
     }
   }
@@ -320,7 +323,7 @@ export async function loadGroupCalendarWeek(
   const to = sundayOfWeek(from);
   const expectationResult = await supabase
     .from('st_training_expectations')
-    .select('id, user_id, source_key, team_id, origin, scheduled_date, title, day_label, workout_id, excused')
+    .select('id, user_id, source_key, team_id, origin, scheduled_date, title, day_label, workout_id, excused, assignment_recipient_id')
     .eq('source_key', sourceKey)
     .gte('scheduled_date', from)
     .lte('scheduled_date', to)
@@ -340,6 +343,7 @@ export async function loadGroupCalendarWeek(
         day_label?: string | null;
         workout_id?: string | null;
         excused?: boolean | null;
+        assignment_recipient_id?: string | null;
       }) => ({
         id: row.id,
         userId: row.user_id,
@@ -351,44 +355,37 @@ export async function loadGroupCalendarWeek(
         dayLabel: row.day_label,
         workoutId: row.workout_id,
         excused: !!row.excused,
+        assignmentRecipientId: row.assignment_recipient_id || null,
       })
     );
 
   let completionKnown = false;
   const memberIds = input.memberUserIds || [];
   if (!expectationResult.error && (input.viewerUserId || memberIds.length)) {
-    const [sessions, logs] = await Promise.all([
+    const sessions = await (
       input.viewerUserId
         ? supabase
             .from('st_workout_sessions')
-            .select('user_id, workout_id, log_date, status, expectation_id')
+            .select('user_id, workout_id, log_date, status, expectation_id, completed_at')
             .eq('user_id', input.viewerUserId)
             .gte('log_date', from)
             .lte('log_date', to)
-        : Promise.resolve({ data: [], error: null }),
-      memberIds.length
-        ? fetchGroupScopedSetLogs(supabase, input.teamId, memberIds, { from, to, limit: 400 })
-        : Promise.resolve({ data: [], pending: false, error: null }),
-    ]);
-    completionKnown = !sessions.error || !logs.error;
+        : Promise.resolve({ data: [], error: null })
+    );
+    completionKnown = !sessions.error;
     if (completionKnown) {
       expectations = attachExpectationCompletion(
-        expectations,
+        await applyRecipientStatus(supabase, expectations),
         (sessions.data || []).map(
-          (row: { user_id: string; workout_id?: string | null; log_date?: string | null; expectation_id?: string | null; status?: string | null }) => ({
+          (row: { user_id: string; workout_id?: string | null; log_date?: string | null; expectation_id?: string | null; status?: string | null; completed_at?: string | null }) => ({
             userId: row.user_id,
             workoutId: row.workout_id,
             logDate: row.log_date ? String(row.log_date).slice(0, 10) : null,
             expectationId: row.expectation_id,
             status: mapSessionStatus(row.status),
+            completedAt: row.completed_at || null,
           })
-        ),
-        (logs.data || [])
-          .filter((row: { completed?: boolean; user_id?: string; log_date?: string }) => row.completed !== false && row.user_id && row.log_date)
-          .map((row: { user_id: string; log_date: string }) => ({
-            userId: row.user_id,
-            date: String(row.log_date).slice(0, 10),
-          }))
+        )
       );
     }
   }

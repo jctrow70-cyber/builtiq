@@ -4,10 +4,12 @@
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { expectationFactsFromSchedule } from '../lib/progress/adherence';
 import {
   attachExpectationCompletion,
   buildGroupTrainingBoard,
   compareProgramSessions,
+  groupExpectationState,
   orderedProgramSessions,
   programRefFromRecord,
   programScheduleNeedsReview,
@@ -241,19 +243,77 @@ const manager = boardFor([amy, sarah]);
 assert.equal(manager.summary.members, 2);
 assert.equal(manager.canManage === undefined, true);
 
-const withSession = attachExpectationCompletion(
-  [expectation('amy', '2026-10-12', 'Full Body A', { id: 'exp-1', workoutId: 'w-mon', dayLabel: 'Mon' })],
-  [{ userId: 'amy', expectationId: 'exp-1', status: 'completed' }],
+const groupDay = expectation('amy', '2026-10-12', 'Full Body A', { id: 'exp-group', workoutId: 'group-wo', dayLabel: 'Mon' });
+const personalSameDay = attachExpectationCompletion(
+  [groupDay],
+  [{ userId: 'amy', workoutId: 'personal-wo', logDate: '2026-10-12', status: 'completed', expectationId: 'personal-exp' }]
+);
+assert.equal(personalSameDay[0].sessionStatus, undefined);
+assert.equal(groupExpectationState(personalSameDay[0], today, true), 'Missed');
+
+const otherCopy = attachExpectationCompletion(
+  [expectation('amy', '2026-10-11', 'Full Body B', { id: 'exp-copy', workoutId: 'enrolled-wo', dayLabel: 'Sun' })],
+  [{ userId: 'amy', workoutId: 'fork-wo', logDate: '2026-10-11', status: 'completed' }]
+);
+assert.equal(otherCopy[0].sessionStatus, undefined);
+assert.equal(groupExpectationState(otherCopy[0], today, true), 'Missed');
+
+const completedGroup = attachExpectationCompletion(
+  [groupDay],
+  [{ userId: 'amy', workoutId: 'group-wo', logDate: '2026-10-12', status: 'completed', completedAt: '2026-10-12T12:00:00Z' }]
+);
+assert.equal(completedGroup[0].sessionStatus, 'completed');
+assert.equal(groupExpectationState(completedGroup[0], today, true), 'Completed');
+const progressMiss = expectationFactsFromSchedule(
+  [{ id: 'exp-group', workout_id: 'group-wo', scheduled_date: '2026-10-12', source_key: `group:${teamId}`, team_id: teamId, origin: 'program' }],
+  [{ workout_id: 'personal-wo', log_date: '2026-10-12', status: 'completed', expectation_id: 'personal-exp' }]
+);
+assert.equal(progressMiss[0].sessionStatus, null);
+const progressFacts = expectationFactsFromSchedule(
+  [{ id: 'exp-group', workout_id: 'group-wo', scheduled_date: '2026-10-12', source_key: `group:${teamId}`, team_id: teamId, origin: 'program' }],
+  [{ workout_id: 'personal-wo', log_date: '2026-10-12', status: 'completed', expectation_id: 'personal-exp' }, { workout_id: 'group-wo', log_date: '2026-10-12', status: 'completed' }]
+);
+assert.equal(progressFacts[0].sessionStatus, 'completed');
+
+const sameDay = attachExpectationCompletion(
+  [
+    expectation('amy', '2026-10-13', 'Full Body A', { id: 'exp-a', workoutId: 'wo-a', dayLabel: 'Tue' }),
+    expectation('amy', '2026-10-13', 'Full Body B', { id: 'exp-b', workoutId: 'wo-b', dayLabel: 'Tue' }),
+  ],
+  [{ userId: 'amy', workoutId: 'wo-a', logDate: '2026-10-13', status: 'completed' }]
+);
+assert.equal(sameDay[0].sessionStatus, 'completed');
+assert.equal(sameDay[1].sessionStatus, undefined);
+assert.equal(groupExpectationState(sameDay[1], today, true), 'Missed');
+
+const excused = expectation('amy', '2026-10-12', 'Full Body A', { id: 'exp-ex', workoutId: 'wo-a', excused: true });
+assert.equal(groupExpectationState(excused, today, true), 'Excused');
+const moved = attachExpectationCompletion(
+  [expectation('amy', '2026-10-15', 'Full Body A', { id: 'exp-moved', workoutId: 'wo-a', dayLabel: 'Thu' })],
+  [
+    { userId: 'amy', workoutId: 'wo-a', logDate: '2026-10-12', status: 'completed' },
+    { userId: 'amy', workoutId: 'wo-a', logDate: '2026-10-15', status: 'completed', expectationId: 'exp-moved' },
+  ]
+);
+assert.equal(moved[0].sessionStatus, 'completed');
+
+const partial = attachExpectationCompletion(
+  [expectation('amy', '2026-10-12', 'Full Body A', { id: 'exp-part', workoutId: 'wo-a' })],
+  [{ userId: 'amy', expectationId: 'exp-part', status: 'partial' }]
+);
+assert.equal(partial[0].sessionStatus, 'partial');
+assert.equal(groupExpectationState(partial[0], today, true), 'Partial');
+const skipped = attachExpectationCompletion(
+  [expectation('amy', '2026-10-12', 'Full Body B', { id: 'exp-skip', workoutId: 'wo-b', recipientStatus: 'pending' })],
+  [{ userId: 'amy', workoutId: 'wo-b', logDate: '2026-10-12', status: 'skipped' }]
+);
+assert.equal(skipped[0].sessionStatus, 'skipped');
+assert.equal(groupExpectationState(skipped[0], today, true), 'Skipped');
+const recipientSkipped = attachExpectationCompletion(
+  [expectation('amy', '2026-10-12', 'Extra', { id: 'exp-rec', workoutId: 'wo-c', origin: 'assignment', recipientStatus: 'skipped' })],
   []
 );
-assert.equal(withSession[0].sessionStatus, 'completed');
-
-const withLog = attachExpectationCompletion(
-  [expectation('amy', '2026-10-14', 'Full Body B', { workoutId: 'w-wed', dayLabel: 'Wed' })],
-  [],
-  [{ userId: 'amy', date: '2026-10-14' }]
-);
-assert.equal(withLog[0].sessionStatus, 'completed');
+assert.equal(recipientSkipped[0].sessionStatus, 'skipped');
 
 const home = readFileSync(new URL('../app/components/groups/GroupTrainingHome.tsx', import.meta.url), 'utf8');
 const loader = readFileSync(new URL('../lib/groups/loadGroupTrainingFacts.ts', import.meta.url), 'utf8');
@@ -265,6 +325,21 @@ assert.match(home, />\s*Calendar\s*</);
 assert.match(loader, /source_kind', 'group'/);
 assert.match(loader, /source_key', sourceKey/);
 assert.doesNotMatch(loader, /source_key', 'personal'/);
+assert.doesNotMatch(loader, /fetchGroupScopedSetLogs/);
+const programRead = readFileSync(new URL('../supabase/migrations/20261016_066_group_assigned_program_read.sql', import.meta.url), 'utf8');
+assert.match(programRead, /st_user_can_edit_team\(p_team_id\)/);
+assert.match(programRead, /e\.status = 'active'/);
+assert.match(programRead, /e\.program_id = p_program_id/);
+assert.match(programRead, /set search_path = public/);
+assert.match(programRead, /revoke all on function public\.st_read_group_assigned_program/);
+assert.doesNotMatch(programRead, /st_set_logs/);
+assert.match(programRead, /order by w\.week nulls last, w\.day_order nulls last, w\.id/);
+assert.match(programRead, /DO NOT APPLY/);
+assert.doesNotMatch(programRead, /source_program_id/);
+const expectationStatus = readFileSync(new URL('../supabase/migrations/20261016_067_group_expectation_status.sql', import.meta.url), 'utf8');
+assert.match(expectationStatus, /DO NOT APPLY/);
+assert.match(expectationStatus, /st_group_expectation_status/);
+assert.doesNotMatch(expectationStatus, /st_set_logs/);
 assert.match(css, /@media \(max-width:720px\)\{[\s\S]*\.group-training-member\{grid-template-columns:1fr\}/);
 assert.match(css, /\.group-training[\s\S]*overflow-x:hidden/);
 const profile = readFileSync(new URL('../app/components/groups/MemberTrainingWorkspace.tsx', import.meta.url), 'utf8');

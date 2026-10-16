@@ -1,4 +1,5 @@
 import type { SessionStatus, SkipReason } from '../scienceEngine/adaptation/types';
+import { plannedSetIdsForWorkout, type WorkoutLike } from '../programDesign/activityCompletion';
 import { logHasPerformance, type PerformanceLike } from './plannedSetGuard';
 
 export type PlannedSetForOutcome = {
@@ -62,4 +63,51 @@ export function deriveSessionStatus(opts: {
 
 export function skippedIsNotFailed(status: SessionStatus): boolean {
   return status === 'skipped' || status === 'not_started';
+}
+
+export type CompletedSessionDraft = {
+  workoutId: string;
+  logDate: string;
+  status: 'completed';
+  expectationId: string | null;
+  sourceKey: string | null;
+  scheduledDate: string | null;
+};
+
+/**
+ * Writes a completed session only when every required working set on this workout is completed.
+ * Partial, skipped, and empty logs stay on the explicit Session card. A log counts only when it
+ * is stored on that planned set, so another workout's sets on the same date do not finish this one.
+ * An existing completed, partial, or skipped status is left unchanged.
+ */
+export function completedSessionDraft(input: {
+  intent?: 'log' | 'edit' | null;
+  workout?: WorkoutLike | null;
+  logs?: Record<string, { completed?: boolean; planned_set_id?: string | null } | undefined>;
+  logDate: string;
+  expectationId?: string | null;
+  sourceKey?: string | null;
+  scheduledDate?: string | null;
+  existingStatus?: string | null;
+}): CompletedSessionDraft | null {
+  if (input.intent === 'edit') return null;
+  if (input.existingStatus === 'completed' || input.existingStatus === 'partial' || input.existingStatus === 'skipped') return null;
+  const workoutId = input.workout?.id;
+  if (!workoutId || !input.logDate) return null;
+  const ids = plannedSetIdsForWorkout(input.workout, { loggableOnly: true });
+  if (!ids.length) return null;
+  const ready = ids.every((id) => {
+    const log = input.logs?.[id];
+    if (!log?.completed) return false;
+    return !log.planned_set_id || log.planned_set_id === id;
+  });
+  if (!ready) return null;
+  return {
+    workoutId,
+    logDate: input.logDate,
+    status: 'completed',
+    expectationId: input.expectationId || null,
+    sourceKey: input.sourceKey || null,
+    scheduledDate: input.scheduledDate || null,
+  };
 }

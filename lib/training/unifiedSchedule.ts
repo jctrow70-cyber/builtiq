@@ -132,6 +132,26 @@ export function sessionFulfillsExpectation(
   return !!session.workoutId && session.workoutId === expectation.workoutId && session.logDate === expectation.scheduledDate;
 }
 
+/** Same choice as st_group_schedule_adherence: the expectation link wins, then the latest completed session. */
+export function pickFulfillingSession<
+  T extends { expectationId?: string | null; workoutId?: string | null; logDate?: string | null; completedAt?: string | null }
+>(sessions: T[], expectation: { id?: string | null; workoutId?: string | null; scheduledDate: string }): T | null {
+  const matches = sessions.filter((session) => sessionFulfillsExpectation(session, expectation));
+  if (!matches.length) return null;
+  matches.sort((a, b) => {
+    const rank = (session: T) => (session.expectationId && expectation.id && session.expectationId === expectation.id ? 0 : 1);
+    const byLink = rank(a) - rank(b);
+    if (byLink) return byLink;
+    const aAt = a.completedAt || '';
+    const bAt = b.completedAt || '';
+    if (aAt === bAt) return 0;
+    if (!aAt) return 1;
+    if (!bAt) return -1;
+    return aAt < bAt ? 1 : -1;
+  });
+  return matches[0];
+}
+
 export function expectationDisplayState(input: {
   scheduledDate: string;
   localToday: string;
