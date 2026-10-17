@@ -6,6 +6,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { expectationFactsFromSchedule } from '../lib/progress/adherence';
 import {
+  applyAuthoritativeExpectationStatus,
+  assignedProgramFromPayload,
   attachExpectationCompletion,
   buildGroupTrainingBoard,
   compareProgramSessions,
@@ -13,6 +15,7 @@ import {
   orderedProgramSessions,
   programRefFromRecord,
   programScheduleNeedsReview,
+  summarizeExpectationStatuses,
   type GroupTrainingExpectationInput,
   type GroupTrainingMemberInput,
   type GroupTrainingProgramRef,
@@ -127,6 +130,89 @@ const excusedPast = boardFor([amy], {
 });
 assert.equal(excusedPast.members[0].status, 'on_track');
 assert.equal(excusedPast.members[0].missedCount, 0);
+
+const labeled = applyAuthoritativeExpectationStatus(
+  [
+    expectation('amy', '2026-10-12', 'Full Body A', { id: 'exp-old', workoutId: 'w-mon', sessionStatus: 'completed' }),
+    expectation('amy', '2026-10-13', 'Full Body B', { id: 'exp-ex', workoutId: 'w-wed', excused: false }),
+    expectation('amy', '2026-10-14', 'Full Body A', { id: 'exp-a', workoutId: 'w-a' }),
+    expectation('amy', '2026-10-14', 'Full Body B', { id: 'exp-b', workoutId: 'w-b' }),
+    expectation('amy', '2026-10-16', 'Full Body C', { id: 'exp-later', workoutId: 'w-fri' }),
+  ],
+  [
+    { expectation_id: 'exp-old', user_id: 'amy', scheduled_date: '2026-10-12', status: 'missed' },
+    { expectation_id: 'exp-ex', user_id: 'amy', scheduled_date: '2026-10-13', status: 'excused' },
+    { expectation_id: 'exp-a', user_id: 'amy', scheduled_date: '2026-10-14', status: 'completed' },
+    { expectation_id: 'exp-b', user_id: 'amy', scheduled_date: '2026-10-14', status: 'partial' },
+    { expectation_id: 'exp-later', user_id: 'amy', scheduled_date: '2026-10-16', status: 'paused' },
+    { expectation_id: 'someone-else', user_id: 'amy', scheduled_date: '2026-10-12', status: 'completed' },
+  ]
+);
+assert.equal(labeled.find((row) => row.id === 'exp-old')?.sessionStatus, undefined);
+assert.equal(groupExpectationState(labeled.find((row) => row.id === 'exp-old')!, today, false, 0), 'Missed');
+assert.equal(groupExpectationState(labeled.find((row) => row.id === 'exp-ex')!, today, true), 'Excused');
+assert.equal(groupExpectationState(labeled.find((row) => row.id === 'exp-a')!, today, false), 'Completed');
+assert.equal(groupExpectationState(labeled.find((row) => row.id === 'exp-b')!, today, false), 'Partial');
+assert.equal(groupExpectationState(labeled.find((row) => row.id === 'exp-later')!, today, true, 4), 'Paused');
+const authoritativeBoard = boardFor([amy], { expectations: labeled, missedByUser: { amy: 9 } });
+assert.equal(authoritativeBoard.members[0].missedCount, 1);
+assert.deepEqual(authoritativeBoard.members[0].missedDates, ['2026-10-12']);
+assert.equal(authoritativeBoard.members[0].status, 'needs_attention');
+assert.equal(authoritativeBoard.members[0].weekItems.find((item) => item.workoutId === 'w-a')?.state, 'Completed');
+assert.equal(authoritativeBoard.members[0].weekItems.find((item) => item.workoutId === 'w-b')?.state, 'Partial');
+assert.equal(authoritativeBoard.members[0].weekItems.find((item) => item.workoutId === 'w-fri')?.state, 'Paused');
+
+const weekSummary = summarizeExpectationStatuses(
+  [
+    { user_id: 'amy', expectation_id: '1', scheduled_date: '2026-10-12', status: 'missed' },
+    { user_id: 'amy', expectation_id: '2', scheduled_date: '2026-10-13', status: 'completed' },
+    { user_id: 'amy', expectation_id: '3', scheduled_date: '2026-10-14', status: 'paused' },
+    { user_id: 'amy', expectation_id: '4', scheduled_date: '2026-10-14', status: 'skipped' },
+  ],
+  ['amy', 'ethan'],
+  today
+);
+assert.equal(weekSummary[0].missed, 1);
+assert.equal(weekSummary[0].completed, 1);
+assert.equal(weekSummary[0].paused, 1);
+assert.equal(weekSummary[0].skipped, 1);
+assert.equal(weekSummary[0].dueToday, 0);
+assert.equal(weekSummary[0].completionRate, 50);
+assert.equal(weekSummary[1].missed, 0);
+assert.equal(weekSummary[1].completionRate, null);
+
+const enrolledPlan = assignedProgramFromPayload(
+  {
+    id: 'enrolled',
+    name: "Mary's butt stuff (just me)",
+    weeks: 6,
+    visibility: 'personal',
+    st_workouts: [
+      {
+        id: 'w1',
+        week: 1,
+        day_label: 'Mon',
+        day_order: 1,
+        workout_type: 'Full Body A',
+        st_exercises: [
+          {
+            id: 'e1',
+            name: 'Hip thrust',
+            sort_order: 1,
+            st_planned_sets: [{ set_number: 1, set_type: 'working', target_reps: '8', target_weight: '100', target_rir: 2, rest_seconds: 90 }],
+          },
+        ],
+      },
+    ],
+  },
+  'enrolled'
+);
+assert.equal(enrolledPlan?.name, "Mary's butt stuff (just me)");
+assert.equal(enrolledPlan?.weeks, 6);
+assert.equal(enrolledPlan?.workouts?.[0].exercises?.[0].sets?.[0].rir, '2');
+assert.equal(enrolledPlan?.workouts?.[0].exercises?.[0].sets?.[0].restSeconds, 90);
+assert.equal(assignedProgramFromPayload({ id: 'assignment-row', name: 'testing24' }, 'enrolled'), null);
+assert.equal(assignedProgramFromPayload(null, 'enrolled'), null);
 
 const sarah: GroupTrainingMemberInput = {
   userId: 'sarah',
@@ -326,6 +412,16 @@ assert.match(loader, /source_kind', 'group'/);
 assert.match(loader, /source_key', sourceKey/);
 assert.doesNotMatch(loader, /source_key', 'personal'/);
 assert.doesNotMatch(loader, /fetchGroupScopedSetLogs/);
+assert.match(loader, /st_group_expectation_status/);
+assert.match(loader, /p_member_user_id = input.memberUserId/);
+assert.match(loader, /memberUserId: input.userId/);
+assert.doesNotMatch(loader, /st_group_schedule_adherence/);
+const progressQueries = readFileSync(new URL('../lib/progress/queries.ts', import.meta.url), 'utf8');
+assert.doesNotMatch(progressQueries, /st_group_expectation_status/);
+assert.doesNotMatch(progressQueries, /st_read_group_assigned_program/);
+const adherencePanel = readFileSync(new URL('../app/components/groups/GroupScheduleAdherence.tsx', import.meta.url), 'utf8');
+assert.match(adherencePanel, /st_group_expectation_status/);
+assert.doesNotMatch(adherencePanel, /st_group_schedule_adherence/);
 const programRead = readFileSync(new URL('../supabase/migrations/20261016_066_group_assigned_program_read.sql', import.meta.url), 'utf8');
 assert.match(programRead, /st_user_can_edit_team\(p_team_id\)/);
 assert.match(programRead, /e\.status = 'active'/);
@@ -350,7 +446,12 @@ assert.match(profile, /Add Activity/);
 assert.match(profile, /Change Program/);
 assert.match(profile, /View Full Plan/);
 assert.match(profile, /fetchFullProgram\(supabase, programId\)/);
+assert.match(profile, /st_read_group_assigned_program/);
+assert.match(profile, /p_member_user_id: member\.userId/);
+assert.match(profile, /p_program_id: programId/);
+assert.match(profile, /assignedProgramFromPayload/);
 assert.match(profile, /member\.programId/);
+assert.match(home, /teamId=\{teamId \|\| null\}/);
 assert.match(profile, /You do not have permission to view this program/);
 assert.match(profile, /program=\{fullProgram\}/);
 assert.doesNotMatch(profile, /ProgramTemplate program=\{scheduleProgram\}/);

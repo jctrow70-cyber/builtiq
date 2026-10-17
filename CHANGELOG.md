@@ -11,11 +11,57 @@ Branch:
 Status:
 ```
 
+## BIQ-0263 - Use assigned-program and expectation-status reads
+
+Date: 2026-10-16
+Branch: main
+Status: In progress, not committed
+
+### Summary
+
+View Full Plan tries the normal program read, then reads the group enrollment program when that read is denied. The Group calendar, missed-workout explanation, attention label, and Group Progress use the per-workout expectation status for the week being shown. Same-day set logs do not mark a scheduled group workout complete. Personal Training is unchanged.
+
+### Purpose
+
+Coaches could not open a member’s personal program copy, and group status could not see another member’s completed, partial, or skipped session. The enrollment program and the saved expectation are the references for this screen.
+
+### Files changed
+
+- `lib/groups/trainingWorkspace.ts`
+- `lib/groups/loadGroupTrainingFacts.ts`
+- `lib/groups/groupCalendar.ts`
+- `lib/training/scheduleActions.ts`
+- `app/components/groups/MemberTrainingWorkspace.tsx`
+- `app/components/groups/GroupTrainingHome.tsx`
+- `app/components/groups/GroupScheduleAdherence.tsx`
+- `scripts/test-group-training-workspace.ts`
+- `CHANGELOG.md`
+
+### Database changes
+
+None. The assigned-program read, adherence match, and expectation-status functions were already applied in the SQL Editor. This change does not rerun them.
+
+### Testing steps
+
+- Open a member whose enrollment program is a team program. View Full Plan shows that program’s name, weeks, exercises, sets, reps, weight, RIR, and rest.
+- Open a member whose enrollment program is a personal copy the coach cannot otherwise read. The same plan appears, and a different assignment-row program is not substituted.
+- Confirm two workouts on one date keep their own Completed, Partial, Skipped, Missed, Due today, Upcoming, Excused, or Paused labels.
+- Confirm the attention count and the listed missed dates describe the same workouts.
+- Confirm Personal Training does not call the group status function.
+
+### Known issues
+
+Signed-in visual approval is still required. This is not Phase 2.
+
+### Recommended commit message
+
+BIQ-0263 Phase 1: Show the enrollment plan and expectation status
+
 ## BIQ-0263 - Prepare assigned-program read and adherence match SQL
 
 Date: 2026-10-16
 Branch: main
-Status: In progress, not committed, not applied
+Status: Applied in the SQL Editor, not committed
 
 ### Summary
 
@@ -46,7 +92,7 @@ None applied. Run the three files in the Supabase SQL Editor in this order: 066,
 
 ### Known issues
 
-The app still uses the existing program read and adherence totals until the SQL Editor results are confirmed. This is not Phase 2.
+The app now calls these functions. Signed-in visual approval is still open. This is not Phase 2.
 
 ### Recommended commit message
 

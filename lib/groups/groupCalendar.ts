@@ -102,7 +102,7 @@ export function buildGroupCalendar(input: {
         'Upcoming'
       );
       return {
-        key: `${row.userId}|${row.scheduledDate}|${row.workoutId || row.title}`,
+        key: row.id || `${row.userId}|${row.scheduledDate}|${row.workoutId || row.title}`,
         userId: row.userId,
         memberName: names.get(row.userId) || 'Member',
         date: row.scheduledDate,

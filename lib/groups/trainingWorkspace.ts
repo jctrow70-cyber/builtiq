@@ -142,6 +142,14 @@ export function programRefFromRecord(program: {
   };
 }
 
+/** Accept a direct program read or the assigned-program function only when the id is the enrollment program. */
+export function assignedProgramFromPayload(payload: unknown, enrollmentProgramId: string): GroupTrainingProgramRef | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const record = payload as { id?: string | null };
+  if (!record.id || record.id !== enrollmentProgramId) return null;
+  return programRefFromRecord(record);
+}
+
 export type GroupTrainingMemberInput = {
   userId: string;
   name: string;
@@ -176,9 +184,20 @@ export type GroupTrainingExpectationInput = {
   workoutId?: string | null;
   excused?: boolean;
   sessionStatus?: ExpectationSessionStatus;
+  authoritativeStatus?: GroupExpectationAuthoritativeStatus | null;
   assignmentRecipientId?: string | null;
   recipientStatus?: string | null;
 };
+
+export type GroupExpectationAuthoritativeStatus =
+  | 'excused'
+  | 'completed'
+  | 'partial'
+  | 'skipped'
+  | 'paused'
+  | 'missed'
+  | 'due_today'
+  | 'upcoming';
 
 export type GroupTrainingWeekState =
   | 'Completed'
@@ -189,6 +208,7 @@ export type GroupTrainingWeekState =
   | 'Scheduled'
   | 'Upcoming'
   | 'Excused'
+  | 'Paused'
   | 'Not confirmed';
 
 export type GroupTrainingWeekItem = {
@@ -452,14 +472,30 @@ function groupExpectationsFor(
   return expectations.filter((row) => row.userId === userId && row.sourceKey === sourceKey);
 }
 
-/** Same completion rules as the unified schedule. Today's incomplete workout stays Due today. */
+const AUTHORITATIVE_WEEK_STATE: Record<GroupExpectationAuthoritativeStatus, GroupTrainingWeekState | 'date'> = {
+  completed: 'Completed',
+  partial: 'Partial',
+  skipped: 'Skipped',
+  excused: 'Excused',
+  paused: 'Paused',
+  missed: 'Missed',
+  due_today: 'Due today',
+  upcoming: 'date',
+};
+
+/** Prefer a saved expectation-status row. Otherwise use the same completion rules as the unified schedule. */
 export function groupExpectationState(
-  row: Pick<GroupTrainingExpectationInput, 'scheduledDate' | 'excused' | 'sessionStatus'>,
+  row: Pick<GroupTrainingExpectationInput, 'scheduledDate' | 'excused' | 'sessionStatus' | 'authoritativeStatus'>,
   today: string,
   completionKnown: boolean,
   userMissed: number | null = null,
   upcoming: 'Scheduled' | 'Upcoming' = 'Scheduled'
 ): GroupTrainingWeekState {
+  if (row.authoritativeStatus) {
+    const mapped = AUTHORITATIVE_WEEK_STATE[row.authoritativeStatus];
+    if (mapped && mapped !== 'date') return mapped;
+    if (mapped === 'date') return upcoming;
+  }
   const display = expectationDisplayState({
     scheduledDate: row.scheduledDate,
     localToday: today,
@@ -603,20 +639,25 @@ export function buildGroupTrainingBoard(input: {
           : null;
     const scheduleDays = formatScheduledDays(customDays.length ? customDays : plan.program ? programScheduledDayLabels(plan.program.workouts) : []);
     const userMissed = input.missedByUser ? Number(input.missedByUser[member.userId] || 0) : null;
-    const missed =
-      userMissed != null
+    const usesAuthoritative = ownExpectations.some((row) => !!row.authoritativeStatus);
+    const missed = usesAuthoritative
+      ? ownExpectations.filter((row) => row.authoritativeStatus === 'missed').length
+      : userMissed != null
         ? userMissed
         : input.completionKnown
           ? missedInWindow(ownExpectations, input.today)
           : 0;
     const missedWindowStart = userMissed != null ? mondayOfWeek(input.today) : addDaysYmd(input.today, -7);
-    const missedDates = ownExpectations
-      .filter((row) => row.scheduledDate < input.today && row.scheduledDate >= missedWindowStart)
-      .filter(
-        (row) =>
-          groupExpectationState(row, input.today, input.completionKnown || userMissed != null, userMissed, 'Upcoming') === 'Missed'
-      )
-      .map((row) => row.scheduledDate);
+    const missedDates = (
+      usesAuthoritative
+        ? ownExpectations.filter((row) => row.authoritativeStatus === 'missed')
+        : ownExpectations
+            .filter((row) => row.scheduledDate < input.today && row.scheduledDate >= missedWindowStart)
+            .filter(
+              (row) =>
+                groupExpectationState(row, input.today, input.completionKnown || userMissed != null, userMissed, 'Upcoming') === 'Missed'
+            )
+    ).map((row) => row.scheduledDate);
     const expectationsEnabled = member.enrollment?.expectationEnabled !== false;
     const status = chooseStatus({
       paused,
@@ -771,5 +812,87 @@ export function attachExpectationCompletion(
       return { ...row, sessionStatus: 'skipped' };
     }
     return row;
+  });
+}
+
+const AUTHORITATIVE_STATUSES = new Set<GroupExpectationAuthoritativeStatus>([
+  'excused',
+  'completed',
+  'partial',
+  'skipped',
+  'paused',
+  'missed',
+  'due_today',
+  'upcoming',
+]);
+
+export type GroupExpectationStatusRow = {
+  expectation_id?: string | null;
+  user_id?: string | null;
+  workout_id?: string | null;
+  scheduled_date?: string | null;
+  status?: string | null;
+};
+
+/** Match status rows by expectation id. A same-day set log is not a status. */
+export function applyAuthoritativeExpectationStatus(
+  expectations: GroupTrainingExpectationInput[],
+  rows: GroupExpectationStatusRow[]
+): GroupTrainingExpectationInput[] {
+  const byId = new Map<string, GroupExpectationAuthoritativeStatus>();
+  rows.forEach((row) => {
+    const status = String(row.status || '') as GroupExpectationAuthoritativeStatus;
+    if (row.expectation_id && AUTHORITATIVE_STATUSES.has(status)) byId.set(row.expectation_id, status);
+  });
+  return expectations.map((row) => {
+    if (!row.id || !byId.has(row.id)) return row;
+    const status = byId.get(row.id) as GroupExpectationAuthoritativeStatus;
+    const sessionStatus = status === 'completed' || status === 'partial' || status === 'skipped' ? status : undefined;
+    return {
+      ...row,
+      authoritativeStatus: status,
+      sessionStatus,
+      excused: status === 'excused',
+    };
+  });
+}
+
+export type GroupExpectationStatusSummary = {
+  userId: string;
+  completed: number;
+  partial: number;
+  skipped: number;
+  missed: number;
+  dueToday: number;
+  upcoming: number;
+  excused: number;
+  paused: number;
+  completionRate: number | null;
+};
+
+/** Week totals from expectation-status rows. Paused today and future rows are not missed. */
+export function summarizeExpectationStatuses(
+  rows: GroupExpectationStatusRow[],
+  memberIds: string[],
+  today: string
+): GroupExpectationStatusSummary[] {
+  return memberIds.filter(Boolean).map((userId) => {
+    const mine = rows.filter((row) => row.user_id === userId);
+    const count = (status: GroupExpectationAuthoritativeStatus) => mine.filter((row) => row.status === status).length;
+    const past = mine.filter((row) => String(row.scheduled_date || '').slice(0, 10) < today && row.status !== 'excused');
+    const expectedPast = past.filter((row) => row.status === 'completed' || row.status === 'partial' || row.status === 'skipped' || row.status === 'missed').length;
+    const completedPast = past.filter((row) => row.status === 'completed').length;
+    return {
+      userId,
+      completed: count('completed'),
+      partial: count('partial'),
+      skipped: count('skipped'),
+      missed: count('missed'),
+      dueToday: count('due_today'),
+      upcoming: count('upcoming'),
+      excused: count('excused'),
+      paused: count('paused'),
+      completionRate: expectedPast === 0 ? null : Math.round((completedPast / expectedPast) * 1000) / 10,
+    };
   });
 }

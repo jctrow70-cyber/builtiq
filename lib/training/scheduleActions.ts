@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { todayYmd } from './programCalendar';
 
 export function scheduleSetupMissing(message: string | undefined): boolean {
-  return /does not exist|could not find|schema cache|st_training_expectations|st_training_enrollments|st_repair_followed_training_schedule|st_group_schedule_adherence/i.test(
+  return /does not exist|could not find|schema cache|st_training_expectations|st_training_enrollments|st_repair_followed_training_schedule|st_group_schedule_adherence|st_group_expectation_status|st_read_group_assigned_program/i.test(
     message || ''
   );
 }

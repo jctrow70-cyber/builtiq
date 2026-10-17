@@ -1,22 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { summarizeExpectationStatuses, type GroupExpectationStatusSummary } from '../../../lib/groups/trainingWorkspace';
 import { supabase } from '../../../lib/supabaseClient';
 import { currentCalendarWeekBounds, todayYmd } from '../../../lib/training/programCalendar';
 import { scheduleSetupMissing } from '../../../lib/training/scheduleActions';
-
-type AdherenceRow = {
-  user_id: string;
-  expected_past: number;
-  completed_past: number;
-  partial_past: number;
-  skipped_past: number;
-  missed: number;
-  due_today: number;
-  completed_today: number;
-  future: number;
-  completion_rate: number | null;
-};
 
 type Props = {
   teamId: string;
@@ -24,16 +12,18 @@ type Props = {
 };
 
 export default function GroupScheduleAdherence({ teamId, members }: Props) {
-  const [rows, setRows] = useState<AdherenceRow[]>([]);
+  const [rows, setRows] = useState<GroupExpectationStatusSummary[]>([]);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const memberKey = members.map((member) => member.user_id || '').join('|');
 
   useEffect(() => {
     let cancelled = false;
     const today = todayYmd();
     const week = currentCalendarWeekBounds();
     void supabase
-      .rpc('st_group_schedule_adherence', {
+      .rpc('st_group_expectation_status', {
         p_team_id: teamId,
         p_from_date: week.monday,
         p_to_date: week.sunday,
@@ -49,12 +39,15 @@ export default function GroupScheduleAdherence({ teamId, members }: Props) {
         }
         setPending(false);
         setError(null);
-        setRows((data || []) as AdherenceRow[]);
+        const memberIds = members.map((member) => member.user_id).filter((id): id is string => !!id);
+        setRows(summarizeExpectationStatuses(data || [], memberIds, today));
       });
     return () => {
       cancelled = true;
     };
-  }, [teamId]);
+    // memberKey already changes when the visible roster changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teamId, memberKey]);
 
   const nameFor = (userId: string) => members.find((member) => member.user_id === userId)?.display_name || 'Member';
 
@@ -62,7 +55,7 @@ export default function GroupScheduleAdherence({ teamId, members }: Props) {
     <div className="card">
       <h2>Scheduled training</h2>
       <p className="muted">
-        This week uses the same group schedule as the calendar. Excused workouts are left out. A paused schedule is not marked missed. Today stays due until the day ends.
+        This week uses each saved group workout. Completed, partial, and skipped come from the workout session. A paused enrollment does not mark today or a later workout as missed. A set log on the same day does not complete the workout.
       </p>
       {pending && (
         <p className="muted">
@@ -72,15 +65,17 @@ export default function GroupScheduleAdherence({ teamId, members }: Props) {
       {error && <p className="muted">{error}</p>}
       {!pending && rows.length === 0 && !error && <p className="muted">No active members to show.</p>}
       {rows.map((row) => (
-        <div key={row.user_id} className="schedule-item">
+        <div key={row.userId} className="schedule-item">
           <div>
-            <b>{nameFor(row.user_id)}</b>
+            <b>{nameFor(row.userId)}</b>
             <div className="muted">
-              {row.completed_past + row.completed_today} completed · {row.partial_past} partial · {row.skipped_past} skipped · {row.missed} missed
-              {row.due_today ? ` · ${row.due_today} due today` : ''}
+              {row.completed} completed · {row.partial} partial · {row.skipped} skipped · {row.missed} missed
+              {row.dueToday ? ` · ${row.dueToday} due today` : ''}
+              {row.paused ? ` · ${row.paused} paused` : ''}
+              {row.excused ? ` · ${row.excused} excused` : ''}
             </div>
           </div>
-          <b>{row.completion_rate == null ? '—' : `${row.completion_rate}%`}</b>
+          <b>{row.completionRate == null ? '—' : `${row.completionRate}%`}</b>
         </div>
       ))}
     </div>

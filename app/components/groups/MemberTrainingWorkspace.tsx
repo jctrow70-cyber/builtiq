@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import DateInput from '../DateInput';
 import type { GroupTrainingMemberRow, GroupTrainingProgramRef, GroupTrainingWeekItem } from '../../../lib/groups/trainingWorkspace';
-import { orderedWeekSessions, programRefFromRecord } from '../../../lib/groups/trainingWorkspace';
+import { assignedProgramFromPayload, orderedWeekSessions } from '../../../lib/groups/trainingWorkspace';
 import { fetchFullProgram } from '../../../lib/training/programFetch';
 import { supabase } from '../../../lib/supabaseClient';
 import { customWeekdayError, materializeMemberSchedule, programCycleAnchor } from '../../../lib/groups/memberSchedule';
@@ -35,7 +35,7 @@ function statusExplanation(member: GroupTrainingMemberRow): string {
     const listed = member.missedDates.length;
     const count = member.missedCount || listed;
     const noun = count === 1 ? 'workout' : 'workouts';
-    const dates = listed ? ` Loaded dates: ${member.missedDates.map((date) => dayHeading(date)).join(', ')}.` : '';
+    const dates = listed ? ` Loaded dates: ${Array.from(new Set(member.missedDates)).map((date) => dayHeading(date)).join(', ')}.` : '';
     const gap = count > listed ? ' Some counted workouts are outside the dates loaded on this screen.' : '';
     return `Missed ${count} ${noun} before today. Excused workouts, paused future workouts, and anything scheduled for today or later are not included.${dates}${gap}`;
   }
@@ -143,6 +143,7 @@ function dayMark(items: GroupTrainingWeekItem[]) {
 
 type MemberTrainingWorkspaceProps = {
   groupName: string;
+  teamId?: string | null;
   member: GroupTrainingMemberRow;
   canManage: boolean;
   planEditor?: ReactNode;
@@ -179,6 +180,7 @@ type MemberTrainingWorkspaceProps = {
 
 export default function MemberTrainingWorkspace({
   groupName,
+  teamId = null,
   member,
   canManage,
   planEditor,
@@ -296,7 +298,6 @@ export default function MemberTrainingWorkspace({
   }, [explainStatus, member.userId]);
 
   useEffect(() => {
-    if (!planOpen) return;
     const programId = member.programId;
     if (!programId) {
       setFullProgram(null);
@@ -305,21 +306,39 @@ export default function MemberTrainingWorkspace({
     }
     let cancelled = false;
     setPlanLoad('loading');
-    void fetchFullProgram(supabase, programId).then(({ data, error }) => {
+    void (async () => {
+      const direct = await fetchFullProgram(supabase, programId);
       if (cancelled) return;
-      const mapped = !error && data?.id === programId ? programRefFromRecord(data) : null;
-      if (!mapped) {
+      const mapped = direct.error ? null : assignedProgramFromPayload(direct.data, programId);
+      if (mapped) {
+        setFullProgram(mapped);
+        setPlanLoad(mapped.workouts?.length ? 'ready' : 'empty');
+        return;
+      }
+      if (!teamId) {
         setFullProgram(null);
         setPlanLoad('denied');
         return;
       }
-      setFullProgram(mapped);
-      setPlanLoad(mapped.workouts?.length ? 'ready' : 'empty');
-    });
+      const assigned = await supabase.rpc('st_read_group_assigned_program', {
+        p_team_id: teamId,
+        p_member_user_id: member.userId,
+        p_program_id: programId,
+      });
+      if (cancelled) return;
+      const fromEnrollment = assigned.error ? null : assignedProgramFromPayload(assigned.data, programId);
+      if (!fromEnrollment) {
+        setFullProgram(null);
+        setPlanLoad('denied');
+        return;
+      }
+      setFullProgram(fromEnrollment);
+      setPlanLoad(fromEnrollment.workouts?.length ? 'ready' : 'empty');
+    })();
     return () => {
       cancelled = true;
     };
-  }, [planOpen, member.programId]);
+  }, [member.programId, member.userId, teamId]);
 
   useEffect(() => {
     if (addingWorkout) setOneOffDate(selectedDate);
@@ -432,9 +451,9 @@ export default function MemberTrainingWorkspace({
       {statusOpen && (
         <div className="member-status-note">
           <p>{statusExplanation(member)}</p>
-          {member.missedDates.map((date) => (
+          {member.missedDates.map((date, index) => (
             <button
-              key={date}
+              key={`${date}-${index}`}
               type="button"
               className="member-text-btn"
               onClick={() => {

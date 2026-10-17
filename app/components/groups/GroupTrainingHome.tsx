@@ -305,6 +305,7 @@ export default function GroupTrainingHome({
         {selected && board ? (
           <MemberTrainingWorkspace
             groupName={teamName || ''}
+            teamId={teamId || null}
             member={selected}
             canManage={canManage}
             section={profileSection}
