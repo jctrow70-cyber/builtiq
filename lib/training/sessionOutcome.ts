@@ -1,5 +1,5 @@
 import type { SessionStatus, SkipReason } from '../scienceEngine/adaptation/types';
-import { plannedSetIdsForWorkout, type WorkoutLike } from '../programDesign/activityCompletion';
+import { plannedSetIdsForWorkout, type SetLogLike, type WorkoutLike } from '../programDesign/activityCompletion';
 import { logHasPerformance, type PerformanceLike } from './plannedSetGuard';
 
 export type PlannedSetForOutcome = {
@@ -110,4 +110,26 @@ export function completedSessionDraft(input: {
     sourceKey: input.sourceKey || null,
     scheduledDate: input.scheduledDate || null,
   };
+}
+
+export function outstandingRequiredSetIds(
+  workout: WorkoutLike | null | undefined,
+  logs?: Record<string, SetLogLike | undefined>
+): string[] {
+  return plannedSetIdsForWorkout(workout, { loggableOnly: true }).filter((id) => {
+    const log = logs?.[id];
+    if (!log?.completed) return true;
+    return !!log.planned_set_id && log.planned_set_id !== id;
+  });
+}
+
+/** A completed session becomes partial when required sets are still open. Partial and skipped stay as chosen. */
+export function sessionStatusAfterPlanChange(input: {
+  existingStatus?: string | null;
+  workout?: WorkoutLike | null;
+  logs?: Record<string, SetLogLike | undefined>;
+}): 'partial' | null {
+  if (input.existingStatus !== 'completed') return null;
+  if (!outstandingRequiredSetIds(input.workout, input.logs).length) return null;
+  return 'partial';
 }

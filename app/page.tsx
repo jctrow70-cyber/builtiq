@@ -49,7 +49,7 @@ import SessionOutcomeCard from './components/training/SessionOutcomeCard';
 import AdaptationSummaryCard from './components/training/AdaptationSummaryCard';
 import { snapshotForLog as buildSetLogSnapshot, stripUnavailableLogColumns } from '../lib/training/setLogSnapshots';
 import { canRewritePlannedSetPrescription } from '../lib/training/plannedSetGuard';
-import { completedSessionDraft, deriveSessionStatus } from '../lib/training/sessionOutcome';
+import { completedSessionDraft, deriveSessionStatus, outstandingRequiredSetIds, sessionStatusAfterPlanChange } from '../lib/training/sessionOutcome';
 import { extraLogsFromSetLogs, extraSetInsertPayload, extraSetsForExercise, nextExtraSetNumber, type ExtraSetLog } from '../lib/training/extraSets';
 import { normalizePainFlag, upsertExerciseSession, upsertWorkoutFeel, upsertWorkoutSession } from '../lib/training/workoutSessions';
 import { refreshProgramExpectations, withdrawAssignmentExpectation } from '../lib/training/scheduleActions';
@@ -298,6 +298,7 @@ export default function Page(){
  const logsRef=useRef<any>({});
  const upsertQueueRef=useRef<Record<string,Promise<any>>>({});
  const completedSessionKeyRef=useRef<string|null>(null);
+ const planChangePartialRef=useRef<string|null>(null);
  const prCelebrationTimerRef=useRef<ReturnType<typeof setTimeout>|null>(null);
  const [prCelebration,setPrCelebration]=useState<{exerciseName:string;message:string;subtext:string}|null>(null);
  const syncingCalendarRef=useRef(false);
@@ -2869,6 +2870,36 @@ function matchingSet(targetExercise:any, sourceSet:any){
   ||(sessionKeep&&(sessionKeep.id===activeWorkout||trainingSessionOpen)?sessionKeep:null)
   ||(trainingSessionOpen?(program?.st_workouts||[]).find((w:any)=>w.week===week&&w.day_label===dayLabelFromYmd(logDate)):null)
   ||(!trainingSessionOpen?weekWorkouts[0]:null);
+ useEffect(()=>{
+  if(!session?.user||!workout?.id||trainingSessionIntent!=='log'||sessionOutcome!=='completed')return;
+  const openIds=outstandingRequiredSetIds(workout, logs);
+  if(!openIds.length)return;
+  if(sessionStatusAfterPlanChange({existingStatus:sessionOutcome,workout,logs})!=='partial')return;
+  const day=activeLogDateForLogging();
+  const key=`${session.user.id}|${workout.id}|${day}|${openIds.join(',')}`;
+  if(planChangePartialRef.current===key)return;
+  planChangePartialRef.current=key;
+  const workoutId=workout.id;
+  void upsertWorkoutSession(supabase,{
+    user_id:session.user.id,
+    workout_id:workoutId,
+    program_id:program?.id||null,
+    log_date:day,
+    status:'partial',
+    expectation_id:activeExpectationId,
+    source_key:activeExpectationSource,
+    scheduled_date:activeExpectationDate,
+  }).then((saved)=>{
+    if(saved.pendingMigration)setPhase2a1Pending(true);
+    if(saved.error){
+      planChangePartialRef.current=null;
+      alert(saved.error);
+      return;
+    }
+    if(completedSessionKeyRef.current===`${session.user.id}|${workoutId}|${day}`)completedSessionKeyRef.current=null;
+    setSessionOutcome('partial');
+  });
+ },[session?.user?.id,workout,logs,sessionOutcome,trainingSessionIntent,program?.id,activeExpectationId,activeExpectationSource,activeExpectationDate]);
  const trainingCompletionWorkouts=(()=>{const byId=new Map<string,any>();[...(program?.st_workouts||[]),...calendarWorkouts,workout].forEach((w:any)=>{if(!w?.id)return;const prev=byId.get(w.id);if(!prev||(w.st_exercises||[]).length>=(prev.st_exercises||[]).length)byId.set(w.id,w);});return Array.from(byId.values());})();
  const workoutDayMoves=workoutDayMovesFromActivities(userCalendarActivities);
  const trainingCompletionOpts={activities:userCalendarActivities,workouts:trainingCompletionWorkouts,progressLogs,sessionLogs:logs,selectedDate:logDate};
@@ -3162,7 +3193,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
     {activeAssignedRecipient&&<div className="card viewing-banner assigned-workout-banner"><div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}><div><h2>Assigned workout</h2><p className="muted">{activeAssignedRecipient.st_workout_assignments?.st_teams?.name||'Group'} · {formatDisplayDate(activeAssignedRecipient.st_workout_assignments?.scheduled_date||logDate)}{activeAssignedRecipient.st_workout_assignments?.notes?` · ${activeAssignedRecipient.st_workout_assignments.notes}`:''}</p>{!assignedHasPersonalCopy(activeAssignedRecipient)?<p className="muted assigned-copy-hint">Group template is read-only. Copy to your personal plan to adjust exercises and sets.</p>:<p className="muted assigned-copy-hint">You are logging your personal copy. Edits stay on your account; completion still counts for the group assignment.</p>}</div><div className="assigned-banner-actions"><button className="btn small secondary" onClick={closeAssignedWorkout}>Back to personal program</button>{assignedHasPersonalCopy(activeAssignedRecipient)?<span className="badge personal-copy-badge">Personal copy</span>:<button type="button" className="btn small green" onClick={()=>copyAssignedWorkoutToPersonal()} disabled={!!assignmentCopyBusy}>{assignmentCopyBusy===activeAssignedRecipient.id?'Copying…':'Copy to personal plan'}</button>}</div></div></div>}
     {!viewingMember&&!activeAssignedRecipient&&program&&isDraftProgram(program)&&canEdit()&&<div className="card program-draft-banner"><div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}><div><h2>Draft program</h2><p className="muted"><b>{program.name}</b> is a draft — it will not appear here for logging until you publish it in Programs.</p></div><button type="button" className="btn small green" onClick={()=>{setTrainingSubNav('personal');setDraftEditProgramId(null);setAppNav('Programs');}}>Open in Programs</button></div></div>}
     {showEditScope&&<div className="applybox-compact"><label htmlFor="apply-scope">Apply this change to</label><select id="apply-scope" value={applyScope} onChange={e=>setApplyScope(e.target.value as any)}><option value="current">Just today</option><option value="future">Rest of program</option></select></div>}
-    {trainingSessionOpen&&trainingSessionIntent==='log'&&workout&&<SessionOutcomeCard status={sessionOutcome} feel={sessionFeel} pain={sessionPain} notes={sessionNotes} skipReason={sessionSkipReason} canEdit={canLog()} pendingMigration={phase2a1Pending} onStatus={(s)=>void saveSessionOutcome(s)} onFeel={(v)=>void saveSessionOutcome(sessionOutcome,{feel:v})} onPain={(v)=>void saveSessionOutcome(sessionOutcome,{pain:v})} onNotes={(v)=>void saveSessionOutcome(sessionOutcome,{notes:v})} onSkipReason={(v)=>void saveSessionOutcome('skipped',{skipReason:v})}/>}
+    {trainingSessionOpen&&trainingSessionIntent==='log'&&workout&&<SessionOutcomeCard status={sessionOutcome} feel={sessionFeel} pain={sessionPain} notes={sessionNotes} skipReason={sessionSkipReason} canEdit={canLog()} pendingMigration={phase2a1Pending} notice={(sessionOutcome==='completed'||sessionOutcome==='partial')&&outstandingRequiredSetIds(workout, logs).length?'Additional required sets are still open. Logged sets and feedback stay. Choose Completed when that work is done.':null} onStatus={(s)=>void saveSessionOutcome(s)} onFeel={(v)=>void saveSessionOutcome(sessionOutcome,{feel:v})} onPain={(v)=>void saveSessionOutcome(sessionOutcome,{pain:v})} onNotes={(v)=>void saveSessionOutcome(sessionOutcome,{notes:v})} onSkipReason={(v)=>void saveSessionOutcome('skipped',{skipReason:v})}/>}
     {trainingSessionOpen&&trainingSessionIntent==='log'&&adaptationSummary&&<AdaptationSummaryCard result={adaptationSummary}/>}
     {(trainingSessionOpen||!!activeAssignedRecipient)&&workoutExerciseSections}
   </section>}

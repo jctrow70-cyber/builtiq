@@ -11,6 +11,7 @@ type Props = {
   durationMinutes?: number | null;
   canEdit: boolean;
   pendingMigration?: boolean;
+  notice?: string | null;
   onStatus: (status: SessionStatus) => void;
   onFeel: (feel: WorkoutFeel) => void;
   onPain: (pain: PainFlag) => void;
@@ -35,6 +36,7 @@ export default function SessionOutcomeCard({
   durationMinutes,
   canEdit,
   pendingMigration,
+  notice,
   onStatus,
   onFeel,
   onPain,
@@ -50,6 +52,7 @@ export default function SessionOutcomeCard({
       {pendingMigration && (
         <p className="muted">Phase 2A.1 migration is not applied yet. These choices will save after review.</p>
       )}
+      {notice ? <p className="muted">{notice}</p> : null}
       <div className="log-chip-row">
         {STATUS_OPTIONS.map((opt) => (
           <button

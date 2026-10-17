@@ -128,15 +128,33 @@ export function sessionFulfillsExpectation(
   session: { expectationId?: string | null; workoutId?: string | null; logDate?: string | null },
   expectation: { id?: string | null; workoutId?: string | null; scheduledDate: string }
 ): boolean {
-  if (session.expectationId && expectation.id && session.expectationId === expectation.id) return true;
+  if (session.expectationId) return !!(expectation.id && session.expectationId === expectation.id);
   return !!session.workoutId && session.workoutId === expectation.workoutId && session.logDate === expectation.scheduledDate;
 }
 
-/** Same choice as st_group_schedule_adherence: the expectation link wins, then the latest completed session. */
+type ExpectationMatch = { id?: string | null; userId?: string | null; workoutId?: string | null; scheduledDate: string };
+
+/** An unlinked session can match a workout and date only when one expectation owns that pair. */
+export function workoutDateFallbackUnambiguous(expectation: ExpectationMatch, expectations: ExpectationMatch[]): boolean {
+  if (!expectation.workoutId) return false;
+  const count = expectations.filter((row) => {
+    if (row.scheduledDate !== expectation.scheduledDate || row.workoutId !== expectation.workoutId) return false;
+    if (expectation.userId && row.userId && row.userId !== expectation.userId) return false;
+    return true;
+  }).length;
+  return count <= 1;
+}
+
+/** Explicit expectation link wins. Workout/date fallback is only for a session with no expectation id. */
 export function pickFulfillingSession<
   T extends { expectationId?: string | null; workoutId?: string | null; logDate?: string | null; completedAt?: string | null }
->(sessions: T[], expectation: { id?: string | null; workoutId?: string | null; scheduledDate: string }): T | null {
-  const matches = sessions.filter((session) => sessionFulfillsExpectation(session, expectation));
+>(sessions: T[], expectation: ExpectationMatch, expectations?: ExpectationMatch[]): T | null {
+  const fallbackAllowed = !expectations || workoutDateFallbackUnambiguous(expectation, expectations);
+  const matches = sessions.filter((session) => {
+    if (session.expectationId) return !!(expectation.id && session.expectationId === expectation.id);
+    if (!fallbackAllowed) return false;
+    return sessionFulfillsExpectation(session, expectation);
+  });
   if (!matches.length) return null;
   matches.sort((a, b) => {
     const rank = (session: T) => (session.expectationId && expectation.id && session.expectationId === expectation.id ? 0 : 1);

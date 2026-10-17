@@ -27,16 +27,19 @@ type SessionRow = {
  * It does not decide on its own whether a workout was required.
  */
 export function expectationFactsFromSchedule(expectations: ExpectationRow[], sessions: SessionRow[]): ExpectationFact[] {
+  const context = expectations.map((row) => ({
+    id: row.id,
+    workoutId: row.workout_id,
+    scheduledDate: row.scheduled_date,
+  }));
+  const mapped = sessions.map((session) => ({
+    ...session,
+    expectationId: session.expectation_id,
+    workoutId: session.workout_id,
+    logDate: session.log_date,
+  }));
   return expectations.map((row) => {
-    const match = pickFulfillingSession(
-      sessions.map((session) => ({
-        ...session,
-        expectationId: session.expectation_id,
-        workoutId: session.workout_id,
-        logDate: session.log_date,
-      })),
-      { id: row.id, workoutId: row.workout_id, scheduledDate: row.scheduled_date }
-    );
+    const match = pickFulfillingSession(mapped, { id: row.id, workoutId: row.workout_id, scheduledDate: row.scheduled_date }, context);
     return {
       id: row.id,
       workoutId: row.workout_id,

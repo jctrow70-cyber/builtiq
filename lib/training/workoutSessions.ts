@@ -33,10 +33,40 @@ function missingTable(error: { message?: string } | null | undefined): boolean {
   return /does not exist|could not find|schema cache/i.test(error?.message || '');
 }
 
+function presentLink(value: string | null | undefined): string | null {
+  const text = value == null ? '' : String(value).trim();
+  return text || null;
+}
+
+/** Absent association values keep the stored session link. A non-empty incoming value replaces it. */
+export function preservedSessionLink(
+  existing: Pick<WorkoutSessionRow, 'expectation_id' | 'source_key' | 'scheduled_date' | 'feedback_id' | 'completed_at'> | null | undefined,
+  incoming: Pick<WorkoutSessionRow, 'expectation_id' | 'source_key' | 'scheduled_date' | 'feedback_id' | 'completed_at' | 'status'>
+): Pick<WorkoutSessionRow, 'expectation_id' | 'source_key' | 'scheduled_date' | 'feedback_id' | 'completed_at'> {
+  const keep = (next: string | null | undefined, prev: string | null | undefined) => presentLink(next) || presentLink(prev);
+  const keepsCompletion = incoming.status === 'completed' || incoming.status === 'partial';
+  return {
+    expectation_id: keep(incoming.expectation_id, existing?.expectation_id),
+    source_key: keep(incoming.source_key, existing?.source_key),
+    scheduled_date: keep(incoming.scheduled_date, existing?.scheduled_date),
+    feedback_id: keep(incoming.feedback_id, existing?.feedback_id),
+    completed_at: keepsCompletion ? incoming.completed_at || existing?.completed_at || new Date().toISOString() : null,
+  };
+}
+
 export async function upsertWorkoutSession(
   supabase: SupabaseClient,
   row: WorkoutSessionRow
 ): Promise<{ data: WorkoutSessionRow | null; error: string | null; pendingMigration: boolean }> {
+  const { data: existing, error: readError } = await supabase
+    .from('st_workout_sessions')
+    .select('expectation_id, source_key, scheduled_date, feedback_id, completed_at')
+    .eq('user_id', row.user_id)
+    .eq('workout_id', row.workout_id)
+    .eq('log_date', row.log_date)
+    .maybeSingle();
+  const stored = readError ? null : (existing as WorkoutSessionRow | null);
+  const link = preservedSessionLink(stored, row);
   const payload = {
     user_id: row.user_id,
     workout_id: row.workout_id,
@@ -44,15 +74,15 @@ export async function upsertWorkoutSession(
     log_date: row.log_date,
     status: row.status,
     skip_reason: row.status === 'skipped' ? row.skip_reason || 'other' : null,
-    completed_at: row.status === 'completed' || row.status === 'partial' ? row.completed_at || new Date().toISOString() : null,
+    completed_at: link.completed_at,
     duration_minutes: row.duration_minutes ?? null,
-    feedback_id: row.feedback_id || null,
+    feedback_id: link.feedback_id,
   };
   const linked = {
     ...payload,
-    expectation_id: row.expectation_id || null,
-    source_key: row.source_key || null,
-    scheduled_date: row.scheduled_date || null,
+    expectation_id: link.expectation_id,
+    source_key: link.source_key,
+    scheduled_date: link.scheduled_date,
   };
   let { data, error } = await supabase
     .from('st_workout_sessions')

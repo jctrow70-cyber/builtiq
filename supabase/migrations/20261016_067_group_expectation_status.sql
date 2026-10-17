@@ -1,12 +1,20 @@
 -- BIQ-0263 Phase 1: per-workout group expectation status
--- DO NOT APPLY until reviewed. This file is the proposal, not a deployed change.
--- It does not change adherence totals, session rows, or set logs.
+-- Apply this file in the Supabase SQL Editor after 20261016_066_group_assigned_program_read.sql.
+-- It adds one index, replaces the adherence session match, and adds one read function.
+-- It does not update or delete training rows. It does not apply migration 065.
 --
--- After it is applied, the group calendar, member labels, and Group Progress
--- should read these rows by expectation id. They should not derive Completed
--- from same-day set logs. Missed counts are the rows whose status is missed.
+-- Session match, used by both functions below:
+--   an expectation link fulfills only that expectation;
+--   an unlinked session matches workout and date only when that member has one such expectation.
+--
+-- While an enrollment is paused, today and future unfinished workouts are paused
+-- on the row-status function. Past unfinished workouts stay missed. Adherence
+-- totals keep the existing missed definition, so this file does not invent a
+-- historical pause date and does not recalculate past misses.
 --
 -- Rollback:
+--   Re-apply the previous st_group_schedule_adherence body from
+--   20261007_059_unified_training_schedule.sql before dropping the new objects.
 --   drop function if exists public.st_group_expectation_status(uuid, date, date, date, uuid);
 --   drop index if exists public.st_workout_sessions_expectation_idx;
 
@@ -71,7 +79,7 @@ begin
       when sess.status = 'completed' then 'completed'
       when sess.status = 'partial' then 'partial'
       when sess.status = 'skipped' or coalesce(rec.status, '') = 'skipped' then 'skipped'
-      when enr.status = 'paused' then 'paused'
+      when enr.status = 'paused' and e.scheduled_date >= p_local_today then 'paused'
       when e.scheduled_date < p_local_today then 'missed'
       when e.scheduled_date = p_local_today then 'due_today'
       else 'upcoming'
@@ -87,7 +95,20 @@ begin
     where s.user_id = e.user_id
       and (
         s.expectation_id = e.id
-        or (e.workout_id is not null and s.workout_id = e.workout_id and s.log_date = e.scheduled_date)
+        or (
+          s.expectation_id is null
+          and e.workout_id is not null
+          and s.workout_id = e.workout_id
+          and s.log_date = e.scheduled_date
+          and not exists (
+            select 1
+            from public.st_training_expectations other
+            where other.user_id = e.user_id
+              and other.workout_id = e.workout_id
+              and other.scheduled_date = e.scheduled_date
+              and other.id <> e.id
+          )
+        )
       )
     order by case when s.expectation_id = e.id then 0 else 1 end, s.completed_at desc nulls last
     limit 1

@@ -145,6 +145,10 @@ assert.equal(
   sessionFulfillsExpectation({ workoutId: 'other', logDate: wednesday }, { id: 'exp-1', workoutId: 'planned', scheduledDate: wednesday }),
   false
 );
+assert.equal(
+  sessionFulfillsExpectation({ expectationId: 'exp-a', workoutId: 'planned', logDate: wednesday }, { id: 'exp-b', workoutId: 'planned', scheduledDate: wednesday }),
+  false
+);
 
 const wednesdayMorning = adherenceCounts(
   [

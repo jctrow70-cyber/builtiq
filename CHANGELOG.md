@@ -11,6 +11,53 @@ Branch:
 Status:
 ```
 
+## BIQ-0263 - Preserve session links and open work after completion
+
+Date: 2026-10-16
+Branch: main
+Status: In progress, not committed
+
+### Summary
+
+A later notes or feedback save keeps the workout session’s expectation, training source, and scheduled date when those values are not supplied again. Adding required sets after automatic completion changes that session from completed to partial and tells the member the new sets are still open. Logged sets and feedback stay. Explicit partial and skipped outcomes are left as chosen.
+
+### Purpose
+
+Reopening a workout outside the calendar was able to clear the schedule link. A completed session could also stay completed after the plan gained required sets.
+
+### Files changed
+
+- `lib/training/workoutSessions.ts`
+- `lib/training/sessionOutcome.ts`
+- `lib/training/unifiedSchedule.ts`
+- `lib/progress/adherence.ts`
+- `lib/groups/trainingWorkspace.ts`
+- `app/page.tsx`
+- `app/components/training/SessionOutcomeCard.tsx`
+- `scripts/test-session-finalization.ts`
+- `scripts/test-unified-schedule.ts`
+- `supabase/migrations/20261016_067_group_expectation_status.sql`
+- `CHANGELOG.md`
+
+### Database changes
+
+None applied. Migration 067’s unapplied status function now uses the tighter session match and does not treat past unfinished workouts as paused. `st_group_schedule_adherence` is unchanged.
+
+### Testing steps
+
+- Finish a scheduled Group workout, reopen it away from the calendar, and edit notes, feel, or pain. The original expectation, source, and scheduled date remain. A second save does not add a session row.
+- Add a required set after completion. The session becomes partial, the earlier logs and feedback remain, and the screen says the new sets are still open.
+- Choose Partial or Skipped first. Adding a set does not replace that choice.
+- A session linked to one expectation does not complete a second expectation on the same workout and date.
+
+### Known issues
+
+The live adherence function still uses the older workout/date fallback. Paused past dates still count as missed there. Migrations 066 and 067 are not applied. This is not Phase 2.
+
+### Recommended commit message
+
+BIQ-0263 Phase 1: Keep session links and reopen finished workouts
+
 ## BIQ-0263 - Finalize completed workout sessions
 
 Date: 2026-10-16

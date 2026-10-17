@@ -753,9 +753,16 @@ export function attachExpectationCompletion(
   }>
 ): GroupTrainingExpectationInput[] {
   return expectations.map((row) => {
+    const context = expectations.map((item) => ({
+      id: item.id,
+      userId: item.userId,
+      workoutId: item.workoutId,
+      scheduledDate: item.scheduledDate,
+    }));
     const session = pickFulfillingSession(
       sessions.filter((item) => item.userId === row.userId),
-      row
+      row,
+      context
     );
     if (session?.status) {
       return { ...row, sessionStatus: session.status as ExpectationSessionStatus };
