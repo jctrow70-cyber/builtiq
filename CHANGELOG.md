@@ -11,6 +11,47 @@ Branch:
 Status:
 ```
 
+## BIQ-0263 - Prepare assigned-program read and adherence match SQL
+
+Date: 2026-10-16
+Branch: main
+Status: In progress, not committed, not applied
+
+### Summary
+
+The assigned-program read, the group adherence session match, and the per-workout expectation status are prepared as SQL Editor files. They create or replace functions and one index. They do not update or delete training rows. The app does not call the new functions until those files are confirmed in the database.
+
+### Purpose
+
+Owners and managers need a read of the program stored on an active group enrollment, and group status needs the same session match the calendar already uses. Current saved sessions and expectations have no ambiguous workout-and-date pair, so the tighter match does not change existing adherence totals.
+
+### Files changed
+
+- `supabase/migrations/20261016_066_group_assigned_program_read.sql`
+- `supabase/migrations/20261016_067_adherence_session_match.sql`
+- `supabase/migrations/20261016_067_group_expectation_status.sql`
+- `scripts/test-session-finalization.ts`
+- `scripts/test-group-training-workspace.ts`
+- `CHANGELOG.md`
+
+### Database changes
+
+None applied. Run the three files in the Supabase SQL Editor in this order: 066, then `20261016_067_adherence_session_match.sql`, then `20261016_067_group_expectation_status.sql`. Do not run migrations 059, 064, or 065 again.
+
+### Testing steps
+
+- Confirm each file contains no insert, update, or delete of training rows before running it.
+- After applying, confirm the three functions exist and the adherence definition contains `s.expectation_id is null`.
+- Do not expect member missed totals to change from this match correction.
+
+### Known issues
+
+The app still uses the existing program read and adherence totals until the SQL Editor results are confirmed. This is not Phase 2.
+
+### Recommended commit message
+
+BIQ-0263 Phase 1: Prepare assigned-program and adherence SQL
+
 ## BIQ-0263 - Preserve session links and open work after completion
 
 Date: 2026-10-16
