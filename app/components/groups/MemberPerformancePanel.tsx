@@ -24,8 +24,9 @@ export default function MemberPerformancePanel({
     <div className="member-performance-panel">
       <div className="card member-assignment-compliance">
         <div className="topline" style={{ justifyContent: 'space-between' }}>
-          <h3>Assigned workouts</h3>
+          <h3>One-off assigned workouts</h3>
         </div>
+        <p className="muted">These are separate from the group schedule. They do not change group adherence.</p>
         {hasAssignments ? (
           <>
             <div className="dash-metrics member-dash-metrics">
@@ -63,11 +64,11 @@ export default function MemberPerformancePanel({
 
       <div className="card member-workout-history">
         <div className="topline" style={{ justifyContent: 'space-between' }}>
-          <h3>Recent workout history</h3>
+          <h3>Group-attributed workout history</h3>
           <span className="muted">Last {history.length || 0} days</span>
         </div>
         {history.length === 0 ? (
-          <p className="muted">{emptyHint || 'No completed sets logged yet.'}</p>
+          <p className="muted">{emptyHint || 'No group-attributed completed sets in this window.'}</p>
         ) : (
           history.map((day) => (
             <div key={day.date} className="member-history-row">

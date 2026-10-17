@@ -1,0 +1,56 @@
+-- BIQ-0263 proposal. Do not run this in the SQL Editor during the frontend stage.
+-- Not applied. Requires a separate approval.
+--
+-- st_assign_group_workout currently requires the workout's program to have
+-- visibility = 'team' and the same team id. A personal program copy on a group
+-- enrollment fails that check, and the error text says to publish a group program.
+--
+-- Smallest change: keep st_user_can_assign_in_group, and allow one additional
+-- case. When the target is a single active member, the workout may belong to
+-- that member's active group enrollment program even if that program is personal.
+-- A personal copy must not be assignable to the whole group or a classification.
+-- Do not bypass the function from the client.
+--
+-- Apply by editing the live function, not by dropping it. Move member-id
+-- resolution ahead of the program check, then replace the visibility predicate
+-- with the block below. Copy the rest of st_assign_group_workout from
+-- supabase/migrations/20261012_062_group_assignment_wizard.sql unchanged.
+
+-- Replacement for the current "visibility = 'team'" existence check:
+--
+-- if p_target_type in ('members', 'individual') then
+--   select coalesce(array_agg(distinct uid), '{}')
+--     into v_ids
+--   from unnest(coalesce(p_target_user_ids, '{}'::uuid[])) as uid
+--   where uid is not null;
+-- end if;
+--
+-- if not exists (
+--   select 1
+--   from public.st_workouts w
+--   join public.st_programs p on p.id = w.program_id
+--   where w.id = p_workout_id
+--     and (
+--       (p.team_id = p_team_id and p.visibility = 'team')
+--       or (
+--         p_target_type in ('members', 'individual')
+--         and cardinality(coalesce(v_ids, '{}')) = 1
+--         and exists (
+--           select 1
+--           from public.st_training_enrollments e
+--           join public.st_team_members tm
+--             on tm.team_id = e.team_id
+--            and tm.user_id = e.user_id
+--            and tm.status = 'active'
+--           where e.team_id = p_team_id
+--             and e.user_id = v_ids[1]
+--             and e.status = 'active'
+--             and e.source_kind = 'group'
+--             and e.source_key = 'group:' || p_team_id::text
+--             and e.program_id = p.id
+--         )
+--       )
+--     )
+-- ) then
+--   raise exception 'That workout is not on a team program or this member''s active group enrollment';
+-- end if;

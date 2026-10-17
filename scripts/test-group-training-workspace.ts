@@ -16,6 +16,9 @@ import {
   programRefFromRecord,
   programScheduleNeedsReview,
   summarizeExpectationStatuses,
+  addActivityChoices,
+  comparePrescriptionToGroupLogs,
+  planExerciseGroups,
   type GroupTrainingExpectationInput,
   type GroupTrainingMemberInput,
   type GroupTrainingProgramRef,
@@ -444,7 +447,7 @@ assert.match(css, /\.group-training[\s\S]*overflow-x:hidden/);
 const profile = readFileSync(new URL('../app/components/groups/MemberTrainingWorkspace.tsx', import.meta.url), 'utf8');
 assert.match(profile, /Add Activity/);
 assert.match(profile, /Change Program/);
-assert.match(profile, /View Full Plan/);
+assert.match(profile, /aria-label="Program weeks"/);
 assert.match(profile, /fetchFullProgram\(supabase, programId\)/);
 assert.match(profile, /st_read_group_assigned_program/);
 assert.match(profile, /p_member_user_id: member\.userId/);
@@ -501,8 +504,14 @@ assert.match(profile, />\s*Manage\s*</);
 assert.match(profile, /Members/);
 assert.match(profile, /Edit Training Days/);
 assert.match(profile, /Calendar/);
+assert.match(profile, /Plan/);
 assert.match(profile, /Progress/);
-assert.match(profile, /Details/);
+assert.doesNotMatch(profile, /'details'/);
+assert.match(profile, /Rest day\. No Group workout scheduled/);
+assert.match(profile, /Log this workout/);
+assert.match(profile, /viewerUserId !== member\.userId/);
+assert.match(profile, /personal copy/);
+assert.match(home, /expectationId: row\.id/);
 assert.match(profile, /hideViewButton/);
 assert.match(profile, /member-week-strip/);
 assert.match(profile, /aria-label="Previous week"/);
@@ -511,7 +520,7 @@ assert.match(profile, /Find a member/);
 assert.match(profile, /setOneOffDate\(selectedDate\)/);
 assert.match(profile, /exercises/);
 assert.doesNotMatch(profile, /selectedItems\.length === 1/);
-assert.match(profile, /Nothing from this group is scheduled this day/);
+assert.doesNotMatch(profile, /Nothing from this group is scheduled this day/);
 assert.match(home, /memberUserIds: \[selected\.userId\]/);
 assert.match(home, /st_assign_group_workout|assignGroupWorkout/);
 assert.match(home, /board\?\.members/);
@@ -522,5 +531,63 @@ assert.match(loader, /\.eq\('user_id', input\.userId\)/);
 assert.doesNotMatch(loader, /84/);
 assert.match(home, /setProfileWeekStart/);
 assert.match(home, /statusFilter/);
+
+const grouped = planExerciseGroups([
+  { id: 'a', name: 'Squat', sortOrder: 1, supersetGroupId: 'ss', supersetLabel: 'A', supersetOrder: 2 },
+  { id: 'b', name: 'Row', sortOrder: 2, supersetGroupId: 'ss', supersetLabel: 'A', supersetOrder: 1 },
+  { id: 'c', name: 'Curl', sortOrder: 3 },
+]);
+assert.equal(grouped.length, 2);
+assert.equal(grouped[0].label, 'A');
+assert.deepEqual(grouped[0].exercises.map((exercise) => exercise.name), ['Row', 'Squat']);
+assert.equal(grouped[1].exercises[0].name, 'Curl');
+
+const teamChoices = addActivityChoices(
+  { id: 'team-plan', name: 'Team plan', visibility: 'team', workouts: [{ id: 'w1', week: 2, dayLabel: 'Mon', title: 'Full Body' }] },
+  'ready'
+);
+assert.equal(teamChoices.reason, 'ready');
+assert.equal(teamChoices.choices[0].workoutId, 'w1');
+assert.equal(addActivityChoices({ id: 'copy', name: 'Copy', visibility: 'personal', workouts: [{ id: 'w2', title: 'Day' }] }, 'ready').reason, 'personal');
+assert.equal(addActivityChoices(null, 'denied').reason, 'unread');
+assert.equal(addActivityChoices({ id: 'empty', name: 'Empty', visibility: 'team', workouts: [] }, 'ready').reason, 'empty');
+
+const compared = comparePrescriptionToGroupLogs(
+  [{ id: 'ex', name: 'Squat', sets: [{ id: 'set-1', setNumber: 1, reps: '8', weight: '100', rir: '2', restSeconds: 90 }] }],
+  [
+    { planned_set_id: 'set-1', log_date: '2026-10-14', completed: true, actual_reps: 6, actual_weight: 95 },
+    { planned_set_id: null, log_date: '2026-10-14', completed: true, actual_reps: 10, snapshot_exercise_name: 'Extra curl' },
+    { planned_set_id: 'other', log_date: '2026-10-13', completed: true, actual_reps: 5 },
+  ],
+  '2026-10-14'
+);
+assert.equal(compared.canMatch, true);
+assert.equal(compared.rows[0].logged.includes('6 reps'), true);
+assert.equal(compared.rows[1].kind, 'extra');
+assert.equal(compared.rows.some((row) => row.logged.includes('5 reps')), false);
+
+const supersets = programRefFromRecord({
+  id: 'with-ss',
+  name: 'Supersets',
+  visibility: 'team',
+  weeks: 6,
+  st_workouts: [{
+    id: 'wo-ss',
+    week: 3,
+    day_label: 'Tue',
+    workout_type: 'Push',
+    st_exercises: [{
+      id: 'ex-ss',
+      name: 'Press',
+      sort_order: 1,
+      superset_group_id: 'g1',
+      superset_label: 'Pair',
+      superset_order: 1,
+      st_planned_sets: [{ id: 'ps1', set_number: 1, target_reps: '5', target_rir: 2, rest_seconds: 120, is_deleted: false }],
+    }],
+  }],
+});
+assert.equal(supersets?.workouts?.[0].exercises?.[0].supersetLabel, 'Pair');
+assert.equal(supersets?.workouts?.[0].exercises?.[0].sets?.[0].id, 'ps1');
 
 console.log('group training workspace checks passed');

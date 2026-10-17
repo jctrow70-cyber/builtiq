@@ -22,6 +22,7 @@ type WorkoutScheduleActionsProps = {
   onExcuseWorkout?: (input: { workoutId: string; originalDate: string }) => Promise<void>;
   onRestoreWorkout?: (input: { workoutId: string; originalDate: string }) => Promise<void>;
   hideViewButton?: boolean;
+  compact?: boolean;
 };
 
 /** Phase 4 actions for one scheduled group workout. The shared program is not edited here. */
@@ -35,6 +36,7 @@ export default function WorkoutScheduleActions({
   onExcuseWorkout,
   onRestoreWorkout,
   hideViewButton = false,
+  compact = false,
 }: WorkoutScheduleActionsProps) {
   const [moveDate, setMoveDate] = useState(workout.date);
   const [confirmMove, setConfirmMove] = useState(false);
@@ -44,13 +46,21 @@ export default function WorkoutScheduleActions({
   const [actionBusy, setActionBusy] = useState(false);
   const today = todayYmd();
   const future = workout.date >= today && !workout.hasSession && !!workout.workoutId;
+  const showMove = !!(canEdit && onMoveWorkout && future);
+  const showExcuse = !!(canEdit && onExcuseWorkout && future && !workout.excused);
+  const showRestore = !!(canEdit && onRestoreWorkout && workout.excused && workout.date >= today && workout.workoutId);
+  if (compact && !showMove && !showExcuse && !showRestore && !confirmMove && !confirmExcuse && !confirmRestore) return null;
 
   return (
-    <div className="member-schedule-editor">
-      <p>
-        <b>{workout.title}</b> · {formatDisplayDate(workout.date)}
-      </p>
-      <p className="muted">This workout only. Training days and the shared program stay the same.</p>
+    <div className={compact ? 'member-day-actions-inline' : 'member-schedule-editor'}>
+      {!compact && (
+        <>
+          <p>
+            <b>{workout.title}</b> · {formatDisplayDate(workout.date)}
+          </p>
+          <p className="muted">This workout only. Training days and the shared program stay the same.</p>
+        </>
+      )}
       {actionError && <p className="team-sheet-error">{actionError}</p>}
       <div className="actions member-training-actions">
         {!hideViewButton && (
@@ -58,17 +68,17 @@ export default function WorkoutScheduleActions({
             View Workout
           </button>
         )}
-        {canEdit && onMoveWorkout && future && (
+        {showMove && (
           <button type="button" className="btn secondary" onClick={() => setConfirmMove(true)}>
             Move Workout
           </button>
         )}
-        {canEdit && onExcuseWorkout && future && !workout.excused && (
+        {showExcuse && (
           <button type="button" className="btn secondary" onClick={() => setConfirmExcuse(true)}>
             Excuse Workout
           </button>
         )}
-        {canEdit && onRestoreWorkout && workout.excused && workout.date >= today && workout.workoutId && (
+        {showRestore && (
           <button type="button" className="btn secondary" onClick={() => setConfirmRestore(true)}>
             Restore Workout
           </button>

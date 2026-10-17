@@ -112,7 +112,7 @@ export default function GroupMemberDashboard({
           <b>
             {memberTodayWorkout
               ? `${memberTodayWorkout.day_label} · ${memberTodayWorkout.workout_type}`
-              : 'Rest / none'}
+              : 'No Group workout scheduled'}
           </b>
           <span className="muted">Assigned workout</span>
         </div>
@@ -122,7 +122,7 @@ export default function GroupMemberDashboard({
         </div>
         <div>
           <b>{stats.sets}</b>
-          <span className="muted">Sets this week</span>
+          <span className="muted">Group-attributed sets this week</span>
         </div>
       </div>
       {canManage && showAssignmentPanel && (

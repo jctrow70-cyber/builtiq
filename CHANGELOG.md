@@ -11,6 +11,89 @@ Branch:
 Status:
 ```
 
+## BIQ-0263 - Simplify the group plan view
+
+Date: 2026-10-17
+Branch: main
+Status: In progress, not committed
+
+Summary: Plan shows the assigned program. Administrative schedule actions stay in one Manage menu. Membership role, participation, tags, and removal moved to the Members list. Calendar day actions sit with the open workout. Supersets have their own visual group.
+
+Purpose: The plan tab was mixing program reading with membership controls and repeated headings, which made the phone layout long.
+
+Files changed:
+- app/components/groups/MemberTrainingWorkspace.tsx
+- app/components/groups/GroupTrainingHome.tsx
+- app/components/groups/GroupsHub.tsx
+- app/components/groups/TeamMembersTab.tsx
+- app/components/groups/WorkoutScheduleActions.tsx
+- app/globals.css
+- scripts/test-group-training-workspace.ts
+- CHANGELOG.md
+- DECISIONS.md
+
+Database changes: None. The two proposals in docs/proposals remain unapplied.
+
+Testing steps:
+- Open Plan and confirm the week navigator is the main content, with one Manage button.
+- Open Members and confirm role, participation, and remove are there, not on Plan.
+- Open a calendar day and confirm Log, Move, and Excuse are with the workout, not below a second exercise list.
+- Confirm a personal workout is still excluded from group schedule counts.
+
+Known issues:
+- Signed-in layout is not verified while the app is on Sign In.
+- Superset fields and planned-set ids are still missing from the assigned-program read.
+- Adding a workout from a personal enrollment copy still waits on the assignment proposal.
+
+Recommended commit message: Keep the group plan view separate from membership controls.
+
+## BIQ-0263 - Rebuild the group member profile
+
+Date: 2026-10-17
+Branch: main
+Status: In progress, not committed
+
+Summary: The member profile is Calendar, Plan, and Progress. The plan is the active enrollment program. Calendar days without a saved workout say rest day. Add Activity lists workouts from an active team program and explains an empty personal-copy list. A member can open their own past group workout in the existing logger. Group progress labels describe group-attributed sets.
+
+Purpose: The old Details view used a published-program fallback and weekday labels, so an assigned program looked missing and group-only set counts looked like all training.
+
+Files changed:
+- app/components/groups/MemberTrainingWorkspace.tsx
+- app/components/groups/GroupTrainingHome.tsx
+- app/components/groups/GroupsHub.tsx
+- app/components/groups/MemberPerformancePanel.tsx
+- app/components/groups/TeamProgressTab.tsx
+- app/components/groups/TeamMembersTab.tsx
+- app/components/groups/GroupOverview.tsx
+- app/components/groups/GroupMemberDashboard.tsx
+- app/components/groups/TeamMemberDetail.tsx
+- app/page.tsx
+- lib/groups/trainingWorkspace.ts
+- scripts/test-group-training-workspace.ts
+- docs/proposals/biq0263-assigned-program-supersets.sql
+- docs/proposals/biq0263-assign-enrolled-personal-workout.sql
+- CHANGELOG.md
+- DECISIONS.md
+
+Database changes: None applied. Two SQL proposals are in docs/proposals and are not to be run in this stage.
+
+Testing steps:
+- Open a member with an assigned program on a day that has no saved group workout and confirm the day says rest day and the plan name stays.
+- Open Plan and move across weeks, including week 6 on a six-week program.
+- Add Activity on an active team program and confirm the workout list is the enrolled program.
+- Add Activity on a personal enrollment copy and confirm the explanation instead of an empty menu.
+- As the member, open a past group workout and confirm the logger keeps the expectation, workout, group source, and scheduled date.
+- As a trainer, confirm there is no log button for another member.
+- Confirm Progress says group-attributed sets and adherence still comes from saved expectations.
+
+Known issues:
+- The assigned-program read does not yet return superset fields or planned-set ids. Supersets and set matching appear when the direct program read includes them.
+- Assigning a workout from a personal enrollment copy is still rejected by st_assign_group_workout.
+- Signed-in mobile and desktop layout was not verified in this pass when the browser was on Sign In.
+- Trainers still cannot write a member’s workout log. That is intentional.
+
+Recommended commit message: Show the enrollment program on Calendar, Plan, and Progress.
+
 ## BIQ-0263 - Use assigned-program and expectation-status reads
 
 Date: 2026-10-16

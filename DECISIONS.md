@@ -19,6 +19,54 @@ Impact:
 
 ---
 
+## Decision 112 - Membership controls stay on the Members list
+
+Date: 2026-10-17
+Status: Accepted
+Category: Groups
+
+### Decision
+
+The group Plan tab is for reading the assigned program. Change Program, training days, pause, customize, edit shared, and message stay in one Manage menu. Role, participation, tags, and removal live on the Members list.
+
+### Reason
+
+Those membership controls were sitting in the everyday training screen and competing with Calendar, Plan, and Progress.
+
+### Alternatives Considered
+
+Leave membership inside Manage on Plan. Put it on group Settings.
+
+### Impact
+
+Opening a member for training no longer shows role or remove. Owners and managers use Membership on the Members list.
+
+---
+
+## Decision 111 - The group member profile is Calendar, Plan, and Progress
+
+Date: 2026-10-17
+Status: Accepted
+Category: Groups
+
+### Decision
+
+A group member profile has Calendar, Plan, and Progress. Calendar shows saved group dates. Plan shows the active enrollment program, one week at a time, and trainer manage actions. Progress separates group schedule adherence from group-attributed logs. The old Details view is not part of this profile.
+
+### Reason
+
+Calendar, Progress, and Details put today’s template label and group-attributed set counts where people read them as the assigned program and all training.
+
+### Alternatives Considered
+
+Keep Details and relabel the metrics. Show every program week on one page.
+
+### Impact
+
+The enrollment program is the plan. A day without a saved group workout is a rest day. Personal logs stay out of group totals. Membership role, participation, and remove stay on Plan without the old workout dashboard.
+
+---
+
 ## Decision 110 - The group member profile opens on the training week
 
 Date: 2026-10-14

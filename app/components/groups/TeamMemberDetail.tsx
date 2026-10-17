@@ -51,6 +51,7 @@ type TeamMemberDetailProps = {
   onToggleMemberClassification?: (member: any, classificationId: string, active: boolean) => void;
   onMessageMember?: (member: any) => void;
   embedded?: boolean;
+  membershipOnly?: boolean;
 };
 
 export default function TeamMemberDetail(props: TeamMemberDetailProps) {
@@ -81,6 +82,7 @@ export default function TeamMemberDetail(props: TeamMemberDetailProps) {
     onToggleMemberClassification,
     onMessageMember,
     embedded = false,
+    membershipOnly = false,
   } = props;
   const teamPrograms = programs.filter((p: any) => p.visibility === 'team');
   const memberName = member.display_name || 'Member';
@@ -160,7 +162,7 @@ export default function TeamMemberDetail(props: TeamMemberDetailProps) {
           )}
         </div>
       )}
-      {!embedded && (
+      {!embedded && !membershipOnly && (
       <div className="team-member-detail-tabs">
         {(['overview', 'assigned', 'history', 'progress'] as MemberDetailTab[]).map((id) => (
           <button key={id} type="button" className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>
@@ -175,7 +177,7 @@ export default function TeamMemberDetail(props: TeamMemberDetailProps) {
         ))}
       </div>
       )}
-      {canManage && (embedded || tab === 'assigned') && (
+      {canManage && !membershipOnly && (embedded || tab === 'assigned') && (
         <div className="actions" style={{ marginTop: 10, flexWrap: 'wrap' }}>
           {onOpenTraining && (
             <button type="button" className="btn small secondary" onClick={onOpenTraining}>
@@ -208,7 +210,7 @@ export default function TeamMemberDetail(props: TeamMemberDetailProps) {
         </div>
       )}
 
-      {(tab === 'overview' || tab === 'assigned') && (
+      {(tab === 'overview' || tab === 'assigned') && !membershipOnly && (
         <GroupMemberDashboard
           {...props}
           onBack={onBack}
@@ -220,7 +222,7 @@ export default function TeamMemberDetail(props: TeamMemberDetailProps) {
         />
       )}
 
-      {tab === 'history' && (
+      {tab === 'history' && !membershipOnly && (
         <div className="team-member-tab-panel">
           <div className="topline" style={{ justifyContent: 'space-between', marginTop: 8 }}>
             <p className="muted">Completed training days from saved set logs (survives program changes).</p>
@@ -257,7 +259,7 @@ export default function TeamMemberDetail(props: TeamMemberDetailProps) {
         </div>
       )}
 
-      {tab === 'progress' && (
+      {tab === 'progress' && !membershipOnly && (
         <div className="team-member-tab-panel">
           <div className="topline" style={{ justifyContent: 'space-between', marginTop: 8, gap: 8 }}>
             <p className="muted">Strength trends and PRs from completed logs — including older group programs.</p>

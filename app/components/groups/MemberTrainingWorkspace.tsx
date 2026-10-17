@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import DateInput from '../DateInput';
-import type { GroupTrainingMemberRow, GroupTrainingProgramRef, GroupTrainingWeekItem } from '../../../lib/groups/trainingWorkspace';
-import { assignedProgramFromPayload, orderedWeekSessions } from '../../../lib/groups/trainingWorkspace';
+import type { GroupActivityLog, GroupTrainingExerciseRef, GroupTrainingMemberRow, GroupTrainingProgramRef, GroupTrainingWeekItem } from '../../../lib/groups/trainingWorkspace';
+import { addActivityChoices, assignedProgramFromPayload, comparePrescriptionToGroupLogs, orderedWeekSessions, planExerciseGroups } from '../../../lib/groups/trainingWorkspace';
 import { fetchFullProgram } from '../../../lib/training/programFetch';
 import { supabase } from '../../../lib/supabaseClient';
 import { customWeekdayError, materializeMemberSchedule, programCycleAnchor } from '../../../lib/groups/memberSchedule';
@@ -11,7 +11,16 @@ import { formatWarmupPrescription } from '../training/WarmupExerciseCard';
 import { addDaysYmd, formatDisplayDate, mondayOfWeek, parseYmd, todayYmd } from '../../../lib/training/programCalendar';
 import WorkoutScheduleActions from './WorkoutScheduleActions';
 
-export type MemberProfileSection = 'calendar' | 'progress' | 'details';
+export type MemberProfileSection = 'calendar' | 'plan' | 'progress';
+
+export type GroupWorkoutLogRequest = {
+  memberUserId: string;
+  expectationId: string;
+  workoutId: string;
+  programId: string;
+  scheduledDate: string;
+  sourceKey: string;
+};
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -50,85 +59,133 @@ function statusExplanation(member: GroupTrainingMemberRow): string {
   return 'No missed workouts before today in the current adherence window.';
 }
 
-function ProgramTemplate({
+function PlanNavigator({
   program,
   planName,
   load,
+  currentWeek,
 }: {
   program: GroupTrainingProgramRef | null;
   planName: string;
   load: 'loading' | 'ready' | 'denied' | 'empty';
+  currentWeek: number | null;
 }) {
+  const weekCount = Math.max(1, Number(program?.weeks || 1));
+  const [week, setWeek] = useState(() => Math.min(weekCount, Math.max(1, currentWeek || 1)));
+  const [openId, setOpenId] = useState<string | null>(null);
+  useEffect(() => {
+    setWeek(Math.min(weekCount, Math.max(1, currentWeek || 1)));
+    setOpenId(null);
+  }, [program?.id, currentWeek, weekCount]);
   if (load === 'loading') {
     return (
       <div className="member-plan-template">
-        <p className="muted">Loading the assigned program…</p>
+        <p className="muted">Loading {planName}…</p>
       </div>
     );
   }
   if (load === 'denied') {
     return (
       <div className="member-plan-template">
-        <p>This is the assigned program, not this member’s calendar.</p>
-        <p className="muted">You do not have permission to view this program. It remains the program on this group enrollment. Opening this view does not change the calendar or start a workout.</p>
+        <p>{planName} is the assigned program.</p>
+        <p className="muted">You do not have permission to view this program. It remains the program on this group enrollment. This view does not change the calendar or start a workout.</p>
       </div>
     );
   }
-  if (load === 'empty' || !program?.workouts?.length) {
-    return (
-      <div className="member-plan-template">
-        <p>This is the program template. The calendar uses this member’s saved dates, including moved and one-off workouts.</p>
-        <p className="muted">{program?.name || planName} has no workouts stored on the program.</p>
-      </div>
-    );
-  }
-  const weeks = Array.from(new Set(program.workouts.map((workout) => Number(workout.week || 1)))).sort((a, b) => a - b);
+  const sessions = program ? orderedWeekSessions(program.workouts || [], week) : [];
   return (
     <div className="member-plan-template">
-      <p>This is the program template, {program.name}. The calendar uses this member’s saved dates, including moved and one-off workouts.</p>
-      {weeks.map((week) => (
-        <section key={week}>
-          <h3>Week {week}</h3>
-          {program.workouts
-            ?.filter((workout) => Number(workout.week || 1) === week)
-            .sort((a, b) => (a.dayOrder || 0) - (b.dayOrder || 0))
-            .map((workout) => (
-              <article key={workout.id || `${week}-${workout.title}`}>
-                <b>{[workout.dayLabel, workout.title].filter(Boolean).join(' · ') || 'Workout'}</b>
-                {(workout.exercises || []).length === 0 ? (
-                  <p className="muted">No exercises are stored on this workout.</p>
-                ) : (
-                  <ul className="member-profile-exercises">
-                    {(workout.exercises || []).map((exercise) => {
-                      const rest = (exercise.sets || []).map((set) => Number(set.restSeconds || 0)).find((value) => value > 0);
-                      const rir = (exercise.sets || []).map((set) => String(set.rir || '').trim()).find(Boolean);
-                      const setTypes = Array.from(
-                        new Set((exercise.sets || []).map((set) => String(set.setType || '').trim()).filter((value) => value && value !== 'working'))
-                      );
-                      return (
-                        <li key={exercise.id || exercise.name}>
-                          <b>{exercise.name}</b>
-                          <span className="muted">
-                            {formatWarmupPrescription(
-                              (exercise.sets || []).map((set, index) => ({
-                                set_number: set.setNumber || index + 1,
-                                target_reps: set.reps || '',
-                                target_weight: set.weight || '',
-                              }))
-                            )}
-                            {setTypes.length ? ` · ${setTypes.join(', ')}` : ''}
-                            {rir ? ` · RIR ${rir}` : ''}
-                            {rest ? ` · Rest ${rest}s` : ''}
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </article>
-            ))}
-        </section>
-      ))}
+      <p className="muted">
+        {program?.name || planName}
+        {currentWeek ? ` · Current program week ${currentWeek}` : ''}
+        {' · '}Saved dates stay on Calendar.
+      </p>
+      <div className="member-plan-weeks" role="tablist" aria-label="Program weeks">
+        {Array.from({ length: weekCount }, (_, index) => index + 1).map((value) => (
+          <button key={value} type="button" role="tab" aria-selected={value === week} className={value === week ? 'is-current' : ''} onClick={() => { setWeek(value); setOpenId(null); }}>
+            Week {value}
+          </button>
+        ))}
+      </div>
+      {sessions.length === 0 ? (
+        <p>Rest day in week {week}. No workout is stored on this program week.</p>
+      ) : (
+        sessions.map((workout) => {
+          const id = workout.id || workout.title || 'workout';
+          const expanded = openId === id;
+          return (
+            <article key={id}>
+              <button type="button" className="member-day-workout-open" aria-expanded={expanded} onClick={() => setOpenId(expanded ? null : id)}>
+                <b>{workout.title || 'Workout'}</b>
+                <span className="muted">{[workout.dayLabel, `Week ${week}`].filter(Boolean).join(' · ')}</span>
+              </button>
+              {expanded && (
+                <div className="member-profile-workout">
+                  {(workout.exercises || []).length === 0 ? (
+                    <p className="muted">No exercises are stored on this workout.</p>
+                  ) : (
+                    planExerciseGroups(workout.exercises).map((group, groupIndex) => (
+                      <div key={group.key || groupIndex} className={group.label ? 'member-superset' : undefined}>
+                        {group.label ? <p className="member-superset-label">{group.label}</p> : null}
+                        <ol className="member-profile-exercises">
+                          {group.exercises.map((exercise, exerciseIndex) => (
+                            <li key={exercise.id || `${exercise.name}-${exerciseIndex}`}>
+                              <b>{exerciseIndex + 1}. {exercise.name}</b>
+                              <ul>
+                                {(exercise.sets || []).map((set, setIndex) => (
+                                  <li key={set.id || setIndex}>
+                                    Set {set.setNumber || setIndex + 1}
+                                    {set.setType ? ` · ${set.setType}` : ''}
+                                    {set.reps ? ` · ${set.reps} reps` : ''}
+                                    {set.weight ? ` · ${set.weight}` : ''}
+                                    {set.rir != null && String(set.rir).trim() ? ` · RIR ${set.rir}` : ''}
+                                    {set.restSeconds != null ? ` · Rest ${set.restSeconds}s` : ''}
+                                  </li>
+                                ))}
+                              </ul>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </article>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
+function PrescriptionCompare({
+  exercises,
+  logs,
+  date,
+}: {
+  exercises: GroupTrainingExerciseRef[];
+  logs: GroupActivityLog[] | null;
+  date: string;
+}) {
+  if (logs == null) return null;
+  const comparison = comparePrescriptionToGroupLogs(exercises || [], logs, date);
+  if (!comparison.rows.length) return <p className="muted">No planned sets and no group-attributed sets on this date.</p>;
+  return (
+    <div>
+      {!comparison.canMatch && (
+        <p className="muted">This program read has no planned-set ids, so logged sets stay separate from the plan.</p>
+      )}
+      <ul className="member-profile-exercises">
+        {comparison.rows.map((row) => (
+          <li key={row.key}>
+            <b>{row.exercise}</b>
+            <span className="muted">
+              {row.kind === 'extra' ? `Extra or unmatched set · ${row.logged} · ${row.planned}` : `Planned ${row.planned} · Logged ${row.logged}`}
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -146,7 +203,6 @@ type MemberTrainingWorkspaceProps = {
   teamId?: string | null;
   member: GroupTrainingMemberRow;
   canManage: boolean;
-  planEditor?: ReactNode;
   customizePrograms?: Array<{ id: string; name: string }>;
   onBack: () => void;
   onChangePlan?: () => void;
@@ -175,7 +231,9 @@ type MemberTrainingWorkspaceProps = {
   explainStatus?: boolean;
   onShowDate?: (date: string) => void;
   progressPanel?: ReactNode;
-  detailsPanel?: ReactNode;
+  viewerUserId?: string | null;
+  groupLogs?: GroupActivityLog[] | null;
+  onLogWorkout?: (input: GroupWorkoutLogRequest) => void;
 };
 
 export default function MemberTrainingWorkspace({
@@ -183,7 +241,6 @@ export default function MemberTrainingWorkspace({
   teamId = null,
   member,
   canManage,
-  planEditor,
   customizePrograms = [],
   onBack,
   onChangePlan,
@@ -212,7 +269,9 @@ export default function MemberTrainingWorkspace({
   explainStatus = false,
   onShowDate,
   progressPanel,
-  detailsPanel,
+  viewerUserId = null,
+  groupLogs = null,
+  onLogWorkout,
 }: MemberTrainingWorkspaceProps) {
   const [showCustomize, setShowCustomize] = useState(false);
   const [planMenuOpen, setPlanMenuOpen] = useState(false);
@@ -231,7 +290,6 @@ export default function MemberTrainingWorkspace({
   const [oneOffDate, setOneOffDate] = useState(todayYmd());
   const [memberQuery, setMemberQuery] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [planOpen, setPlanOpen] = useState(false);
   const [fullProgram, setFullProgram] = useState<GroupTrainingProgramRef | null>(null);
   const [planLoad, setPlanLoad] = useState<'loading' | 'ready' | 'denied' | 'empty'>('empty');
   const [statusOpen, setStatusOpen] = useState(explainStatus);
@@ -248,22 +306,36 @@ export default function MemberTrainingWorkspace({
   );
   const selectedItems = weekCells.find((cell) => cell.date === selectedDate)?.items || [];
   const currentWeek = resolvedWeekStart === mondayOfWeek(todayYmd());
+  const scheduleSource = fullProgram?.workouts?.length ? fullProgram : scheduleProgram;
   const sessions = useMemo(() => {
-    const workouts = scheduleProgram?.workouts || [];
+    const workouts = scheduleSource?.workouts || [];
     const week = workouts.map((workout) => Number(workout.week)).find((value) => orderedWeekSessions(workouts, value).length > 0) || 1;
     return orderedWeekSessions(workouts, week);
-  }, [scheduleProgram]);
+  }, [scheduleSource]);
+  const activity = addActivityChoices(fullProgram, planLoad);
+  const adherence = days.reduce(
+    (counts, item) => {
+      counts[item.state] = (counts[item.state] || 0) + 1;
+      return counts;
+    },
+    {} as Record<string, number>
+  );
+  function memberCanLog(item: GroupTrainingWeekItem) {
+    if (!onLogWorkout || !viewerUserId || viewerUserId !== member.userId || !teamId || !member.programId) return false;
+    if (!item.workoutId || !item.expectationId || item.date > todayYmd()) return false;
+    return item.state !== 'Excused' && item.state !== 'Paused' && item.state !== 'Upcoming';
+  }
   const preview = useMemo(() => {
-    if (!scheduleProgram || scheduleMode !== 'custom_weekdays') return [];
+    if (!scheduleSource || scheduleMode !== 'custom_weekdays') return [];
     return materializeMemberSchedule({
       mode: 'custom_weekdays',
       weekdays,
-      program: scheduleProgram,
+      program: scheduleSource,
       startsOn: effectiveOn,
       effectiveOn,
-      cycleAnchor: programCycleAnchor(scheduleProgram, effectiveOn),
+      cycleAnchor: programCycleAnchor(scheduleSource, effectiveOn),
     }).slice(0, 4);
-  }, [scheduleProgram, scheduleMode, weekdays, effectiveOn]);
+  }, [scheduleSource, scheduleMode, weekdays, effectiveOn]);
   const switchIndex = switchMembers.findIndex((item) => item.userId === member.userId);
   const pickerQuery = memberQuery.trim().toLowerCase();
   const pickerMatches = switchMembers.filter((item) => item.name.toLowerCase().includes(pickerQuery));
@@ -286,7 +358,6 @@ export default function MemberTrainingWorkspace({
     setExpandedKey(null);
     setAddingWorkout(false);
     setPickerOpen(false);
-    setPlanOpen(false);
     setFullProgram(null);
     setPlanLoad('empty');
     setStatusOpen(false);
@@ -429,7 +500,7 @@ export default function MemberTrainingWorkspace({
         </div>
       )}
       <div className="member-program-summary">
-        <button type="button" className="member-program-open" onClick={() => setPlanOpen((open) => !open)} aria-expanded={planOpen}>
+        <div className="member-program-open">
           <b>{fullProgram?.name || member.planName}</b>
           <span className="muted">
             {[
@@ -438,12 +509,9 @@ export default function MemberTrainingWorkspace({
               member.currentProgramWeek && member.programWeeks ? `Week ${member.currentProgramWeek} of ${member.programWeeks}` : '',
             ]
               .filter(Boolean)
-              .join(' · ') || 'Program details are not on this assignment.'}
+              .join(' · ') || member.planName}
           </span>
-        </button>
-        <button type="button" className="member-text-btn" onClick={() => setPlanOpen(true)}>
-          View Full Plan
-        </button>
+        </div>
         <button type="button" className={`group-training-status group-training-status-${member.status}`} onClick={() => setStatusOpen((open) => !open)}>
           {member.statusLabel}
         </button>
@@ -458,34 +526,17 @@ export default function MemberTrainingWorkspace({
               className="member-text-btn"
               onClick={() => {
                 setSelectedDate(date);
-                setPlanOpen(false);
+                onSection?.('calendar');
                 onShowDate?.(date);
               }}
             >
               Show {dayHeading(date)}
             </button>
           ))}
-          {member.status === 'needs_plan' && onChangePlan && (
-            <button type="button" className="member-text-btn" onClick={onChangePlan}>
-              Change Plan
-            </button>
-          )}
-          {member.status === 'schedule_review' && onSaveSchedule && (
-            <button type="button" className="member-text-btn" onClick={() => { setPlanMenuOpen(true); setEditingSchedule(true); }}>
-              Edit Training Days
-            </button>
-          )}
         </div>
       )}
-      {planOpen && (
-        <ProgramTemplate
-          program={fullProgram}
-          planName={fullProgram?.name || member.planName}
-          load={planLoad}
-        />
-      )}
       <div className="member-profile-tabs" role="tablist" aria-label="Member profile">
-        {(['calendar', 'progress', 'details'] as MemberProfileSection[]).map((id) => (
+        {(['calendar', 'plan', 'progress'] as MemberProfileSection[]).map((id) => (
           <button
             key={id}
             type="button"
@@ -494,28 +545,28 @@ export default function MemberTrainingWorkspace({
             className={section === id ? 'is-current' : ''}
             onClick={() => onSection?.(id)}
           >
-            {id === 'calendar' ? 'Calendar' : id === 'progress' ? 'Progress' : 'Details'}
+            {id === 'calendar' ? 'Calendar' : id === 'plan' ? 'Plan' : 'Progress'}
           </button>
         ))}
       </div>
 
       {section === 'progress' && (
         <div className="member-profile-panel">
-          {progressPanel || <p className="muted">Progress for this member stays with the people allowed to view it.</p>}
-        </div>
-      )}
-      {section === 'details' && (
-        <div className="member-profile-panel">
-          {detailsPanel || (
-            <p className="muted">
-              {member.planName}. {member.scheduleDays}. Personal training stays private.
-            </p>
-          )}
+          <p>
+            <b>Group schedule this week.</b>{' '}
+            {['Completed', 'Partial', 'Skipped', 'Missed', 'Due today', 'Paused', 'Excused', 'Upcoming', 'Scheduled']
+              .filter((state) => adherence[state])
+              .map((state) => `${adherence[state]} ${state.toLowerCase()}`)
+              .join(' · ') || 'No Group workout scheduled this week.'}
+          </p>
+          <p className="muted">These counts use saved expectations and matching sessions. A personal workout does not complete a group day.</p>
+          <p className="muted">Logged sets below are group-attributed. Personal Training is not loaded here.</p>
+          {progressPanel || <p className="muted">Group-attributed logs stay with the people allowed to view them.</p>}
         </div>
       )}
 
-      {section === 'calendar' && (
-        <>
+      {section === 'plan' && (
+        <div className="member-profile-panel">
           {member.scheduleNeedsReview && (
             <p className="muted member-training-note">
               {member.scheduleReviewDetail || 'This schedule needs review. Future workouts stay as they are until it is updated.'}
@@ -604,7 +655,7 @@ export default function MemberTrainingWorkspace({
               className="member-schedule-editor"
               onSubmit={(event) => {
                 event.preventDefault();
-                const problem = scheduleMode === 'custom_weekdays' ? customWeekdayError(scheduleProgram?.workouts, weekdays) : null;
+                const problem = scheduleMode === 'custom_weekdays' ? customWeekdayError(scheduleSource?.workouts, weekdays) : null;
                 if (problem) {
                   setScheduleError(problem);
                   return;
@@ -693,7 +744,25 @@ export default function MemberTrainingWorkspace({
               </select>
             </label>
           )}
-          {planEditor}
+          <PlanNavigator
+            program={fullProgram}
+            planName={fullProgram?.name || member.planName}
+            load={planLoad}
+            currentWeek={member.currentProgramWeek}
+          />
+        </div>
+      )}
+
+      {section === 'calendar' && (
+        <>
+          {member.scheduleNeedsReview && (
+            <p className="muted member-training-note">
+              {member.scheduleReviewDetail || 'This schedule needs review. Future workouts stay as they are until it is updated.'}
+            </p>
+          )}
+          {member.planKind === 'personal' && (
+            <p className="muted member-training-note">This group is not assigning a plan. Personal training stays private.</p>
+          )}
           {!member.expectationsEnabled && <p className="muted member-training-note">Schedule paused. Past workouts stay. Personal training is unchanged.</p>}
           <div className="member-week-nav">
             <button type="button" className="member-icon-btn" aria-label="Previous week" onClick={onPreviousWeek}>
@@ -760,8 +829,8 @@ export default function MemberTrainingWorkspace({
                 className="member-schedule-editor"
                 onSubmit={(event) => {
                   event.preventDefault();
-                  if (!oneOffId) {
-                    setActionError('Choose a workout.');
+                  if (!oneOffId || activity.reason !== 'ready') {
+                    setActionError(activity.reason === 'personal' ? 'A personal copy cannot be added with the current assignment rule.' : 'Choose a workout.');
                     return;
                   }
                   setActionBusy(true);
@@ -773,29 +842,46 @@ export default function MemberTrainingWorkspace({
                 }}
               >
                 <p>Add one group workout for {member.name} on {dayHeading(oneOffDate)}. This stays on the group schedule. Personal training is not changed.</p>
-                <label>
-                  Workout
-                  <select value={oneOffId} onChange={(event) => setOneOffId(event.target.value)}>
-                    <option value="">Choose a workout…</option>
-                    {(scheduleProgram?.workouts ?? []).map((workout) => (
-                      <option key={workout.id} value={workout.id || workout.title}>
-                        {workout.title}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                {activity.reason === 'loading' && <p className="muted">Loading workouts from the assigned program…</p>}
+                {activity.reason === 'unread' && (
+                  <p>The assigned program could not be read, so there is no workout to add. The enrollment itself is unchanged.</p>
+                )}
+                {activity.reason === 'personal' && (
+                  <p>
+                    {fullProgram?.name || member.planName} is a personal copy. Adding one of its workouts needs a database change that is not turned on. The current assignment rule only accepts a team program.
+                  </p>
+                )}
+                {activity.reason === 'empty' && <p>{fullProgram?.name || member.planName} has no workouts to add.</p>}
+                {activity.reason === 'ready' && (
+                  <label>
+                    Workout
+                    <select value={oneOffId} onChange={(event) => setOneOffId(event.target.value)}>
+                      <option value="">Choose a workout…</option>
+                      {activity.choices.map((workout) => (
+                        <option key={workout.workoutId} value={workout.workoutId}>
+                          {workout.title}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
                 <label>
                   Date
                   <DateInput value={oneOffDate} onChange={setOneOffDate} />
                 </label>
                 {actionError && <p className="team-sheet-error">{actionError}</p>}
-                <button type="submit" className="btn green" disabled={actionBusy}>
+                <button type="submit" className="btn green" disabled={actionBusy || activity.reason !== 'ready'}>
                   {actionBusy ? 'Saving…' : 'Add this workout'}
                 </button>
               </form>
             )}
             {selectedItems.length === 0 ? (
-              <p className="muted">Nothing from this group is scheduled this day.</p>
+              <div>
+                <p>Rest day. No Group workout scheduled.</p>
+                {member.programId ? (
+                  <p className="muted">The assigned program is still {fullProgram?.name || member.planName}.</p>
+                ) : null}
+              </div>
             ) : (
               selectedItems.map((item, index) => {
                 const key = `${item.date}-${item.workoutId || item.title}-${index}`;
@@ -812,15 +898,56 @@ export default function MemberTrainingWorkspace({
                     >
                       <b>{item.title}</b>
                       <span className="muted">
-                        {dayHeading(item.date)} · {item.state}
+                        {item.state}
                         {countLabel ? ` · ${countLabel}` : ''}
                       </span>
                     </button>
                     {open && (
                       <div className="member-profile-workout">
-                        {exercises.length === 0 ? (
-                          <p className="muted">No exercise details are stored on this workout.</p>
-                        ) : (
+                        <div className="member-day-actions">
+                          {memberCanLog(item) && item.workoutId && item.expectationId && member.programId && teamId && (
+                            <button
+                              type="button"
+                              className="btn small green"
+                              onClick={() =>
+                                onLogWorkout?.({
+                                  memberUserId: member.userId,
+                                  expectationId: item.expectationId || '',
+                                  workoutId: item.workoutId || '',
+                                  programId: member.programId || '',
+                                  scheduledDate: item.date,
+                                  sourceKey: `group:${teamId}`,
+                                })
+                              }
+                            >
+                              Log this workout
+                            </button>
+                          )}
+                          {canEditSchedule && (
+                            <WorkoutScheduleActions
+                              memberName={member.name}
+                              workout={item}
+                              canEdit
+                              compact
+                              sameSchedule={days}
+                              hideViewButton
+                              onClose={() => setExpandedKey(null)}
+                              onMoveWorkout={onMoveWorkout}
+                              onExcuseWorkout={onExcuseWorkout}
+                              onRestoreWorkout={onRestoreWorkout}
+                            />
+                          )}
+                        </div>
+                        {viewerUserId && viewerUserId !== member.userId && item.workoutId && item.date <= todayYmd() && item.state !== 'Excused' && item.state !== 'Paused' && (
+                          <p className="muted">Only this member can log the workout.</p>
+                        )}
+                        <PrescriptionCompare exercises={exercises} logs={groupLogs} date={item.date} />
+                        {groupLogs == null && (
+                          <p className="muted">Planned sets are below. Group-attributed logs appear with this member’s progress. Personal training is not queried here.</p>
+                        )}
+                        {exercises.length === 0 && groupLogs == null ? (
+                          <p className="muted">No exercises are stored on this workout.</p>
+                        ) : groupLogs == null ? (
                           <ul className="member-profile-exercises">
                             {exercises.map((exercise) => (
                               <li key={exercise.id || exercise.name}>
@@ -837,20 +964,7 @@ export default function MemberTrainingWorkspace({
                               </li>
                             ))}
                           </ul>
-                        )}
-                        {canEditSchedule && (
-                          <WorkoutScheduleActions
-                            memberName={member.name}
-                            workout={item}
-                            canEdit
-                            sameSchedule={days}
-                            hideViewButton
-                            onClose={() => setExpandedKey(null)}
-                            onMoveWorkout={onMoveWorkout}
-                            onExcuseWorkout={onExcuseWorkout}
-                            onRestoreWorkout={onRestoreWorkout}
-                          />
-                        )}
+                        ) : null}
                       </div>
                     )}
                   </article>

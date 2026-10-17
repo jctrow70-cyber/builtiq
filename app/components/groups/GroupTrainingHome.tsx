@@ -8,6 +8,7 @@ import type { GroupClassification } from '../../../lib/groups/schema';
 import {
   buildGroupTrainingBoard,
   groupExpectationState,
+  type GroupActivityLog,
   type GroupTrainingProgramRef,
   type GroupTrainingWeekItem,
 } from '../../../lib/groups/trainingWorkspace';
@@ -15,7 +16,7 @@ import { addDaysYmd, formatDisplayDate, mondayOfWeek, sundayOfWeek, todayYmd } f
 import { supabase } from '../../../lib/supabaseClient';
 import GroupTrainingCalendar from './GroupTrainingCalendar';
 import GroupTrainingMemberList from './GroupTrainingMemberList';
-import MemberTrainingWorkspace, { type MemberProfileSection } from './MemberTrainingWorkspace';
+import MemberTrainingWorkspace, { type GroupWorkoutLogRequest, type MemberProfileSection } from './MemberTrainingWorkspace';
 
 type GroupTrainingHomeProps = {
   canManage: boolean;
@@ -46,7 +47,9 @@ type GroupTrainingHomeProps = {
   onMemberFocus?: (userId: string, section: MemberProfileSection) => void;
   panelUserId?: string | null;
   progressPanel?: ReactNode;
-  detailsPanel?: ReactNode;
+  viewerUserId?: string | null;
+  groupLogs?: GroupActivityLog[] | null;
+  onLogGroupWorkout?: (input: GroupWorkoutLogRequest) => void;
   memberAssignments?: Record<string, any>;
   programs?: any[];
   defaultProgramId?: string | null;
@@ -115,7 +118,9 @@ export default function GroupTrainingHome({
   onMemberFocus,
   panelUserId,
   progressPanel,
-  detailsPanel,
+  viewerUserId = null,
+  groupLogs = null,
+  onLogGroupWorkout,
   members = [],
   classifications = [],
   memberClassificationIds = {},
@@ -270,6 +275,7 @@ export default function GroupTrainingHome({
       dayLabel: row.dayLabel || '',
       state: groupExpectationState(row, todayYmd(), !!memberWeek?.completionKnown, null, 'Upcoming'),
       workoutId: row.workoutId || null,
+      expectationId: row.id || null,
       origin: row.origin === 'assignment' ? 'assignment' : 'program',
       excused: !!row.excused,
       hasSession: !!row.sessionStatus && row.sessionStatus !== 'not_started',
@@ -322,7 +328,9 @@ export default function GroupTrainingHome({
             explainStatus={explainUserId === selected.userId}
             onShowDate={(date) => setProfileWeekStart(mondayOfWeek(date))}
             progressPanel={panelUserId === selected.userId ? progressPanel : panelUserId ? <p className="muted">Loading progress…</p> : undefined}
-            detailsPanel={panelUserId === selected.userId ? detailsPanel : panelUserId ? <p className="muted">Loading details…</p> : undefined}
+            viewerUserId={viewerUserId || sessionUserId}
+            groupLogs={panelUserId === selected.userId ? groupLogs : null}
+            onLogWorkout={onLogGroupWorkout}
             customizePrograms={customizePrograms}
             onBack={() => {
               setSelectedUserId(null);

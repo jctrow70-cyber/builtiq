@@ -52,18 +52,24 @@ export type GroupTrainingStatus =
 
 export type GroupTrainingPlanKind = 'group_program' | 'custom_fork' | 'personal' | 'none';
 
+export type GroupTrainingSetRef = {
+  id?: string | null;
+  setNumber?: number | null;
+  reps?: string | null;
+  weight?: string | null;
+  restSeconds?: number | null;
+  setType?: string | null;
+  rir?: string | null;
+};
+
 export type GroupTrainingExerciseRef = {
   id?: string | null;
   name?: string | null;
   sortOrder?: number | null;
-  sets?: Array<{
-    setNumber?: number | null;
-    reps?: string | null;
-    weight?: string | null;
-    restSeconds?: number | null;
-    setType?: string | null;
-    rir?: string | null;
-  }>;
+  supersetGroupId?: string | null;
+  supersetLabel?: string | null;
+  supersetOrder?: number | null;
+  sets?: GroupTrainingSetRef[];
 };
 
 export type GroupTrainingWorkoutRef = {
@@ -127,7 +133,11 @@ export function programRefFromRecord(program: {
             id: (exercise.id as string) || null,
             name: (exercise.name || exercise.exercise_name || 'Exercise') as string,
             sortOrder: (exercise.sort_order ?? exercise.sortOrder ?? 0) as number,
+            supersetGroupId: (exercise.superset_group_id || exercise.supersetGroupId || null) as string | null,
+            supersetLabel: (exercise.superset_label || exercise.supersetLabel || null) as string | null,
+            supersetOrder: (exercise.superset_order ?? exercise.supersetOrder ?? null) as number | null,
             sets: sets.map((set) => ({
+              id: (set.id as string) || null,
               setNumber: (set.set_number ?? set.setNumber) as number | null,
               reps: (set.target_reps || set.reps || '') as string,
               weight: (set.target_weight || set.weight || '') as string,
@@ -148,6 +158,139 @@ export function assignedProgramFromPayload(payload: unknown, enrollmentProgramId
   const record = payload as { id?: string | null };
   if (!record.id || record.id !== enrollmentProgramId) return null;
   return programRefFromRecord(record);
+}
+
+export type PlanExerciseGroup = {
+  key: string;
+  label: string | null;
+  exercises: GroupTrainingExerciseRef[];
+};
+
+/** Group exercises that share a superset id. Exercises without that field stay in order on their own. */
+export function planExerciseGroups(exercises: GroupTrainingExerciseRef[] | null | undefined): PlanExerciseGroup[] {
+  const sorted = [...(exercises || [])].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0) || String(a.name || '').localeCompare(String(b.name || '')));
+  const groups: PlanExerciseGroup[] = [];
+  const placed = new Set<string>();
+  sorted.forEach((exercise) => {
+    const groupId = exercise.supersetGroupId || '';
+    if (!groupId) {
+      groups.push({ key: exercise.id || exercise.name || `exercise-${groups.length}`, label: null, exercises: [exercise] });
+      return;
+    }
+    if (placed.has(groupId)) return;
+    placed.add(groupId);
+    const members = sorted
+      .filter((row) => row.supersetGroupId === groupId)
+      .sort((a, b) => (a.supersetOrder ?? a.sortOrder ?? 0) - (b.supersetOrder ?? b.sortOrder ?? 0));
+    groups.push({
+      key: groupId,
+      label: members.find((row) => row.supersetLabel)?.supersetLabel || 'Superset',
+      exercises: members,
+    });
+  });
+  return groups;
+}
+
+export type AddActivityChoice = { workoutId: string; title: string };
+
+/** Workouts the current assignment rule can accept. A personal enrollment copy is listed as blocked, not as a silent empty menu. */
+export function addActivityChoices(
+  program: GroupTrainingProgramRef | null | undefined,
+  load: 'loading' | 'ready' | 'denied' | 'empty'
+): { reason: 'loading' | 'personal' | 'unread' | 'empty' | 'ready'; choices: AddActivityChoice[] } {
+  if (load === 'loading') return { reason: 'loading', choices: [] };
+  if (load === 'denied' || !program) return { reason: 'unread', choices: [] };
+  if (program.visibility === 'personal') return { reason: 'personal', choices: [] };
+  const seen = new Set<string>();
+  const choices: AddActivityChoice[] = [];
+  (program.workouts || []).forEach((workout) => {
+    const workoutId = workout.id || '';
+    if (!workoutId || seen.has(workoutId)) return;
+    seen.add(workoutId);
+    const place = [workout.week ? `Week ${workout.week}` : '', workout.dayLabel || ''].filter(Boolean).join(' ');
+    choices.push({ workoutId, title: [workout.title || 'Workout', place].filter(Boolean).join(' · ') });
+  });
+  if (!choices.length) return { reason: 'empty', choices: [] };
+  return { reason: 'ready', choices };
+}
+
+export type GroupActivityLog = {
+  planned_set_id?: string | null;
+  log_date?: string | null;
+  completed?: boolean | null;
+  actual_reps?: string | number | null;
+  actual_weight?: string | number | null;
+  snapshot_exercise_name?: string | null;
+  snapshot_set_type?: string | null;
+};
+
+export type PrescriptionComparisonRow = {
+  key: string;
+  exercise: string;
+  planned: string;
+  logged: string;
+  kind: 'matched' | 'unlogged' | 'extra';
+};
+
+function plannedSetText(set: GroupTrainingSetRef): string {
+  return [
+    set.setType || null,
+    set.reps ? `${set.reps} reps` : null,
+    set.weight || null,
+    set.rir != null && String(set.rir).trim() ? `RIR ${set.rir}` : null,
+    set.restSeconds != null ? `${set.restSeconds}s rest` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ') || 'Planned set';
+}
+
+function loggedSetText(log: GroupActivityLog): string {
+  const parts = [
+    log.actual_reps != null && String(log.actual_reps).trim() ? `${log.actual_reps} reps` : null,
+    log.actual_weight != null && String(log.actual_weight).trim() ? String(log.actual_weight) : null,
+    log.completed ? 'completed' : null,
+  ].filter(Boolean);
+  return parts.join(' · ') || (log.completed ? 'Completed' : 'Logged without reps or weight');
+}
+
+/**
+ * Pair a workout prescription with group-attributed logs for one date.
+ * Logs without a planned-set id stay separate. This does not identify who changed the program.
+ */
+export function comparePrescriptionToGroupLogs(
+  exercises: GroupTrainingExerciseRef[] | null | undefined,
+  logs: GroupActivityLog[] | null | undefined,
+  date: string
+): { canMatch: boolean; rows: PrescriptionComparisonRow[] } {
+  const dayLogs = (logs || []).filter((log) => String(log.log_date || '').slice(0, 10) === date);
+  const planned = (exercises || []).flatMap((exercise) =>
+    (exercise.sets || []).map((set, index) => ({ exercise, set, index }))
+  );
+  const canMatch = planned.some((row) => !!row.set.id);
+  const used = new Set<GroupActivityLog>();
+  const rows: PrescriptionComparisonRow[] = planned.map((row) => {
+    const match = canMatch && row.set.id ? dayLogs.find((log) => log.planned_set_id === row.set.id && !used.has(log)) : undefined;
+    if (match) used.add(match);
+    return {
+      key: row.set.id || `${row.exercise.id || row.exercise.name}-${row.index}`,
+      exercise: row.exercise.name || 'Exercise',
+      planned: plannedSetText(row.set),
+      logged: match ? loggedSetText(match) : canMatch ? 'Not logged' : 'Set id is not on this program read',
+      kind: match ? 'matched' : 'unlogged',
+    };
+  });
+  dayLogs.forEach((log, index) => {
+    if (log.planned_set_id && planned.some((row) => row.set.id === log.planned_set_id)) return;
+    if (used.has(log)) return;
+    rows.push({
+      key: `extra-${index}`,
+      exercise: log.snapshot_exercise_name || 'Logged set',
+      planned: log.planned_set_id ? 'Not on this workout prescription' : 'No planned set',
+      logged: loggedSetText(log),
+      kind: 'extra',
+    });
+  });
+  return { canMatch, rows };
 }
 
 export type GroupTrainingMemberInput = {
@@ -217,6 +360,7 @@ export type GroupTrainingWeekItem = {
   dayLabel: string;
   state: GroupTrainingWeekState;
   workoutId: string | null;
+  expectationId?: string | null;
   origin: 'program' | 'assignment';
   excused: boolean;
   hasSession: boolean;
@@ -688,6 +832,7 @@ export function buildGroupTrainingBoard(input: {
           dayLabel: normalizeProgramDayLabel(row.dayLabel),
           state: weekState(row, input.today, input.completionKnown, userMissed),
           workoutId: row.workoutId || null,
+          expectationId: row.id || null,
           origin: row.origin === 'assignment' ? 'assignment' as const : 'program' as const,
           excused: !!row.excused,
           hasSession: !!row.sessionStatus && row.sessionStatus !== 'not_started',

@@ -50,8 +50,8 @@ export default function TeamProgressTab({
         </div>
         <p className="muted" style={{ marginTop: 6 }}>
           {canViewGroupProgress
-            ? 'People with at least one completed set this week. This is activity, not whether a scheduled workout was missed.'
-            : 'Your completed sets in this group this week.'}
+            ? 'People with at least one group-attributed completed set this week. This is not whether a scheduled group workout was missed.'
+            : 'Your group-attributed completed sets this week. Personal training is not included.'}
         </p>
         <div className="dash-metrics">
           {canViewGroupProgress ? (
@@ -64,7 +64,7 @@ export default function TeamProgressTab({
               </div>
               <div>
                 <b>{teamTotalSets}</b>
-                <span className="muted">Total completed sets</span>
+                <span className="muted">Group-attributed sets</span>
               </div>
               {recentPrs > 0 && (
                 <div>
@@ -77,7 +77,7 @@ export default function TeamProgressTab({
             <>
               <div>
                 <b>{memberStats[sessionUserId]?.sets || 0}</b>
-                <span className="muted">Your sets</span>
+                <span className="muted">Your group-attributed sets</span>
               </div>
               <div>
                 <b>{memberStats[sessionUserId]?.days || 0}</b>
@@ -117,7 +117,7 @@ export default function TeamProgressTab({
           const stats = memberStats[m.user_id] || { sets: 0, days: 0 };
           const meta = memberRosterMeta[m.user_id];
           const activity =
-            stats.sets > 0 ? `${stats.sets} sets · ${stats.days} active day${stats.days === 1 ? '' : 's'}` : 'No activity this week';
+            stats.sets > 0 ? `${stats.sets} group-attributed sets · ${stats.days} day${stats.days === 1 ? '' : 's'}` : 'No group-attributed sets this week';
           return (
             <button
               key={m.id}

@@ -100,7 +100,7 @@ export default function GroupOverview({
           <div className="group-attention-list">
             {noActivityNames.length > 0 && (
               <p>
-                <b>No activity this week</b>
+                <b>No group-attributed sets this week</b>
                 <span className="muted">
                   {' '}
                   · {noActivityNames.slice(0, 8).join(', ')}
