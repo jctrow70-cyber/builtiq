@@ -330,6 +330,7 @@ export type GroupTrainingExpectationInput = {
   authoritativeStatus?: GroupExpectationAuthoritativeStatus | null;
   assignmentRecipientId?: string | null;
   recipientStatus?: string | null;
+  programWeek?: number | null;
 };
 
 export type GroupExpectationAuthoritativeStatus =
@@ -364,6 +365,7 @@ export type GroupTrainingWeekItem = {
   origin: 'program' | 'assignment';
   excused: boolean;
   hasSession: boolean;
+  programWeek?: number | null;
 };
 
 export type GroupTrainingNextWorkout = {
@@ -426,6 +428,50 @@ export function normalizeProgramDayLabel(value: string | null | undefined): stri
   if (alias) return alias;
   const exact = PROGRAM_WEEKDAY_ORDER.find((day) => day.toLowerCase() === raw.toLowerCase());
   return exact || raw;
+}
+
+const WEEKDAY_ONLY_TITLES = new Set([
+  'mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun',
+  'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+]);
+
+/** A stored title that is only a weekday, such as Mon, is not the workout name. */
+export function isWeekdayOnlyTitle(value: string | null | undefined): boolean {
+  return WEEKDAY_ONLY_TITLES.has(String(value || '').trim().toLowerCase());
+}
+
+/**
+ * Prefer the program workout name when the saved title is blank or only a weekday.
+ * A custom title is left as saved. The calendar date is not part of this name.
+ */
+export function displayWorkoutName(
+  savedTitle: string | null | undefined,
+  workout?: { title?: string | null; dayLabel?: string | null } | null
+): string {
+  const saved = String(savedTitle || '').trim();
+  const real = String(workout?.title || '').trim();
+  if (real && (!saved || isWeekdayOnlyTitle(saved))) return real;
+  return saved || real || 'Workout';
+}
+
+/** Program week and program day. This is not the date chosen on the calendar. */
+export function programWorkoutPlace(workout?: { week?: number | null; dayLabel?: string | null } | null): string {
+  if (!workout) return '';
+  const day = normalizeProgramDayLabel(workout.dayLabel);
+  const week = workout.week ? `Week ${workout.week}` : '';
+  return [week, day].filter(Boolean).join(' · ');
+}
+
+export function resolveExpectationTitle(
+  row: Pick<GroupTrainingExpectationInput, 'title' | 'dayLabel' | 'workoutId' | 'programWeek'>,
+  workouts: GroupTrainingWorkoutRef[] | null | undefined
+): { title: string; dayLabel: string; programWeek: number | null } {
+  const workout = row.workoutId ? (workouts || []).find((item) => item.id === row.workoutId) : null;
+  return {
+    title: displayWorkoutName(row.title, workout),
+    dayLabel: normalizeProgramDayLabel(row.dayLabel || workout?.dayLabel),
+    programWeek: workout?.week ?? row.programWeek ?? null,
+  };
 }
 
 export function programWeekdayIndex(dayLabel: string | null | undefined): number {
@@ -826,29 +872,33 @@ export function buildGroupTrainingBoard(input: {
     if (input.expectationsAvailable) {
       weekItems = ownExpectations
         .filter((row) => row.scheduledDate >= weekStart && row.scheduledDate <= weekEnd)
-        .map((row) => ({
-          date: row.scheduledDate,
-          title: row.title || 'Workout',
-          dayLabel: normalizeProgramDayLabel(row.dayLabel),
-          state: weekState(row, input.today, input.completionKnown, userMissed),
-          workoutId: row.workoutId || null,
-          expectationId: row.id || null,
-          origin: row.origin === 'assignment' ? 'assignment' as const : 'program' as const,
-          excused: !!row.excused,
-          hasSession: !!row.sessionStatus && row.sessionStatus !== 'not_started',
-        }));
+        .map((row) => {
+          const named = resolveExpectationTitle(row, plan.program?.workouts);
+          return {
+            date: row.scheduledDate,
+            title: named.title,
+            dayLabel: named.dayLabel,
+            programWeek: named.programWeek,
+            state: weekState(row, input.today, input.completionKnown, userMissed),
+            workoutId: row.workoutId || null,
+            expectationId: row.id || null,
+            origin: row.origin === 'assignment' ? 'assignment' as const : 'program' as const,
+            excused: !!row.excused,
+            hasSession: !!row.sessionStatus && row.sessionStatus !== 'not_started',
+          };
+        });
       const next = ownExpectations.find((row) => {
         if (row.excused || row.scheduledDate < input.today) return false;
         if (row.sessionStatus === 'completed') return false;
         return true;
       });
       if (next) {
-        const dayLabel = normalizeProgramDayLabel(next.dayLabel);
+        const named = resolveExpectationTitle(next, plan.program?.workouts);
         nextWorkout = {
           date: next.scheduledDate,
-          title: next.title || 'Workout',
-          dayLabel,
-          label: workoutLabel(dayLabel, next.title || 'Workout'),
+          title: named.title,
+          dayLabel: named.dayLabel,
+          label: workoutLabel(named.dayLabel, named.title),
         };
       }
     } else if (plan.program && plan.kind !== 'personal' && plan.kind !== 'none' && !paused) {

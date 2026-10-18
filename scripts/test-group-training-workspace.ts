@@ -18,7 +18,9 @@ import {
   summarizeExpectationStatuses,
   addActivityChoices,
   comparePrescriptionToGroupLogs,
+  displayWorkoutName,
   planExerciseGroups,
+  programWorkoutPlace,
   type GroupTrainingExpectationInput,
   type GroupTrainingMemberInput,
   type GroupTrainingProgramRef,
@@ -593,5 +595,43 @@ const supersets = programRefFromRecord({
 });
 assert.equal(supersets?.workouts?.[0].exercises?.[0].supersetLabel, 'Pair');
 assert.equal(supersets?.workouts?.[0].exercises?.[0].sets?.[0].id, 'ps1');
+
+const addedOnOccupiedDate = boardFor([amy], {
+  expectations: [
+    expectation('amy', '2026-10-14', 'Full Body B', {
+      id: 'exp-existing',
+      workoutId: 'w-wed',
+      dayLabel: 'Wed',
+      origin: 'program',
+      authoritativeStatus: 'partial',
+    }),
+    expectation('amy', '2026-10-14', 'Mon', {
+      id: 'exp-added',
+      workoutId: 'w-mon',
+      dayLabel: 'Mon',
+      origin: 'assignment',
+      authoritativeStatus: 'missed',
+    }),
+  ],
+});
+const sameDayItems = addedOnOccupiedDate.members[0].weekItems.filter((item) => item.date === '2026-10-14');
+assert.equal(sameDayItems.length, 2);
+const addedWorkout = sameDayItems.find((item) => item.workoutId === 'w-mon');
+const existingWorkout = sameDayItems.find((item) => item.workoutId === 'w-wed');
+assert.equal(addedWorkout?.title, 'Full Body A');
+assert.equal(addedWorkout?.dayLabel, 'Mon');
+assert.equal(addedWorkout?.programWeek, 1);
+assert.equal(addedWorkout?.state, 'Missed');
+assert.equal(addedWorkout?.origin, 'assignment');
+assert.equal(existingWorkout?.title, 'Full Body B');
+assert.equal(existingWorkout?.dayLabel, 'Wed');
+assert.equal(existingWorkout?.state, 'Partial');
+assert.equal(existingWorkout?.origin, 'program');
+assert.equal(displayWorkoutName('Mon', { title: 'Full Body A', dayLabel: 'Mon' }), 'Full Body A');
+assert.equal(displayWorkoutName('Tuesday', { title: 'Full Body A', dayLabel: 'Tue' }), 'Full Body A');
+assert.equal(displayWorkoutName('Deload', { title: 'Full Body A', dayLabel: 'Mon' }), 'Deload');
+assert.equal(displayWorkoutName('Full Body B', { title: 'Full Body A', dayLabel: 'Mon' }), 'Full Body B');
+assert.equal(programWorkoutPlace({ week: 1, dayLabel: 'Mon' }), 'Week 1 · Mon');
+assert.equal(addedOnOccupiedDate.members[0].missedCount, 1);
 
 console.log('group training workspace checks passed');

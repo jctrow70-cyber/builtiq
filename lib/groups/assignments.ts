@@ -4,6 +4,7 @@ import {
   resolveProgramStartDate,
   weekForDate,
 } from '../training/programCalendar';
+import { displayWorkoutName, programWorkoutPlace } from './trainingWorkspace';
 import type { RecipientStatus } from './schema';
 
 export type AssignedWorkoutRow = {
@@ -45,10 +46,16 @@ export const RECIPIENT_STATUS_LABELS: Record<RecipientStatus, string> = {
 
 export function assignmentDisplayTitle(row: AssignedWorkoutRow): string {
   const wa = row.st_workout_assignments;
-  if (wa?.title?.trim()) return wa.title.trim();
-  const w = wa?.st_workouts;
-  if (w) return `${w.day_label} · ${w.workout_type}`;
+  const workout = wa?.st_workouts;
+  const named = displayWorkoutName(wa?.title, workout ? { title: workout.workout_type, dayLabel: workout.day_label } : null);
+  if (named !== 'Workout') return named;
   return wa?.st_programs?.name || 'Assigned workout';
+}
+
+export function assignmentProgramPlace(row: AssignedWorkoutRow): string {
+  const workout = row.st_workout_assignments?.st_workouts;
+  if (!workout) return '';
+  return programWorkoutPlace({ week: workout.week, dayLabel: workout.day_label });
 }
 
 export function resolveAssignmentWorkout(program: any, assignment: AssignedWorkoutRow['st_workout_assignments']) {

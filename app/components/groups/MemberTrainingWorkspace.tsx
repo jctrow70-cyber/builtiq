@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import DateInput from '../DateInput';
 import type { GroupActivityLog, GroupTrainingExerciseRef, GroupTrainingMemberRow, GroupTrainingProgramRef, GroupTrainingWeekItem } from '../../../lib/groups/trainingWorkspace';
-import { addActivityChoices, assignedProgramFromPayload, comparePrescriptionToGroupLogs, orderedWeekSessions, planExerciseGroups } from '../../../lib/groups/trainingWorkspace';
+import { addActivityChoices, assignedProgramFromPayload, comparePrescriptionToGroupLogs, displayWorkoutName, orderedWeekSessions, planExerciseGroups, programWorkoutPlace } from '../../../lib/groups/trainingWorkspace';
 import { fetchFullProgram } from '../../../lib/training/programFetch';
 import { supabase } from '../../../lib/supabaseClient';
 import { customWeekdayError, materializeMemberSchedule, programCycleAnchor } from '../../../lib/groups/memberSchedule';
@@ -415,11 +415,10 @@ export default function MemberTrainingWorkspace({
     if (addingWorkout) setOneOffDate(selectedDate);
   }, [selectedDate, addingWorkout]);
 
-  function exercisesFor(workoutId: string | null) {
-    if (!workoutId) return [];
+  function workoutFor(workoutId: string | null) {
+    if (!workoutId) return null;
     const source = fullProgram?.workouts?.length ? fullProgram : scheduleProgram;
-    const workout = source?.workouts?.find((item) => item.id === workoutId);
-    return [...(workout?.exercises || [])].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+    return source?.workouts?.find((item) => item.id === workoutId) || null;
   }
 
   function closePlanTools() {
@@ -885,9 +884,12 @@ export default function MemberTrainingWorkspace({
             ) : (
               selectedItems.map((item, index) => {
                 const key = `${item.date}-${item.workoutId || item.title}-${index}`;
-                const exercises = exercisesFor(item.workoutId);
+                const workout = workoutFor(item.workoutId);
+                const exercises = [...(workout?.exercises || [])].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
                 const open = expandedKey === key;
                 const countLabel = exercises.length === 1 ? '1 exercise' : exercises.length > 1 ? `${exercises.length} exercises` : '';
+                const title = displayWorkoutName(item.title, workout);
+                const place = programWorkoutPlace(workout) || programWorkoutPlace({ week: item.programWeek, dayLabel: item.dayLabel });
                 return (
                   <article key={key} className="member-day-workout">
                     <button
@@ -896,7 +898,8 @@ export default function MemberTrainingWorkspace({
                       aria-expanded={open}
                       onClick={() => setExpandedKey(open ? null : key)}
                     >
-                      <b>{item.title}</b>
+                      <b>{title}</b>
+                      {place ? <span className="muted">{place}</span> : null}
                       <span className="muted">
                         {item.state}
                         {countLabel ? ` · ${countLabel}` : ''}

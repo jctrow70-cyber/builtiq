@@ -1,5 +1,5 @@
 import { addDaysYmd, dayLabelFromYmd, mondayOfWeek, sundayOfWeek } from '../training/programCalendar';
-import { groupExpectationState, type GroupTrainingExpectationInput, type GroupTrainingWeekState } from './trainingWorkspace';
+import { groupExpectationState, programWorkoutPlace, type GroupTrainingExpectationInput, type GroupTrainingWeekState } from './trainingWorkspace';
 
 export const CALENDAR_CARD_LIMIT = 3;
 
@@ -18,6 +18,7 @@ export type GroupCalendarCard = {
   excused: boolean;
   hasSession: boolean;
   sourceLabel: string;
+  programPlace: string;
 };
 
 export type GroupCalendarDay = {
@@ -113,6 +114,7 @@ export function buildGroupCalendar(input: {
         excused: !!row.excused,
         hasSession: !!row.sessionStatus && row.sessionStatus !== 'not_started',
         sourceLabel: origin === 'assignment' ? 'One-off' : 'Group plan',
+        programPlace: programWorkoutPlace({ week: row.programWeek, dayLabel: row.dayLabel }),
       };
     })
     .sort((a, b) => a.memberName.localeCompare(b.memberName) || a.title.localeCompare(b.title));

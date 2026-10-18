@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { addDaysYmd, mondayOfWeek, sundayOfWeek, todayYmd } from '../training/programCalendar';
 import { scheduleSetupMissing } from '../training/scheduleActions';
 import { groupSourceKey } from './trainingSources';
-import { applyAuthoritativeExpectationStatus, attachExpectationCompletion, type GroupExpectationStatusRow, type GroupTrainingExpectationInput } from './trainingWorkspace';
+import { applyAuthoritativeExpectationStatus, attachExpectationCompletion, displayWorkoutName, type GroupExpectationStatusRow, type GroupTrainingExpectationInput } from './trainingWorkspace';
 import { CALENDAR_DEPENDENCY_NOTICE } from './groupCalendar';
 
 export type GroupTrainingEnrollmentFact = {
@@ -24,6 +24,30 @@ export type GroupTrainingFacts = {
   missedByUser: Record<string, number> | null;
   notice: string | null;
 };
+
+/** Replaces a weekday-only saved title with the program workout name. The saved row is not updated. */
+async function applyWorkoutNames(
+  supabase: SupabaseClient,
+  rows: GroupTrainingExpectationInput[]
+): Promise<GroupTrainingExpectationInput[]> {
+  const ids = Array.from(new Set(rows.map((row) => row.workoutId).filter((id): id is string => !!id)));
+  if (!ids.length) return rows;
+  const result = await supabase.from('st_workouts').select('id, workout_type, day_label, week').in('id', ids);
+  if (result.error || !result.data) return rows;
+  const byId = new Map(
+    (result.data as Array<{ id: string; workout_type?: string | null; day_label?: string | null; week?: number | null }>).map((row) => [row.id, row])
+  );
+  return rows.map((row) => {
+    const workout = row.workoutId ? byId.get(row.workoutId) : undefined;
+    if (!workout) return row;
+    return {
+      ...row,
+      title: displayWorkoutName(row.title, { title: workout.workout_type, dayLabel: workout.day_label }),
+      dayLabel: row.dayLabel || workout.day_label || null,
+      programWeek: workout.week ?? row.programWeek ?? null,
+    };
+  });
+}
 
 async function expectationStatuses(
   supabase: SupabaseClient,
@@ -205,6 +229,8 @@ export async function loadGroupTrainingFacts(
     notice = expectationResult.error.message;
   }
 
+  expectations = await applyWorkoutNames(supabase, expectations);
+
   return {
     enrollments,
     expectations,
@@ -313,6 +339,7 @@ export async function loadMemberTrainingWeek(
   }
 
   const missing = scheduleSetupMissing(expectationResult.error?.message);
+  expectations = await applyWorkoutNames(supabase, expectations);
   return {
     expectations,
     expectationsAvailable: !expectationResult.error,
@@ -410,6 +437,7 @@ export async function loadGroupCalendarWeek(
   }
 
   const missing = scheduleSetupMissing(expectationResult.error?.message);
+  expectations = await applyWorkoutNames(supabase, expectations);
   return {
     expectations,
     expectationsAvailable: !expectationResult.error,

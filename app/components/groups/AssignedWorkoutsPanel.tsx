@@ -3,6 +3,7 @@
 import {
   assignedHasPersonalCopy,
   assignmentDisplayTitle,
+  assignmentProgramPlace,
   RECIPIENT_STATUS_LABELS,
   type AssignedWorkoutRow,
 } from '../../../lib/groups';
@@ -79,6 +80,7 @@ export default function AssignedWorkoutsPanel({
               <b>{assignmentDisplayTitle(row)}</b>
               <span className="muted">
                 {groupName} · {formatDisplayDate(wa.scheduled_date)}
+                {assignmentProgramPlace(row) ? ` · ${assignmentProgramPlace(row)}` : ''}
                 {wa.due_date ? ` · due ${formatDisplayDate(wa.due_date)}` : ''}
               </span>
               {wa.notes && <span className="muted assigned-workout-notes">{wa.notes}</span>}
@@ -131,6 +133,7 @@ export default function AssignedWorkoutsPanel({
                   <b>{assignmentDisplayTitle(row)}</b>
                   <span className="muted">
                     {wa?.st_teams?.name || 'Group'} · {formatDisplayDate(wa.scheduled_date)}
+                    {assignmentProgramPlace(row) ? ` · ${assignmentProgramPlace(row)}` : ''}
                   </span>
                 </div>
                 <span className="badge">Completed</span>

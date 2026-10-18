@@ -11,6 +11,45 @@ Branch:
 Status:
 ```
 
+## BIQ-0263 - Show the workout name for an added activity
+
+Date: 2026-10-18
+Branch: main
+Status: In progress, not committed
+
+Summary: An added group workout keeps its calendar date and appears beside a workout already on that date. The screen shows the program workout name, such as Full Body A, when the saved title is only a weekday. The program week and program day stay separate from that date.
+
+Purpose: Add Activity stores a null assignment title. The expectation trigger then copies the program day label into the title, so Wednesday showed Mon.
+
+Files changed:
+- lib/groups/trainingWorkspace.ts
+- lib/groups/loadGroupTrainingFacts.ts
+- lib/groups/groupCalendar.ts
+- lib/groups/assignments.ts
+- app/components/groups/MemberTrainingWorkspace.tsx
+- app/components/groups/GroupTrainingHome.tsx
+- app/components/groups/GroupTrainingCalendar.tsx
+- app/components/groups/AssignedWorkoutsPanel.tsx
+- app/components/groups/AssignTrainingWizard.tsx
+- scripts/test-group-training-workspace.ts
+- docs/proposals/biq0263-assignment-workout-title.sql
+- CHANGELOG.md
+
+Database changes: None applied. A proposal replaces the expectation trigger so a future save stores the workout name. Existing rows are not updated.
+
+Testing steps:
+- Open the member calendar day that already has two workouts and confirm the added one shows its program name, program week, and program day, while the other workout and its status stay in place.
+- Confirm a custom assignment title is not replaced by the program name.
+- Add another workout only after this display is accepted. Notification text still uses the weekday until the title proposal is approved.
+
+Known issues:
+- The saved expectation title for the workout already added can still be the weekday. The screen reads the program workout instead of rewriting that row.
+- Notification text for a new assignment still uses the weekday until the title proposal is approved.
+- A past added workout still counts as missed. That adherence rule was not changed.
+- Group navigation, mobile weekly calendar, selected-date styling, logger date visibility, repeated exercise rows, assignment wizard program labels, and Progress usability remain open.
+
+Recommended commit message: Show the program workout name when an added activity title is only a weekday.
+
 ## BIQ-0263 - Explain the Add Activity column error
 
 Date: 2026-10-18

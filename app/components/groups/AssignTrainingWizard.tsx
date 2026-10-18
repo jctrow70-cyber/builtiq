@@ -5,7 +5,7 @@ import DateInput from '../DateInput';
 import { formatDisplayDate, todayYmd } from '../../../lib/training/programCalendar';
 import { supabase } from '../../../lib/supabaseClient';
 import { groupSourceKey, workoutLabel } from '../../../lib/groups';
-import { orderedWeekSessions } from '../../../lib/groups/trainingWorkspace';
+import { displayWorkoutName, orderedWeekSessions } from '../../../lib/groups/trainingWorkspace';
 import { customWeekdayError, materializeMemberSchedule, programCycleAnchor } from '../../../lib/groups/memberSchedule';
 import type { MemberScheduleInput } from '../../../lib/groups/assignGroupTraining';
 import {
@@ -191,16 +191,31 @@ export default function AssignTrainingWizard({
       });
     void supabase
       .from('st_workout_assignments')
-      .select('scheduled_date, title, is_active, st_assignment_recipients(user_id)')
+      .select('scheduled_date, title, workout_id, is_active, st_assignment_recipients(user_id)')
       .eq('team_id', teamId)
       .eq('is_active', true)
-      .then(({ data }) => {
+      .then(async ({ data }) => {
         if (cancelled || !data) return;
+        const ids = Array.from(new Set(data.map((row: { workout_id?: string | null }) => row.workout_id).filter((id): id is string => !!id)));
+        const names = new Map<string, { title?: string | null; dayLabel?: string | null }>();
+        if (ids.length) {
+          const workouts = await supabase.from('st_workouts').select('id, workout_type, day_label').in('id', ids);
+          if (!workouts.error) {
+            (workouts.data || []).forEach((workout: { id: string; workout_type?: string | null; day_label?: string | null }) => {
+              names.set(workout.id, { title: workout.workout_type, dayLabel: workout.day_label });
+            });
+          }
+        }
+        if (cancelled) return;
         const rows: Array<{ userId: string; scheduledDate: string; title: string }> = [];
-        data.forEach((row: any) => {
-          (row.st_assignment_recipients || []).forEach((recipient: { user_id?: string }) => {
+        data.forEach((row: { scheduled_date?: string; title?: string | null; workout_id?: string | null; st_assignment_recipients?: Array<{ user_id?: string }> }) => {
+          (row.st_assignment_recipients || []).forEach((recipient) => {
             if (!recipient.user_id || !row.scheduled_date) return;
-            rows.push({ userId: recipient.user_id, scheduledDate: row.scheduled_date, title: row.title || 'Workout' });
+            rows.push({
+              userId: recipient.user_id,
+              scheduledDate: row.scheduled_date,
+              title: displayWorkoutName(row.title, row.workout_id ? names.get(row.workout_id) : null),
+            });
           });
         });
         setOneOffs(rows);

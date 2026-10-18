@@ -122,6 +122,7 @@ export default function GroupTrainingCalendar({
         <button type="button" className="group-calendar-card-open" onClick={() => setSelected(card)}>
           <b>{card.memberName}</b>
           <span>{card.title}</span>
+          {card.programPlace ? <span className="muted">{card.programPlace}</span> : null}
           <span className="muted">{card.sourceLabel}</span>
         </button>
         <span className={`group-training-status group-training-week-${card.state.replace(/\s+/g, '-').toLowerCase()}`}>{card.state}</span>

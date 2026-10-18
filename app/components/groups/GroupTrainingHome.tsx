@@ -273,6 +273,7 @@ export default function GroupTrainingHome({
       date: row.scheduledDate,
       title: row.title || 'Workout',
       dayLabel: row.dayLabel || '',
+      programWeek: row.programWeek ?? null,
       state: groupExpectationState(row, todayYmd(), !!memberWeek?.completionKnown, null, 'Upcoming'),
       workoutId: row.workoutId || null,
       expectationId: row.id || null,
