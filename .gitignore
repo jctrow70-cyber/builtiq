@@ -8,6 +8,9 @@ out/
 # Environment (secrets — never commit)
 .env
 .env.local
+/test-results/
+/playwright-report/
+/blob-report/
 .env.*.local
 
 # Debug / logs

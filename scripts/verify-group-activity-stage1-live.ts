@@ -478,6 +478,7 @@ async function main() {
     if (retain) {
       fs.writeFileSync(FIXTURE, JSON.stringify({
         email: emails.owner,
+        emails,
         password,
         teamName: `BIQ-0263 QA ${stamp}`,
         memberName: 'QA member',

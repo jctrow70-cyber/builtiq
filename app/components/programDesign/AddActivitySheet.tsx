@@ -118,11 +118,12 @@ export default function AddActivitySheet({
   onSave,
   onDelete,
 }: AddActivitySheetProps) {
-  const [draft, setDraft] = useState<ActivityDraft>(() => {
+  function draftForSheet() {
     const start = initialDraft(existing, calendarExisting, occurrenceDate, defaultWeekday);
     if (activityTypes?.length && !activityTypes.includes(start.activity_type)) return emptyDraft(activityTypes[0], defaultWeekday);
     return start;
-  });
+  }
+  const [draft, setDraft] = useState<ActivityDraft>(draftForSheet);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const isLegacy = !!existing?.id.startsWith('legacy-');
@@ -138,9 +139,9 @@ export default function AddActivitySheet({
   const editingAny = !!(existing || calendarExisting);
 
   useEffect(() => {
-    setDraft(initialDraft(existing, calendarExisting, occurrenceDate, defaultWeekday));
+    setDraft(draftForSheet());
     setError('');
-  }, [existing, calendarExisting, occurrenceDate, defaultWeekday]);
+  }, [existing, calendarExisting, occurrenceDate, defaultWeekday, activityTypes?.join(',')]);
 
   function setScope(next: 'this-day' | 'series') {
     if (!calendarExisting) {

@@ -210,6 +210,7 @@ type MemberTrainingWorkspaceProps = {
   onBack: () => void;
   onChangePlan?: () => void;
   canEditSchedule?: boolean;
+  canRequireExtra?: boolean;
   scheduleProgram?: GroupTrainingProgramRef | null;
   onSaveSchedule?: (input: { mode: 'program_days' | 'custom_weekdays'; weekdays: string[]; effectiveOn: string }) => Promise<void>;
   onMoveWorkout?: (input: { workoutId: string; originalDate: string; newDate: string }) => Promise<void>;
@@ -258,6 +259,7 @@ export default function MemberTrainingWorkspace({
   onBack,
   onChangePlan,
   canEditSchedule = false,
+  canRequireExtra = false,
   scheduleProgram = null,
   onSaveSchedule,
   onMoveWorkout,
@@ -328,7 +330,7 @@ export default function MemberTrainingWorkspace({
     return orderedWeekSessions(workouts, week);
   }, [scheduleSource]);
   const activity = addActivityChoices(fullProgram, planLoad);
-  const canAddActivity = !!onAddActivity && (canEditSchedule || viewerUserId === member.userId);
+  const canAddActivity = !!onAddActivity;
   const adherence = days.reduce(
     (counts, item) => {
       counts[item.state] = (counts[item.state] || 0) + 1;
@@ -859,7 +861,7 @@ export default function MemberTrainingWorkspace({
                     scheduledDate: oneOffDate,
                     workoutId: oneOffId,
                     programId: member.programId,
-                    required: canEditSchedule && extraRequired,
+                    required: canRequireExtra && extraRequired,
                   })
                     .then(() => setAddingWorkout(false))
                     .catch((error: Error) => setActionError(error.message || 'Could not add that workout.'))
@@ -898,7 +900,7 @@ export default function MemberTrainingWorkspace({
                   Date
                   <DateInput value={oneOffDate} onChange={setOneOffDate} />
                 </label>
-                {canEditSchedule && (
+                {canRequireExtra && (
                   <label className="remember-row">
                     <input type="checkbox" checked={extraRequired} onChange={(event) => setExtraRequired(event.target.checked)} />
                     Required. Program missed totals stay the same.
@@ -914,7 +916,7 @@ export default function MemberTrainingWorkspace({
               <AddActivitySheet
                 dayLabel={dayHeading(oneOffDate)}
                 activityTypes={GROUP_EXTRA_TYPES}
-                allowRequired={canEditSchedule}
+                allowRequired={canRequireExtra}
                 required={extraRequired}
                 onRequiredChange={setExtraRequired}
                 onClose={() => setActivitySheet(false)}
@@ -926,7 +928,7 @@ export default function MemberTrainingWorkspace({
                     durationMinutes: draft.duration_minutes,
                     notes: draft.notes,
                     details: draft.details,
-                    required: canEditSchedule && extraRequired,
+                    required: canRequireExtra && extraRequired,
                   });
                   setActivitySheet(false);
                   setAddingWorkout(false);

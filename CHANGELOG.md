@@ -15,9 +15,9 @@ Status:
 
 Date: 2026-10-18
 Branch: main
-Status: Proposed, not applied
+Status: Applied in Supabase, not committed
 
-Summary: New Group creation fails because the Quick Join row is inserted before the Group row exists. The approved script moves that insert to an AFTER INSERT trigger, keeps the foreign key immediate, and fails the group insert when the temporary code is missing. It is not applied.
+Summary: New Group creation fails because the Quick Join row is inserted before the Group row exists. The approved script moves that insert to an AFTER INSERT trigger, keeps the foreign key immediate, and fails the group insert when the temporary code is missing. It was applied in the Supabase SQL Editor. The verification query returned passed.
 
 Purpose: Unblock Create Group and the Stage 1 disposable-group tests without using a real group or a personal login.
 
@@ -25,7 +25,7 @@ Files changed:
 - docs/proposals/biq0263-quick-join-after-insert.sql
 - CHANGELOG.md
 
-Database changes: None applied.
+Database changes: Applied in the Supabase SQL Editor. The foreign key stays immediate. Existing groups were not rewritten.
 
 Testing steps:
 - Review the proposal.
@@ -33,7 +33,6 @@ Testing steps:
 - Roll back with the statement in the review if the check insert fails.
 
 Known issues:
-- Live role tests and browser tests stay blocked until this SQL is approved and applied.
 - Stages 2–4 are not started.
 
 Recommended commit message: Move Quick Join creation until the group row exists.
@@ -42,30 +41,36 @@ Recommended commit message: Move Quick Join creation until the group row exists.
 
 Date: 2026-10-18
 Branch: main
-Status: In progress, not committed
+Status: Automated QA passed, not committed
 
-Summary: Stage 1 group extras now have a local rule check and a live role check. The live check signs in as an owner, a manager, a member, a member whose group allows assign, and a user outside the group. It deletes those disposable accounts when it finishes.
+Summary: Stage 1 group extras have a local rule check, a live role check, and authenticated desktop and mobile browser checks. The live check signs in as an owner, a manager, a member, a member whose group allows assign, and a user outside the group. It deletes those disposable accounts when it finishes. Group Add Activity now opens on cardio when strength is not allowed, and an assign-enabled member can add or require an extra without a team program.
 
 Purpose: Approve Stage 1 from automated coverage of save rules, permissions, missed totals, and existing training records.
 
 Files changed:
 - scripts/test-group-activity-stage1.ts
 - scripts/verify-group-activity-stage1-live.ts
+- scripts/test-group-architecture.ts
 - lib/groups/trainingWorkspace.ts
 - app/components/groups/MemberTrainingWorkspace.tsx
+- app/components/groups/GroupTrainingHome.tsx
+- app/components/programDesign/AddActivitySheet.tsx
+- e2e/group-activity-stage1.spec.ts
+- playwright.config.ts
 - package.json
+- .gitignore
 - CHANGELOG.md
 
-Database changes: None. The live script does not apply SQL. It creates a disposable group and removes it.
+Database changes: None in this pass. The live script does not apply SQL. It creates a disposable group and removes it.
 
 Testing steps:
 - Run node node_modules/tsx/dist/cli.mjs scripts/test-group-activity-stage1.ts
-- Run node node_modules/tsx/dist/cli.mjs scripts/verify-group-activity-stage1-live.ts
-- Confirm the live result says passed and the baseline counts match after cleanup.
+- Run node node_modules/tsx/dist/cli.mjs scripts/verify-group-activity-stage1-live.ts --keep
+- Run node node_modules/@playwright/test/cli.js test
+- Run node node_modules/tsx/dist/cli.mjs scripts/verify-group-activity-stage1-live.ts --cleanup
+- Confirm the live result says passed and cleanup says countsMatchBaseline true.
 
 Known issues:
-- The live role script cannot create a disposable group. Inserting a team runs the Quick Join trigger before the team row exists, so the foreign key rejects it. No management token or database URL is available to work around that. Disposable auth users from the attempt were deleted.
-- Playwright is not installed, and the browser pass did not run.
 - Stages 2–4 are not started.
 - Group navigation, mobile weekly calendar, selected-date styling, logger date visibility, repeated exercise rows, assignment wizard program labels, and Progress usability remain open.
 
@@ -95,7 +100,7 @@ Files changed:
 - DECISIONS.md
 - CHANGELOG.md
 
-Database changes: Migration 068 is written and not applied. Run it in the Supabase SQL Editor before saving an extra. It adds group activity series, recipients, occurrences, and st_save_group_activity. It does not change enrollments, expectations, sessions, or set logs.
+Database changes: Migration 068 was applied in the Supabase SQL Editor. It adds group activity series, recipients, occurrences, and st_save_group_activity. It does not change enrollments, expectations, sessions, or set logs.
 
 Testing steps:
 - Run migration 068 in the SQL Editor.
@@ -106,7 +111,6 @@ Testing steps:
 
 Known issues:
 - Weekly repeat, one-day edits, and custom group strength workouts are not in this stage.
-- The migration has not been applied, so save shows the migration message until it is run.
 - Group navigation, mobile weekly calendar, selected-date styling, logger date visibility, repeated exercise rows, assignment wizard program labels, and Progress usability remain open.
 
 Recommended commit message: Save one-time group extras separately from the assigned program.

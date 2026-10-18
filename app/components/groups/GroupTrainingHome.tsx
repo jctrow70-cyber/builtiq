@@ -348,6 +348,7 @@ export default function GroupTrainingHome({
                 : undefined
             }
             canEditSchedule={!!(canAssign && teamId && selected.planKind !== 'personal' && selected.programId)}
+            canRequireExtra={!!canAssign}
             scheduleProgram={asPrograms(programs).find((program) => program.id === selected.programId) || null}
             onSaveSchedule={
               teamId
