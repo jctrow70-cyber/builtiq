@@ -11,6 +11,46 @@ Branch:
 Status:
 ```
 
+## BIQ-0263 - Add one-time group extras
+
+Date: 2026-10-18
+Branch: main
+Status: In progress, not committed
+
+Summary: Group Add Activity can save a program workout or a cardio, mobility, stretching, recovery, sport, or rest activity for one member and one date. The row is a group extra. It is labeled Extra on the calendar. It does not create a program expectation and does not change program missed totals.
+
+Purpose: Additional group activities need their own store, separate from the assigned program and from Personal Training.
+
+Files changed:
+- supabase/migrations/20261018_068_group_activity_series.sql
+- lib/groups/groupActivities.ts
+- lib/groups/trainingWorkspace.ts
+- lib/groups/loadGroupTrainingFacts.ts
+- lib/groups/groupCalendar.ts
+- app/components/groups/GroupTrainingHome.tsx
+- app/components/groups/GroupTrainingCalendar.tsx
+- app/components/groups/MemberTrainingWorkspace.tsx
+- app/components/programDesign/AddActivitySheet.tsx
+- scripts/test-group-training-workspace.ts
+- DECISIONS.md
+- CHANGELOG.md
+
+Database changes: Migration 068 is written and not applied. Run it in the Supabase SQL Editor before saving an extra. It adds group activity series, recipients, occurrences, and st_save_group_activity. It does not change enrollments, expectations, sessions, or set logs.
+
+Testing steps:
+- Run migration 068 in the SQL Editor.
+- As a manager, add a cardio extra on a member day and confirm it shows Extra beside the program workout.
+- Confirm the member missed count does not rise because of that extra.
+- As a member, add an extra on your own day. Confirm you cannot mark it required and cannot add one for someone else.
+- Confirm Personal Training activities are unchanged.
+
+Known issues:
+- Weekly repeat, one-day edits, and custom group strength workouts are not in this stage.
+- The migration has not been applied, so save shows the migration message until it is run.
+- Group navigation, mobile weekly calendar, selected-date styling, logger date visibility, repeated exercise rows, assignment wizard program labels, and Progress usability remain open.
+
+Recommended commit message: Save one-time group extras separately from the assigned program.
+
 ## BIQ-0263 - Show the workout name for an added activity
 
 Date: 2026-10-18

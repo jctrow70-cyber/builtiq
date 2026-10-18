@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import DateInput from '../DateInput';
+import AddActivitySheet from '../programDesign/AddActivitySheet';
+import type { ActivityType } from '../../../lib/programDesign/types';
 import type { GroupActivityLog, GroupTrainingExerciseRef, GroupTrainingMemberRow, GroupTrainingProgramRef, GroupTrainingWeekItem } from '../../../lib/groups/trainingWorkspace';
 import { addActivityChoices, assignedProgramFromPayload, comparePrescriptionToGroupLogs, displayWorkoutName, orderedWeekSessions, planExerciseGroups, programWorkoutPlace } from '../../../lib/groups/trainingWorkspace';
 import { fetchFullProgram } from '../../../lib/training/programFetch';
@@ -23,6 +25,7 @@ export type GroupWorkoutLogRequest = {
 };
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const GROUP_EXTRA_TYPES: ActivityType[] = ['cardio', 'mobility', 'stretching', 'recovery', 'sport', 'rest'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 function shortWeekRange(start: string) {
@@ -213,7 +216,17 @@ type MemberTrainingWorkspaceProps = {
   onExcuseWorkout?: (input: { workoutId: string; originalDate: string }) => Promise<void>;
   onRestoreWorkout?: (input: { workoutId: string; originalDate: string }) => Promise<void>;
   onSetExpectations?: (enabled: boolean) => Promise<void>;
-  onAddWorkout?: (input: { workoutId: string; scheduledDate: string }) => Promise<void>;
+  onAddActivity?: (input: {
+    activityType: ActivityType;
+    title: string;
+    scheduledDate: string;
+    workoutId?: string | null;
+    programId?: string | null;
+    durationMinutes?: number | null;
+    notes?: string | null;
+    details?: Record<string, unknown>;
+    required?: boolean;
+  }) => Promise<void>;
   onEditSharedProgram?: () => void;
   onCustomize?: (programId: string) => void;
   onMessage?: () => void;
@@ -251,7 +264,7 @@ export default function MemberTrainingWorkspace({
   onExcuseWorkout,
   onRestoreWorkout,
   onSetExpectations,
-  onAddWorkout,
+  onAddActivity,
   onEditSharedProgram,
   onCustomize,
   onMessage,
@@ -286,6 +299,8 @@ export default function MemberTrainingWorkspace({
   const [actionError, setActionError] = useState('');
   const [actionBusy, setActionBusy] = useState(false);
   const [addingWorkout, setAddingWorkout] = useState(false);
+  const [activitySheet, setActivitySheet] = useState(false);
+  const [extraRequired, setExtraRequired] = useState(false);
   const [oneOffId, setOneOffId] = useState('');
   const [oneOffDate, setOneOffDate] = useState(todayYmd());
   const [memberQuery, setMemberQuery] = useState('');
@@ -313,6 +328,7 @@ export default function MemberTrainingWorkspace({
     return orderedWeekSessions(workouts, week);
   }, [scheduleSource]);
   const activity = addActivityChoices(fullProgram, planLoad);
+  const canAddActivity = !!onAddActivity && (canEditSchedule || viewerUserId === member.userId);
   const adherence = days.reduce(
     (counts, item) => {
       counts[item.state] = (counts[item.state] || 0) + 1;
@@ -809,13 +825,14 @@ export default function MemberTrainingWorkspace({
           <section className="member-day-detail" aria-label={dayHeading(selectedDate)}>
             <div className="member-day-head">
               <h3>{dayHeading(selectedDate)}</h3>
-              {canEditSchedule && onAddWorkout && (
+              {canAddActivity && (
                 <button
                   type="button"
                   className="member-text-btn"
                   onClick={() => {
                     closePlanTools();
                     setOneOffDate(selectedDate);
+                    setExtraRequired(false);
                     setAddingWorkout(true);
                   }}
                 >
@@ -823,7 +840,7 @@ export default function MemberTrainingWorkspace({
                 </button>
               )}
             </div>
-            {addingWorkout && onAddWorkout && (
+            {addingWorkout && onAddActivity && (
               <form
                 className="member-schedule-editor"
                 onSubmit={(event) => {
@@ -834,13 +851,26 @@ export default function MemberTrainingWorkspace({
                   }
                   setActionBusy(true);
                   setActionError('');
-                  void onAddWorkout({ workoutId: oneOffId, scheduledDate: oneOffDate })
+                  const chosen = activity.choices.find((workout) => workout.workoutId === oneOffId);
+                  const workoutName = workoutFor(oneOffId)?.title || chosen?.title || 'Workout';
+                  void onAddActivity({
+                    activityType: 'strength',
+                    title: workoutName,
+                    scheduledDate: oneOffDate,
+                    workoutId: oneOffId,
+                    programId: member.programId,
+                    required: canEditSchedule && extraRequired,
+                  })
                     .then(() => setAddingWorkout(false))
                     .catch((error: Error) => setActionError(error.message || 'Could not add that workout.'))
                     .finally(() => setActionBusy(false));
                 }}
               >
-                <p>Add one group workout for {member.name} on {dayHeading(oneOffDate)}. This stays on the group schedule. Personal training is not changed.</p>
+                <p>Add one extra for {member.name} on {dayHeading(oneOffDate)}. It stays off the assigned program and off Personal Training.</p>
+                <div className="assign-wizard-choices">
+                  <button type="button" className="is-current">Program workout</button>
+                  <button type="button" onClick={() => setActivitySheet(true)}>Cardio, mobility, or other</button>
+                </div>
                 {activity.reason === 'loading' && <p className="muted">Loading workouts from the assigned program…</p>}
                 {activity.reason === 'unread' && (
                   <p>The assigned program could not be read, so there is no workout to add. The enrollment itself is unchanged.</p>
@@ -868,11 +898,40 @@ export default function MemberTrainingWorkspace({
                   Date
                   <DateInput value={oneOffDate} onChange={setOneOffDate} />
                 </label>
+                {canEditSchedule && (
+                  <label className="remember-row">
+                    <input type="checkbox" checked={extraRequired} onChange={(event) => setExtraRequired(event.target.checked)} />
+                    Required. Program missed totals stay the same.
+                  </label>
+                )}
                 {actionError && <p className="team-sheet-error">{actionError}</p>}
                 <button type="submit" className="btn green" disabled={actionBusy || activity.reason !== 'ready'}>
                   {actionBusy ? 'Saving…' : 'Add this workout'}
                 </button>
               </form>
+            )}
+            {activitySheet && onAddActivity && (
+              <AddActivitySheet
+                dayLabel={dayHeading(oneOffDate)}
+                activityTypes={GROUP_EXTRA_TYPES}
+                allowRequired={canEditSchedule}
+                required={extraRequired}
+                onRequiredChange={setExtraRequired}
+                onClose={() => setActivitySheet(false)}
+                onSave={async (draft) => {
+                  await onAddActivity({
+                    activityType: draft.activity_type,
+                    title: draft.title,
+                    scheduledDate: oneOffDate,
+                    durationMinutes: draft.duration_minutes,
+                    notes: draft.notes,
+                    details: draft.details,
+                    required: canEditSchedule && extraRequired,
+                  });
+                  setActivitySheet(false);
+                  setAddingWorkout(false);
+                }}
+              />
             )}
             {selectedItems.length === 0 ? (
               <div>
@@ -899,6 +958,7 @@ export default function MemberTrainingWorkspace({
                       onClick={() => setExpandedKey(open ? null : key)}
                     >
                       <b>{title}</b>
+                      {item.origin === 'extra' ? <span className="muted">Extra{item.required ? ' · required' : ''}</span> : null}
                       {place ? <span className="muted">{place}</span> : null}
                       <span className="muted">
                         {item.state}

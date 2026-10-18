@@ -4,6 +4,8 @@ import { scheduleSetupMissing } from '../training/scheduleActions';
 import { groupSourceKey } from './trainingSources';
 import { applyAuthoritativeExpectationStatus, attachExpectationCompletion, displayWorkoutName, type GroupExpectationStatusRow, type GroupTrainingExpectationInput } from './trainingWorkspace';
 import { CALENDAR_DEPENDENCY_NOTICE } from './groupCalendar';
+import { fetchGroupExtras } from './groupActivities';
+import type { GroupExtraActivity } from './trainingWorkspace';
 
 export type GroupTrainingEnrollmentFact = {
   id: string | null;
@@ -23,6 +25,7 @@ export type GroupTrainingFacts = {
   completionKnown: boolean;
   missedByUser: Record<string, number> | null;
   notice: string | null;
+  extras: GroupExtraActivity[];
 };
 
 /** Replaces a weekday-only saved title with the program workout name. The saved row is not updated. */
@@ -230,6 +233,9 @@ export async function loadGroupTrainingFacts(
   }
 
   expectations = await applyWorkoutNames(supabase, expectations);
+  const extras = expectationResult.error
+    ? []
+    : await fetchGroupExtras(supabase, { teamId: input.teamId, from: weekFrom, to: sundayOfWeek(today) });
 
   return {
     enrollments,
@@ -238,6 +244,7 @@ export async function loadGroupTrainingFacts(
     completionKnown: completionKnown || missedByUser != null,
     missedByUser,
     notice,
+    extras,
   };
 }
 
@@ -248,6 +255,7 @@ export type GroupCalendarWeekFacts = {
   notice: string | null;
   from: string;
   to: string;
+  extras: GroupExtraActivity[];
 };
 
 /**
@@ -340,6 +348,10 @@ export async function loadMemberTrainingWeek(
 
   const missing = scheduleSetupMissing(expectationResult.error?.message);
   expectations = await applyWorkoutNames(supabase, expectations);
+  const extraUserId = 'userId' in input ? String((input as { userId?: string | null }).userId || '') : '';
+  const extras = expectationResult.error
+    ? []
+    : await fetchGroupExtras(supabase, { teamId: input.teamId, from, to, userId: extraUserId || null });
   return {
     expectations,
     expectationsAvailable: !expectationResult.error,
@@ -347,6 +359,7 @@ export async function loadMemberTrainingWeek(
     notice: missing || expectationResult.error ? CALENDAR_DEPENDENCY_NOTICE : null,
     from,
     to,
+    extras,
   };
 }
 
@@ -438,6 +451,10 @@ export async function loadGroupCalendarWeek(
 
   const missing = scheduleSetupMissing(expectationResult.error?.message);
   expectations = await applyWorkoutNames(supabase, expectations);
+  const extraUserId = 'userId' in input ? String((input as { userId?: string | null }).userId || '') : '';
+  const extras = expectationResult.error
+    ? []
+    : await fetchGroupExtras(supabase, { teamId: input.teamId, from, to, userId: extraUserId || null });
   return {
     expectations,
     expectationsAvailable: !expectationResult.error,
@@ -445,5 +462,6 @@ export async function loadGroupCalendarWeek(
     notice: missing || expectationResult.error ? CALENDAR_DEPENDENCY_NOTICE : null,
     from,
     to,
+    extras,
   };
 }

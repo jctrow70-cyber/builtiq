@@ -17,6 +17,8 @@ import {
   programScheduleNeedsReview,
   summarizeExpectationStatuses,
   addActivityChoices,
+  groupExtraWeekItems,
+  requiredExtraStanding,
   comparePrescriptionToGroupLogs,
   displayWorkoutName,
   planExerciseGroups,
@@ -524,7 +526,10 @@ assert.match(profile, /exercises/);
 assert.doesNotMatch(profile, /selectedItems\.length === 1/);
 assert.doesNotMatch(profile, /Nothing from this group is scheduled this day/);
 assert.match(home, /memberUserIds: \[selected\.userId\]/);
-assert.match(home, /st_assign_group_workout|assignGroupWorkout/);
+assert.match(home, /saveGroupActivity/);
+assert.doesNotMatch(home, /assignGroupWorkout/);
+assert.match(profile, /AddActivitySheet/);
+assert.match(profile, /Extra/);
 const assignSource = readFileSync(new URL('../lib/groups/assignGroupTraining.ts', import.meta.url), 'utf8');
 assert.match(assignSource, /coaching_metadata/);
 assert.match(assignSource, /Nothing was saved/);
@@ -633,5 +638,21 @@ assert.equal(displayWorkoutName('Deload', { title: 'Full Body A', dayLabel: 'Mon
 assert.equal(displayWorkoutName('Full Body B', { title: 'Full Body A', dayLabel: 'Mon' }), 'Full Body B');
 assert.equal(programWorkoutPlace({ week: 1, dayLabel: 'Mon' }), 'Week 1 · Mon');
 assert.equal(addedOnOccupiedDate.members[0].missedCount, 1);
+
+const withExtra = boardFor([amy], {
+  expectations: [
+    expectation('amy', '2026-10-12', 'Full Body A', { id: 'exp-miss', workoutId: 'w-mon', dayLabel: 'Mon', authoritativeStatus: 'missed' }),
+  ],
+  extras: [
+    { id: 'extra-1', userId: 'amy', date: '2026-10-12', title: 'Zone 2 ride', activityType: 'cardio', workoutId: null, required: false, completed: false },
+    { id: 'extra-2', userId: 'amy', date: '2026-10-14', title: 'Mobility', activityType: 'mobility', workoutId: null, required: true, completed: false },
+  ],
+});
+assert.equal(withExtra.members[0].missedCount, 1);
+assert.equal(withExtra.members[0].weekItems.filter((item) => item.origin === 'extra').length, 2);
+assert.equal(withExtra.members[0].weekItems.find((item) => item.title === 'Zone 2 ride')?.state, 'Extra');
+assert.equal(requiredExtraStanding({ date: '2026-10-12', required: false, completed: false }, today), 'open');
+assert.equal(requiredExtraStanding({ date: '2026-10-12', required: true, completed: false }, today), 'not_completed');
+assert.equal(groupExtraWeekItems(withExtra.members[0].weekItems.map(() => ({ id: 'x', userId: 'other', date: '2026-10-14', title: 'Hidden', activityType: 'rest', workoutId: null, required: false, completed: false })), 'amy', '2026-10-12', '2026-10-18').length, 0);
 
 console.log('group training workspace checks passed');

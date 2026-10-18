@@ -1,5 +1,5 @@
 import { addDaysYmd, dayLabelFromYmd, mondayOfWeek, sundayOfWeek } from '../training/programCalendar';
-import { groupExpectationState, programWorkoutPlace, type GroupTrainingExpectationInput, type GroupTrainingWeekState } from './trainingWorkspace';
+import { groupExpectationState, programWorkoutPlace, type GroupExtraActivity, type GroupTrainingExpectationInput, type GroupTrainingWeekState } from './trainingWorkspace';
 
 export const CALENDAR_CARD_LIMIT = 3;
 
@@ -14,7 +14,7 @@ export type GroupCalendarCard = {
   title: string;
   state: GroupTrainingWeekState;
   workoutId: string | null;
-  origin: 'program' | 'assignment';
+  origin: 'program' | 'assignment' | 'extra';
   excused: boolean;
   hasSession: boolean;
   sourceLabel: string;
@@ -81,6 +81,7 @@ export function buildGroupCalendar(input: {
   visibleUserIds: string[];
   completionKnown: boolean;
   missedByUser?: Record<string, number> | null;
+  extras?: GroupExtraActivity[];
 }): GroupCalendarWeek {
   const weekStart = mondayOfWeek(input.weekStart);
   const weekEnd = sundayOfWeek(weekStart);
@@ -118,6 +119,24 @@ export function buildGroupCalendar(input: {
       };
     })
     .sort((a, b) => a.memberName.localeCompare(b.memberName) || a.title.localeCompare(b.title));
+  const extraCards: GroupCalendarCard[] = (input.extras || [])
+    .filter((extra) => visible.has(extra.userId) && extra.date >= weekStart && extra.date <= weekEnd)
+    .map((extra) => ({
+      key: extra.id,
+      userId: extra.userId,
+      memberName: names.get(extra.userId) || 'Member',
+      date: extra.date,
+      title: extra.title || 'Activity',
+      state: extra.completed ? 'Completed' as const : 'Extra' as const,
+      workoutId: extra.workoutId,
+      origin: 'extra' as const,
+      excused: false,
+      hasSession: extra.completed,
+      sourceLabel: 'Extra',
+      programPlace: '',
+    }));
+  cards.push(...extraCards);
+  cards.sort((a, b) => a.memberName.localeCompare(b.memberName) || a.title.localeCompare(b.title));
 
   const days = calendarWeekDays(weekStart).map((date) => ({
     date,

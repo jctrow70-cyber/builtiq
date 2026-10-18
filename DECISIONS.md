@@ -19,6 +19,28 @@ Impact:
 
 ---
 
+## Decision 113 - Group extras are not program expectations
+
+Date: 2026-10-18
+Status: Accepted
+Category: Groups
+
+### Decision
+
+Additional group activities live in their own series, recipient, and occurrence tables. They appear on the group calendar with an Extra label. They default to optional and do not change program missed totals. A required extra is a separate standing and is not fed into the program adherence function. Personal calendar rows are not read or written by this flow.
+
+### Reason
+
+The assigned program and Personal Training already have their own schedules. Putting extras into either one would mix private training with the group or make an optional activity count as a missed program workout.
+
+### Alternatives Considered
+
+Reusing st_user_calendar_activities. Reusing st_assign_group_workout, which creates a required expectation.
+
+### Impact
+
+Stage 1 saves one date at a time. Weekly repeat and custom group strength workouts wait for later stages. Migration 068 has to be applied before a save succeeds.
+
 ## Decision 112 - Membership controls stay on the Members list
 
 Date: 2026-10-17

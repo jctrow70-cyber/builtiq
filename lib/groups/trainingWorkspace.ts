@@ -191,6 +191,49 @@ export function planExerciseGroups(exercises: GroupTrainingExerciseRef[] | null 
   return groups;
 }
 
+export type GroupExtraActivity = {
+  id: string;
+  userId: string;
+  date: string;
+  title: string;
+  activityType: string;
+  workoutId: string | null;
+  required: boolean;
+  completed: boolean;
+};
+
+/** Required extras stay out of program missed totals. */
+export function requiredExtraStanding(
+  extra: Pick<GroupExtraActivity, 'date' | 'required' | 'completed'>,
+  today: string
+): 'completed' | 'open' | 'not_completed' {
+  if (extra.completed) return 'completed';
+  if (!extra.required) return 'open';
+  return extra.date < today ? 'not_completed' : 'open';
+}
+
+export function groupExtraWeekItems(
+  extras: GroupExtraActivity[],
+  userId: string,
+  weekStart: string,
+  weekEnd: string
+): GroupTrainingWeekItem[] {
+  return extras
+    .filter((extra) => extra.userId === userId && extra.date >= weekStart && extra.date <= weekEnd)
+    .map((extra) => ({
+      date: extra.date,
+      title: extra.title || 'Activity',
+      dayLabel: '',
+      state: extra.completed ? 'Completed' as const : 'Extra' as const,
+      workoutId: extra.workoutId,
+      origin: 'extra' as const,
+      excused: false,
+      hasSession: extra.completed,
+      required: extra.required,
+      activityType: extra.activityType,
+    }));
+}
+
 export type AddActivityChoice = { workoutId: string; title: string };
 
 /** Workouts the current assignment rule can accept. A personal enrollment copy is listed as blocked, not as a silent empty menu. */
@@ -353,7 +396,8 @@ export type GroupTrainingWeekState =
   | 'Upcoming'
   | 'Excused'
   | 'Paused'
-  | 'Not confirmed';
+  | 'Not confirmed'
+  | 'Extra';
 
 export type GroupTrainingWeekItem = {
   date: string;
@@ -362,10 +406,12 @@ export type GroupTrainingWeekItem = {
   state: GroupTrainingWeekState;
   workoutId: string | null;
   expectationId?: string | null;
-  origin: 'program' | 'assignment';
+  origin: 'program' | 'assignment' | 'extra';
   excused: boolean;
   hasSession: boolean;
   programWeek?: number | null;
+  required?: boolean;
+  activityType?: string | null;
 };
 
 export type GroupTrainingNextWorkout = {
@@ -793,6 +839,7 @@ export function buildGroupTrainingBoard(input: {
   expectationsAvailable: boolean;
   completionKnown: boolean;
   missedByUser?: Record<string, number> | null;
+  extras?: GroupExtraActivity[];
 }): GroupTrainingBoard {
   const visible = input.canManage
     ? input.members
@@ -929,6 +976,11 @@ export function buildGroupTrainingBoard(input: {
         };
       }
     }
+
+    weekItems = [
+      ...weekItems,
+      ...groupExtraWeekItems(input.extras || [], member.userId, weekStart, weekEnd),
+    ];
 
     return {
       userId: member.userId,

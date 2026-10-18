@@ -21,6 +21,10 @@ type AddActivitySheetProps = {
   allowMultiDay?: boolean;
   allowRemainingWeeks?: boolean;
   defaultWeekday?: number;
+  activityTypes?: ActivityType[];
+  allowRequired?: boolean;
+  required?: boolean;
+  onRequiredChange?: (required: boolean) => void;
   onClose: () => void;
   onSave: (draft: ActivityDraft) => Promise<void>;
   onDelete?: (scope?: 'this-day' | 'series') => Promise<void>;
@@ -106,13 +110,19 @@ export default function AddActivitySheet({
   allowMultiDay = false,
   allowRemainingWeeks = false,
   defaultWeekday = 0,
+  activityTypes,
+  allowRequired = false,
+  required = false,
+  onRequiredChange,
   onClose,
   onSave,
   onDelete,
 }: AddActivitySheetProps) {
-  const [draft, setDraft] = useState<ActivityDraft>(() =>
-    initialDraft(existing, calendarExisting, occurrenceDate, defaultWeekday)
-  );
+  const [draft, setDraft] = useState<ActivityDraft>(() => {
+    const start = initialDraft(existing, calendarExisting, occurrenceDate, defaultWeekday);
+    if (activityTypes?.length && !activityTypes.includes(start.activity_type)) return emptyDraft(activityTypes[0], defaultWeekday);
+    return start;
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const isLegacy = !!existing?.id.startsWith('legacy-');
@@ -249,7 +259,7 @@ export default function AddActivitySheet({
 
         <label>Activity type</label>
         <div className="pd-type-grid">
-          {ACTIVITY_TYPES.map((id) => {
+          {(activityTypes || ACTIVITY_TYPES).map((id) => {
             const meta = ACTIVITY_TYPE_META[id];
             return (
               <button
@@ -429,6 +439,13 @@ export default function AddActivitySheet({
               onChange={(e) => setDraft({ ...draft, applyRemainingWeeks: e.target.checked })}
             />
             Add through remaining weeks of this program
+          </label>
+        )}
+
+        {allowRequired && (
+          <label className="remember-row" style={{ marginTop: 8 }}>
+            <input type="checkbox" checked={required} onChange={(event) => onRequiredChange?.(event.target.checked)} />
+            Required. This does not change program missed totals.
           </label>
         )}
 

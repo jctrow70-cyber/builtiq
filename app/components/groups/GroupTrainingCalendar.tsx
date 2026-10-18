@@ -104,6 +104,7 @@ export default function GroupTrainingCalendar({
       members,
       visibleUserIds,
       completionKnown: facts.completionKnown,
+      extras: facts.extras || [],
     });
   }, [facts, weekStart, today, teamId, members, visibleUserIds]);
 

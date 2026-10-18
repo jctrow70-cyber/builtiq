@@ -2,12 +2,14 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { TeamProgramRow } from '../../../lib/groups/programRoster';
-import { assignGroupWorkout, excuseMemberWorkout, moveMemberWorkout, restoreMemberWorkout, setMemberGroupExpectation, setMemberTrainingSchedule } from '../../../lib/groups/assignGroupTraining';
+import { excuseMemberWorkout, moveMemberWorkout, restoreMemberWorkout, setMemberGroupExpectation, setMemberTrainingSchedule } from '../../../lib/groups/assignGroupTraining';
+import { saveGroupActivity } from '../../../lib/groups/groupActivities';
 import { loadGroupTrainingFacts, loadMemberTrainingWeek, type GroupCalendarWeekFacts, type GroupTrainingFacts } from '../../../lib/groups/loadGroupTrainingFacts';
 import type { GroupClassification } from '../../../lib/groups/schema';
 import {
   buildGroupTrainingBoard,
   groupExpectationState,
+  groupExtraWeekItems,
   type GroupActivityLog,
   type GroupTrainingProgramRef,
   type GroupTrainingWeekItem,
@@ -227,6 +229,7 @@ export default function GroupTrainingHome({
       expectationsAvailable: facts.expectationsAvailable,
       completionKnown: facts.completionKnown,
       missedByUser: facts.missedByUser,
+      extras: facts.extras || [],
       members: members
         .filter((member) => member.user_id)
         .map((member) => {
@@ -267,9 +270,10 @@ export default function GroupTrainingHome({
     const statusMatch = statusFilter === 'all' || member.status === statusFilter;
     return nameMatch && statusMatch;
   });
-  const profileWeekItems: GroupTrainingWeekItem[] = (memberWeek?.expectations || [])
+  const profileWeekItems: GroupTrainingWeekItem[] = [
+    ...(memberWeek?.expectations || [])
     .filter((row) => row.userId === selectedUserId)
-    .map((row) => ({
+    .map((row): GroupTrainingWeekItem => ({
       date: row.scheduledDate,
       title: row.title || 'Workout',
       dayLabel: row.dayLabel || '',
@@ -277,10 +281,12 @@ export default function GroupTrainingHome({
       state: groupExpectationState(row, todayYmd(), !!memberWeek?.completionKnown, null, 'Upcoming'),
       workoutId: row.workoutId || null,
       expectationId: row.id || null,
-      origin: row.origin === 'assignment' ? 'assignment' : 'program',
+      origin: row.origin === 'assignment' ? 'assignment' as const : 'program' as const,
       excused: !!row.excused,
       hasSession: !!row.sessionStatus && row.sessionStatus !== 'not_started',
-    }));
+    })),
+    ...groupExtraWeekItems(memberWeek?.extras || [], selectedUserId || '', mondayOfWeek(profileWeekStart), sundayOfWeek(profileWeekStart)),
+  ];
   const profileWeekLabel = `${formatDisplayDate(mondayOfWeek(profileWeekStart))} – ${formatDisplayDate(sundayOfWeek(profileWeekStart))}`;
 
   function openProfile(userId: string, section: MemberProfileSection) {
@@ -421,17 +427,22 @@ export default function GroupTrainingHome({
                   }
                 : undefined
             }
-            onAddWorkout={
-              teamId && selected.programId
+            onAddActivity={
+              teamId && (canAssign || sessionUserId === selected.userId)
                 ? async (input) => {
-                    const { error } = await assignGroupWorkout(supabase, {
+                    const { error } = await saveGroupActivity(supabase, {
                       teamId,
-                      workoutId: input.workoutId,
-                      programId: selected.programId,
-                      targetType: 'members',
-                      memberUserIds: [selected.userId],
+                      activityType: input.activityType,
+                      title: input.title,
                       scheduledDate: input.scheduledDate,
+                      memberUserIds: [selected.userId],
                       requestKey: crypto.randomUUID(),
+                      workoutId: input.workoutId,
+                      programId: input.programId || selected.programId,
+                      durationMinutes: input.durationMinutes,
+                      notes: input.notes,
+                      details: input.details,
+                      required: !!input.required && !!canAssign,
                     });
                     if (error) throw new Error(error);
                     setFactsTick((value) => value + 1);
