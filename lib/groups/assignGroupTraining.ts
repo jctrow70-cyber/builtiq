@@ -39,6 +39,9 @@ function assignmentError(message: string | undefined, fallback: string): string 
   if (/not authorized/i.test(raw)) return 'You do not have permission to assign training in this group.';
   if (/member not found/i.test(raw)) return 'One of the selected people is not an active member of this group. Nothing was assigned.';
   if (/publish a group program/i.test(raw)) return 'Publish the group program before assigning it. Nothing was assigned.';
+  if (/coaching_metadata/i.test(raw) && /does not exist/i.test(raw)) {
+    return 'This workout was not added. The assignment save expects coaching_metadata on workout assignments, and that column is not in the database yet. Nothing was saved.';
+  }
   return raw;
 }
 

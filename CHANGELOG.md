@@ -11,6 +11,36 @@ Branch:
 Status:
 ```
 
+## BIQ-0263 - Explain the Add Activity column error
+
+Date: 2026-10-18
+Branch: main
+Status: In progress, not committed
+
+Summary: Add Activity still calls st_assign_group_workout. When that save reports a missing coaching_metadata column, the screen says the workout was not added instead of showing the database error. A separate SQL proposal adds the column. It was not applied.
+
+Purpose: The live workout-assignment function inserts coaching_metadata, and that column is not on st_workout_assignments. The client cannot remove the column from the function.
+
+Files changed:
+- lib/groups/assignGroupTraining.ts
+- app/page.tsx
+- scripts/test-group-training-workspace.ts
+- docs/proposals/biq0263-workout-assignment-coaching-metadata.sql
+- CHANGELOG.md
+
+Database changes: None applied. The proposal was checked against the live table on 2026-10-18 and is ready for the SQL Editor. It adds only st_workout_assignments.coaching_metadata.
+
+Testing steps:
+- Add Activity on a team program and confirm the message says the workout was not added while the column is missing.
+- After the proposal is approved and run separately, repeat Add Activity and confirm the workout appears on the saved date.
+
+Known issues:
+- Add Activity cannot succeed until the column exists. The SQL is verified and still waiting to be run in the SQL Editor.
+- st_teams.coaching_metadata is also missing and is not part of this proposal because Add Activity does not write it.
+- The remaining Phase 1 testing findings are still open: Group navigation, mobile weekly calendar layout, selected-date styling, workout logger date, repeated exercise rows, assignment wizard program labels, and Progress usability. Sections 6 and 7 of the signed-in checklist are still pending.
+
+Recommended commit message: Explain the missing assignment column instead of showing the database error.
+
 ## BIQ-0263 - Simplify the group plan view
 
 Date: 2026-10-17

@@ -1108,6 +1108,9 @@ export default function Page(){
    if(/could not find the function|schema cache/i.test(raw)){
     throw new Error('Assign workout needs a Supabase update. Run st_assign_workout_to_targets migrations in the SQL Editor.');
    }
+   if(/coaching_metadata/i.test(raw)&&/does not exist/i.test(raw)){
+    throw new Error('This workout was not added. The assignment save expects coaching_metadata on workout assignments, and that column is not in the database yet. Nothing was saved.');
+   }
    throw new Error(raw);
   }
   return assignmentId;
