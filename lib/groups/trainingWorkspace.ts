@@ -202,6 +202,10 @@ export type GroupExtraActivity = {
   completed: boolean;
 };
 
+export function extraActivityLabel(required: boolean): string {
+  return required ? 'Extra · required' : 'Extra';
+}
+
 /** Required extras stay out of program missed totals. */
 export function requiredExtraStanding(
   extra: Pick<GroupExtraActivity, 'date' | 'required' | 'completed'>,

@@ -5,7 +5,7 @@ import DateInput from '../DateInput';
 import AddActivitySheet from '../programDesign/AddActivitySheet';
 import type { ActivityType } from '../../../lib/programDesign/types';
 import type { GroupActivityLog, GroupTrainingExerciseRef, GroupTrainingMemberRow, GroupTrainingProgramRef, GroupTrainingWeekItem } from '../../../lib/groups/trainingWorkspace';
-import { addActivityChoices, assignedProgramFromPayload, comparePrescriptionToGroupLogs, displayWorkoutName, orderedWeekSessions, planExerciseGroups, programWorkoutPlace } from '../../../lib/groups/trainingWorkspace';
+import { addActivityChoices, assignedProgramFromPayload, comparePrescriptionToGroupLogs, displayWorkoutName, extraActivityLabel, orderedWeekSessions, planExerciseGroups, programWorkoutPlace } from '../../../lib/groups/trainingWorkspace';
 import { fetchFullProgram } from '../../../lib/training/programFetch';
 import { supabase } from '../../../lib/supabaseClient';
 import { customWeekdayError, materializeMemberSchedule, programCycleAnchor } from '../../../lib/groups/memberSchedule';
@@ -958,7 +958,7 @@ export default function MemberTrainingWorkspace({
                       onClick={() => setExpandedKey(open ? null : key)}
                     >
                       <b>{title}</b>
-                      {item.origin === 'extra' ? <span className="muted">Extra{item.required ? ' · required' : ''}</span> : null}
+                      {item.origin === 'extra' ? <span className="muted">{extraActivityLabel(!!item.required)}</span> : null}
                       {place ? <span className="muted">{place}</span> : null}
                       <span className="muted">
                         {item.state}

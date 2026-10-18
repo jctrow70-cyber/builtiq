@@ -11,6 +11,66 @@ Branch:
 Status:
 ```
 
+## BIQ-0263 - Propose a Quick Join insert fix
+
+Date: 2026-10-18
+Branch: main
+Status: Proposed, not applied
+
+Summary: New Group creation fails because the Quick Join row is inserted before the Group row exists. The approved script moves that insert to an AFTER INSERT trigger, keeps the foreign key immediate, and fails the group insert when the temporary code is missing. It is not applied.
+
+Purpose: Unblock Create Group and the Stage 1 disposable-group tests without using a real group or a personal login.
+
+Files changed:
+- docs/proposals/biq0263-quick-join-after-insert.sql
+- CHANGELOG.md
+
+Database changes: None applied.
+
+Testing steps:
+- Review the proposal.
+- After approval, run it in the SQL Editor and use the verification query in the review.
+- Roll back with the statement in the review if the check insert fails.
+
+Known issues:
+- Live role tests and browser tests stay blocked until this SQL is approved and applied.
+- Stages 2–4 are not started.
+
+Recommended commit message: Move Quick Join creation until the group row exists.
+
+## BIQ-0263 - Test one-time group extras
+
+Date: 2026-10-18
+Branch: main
+Status: In progress, not committed
+
+Summary: Stage 1 group extras now have a local rule check and a live role check. The live check signs in as an owner, a manager, a member, a member whose group allows assign, and a user outside the group. It deletes those disposable accounts when it finishes.
+
+Purpose: Approve Stage 1 from automated coverage of save rules, permissions, missed totals, and existing training records.
+
+Files changed:
+- scripts/test-group-activity-stage1.ts
+- scripts/verify-group-activity-stage1-live.ts
+- lib/groups/trainingWorkspace.ts
+- app/components/groups/MemberTrainingWorkspace.tsx
+- package.json
+- CHANGELOG.md
+
+Database changes: None. The live script does not apply SQL. It creates a disposable group and removes it.
+
+Testing steps:
+- Run node node_modules/tsx/dist/cli.mjs scripts/test-group-activity-stage1.ts
+- Run node node_modules/tsx/dist/cli.mjs scripts/verify-group-activity-stage1-live.ts
+- Confirm the live result says passed and the baseline counts match after cleanup.
+
+Known issues:
+- The live role script cannot create a disposable group. Inserting a team runs the Quick Join trigger before the team row exists, so the foreign key rejects it. No management token or database URL is available to work around that. Disposable auth users from the attempt were deleted.
+- Playwright is not installed, and the browser pass did not run.
+- Stages 2–4 are not started.
+- Group navigation, mobile weekly calendar, selected-date styling, logger date visibility, repeated exercise rows, assignment wizard program labels, and Progress usability remain open.
+
+Recommended commit message: Check one-time group extras against role permissions and missed totals.
+
 ## BIQ-0263 - Add one-time group extras
 
 Date: 2026-10-18
