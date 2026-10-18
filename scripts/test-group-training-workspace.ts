@@ -26,6 +26,7 @@ import {
   planExerciseGroups,
   prescriptionExerciseBlocks,
   summarizeGroupExtras,
+  MEMBER_PLAN_LOADING_LABEL,
   programWorkoutPlace,
   type GroupTrainingExpectationInput,
   type GroupTrainingMemberInput,
@@ -262,6 +263,21 @@ const fork: GroupTrainingMemberInput = {
 const custom = boardFor([fork]);
 assert.equal(custom.members[0].planKind, 'custom_fork');
 assert.equal(custom.members[0].planName, 'Full Body (just me)');
+const unloadedProgram = boardFor(
+  [{ ...amy, enrollment: { programId: 'enrolled-plan', status: 'active', startsOn: '2026-10-06' } }],
+  {
+    programs: [{ ...strength, id: 'other-program', name: 'Other program' }],
+    defaultProgramId: 'other-program',
+    expectations: [expectation('amy', '2026-10-14', 'Full Body B', { dayLabel: 'Wed', workoutId: 'wo-b' })],
+  }
+);
+const unloadedRow = unloadedProgram.members[0];
+assert.equal(unloadedRow.programId, 'enrolled-plan');
+assert.equal(unloadedRow.planKind, 'group_program');
+assert.equal(unloadedRow.planName, MEMBER_PLAN_LOADING_LABEL);
+assert.equal(unloadedRow.weekItems.some((item) => item.title === 'Full Body B' && item.date === '2026-10-14' && item.workoutId === 'wo-b'), true);
+assert.equal(JSON.stringify(unloadedProgram).includes('Custom group plan'), false);
+assert.equal(JSON.stringify(unloadedProgram).includes('Other program'), false);
 assert.equal(custom.summary.assigned, 1);
 assert.equal(custom.summary.needsPlan, 0);
 assert.equal(custom.members[0].status, 'on_track');

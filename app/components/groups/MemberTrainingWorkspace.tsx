@@ -5,7 +5,7 @@ import DateInput from '../DateInput';
 import AddActivitySheet from '../programDesign/AddActivitySheet';
 import type { ActivityType } from '../../../lib/programDesign/types';
 import type { GroupActivityLog, GroupTrainingExerciseRef, GroupTrainingMemberRow, GroupTrainingProgramRef, GroupTrainingWeekItem } from '../../../lib/groups/trainingWorkspace';
-import { addActivityChoices, assignedProgramFromPayload, displayWorkoutName, extraActivityLabel, orderedWeekSessions, planExerciseGroups, prescriptionExerciseBlocks, programWorkoutPlace } from '../../../lib/groups/trainingWorkspace';
+import { addActivityChoices, assignedProgramFromPayload, displayWorkoutName, extraActivityLabel, MEMBER_PLAN_LOADING_LABEL, orderedWeekSessions, planExerciseGroups, prescriptionExerciseBlocks, programWorkoutPlace } from '../../../lib/groups/trainingWorkspace';
 import { fetchFullProgram } from '../../../lib/training/programFetch';
 import { supabase } from '../../../lib/supabaseClient';
 import { customWeekdayError, materializeMemberSchedule, programCycleAnchor } from '../../../lib/groups/memberSchedule';
@@ -82,16 +82,18 @@ function PlanNavigator({
     setOpenId(null);
   }, [program?.id, currentWeek, weekCount]);
   if (load === 'loading') {
+    const loadingLabel = !planName || planName === MEMBER_PLAN_LOADING_LABEL ? MEMBER_PLAN_LOADING_LABEL : `Loading ${planName}…`;
     return (
       <div className="member-plan-template">
-        <p className="muted">Loading {planName}…</p>
+        <p className="muted">{loadingLabel}</p>
       </div>
     );
   }
   if (load === 'denied') {
+    const assignedName = planName && planName !== MEMBER_PLAN_LOADING_LABEL ? planName : '';
     return (
       <div className="member-plan-template">
-        <p>{planName} is the assigned program.</p>
+        <p>{assignedName ? `${assignedName} is the assigned program.` : 'The enrolled program is still assigned.'}</p>
         <p className="muted">You do not have permission to view this program. It remains the program on this group enrollment. This view does not change the calendar or start a workout.</p>
       </div>
     );
@@ -536,7 +538,9 @@ export default function MemberTrainingWorkspace({
       )}
       <div className="member-program-summary">
         <div className="member-program-open">
-          <b>{fullProgram?.name || member.planName}</b>
+          <b data-plan-state={fullProgram?.name || member.planName !== MEMBER_PLAN_LOADING_LABEL ? 'ready' : 'loading'}>
+            {fullProgram?.name || member.planName}
+          </b>
           <span className="muted">
             {[
               member.scheduleDays,
@@ -544,7 +548,7 @@ export default function MemberTrainingWorkspace({
               member.currentProgramWeek && member.programWeeks ? `Week ${member.currentProgramWeek} of ${member.programWeeks}` : '',
             ]
               .filter(Boolean)
-              .join(' · ') || member.planName}
+              .join(' · ') || (member.planName === MEMBER_PLAN_LOADING_LABEL ? '' : member.planName)}
           </span>
         </div>
         <button type="button" className={`group-training-status group-training-status-${member.status}`} onClick={() => setStatusOpen((open) => !open)}>

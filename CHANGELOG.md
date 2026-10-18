@@ -15,9 +15,9 @@ Status:
 
 Date: 2026-10-18
 Branch: main
-Status: Implemented, not committed
+Status: Committed locally
 
-Summary: Logging a group workout shows the scheduled date and returns to that group member and day. Personal Training still returns to its own calendar. Workout details list each exercise once with its sets underneath. The assignment wizard names a member's program from the active enrollment. Selected dates are outlined, and Group Progress hides empty cards that are not group training.
+Summary: Logging a group workout shows the scheduled date and returns to that group member and day. Personal Training still returns to its own calendar. While the enrollment program record is still loading, the member header says "Loading plan…" and keeps the same group, member, date, and workout. Workout details list each exercise once with its sets underneath. The assignment wizard names a member's program from the active enrollment. Selected dates are outlined, and Group Progress hides empty cards that are not group training.
 
 Purpose: The Phase 1 group screens were hard to follow on a phone and after opening the logger.
 

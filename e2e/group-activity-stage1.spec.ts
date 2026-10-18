@@ -129,9 +129,14 @@ test.describe('Stage 1 group extras', () => {
     await expect(page.getByTestId('group-log-date')).toContainText(`/${dayNumber.padStart(2, '0')}/`);
     await page.screenshot({ path: `test-results/biq0263-ux/${testInfo.project.name}-logger.png`, fullPage: true });
     await page.getByRole('button', { name: 'Back to calendar' }).click();
+    await expect(page.getByText('Custom group plan')).toHaveCount(0);
     await expect(page.locator('.team-selector-value')).toHaveText(fixture.teamName);
+    await expect(page.getByRole('button', { name: /QA member/ }).first()).toBeVisible();
     await expect(dayHeading).toHaveText(selectedDay);
+    await expect(page.locator('.member-day-detail').getByRole('button', { name: /Due today/ })).toBeVisible();
+    await expect(page.locator('[data-plan-state="loading"], [data-plan-state="ready"]')).toBeVisible();
     await expect(page.getByText(/BIQ-0263 QA program/)).toBeVisible();
+    await expect(page.getByText('Custom group plan')).toHaveCount(0);
     await page.screenshot({ path: `test-results/biq0263-ux/${testInfo.project.name}-returned.png`, fullPage: true });
     await page.locator('.member-profile-toolbar').getByRole('button', { name: 'Members' }).click();
     await page.getByRole('tablist', { name: 'Training view' }).getByRole('button', { name: 'Calendar' }).click();

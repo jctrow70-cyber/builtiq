@@ -709,6 +709,9 @@ function programById(programs: GroupTrainingProgramRef[]): Map<string, GroupTrai
   return new Map(programs.map((program) => [program.id, program]));
 }
 
+/** Shown until the enrollment program record is available. This is not a program name. */
+export const MEMBER_PLAN_LOADING_LABEL = 'Loading plan…';
+
 export function resolveMemberGroupPlan(input: {
   member: GroupTrainingMemberInput;
   programs: GroupTrainingProgramRef[];
@@ -739,10 +742,18 @@ export function resolveMemberGroupPlan(input: {
     }
     const assignmentName =
       input.member.assignment?.programId === programId ? String(input.member.assignment?.programName || '').trim() : '';
+    if (assignmentName) {
+      return {
+        kind: 'custom_fork',
+        programId,
+        programName: assignmentName,
+        program: null,
+      };
+    }
     return {
-      kind: 'custom_fork',
+      kind: 'group_program',
       programId,
-      programName: assignmentName || 'Custom group plan',
+      programName: MEMBER_PLAN_LOADING_LABEL,
       program: null,
     };
   }
