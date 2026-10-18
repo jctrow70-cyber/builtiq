@@ -1,6 +1,11 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { fetchGroupExtras } from '../../../lib/groups/groupActivities';
 import type { MemberRosterMeta } from '../../../lib/groups/memberPerformance';
+import { summarizeGroupExtras } from '../../../lib/groups/trainingWorkspace';
+import { addDaysYmd, mondayOfWeek, todayYmd } from '../../../lib/training/programCalendar';
+import { supabase } from '../../../lib/supabaseClient';
 import { roleLabel } from '../../../lib/groups';
 import GroupScheduleAdherence from './GroupScheduleAdherence';
 
@@ -35,7 +40,23 @@ export default function TeamProgressTab({
   const recentPrs = visible.filter((m) => memberRosterMeta[m.user_id]?.recentPr).length;
   const overdue = visible.reduce((sum, m) => sum + (memberRosterMeta[m.user_id]?.assignmentOverdue || 0), 0);
   const pending = visible.reduce((sum, m) => sum + (memberRosterMeta[m.user_id]?.assignmentPending || 0), 0);
-  const showAssignments = canViewGroupProgress;
+  const showAssignments = canViewGroupProgress && (pending > 0 || overdue > 0);
+  const [extraSummary, setExtraSummary] = useState<ReturnType<typeof summarizeGroupExtras> | null>(null);
+
+  useEffect(() => {
+    if (!teamId) {
+      setExtraSummary(null);
+      return;
+    }
+    let cancelled = false;
+    const today = todayYmd();
+    void fetchGroupExtras(supabase, { teamId, from: mondayOfWeek(today), to: addDaysYmd(mondayOfWeek(today), 6) }).then((extras) => {
+      if (!cancelled) setExtraSummary(summarizeGroupExtras(extras, today));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [teamId]);
 
   return (
     <>
@@ -93,6 +114,27 @@ export default function TeamProgressTab({
           teamId={teamId}
           members={visible.map((member) => ({ user_id: member.user_id, display_name: member.display_name }))}
         />
+      )}
+
+      {extraSummary && extraSummary.total > 0 && (
+        <div className="card">
+          <h2>Group extras this week</h2>
+          <p className="muted">Required extras have their own standing. Optional extras are not program misses.</p>
+          <div className="dash-metrics">
+            <div>
+              <b>{extraSummary.requiredCompleted}</b>
+              <span className="muted">Required completed</span>
+            </div>
+            <div>
+              <b>{extraSummary.requiredOpen}</b>
+              <span className="muted">Required still open</span>
+            </div>
+            <div>
+              <b>{extraSummary.optional}</b>
+              <span className="muted">Optional</span>
+            </div>
+          </div>
+        </div>
       )}
 
       {showAssignments && (

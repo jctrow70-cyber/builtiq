@@ -77,14 +77,17 @@ export function memberPlanKind(member: WizardMember): MemberPlanKind {
   return 'none';
 }
 
-export function memberPlanName(member: WizardMember, defaultProgramName?: string | null): string | null {
-  const kind = memberPlanKind(member);
-  if (kind === 'personal') return 'Personal training';
-  if (kind === 'fork' || kind === 'individual') {
-    return member.assignmentProgramName || member.enrollmentProgramName || 'Group plan';
-  }
-  if (kind === 'group') return member.enrollmentProgramName || member.assignmentProgramName || defaultProgramName || 'Group plan';
-  return null;
+/** The member's current program is the active group enrollment. Team default and assignment rows are not substitutes. */
+export function memberPlanName(member: WizardMember, _defaultProgramName?: string | null): string | null {
+  if (memberPlanKind(member) === 'personal') return 'Personal training';
+  return member.enrollmentProgramName || null;
+}
+
+export function memberPlanLabel(member: WizardMember): string {
+  if (memberPlanKind(member) === 'personal') return 'Personal training';
+  if (member.enrollmentProgramName) return `Current plan · ${member.enrollmentProgramName}`;
+  if (member.enrollmentProgramId) return 'Current plan';
+  return 'No group plan';
 }
 
 export function isEligibleForGroupAssign(member: WizardMember): boolean {

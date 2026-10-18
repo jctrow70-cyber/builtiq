@@ -12,6 +12,7 @@ import {
   INDIVIDUAL_SCHEDULE_NOTE,
   buildAssignmentReview,
   keepWizardDraftOnError,
+  memberPlanLabel,
   memberPlanName,
   memberUserIdsForClassification,
   nextWizardStep,
@@ -491,7 +492,7 @@ export default function AssignTrainingWizard({
                     </label>
                     <div className="assign-wizard-list">
                       {searchMembers(wizardMembers, memberQuery).map((member) => {
-                        const plan = memberPlanName(member, defaultProgramName);
+                        const plan = memberPlanLabel(member);
                         return (
                           <label key={member.userId} className="assign-wizard-person">
                             <input
@@ -507,7 +508,7 @@ export default function AssignTrainingWizard({
                             />
                             <span>
                               <b>{member.name}</b>
-                              <span className="muted">{plan ? `Current plan · ${plan}` : 'No group plan'}</span>
+                              <span className="muted">{plan}</span>
                             </span>
                           </label>
                         );
@@ -520,7 +521,7 @@ export default function AssignTrainingWizard({
                     {chosenMembers.map((member) => (
                       <li key={member.userId}>
                         <b>{member.name}</b>
-                        <span className="muted">{memberPlanName(member, defaultProgramName) || 'No group plan'}</span>
+                        <span className="muted">{memberPlanLabel(member)}</span>
                       </li>
                     ))}
                   </ul>

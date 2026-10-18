@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import DateInput from '../DateInput';
 import AddActivitySheet from '../programDesign/AddActivitySheet';
 import type { ActivityType } from '../../../lib/programDesign/types';
 import type { GroupActivityLog, GroupTrainingExerciseRef, GroupTrainingMemberRow, GroupTrainingProgramRef, GroupTrainingWeekItem } from '../../../lib/groups/trainingWorkspace';
-import { addActivityChoices, assignedProgramFromPayload, comparePrescriptionToGroupLogs, displayWorkoutName, extraActivityLabel, orderedWeekSessions, planExerciseGroups, programWorkoutPlace } from '../../../lib/groups/trainingWorkspace';
+import { addActivityChoices, assignedProgramFromPayload, displayWorkoutName, extraActivityLabel, orderedWeekSessions, planExerciseGroups, prescriptionExerciseBlocks, programWorkoutPlace } from '../../../lib/groups/trainingWorkspace';
 import { fetchFullProgram } from '../../../lib/training/programFetch';
 import { supabase } from '../../../lib/supabaseClient';
 import { customWeekdayError, materializeMemberSchedule, programCycleAnchor } from '../../../lib/groups/memberSchedule';
@@ -22,6 +22,7 @@ export type GroupWorkoutLogRequest = {
   programId: string;
   scheduledDate: string;
   sourceKey: string;
+  teamId?: string | null;
 };
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -172,23 +173,33 @@ function PrescriptionCompare({
   date: string;
 }) {
   if (logs == null) return null;
-  const comparison = comparePrescriptionToGroupLogs(exercises || [], logs, date);
-  if (!comparison.rows.length) return <p className="muted">No planned sets and no group-attributed sets on this date.</p>;
+  const blocks = prescriptionExerciseBlocks(exercises || [], logs, date);
+  const hasSets = blocks.some((block) => block.exercises.some((exercise) => exercise.sets.length));
+  if (!hasSets) return <p className="muted">No planned sets and no group-attributed sets on this date.</p>;
   return (
     <div>
-      {!comparison.canMatch && (
-        <p className="muted">This program read has no planned-set ids, so logged sets stay separate from the plan.</p>
-      )}
-      <ul className="member-profile-exercises">
-        {comparison.rows.map((row) => (
-          <li key={row.key}>
-            <b>{row.exercise}</b>
-            <span className="muted">
-              {row.kind === 'extra' ? `Extra or unmatched set · ${row.logged} · ${row.planned}` : `Planned ${row.planned} · Logged ${row.logged}`}
-            </span>
-          </li>
-        ))}
-      </ul>
+      {blocks.map((block) => (
+        <div key={block.key} className={block.label ? 'member-superset' : undefined}>
+          {block.label ? <p className="member-superset-label">{block.label}</p> : null}
+          <ol className="member-profile-exercises">
+            {block.exercises.map((exercise, exerciseIndex) => (
+              <li key={exercise.key}>
+                <b>{exerciseIndex + 1}. {exercise.name}</b>
+                <ul>
+                  {exercise.sets.map((set, setIndex) => (
+                    <li key={set.key}>
+                      Set {setIndex + 1}
+                      <span className="muted">
+                        {set.kind === 'extra' ? ` · Extra or unmatched set · ${set.logged} · ${set.planned}` : ` · Planned ${set.planned} · Logged ${set.logged}`}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </li>
+            ))}
+          </ol>
+        </div>
+      ))}
     </div>
   );
 }
@@ -235,6 +246,7 @@ type MemberTrainingWorkspaceProps = {
   onSection?: (section: MemberProfileSection) => void;
   weekItems?: GroupTrainingWeekItem[];
   weekStart?: string;
+  initialDate?: string | null;
   weekRangeLabel?: string;
   onPreviousWeek?: () => void;
   onNextWeek?: () => void;
@@ -274,6 +286,7 @@ export default function MemberTrainingWorkspace({
   onSection,
   weekItems,
   weekStart,
+  initialDate = null,
   weekRangeLabel,
   onPreviousWeek,
   onNextWeek,
@@ -310,7 +323,8 @@ export default function MemberTrainingWorkspace({
   const [fullProgram, setFullProgram] = useState<GroupTrainingProgramRef | null>(null);
   const [planLoad, setPlanLoad] = useState<'loading' | 'ready' | 'denied' | 'empty'>('empty');
   const [statusOpen, setStatusOpen] = useState(explainStatus);
-  const [selectedDate, setSelectedDate] = useState(todayYmd());
+  const [selectedDate, setSelectedDate] = useState(initialDate || todayYmd());
+  const appliedResumeDate = useRef<string | null>(null);
   const days = weekItems || member.weekItems;
   const resolvedWeekStart = mondayOfWeek(weekStart || days[0]?.date || todayYmd());
   const weekCells = useMemo(
@@ -363,6 +377,10 @@ export default function MemberTrainingWorkspace({
   useEffect(() => {
     const end = addDaysYmd(resolvedWeekStart, 6);
     setSelectedDate((current) => {
+      if (initialDate && appliedResumeDate.current !== initialDate && initialDate >= resolvedWeekStart && initialDate <= end) {
+        appliedResumeDate.current = initialDate;
+        return initialDate;
+      }
       if (current >= resolvedWeekStart && current <= end) return current;
       const today = todayYmd();
       if (today >= resolvedWeekStart && today <= end) return today;
@@ -370,7 +388,7 @@ export default function MemberTrainingWorkspace({
       const index = weekday === 0 ? 6 : weekday - 1;
       return addDaysYmd(resolvedWeekStart, index);
     });
-  }, [resolvedWeekStart]);
+  }, [resolvedWeekStart, initialDate]);
 
   useEffect(() => {
     setExpandedKey(null);
@@ -809,6 +827,7 @@ export default function MemberTrainingWorkspace({
                   type="button"
                   role="tab"
                   aria-selected={selected}
+                  data-selected={selected ? 'true' : 'false'}
                   aria-label={`${WEEKDAYS[value.getDay()]} ${value.getDate()}${cell.items.length ? `, ${cell.items.map((item) => item.title).join(', ')}` : ''}`}
                   className={`member-week-cell${selected ? ' is-selected' : ''}${cell.date === todayYmd() ? ' is-today' : ''}`}
                   onClick={() => {
@@ -982,6 +1001,7 @@ export default function MemberTrainingWorkspace({
                                   programId: member.programId || '',
                                   scheduledDate: item.date,
                                   sourceKey: `group:${teamId}`,
+                                  teamId,
                                 })
                               }
                             >

@@ -11,9 +11,20 @@ import {
   type GroupCalendarCard,
 } from '../../../lib/groups/groupCalendar';
 import { loadGroupCalendarWeek, type GroupCalendarWeekFacts } from '../../../lib/groups/loadGroupTrainingFacts';
-import { addDaysYmd, formatDisplayDate, mondayOfWeek, todayYmd } from '../../../lib/training/programCalendar';
+import { addDaysYmd, formatDisplayDate, mondayOfWeek, parseYmd, todayYmd } from '../../../lib/training/programCalendar';
 import { supabase } from '../../../lib/supabaseClient';
 import WorkoutScheduleActions from './WorkoutScheduleActions';
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function shortWeekRange(start: string) {
+  const end = addDaysYmd(start, 6);
+  const left = parseYmd(start);
+  const right = parseYmd(end);
+  const startLabel = `${MONTHS[left.getMonth()]} ${left.getDate()}`;
+  const endLabel = left.getMonth() === right.getMonth() ? String(right.getDate()) : `${MONTHS[right.getMonth()]} ${right.getDate()}`;
+  return `${startLabel} – ${endLabel}`;
+}
 
 type GroupTrainingCalendarProps = {
   teamId: string;
@@ -137,8 +148,10 @@ export default function GroupTrainingCalendar({
   function renderDay(date: string, weekday: string) {
     const cards = dayCards(date);
     const shown = visibleCalendarCards(cards, !!expanded[date]);
+    const selected = date === selectedDay;
+    const isToday = date === today;
     return (
-      <div key={date} className="group-calendar-day">
+      <div key={date} className={`group-calendar-day${selected ? ' is-selected' : ''}${isToday ? ' is-today' : ''}`}>
         <div className="group-calendar-day-head">
           <b>{weekday}</b>
           <span className="muted">{formatDisplayDate(date)}</span>
@@ -167,9 +180,7 @@ export default function GroupTrainingCalendar({
           ‹
         </button>
         <div className="member-week-heading">
-          <b>
-            {formatDisplayDate(weekStart)} – {formatDisplayDate(week?.weekEnd || weekStart)}
-          </b>
+          <b>{shortWeekRange(weekStart)}</b>
           {weekStart !== mondayOfWeek(today) && (
             <button type="button" className="member-text-btn" onClick={() => showWeek(mondayOfWeek(today))}>
               Today
@@ -220,7 +231,8 @@ export default function GroupTrainingCalendar({
                 <button
                   key={day.date}
                   type="button"
-                  className={day.date === mobileDay?.date ? 'is-current' : ''}
+                  data-selected={day.date === mobileDay?.date ? 'true' : 'false'}
+                  className={`${day.date === mobileDay?.date ? 'is-current' : ''}${day.date === today ? ' is-today' : ''}`}
                   onClick={() => setSelectedDay(day.date)}
                 >
                   <span>{day.weekday}</span>

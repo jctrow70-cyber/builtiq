@@ -11,6 +11,54 @@ Branch:
 Status:
 ```
 
+## BIQ-0263 - Clarify group logging, calendars, and progress
+
+Date: 2026-10-18
+Branch: main
+Status: Implemented, not committed
+
+Summary: Logging a group workout shows the scheduled date and returns to that group member and day. Personal Training still returns to its own calendar. Workout details list each exercise once with its sets underneath. The assignment wizard names a member's program from the active enrollment. Selected dates are outlined, and Group Progress hides empty cards that are not group training.
+
+Purpose: The Phase 1 group screens were hard to follow on a phone and after opening the logger.
+
+Files changed:
+- app/page.tsx
+- app/components/groups/GroupTrainingHome.tsx
+- app/components/groups/GroupsHub.tsx
+- app/components/groups/MemberTrainingWorkspace.tsx
+- app/components/groups/GroupTrainingCalendar.tsx
+- app/components/groups/AssignTrainingWizard.tsx
+- app/components/groups/MemberPerformancePanel.tsx
+- app/components/groups/TeamProgressTab.tsx
+- app/components/ProgressInsights.tsx
+- app/globals.css
+- lib/groups/groupLogReturn.ts
+- lib/groups/trainingWorkspace.ts
+- lib/groups/assignmentWizard.ts
+- scripts/test-group-training-workspace.ts
+- scripts/test-assignment-wizard.ts
+- scripts/verify-group-activity-stage1-live.ts
+- e2e/group-activity-stage1.spec.ts
+- CHANGELOG.md
+
+Database changes: None.
+
+Testing steps:
+- Log your own past or current group workout and confirm the logger shows the scheduled date.
+- Choose Back to calendar and confirm the same group member and day are open.
+- Open a personal workout and confirm Back to calendar stays in Personal Training.
+- Open a group workout with more than one set and confirm the exercise name appears once.
+- Open Assign Training and confirm a member's current plan is the enrollment, while Current group plan appears only on the team default.
+- On a phone, select a calendar day and confirm the outline is visible and the week does not scroll sideways.
+- Open Group Progress and confirm empty one-off and personal-training cards are hidden.
+
+Known issues:
+- Stages 2–4 are not started.
+- Group navigation between Overview, Members, and Training is still the existing tab model.
+- Weekly repeat, one-day edits, and custom group strength workouts are not in this stage.
+
+Recommended commit message: Return group logging to the member calendar and clarify progress.
+
 ## BIQ-0263 - Propose a Quick Join insert fix
 
 Date: 2026-10-18

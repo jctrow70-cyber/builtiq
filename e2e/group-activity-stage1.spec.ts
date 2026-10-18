@@ -109,6 +109,46 @@ test.describe('Stage 1 group extras', () => {
     await expectNoHorizontalOverflow(page);
   });
 
+  test('member returns to the selected group day and personal training stays separate', async ({ page }, testInfo) => {
+    const fixture = loadFixture();
+    await signIn(page, fixture.emails.member, fixture.password);
+    await openGroup(page, fixture.teamName);
+    await page.getByRole('button', { name: /QA member/ }).first().click();
+    const selected = page.locator('.member-week-cell[data-selected="true"]');
+    await expect(selected).toBeVisible();
+    const border = await selected.evaluate((element) => getComputedStyle(element).boxShadow);
+    expect(border).not.toBe('none');
+    const dayHeading = page.locator('.member-day-detail h3');
+    await expect(dayHeading).toBeVisible();
+    const selectedDay = (await dayHeading.innerText()).trim();
+    const dayNumber = selectedDay.match(/(\d+)\s*$/)?.[1] || '';
+    await page.screenshot({ path: `test-results/biq0263-ux/${testInfo.project.name}-calendar.png`, fullPage: true });
+    await page.locator('.member-day-detail').getByRole('button', { name: /Due today/ }).click();
+    await page.getByRole('button', { name: 'Log this workout' }).click();
+    await expect(page.getByTestId('group-log-date')).toContainText(`Scheduled`);
+    await expect(page.getByTestId('group-log-date')).toContainText(`/${dayNumber.padStart(2, '0')}/`);
+    await page.screenshot({ path: `test-results/biq0263-ux/${testInfo.project.name}-logger.png`, fullPage: true });
+    await page.getByRole('button', { name: 'Back to calendar' }).click();
+    await expect(page.locator('.team-selector-value')).toHaveText(fixture.teamName);
+    await expect(dayHeading).toHaveText(selectedDay);
+    await expect(page.getByText(/BIQ-0263 QA program/)).toBeVisible();
+    await page.screenshot({ path: `test-results/biq0263-ux/${testInfo.project.name}-returned.png`, fullPage: true });
+    await page.locator('.member-profile-toolbar').getByRole('button', { name: 'Members' }).click();
+    await page.getByRole('tablist', { name: 'Training view' }).getByRole('button', { name: 'Calendar' }).click();
+    const groupDay = page.locator('.group-calendar-day.is-selected, .group-calendar-day-strip [data-selected="true"]').locator('visible=true');
+    await expect(groupDay.first()).toBeVisible();
+    await page.screenshot({ path: `test-results/biq0263-ux/${testInfo.project.name}-group-calendar.png`, fullPage: false });
+    await page.getByRole('navigation', { name: 'Primary' }).getByRole('button', { name: 'Training' }).click();
+    await expect(page.getByRole('heading', { name: 'Training' })).toBeVisible();
+    await expect(page.getByTestId('group-log-date')).toHaveCount(0);
+    await page.getByRole('navigation', { name: 'Primary' }).getByRole('button', { name: 'Groups' }).click();
+    await page.getByRole('tab', { name: 'Progress' }).click();
+    await expect(page.getByRole('heading', { name: 'Scheduled training' })).toBeVisible();
+    await expect(page.getByText('Log completed strength sets in Training')).toHaveCount(0);
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: `test-results/biq0263-ux/${testInfo.project.name}-progress.png`, fullPage: true });
+  });
+
   test('nonmember does not see the disposable group', async ({ page }) => {
     const fixture = loadFixture();
     await signIn(page, fixture.emails.outsider, fixture.password);

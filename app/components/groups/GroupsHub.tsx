@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   buildTeamProgramRows,
   groupPermissionFlags,
@@ -85,7 +85,10 @@ export type GroupsHubProps = {
     programId: string;
     scheduledDate: string;
     sourceKey: string;
+    teamId?: string | null;
   }) => void;
+  groupLogResume?: { teamId: string; memberUserId: string; scheduledDate: string } | null;
+  onGroupLogResumeConsumed?: () => void;
   onCloseMemberDashboard: () => void;
   onOpenMemberWorkout: (member: any) => void;
   onSetMemberTrainingSource: (member: any, source: string) => void;
@@ -184,6 +187,8 @@ export default function GroupsHub(props: GroupsHubProps) {
     onRefreshMembers,
     onOpenMember,
     onLogGroupWorkout,
+    groupLogResume = null,
+    onGroupLogResumeConsumed,
     onCloseMemberDashboard,
     onOpenMemberWorkout,
     onSetMemberTrainingSource,
@@ -234,10 +239,24 @@ export default function GroupsHub(props: GroupsHubProps) {
   const [wizardSeed, setWizardSeed] = useState<{ memberUserId?: string | null; programId?: string | null } | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [trainingFocusUserId, setTrainingFocusUserId] = useState<string | null>(null);
+  const [trainingFocusDate, setTrainingFocusDate] = useState<string | null>(null);
   const [profileSection, setProfileSection] = useState<MemberProfileSection>('calendar');
   const [pendingInvites, setPendingInvites] = useState(0);
 
   useEffect(() => {
+    if (!groupLogResume?.memberUserId || !groupLogResume.scheduledDate) return;
+    setWorkspaceTab('training');
+    setProfileSection('calendar');
+    setTrainingFocusUserId(groupLogResume.memberUserId);
+    setTrainingFocusDate(groupLogResume.scheduledDate);
+    onGroupLogResumeConsumed?.();
+  }, [groupLogResume]);
+
+  const groupLogResumeRef = useRef(groupLogResume);
+  groupLogResumeRef.current = groupLogResume;
+
+  useEffect(() => {
+    if (groupLogResumeRef.current?.memberUserId) return;
     setWorkspaceTab('overview');
     setSettingsOpen(false);
     setManagePlans(false);
@@ -509,8 +528,12 @@ export default function GroupsHub(props: GroupsHubProps) {
           }
           teamId={activeTeam?.id || null}
           focusUserId={trainingFocusUserId}
+          focusDate={trainingFocusDate}
           focusSection={profileSection}
-          onFocusHandled={() => setTrainingFocusUserId(null)}
+          onFocusHandled={() => {
+            setTrainingFocusUserId(null);
+            setTrainingFocusDate(null);
+          }}
           onMemberFocus={(userId) => {
             const member = members.find((item: any) => item.user_id === userId);
             if (member && (canManage || member.user_id === sessionUserId)) onOpenMember(member);
@@ -524,6 +547,8 @@ export default function GroupsHub(props: GroupsHubProps) {
                 performanceLogs={memberPerformance?.logs || []}
                 weightUnit={weightUnit}
                 emptyHint="No group-attributed completed sets in this window."
+                teamId={activeTeam?.id || null}
+                userId={memberDashboard.user_id}
               />
             ) : undefined
           }

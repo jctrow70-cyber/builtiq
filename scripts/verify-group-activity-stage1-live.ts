@@ -471,8 +471,25 @@ async function main() {
       program_id: programId,
       status: 'active',
       starts_on: past,
-    });
-    expect('test enrollment can be created for the browser fixture', !enrollment.error, enrollment.error?.message);
+      expectation_enabled: true,
+    }).select('id').single();
+    expect('test enrollment can be created for the browser fixture', !enrollment.error && !!enrollment.data?.id, enrollment.error?.message);
+    if (enrollment.data?.id) {
+      const expectation = await admin.from('st_training_expectations').insert({
+        user_id: memberId,
+        source_key: `group:${teamId}`,
+        team_id: teamId,
+        enrollment_id: enrollment.data.id,
+        program_id: programId,
+        workout_id: workoutId,
+        scheduled_date: today,
+        title: 'QA Full Body',
+        day_label: 'Mon',
+        origin: 'program',
+        excused: false,
+      });
+      expect('test expectation can be created for the browser logger', !expectation.error, expectation.error?.message);
+    }
 
     retain = keep && checks.every((check) => check.ok);
     if (retain) {
@@ -505,8 +522,12 @@ async function main() {
 }
 
 async function removeFixture(admin: SupabaseClient, teamIds: string[], userIds: string[]) {
+  if (userIds.length) {
+    await admin.from('st_training_expectations').delete().in('user_id', userIds);
+    await admin.from('st_training_enrollments').delete().in('user_id', userIds);
+    await admin.from('st_user_calendar_activities').delete().in('user_id', userIds);
+  }
   if (teamIds.length) await admin.from('st_teams').delete().in('id', teamIds);
-  if (userIds.length) await admin.from('st_user_calendar_activities').delete().in('user_id', userIds);
   for (const userId of userIds) {
     await admin.auth.admin.deleteUser(userId);
   }

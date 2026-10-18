@@ -13,6 +13,7 @@ import {
   historicalExpectationsRemain,
   isEligibleForGroupAssign,
   keepWizardDraftOnError,
+  memberPlanLabel,
   memberPlanName,
   memberUserIdsForClassification,
   nextWizardStep,
@@ -132,9 +133,12 @@ assert.equal(ASSIGNMENT_TYPE_LABELS.team, 'Use Group Plan');
 assert.equal(ASSIGNMENT_TYPE_LABELS.personal, 'Use Personal Training');
 assert.equal(ASSIGNMENT_TYPE_LABELS.individual_team, 'Assign Different Plan');
 assert.equal(ASSIGNMENT_TYPE_LABELS.manual, 'Assign Different Plan');
-assert.equal(memberPlanName(amy, 'Old Plan'), 'Old Plan');
-assert.equal(memberPlanName(ben, 'Old Plan'), null);
-assert.equal(memberPlanName(cara, 'Old Plan'), 'Personal training');
+assert.equal(memberPlanName(amy, 'Team default'), 'Old Plan');
+assert.equal(memberPlanName(ben, 'Team default'), null);
+assert.equal(memberPlanName(cara, 'Team default'), 'Personal training');
+assert.equal(memberPlanName(eli, 'Team default'), null);
+assert.equal(memberPlanLabel(amy), 'Current plan · Old Plan');
+assert.equal(memberPlanLabel({ ...eli, enrollmentProgramName: null, assignmentProgramName: 'Stale assignment' }), 'Current plan');
 assert.equal(isEligibleForGroupAssign(cara), false);
 assert.equal(isEligibleForGroupAssign(paused), false);
 assert.equal(isEligibleForGroupAssign(ben), true);

@@ -13,6 +13,7 @@ type ProgressInsightsProps = {
   logs: any[];
   weightUnit?: string;
   emptyMessage?: string;
+  hideEmpty?: boolean;
 };
 
 function PrRow({ pr, weightUnit }: { pr: PersonalRecord; weightUnit: string }) {
@@ -35,7 +36,7 @@ function PrRow({ pr, weightUnit }: { pr: PersonalRecord; weightUnit: string }) {
   );
 }
 
-export default function ProgressInsights({ logs, weightUnit = 'lb', emptyMessage }: ProgressInsightsProps) {
+export default function ProgressInsights({ logs, weightUnit = 'lb', emptyMessage, hideEmpty = false }: ProgressInsightsProps) {
   const prs = computePersonalRecords(logs);
   const weeks = computeWeeklyTrends(logs, 8);
   const summary = computeProgressSummary(logs, prs);
@@ -43,6 +44,7 @@ export default function ProgressInsights({ logs, weightUnit = 'lb', emptyMessage
   const hasStrength = summary.strengthSets > 0;
 
   if (!hasStrength) {
+    if (hideEmpty) return null;
     return (
       <div className="card">
         <p className="muted">

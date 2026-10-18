@@ -5,6 +5,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { expectationFactsFromSchedule } from '../lib/progress/adherence';
+import { seriesKey, seriesIdentityFromLog } from '../lib/progress/identity';
+import { groupLogReturnFromRequest, trainingLoggerBack } from '../lib/groups/groupLogReturn';
 import {
   applyAuthoritativeExpectationStatus,
   assignedProgramFromPayload,
@@ -22,6 +24,8 @@ import {
   comparePrescriptionToGroupLogs,
   displayWorkoutName,
   planExerciseGroups,
+  prescriptionExerciseBlocks,
+  summarizeGroupExtras,
   programWorkoutPlace,
   type GroupTrainingExpectationInput,
   type GroupTrainingMemberInput,
@@ -576,6 +580,60 @@ assert.equal(compared.canMatch, true);
 assert.equal(compared.rows[0].logged.includes('6 reps'), true);
 assert.equal(compared.rows[1].kind, 'extra');
 assert.equal(compared.rows.some((row) => row.logged.includes('5 reps')), false);
+const blocks = prescriptionExerciseBlocks(
+  [
+    { id: 'squat-a', name: 'Squat', sortOrder: 1, supersetGroupId: 'ss', supersetLabel: 'A', supersetOrder: 1, sets: [{ id: 's1', setNumber: 1, reps: '5' }, { id: 's2', setNumber: 2, reps: '5' }] },
+    { id: 'squat-b', name: 'Squat', sortOrder: 2, sets: [{ id: 's3', setNumber: 1, reps: '8' }] },
+  ],
+  [],
+  '2026-10-14'
+);
+assert.equal(blocks[0].label, 'A');
+assert.equal(blocks[0].exercises[0].name, 'Squat');
+assert.equal(blocks[0].exercises[0].sets.length, 2);
+assert.equal(blocks[1].exercises[0].sets.length, 1);
+assert.notEqual(blocks[0].exercises[0].key, blocks[1].exercises[0].key);
+const extras = summarizeGroupExtras(
+  [
+    { date: '2026-10-14', required: true, completed: true },
+    { date: '2026-10-12', required: true, completed: false },
+    { date: '2026-10-14', required: false, completed: false },
+  ],
+  '2026-10-14'
+);
+assert.deepEqual(extras, { requiredCompleted: 1, requiredOpen: 1, optional: 1, total: 3 });
+const ownLog = groupLogReturnFromRequest({
+  sessionUserId: 'member',
+  memberUserId: 'member',
+  expectationId: 'exp',
+  workoutId: 'wo',
+  scheduledDate: '2026-10-12',
+  sourceKey: 'group:team',
+});
+assert.equal(trainingLoggerBack(ownLog), 'group');
+assert.equal(ownLog?.scheduledDate, '2026-10-12');
+assert.equal(groupLogReturnFromRequest({
+  sessionUserId: 'trainer',
+  memberUserId: 'member',
+  expectationId: 'exp',
+  workoutId: 'wo',
+  scheduledDate: '2026-10-12',
+  teamId: 'team',
+}), null);
+assert.equal(trainingLoggerBack(null), 'personal');
+assert.notEqual(
+  seriesKey(seriesIdentityFromLog({ snapshot_exercise_name: 'Squat', snapshot_catalog_exercise_id: 'cat', snapshot_equipment: 'Barbell' })),
+  seriesKey(seriesIdentityFromLog({ snapshot_exercise_name: 'Squat', snapshot_catalog_exercise_id: 'cat', snapshot_equipment: 'Dumbbell' }))
+);
+const pageSource = readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
+assert.match(pageSource, /Scheduled \{formatDisplayDate\(groupLogReturn\.scheduledDate\)\}/);
+assert.match(pageSource, /trainingLoggerBack\(groupLogReturn\)==='group'/);
+assert.match(pageSource, /restoreFollowedCalendar\(\)/);
+const progressSource = readFileSync(new URL('../app/components/groups/TeamProgressTab.tsx', import.meta.url), 'utf8');
+assert.match(progressSource, /pending > 0 \|\| overdue > 0/);
+assert.doesNotMatch(progressSource, /st_user_calendar_activities/);
+const calendarCss = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
+assert.match(calendarCss, /box-shadow:inset 0 0 0 2px var\(--accent\)/);
 
 const supersets = programRefFromRecord({
   id: 'with-ss',

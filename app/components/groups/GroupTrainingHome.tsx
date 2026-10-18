@@ -44,6 +44,7 @@ type GroupTrainingHomeProps = {
   classifications?: GroupClassification[];
   memberClassificationIds?: Record<string, string[]>;
   focusUserId?: string | null;
+  focusDate?: string | null;
   focusSection?: MemberProfileSection;
   onFocusHandled?: () => void;
   onMemberFocus?: (userId: string, section: MemberProfileSection) => void;
@@ -115,6 +116,7 @@ export default function GroupTrainingHome({
   teamName,
   sessionUserId,
   focusUserId,
+  focusDate = null,
   focusSection = 'calendar',
   onFocusHandled,
   onMemberFocus,
@@ -137,6 +139,7 @@ export default function GroupTrainingHome({
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [profileSection, setProfileSection] = useState<MemberProfileSection>('calendar');
   const [profileWeekStart, setProfileWeekStart] = useState(() => mondayOfWeek(todayYmd()));
+  const [openedDate, setOpenedDate] = useState<string | null>(null);
   const [memberWeek, setMemberWeek] = useState<GroupCalendarWeekFacts | null>(null);
   const [memberQuery, setMemberQuery] = useState('');
   const [explainUserId, setExplainUserId] = useState<string | null>(null);
@@ -166,8 +169,12 @@ export default function GroupTrainingHome({
     setSelectedUserId(focusUserId);
     setProfileSection(focusSection);
     setTrainingView('members');
+    if (focusDate) {
+      setProfileWeekStart(mondayOfWeek(focusDate));
+      setOpenedDate(focusDate);
+    }
     onFocusHandled?.();
-  }, [focusUserId, focusSection, onFocusHandled]);
+  }, [focusUserId, focusSection, focusDate, onFocusHandled]);
 
   useEffect(() => {
     if (!teamId || !selectedUserId) {
@@ -325,6 +332,7 @@ export default function GroupTrainingHome({
             onSection={(section) => openProfile(selected.userId, section)}
             weekItems={memberWeek ? profileWeekItems : selected.weekItems}
             weekStart={profileWeekStart}
+            initialDate={openedDate}
             weekRangeLabel={profileWeekLabel}
             weekNotice={memberWeek?.notice}
             onPreviousWeek={() => setProfileWeekStart((current) => addDaysYmd(mondayOfWeek(current), -7))}

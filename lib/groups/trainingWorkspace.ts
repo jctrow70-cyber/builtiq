@@ -273,11 +273,17 @@ export type GroupActivityLog = {
 
 export type PrescriptionComparisonRow = {
   key: string;
+  exerciseKey: string;
   exercise: string;
   planned: string;
   logged: string;
   kind: 'matched' | 'unlogged' | 'extra';
 };
+
+function exerciseKeyFor(exercises: GroupTrainingExerciseRef[] | null | undefined, exercise: GroupTrainingExerciseRef) {
+  const index = (exercises || []).indexOf(exercise);
+  return exercise.id || `exercise-${index}`;
+}
 
 function plannedSetText(set: GroupTrainingSetRef): string {
   return [
@@ -319,7 +325,8 @@ export function comparePrescriptionToGroupLogs(
     const match = canMatch && row.set.id ? dayLogs.find((log) => log.planned_set_id === row.set.id && !used.has(log)) : undefined;
     if (match) used.add(match);
     return {
-      key: row.set.id || `${row.exercise.id || row.exercise.name}-${row.index}`,
+      key: row.set.id || `${exerciseKeyFor(exercises, row.exercise)}-${row.index}`,
+      exerciseKey: exerciseKeyFor(exercises, row.exercise),
       exercise: row.exercise.name || 'Exercise',
       planned: plannedSetText(row.set),
       logged: match ? loggedSetText(match) : canMatch ? 'Not logged' : 'Set id is not on this program read',
@@ -331,6 +338,7 @@ export function comparePrescriptionToGroupLogs(
     if (used.has(log)) return;
     rows.push({
       key: `extra-${index}`,
+      exerciseKey: `extra-${index}`,
       exercise: log.snapshot_exercise_name || 'Logged set',
       planned: log.planned_set_id ? 'Not on this workout prescription' : 'No planned set',
       logged: loggedSetText(log),
@@ -338,6 +346,61 @@ export function comparePrescriptionToGroupLogs(
     });
   });
   return { canMatch, rows };
+}
+
+export type PrescriptionExerciseBlock = {
+  key: string;
+  label: string | null;
+  exercises: Array<{ key: string; name: string; sets: PrescriptionComparisonRow[] }>;
+};
+
+/** One block per exercise occurrence, with each planned set underneath. Supersets stay grouped. */
+export function prescriptionExerciseBlocks(
+  exercises: GroupTrainingExerciseRef[] | null | undefined,
+  logs: GroupActivityLog[] | null | undefined,
+  date: string
+): PrescriptionExerciseBlock[] {
+  const comparison = comparePrescriptionToGroupLogs(exercises, logs, date);
+  const rowsFor = (exercise: GroupTrainingExerciseRef) => {
+    const key = exerciseKeyFor(exercises, exercise);
+    return comparison.rows.filter((row) => row.exerciseKey === key);
+  };
+  const blocks: PrescriptionExerciseBlock[] = planExerciseGroups(exercises).map((group, groupIndex) => ({
+    key: `${group.key}-${groupIndex}`,
+    label: group.label,
+    exercises: group.exercises.map((exercise) => ({
+      key: exerciseKeyFor(exercises, exercise),
+      name: exercise.name || 'Exercise',
+      sets: rowsFor(exercise),
+    })),
+  }));
+  const extras = comparison.rows.filter((row) => row.kind === 'extra');
+  if (extras.length) {
+    blocks.push({
+      key: 'extra-sets',
+      label: null,
+      exercises: extras.map((row) => ({ key: row.exerciseKey, name: row.exercise, sets: [row] })),
+    });
+  }
+  return blocks;
+}
+
+export function summarizeGroupExtras(
+  extras: Array<Pick<GroupExtraActivity, 'date' | 'required' | 'completed'>>,
+  today: string
+) {
+  let requiredCompleted = 0;
+  let requiredOpen = 0;
+  let optional = 0;
+  extras.forEach((extra) => {
+    if (!extra.required) {
+      optional += 1;
+      return;
+    }
+    if (requiredExtraStanding(extra, today) === 'completed') requiredCompleted += 1;
+    else requiredOpen += 1;
+  });
+  return { requiredCompleted, requiredOpen, optional, total: extras.length };
 }
 
 export type GroupTrainingMemberInput = {
