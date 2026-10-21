@@ -193,25 +193,44 @@ export function planExerciseGroups(exercises: GroupTrainingExerciseRef[] | null 
 
 export type GroupExtraActivity = {
   id: string;
+  seriesId?: string;
   userId: string;
   date: string;
+  originalDate?: string;
   title: string;
   activityType: string;
   workoutId: string | null;
   required: boolean;
   completed: boolean;
+  status?: 'scheduled' | 'skipped';
+  virtual?: boolean;
+  detached?: boolean;
+  durationMinutes?: number | null;
+  notes?: string | null;
+  details?: Record<string, unknown>;
+  seriesDetails?: Record<string, unknown>;
+  recurrence?: 'none' | 'weekly';
+  recurrenceWeekdays?: number[];
+  recurrenceUntil?: string | null;
 };
 
 export function extraActivityLabel(required: boolean): string {
   return required ? 'Extra · required' : 'Extra';
 }
 
-/** Required extras stay out of program missed totals. */
+export function extraStatusLabel(extra: Pick<GroupExtraActivity, 'completed' | 'status'>): 'Completed' | 'Skipped' | 'Scheduled' {
+  if (extra.completed) return 'Completed';
+  if (extra.status === 'skipped') return 'Skipped';
+  return 'Scheduled';
+}
+
+/** Required extras stay out of program missed totals. A skip is not a program miss. */
 export function requiredExtraStanding(
-  extra: Pick<GroupExtraActivity, 'date' | 'required' | 'completed'>,
+  extra: Pick<GroupExtraActivity, 'date' | 'required' | 'completed' | 'status'>,
   today: string
-): 'completed' | 'open' | 'not_completed' {
+): 'completed' | 'open' | 'not_completed' | 'skipped' {
   if (extra.completed) return 'completed';
+  if (extra.status === 'skipped') return 'skipped';
   if (!extra.required) return 'open';
   return extra.date < today ? 'not_completed' : 'open';
 }
@@ -228,13 +247,14 @@ export function groupExtraWeekItems(
       date: extra.date,
       title: extra.title || 'Activity',
       dayLabel: '',
-      state: extra.completed ? 'Completed' as const : 'Extra' as const,
+      state: extraStatusLabel(extra),
       workoutId: extra.workoutId,
       origin: 'extra' as const,
       excused: false,
       hasSession: extra.completed,
       required: extra.required,
       activityType: extra.activityType,
+      extra,
     }));
 }
 
@@ -386,21 +406,27 @@ export function prescriptionExerciseBlocks(
 }
 
 export function summarizeGroupExtras(
-  extras: Array<Pick<GroupExtraActivity, 'date' | 'required' | 'completed'>>,
+  extras: Array<Pick<GroupExtraActivity, 'date' | 'required' | 'completed' | 'status'>>,
   today: string
 ) {
   let requiredCompleted = 0;
   let requiredOpen = 0;
   let optional = 0;
+  let skipped = 0;
   extras.forEach((extra) => {
+    const standing = requiredExtraStanding(extra, today);
+    if (standing === 'skipped') {
+      skipped += 1;
+      return;
+    }
     if (!extra.required) {
       optional += 1;
       return;
     }
-    if (requiredExtraStanding(extra, today) === 'completed') requiredCompleted += 1;
+    if (standing === 'completed') requiredCompleted += 1;
     else requiredOpen += 1;
   });
-  return { requiredCompleted, requiredOpen, optional, total: extras.length };
+  return { requiredCompleted, requiredOpen, optional, skipped, total: extras.length };
 }
 
 export type GroupTrainingMemberInput = {
@@ -479,6 +505,7 @@ export type GroupTrainingWeekItem = {
   programWeek?: number | null;
   required?: boolean;
   activityType?: string | null;
+  extra?: GroupExtraActivity;
 };
 
 export type GroupTrainingNextWorkout = {

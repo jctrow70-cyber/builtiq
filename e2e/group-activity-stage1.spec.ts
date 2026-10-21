@@ -72,6 +72,26 @@ test.describe('Stage 1 group extras', () => {
     await expect(saveButton).toBeVisible();
   });
 
+  test('owner can repeat an activity every week', async ({ page }, testInfo) => {
+    const fixture = loadFixture();
+    const title = testInfo.project.name === 'mobile' ? 'QA mobile weekly' : 'QA desktop weekly';
+    await signIn(page, fixture.emails.owner, fixture.password);
+    await openGroup(page, fixture.teamName);
+    await page.getByRole('button', { name: new RegExp(fixture.memberName) }).first().click();
+    await page.getByRole('button', { name: 'Add Activity' }).click();
+    await page.getByRole('button', { name: 'Cardio, mobility, or other' }).click();
+    const sheet = page.locator('.pd-sheet');
+    await sheet.getByRole('button', { name: 'Cardio' }).click();
+    await sheet.getByPlaceholder('Cardio').fill(title);
+    await sheet.getByRole('radio', { name: 'Every week' }).check();
+    await sheet.getByRole('button', { name: 'Add activity', exact: true }).click();
+    await expect(page.getByText(title).first()).toBeVisible();
+    await page.getByRole('button', { name: 'Next week' }).click();
+    await expect(page.getByText(title).first()).toBeVisible();
+    await expect(page.getByText('Scheduled').first()).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+  });
+
   test('ordinary member can add an optional extra and cannot mark it required', async ({ page }) => {
     const fixture = loadFixture();
     await signIn(page, fixture.emails.member, fixture.password);

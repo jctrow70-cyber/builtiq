@@ -617,7 +617,7 @@ const extras = summarizeGroupExtras(
   ],
   '2026-10-14'
 );
-assert.deepEqual(extras, { requiredCompleted: 1, requiredOpen: 1, optional: 1, total: 3 });
+assert.deepEqual(extras, { requiredCompleted: 1, requiredOpen: 1, optional: 1, skipped: 0, total: 3 });
 const ownLog = groupLogReturnFromRequest({
   sessionUserId: 'member',
   memberUserId: 'member',
@@ -724,7 +724,7 @@ const withExtra = boardFor([amy], {
 });
 assert.equal(withExtra.members[0].missedCount, 1);
 assert.equal(withExtra.members[0].weekItems.filter((item) => item.origin === 'extra').length, 2);
-assert.equal(withExtra.members[0].weekItems.find((item) => item.title === 'Zone 2 ride')?.state, 'Extra');
+assert.equal(withExtra.members[0].weekItems.find((item) => item.title === 'Zone 2 ride')?.state, 'Scheduled');
 assert.equal(requiredExtraStanding({ date: '2026-10-12', required: false, completed: false }, today), 'open');
 assert.equal(requiredExtraStanding({ date: '2026-10-12', required: true, completed: false }, today), 'not_completed');
 assert.equal(groupExtraWeekItems(withExtra.members[0].weekItems.map(() => ({ id: 'x', userId: 'other', date: '2026-10-14', title: 'Hidden', activityType: 'rest', workoutId: null, required: false, completed: false })), 'amy', '2026-10-12', '2026-10-18').length, 0);

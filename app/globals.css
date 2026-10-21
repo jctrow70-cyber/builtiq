@@ -168,6 +168,8 @@ button.member-training-week-row{width:100%;background:transparent;border-left:0;
 .group-calendar-board{display:none}
 .group-calendar-mobile{display:flex;flex-direction:column;gap:8px;min-width:0}
 .group-calendar-card{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:8px 0;border-top:1px solid var(--line)}
+.group-activity-repeat{border:0;margin:8px 0;padding:0}
+.group-activity-weekdays{display:flex;flex-wrap:wrap;gap:8px 12px;margin:8px 0}
 .group-calendar-card-open,.group-calendar-name,.group-calendar-more{width:100%;text-align:left;background:transparent;border:0;color:inherit;font:inherit;cursor:pointer;min-height:44px}
 .group-calendar-card-open b,.group-calendar-card-open span{display:block}
 .group-calendar-name{color:var(--muted);font-size:13px}

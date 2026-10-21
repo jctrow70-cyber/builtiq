@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { TeamProgramRow } from '../../../lib/groups/programRoster';
 import { excuseMemberWorkout, moveMemberWorkout, restoreMemberWorkout, setMemberGroupExpectation, setMemberTrainingSchedule } from '../../../lib/groups/assignGroupTraining';
-import { saveGroupActivity } from '../../../lib/groups/groupActivities';
+import { runGroupExtraAction, saveGroupActivity, type GroupExtraAction } from '../../../lib/groups/groupActivities';
 import { loadGroupTrainingFacts, loadMemberTrainingWeek, type GroupCalendarWeekFacts, type GroupTrainingFacts } from '../../../lib/groups/loadGroupTrainingFacts';
 import type { GroupClassification } from '../../../lib/groups/schema';
 import {
@@ -304,6 +304,13 @@ export default function GroupTrainingHome({
     onMemberFocus?.(userId, section);
   }
 
+  async function changeExtra(action: GroupExtraAction) {
+    const { error, message } = await runGroupExtraAction(supabase, action);
+    if (error) throw new Error(error);
+    setFactsTick((value) => value + 1);
+    return message;
+  }
+
   function assignTraining() {
     if (onOpenAssignWizard) onOpenAssignWizard();
     else if (current && current.status === 'published' && onAssign) onAssign();
@@ -452,12 +459,16 @@ export default function GroupTrainingHome({
                       notes: input.notes,
                       details: input.details,
                       required: !!input.required && !!canAssign,
+                      recurrence: input.recurrence,
+                      recurrenceWeekdays: input.recurrenceWeekdays,
+                      recurrenceUntil: input.recurrenceUntil,
                     });
                     if (error) throw new Error(error);
                     setFactsTick((value) => value + 1);
                   }
                 : undefined
             }
+            onExtraAction={teamId ? changeExtra : undefined}
             onEditSharedProgram={
               selected.programId && onEditProgram
                 ? () => onEditProgram(selected.programId as string)
@@ -533,6 +544,7 @@ export default function GroupTrainingHome({
                       }
                     : undefined
                 }
+                onExtraAction={teamId ? changeExtra : undefined}
                 onRestoreWorkout={
                   teamId
                     ? async (input) => {

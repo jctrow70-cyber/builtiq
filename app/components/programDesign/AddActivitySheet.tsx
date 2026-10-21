@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { ACTIVITY_TYPE_META } from '../../../lib/programDesign/activityTypes';
 import { draftWeekdays, isWeeklyRecurrence, normalizeWeekdays } from '../../../lib/programDesign/recurrence';
 import { draftFromCalendarActivity, type UserCalendarActivity } from '../../../lib/programDesign/userCalendar';
@@ -27,6 +27,7 @@ type AddActivitySheetProps = {
   onRequiredChange?: (required: boolean) => void;
   onClose: () => void;
   onSave: (draft: ActivityDraft) => Promise<void>;
+  repeatSlot?: ReactNode;
   onDelete?: (scope?: 'this-day' | 'series') => Promise<void>;
 };
 
@@ -117,6 +118,7 @@ export default function AddActivitySheet({
   onClose,
   onSave,
   onDelete,
+  repeatSlot,
 }: AddActivitySheetProps) {
   function draftForSheet() {
     const start = initialDraft(existing, calendarExisting, occurrenceDate, defaultWeekday);
@@ -443,6 +445,7 @@ export default function AddActivitySheet({
           </label>
         )}
 
+        {repeatSlot}
         {allowRequired && (
           <label className="remember-row" style={{ marginTop: 8 }}>
             <input type="checkbox" checked={required} onChange={(event) => onRequiredChange?.(event.target.checked)} />

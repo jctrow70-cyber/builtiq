@@ -114,16 +114,17 @@ const sunday = board.members[0].weekItems.filter((item) => item.date === '2026-1
 assert.equal(sunday.some((item) => item.origin === 'program' || item.origin === 'assignment'), false);
 assert.equal(sunday.filter((item) => item.origin === 'extra').length, 5);
 for (const activityType of ['cardio', 'mobility', 'stretching']) {
-  assert.equal(sunday.some((item) => item.activityType === activityType && item.state === 'Extra'), true);
+  assert.equal(sunday.some((item) => item.activityType === activityType && item.state === 'Scheduled'), true);
 }
 assert.equal(sunday.some((item) => item.workoutId === 'w-mon' && item.title === 'Full Body A'), true);
 assert.equal(sunday.some((item) => item.title === 'Required mobility' && item.required), true);
 assert.equal(board.members[0].weekItems.find((item) => item.title === 'Full Body B')?.state, 'Missed');
 assert.equal(board.members[0].weekItems.filter((item) => item.state === 'Missed').length, 1);
-assert.equal(board.members[0].weekItems.find((item) => item.title === 'Required recovery')?.state, 'Extra');
+assert.equal(board.members[0].weekItems.find((item) => item.title === 'Required recovery')?.state, 'Scheduled');
 assert.equal(requiredExtraStanding(requiredOpen, today), 'open');
 assert.equal(requiredExtraStanding(requiredDone, today), 'completed');
 assert.equal(requiredExtraStanding(requiredPast, today), 'not_completed');
+assert.equal(requiredExtraStanding({ ...requiredPast, status: 'skipped' }, today), 'skipped');
 assert.equal(requiredExtraStanding(typed[0], today), 'open');
 assert.equal(extraActivityLabel(false), 'Extra');
 assert.equal(extraActivityLabel(true), 'Extra · required');

@@ -13,6 +13,8 @@ import {
 import { loadGroupCalendarWeek, type GroupCalendarWeekFacts } from '../../../lib/groups/loadGroupTrainingFacts';
 import { addDaysYmd, formatDisplayDate, mondayOfWeek, parseYmd, todayYmd } from '../../../lib/training/programCalendar';
 import { supabase } from '../../../lib/supabaseClient';
+import type { GroupExtraAction } from '../../../lib/groups/groupActivities';
+import GroupExtraActions from './GroupExtraActions';
 import WorkoutScheduleActions from './WorkoutScheduleActions';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -40,6 +42,7 @@ type GroupTrainingCalendarProps = {
   onMoveWorkout?: (input: { memberUserId: string; workoutId: string; originalDate: string; newDate: string }) => Promise<void>;
   onExcuseWorkout?: (input: { memberUserId: string; workoutId: string; originalDate: string }) => Promise<void>;
   onRestoreWorkout?: (input: { memberUserId: string; workoutId: string; originalDate: string }) => Promise<void>;
+  onExtraAction?: (action: GroupExtraAction) => Promise<string | null>;
 };
 
 export default function GroupTrainingCalendar({
@@ -55,6 +58,7 @@ export default function GroupTrainingCalendar({
   onMoveWorkout,
   onExcuseWorkout,
   onRestoreWorkout,
+  onExtraAction,
 }: GroupTrainingCalendarProps) {
   const today = todayYmd();
   const [weekStart, setWeekStart] = useState(() => mondayOfWeek(today));
@@ -244,7 +248,21 @@ export default function GroupTrainingCalendar({
           </div>
         </>
       )}
-      {selected && (
+      {selected?.extra && onExtraAction && (
+        <GroupExtraActions
+          extra={selected.extra}
+          memberName={selected.memberName}
+          canAssign={canEdit}
+          viewerUserId={viewerUserId}
+          onClose={() => setSelected(null)}
+          onAction={async (action) => {
+            const message = await onExtraAction(action);
+            if (!message) setSelected(null);
+            return message;
+          }}
+        />
+      )}
+      {selected && !selected.extra && (
         <WorkoutScheduleActions
           memberName={selected.memberName}
           workout={selected}

@@ -366,10 +366,14 @@ async function main() {
     });
     expect('owner can add a past required extra', !requiredPast.error, requiredPast.error || undefined);
     if (requiredPast.data?.series_id) {
-      const marked = await admin.from('st_group_activity_occurrences').update({ completed: true }).eq('series_id', requiredPast.data.series_id).select('id');
-      expect('completed flag can be stored on the occurrence', !marked.error && !!marked.data?.length, marked.error?.message || 'no row');
+      const marked = await member.rpc('st_complete_group_activity_occurrence', {
+        p_series_id: requiredPast.data.series_id,
+        p_user_id: memberId,
+        p_original_date: past === today ? '2026-10-01' : past,
+      });
+      expect('member can complete their own required extra', !marked.error, marked.error?.message);
       const reverted = await admin.from('st_group_activity_occurrences').update({ completed: false }).eq('series_id', requiredPast.data.series_id);
-      expect('completed flag can return to open history', !reverted.error, reverted.error?.message);
+      expect('completed history stays stored', !!reverted.error, 'completed flag was cleared');
     }
 
     const assignRequired = await save(assigner, {

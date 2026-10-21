@@ -11,13 +11,64 @@ Branch:
 Status:
 ```
 
+## BIQ-0263 - Stage 2 recurring group activity calendar
+
+Date: 2026-10-21
+Branch: main
+Status: Complete. Committed on main.
+
+Summary: Group calendars read recurring extras from st_list_group_activities, including virtual dates and stored exceptions. Add Activity can stay one-time, repeat every week, repeat on chosen weekdays, and take an optional end date. A repeating extra can be changed for this occurrence, this and future dates, or the entire series, and it can be completed, skipped, restored, or ended through the database functions.
+
+Purpose: Weekly group extras should follow the recurrence rules in the database and keep completed history when the series changes.
+
+Files changed:
+- lib/groups/groupActivities.ts
+- lib/groups/groupActivityRepeat.ts
+- lib/groups/groupCalendar.ts
+- lib/groups/trainingWorkspace.ts
+- app/components/groups/GroupActivityRepeatFields.tsx
+- app/components/groups/GroupExtraActions.tsx
+- app/components/groups/GroupTrainingCalendar.tsx
+- app/components/groups/GroupTrainingHome.tsx
+- app/components/groups/MemberTrainingWorkspace.tsx
+- app/components/groups/MemberPerformancePanel.tsx
+- app/components/groups/TeamProgressTab.tsx
+- app/components/programDesign/AddActivitySheet.tsx
+- app/globals.css
+- scripts/test-group-activity-stage1.ts
+- scripts/test-group-activity-stage2.ts
+- scripts/verify-group-activity-stage1-live.ts
+- scripts/test-group-training-workspace.ts
+- e2e/group-activity-stage1.spec.ts
+- e2e/group-activity-stage2.spec.ts
+- package.json
+- CHANGELOG.md
+
+Database changes: None. Migration 068 and 069 were not modified. Reads use st_list_group_activities and a series metadata select. Writes use the existing activity functions.
+
+Testing steps:
+- Hosted Supabase schema check on 2026-10-21 confirmed the Stage 2 columns, list and edit functions, and the recurrence arguments on st_save_group_activity.
+- node node_modules/tsx/dist/cli.mjs scripts/test-group-activity-stage2.ts passed.
+- The group regression scripts in package.json test:groups passed, including the Stage 1, Stage 2, calendar, and training workspace checks.
+- node node_modules/typescript/bin/tsc --noEmit exited 0, including after the Stage 2 browser spec.
+- Disposable hosted QA users passed scripts/verify-group-activity-stage1-live.ts, including completion that cannot be cleared afterward.
+- Playwright e2e/group-activity-stage1.spec.ts and e2e/group-activity-stage2.spec.ts passed 34 tests on desktop and mobile: custom weekdays, end date, this occurrence, this and future, entire series, skip and restore, completion, end series, move, role permissions, and the existing Stage 1 calendar and logging checks.
+- Disposable hosted QA cleanup matched baseline counts.
+
+Known issues:
+- A direct database connection string was not available, so the hosted ACL and overload queries were not re-run. The API lists one save function with the recurrence arguments.
+- Deleting a whole group can still cascade completed rows.
+- Activities without a workout are not duplicate-checked against each other.
+
+Recommended commit message: Show recurring group activities on the group calendar
+
 ## BIQ-0263 - Stage 2 recurring group activities migration
 
 Date: 2026-10-21
 Branch: main
-Status: Written, not applied. Awaiting review.
+Status: Applied on hosted Supabase. Schema confirmed 2026-10-21. Not committed from this workspace.
 
-Summary: Migration 069 is a complete, executable proposal for weekly group extras. It keeps the Stage 1 save call working, stores an immutable snapshot when an occurrence is completed, and adds list, edit, skip, restore, end, and series-split operations. It has not been applied to Supabase.
+Summary: Migration 069 keeps the Stage 1 save call working, stores an immutable snapshot when an occurrence is completed, and adds list, edit, skip, restore, end, and series-split operations. Hosted Supabase now exposes those columns and functions. The save function accepts recurrence arguments, completed rows are snapshotted, and no weekly series existed at confirmation.
 
 Purpose: Recurring group activities need one reviewable database change before any calendar UI work.
 

@@ -92,6 +92,12 @@ export default function MemberPerformancePanel({
               <b>{extraSummary.optional}</b>
               <span className="muted">Optional</span>
             </div>
+            {extraSummary.skipped > 0 && (
+              <div>
+                <b>{extraSummary.skipped}</b>
+                <span className="muted">Skipped</span>
+              </div>
+            )}
           </div>
         </div>
       )}

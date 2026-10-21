@@ -11,6 +11,10 @@ import { supabase } from '../../../lib/supabaseClient';
 import { customWeekdayError, materializeMemberSchedule, programCycleAnchor } from '../../../lib/groups/memberSchedule';
 import { formatWarmupPrescription } from '../training/WarmupExerciseCard';
 import { addDaysYmd, formatDisplayDate, mondayOfWeek, parseYmd, todayYmd } from '../../../lib/training/programCalendar';
+import type { GroupExtraAction } from '../../../lib/groups/groupActivities';
+import { groupRepeatDraft, groupRepeatSave, groupWeekdayIndex } from '../../../lib/groups/groupActivityRepeat';
+import GroupActivityRepeatFields from './GroupActivityRepeatFields';
+import GroupExtraActions from './GroupExtraActions';
 import WorkoutScheduleActions from './WorkoutScheduleActions';
 
 export type MemberProfileSection = 'calendar' | 'plan' | 'progress';
@@ -240,7 +244,11 @@ type MemberTrainingWorkspaceProps = {
     notes?: string | null;
     details?: Record<string, unknown>;
     required?: boolean;
+    recurrence?: 'none' | 'weekly';
+    recurrenceWeekdays?: number[];
+    recurrenceUntil?: string | null;
   }) => Promise<void>;
+  onExtraAction?: (action: GroupExtraAction) => Promise<string | null>;
   onEditSharedProgram?: () => void;
   onCustomize?: (programId: string) => void;
   onMessage?: () => void;
@@ -281,6 +289,7 @@ export default function MemberTrainingWorkspace({
   onRestoreWorkout,
   onSetExpectations,
   onAddActivity,
+  onExtraAction,
   onEditSharedProgram,
   onCustomize,
   onMessage,
@@ -318,6 +327,7 @@ export default function MemberTrainingWorkspace({
   const [addingWorkout, setAddingWorkout] = useState(false);
   const [activitySheet, setActivitySheet] = useState(false);
   const [extraRequired, setExtraRequired] = useState(false);
+  const [repeat, setRepeat] = useState(() => groupRepeatDraft(todayYmd()));
   const [oneOffId, setOneOffId] = useState('');
   const [oneOffDate, setOneOffDate] = useState(todayYmd());
   const [memberQuery, setMemberQuery] = useState('');
@@ -858,6 +868,7 @@ export default function MemberTrainingWorkspace({
                     closePlanTools();
                     setOneOffDate(selectedDate);
                     setExtraRequired(false);
+                    setRepeat(groupRepeatDraft(selectedDate));
                     setAddingWorkout(true);
                   }}
                 >
@@ -878,6 +889,7 @@ export default function MemberTrainingWorkspace({
                   setActionError('');
                   const chosen = activity.choices.find((workout) => workout.workoutId === oneOffId);
                   const workoutName = workoutFor(oneOffId)?.title || chosen?.title || 'Workout';
+                  const recurrence = groupRepeatSave(repeat, oneOffDate);
                   void onAddActivity({
                     activityType: 'strength',
                     title: workoutName,
@@ -885,6 +897,7 @@ export default function MemberTrainingWorkspace({
                     workoutId: oneOffId,
                     programId: member.programId,
                     required: canRequireExtra && extraRequired,
+                    ...recurrence,
                   })
                     .then(() => setAddingWorkout(false))
                     .catch((error: Error) => setActionError(error.message || 'Could not add that workout.'))
@@ -921,8 +934,15 @@ export default function MemberTrainingWorkspace({
                 )}
                 <label>
                   Date
-                  <DateInput value={oneOffDate} onChange={setOneOffDate} />
+                  <DateInput
+                    value={oneOffDate}
+                    onChange={(next) => {
+                      setOneOffDate(next);
+                      setRepeat((current) => ({ ...current, weekdays: Array.from(new Set([groupWeekdayIndex(next), ...current.weekdays])) }));
+                    }}
+                  />
                 </label>
+                <GroupActivityRepeatFields date={oneOffDate} value={repeat} onChange={setRepeat} />
                 {canRequireExtra && (
                   <label className="remember-row">
                     <input type="checkbox" checked={extraRequired} onChange={(event) => setExtraRequired(event.target.checked)} />
@@ -942,8 +962,10 @@ export default function MemberTrainingWorkspace({
                 allowRequired={canRequireExtra}
                 required={extraRequired}
                 onRequiredChange={setExtraRequired}
+                repeatSlot={<GroupActivityRepeatFields date={oneOffDate} value={repeat} onChange={setRepeat} />}
                 onClose={() => setActivitySheet(false)}
                 onSave={async (draft) => {
+                  const recurrence = groupRepeatSave(repeat, oneOffDate);
                   await onAddActivity({
                     activityType: draft.activity_type,
                     title: draft.title,
@@ -952,6 +974,7 @@ export default function MemberTrainingWorkspace({
                     notes: draft.notes,
                     details: draft.details,
                     required: canRequireExtra && extraRequired,
+                    ...recurrence,
                   });
                   setActivitySheet(false);
                   setAddingWorkout(false);
@@ -1012,7 +1035,16 @@ export default function MemberTrainingWorkspace({
                               Log this workout
                             </button>
                           )}
-                          {canEditSchedule && (
+                          {item.origin === 'extra' && item.extra && onExtraAction && (
+                            <GroupExtraActions
+                              extra={item.extra}
+                              memberName={member.name}
+                              canAssign={canRequireExtra}
+                              viewerUserId={viewerUserId || ''}
+                              onAction={onExtraAction}
+                            />
+                          )}
+                          {canEditSchedule && item.origin !== 'extra' && (
                             <WorkoutScheduleActions
                               memberName={member.name}
                               workout={item}
