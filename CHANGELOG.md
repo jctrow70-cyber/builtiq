@@ -11,6 +11,42 @@ Branch:
 Status:
 ```
 
+## BIQ-0263 - Stage 2 recurring group activities migration
+
+Date: 2026-10-21
+Branch: main
+Status: Written, not applied. Awaiting review.
+
+Summary: Migration 069 is a complete, executable proposal for weekly group extras. It keeps the Stage 1 save call working, stores an immutable snapshot when an occurrence is completed, and adds list, edit, skip, restore, end, and series-split operations. It has not been applied to Supabase.
+
+Purpose: Recurring group activities need one reviewable database change before any calendar UI work.
+
+Files changed:
+- supabase/migrations/20261021_069_group_activity_recurrence.sql
+- scripts/sql/biq0263-stage2-bootstrap.sql
+- scripts/sql/biq0263-stage2-seed-before-069.sql
+- scripts/sql/biq0263-stage2-tests.sql
+- scripts/sql/pgSimpleClient.ts
+- scripts/verify-group-activity-stage2-sql.ts
+- CHANGELOG.md
+
+Database changes: None applied. Proposed migration 069 adds recurrence columns, completion snapshots, and the Stage 2 functions. Migration 068 is unchanged.
+
+Testing steps:
+- Executed on disposable local PostgreSQL 16.6.0 at 127.0.0.1:55432, not Supabase.
+- Static checks confirmed migration 068 is unchanged and 069 has one transaction, no placeholders, and the expected functions.
+- Applied bootstrap, migration 068, a Stage 1 completed row, migration 069, and the Stage 2 SQL checks.
+- The SQL checks passed, including Stage 1 compatibility, weekly generation, cross-week and cross-year moves, snapshots, series splits, entire-series edits, skip, restore, end, duplicate prevention, five group roles, and isolation from Personal Training tables.
+- Two concurrent saves of the same virtual workout waited 3272ms, the second was rejected, and one series remained.
+- Not executed: Supabase apply, the app UI, Playwright, or Stage 1 live checks against the hosted database.
+
+Known issues:
+- The app still reads stored occurrence rows, so virtual weekly dates do not appear until a later UI change.
+- Deleting a whole group can still cascade completed rows. The activity functions do not delete completed rows.
+- Activities without a workout are not duplicate-checked against each other, matching Stage 1.
+
+Recommended commit message: Add the recurring group activity migration for review
+
 ## BIQ-0263 - Clarify group logging, calendars, and progress
 
 Date: 2026-10-18
