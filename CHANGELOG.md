@@ -11,6 +11,32 @@ Branch:
 Status:
 ```
 
+## BIQ-0264 - Open Training on the Calendar view
+
+Date: 2026-10-21
+Branch: main
+Status: Local / in progress
+
+Summary: Training opens on Calendar again. The Day, Week, and Calendar switch had gone back to Week as the starting view.
+
+Purpose: BIQ-0203 set the Training default to the month calendar. That default had reverted to Week.
+
+Files changed:
+- app/page.tsx
+- CHANGELOG.md
+
+Database changes: None.
+
+Testing steps:
+1. Open Training. Calendar is selected and the month grid is showing.
+2. Switch to Week, then Day. Each view still loads.
+3. Refresh the page and open Training again. Calendar is selected.
+4. On a phone-width screen, the month calendar still fits and Day and Week remain available.
+
+Known issues: None.
+
+Recommended commit message: Open Training on the Calendar view
+
 ## BIQ-0263 - Stage 2 recurring group activity calendar
 
 Date: 2026-10-21

@@ -214,7 +214,7 @@ export default function Page(){
  const [bodyDashRefreshKey,setBodyDashRefreshKey]=useState(0);
  const [historyRestoreBusy,setHistoryRestoreBusy]=useState(false);
  const [trainingSubNav,setTrainingSubNav]=useState<'personal'|'setup'>('personal');
- const [trainingCalendarView,setTrainingCalendarView]=useState<'day'|'week'|'month'>('week');
+ const [trainingCalendarView,setTrainingCalendarView]=useState<'day'|'week'|'month'>('month');
  const [trainingCalendarMonth,setTrainingCalendarMonth]=useState(()=>yearMonthOf(todayYmd()));
  const [trainingSessionOpen,setTrainingSessionOpen]=useState(false);
  const [activeExpectationId,setActiveExpectationId]=useState<string|null>(null);
