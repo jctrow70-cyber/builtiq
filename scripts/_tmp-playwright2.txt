@@ -1,0 +1,223 @@
+
+Running 44 tests using 1 worker
+
+(node:10816) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  1 [desktop] › e2e\group-activity-stage1.spec.ts:49:7 › Stage 1 group extras › owner sees extras and can save another activity (17.6s)
+  ok  2 [desktop] › e2e\group-activity-stage1.spec.ts:75:7 › Stage 1 group extras › owner can repeat an activity every week (12.0s)
+  ok  3 [desktop] › e2e\group-activity-stage1.spec.ts:95:7 › Stage 1 group extras › ordinary member can add an optional extra and cannot mark it required (9.6s)
+  ok  4 [desktop] › e2e\group-activity-stage1.spec.ts:107:7 › Stage 1 group extras › manager can open Add Activity and see a required extra (9.4s)
+  ok  5 [desktop] › e2e\group-activity-stage1.spec.ts:119:7 › Stage 1 group extras › assign-enabled member can require an extra without a team program (10.1s)
+  ok  6 [desktop] › e2e\group-activity-stage1.spec.ts:132:7 › Stage 1 group extras › member returns to the selected group day and personal training stays separate (15.7s)
+  ok  7 [desktop] › e2e\group-activity-stage1.spec.ts:177:7 › Stage 1 group extras › nonmember does not see the disposable group (8.1s)
+  ok  8 [desktop] › e2e\group-activity-stage2.spec.ts:179:7 › Stage 2 recurring group extras › owner can repeat an activity on custom weekdays (15.8s)
+  ok  9 [desktop] › e2e\group-activity-stage2.spec.ts:229:7 › Stage 2 recurring group extras › an end date hides later occurrences (14.7s)
+  ok 10 [desktop] › e2e\group-activity-stage2.spec.ts:249:7 › Stage 2 recurring group extras › editing this occurrence leaves other dates unchanged (18.0s)
+  ok 11 [desktop] › e2e\group-activity-stage2.spec.ts:273:7 › Stage 2 recurring group extras › editing this and future leaves earlier dates unchanged (22.6s)
+  ok 12 [desktop] › e2e\group-activity-stage2.spec.ts:300:7 › Stage 2 recurring group extras › editing the entire series updates every date (16.6s)
+  ok 13 [desktop] › e2e\group-activity-stage2.spec.ts:324:7 › Stage 2 recurring group extras › skip and restore keep a single scheduled card (17.3s)
+  ok 14 [desktop] › e2e\group-activity-stage2.spec.ts:342:7 › Stage 2 recurring group extras › a completed occurrence stays completed (21.0s)
+  ok 15 [desktop] › e2e\group-activity-stage2.spec.ts:364:7 › Stage 2 recurring group extras › ending a series keeps history and drops future dates (15.4s)
+  ok 16 [desktop] › e2e\group-activity-stage2.spec.ts:387:7 › Stage 2 recurring group extras › moving an occurrence shows it only on the new date (15.3s)
+  ok 17 [desktop] › e2e\group-activity-stage2.spec.ts:421:7 › Stage 2 recurring group extras › roles can change only the extras they are allowed to change (42.0s)
+  ok 18 [desktop] › e2e\group-activity-stage3.spec.ts:191:7 › Phase 3B group strength workouts › owner builds, assigns, and reloads a recurring standalone workout (52.1s)
+  ok 19 [desktop] › e2e\group-activity-stage3.spec.ts:294:7 › Phase 3B group strength workouts › ordinary member can save only an optional personal extra and cannot read a private workout (15.2s)
+  ok 20 [desktop] › e2e\group-activity-stage3.spec.ts:328:7 › Phase 3B group strength workouts › manager can assign a published program workout and a required extra (15.4s)
+  ok 21 [desktop] › e2e\group-activity-stage3.spec.ts:382:7 › Phase 3B group strength workouts › assign-enabled member can assign a workout on the assign group (15.1s)
+  ok 22 [desktop] › e2e\group-activity-stage3.spec.ts:407:7 › Phase 3B group strength workouts › member logs a standalone workout and returns to the calendar (39.9s)
+(node:32048) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x  23 [mobile] › e2e\group-activity-stage1.spec.ts:49:7 › Stage 1 group extras › owner sees extras and can save another activity (34.8s)
+(node:35380) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 24 [mobile] › e2e\group-activity-stage1.spec.ts:75:7 › Stage 1 group extras › owner can repeat an activity every week (16.7s)
+  ok 25 [mobile] › e2e\group-activity-stage1.spec.ts:95:7 › Stage 1 group extras › ordinary member can add an optional extra and cannot mark it required (10.4s)
+  x  26 [mobile] › e2e\group-activity-stage1.spec.ts:107:7 › Stage 1 group extras › manager can open Add Activity and see a required extra (29.1s)
+(node:37692) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x  27 [mobile] › e2e\group-activity-stage1.spec.ts:119:7 › Stage 1 group extras › assign-enabled member can require an extra without a team program (34.5s)
+(node:25300) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 28 [mobile] › e2e\group-activity-stage1.spec.ts:132:7 › Stage 1 group extras › member returns to the selected group day and personal training stays separate (18.8s)
+  ok 29 [mobile] › e2e\group-activity-stage1.spec.ts:177:7 › Stage 1 group extras › nonmember does not see the disposable group (7.3s)
+  ok 30 [mobile] › e2e\group-activity-stage2.spec.ts:179:7 › Stage 2 recurring group extras › owner can repeat an activity on custom weekdays (15.2s)
+  ok 31 [mobile] › e2e\group-activity-stage2.spec.ts:229:7 › Stage 2 recurring group extras › an end date hides later occurrences (13.7s)
+  ok 32 [mobile] › e2e\group-activity-stage2.spec.ts:249:7 › Stage 2 recurring group extras › editing this occurrence leaves other dates unchanged (17.0s)
+  ok 33 [mobile] › e2e\group-activity-stage2.spec.ts:273:7 › Stage 2 recurring group extras › editing this and future leaves earlier dates unchanged (16.5s)
+  ok 34 [mobile] › e2e\group-activity-stage2.spec.ts:300:7 › Stage 2 recurring group extras › editing the entire series updates every date (17.4s)
+  ok 35 [mobile] › e2e\group-activity-stage2.spec.ts:324:7 › Stage 2 recurring group extras › skip and restore keep a single scheduled card (14.6s)
+  ok 36 [mobile] › e2e\group-activity-stage2.spec.ts:342:7 › Stage 2 recurring group extras › a completed occurrence stays completed (18.3s)
+  ok 37 [mobile] › e2e\group-activity-stage2.spec.ts:364:7 › Stage 2 recurring group extras › ending a series keeps history and drops future dates (15.6s)
+  ok 38 [mobile] › e2e\group-activity-stage2.spec.ts:387:7 › Stage 2 recurring group extras › moving an occurrence shows it only on the new date (16.4s)
+  x  39 [mobile] › e2e\group-activity-stage2.spec.ts:421:7 › Stage 2 recurring group extras › roles can change only the extras they are allowed to change (50.4s)
+(node:37080) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 40 [mobile] › e2e\group-activity-stage3.spec.ts:191:7 › Phase 3B group strength workouts › owner builds, assigns, and reloads a recurring standalone workout (57.0s)
+  ok 41 [mobile] › e2e\group-activity-stage3.spec.ts:294:7 › Phase 3B group strength workouts › ordinary member can save only an optional personal extra and cannot read a private workout (16.4s)
+  ok 42 [mobile] › e2e\group-activity-stage3.spec.ts:328:7 › Phase 3B group strength workouts › manager can assign a published program workout and a required extra (13.9s)
+  x  43 [mobile] › e2e\group-activity-stage3.spec.ts:382:7 › Phase 3B group strength workouts › assign-enabled member can assign a workout on the assign group (27.3m)
+(node:33100) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok 44 [mobile] › e2e\group-activity-stage3.spec.ts:407:7 › Phase 3B group strength workouts › member logs a standalone workout and returns to the calendar (59.5s)
+
+
+  1) [mobile] › e2e\group-activity-stage1.spec.ts:49:7 › Stage 1 group extras › owner sees extras and can save another activity 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('QA cardio').first()
+    Expected: visible
+    Timeout: 20000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('QA cardio').first() with timeout 20000ms
+      - waiting for getByText('QA cardio').first()
+
+
+      53 |     await openGroup(page, fixture.teamName);
+      54 |     await page.getByRole('button', { name: new RegExp(fixture.memberName) }).first().click();
+    > 55 |     await expect(page.getByText('QA cardio').first()).toBeVisible();
+         |                                                       ^
+      56 |     await expect(page.getByText('Extra', { exact: true }).first()).toBeVisible();
+      57 |     await expect(page.getByText('Extra · required').first()).toBeVisible();
+      58 |     await page.getByRole('button', { name: 'Add Activity' }).click();
+        at C:\Users\JesseTrowbridge\OneDrive - Tegria\Documents\GitHub\builtiq\e2e\group-activity-stage1.spec.ts:55:55
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\group-activity-stage1-Stag-33346-d-can-save-another-activity-mobile\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\group-activity-stage1-Stag-33346-d-can-save-another-activity-mobile\error-context.md
+
+  2) [mobile] › e2e\group-activity-stage1.spec.ts:107:7 › Stage 1 group extras › manager can open Add Activity and see a required extra 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('QA cardio').first()
+    Expected: visible
+    Timeout: 20000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('QA cardio').first() with timeout 20000ms
+      - waiting for getByText('QA cardio').first()
+
+
+      110 |     await openGroup(page, fixture.teamName);
+      111 |     await page.getByRole('button', { name: new RegExp(fixture.memberName) }).first().click();
+    > 112 |     await expect(page.getByText('QA cardio').first()).toBeVisible();
+          |                                                       ^
+      113 |     await expect(page.getByText('Extra · required').first()).toBeVisible();
+      114 |     await page.getByRole('button', { name: 'Add Activity' }).click();
+      115 |     await expect(page.getByText('Required. Program missed totals stay the same.')).toBeVisible();
+        at C:\Users\JesseTrowbridge\OneDrive - Tegria\Documents\GitHub\builtiq\e2e\group-activity-stage1.spec.ts:112:55
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\group-activity-stage1-Stag-9ff3b-ty-and-see-a-required-extra-mobile\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\group-activity-stage1-Stag-9ff3b-ty-and-see-a-required-extra-mobile\error-context.md
+
+  3) [mobile] › e2e\group-activity-stage1.spec.ts:119:7 › Stage 1 group extras › assign-enabled member can require an extra without a team program 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('QA assigned sport').first()
+    Expected: visible
+    Timeout: 20000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('QA assigned sport').first() with timeout 20000ms
+      - waiting for getByText('QA assigned sport').first()
+
+
+      123 |     await openGroup(page, assignTeam);
+      124 |     await page.getByRole('button', { name: /QA owner/ }).first().click();
+    > 125 |     await expect(page.getByText('QA assigned sport').first()).toBeVisible();
+          |                                                               ^
+      126 |     await expect(page.getByText('Extra · required').first()).toBeVisible();
+      127 |     await page.getByRole('button', { name: 'Add Activity' }).click();
+      128 |     await expect(page.getByText('Required. Program missed totals stay the same.')).toBeVisible();
+        at C:\Users\JesseTrowbridge\OneDrive - Tegria\Documents\GitHub\builtiq\e2e\group-activity-stage1.spec.ts:125:63
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\group-activity-stage1-Stag-920d1-xtra-without-a-team-program-mobile\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\group-activity-stage1-Stag-920d1-xtra-without-a-team-program-mobile\error-context.md
+
+  4) [mobile] › e2e\group-activity-stage2.spec.ts:421:7 › Stage 2 recurring group extras › roles can change only the extras they are allowed to change 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.member-day-detail').getByRole('button', { name: /^QA required mobility\b/ })
+    Expected: 1
+    Received: 0
+    Timeout:  20000ms
+
+    Call log:
+      - Expect "toHaveCount" locator('.member-day-detail').getByRole('button', { name: /^QA required mobility\b/ }) with timeout 20000ms
+      - waiting for locator('.member-day-detail').getByRole('button', { name: /^QA required mobility\b/ })
+        43 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      138 | async function expectLabels(page: Page, title: string, status: 'Scheduled' | 'Completed' | 'Skipped', required = false) {
+      139 |   const card = titledCards(page, title);
+    > 140 |   await expect(card).toHaveCount(1);
+          |                      ^
+      141 |   await expect(card).toContainText(status);
+      142 |   await expect(card).toContainText(required ? 'Extra · required' : 'Extra');
+      143 |   if (!required) await expect(card).not.toContainText('Extra · required');
+        at expectLabels (C:\Users\JesseTrowbridge\OneDrive - Tegria\Documents\GitHub\builtiq\e2e\group-activity-stage2.spec.ts:140:22)
+        at C:\Users\JesseTrowbridge\OneDrive - Tegria\Documents\GitHub\builtiq\e2e\group-activity-stage2.spec.ts:451:11
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\group-activity-stage2-Stag-53108--they-are-allowed-to-change-mobile\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\group-activity-stage2-Stag-53108--they-are-allowed-to-change-mobile\error-context.md
+
+  5) [mobile] › e2e\group-activity-stage3.spec.ts:382:7 › Phase 3B group strength workouts › assign-enabled member can assign a workout on the assign group 
+
+    Test timeout of 180000ms exceeded.
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.group-calendar-day').visible().filter({ has: getByRole('button', { name: /^Thu/ }) }).locator('.group-calendar-card').filter({ hasText: 'QA mobile assign lift' })
+    Expected: 2
+    Received: 0
+    Timeout:  20000ms
+
+    Call log:
+      - Expect "toHaveCount" locator('.group-calendar-day').visible().filter({ has: getByRole('button', { name: /^Thu/ }) }).locator('.group-calendar-card').filter({ hasText: 'QA mobile assign lift' }) with timeout 20000ms
+      - waiting for locator('.group-calendar-day').visible().filter({ has: getByRole('button', { name: /^Thu/ }) }).locator('.group-calendar-card').filter({ hasText: 'QA mobile assign lift' })
+        5 × locator resolved to 0 elements
+          - unexpected value "0"
+
+
+      125 |   const more = column.getByRole('button', { name: /\+\d+ more/ });
+      126 |   if (await more.count()) await more.click();
+    > 127 |   await expect(column.locator('.group-calendar-card').filter({ hasText: title })).toHaveCount(count);
+          |                                                                                   ^
+      128 | }
+      129 |
+      130 | async function accessToken(page: Page) {
+        at expectCards (C:\Users\JesseTrowbridge\OneDrive - Tegria\Documents\GitHub\builtiq\e2e\group-activity-stage3.spec.ts:127:83)
+        at C:\Users\JesseTrowbridge\OneDrive - Tegria\Documents\GitHub\builtiq\e2e\group-activity-stage3.spec.ts:403:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results\group-activity-stage3-Phas-44862-workout-on-the-assign-group-mobile\test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results\group-activity-stage3-Phas-44862-workout-on-the-assign-group-mobile\error-context.md
+
+  5 failed
+    [mobile] › e2e\group-activity-stage1.spec.ts:49:7 › Stage 1 group extras › owner sees extras and can save another activity 
+    [mobile] › e2e\group-activity-stage1.spec.ts:107:7 › Stage 1 group extras › manager can open Add Activity and see a required extra 
+    [mobile] › e2e\group-activity-stage1.spec.ts:119:7 › Stage 1 group extras › assign-enabled member can require an extra without a team program 
+    [mobile] › e2e\group-activity-stage2.spec.ts:421:7 › Stage 2 recurring group extras › roles can change only the extras they are allowed to change 
+    [mobile] › e2e\group-activity-stage3.spec.ts:382:7 › Phase 3B group strength workouts › assign-enabled member can assign a workout on the assign group 
+  39 passed (44.4m)

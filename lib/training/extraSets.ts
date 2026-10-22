@@ -20,6 +20,7 @@ export type ExtraSetLog = {
   snapshot_program_role?: string | null;
   snapshot_catalog_exercise_id?: string | null;
   snapshot_equipment?: string | null;
+  team_id?: string | null;
   snapshot_variant?: string | null;
   snapshot_movement_pattern?: string | null;
   snapshot_muscle_credits?: { muscle: string; contribution: number }[] | null;
@@ -84,6 +85,7 @@ export function extraSetInsertPayload(row: ExtraSetLog): Record<string, unknown>
     snapshot_week: row.snapshot_week ?? null,
     snapshot_day_label: row.snapshot_day_label || '',
     snapshot_workout_type: row.snapshot_workout_type || '',
+    ...(row.team_id ? { team_id: row.team_id } : {}),
   };
 }
 

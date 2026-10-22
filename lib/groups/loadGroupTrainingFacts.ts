@@ -199,7 +199,7 @@ export async function loadGroupTrainingFacts(
       input.viewerUserId
         ? supabase
             .from('st_workout_sessions')
-            .select('user_id, workout_id, log_date, status, expectation_id, completed_at')
+            .select('user_id, workout_id, log_date, status, expectation_id, source_key, completed_at')
             .eq('user_id', input.viewerUserId)
             .gte('log_date', weekFrom)
             .lte('log_date', sundayOfWeek(today))
@@ -210,11 +210,12 @@ export async function loadGroupTrainingFacts(
       expectations = attachExpectationCompletion(
         await applyRecipientStatus(supabase, expectations),
         (sessions.data || []).map(
-          (row: { user_id: string; workout_id?: string | null; log_date?: string | null; expectation_id?: string | null; status?: string | null; completed_at?: string | null }) => ({
+          (row: { user_id: string; workout_id?: string | null; log_date?: string | null; expectation_id?: string | null; source_key?: string | null; status?: string | null; completed_at?: string | null }) => ({
             userId: row.user_id,
             workoutId: row.workout_id,
             logDate: row.log_date ? String(row.log_date).slice(0, 10) : null,
             expectationId: row.expectation_id,
+            sourceKey: row.source_key,
             status: mapSessionStatus(row.status),
             completedAt: row.completed_at || null,
           })
@@ -323,7 +324,7 @@ export async function loadMemberTrainingWeek(
     } else if (input.viewerUserId && input.viewerUserId === input.userId) {
       const sessions = await supabase
         .from('st_workout_sessions')
-        .select('user_id, workout_id, log_date, status, expectation_id, completed_at')
+        .select('user_id, workout_id, log_date, status, expectation_id, source_key, completed_at')
         .eq('user_id', input.userId)
         .gte('log_date', from)
         .lte('log_date', to);
@@ -332,11 +333,12 @@ export async function loadMemberTrainingWeek(
         expectations = attachExpectationCompletion(
           await applyRecipientStatus(supabase, expectations),
           (sessions.data || []).map(
-            (row: { user_id: string; workout_id?: string | null; log_date?: string | null; expectation_id?: string | null; status?: string | null; completed_at?: string | null }) => ({
+            (row: { user_id: string; workout_id?: string | null; log_date?: string | null; expectation_id?: string | null; source_key?: string | null; status?: string | null; completed_at?: string | null }) => ({
               userId: row.user_id,
               workoutId: row.workout_id,
               logDate: row.log_date ? String(row.log_date).slice(0, 10) : null,
               expectationId: row.expectation_id,
+              sourceKey: row.source_key,
               status: mapSessionStatus(row.status),
               completedAt: row.completed_at || null,
             })
@@ -424,7 +426,7 @@ export async function loadGroupCalendarWeek(
         input.viewerUserId
           ? supabase
               .from('st_workout_sessions')
-              .select('user_id, workout_id, log_date, status, expectation_id, completed_at')
+              .select('user_id, workout_id, log_date, status, expectation_id, source_key, completed_at')
               .eq('user_id', input.viewerUserId)
               .gte('log_date', from)
               .lte('log_date', to)
@@ -435,11 +437,12 @@ export async function loadGroupCalendarWeek(
         expectations = attachExpectationCompletion(
           await applyRecipientStatus(supabase, expectations),
           (sessions.data || []).map(
-            (row: { user_id: string; workout_id?: string | null; log_date?: string | null; expectation_id?: string | null; status?: string | null; completed_at?: string | null }) => ({
+            (row: { user_id: string; workout_id?: string | null; log_date?: string | null; expectation_id?: string | null; source_key?: string | null; status?: string | null; completed_at?: string | null }) => ({
               userId: row.user_id,
               workoutId: row.workout_id,
               logDate: row.log_date ? String(row.log_date).slice(0, 10) : null,
               expectationId: row.expectation_id,
+              sourceKey: row.source_key,
               status: mapSessionStatus(row.status),
               completedAt: row.completed_at || null,
             })

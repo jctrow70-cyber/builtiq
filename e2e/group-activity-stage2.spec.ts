@@ -75,8 +75,10 @@ async function clearAuthStorage(page: Page) {
 async function signIn(page: Page, email: string, password: string) {
   await page.goto('/');
   const emailField = page.locator('#signin-email');
+  const account = page.getByRole('button', { name: 'Account menu' });
+  await expect(emailField.or(account)).toBeVisible();
   if (!(await emailField.isVisible())) {
-    await page.getByRole('button', { name: 'Account menu' }).click();
+    await account.click();
     await page.getByRole('menuitem', { name: 'Sign out' }).click();
     await expect(emailField).toBeVisible();
   }

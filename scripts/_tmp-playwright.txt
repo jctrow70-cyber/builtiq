@@ -1,0 +1,30 @@
+
+Running 44 tests using 1 worker
+
+(node:5360) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  1 [desktop] › e2e\group-activity-stage1.spec.ts:49:7 › Stage 1 group extras › owner sees extras and can save another activity (20.3s)
+  ok  2 [desktop] › e2e\group-activity-stage1.spec.ts:75:7 › Stage 1 group extras › owner can repeat an activity every week (12.3s)
+  ok  3 [desktop] › e2e\group-activity-stage1.spec.ts:95:7 › Stage 1 group extras › ordinary member can add an optional extra and cannot mark it required (10.1s)
+  ok  4 [desktop] › e2e\group-activity-stage1.spec.ts:107:7 › Stage 1 group extras › manager can open Add Activity and see a required extra (10.5s)
+  ok  5 [desktop] › e2e\group-activity-stage1.spec.ts:119:7 › Stage 1 group extras › assign-enabled member can require an extra without a team program (13.8s)
+  ok  6 [desktop] › e2e\group-activity-stage1.spec.ts:132:7 › Stage 1 group extras › member returns to the selected group day and personal training stays separate (15.0s)
+  ok  7 [desktop] › e2e\group-activity-stage1.spec.ts:177:7 › Stage 1 group extras › nonmember does not see the disposable group (8.5s)
+  x   8 [desktop] › e2e\group-activity-stage2.spec.ts:177:7 › Stage 2 recurring group extras › owner can repeat an activity on custom weekdays (2.0m)
+(node:3368) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x   9 [desktop] › e2e\group-activity-stage2.spec.ts:227:7 › Stage 2 recurring group extras › an end date hides later occurrences (2.0m)
+(node:37164) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x  10 [desktop] › e2e\group-activity-stage2.spec.ts:247:7 › Stage 2 recurring group extras › editing this occurrence leaves other dates unchanged (2.0m)
+(node:29264) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x  11 [desktop] › e2e\group-activity-stage2.spec.ts:271:7 › Stage 2 recurring group extras › editing this and future leaves earlier dates unchanged (2.0m)
+(node:3152) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x  12 [desktop] › e2e\group-activity-stage2.spec.ts:298:7 › Stage 2 recurring group extras › editing the entire series updates every date (2.0m)
+(node:39576) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  x  13 [desktop] › e2e\group-activity-stage2.spec.ts:322:7 › Stage 2 recurring group extras › skip and restore keep a single scheduled card (2.0m)
+(node:4124) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)

@@ -18,6 +18,7 @@ import { addDaysYmd, formatDisplayDate, mondayOfWeek, sundayOfWeek, todayYmd } f
 import { supabase } from '../../../lib/supabaseClient';
 import GroupTrainingCalendar from './GroupTrainingCalendar';
 import GroupTrainingMemberList from './GroupTrainingMemberList';
+import type { GroupActivityLogRequest } from '../../../lib/groups/groupActivityLog';
 import MemberTrainingWorkspace, { type GroupWorkoutLogRequest, type MemberProfileSection } from './MemberTrainingWorkspace';
 
 type GroupTrainingHomeProps = {
@@ -46,6 +47,8 @@ type GroupTrainingHomeProps = {
   focusUserId?: string | null;
   focusDate?: string | null;
   focusSection?: MemberProfileSection;
+  calendarFocusDate?: string | null;
+  onCalendarFocusHandled?: () => void;
   onFocusHandled?: () => void;
   onMemberFocus?: (userId: string, section: MemberProfileSection) => void;
   panelUserId?: string | null;
@@ -53,6 +56,7 @@ type GroupTrainingHomeProps = {
   viewerUserId?: string | null;
   groupLogs?: GroupActivityLog[] | null;
   onLogGroupWorkout?: (input: GroupWorkoutLogRequest) => void;
+  onLogGroupActivity?: (input: GroupActivityLogRequest) => void;
   memberAssignments?: Record<string, any>;
   programs?: any[];
   defaultProgramId?: string | null;
@@ -118,6 +122,8 @@ export default function GroupTrainingHome({
   focusUserId,
   focusDate = null,
   focusSection = 'calendar',
+  calendarFocusDate = null,
+  onCalendarFocusHandled,
   onFocusHandled,
   onMemberFocus,
   panelUserId,
@@ -125,6 +131,7 @@ export default function GroupTrainingHome({
   viewerUserId = null,
   groupLogs = null,
   onLogGroupWorkout,
+  onLogGroupActivity,
   members = [],
   classifications = [],
   memberClassificationIds = {},
@@ -147,6 +154,7 @@ export default function GroupTrainingHome({
   const [facts, setFacts] = useState<GroupTrainingFacts | null>(null);
   const [factsTick, setFactsTick] = useState(0);
   const [trainingView, setTrainingView] = useState<'members' | 'calendar'>('members');
+  const [calendarDate, setCalendarDate] = useState<string | null>(null);
 
   const assignmentKey = useMemo(
     () =>
@@ -163,6 +171,14 @@ export default function GroupTrainingHome({
     setSelectedUserId(null);
     setProfileWeekStart(mondayOfWeek(todayYmd()));
   }, [teamId]);
+
+  useEffect(() => {
+    if (!calendarFocusDate) return;
+    setCalendarDate(calendarFocusDate);
+    setSelectedUserId(null);
+    setTrainingView('calendar');
+    onCalendarFocusHandled?.();
+  }, [calendarFocusDate, onCalendarFocusHandled]);
 
   useEffect(() => {
     if (!focusUserId) return;
@@ -353,6 +369,7 @@ export default function GroupTrainingHome({
             viewerUserId={viewerUserId || sessionUserId}
             groupLogs={panelUserId === selected.userId ? groupLogs : null}
             onLogWorkout={onLogGroupWorkout}
+            onLogGroupActivity={onLogGroupActivity}
             customizePrograms={customizePrograms}
             onBack={() => {
               setSelectedUserId(null);
@@ -546,6 +563,8 @@ export default function GroupTrainingHome({
                     : undefined
                 }
                 onExtraAction={teamId ? changeExtra : undefined}
+                onLogGroupActivity={onLogGroupActivity}
+                focusDate={calendarDate}
                 onActivitySaved={() => setFactsTick((value) => value + 1)}
                 onRestoreWorkout={
                   teamId

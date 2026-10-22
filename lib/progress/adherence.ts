@@ -20,6 +20,7 @@ type SessionRow = {
   workout_id?: string | null;
   log_date?: string | null;
   status?: string | null;
+  source_key?: string | null;
 };
 
 /**
@@ -37,6 +38,7 @@ export function expectationFactsFromSchedule(expectations: ExpectationRow[], ses
     expectationId: session.expectation_id,
     workoutId: session.workout_id,
     logDate: session.log_date,
+    sourceKey: session.source_key,
   }));
   return expectations.map((row) => {
     const match = pickFulfillingSession(mapped, { id: row.id, workoutId: row.workout_id, scheduledDate: row.scheduled_date }, context);

@@ -14,6 +14,7 @@ import { loadGroupCalendarWeek, type GroupCalendarWeekFacts } from '../../../lib
 import { addDaysYmd, formatDisplayDate, mondayOfWeek, parseYmd, todayYmd } from '../../../lib/training/programCalendar';
 import { supabase } from '../../../lib/supabaseClient';
 import type { GroupExtraAction } from '../../../lib/groups/groupActivities';
+import { groupStrengthCardCanLog, type GroupActivityLogRequest } from '../../../lib/groups/groupActivityLog';
 import GroupCalendarActivitySheet from './GroupCalendarActivitySheet';
 import GroupExtraActions from './GroupExtraActions';
 import WorkoutScheduleActions from './WorkoutScheduleActions';
@@ -44,7 +45,9 @@ type GroupTrainingCalendarProps = {
   onExcuseWorkout?: (input: { memberUserId: string; workoutId: string; originalDate: string }) => Promise<void>;
   onRestoreWorkout?: (input: { memberUserId: string; workoutId: string; originalDate: string }) => Promise<void>;
   onExtraAction?: (action: GroupExtraAction) => Promise<string | null>;
+  onLogGroupActivity?: (input: GroupActivityLogRequest) => void;
   onActivitySaved?: () => void;
+  focusDate?: string | null;
 };
 
 export default function GroupTrainingCalendar({
@@ -61,7 +64,9 @@ export default function GroupTrainingCalendar({
   onExcuseWorkout,
   onRestoreWorkout,
   onExtraAction,
+  onLogGroupActivity,
   onActivitySaved,
+  focusDate = null,
 }: GroupTrainingCalendarProps) {
   const today = todayYmd();
   const [weekStart, setWeekStart] = useState(() => mondayOfWeek(today));
@@ -74,6 +79,12 @@ export default function GroupTrainingCalendar({
   const [adding, setAdding] = useState(false);
 
   const memberIds = useMemo(() => members.map((member) => member.userId).join(','), [members]);
+
+  useEffect(() => {
+    if (!focusDate) return;
+    setWeekStart(mondayOfWeek(focusDate));
+    setSelectedDay(focusDate);
+  }, [focusDate]);
 
   useEffect(() => {
     let cancelled = false;
@@ -281,6 +292,37 @@ export default function GroupTrainingCalendar({
           memberName={selected.memberName}
           canAssign={canEdit}
           viewerUserId={viewerUserId}
+          onLogWorkout={
+            onLogGroupActivity &&
+            groupStrengthCardCanLog({
+              viewerUserId,
+              memberUserId: selected.userId,
+              activityType: selected.extra.activityType,
+              workoutId: selected.workoutId,
+              seriesId: selected.extra.seriesId,
+              originalDate: selected.extra.originalDate || selected.date,
+              date: selected.date,
+              today,
+              status: selected.extra.status,
+              expectations: (facts?.expectations || []).map((row) => ({
+                userId: row.userId,
+                workoutId: row.workoutId,
+                scheduledDate: row.scheduledDate,
+                excused: row.excused,
+              })),
+            })
+              ? () =>
+                  onLogGroupActivity({
+                    teamId,
+                    memberUserId: selected.userId,
+                    workoutId: selected.workoutId || '',
+                    seriesId: selected.extra?.seriesId || '',
+                    originalDate: selected.extra?.originalDate || selected.date,
+                    scheduledDate: selected.date,
+                    returnTo: 'group-calendar',
+                  })
+              : undefined
+          }
           onClose={() => setSelected(null)}
           onAction={async (action) => {
             const message = await onExtraAction(action);

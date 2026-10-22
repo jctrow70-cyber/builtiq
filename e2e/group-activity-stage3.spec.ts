@@ -403,4 +403,103 @@ test.describe('Phase 3B group strength workouts', () => {
     await expectCards(page, today, title, 2);
     await expectNoHorizontalOverflow(page);
   });
+
+  test('member logs a standalone workout and returns to the calendar', async ({ page }, testInfo) => {
+    const fixture = loadFixture();
+    const tag = tagOf(testInfo.project.name);
+    const title = `QA ${tag} log lift`;
+    const today = weekdayShort();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayShort = WEEKDAYS[yesterday.getDay()];
+    const yesterdayYmd = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`;
+    await signIn(page, fixture.emails.member, fixture.password);
+    await openCalendar(page, fixture.teamName);
+    await selectCalendarDay(page, today);
+    await page.getByRole('button', { name: 'Add Activity' }).click();
+    const sheet = page.locator('.group-strength-sheet');
+    await sheet.getByRole('button', { name: 'Strength workout' }).click();
+    await sheet.getByLabel('Workout name').fill(title);
+    await addConfiguredExercise(page, 'Strength', ['press', 'curl', 'row'], { reps: '8', weight: '30' });
+    if (await page.locator('.add-exercise-panel').isVisible()) {
+      await page.locator('.add-exercise-panel').getByRole('button', { name: 'Cancel' }).click();
+    }
+    const exerciseEquipment = sheet.getByLabel(/^Equipment for /).first();
+    if ((await exerciseEquipment.locator('option').count()) > 1) await exerciseEquipment.selectOption({ index: 1 });
+    const chosenEquipment = await exerciseEquipment.inputValue();
+    await sheet.getByRole('radio', { name: 'Every week' }).check();
+    await sheet.getByRole('button', { name: 'Save workout' }).click();
+    await expect(sheet).toBeHidden();
+    await expectCards(page, today, title, 1);
+    await page.locator('.group-calendar-nav').getByRole('button', { name: 'Next week' }).click();
+    await selectCalendarDay(page, today);
+    await dayColumn(page, today).locator('.group-calendar-card').filter({ hasText: title }).locator('.group-calendar-card-open').click();
+    await expect(page.getByTestId('log-group-activity')).toHaveCount(0);
+    await page.locator('.group-calendar-nav').getByRole('button', { name: 'Today' }).click();
+    await selectCalendarDay(page, today);
+
+    await dayColumn(page, today).locator('.group-calendar-card').filter({ hasText: title }).locator('.group-calendar-card-open').click();
+    await page.getByRole('button', { name: 'This occurrence' }).click();
+    await page.locator('form').getByLabel('Date').fill(yesterdayYmd);
+    await page.getByRole('button', { name: 'Save this occurrence' }).click();
+    await expect(page.getByRole('button', { name: 'Log workout' })).toHaveCount(0);
+
+    if (yesterday.getDay() === 0) {
+      await page.locator('.group-calendar-nav').getByRole('button', { name: 'Previous week' }).click();
+    }
+    await selectCalendarDay(page, yesterdayShort);
+    await expectCards(page, yesterdayShort, title, 1);
+    await selectCalendarDay(page, yesterdayShort);
+    await dayColumn(page, yesterdayShort).locator('.group-calendar-card').filter({ hasText: title }).locator('.group-calendar-card-open').click();
+    await page.getByTestId('log-group-activity').click();
+    await expect(page.getByTestId('group-log-date')).toBeVisible();
+    const repsInput = () => page.locator('.set-log-card').first().locator('input.log-input-card').nth(1);
+    if (!(await repsInput().count())) await page.getByRole('button', { name: 'Expand' }).first().click();
+    const reps = repsInput();
+    await reps.fill('4');
+    await reps.blur();
+    await page.getByRole('button', { name: 'Back to calendar' }).click();
+    await expect(page.locator('.group-calendar')).toBeVisible();
+    await selectCalendarDay(page, yesterdayShort);
+    await dayColumn(page, yesterdayShort).locator('.group-calendar-card').filter({ hasText: title }).locator('.group-calendar-card-open').click();
+    await expect(page.getByText('Completed', { exact: true })).toHaveCount(0);
+    await page.getByTestId('log-group-activity').click();
+    if (!(await repsInput().count())) await page.getByRole('button', { name: 'Expand' }).first().click();
+    await expect(repsInput()).toHaveValue('4');
+    await page.getByRole('button', { name: 'Completed' }).click();
+    await expect.poll(async () => {
+      const rows = await restGet(page, `st_group_activity_occurrences?occurrence_date=eq.${yesterdayYmd}&select=completed`);
+      return rows.some((row: { completed?: boolean }) => row.completed);
+    }).toBe(true);
+    await page.getByRole('button', { name: 'Back to calendar' }).click();
+    await selectCalendarDay(page, yesterdayShort);
+    await expect(dayColumn(page, yesterdayShort).locator('.group-calendar-card').filter({ hasText: title })).toContainText('Completed');
+
+    const series = await restGet(page, `st_group_activity_series?title=eq.${encodeURIComponent(title)}&select=id,workout_id`);
+    const workoutId = series[0].workout_id as string;
+    const mine = await restGet(
+      page,
+      `st_set_logs?log_date=eq.${yesterdayYmd}&snapshot_equipment=eq.${encodeURIComponent(chosenEquipment)}&select=actual_reps,snapshot_equipment,team_id,completed`
+    );
+    expect(mine.some((row: { actual_reps?: string }) => row.actual_reps === '4')).toBeTruthy();
+    expect(mine.every((row: { team_id?: string | null }) => row.team_id)).toBeTruthy();
+    const expectations = await restGet(page, `st_training_expectations?workout_id=eq.${workoutId}&select=id`);
+    expect(expectations).toEqual([]);
+    const sessions = await restGet(page, `st_workout_sessions?workout_id=eq.${workoutId}&select=source_key,expectation_id,status`);
+    expect(sessions.some((row: { source_key?: string; expectation_id?: string | null; status?: string }) => String(row.source_key || '').startsWith('group-activity:') && !row.expectation_id && row.status === 'completed')).toBeTruthy();
+
+    await page.getByRole('button', { name: 'Training', exact: true }).click();
+    await expect(page.getByTestId('group-log-date')).toHaveCount(0);
+    await expect(page.getByText(title)).toHaveCount(0);
+
+    await signIn(page, fixture.emails.manager, fixture.password);
+    await openCalendar(page, fixture.teamName);
+    if (yesterday.getDay() === 0) {
+      await page.locator('.group-calendar-nav').getByRole('button', { name: 'Previous week' }).click();
+    }
+    await selectCalendarDay(page, yesterdayShort);
+    await dayColumn(page, yesterdayShort).locator('.group-calendar-card').filter({ hasText: title }).locator('.group-calendar-card-open').click();
+    await expect(page.getByTestId('log-group-activity')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Mark complete' })).toHaveCount(0);
+  });
 });

@@ -12,6 +12,7 @@ import { customWeekdayError, materializeMemberSchedule, programCycleAnchor } fro
 import { formatWarmupPrescription } from '../training/WarmupExerciseCard';
 import { addDaysYmd, formatDisplayDate, mondayOfWeek, parseYmd, todayYmd } from '../../../lib/training/programCalendar';
 import type { GroupExtraAction } from '../../../lib/groups/groupActivities';
+import { groupStrengthCardCanLog, type GroupActivityLogRequest } from '../../../lib/groups/groupActivityLog';
 import { groupRepeatDraft, groupRepeatSave, groupWeekdayIndex } from '../../../lib/groups/groupActivityRepeat';
 import GroupActivityRepeatFields from './GroupActivityRepeatFields';
 import GroupExtraActions from './GroupExtraActions';
@@ -270,6 +271,7 @@ type MemberTrainingWorkspaceProps = {
   viewerUserId?: string | null;
   groupLogs?: GroupActivityLog[] | null;
   onLogWorkout?: (input: GroupWorkoutLogRequest) => void;
+  onLogGroupActivity?: (input: GroupActivityLogRequest) => void;
 };
 
 export default function MemberTrainingWorkspace({
@@ -311,6 +313,7 @@ export default function MemberTrainingWorkspace({
   viewerUserId = null,
   groupLogs = null,
   onLogWorkout,
+  onLogGroupActivity,
 }: MemberTrainingWorkspaceProps) {
   const [showCustomize, setShowCustomize] = useState(false);
   const [planMenuOpen, setPlanMenuOpen] = useState(false);
@@ -1041,6 +1044,39 @@ export default function MemberTrainingWorkspace({
                               memberName={member.name}
                               canAssign={canRequireExtra}
                               viewerUserId={viewerUserId || ''}
+                              onLogWorkout={
+                                onLogGroupActivity && teamId &&
+                                groupStrengthCardCanLog({
+                                  viewerUserId,
+                                  memberUserId: member.userId,
+                                  activityType: item.extra.activityType,
+                                  workoutId: item.workoutId,
+                                  seriesId: item.extra.seriesId,
+                                  originalDate: item.extra.originalDate || item.date,
+                                  date: item.date,
+                                  today: todayYmd(),
+                                  status: item.extra.status,
+                                  expectations: days
+                                    .filter((row) => row.origin !== 'extra')
+                                    .map((row) => ({
+                                      userId: member.userId,
+                                      workoutId: row.workoutId,
+                                      scheduledDate: row.date,
+                                      excused: row.excused,
+                                    })),
+                                })
+                                  ? () =>
+                                      onLogGroupActivity({
+                                        teamId,
+                                        memberUserId: member.userId,
+                                        workoutId: item.workoutId || '',
+                                        seriesId: item.extra?.seriesId || '',
+                                        originalDate: item.extra?.originalDate || item.date,
+                                        scheduledDate: item.date,
+                                        returnTo: 'member-profile',
+                                      })
+                                  : undefined
+                              }
                               onAction={onExtraAction}
                             />
                           )}

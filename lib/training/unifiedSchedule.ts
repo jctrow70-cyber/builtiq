@@ -125,9 +125,10 @@ export function sourceLabel(sourceKey: string, teamName?: string | null): string
 }
 
 export function sessionFulfillsExpectation(
-  session: { expectationId?: string | null; workoutId?: string | null; logDate?: string | null },
+  session: { expectationId?: string | null; workoutId?: string | null; logDate?: string | null; sourceKey?: string | null },
   expectation: { id?: string | null; workoutId?: string | null; scheduledDate: string }
 ): boolean {
+  if (String(session.sourceKey || '').startsWith('group-activity:')) return false;
   if (session.expectationId) return !!(expectation.id && session.expectationId === expectation.id);
   return !!session.workoutId && session.workoutId === expectation.workoutId && session.logDate === expectation.scheduledDate;
 }

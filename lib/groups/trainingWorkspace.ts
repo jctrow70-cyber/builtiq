@@ -1141,6 +1141,7 @@ export function attachExpectationCompletion(
     workoutId?: string | null;
     logDate?: string | null;
     expectationId?: string | null;
+    sourceKey?: string | null;
     status?: string | null;
     completedAt?: string | null;
   }>

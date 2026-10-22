@@ -87,7 +87,16 @@ export type GroupsHubProps = {
     sourceKey: string;
     teamId?: string | null;
   }) => void;
-  groupLogResume?: { teamId: string; memberUserId: string; scheduledDate: string } | null;
+  groupLogResume?: { teamId: string; memberUserId: string; scheduledDate: string; returnTo?: 'group-calendar' | 'member-profile' } | null;
+  onLogGroupActivity?: (input: {
+    teamId: string;
+    memberUserId: string;
+    workoutId: string;
+    seriesId: string;
+    originalDate: string;
+    scheduledDate: string;
+    returnTo: 'group-calendar' | 'member-profile';
+  }) => void;
   onGroupLogResumeConsumed?: () => void;
   onCloseMemberDashboard: () => void;
   onOpenMemberWorkout: (member: any) => void;
@@ -187,6 +196,7 @@ export default function GroupsHub(props: GroupsHubProps) {
     onRefreshMembers,
     onOpenMember,
     onLogGroupWorkout,
+    onLogGroupActivity,
     groupLogResume = null,
     onGroupLogResumeConsumed,
     onCloseMemberDashboard,
@@ -240,6 +250,7 @@ export default function GroupsHub(props: GroupsHubProps) {
   const [wizardOpen, setWizardOpen] = useState(false);
   const [trainingFocusUserId, setTrainingFocusUserId] = useState<string | null>(null);
   const [trainingFocusDate, setTrainingFocusDate] = useState<string | null>(null);
+  const [calendarFocusDate, setCalendarFocusDate] = useState<string | null>(null);
   const [profileSection, setProfileSection] = useState<MemberProfileSection>('calendar');
   const [pendingInvites, setPendingInvites] = useState(0);
 
@@ -247,8 +258,14 @@ export default function GroupsHub(props: GroupsHubProps) {
     if (!groupLogResume?.memberUserId || !groupLogResume.scheduledDate) return;
     setWorkspaceTab('training');
     setProfileSection('calendar');
-    setTrainingFocusUserId(groupLogResume.memberUserId);
-    setTrainingFocusDate(groupLogResume.scheduledDate);
+    if (groupLogResume.returnTo === 'group-calendar') {
+      setTrainingFocusUserId(null);
+      setCalendarFocusDate(groupLogResume.scheduledDate);
+    } else {
+      setCalendarFocusDate(null);
+      setTrainingFocusUserId(groupLogResume.memberUserId);
+      setTrainingFocusDate(groupLogResume.scheduledDate);
+    }
     onGroupLogResumeConsumed?.();
   }, [groupLogResume]);
 
@@ -560,6 +577,9 @@ export default function GroupsHub(props: GroupsHubProps) {
               : null
           }
           onLogGroupWorkout={onLogGroupWorkout}
+          onLogGroupActivity={onLogGroupActivity}
+          calendarFocusDate={calendarFocusDate}
+          onCalendarFocusHandled={() => setCalendarFocusDate(null)}
           members={members}
           classifications={classifications}
           memberClassificationIds={memberClassificationIds}

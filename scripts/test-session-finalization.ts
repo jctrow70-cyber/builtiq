@@ -212,9 +212,11 @@ assert.equal(pickFulfillingSession(unlinked, pair[0], [pair[0]])?.workoutId, 'gr
 
 const page = readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
 assert.match(page, /completedSessionDraft\(/);
-assert.match(page, /expectation_id:draft\.expectationId/);
-assert.match(page, /source_key:draft\.sourceKey/);
-assert.match(page, /scheduled_date:draft\.scheduledDate/);
+assert.match(page, /expectation_id:activeExpectationId/);
+assert.match(page, /source_key:groupActivitySourceKey\(activity\.seriesId\)/);
+assert.match(page, /expectation_id:links\.expectation_id/);
+assert.match(page, /source_key:links\.source_key/);
+assert.match(page, /scheduled_date:links\.scheduled_date/);
 assert.match(page, /sessionStatusAfterPlanChange\(/);
 assert.match(page, /Additional required sets are still open/);
 const sessionsLib = readFileSync(new URL('../lib/training/workoutSessions.ts', import.meta.url), 'utf8');

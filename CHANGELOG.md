@@ -11,11 +11,64 @@ Branch:
 Status:
 ```
 
+## BIQ-0263 - Phase 3C group strength logging
+
+Date: 2026-10-22
+Branch: main
+Status: Local implementation. Hosted preflight scripts are ready. Migration 071 has not been applied to hosted Supabase. Not committed or released.
+
+Summary: A signed-in member can log their own Group strength activity in the existing workout logger. The logger uses the activity's effective workout and visible date. Completing the logger session completes that member's occurrence. Partial logs stay on the original workout. A published program workout and a Group extra cannot occupy the same member and date. Shelf set logging is limited to the assigned recipient.
+
+Purpose: Phase 3B created Group strength activities. Phase 3C records performance and completion without creating program expectations or changing Personal Training.
+
+Files changed:
+- supabase/migrations/20261022_071_group_strength_logging.sql
+- app/page.tsx
+- app/components/groups/GroupExtraActions.tsx
+- app/components/groups/GroupTrainingCalendar.tsx
+- app/components/groups/GroupTrainingHome.tsx
+- app/components/groups/GroupsHub.tsx
+- app/components/groups/MemberTrainingWorkspace.tsx
+- e2e/group-activity-stage3.spec.ts
+- lib/groups/groupActivityLog.ts
+- lib/groups/groupLogReturn.ts
+- lib/groups/loadGroupTrainingFacts.ts
+- lib/groups/trainingWorkspace.ts
+- lib/progress/adherence.ts
+- lib/training/extraSets.ts
+- lib/training/unifiedSchedule.ts
+- scripts/sql/biq0263-071-tests.sql
+- scripts/sql/biq0263-071-preflight.sql
+- scripts/sql/biq0263-071-postcheck.sql
+- scripts/test-group-activity-log.ts
+- scripts/verify-group-activity-stage3c-sql.ts
+- package.json
+- CHANGELOG.md
+
+Database changes: New migration 071 only. It does not edit or reapply 068, 069, or 070. Apply 071 once in the hosted SQL Editor after approval. Do not run it until that approval.
+
+Testing steps:
+- Disposable PostgreSQL: node node_modules/tsx/dist/cli.mjs scripts/verify-group-activity-stage3c-sql.ts
+- TypeScript: node node_modules/typescript/bin/tsc --noEmit --pretty false
+- Group scripts: node node_modules/tsx/dist/cli.mjs scripts/test-group-activity-log.ts and the existing scripts in test:groups
+- Signed-in Playwright desktop and mobile: the Phase 3C case in e2e/group-activity-stage3.spec.ts
+- Confirm hosted Supabase was not changed
+- In the hosted SQL Editor, run scripts/sql/biq0263-071-preflight.sql by itself. Apply migration 071 only after that row says safe_to_apply and this checkpoint is approved. Then run scripts/sql/biq0263-071-postcheck.sql by itself.
+
+Known issues:
+- Migration 071 is not applied on the hosted project. Logging against hosted data uses the current policies until 071 is approved and applied.
+- The hosted SQL Editor still needs to run scripts/sql/biq0263-071-preflight.sql. A read-only data API check found no expectation/extra collisions.
+- A card that already overlaps a program expectation stays visible, but Log workout stays hidden. Mark complete still completes only the activity.
+- Deleting a whole group can still cascade completed rows.
+- Activities without a workout are still not duplicate-checked.
+
+Recommended commit message: Log group strength workouts from the calendar
+
 ## BIQ-0263 - Phase 3B group strength workouts
 
 Date: 2026-10-22
 Branch: main
-Status: Complete on main. Phase 3C is still pending.
+Status: Complete on main. Phase 3C is implemented locally and is waiting for approval.
 
 Summary: The Group training calendar can add a strength workout for a selected date. The activity can use a published group program workout or a new standalone workout. A new workout is built with the existing exercise library and saved by st_save_group_strength_workout. The calendar shows it for the chosen recipients.
 

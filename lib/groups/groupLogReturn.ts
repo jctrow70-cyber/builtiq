@@ -4,6 +4,9 @@ export type GroupLogReturn = {
   scheduledDate: string;
   workoutId: string;
   expectationId: string;
+  seriesId?: string | null;
+  originalDate?: string | null;
+  returnTo?: 'group-calendar' | 'member-profile';
 };
 
 /** A member can return to their own group day. A trainer does not receive that return path. */

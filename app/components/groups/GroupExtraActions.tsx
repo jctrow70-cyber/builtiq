@@ -15,6 +15,7 @@ type GroupExtraActionsProps = {
   canAssign: boolean;
   viewerUserId: string;
   onClose?: () => void;
+  onLogWorkout?: () => void;
   onAction: (action: GroupExtraAction) => Promise<string | null>;
 };
 
@@ -26,6 +27,7 @@ export default function GroupExtraActions({
   canAssign,
   viewerUserId,
   onClose,
+  onLogWorkout,
   onAction,
 }: GroupExtraActionsProps) {
   const seriesId = extra.seriesId || '';
@@ -94,6 +96,11 @@ export default function GroupExtraActions({
       {error && <p className="team-sheet-error">{error}</p>}
       {notice && <p className="muted">{notice}</p>}
       <div className="actions member-training-actions">
+        {onLogWorkout && (
+          <button type="button" className="btn small green" data-testid="log-group-activity" onClick={onLogWorkout}>
+            Log workout
+          </button>
+        )}
         {canComplete && (
           <button type="button" className="btn small green" disabled={busy} onClick={() => run({ kind: 'complete', seriesId, userId: extra.userId, originalDate })}>
             Mark complete

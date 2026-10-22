@@ -14,7 +14,7 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { fetchGroupExtras } from '../lib/groups/groupActivities';
 import { buildGroupCalendar } from '../lib/groups/groupCalendar';
 import { buildGroupTrainingBoard, extraActivityLabel, requiredExtraStanding } from '../lib/groups/trainingWorkspace';
-import { mondayOfWeek, todayYmd } from '../lib/training/programCalendar';
+import { addDaysYmd, mondayOfWeek, todayYmd } from '../lib/training/programCalendar';
 
 const FIXTURE = path.join(os.tmpdir(), 'biq0263-stage1-qa.json');
 const TABLES = [
@@ -318,12 +318,13 @@ async function main() {
     });
     expect('same request key returns the original series', !!first.data?.series_id && first.data.series_id === second.data?.series_id, second.error || 'ids differ');
 
+    const programExtraDate = addDaysYmd(today, 1);
     const workoutSave = await save(manager, {
       ...baseSave,
       p_team_id: teamId,
       p_activity_type: 'strength',
       p_title: 'QA Full Body',
-      p_occurrence_date: today,
+      p_occurrence_date: programExtraDate,
       p_recipient_user_ids: [memberId],
       p_request_key: `workout-${stamp}`,
       p_workout_id: workoutId,
@@ -335,7 +336,7 @@ async function main() {
       p_team_id: teamId,
       p_activity_type: 'strength',
       p_title: 'QA Full Body again',
-      p_occurrence_date: today,
+      p_occurrence_date: programExtraDate,
       p_recipient_user_ids: [memberId],
       p_request_key: `workout-again-${stamp}`,
       p_workout_id: workoutId,
@@ -441,7 +442,9 @@ async function main() {
     });
     expect('optional and required extras leave program missedCount unchanged', board.members[0].missedCount === 1, String(board.members[0].missedCount));
     const sameDay = board.members[0].weekItems.filter((item) => item.date === today);
-    expect('program workout extra and other extras share the member date', sameDay.some((item) => item.workoutId === workoutId) && sameDay.filter((item) => item.origin === 'extra').length >= 2, String(sameDay.length));
+    const programExtraDay = board.members[0].weekItems.filter((item) => item.date === programExtraDate);
+    expect('published workout extra stays off the program expectation date', programExtraDay.some((item) => item.workoutId === workoutId), programExtraDate);
+    expect('other extras share the member date', sameDay.filter((item) => item.origin === 'extra').length >= 2, String(sameDay.length));
     expect('required label is Extra · required', extraActivityLabel(!!sameDay.find((item) => item.title === 'QA required mobility')?.required) === 'Extra · required');
 
     const calendar = buildGroupCalendar({
