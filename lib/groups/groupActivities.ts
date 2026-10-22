@@ -106,6 +106,7 @@ type ListedActivity = {
   details?: Record<string, unknown> | null;
   required?: boolean | null;
   virtual?: boolean | null;
+  workout_id?: string | null;
 };
 
 type SeriesMeta = {
@@ -156,7 +157,7 @@ export function mapListedGroupActivity(row: ListedActivity, series?: SeriesMeta 
     originalDate,
     title: row.title || 'Activity',
     activityType: row.activity_type || 'sport',
-    workoutId: series?.workout_id || null,
+    workoutId: row.workout_id || series?.workout_id || null,
     required: !!row.required,
     completed: !!row.completed,
     status: row.status === 'skipped' ? 'skipped' : 'scheduled',

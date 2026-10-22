@@ -11,6 +11,54 @@ Branch:
 Status:
 ```
 
+## BIQ-0263 - Phase 3B group strength workouts
+
+Date: 2026-10-21
+Branch: main
+Status: Local / not committed
+
+Summary: The Group training calendar can add a strength workout for a selected date. The activity can use a published group program workout or a new standalone workout. A new workout is built with the existing exercise library and saved by st_save_group_strength_workout. The calendar shows it for the chosen recipients.
+
+Purpose: Phase 3A stored standalone group strength workouts. Phase 3B is the screen that creates and assigns them. Logging and completion stay in Phase 3C.
+
+Files changed:
+- app/components/groups/GroupCalendarActivitySheet.tsx
+- app/components/groups/GroupStrengthWorkoutEditor.tsx
+- app/components/groups/GroupTrainingCalendar.tsx
+- app/components/groups/GroupTrainingHome.tsx
+- app/components/training/WorkoutTemplateEditor.tsx
+- app/globals.css
+- e2e/group-activity-stage3.spec.ts
+- lib/groups/groupActivities.ts
+- lib/groups/groupStrengthWorkout.ts
+- lib/training/catalogFetch.ts
+- lib/training/draftWorkout.ts
+- scripts/test-group-strength-workout.ts
+- scripts/verify-group-activity-stage1-live.ts
+- package.json
+- CHANGELOG.md
+
+Database changes: None. Migration 070 is already on the hosted project and was not run again. Migrations 068, 069, and 070 were not edited.
+
+Testing steps:
+1. Disposable signed-in Playwright, desktop and mobile: 8 passed (4 per project). The suite creates a standalone workout, picks library exercises, changes equipment, sets reps, weight, RIR, rest, a warm-up set, and a superset, assigns it to two members as required, repeats it weekly, and confirms it after reload and on the next week.
+2. An ordinary member can save only an optional workout for themselves. That member cannot see or read another person's private workout.
+3. A manager can assign a published program workout. Saving that same workout for the same person on the same date shows "That workout is already on this date."
+4. An assign-enabled member can assign a new workout to the whole group.
+5. A calendar cardio activity saves and the sheet closes. Personal Training does not show the group workout title, and the group editor is not mounted there.
+6. One Add Activity control, no horizontal page overflow, and an empty workout save shows "Add at least one exercise."
+
+Known issues:
+- The Training workout editor writes exercises directly. A group shelf workout cannot be saved that way, so the group screen reuses the exercise library and prescription rules in memory and sends them to st_save_group_strength_workout. The exercise card layout is still separate. Rest seconds are on the group draft only.
+- A cardio, mobility, or other activity added from the group calendar is assigned only to the signed-in person. Choosing other members is available on the strength path.
+- The member-profile Add Activity control was not given the new strength builder.
+- Opening the saved workout in the logger, and keeping completion in sync with the group activity, is Phase 3C.
+- Deleting a whole group can still cascade completed rows.
+- Activities with no workout are still not duplicate-checked against each other.
+- Hosted ACL and overload queries for migration 069 were not re-run.
+
+Recommended commit message: Add group strength workouts on the calendar
+
 ## BIQ-0266 - Stop a finished plan from filling later weeks
 
 Date: 2026-10-21
@@ -42,7 +90,7 @@ Recommended commit message: Stop a finished plan from filling later weeks
 
 Date: 2026-10-21
 Branch: main
-Status: Written locally. Disposable PostgreSQL checks passed. Not applied to hosted Supabase. Not committed.
+Status: Written locally. Disposable PostgreSQL checks passed. Hosted project qruiwfzzrylrirlxzdqx already exposes the 070 columns and functions. Do not apply the file again. Not committed.
 
 Summary: Standalone group strength workouts can be stored on a shelf program that normal program lists, enrollments, and expectations cannot use. A recipient can read only an assigned workout. Completed dates keep their prescription when a series changes.
 
@@ -52,20 +100,22 @@ Files changed:
 - supabase/migrations/20261021_070_group_strength_shelf.sql
 - scripts/sql/biq0263-stage3-prelude.sql
 - scripts/sql/biq0263-stage3-tests.sql
+- scripts/sql/biq0263-070-preflight.sql
+- scripts/sql/biq0263-070-postcheck.sql
 - scripts/verify-group-activity-stage3-sql.ts
 - CHANGELOG.md
 
-Database changes: New migration 070. Adds program_use, occurrence workout_id, and recipient removed_on. Adds shelf, clone, pin, save, and edit functions, plus select policies. Does not modify migrations 068 or 069. Not applied to hosted Supabase.
+Database changes: New migration 070. Adds program_use, occurrence workout_id, and recipient removed_on. Adds shelf, clone, pin, save, and edit functions, plus select policies. Does not modify migrations 068 or 069. The hosted project in .env.local already exposes these objects, so the file must not be applied there again.
 
 Testing steps:
 1. Run scripts/verify-group-activity-stage3-sql.ts against disposable PostgreSQL. Passed on 2026-10-21, including the Stage 2 SQL regression and a concurrent duplicate wait.
 2. Confirm a recipient cannot read another member's occurrence workout.
 3. Confirm a completed date keeps its workout id after a series edit.
 4. Confirm completion does not insert an expectation.
-5. Leave this file unapplied on hosted Supabase until you choose to run it there.
+5. On 2026-10-21 the hosted API for project qruiwfzzrylrirlxzdqx already showed program_use, occurrence workout_id, recipient removed_on, and the Phase 3A functions. All 82 programs were training and no shelf row existed. Anon execute was denied. Catalog grants, dependencies, and search_path still need scripts/sql/biq0263-070-postcheck.sql in the SQL Editor.
 
 Known issues:
-- A direct database connection string was not available, so hosted ACL checks for 069 were not re-run.
+- No database management token was available, so the catalog preflight was not executed from this workspace. Run the post-check in the SQL Editor.
 - Deleting a whole group can still cascade completed rows.
 - Activities without a workout are not duplicate-checked against each other.
 

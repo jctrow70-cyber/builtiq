@@ -509,6 +509,7 @@ export default function GroupTrainingHome({
                     id: member.id,
                     userId: member.user_id as string,
                     name: member.display_name || 'Member',
+                    active: member.is_active_participant !== false,
                   }))}
                 classifications={classifications}
                 memberClassificationIds={memberClassificationIds}
@@ -545,6 +546,7 @@ export default function GroupTrainingHome({
                     : undefined
                 }
                 onExtraAction={teamId ? changeExtra : undefined}
+                onActivitySaved={() => setFactsTick((value) => value + 1)}
                 onRestoreWorkout={
                   teamId
                     ? async (input) => {

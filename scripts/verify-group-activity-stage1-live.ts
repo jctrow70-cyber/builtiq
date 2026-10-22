@@ -116,11 +116,11 @@ async function main() {
     await removeFixture(admin, saved.teamIds, saved.userIds);
     const after = await snapshot(admin);
     const drifted = TABLES.filter((table) => after[table] !== saved.baseline[table]);
-    fs.unlinkSync(FIXTURE);
     if (drifted.length) {
       console.error(JSON.stringify({ status: 'cleanup-drift', drifted, baseline: saved.baseline, after }));
       process.exit(1);
     }
+    fs.unlinkSync(FIXTURE);
     console.log(JSON.stringify({ status: 'cleaned', countsMatchBaseline: true }));
     return;
   }
@@ -527,13 +527,35 @@ async function main() {
 
 async function removeFixture(admin: SupabaseClient, teamIds: string[], userIds: string[]) {
   if (userIds.length) {
-    await admin.from('st_training_expectations').delete().in('user_id', userIds);
-    await admin.from('st_training_enrollments').delete().in('user_id', userIds);
-    await admin.from('st_user_calendar_activities').delete().in('user_id', userIds);
+    const enrollments = await admin.from('st_training_enrollments').select('id').in('user_id', userIds);
+    if (enrollments.error) throw new Error(enrollments.error.message);
+    for (const enrollment of enrollments.data || []) {
+      const withdrawn = await admin.rpc('st_withdraw_future_program_expectations', {
+        p_enrollment_id: enrollment.id,
+        p_effective_on: '2000-01-01',
+      });
+      if (withdrawn.error) throw new Error(withdrawn.error.message);
+    }
+    const expectations = await admin.from('st_training_expectations').delete().in('user_id', userIds);
+    if (expectations.error) throw new Error(expectations.error.message);
+    const enrollmentDelete = await admin.from('st_training_enrollments').delete().in('user_id', userIds);
+    if (enrollmentDelete.error) throw new Error(enrollmentDelete.error.message);
+    const calendar = await admin.from('st_user_calendar_activities').delete().in('user_id', userIds);
+    if (calendar.error) throw new Error(calendar.error.message);
   }
-  if (teamIds.length) await admin.from('st_teams').delete().in('id', teamIds);
+  if (teamIds.length) {
+    const series = await admin.from('st_group_activity_series').delete().in('team_id', teamIds);
+    if (series.error) throw new Error(series.error.message);
+    const programs = await admin.from('st_programs').delete().in('team_id', teamIds);
+    if (programs.error) throw new Error(programs.error.message);
+    const members = await admin.from('st_team_members').delete().in('team_id', teamIds);
+    if (members.error) throw new Error(members.error.message);
+    const teams = await admin.from('st_teams').delete().in('id', teamIds);
+    if (teams.error) throw new Error(teams.error.message);
+  }
   for (const userId of userIds) {
-    await admin.auth.admin.deleteUser(userId);
+    const removed = await admin.auth.admin.deleteUser(userId);
+    if (removed.error) throw new Error(removed.error.message);
   }
 }
 

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import AddExercisePanel from './AddExercisePanel';
 import WarmupExerciseCard from './WarmupExerciseCard';
-import { fetchAllExerciseCatalog } from '../../../lib/training/catalogFetch';
+import { fetchAllExerciseCatalog, insertUserCatalogExercise } from '../../../lib/training/catalogFetch';
 import { catalogResultMeta, searchCatalog, workoutSearchCatalogItems } from '../../../lib/training/catalogSearch';
 import { normalizeEquipmentList } from '../../../lib/training/equipmentFilter';
 import { compatibleEquipmentOptions, defaultCatalogEquipment, resolveExerciseEquipment } from '../../../lib/training/exerciseEquipment';
@@ -143,19 +143,13 @@ export default function WorkoutTemplateEditor({
     }
     setBusy(true);
     setError('');
-    const { data, error: insertError } = await supabase
-      .from('st_exercise_catalog')
-      .insert({
-        user_id: userId,
-        name,
-        category: panel.custom.category || panel.section,
-        muscle_group: panel.custom.muscle_group.trim() || null,
-        equipment: panel.custom.equipment.trim() || null,
-        is_system: false,
-        is_archived: false,
-      })
-      .select()
-      .single();
+    const { data, error: insertError } = await insertUserCatalogExercise(supabase, {
+      userId,
+      name,
+      category: panel.custom.category || panel.section,
+      muscleGroup: panel.custom.muscle_group,
+      equipment: panel.custom.equipment,
+    });
     if (insertError || !data) return persistError(insertError?.message || 'Could not create exercise');
     const { data: cat } = await fetchAllExerciseCatalog(supabase);
     setCatalog(cat || []);

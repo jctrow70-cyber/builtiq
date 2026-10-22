@@ -29,3 +29,26 @@ export async function fetchAllExerciseCatalog(supabase: SupabaseClient) {
 
   return { data: rows, error: null };
 }
+
+export async function insertUserCatalogExercise(
+  supabase: SupabaseClient,
+  input: { userId: string; name: string; category?: string | null; muscleGroup?: string | null; equipment?: string | null }
+) {
+  const name = input.name.trim();
+  if (!name) return { data: null, error: { message: 'Enter exercise name.' } };
+  const { data, error } = await supabase
+    .from('st_exercise_catalog')
+    .insert({
+      user_id: input.userId,
+      name,
+      category: input.category || null,
+      muscle_group: input.muscleGroup?.trim() || null,
+      equipment: input.equipment?.trim() || null,
+      is_system: false,
+      is_archived: false,
+    })
+    .select()
+    .single();
+  if (error || !data) return { data: null, error: error || { message: 'Could not create exercise' } };
+  return { data, error: null };
+}

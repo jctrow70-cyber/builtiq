@@ -14,6 +14,7 @@ import { loadGroupCalendarWeek, type GroupCalendarWeekFacts } from '../../../lib
 import { addDaysYmd, formatDisplayDate, mondayOfWeek, parseYmd, todayYmd } from '../../../lib/training/programCalendar';
 import { supabase } from '../../../lib/supabaseClient';
 import type { GroupExtraAction } from '../../../lib/groups/groupActivities';
+import GroupCalendarActivitySheet from './GroupCalendarActivitySheet';
 import GroupExtraActions from './GroupExtraActions';
 import WorkoutScheduleActions from './WorkoutScheduleActions';
 
@@ -35,7 +36,7 @@ type GroupTrainingCalendarProps = {
   canEdit: boolean;
   viewerUserId: string;
   reloadKey: number;
-  members: Array<{ id?: string; userId: string; name: string }>;
+  members: Array<{ id?: string; userId: string; name: string; active?: boolean }>;
   classifications?: GroupClassification[];
   memberClassificationIds?: Record<string, string[]>;
   onOpenMember: (userId: string) => void;
@@ -43,6 +44,7 @@ type GroupTrainingCalendarProps = {
   onExcuseWorkout?: (input: { memberUserId: string; workoutId: string; originalDate: string }) => Promise<void>;
   onRestoreWorkout?: (input: { memberUserId: string; workoutId: string; originalDate: string }) => Promise<void>;
   onExtraAction?: (action: GroupExtraAction) => Promise<string | null>;
+  onActivitySaved?: () => void;
 };
 
 export default function GroupTrainingCalendar({
@@ -59,6 +61,7 @@ export default function GroupTrainingCalendar({
   onExcuseWorkout,
   onRestoreWorkout,
   onExtraAction,
+  onActivitySaved,
 }: GroupTrainingCalendarProps) {
   const today = todayYmd();
   const [weekStart, setWeekStart] = useState(() => mondayOfWeek(today));
@@ -68,6 +71,7 @@ export default function GroupTrainingCalendar({
   const [facts, setFacts] = useState<GroupCalendarWeekFacts | null>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [selected, setSelected] = useState<GroupCalendarCard | null>(null);
+  const [adding, setAdding] = useState(false);
 
   const memberIds = useMemo(() => members.map((member) => member.userId).join(','), [members]);
 
@@ -157,8 +161,10 @@ export default function GroupTrainingCalendar({
     return (
       <div key={date} className={`group-calendar-day${selected ? ' is-selected' : ''}${isToday ? ' is-today' : ''}`}>
         <div className="group-calendar-day-head">
-          <b>{weekday}</b>
-          <span className="muted">{formatDisplayDate(date)}</span>
+          <button type="button" aria-pressed={selected} aria-label={`${weekday} ${formatDisplayDate(date)}`} onClick={() => setSelectedDay(date)}>
+            <b>{weekday}</b>
+            <span className="muted">{formatDisplayDate(date)}</span>
+          </button>
         </div>
         {cards.length === 0 ? <p className="muted">No workouts</p> : shown.visible.map(renderCard)}
         {shown.hidden > 0 && (
@@ -222,6 +228,14 @@ export default function GroupTrainingCalendar({
           </select>
         </label>
       </div>
+      {viewerUserId && members.some((member) => member.userId === viewerUserId && member.active !== false) ? (
+        <div className="group-calendar-add">
+          <span>{formatDisplayDate(selectedDay)}</span>
+          <button type="button" className="btn secondary" onClick={() => setAdding(true)}>
+            Add Activity
+          </button>
+        </div>
+      ) : null}
       {!facts ? <p className="muted">Loading the week…</p> : null}
       {facts && !facts.expectationsAvailable ? <p className="team-sheet-error">{facts.notice || CALENDAR_DEPENDENCY_NOTICE}</p> : null}
       {week && (
@@ -248,6 +262,19 @@ export default function GroupTrainingCalendar({
           </div>
         </>
       )}
+      {adding ? (
+        <GroupCalendarActivitySheet
+          supabase={supabase}
+          teamId={teamId}
+          date={selectedDay}
+          members={members}
+          canAssign={canEdit}
+          viewerUserId={viewerUserId}
+          onDate={setSelectedDay}
+          onClose={() => setAdding(false)}
+          onSaved={() => onActivitySaved?.()}
+        />
+      ) : null}
       {selected?.extra && onExtraAction && (
         <GroupExtraActions
           extra={selected.extra}
