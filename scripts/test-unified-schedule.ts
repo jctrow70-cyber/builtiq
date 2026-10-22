@@ -296,6 +296,29 @@ assert.equal(overlaidMonday.items.find((item) => item.workoutId === 'b-tue')?.so
 assert.equal(overlaidMonday.items.find((item) => item.workoutId === 'b-tue')?.canMove, false);
 assert.equal(overlaidMonday.items.filter((item) => !item.isRest).length, 3);
 
+const privateCopy = overlayVisibleExpectations(
+  mondayPlan,
+  [
+    {
+      id: 'exp-template',
+      workoutId: 'template-mon',
+      programId: 'prog-template',
+      scheduledDate: monday,
+      title: 'Full Body',
+      sourceKey: 'group:team',
+      teamId: 'team',
+      sourceName: 'Basketball',
+      excused: false,
+      sessionStatus: null,
+    },
+  ],
+  wednesday,
+  'prog-template'
+);
+assert.equal(privateCopy.items.filter((item) => item.title === 'Full Body').length, 1);
+assert.equal(privateCopy.items.find((item) => item.title === 'Full Body')?.workoutId, 'p-mon');
+assert.equal(privateCopy.items.find((item) => item.title === 'Easy run')?.activityId, 'cal-cardio');
+
 const hiddenMonday = overlayVisibleExpectations(mondayPlan, [], wednesday);
 assert.equal(hiddenMonday.items.some((item) => item.workoutId === 'b-tue'), false);
 

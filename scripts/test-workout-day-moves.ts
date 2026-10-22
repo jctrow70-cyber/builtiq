@@ -11,7 +11,7 @@ import {
   workoutAppearsOnDate,
   workoutDayMovesFromDetails,
 } from '../lib/programDesign/workoutDayMoves';
-import { applyWorkoutDayMoves, mergeProgramActivities, planForDate } from '../lib/programDesign/trainingSchedule';
+import { applyWorkoutDayMoves, mergeProgramActivities, planForCalendarDate, planForDate } from '../lib/programDesign/trainingSchedule';
 import type { ProgramActivity, ProgramDesignRecord } from '../lib/programDesign/types';
 
 const program: ProgramDesignRecord = {
@@ -83,5 +83,46 @@ details = detailsWithWorkoutDayMove(details, 'w:w-wed', '2026-09-16');
 assert.equal(workoutDayMovesFromDetails(details)['w:w-wed'], '2026-09-16');
 details = detailsWithWorkoutDayMove(details, 'w:w-wed', null);
 assert.equal(workoutDayMovesFromDetails(details)['w:w-wed'], undefined);
+
+const stillThere = planForDate(program, activities, '2026-09-16');
+assert.equal(stillThere.items.some((item) => item.workoutId === 'w-wed'), true);
+assert.equal(planForDate(program, activities, '2026-09-07').items.length, 0);
+assert.equal(planForDate(program, activities, '2026-10-12').items.length, 0);
+
+const sixWeek: ProgramDesignRecord = {
+  id: 'mary',
+  name: 'Mary',
+  weeks: 6,
+  start_date: '2026-09-14',
+  end_date: '2026-10-25',
+};
+const weekSixMonday: ProgramActivity = {
+  ...wed,
+  id: 'legacy-w-mon',
+  week_number: 6,
+  day_of_week: 0,
+  title: 'Full Body A',
+  workout_id: 'w-mon',
+};
+assert.equal(planForDate(sixWeek, [weekSixMonday], '2026-10-19').items[0]?.title, 'Full Body A');
+assert.equal(planForDate(sixWeek, [weekSixMonday], '2026-10-26').items.length, 0);
+assert.equal(planForDate(sixWeek, [weekSixMonday], '2026-11-02').items.length, 0);
+
+const novemberRun = planForCalendarDate(sixWeek, [weekSixMonday], [{
+  id: 'run',
+  user_id: 'u',
+  activity_date: '2026-11-04',
+  activity_type: 'cardio',
+  title: 'Easy run',
+  duration_minutes: 30,
+  notes: '',
+  details: {},
+  recurrence: 'none',
+  recurrence_until: null,
+  recurrence_weekdays: [],
+  workout_id: null,
+}], '2026-11-04');
+assert.equal(novemberRun.items.length, 1);
+assert.equal(novemberRun.items[0]?.title, 'Easy run');
 
 console.log('OK: workout-day-moves checks passed');

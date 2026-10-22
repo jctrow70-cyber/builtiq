@@ -11,6 +11,96 @@ Branch:
 Status:
 ```
 
+## BIQ-0266 - Stop a finished plan from filling later weeks
+
+Date: 2026-10-21
+Branch: main
+Status: Local / in progress
+
+Summary: Training was still placing a program's last week of workouts on later dates. A 6-week plan that ends on 10/25 kept showing those sessions through November.
+
+Purpose: The calendar treated every date after the final week as that last week. The plan's end date is the last day those workouts belong on.
+
+Files changed:
+- lib/programDesign/trainingSchedule.ts
+- scripts/test-workout-day-moves.ts
+- CHANGELOG.md
+
+Database changes: None.
+
+Testing steps:
+1. Open Training on a 6-week plan that ends 10/25. October 19, 21, and 23 still show their workouts.
+2. Open November. Those program workouts are gone.
+3. An activity added on a November date still shows.
+4. A workout moved onto a date still shows on the date it was moved to.
+
+Known issues: None.
+
+Recommended commit message: Stop a finished plan from filling later weeks
+
+## BIQ-0263 - Phase 3A group strength shelf
+
+Date: 2026-10-21
+Branch: main
+Status: Written locally. Disposable PostgreSQL checks passed. Not applied to hosted Supabase. Not committed.
+
+Summary: Standalone group strength workouts can be stored on a shelf program that normal program lists, enrollments, and expectations cannot use. A recipient can read only an assigned workout. Completed dates keep their prescription when a series changes.
+
+Purpose: Phase 3B can open the existing exercise editor from the group calendar without mixing these workouts into personal training or assigned group programs.
+
+Files changed:
+- supabase/migrations/20261021_070_group_strength_shelf.sql
+- scripts/sql/biq0263-stage3-prelude.sql
+- scripts/sql/biq0263-stage3-tests.sql
+- scripts/verify-group-activity-stage3-sql.ts
+- CHANGELOG.md
+
+Database changes: New migration 070. Adds program_use, occurrence workout_id, and recipient removed_on. Adds shelf, clone, pin, save, and edit functions, plus select policies. Does not modify migrations 068 or 069. Not applied to hosted Supabase.
+
+Testing steps:
+1. Run scripts/verify-group-activity-stage3-sql.ts against disposable PostgreSQL. Passed on 2026-10-21, including the Stage 2 SQL regression and a concurrent duplicate wait.
+2. Confirm a recipient cannot read another member's occurrence workout.
+3. Confirm a completed date keeps its workout id after a series edit.
+4. Confirm completion does not insert an expectation.
+5. Leave this file unapplied on hosted Supabase until you choose to run it there.
+
+Known issues:
+- A direct database connection string was not available, so hosted ACL checks for 069 were not re-run.
+- Deleting a whole group can still cascade completed rows.
+- Activities without a workout are not duplicate-checked against each other.
+
+Recommended commit message: Add the group strength workout shelf
+
+## BIQ-0265 - Show one copy of a followed group workout
+
+Date: 2026-10-21
+Branch: main
+Status: Local / in progress
+
+Summary: Training was listing the same workout twice on a day when you follow a private copy of a group plan. The copy and the original group plan were both placed on Monday, Wednesday, and Friday.
+
+Purpose: A private copy is the plan Training should show. The group plan it came from is the same session, so it should not appear again beside it.
+
+Files changed:
+- lib/programDesign/trainingSchedule.ts
+- app/components/training/UnifiedTrainingSchedule.tsx
+- app/components/training/TrainingExecution.tsx
+- app/page.tsx
+- scripts/test-unified-schedule.ts
+- CHANGELOG.md
+
+Database changes: None.
+
+Testing steps:
+1. Open Training while following a private copy of a group plan. Each training day lists that workout once.
+2. A different group workout on the same day still appears.
+3. An added activity, such as a run, still appears beside the program workout.
+4. Day view no longer repeats the second workout under Later today.
+
+Known issues: None.
+
+Recommended commit message: Show one copy of a followed group workout
+
 ## BIQ-0264 - Open Training on the Calendar view
 
 Date: 2026-10-21

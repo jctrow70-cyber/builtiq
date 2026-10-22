@@ -330,24 +330,6 @@ export default function TrainingExecution({
             <h2>{viewingToday ? "Today's plan" : "This day's plan"}</h2>
             {dayItemHandlers && <DayItems {...dayItemHandlers} />}
           </section>
-          {today.later.length > 0 && (
-            <section className="te-block">
-              <h2>Later today</h2>
-              {today.later.map((item) => (
-                <div key={item.id} className="te-later">
-                  <p>
-                    <b>{item.title}</b>
-                    {item.duration ? ` · ${item.duration}` : ''}
-                  </p>
-                  {item.workoutId && (
-                    <button type="button" className="btn small secondary" onClick={() => onStartWorkout(item, today.date)}>
-                      Start
-                    </button>
-                  )}
-                </div>
-              ))}
-            </section>
-          )}
           {tomorrow && (
             <section className="te-block te-tomorrow">
               <h2>{viewingToday ? 'Tomorrow' : 'Next day'}</h2>

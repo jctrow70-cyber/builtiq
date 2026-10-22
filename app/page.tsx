@@ -3129,6 +3129,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
       followedFromGroup,
       followingGroupTemplate,
       personalizedCopy,
+      followedSourceProgramId:personalizedCopy?program?.source_program_id||null:null,
       onCustomizeForMe:canCustomizeForMe?()=>void customizeFollowedProgramForMeHandler():undefined,
       customizeBusy:customizeForMeBusy,
       today:trainingTodayPlan,

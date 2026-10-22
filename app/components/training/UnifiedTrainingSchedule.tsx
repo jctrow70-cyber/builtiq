@@ -95,6 +95,7 @@ type CalendarProps = {
   onMoveItem?: (item: TrainingDayItem, date: string) => void;
   completingItemId?: string | null;
   completedDates?: string[];
+  followedSourceProgramId?: string | null;
 };
 
 type Props = {
@@ -224,12 +225,13 @@ export default function UnifiedTrainingSchedule({ userId, teams, rangeFrom, rang
     }));
   }, [expectations, sessions, teams]);
 
-  const calendarToday = calendar.today ? overlayVisibleExpectations(calendar.today, visibleExpectations, today) : null;
-  const calendarTomorrow = calendar.tomorrow ? overlayVisibleExpectations(calendar.tomorrow, visibleExpectations, today) : null;
-  const calendarWeek = calendar.weekDays.map((day) => overlayVisibleExpectations(day, visibleExpectations, today));
+  const sourceProgramId = calendar.followedSourceProgramId || null;
+  const calendarToday = calendar.today ? overlayVisibleExpectations(calendar.today, visibleExpectations, today, sourceProgramId) : null;
+  const calendarTomorrow = calendar.tomorrow ? overlayVisibleExpectations(calendar.tomorrow, visibleExpectations, today, sourceProgramId) : null;
+  const calendarWeek = calendar.weekDays.map((day) => overlayVisibleExpectations(day, visibleExpectations, today, sourceProgramId));
   const calendarMonth = calendar.monthCells.map((cell) => ({
     ...cell,
-    plan: cell.plan ? overlayVisibleExpectations(cell.plan, visibleExpectations, today) : cell.plan,
+    plan: cell.plan ? overlayVisibleExpectations(cell.plan, visibleExpectations, today, sourceProgramId) : cell.plan,
   }));
 
   async function toggleVisible(row: EnrollmentRow) {

@@ -74,8 +74,9 @@ export function planForDate(
   dateYmd: string,
   today = todayYmd()
 ): TrainingDayPlan {
-  const { start } = programDateRange(program);
-  const weekNumber = weekForDate(start, dateYmd, cycleLengthOf(program));
+  const range = programDateRange(program);
+  if (dateYmd < range.start || dateYmd > range.end) return emptyDayPlan(dateYmd, today);
+  const weekNumber = weekForDate(range.start, dateYmd, cycleLengthOf(program));
   const dayLabel = dayLabelFromYmd(dateYmd);
   const dayOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].indexOf(dayLabel);
   const dayActs = activities
@@ -307,11 +308,21 @@ function withStatus(item: TrainingDayItem): TrainingDayItem {
   return { ...item, statusLabel: item.completed ? 'Completed' : 'Scheduled' };
 }
 
-/** Place visible enrollment workouts on the calendar without duplicating a workout already on that date. */
+function sameTitle(left: string | null | undefined, right: string | null | undefined): boolean {
+  const a = String(left || '').trim().toLowerCase();
+  const b = String(right || '').trim().toLowerCase();
+  return !!a && a === b;
+}
+
+/**
+ * Place visible enrollment workouts on the calendar without duplicating a workout already on that date.
+ * A private copy of a group plan already occupies its dates. The source plan's expectation is the same session.
+ */
 export function overlayVisibleExpectations(
   plan: TrainingDayPlan,
   rows: VisibleScheduleExpectation[],
-  localToday: string
+  localToday: string,
+  followedSourceProgramId?: string | null
 ): TrainingDayPlan {
   const mine = rows.filter((row) => row.scheduledDate === plan.date);
   let items = plan.items.map((item) => ({ ...item }));
@@ -336,6 +347,13 @@ export function overlayVisibleExpectations(
         teamId: row.teamId,
         sourceName: row.sourceName,
       };
+      continue;
+    }
+    if (
+      followedSourceProgramId &&
+      row.programId === followedSourceProgramId &&
+      items.some((item) => item.source !== 'calendar' && !item.isRest && sameTitle(item.title, row.title))
+    ) {
       continue;
     }
     const completed = state === 'Completed';
