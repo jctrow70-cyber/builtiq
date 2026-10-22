@@ -13,9 +13,9 @@ Status:
 
 ## BIQ-0263 - Phase 3B group strength workouts
 
-Date: 2026-10-21
+Date: 2026-10-22
 Branch: main
-Status: Local / not committed
+Status: Complete on main. Phase 3C is still pending.
 
 Summary: The Group training calendar can add a strength workout for a selected date. The activity can use a published group program workout or a new standalone workout. A new workout is built with the existing exercise library and saved by st_save_group_strength_workout. The calendar shows it for the chosen recipients.
 
@@ -52,7 +52,7 @@ Known issues:
 - The Training workout editor writes exercises directly. A group shelf workout cannot be saved that way, so the group screen reuses the exercise library and prescription rules in memory and sends them to st_save_group_strength_workout. The exercise card layout is still separate. Rest seconds are on the group draft only.
 - A cardio, mobility, or other activity added from the group calendar is assigned only to the signed-in person. Choosing other members is available on the strength path.
 - The member-profile Add Activity control was not given the new strength builder.
-- Opening the saved workout in the logger, and keeping completion in sync with the group activity, is Phase 3C.
+- Phase 3C is not started. Opening a saved group workout in the logger, and keeping completion in sync with the group activity, is still pending.
 - Deleting a whole group can still cascade completed rows.
 - Activities with no workout are still not duplicate-checked against each other.
 - Hosted ACL and overload queries for migration 069 were not re-run.
@@ -90,7 +90,7 @@ Recommended commit message: Stop a finished plan from filling later weeks
 
 Date: 2026-10-21
 Branch: main
-Status: Written locally. Disposable PostgreSQL checks passed. Hosted project qruiwfzzrylrirlxzdqx already exposes the 070 columns and functions. Do not apply the file again. Not committed.
+Status: Migration file is on main. Disposable PostgreSQL checks passed. Hosted project qruiwfzzrylrirlxzdqx already exposes the 070 columns and functions. Do not apply the file again.
 
 Summary: Standalone group strength workouts can be stored on a shelf program that normal program lists, enrollments, and expectations cannot use. A recipient can read only an assigned workout. Completed dates keep their prescription when a series changes.
 
