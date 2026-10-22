@@ -4,7 +4,9 @@
  * Does not apply SQL. Does not change existing enrollments, expectations, sessions, or set logs.
  *
  * Run: node node_modules/tsx/dist/cli.mjs scripts/verify-group-activity-stage1-live.ts
- * Keep the fixture for browser QA: add --keep
+ * Keep fixtures for browser QA: add --keep
+ * --keep writes one desktop fixture and one mobile fixture. Stage 3 may delete
+ * only its own project's series. Cleanup removes both and checks one baseline.
  * Remove a kept fixture: add --cleanup
  */
 import fs from 'fs';
@@ -100,6 +102,17 @@ async function save(actor: SupabaseClient, input: Record<string, unknown>) {
   return { data: data as { series_id?: string } | null, error: error?.message || null };
 }
 
+type KeptFixture = {
+  email: string;
+  emails: Record<RoleName, string>;
+  password: string;
+  teamName: string;
+  memberName: string;
+  teamIds: string[];
+  userIds: string[];
+  today: string;
+};
+
 async function main() {
   loadEnvLocal();
   const cleanupOnly = process.argv.includes('--cleanup');
@@ -112,8 +125,19 @@ async function main() {
 
   if (cleanupOnly) {
     if (!fs.existsSync(FIXTURE)) throw new Error('No kept Stage 1 fixture to clean up.');
-    const saved = JSON.parse(fs.readFileSync(FIXTURE, 'utf8')) as { teamIds: string[]; userIds: string[]; baseline: Record<string, number> };
-    await removeFixture(admin, saved.teamIds, saved.userIds);
+    const saved = JSON.parse(fs.readFileSync(FIXTURE, 'utf8')) as {
+      baseline: Record<string, number>;
+      teamIds?: string[];
+      userIds?: string[];
+      projects?: Record<string, { teamIds?: string[]; userIds?: string[] }>;
+    };
+    const teamIds = saved.projects
+      ? Object.values(saved.projects).flatMap((project) => project.teamIds || [])
+      : saved.teamIds || [];
+    const userIds = saved.projects
+      ? Object.values(saved.projects).flatMap((project) => project.userIds || [])
+      : saved.userIds || [];
+    await removeFixture(admin, teamIds, userIds);
     const after = await snapshot(admin);
     const drifted = TABLES.filter((table) => after[table] !== saved.baseline[table]);
     if (drifted.length) {
@@ -125,14 +149,67 @@ async function main() {
     return;
   }
 
+  await sweepQaUsers(admin);
+  const baseline = await snapshot(admin);
+  const labels = keep ? ['desktop', 'mobile'] : ['check'];
+  const checks: Check[] = [];
+  const created: Array<{ teamIds: string[]; userIds: string[] }> = [];
+  const projects: Record<string, KeptFixture> = {};
+  let retain = false;
+  try {
+    let stamp = Date.now();
+    for (const label of labels) {
+      stamp += 1;
+      const localBaseline = await snapshot(admin);
+      const result = await provisionQaFixture({
+        admin,
+        url,
+        anonKey,
+        baseline: localBaseline,
+        stamp,
+      });
+      created.push({ teamIds: result.teamIds, userIds: result.userIds });
+      for (const check of result.checks) checks.push({ ...check, name: `${label}: ${check.name}` });
+      if (!result.fixture) break;
+      projects[label] = result.fixture;
+    }
+    retain = !!keep && labels.every((label) => !!projects[label]);
+    if (retain) fs.writeFileSync(FIXTURE, JSON.stringify({ baseline, projects }));
+  } finally {
+    if (!retain) {
+      for (const item of created) await removeFixture(admin, item.teamIds, item.userIds);
+    }
+  }
+
+  if (!retain) {
+    const after = await snapshot(admin);
+    for (const table of TABLES) {
+      const ok = after[table] === baseline[table];
+      checks.push({
+        name: `${table} matches the baseline after cleanup`,
+        ok,
+        detail: ok ? undefined : `${baseline[table]} -> ${after[table]}`,
+      });
+    }
+  }
+
+  const failed = checks.filter((check) => !check.ok);
+  console.log(JSON.stringify({ status: failed.length ? 'failed' : 'passed', failed: failed.length, projects: Object.keys(projects), checks }, null, 2));
+  if (failed.length) process.exit(1);
+}
+
+async function provisionQaFixture(input: {
+  admin: SupabaseClient;
+  url: string;
+  anonKey: string;
+  baseline: Record<string, number>;
+  stamp: number;
+}): Promise<{ checks: Check[]; teamIds: string[]; userIds: string[]; fixture: KeptFixture | null }> {
+  const { admin, url, anonKey, baseline, stamp } = input;
   const checks: Check[] = [];
   const fail = (name: string, detail?: string) => checks.push({ name, ok: false, detail });
   const pass = (name: string, detail?: string) => checks.push({ name, ok: true, detail });
   const expect = (name: string, ok: boolean, detail?: string) => (ok ? pass(name, detail) : fail(name, detail));
-
-  await sweepQaUsers(admin);
-  const baseline = await snapshot(admin);
-  const stamp = Date.now();
   const password = `Biq0263!${stamp}`;
   const today = todayYmd();
   const past = mondayOfWeek(today);
@@ -141,7 +218,6 @@ async function main() {
   const userIds: Partial<Record<RoleName, string>> = {};
   const actors: Partial<Record<RoleName, SupabaseClient>> = {};
   const teamIds: string[] = [];
-  let retain = false;
 
   try {
     for (const role of names) {
@@ -498,34 +574,34 @@ async function main() {
       expect('test expectation can be created for the browser logger', !expectation.error, expectation.error?.message);
     }
 
-    retain = keep && checks.every((check) => check.ok);
-    if (retain) {
-      fs.writeFileSync(FIXTURE, JSON.stringify({
-        email: emails.owner,
-        emails,
-        password,
-        teamName: `BIQ-0263 QA ${stamp}`,
-        memberName: 'QA member',
-        teamIds,
-        userIds: names.map((role) => userIds[role]),
-        baseline,
-        today,
-      }));
-    }
-  } finally {
-    if (!retain) await removeFixture(admin, teamIds, Object.values(userIds).filter((id): id is string => !!id));
+    const ok = checks.every((check) => check.ok);
+    const ids = names.map((role) => userIds[role]).filter((id): id is string => !!id);
+    return {
+      checks,
+      teamIds,
+      userIds: ids,
+      fixture: ok
+        ? {
+            email: emails.owner,
+            emails,
+            password,
+            teamName: `BIQ-0263 QA ${stamp}`,
+            memberName: 'QA member',
+            teamIds,
+            userIds: ids,
+            today,
+          }
+        : null,
+    };
+  } catch (error) {
+    checks.push({ name: 'fixture provision', ok: false, detail: error instanceof Error ? error.message : String(error) });
+    return {
+      checks,
+      teamIds,
+      userIds: Object.values(userIds).filter((id): id is string => !!id),
+      fixture: null,
+    };
   }
-
-  if (!retain) {
-    const after = await snapshot(admin);
-    for (const table of TABLES) {
-      expect(`${table} matches the baseline after cleanup`, after[table] === baseline[table], `${baseline[table]} -> ${after[table]}`);
-    }
-  }
-
-  const failed = checks.filter((check) => !check.ok);
-  console.log(JSON.stringify({ status: failed.length ? 'failed' : 'passed', failed: failed.length, checks }, null, 2));
-  if (failed.length) process.exit(1);
 }
 
 async function removeFixture(admin: SupabaseClient, teamIds: string[], userIds: string[]) {

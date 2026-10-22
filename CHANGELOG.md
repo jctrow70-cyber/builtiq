@@ -15,7 +15,7 @@ Status:
 
 Date: 2026-10-22
 Branch: main
-Status: Local implementation. Hosted preflight scripts are ready. Migration 071 has not been applied to hosted Supabase. Not committed or released.
+Status: Hosted validation passed on desktop and mobile. Fixture isolation and temporary log cleanup are in the release commit.
 
 Summary: A signed-in member can log their own Group strength activity in the existing workout logger. The logger uses the activity's effective workout and visible date. Completing the logger session completes that member's occurrence. Partial logs stay on the original workout. A published program workout and a Group extra cannot occupy the same member and date. Shelf set logging is limited to the assigned recipient.
 
@@ -29,6 +29,8 @@ Files changed:
 - app/components/groups/GroupTrainingHome.tsx
 - app/components/groups/GroupsHub.tsx
 - app/components/groups/MemberTrainingWorkspace.tsx
+- e2e/group-activity-stage1.spec.ts
+- e2e/group-activity-stage2.spec.ts
 - e2e/group-activity-stage3.spec.ts
 - lib/groups/groupActivityLog.ts
 - lib/groups/groupLogReturn.ts
@@ -41,23 +43,24 @@ Files changed:
 - scripts/sql/biq0263-071-preflight.sql
 - scripts/sql/biq0263-071-postcheck.sql
 - scripts/test-group-activity-log.ts
+- scripts/verify-group-activity-stage1-live.ts
 - scripts/verify-group-activity-stage3c-sql.ts
+- scripts/test-session-finalization.ts
 - package.json
+- .gitignore
 - CHANGELOG.md
 
-Database changes: New migration 071 only. It does not edit or reapply 068, 069, or 070. Apply 071 once in the hosted SQL Editor after approval. Do not run it until that approval.
+Database changes: Migration 071 is installed on hosted Supabase. Do not run it again. Migrations 068, 069, and 070 were not edited.
 
 Testing steps:
 - Disposable PostgreSQL: node node_modules/tsx/dist/cli.mjs scripts/verify-group-activity-stage3c-sql.ts
 - TypeScript: node node_modules/typescript/bin/tsc --noEmit --pretty false
 - Group scripts: node node_modules/tsx/dist/cli.mjs scripts/test-group-activity-log.ts and the existing scripts in test:groups
-- Signed-in Playwright desktop and mobile: the Phase 3C case in e2e/group-activity-stage3.spec.ts
-- Confirm hosted Supabase was not changed
-- In the hosted SQL Editor, run scripts/sql/biq0263-071-preflight.sql by itself. Apply migration 071 only after that row says safe_to_apply and this checkpoint is approved. Then run scripts/sql/biq0263-071-postcheck.sql by itself.
+- Signed-in Playwright desktop and mobile, with a separate disposable fixture for each project: 44 passed. The mobile assign-group save stored two occurrences on Thursday 2026-10-22 for that project's assign group, and the same test passed on desktop.
+- Disposable QA cleanup returned the tracked production counts to the fixture baseline
 
 Known issues:
-- Migration 071 is not applied on the hosted project. Logging against hosted data uses the current policies until 071 is approved and applied.
-- The hosted SQL Editor still needs to run scripts/sql/biq0263-071-preflight.sql. A read-only data API check found no expectation/extra collisions.
+- Migration 071 is installed. Do not reapply it.
 - A card that already overlaps a program expectation stays visible, but Log workout stays hidden. Mark complete still completes only the activity.
 - Deleting a whole group can still cascade completed rows.
 - Activities without a workout are still not duplicate-checked.

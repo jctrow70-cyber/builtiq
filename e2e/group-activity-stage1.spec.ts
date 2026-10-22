@@ -17,7 +17,13 @@ function loadFixture(): Fixture {
   if (!fs.existsSync(fixturePath)) {
     throw new Error('Disposable Stage 1 fixture is missing. Run the live script with --keep first.');
   }
-  return JSON.parse(fs.readFileSync(fixturePath, 'utf8')) as Fixture;
+  const saved = JSON.parse(fs.readFileSync(fixturePath, 'utf8')) as Fixture & {
+    projects?: { desktop?: Fixture; mobile?: Fixture };
+  };
+  const project = test.info().project.name === 'mobile' ? 'mobile' : 'desktop';
+  const fixture = saved.projects?.[project] || (saved.emails ? saved : null);
+  if (!fixture?.emails) throw new Error(`Disposable ${project} fixture is missing. Run the live script with --keep first.`);
+  return fixture;
 }
 
 async function signIn(page: Page, email: string, password: string) {

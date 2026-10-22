@@ -40,6 +40,7 @@ coverage/
 # Local debug scripts (never commit secrets)
 .tmp-*.cmd
 scripts/bug-reports-out.json
+scripts/_tmp-*
 
 # Downloaded exercise datasets (large; regenerate via convert script)
 scripts/import-exercises/data/

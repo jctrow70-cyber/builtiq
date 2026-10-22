@@ -20,7 +20,13 @@ function loadFixture(): Fixture {
   if (!fs.existsSync(fixturePath)) {
     throw new Error('Disposable Stage 1 fixture is missing. Run the live script with --keep first.');
   }
-  return JSON.parse(fs.readFileSync(fixturePath, 'utf8')) as Fixture;
+  const saved = JSON.parse(fs.readFileSync(fixturePath, 'utf8')) as Fixture & {
+    projects?: { desktop?: Fixture; mobile?: Fixture };
+  };
+  const project = test.info().project.name === 'mobile' ? 'mobile' : 'desktop';
+  const fixture = saved.projects?.[project] || (saved.teamIds ? saved : null);
+  if (!fixture?.teamIds?.length) throw new Error(`Disposable ${project} fixture is missing. Run the live script with --keep first.`);
+  return fixture;
 }
 
 function loadPublicEnv() {
@@ -42,6 +48,7 @@ function loadPublicEnv() {
 
 const resetProjects = new Set<string>();
 
+/** Deletes series for this project only. The other browser project keeps its own teams. */
 async function resetFixtureSeries() {
   const fixture = loadFixture();
   const env = loadPublicEnv();
