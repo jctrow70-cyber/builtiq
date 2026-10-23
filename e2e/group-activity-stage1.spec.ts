@@ -43,7 +43,34 @@ async function openGroup(page: Page, teamName: string) {
     await page.getByRole('option', { name: new RegExp(teamName) }).click();
   }
   await expect(page.locator('.team-selector-value')).toHaveText(teamName);
-  await page.getByRole('tab', { name: 'Training' }).click();
+  await expect(page.getByRole('tab', { name: 'Calendar' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.group-calendar')).toBeVisible();
+  await expect(page.getByText('Loading the week…')).toHaveCount(0);
+}
+
+async function openListedMember(page: Page, name: string | RegExp) {
+  await page.getByRole('tablist', { name: 'Training view' }).getByRole('button', { name: 'Members', exact: true }).click();
+  await page.getByRole('button', { name: name }).first().click();
+}
+
+function todayParts() {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const year = String(now.getFullYear()).slice(-2);
+  const weekday = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][now.getDay()];
+  return { weekday, display: `${month}/${day}/${year}`, dayNumber: String(now.getDate()) };
+}
+
+async function expectTodaySelected(page: Page) {
+  const today = todayParts();
+  const desktop = page.locator('.group-calendar-board').getByRole('button', { name: `${today.weekday} ${today.display}`, pressed: true });
+  if ((await desktop.count()) > 0 && (await desktop.isVisible())) {
+    await expect(desktop).toBeVisible();
+    return;
+  }
+  const mobile = page.locator('.group-calendar-day-strip').getByRole('button', { name: new RegExp(`^${today.weekday}\\s*${today.dayNumber}$`) });
+  await expect(mobile).toHaveAttribute('data-selected', 'true');
 }
 
 async function expectNoHorizontalOverflow(page: Page) {
@@ -52,12 +79,48 @@ async function expectNoHorizontalOverflow(page: Page) {
 }
 
 test.describe('Stage 1 group extras', () => {
+  test('groups open on the selected calendar', async ({ page }) => {
+    const fixture = loadFixture();
+    const assignTeam = fixture.teamName.replace('BIQ-0263 QA ', 'BIQ-0263 QA assign ');
+    await signIn(page, fixture.emails.owner, fixture.password);
+    await openGroup(page, fixture.teamName);
+    await expect(page.getByRole('tab', { name: 'Overview' })).toHaveCount(0);
+    await expect(page.getByRole('tab', { name: 'Training' })).toHaveCount(0);
+    await expect(page.getByRole('tab', { name: 'Members' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Progress' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Programs' })).toBeVisible();
+    await expect(page.getByTestId('group-calendar-summary')).toHaveText(/\d+ members · \d+ scheduled · \d+ completed/);
+    await expect(page.getByRole('button', { name: 'Assign Training' })).toHaveCount(1);
+    await expect(page.getByRole('button', { name: 'Add Activity' })).toBeVisible();
+    await expectTodaySelected(page);
+    await expectNoHorizontalOverflow(page);
+
+    await page.getByRole('tab', { name: 'Members' }).click();
+    await expect(page.locator('.team-selector-value')).toHaveText(fixture.teamName);
+    await page.getByRole('tab', { name: 'Programs' }).click();
+    await expect(page.getByRole('heading', { name: 'Program library' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Assign Training' })).toHaveCount(0);
+    await page.getByRole('tab', { name: 'Calendar' }).click();
+    await expect(page.locator('.group-calendar')).toBeVisible();
+    await expect(page.locator('.team-selector-value')).toHaveText(fixture.teamName);
+
+    await page.locator('.team-selector-trigger').click();
+    await page.getByRole('option', { name: new RegExp(assignTeam) }).click();
+    await expect(page.locator('.team-selector-value')).toHaveText(assignTeam);
+    await expect(page.getByRole('tab', { name: 'Calendar' })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('.group-calendar')).toBeVisible();
+    await expect(page.getByText('Loading the week…')).toHaveCount(0);
+    await expectTodaySelected(page);
+    await expect(page.getByTestId('group-calendar-summary')).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+  });
+
   test('owner sees extras and can save another activity', async ({ page }, testInfo) => {
     const fixture = loadFixture();
     const title = testInfo.project.name === 'mobile' ? 'QA mobile stretch' : 'QA desktop stretch';
     await signIn(page, fixture.emails.owner, fixture.password);
     await openGroup(page, fixture.teamName);
-    await page.getByRole('button', { name: new RegExp(fixture.memberName) }).first().click();
+    await openListedMember(page, new RegExp(fixture.memberName));
     await expect(page.getByText('QA cardio').first()).toBeVisible();
     await expect(page.getByText('Extra', { exact: true }).first()).toBeVisible();
     await expect(page.getByText('Extra · required').first()).toBeVisible();
@@ -83,7 +146,7 @@ test.describe('Stage 1 group extras', () => {
     const title = testInfo.project.name === 'mobile' ? 'QA mobile weekly' : 'QA desktop weekly';
     await signIn(page, fixture.emails.owner, fixture.password);
     await openGroup(page, fixture.teamName);
-    await page.getByRole('button', { name: new RegExp(fixture.memberName) }).first().click();
+    await openListedMember(page, new RegExp(fixture.memberName));
     await page.getByRole('button', { name: 'Add Activity' }).click();
     await page.getByRole('button', { name: 'Cardio, mobility, or other' }).click();
     const sheet = page.locator('.pd-sheet');
@@ -102,7 +165,9 @@ test.describe('Stage 1 group extras', () => {
     const fixture = loadFixture();
     await signIn(page, fixture.emails.member, fixture.password);
     await openGroup(page, fixture.teamName);
-    await page.getByRole('button', { name: /QA member/ }).first().click();
+    await expect(page.getByRole('tab', { name: 'Programs' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Assign Training' })).toHaveCount(0);
+    await openListedMember(page, /QA member/);
     await page.getByRole('button', { name: 'Add Activity' }).click();
     await expect(page.getByText('Required. Program missed totals stay the same.')).toHaveCount(0);
     await page.getByRole('button', { name: 'Cardio, mobility, or other' }).click();
@@ -114,7 +179,9 @@ test.describe('Stage 1 group extras', () => {
     const fixture = loadFixture();
     await signIn(page, fixture.emails.manager, fixture.password);
     await openGroup(page, fixture.teamName);
-    await page.getByRole('button', { name: new RegExp(fixture.memberName) }).first().click();
+    await expect(page.getByRole('tab', { name: 'Programs' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Assign Training' })).toBeVisible();
+    await openListedMember(page, new RegExp(fixture.memberName));
     await expect(page.getByText('QA cardio').first()).toBeVisible();
     await expect(page.getByText('Extra · required').first()).toBeVisible();
     await page.getByRole('button', { name: 'Add Activity' }).click();
@@ -127,7 +194,9 @@ test.describe('Stage 1 group extras', () => {
     const assignTeam = fixture.teamName.replace('BIQ-0263 QA ', 'BIQ-0263 QA assign ');
     await signIn(page, fixture.emails.assigner, fixture.password);
     await openGroup(page, assignTeam);
-    await page.getByRole('button', { name: /QA owner/ }).first().click();
+    await expect(page.getByRole('tab', { name: 'Programs' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Assign Training' })).toBeVisible();
+    await openListedMember(page, /QA owner/);
     await expect(page.getByText('QA assigned sport').first()).toBeVisible();
     await expect(page.getByText('Extra · required').first()).toBeVisible();
     await page.getByRole('button', { name: 'Add Activity' }).click();
@@ -139,7 +208,7 @@ test.describe('Stage 1 group extras', () => {
     const fixture = loadFixture();
     await signIn(page, fixture.emails.member, fixture.password);
     await openGroup(page, fixture.teamName);
-    await page.getByRole('button', { name: /QA member/ }).first().click();
+    await openListedMember(page, /QA member/);
     const selected = page.locator('.member-week-cell[data-selected="true"]');
     await expect(selected).toBeVisible();
     const border = await selected.evaluate((element) => getComputedStyle(element).boxShadow);

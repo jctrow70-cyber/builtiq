@@ -2891,7 +2891,7 @@ function onSelectTrainingDay(date:string){
  }
  function switchTrainingContext(next:'personal'|'group'){setMode(next==='group'?'team':'personal');if(next==='group'&&teams.length&&!selectedTeamId)setSelectedTeamId(teams[0].id);}
  function handleGroupsWorkspaceTabChange(tab:string){
-  if(tab==='training')loadPrograms('setup');
+  if(tab==='calendar'||tab==='programs')loadPrograms('setup');
   if(tab==='members')return;
   if(viewingMember&&viewingMember.user_id!==session?.user?.id)closeMemberView();
   else if(memberDashboard){setMemberDashboard(null);setMemberPerformance(null);}

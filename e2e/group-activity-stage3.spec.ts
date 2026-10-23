@@ -94,6 +94,21 @@ async function signIn(page: Page, email: string, password: string) {
   await expect(page.getByRole('navigation', { name: 'Primary' })).toBeVisible();
 }
 
+async function expectTodaySelected(page: Page) {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const year = String(now.getFullYear()).slice(-2);
+  const weekday = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][now.getDay()];
+  const desktop = page.locator('.group-calendar-board').getByRole('button', { name: `${weekday} ${month}/${day}/${year}`, pressed: true });
+  if ((await desktop.count()) > 0 && (await desktop.isVisible())) {
+    await expect(desktop).toBeVisible();
+    return;
+  }
+  const mobile = page.locator('.group-calendar-day-strip').getByRole('button', { name: new RegExp(`^${weekday}\\s*${Number(day)}$`) });
+  await expect(mobile).toHaveAttribute('data-selected', 'true');
+}
+
 async function openCalendar(page: Page, teamName: string) {
   await page.getByRole('navigation', { name: 'Primary' }).getByRole('button', { name: 'Groups' }).click();
   await expect(page.locator('.team-selector-value')).toBeVisible();
@@ -103,10 +118,10 @@ async function openCalendar(page: Page, teamName: string) {
     await page.getByRole('option', { name: new RegExp(teamName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) }).click();
   }
   await expect(page.locator('.team-selector-value')).toHaveText(teamName);
-  await page.getByRole('tab', { name: 'Training' }).click();
-  await page.getByRole('tablist', { name: 'Training view' }).getByRole('button', { name: 'Calendar' }).click();
+  await expect(page.getByRole('tab', { name: 'Calendar' })).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('.group-calendar')).toBeVisible();
   await expect(page.getByText('Loading the week…')).toHaveCount(0);
+  await expectTodaySelected(page);
 }
 
 async function expectNoHorizontalOverflow(page: Page) {

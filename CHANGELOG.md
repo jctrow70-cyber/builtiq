@@ -11,6 +11,48 @@ Branch:
 Status:
 ```
 
+## BIQ-0264 - Phase 1 calendar home
+
+Date: 2026-10-23
+Branch: main
+Status: Implemented locally. TypeScript passed. Group regression scripts passed. Signed-in Playwright passed 46 tests on desktop and mobile. Disposable QA cleanup restored the baseline. Not committed.
+
+Summary: Groups opens on the selected group's calendar for the current week, with today selected. Primary navigation is Calendar, Members, Progress, and Programs for people who can manage programs. The calendar header shows the group member count, scheduled activities for the visible week, and completed activities for that week.
+
+Purpose: Make the group calendar the landing experience without changing assignments, recurrence, logging, permissions, or the database.
+
+Files changed:
+- app/components/groups/GroupsHub.tsx
+- app/components/groups/GroupTrainingHome.tsx
+- app/components/groups/GroupTrainingCalendar.tsx
+- app/components/groups/TeamWorkspaceTabs.tsx
+- app/components/groups/GroupOverview.tsx (kept, no longer mounted)
+- app/globals.css
+- app/page.tsx
+- lib/groups/workspaceTabs.ts
+- lib/groups/groupCalendar.ts
+- e2e/group-activity-stage1.spec.ts
+- e2e/group-activity-stage2.spec.ts
+- e2e/group-activity-stage3.spec.ts
+- scripts/test-group-architecture.ts
+- scripts/test-group-calendar.ts
+- scripts/test-group-training-workspace.ts
+- CHANGELOG.md
+
+Database changes: None.
+
+Testing steps:
+- TypeScript: node node_modules/typescript/bin/tsc --noEmit --pretty false
+- Group scripts: node node_modules/tsx/dist/cli.mjs scripts/test-group-architecture.ts, scripts/test-group-calendar.ts, scripts/test-group-training-workspace.ts, and the rest of test:groups
+- Signed-in Playwright desktop and mobile with a disposable fixture, then cleanup back to the fixture baseline
+
+Known issues:
+- GroupOverview.tsx remains in the repo and is not on the tab bar. Its member, set, assignment, and invite information stays on the calendar header, Progress, Members, and Programs.
+- The calendar still has the existing member-status list behind the inner Members control. The Members tab remains the roster.
+- Phase 2 has not started.
+
+Recommended commit message: Open Groups on the selected calendar
+
 ## BIQ-0263 - Phase 3C group strength logging
 
 Date: 2026-10-22

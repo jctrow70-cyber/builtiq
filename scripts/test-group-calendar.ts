@@ -8,6 +8,7 @@ import {
   adjacentCalendarWeek,
   buildGroupCalendar,
   calendarMemberIds,
+  calendarWeekSummary,
   visibleCalendarCards,
 } from '../lib/groups/groupCalendar';
 import { buildGroupTrainingBoard, type GroupTrainingExpectationInput } from '../lib/groups/trainingWorkspace';
@@ -77,6 +78,43 @@ assert.equal(thursday?.workouts.find((card) => card.origin === 'assignment')?.so
 assert.equal(mixed.days.find((day) => day.date === '2026-10-14')?.workouts.find((card) => card.memberName === 'Amy')?.state, 'Partial');
 assert.equal(mixed.days.find((day) => day.date === '2026-10-14')?.workouts.find((card) => card.memberName === 'Mike')?.state, 'Completed');
 assert.equal(mixed.days.find((day) => day.date === '2026-10-16')?.workouts[0].state, 'Excused');
+assert.deepEqual(calendarWeekSummary(mixed), { scheduled: mixed.workoutCount, completed: 1 });
+const withExtras = buildGroupCalendar({
+  weekStart,
+  today,
+  teamId,
+  expectations: [
+    row('amy', '2026-10-14', 'Partial Day', { workoutId: 'part', sessionStatus: 'partial' }),
+    row('mike', '2026-10-14', 'Done Day', { workoutId: 'done', sessionStatus: 'completed' }),
+  ],
+  members,
+  visibleUserIds: ['amy', 'mike'],
+  completionKnown: true,
+  extras: [
+    {
+      id: 'walk',
+      userId: 'amy',
+      date: '2026-10-12',
+      title: 'Walk',
+      activityType: 'cardio',
+      workoutId: null,
+      required: false,
+      completed: true,
+    },
+    {
+      id: 'rest',
+      userId: 'mike',
+      date: '2026-10-13',
+      title: 'Rest',
+      activityType: 'mobility',
+      workoutId: null,
+      required: true,
+      completed: false,
+      status: 'skipped',
+    },
+  ],
+});
+assert.deepEqual(calendarWeekSummary(withExtras), { scheduled: 4, completed: 2 });
 assert.equal(mixed.days.some((day) => day.workouts.some((card) => card.title === 'Last Week' || card.title === 'Personal Lift')), false);
 
 const restored = weekFor([row('amy', '2026-10-16', 'Excused Day', { excused: false, workoutId: 'ex' })]);
@@ -182,8 +220,16 @@ assert.match(facts, /\.lte\('scheduled_date', to\)/);
 assert.doesNotMatch(calendar, /buildProgramExpectationDates/);
 assert.match(css, /@media \(min-width:721px\)/);
 assert.match(css, /\.group-calendar-board\{display:grid/);
-assert.match(tabs, /Overview/);
-assert.match(tabs, /Training/);
-assert.doesNotMatch(tabs, /Calendar/);
+assert.match(tabs, /Calendar/);
+assert.match(tabs, /Members/);
+assert.match(tabs, /Progress/);
+assert.match(tabs, /visibleGroupWorkspaceTabs/);
+assert.match(tabs, /Programs/);
+assert.doesNotMatch(tabs, /label: 'Overview'/);
+assert.doesNotMatch(tabs, /label: 'Training'/);
+assert.match(calendar, /calendarWeekSummary/);
+assert.match(calendar, /group-calendar-summary/);
+assert.match(calendar, /members\.length\} members/);
+assert.doesNotMatch(calendar, /workouts ·/);
 
 console.log('group calendar checks passed');

@@ -17,7 +17,6 @@ import { emptyAssignmentCompliance } from '../../../lib/groups/memberPerformance
 import TeamCreateJoinSheet, { type CreateGroupPayload } from './TeamCreateJoinSheet';
 import GroupClassificationsPanel from './GroupClassificationsPanel';
 import GroupInviteMembersPanel from './GroupInviteMembersPanel';
-import GroupOverview from './GroupOverview';
 import GroupTrainingHome from './GroupTrainingHome';
 import MemberPerformancePanel from './MemberPerformancePanel';
 import type { MemberProfileSection } from './MemberTrainingWorkspace';
@@ -27,6 +26,7 @@ import TeamProgramsTab from './TeamProgramsTab';
 import TeamSelector from './TeamSelector';
 import TeamSettingsTab from './TeamSettingsTab';
 import TeamWorkspaceTabs, { type TeamWorkspaceTab } from './TeamWorkspaceTabs';
+import { visibleGroupWorkspaceTabs } from '../../../lib/groups/workspaceTabs';
 import GroupMessages, { MessageIconMark } from './GroupMessages';
 import type { GroupPermissionFlags } from '../../../lib/groups/groupPermissions';
 import { canStartDirectConversation, groupCommunicationFlags } from '../../../lib/groups/communication';
@@ -238,25 +238,23 @@ export default function GroupsHub(props: GroupsHubProps) {
     statusLabel,
   } = props;
 
-  const [workspaceTab, setWorkspaceTab] = useState<TeamWorkspaceTab>('overview');
+  const [workspaceTab, setWorkspaceTab] = useState<TeamWorkspaceTab>('calendar');
   const [sheetMode, setSheetMode] = useState<'create' | 'join' | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [messagesOpen, setMessagesOpen] = useState(false);
   const [unreadConversations, setUnreadConversations] = useState(0);
   const [composeUserId, setComposeUserId] = useState<string | null>(null);
   const [openedConversationId, setOpenedConversationId] = useState<string | null>(null);
-  const [managePlans, setManagePlans] = useState(false);
   const [wizardSeed, setWizardSeed] = useState<{ memberUserId?: string | null; programId?: string | null } | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
   const [trainingFocusUserId, setTrainingFocusUserId] = useState<string | null>(null);
   const [trainingFocusDate, setTrainingFocusDate] = useState<string | null>(null);
   const [calendarFocusDate, setCalendarFocusDate] = useState<string | null>(null);
   const [profileSection, setProfileSection] = useState<MemberProfileSection>('calendar');
-  const [pendingInvites, setPendingInvites] = useState(0);
 
   useEffect(() => {
     if (!groupLogResume?.memberUserId || !groupLogResume.scheduledDate) return;
-    setWorkspaceTab('training');
+    setWorkspaceTab('calendar');
     setProfileSection('calendar');
     if (groupLogResume.returnTo === 'group-calendar') {
       setTrainingFocusUserId(null);
@@ -274,9 +272,9 @@ export default function GroupsHub(props: GroupsHubProps) {
 
   useEffect(() => {
     if (groupLogResumeRef.current?.memberUserId) return;
-    setWorkspaceTab('overview');
+    setWorkspaceTab('calendar');
+    onWorkspaceTabChange?.('calendar');
     setSettingsOpen(false);
-    setManagePlans(false);
     setMessagesOpen(false);
     setComposeUserId(null);
     setOpenedConversationId(null);
@@ -314,29 +312,6 @@ export default function GroupsHub(props: GroupsHubProps) {
     onPendingConversationHandled?.();
   }, [pendingConversation, activeTeam?.id, onPendingConversationHandled]);
 
-  useEffect(() => {
-    if (!canManage || !accessToken || !activeTeam?.id) {
-      setPendingInvites(0);
-      return;
-    }
-    let cancelled = false;
-    fetch(`/api/groups/invite?teamId=${encodeURIComponent(activeTeam.id)}`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    })
-      .then((res) => res.json().catch(() => ({})))
-      .then((data) => {
-        if (cancelled) return;
-        const rows = Array.isArray(data?.invites) ? data.invites : [];
-        setPendingInvites(rows.filter((row: { status?: string }) => row.status === 'pending').length);
-      })
-      .catch(() => {
-        if (!cancelled) setPendingInvites(0);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [canManage, accessToken, activeTeam?.id]);
-
   const programRows = useMemo(
     () =>
       buildTeamProgramRows(
@@ -352,8 +327,12 @@ export default function GroupsHub(props: GroupsHubProps) {
     if (!assignmentResume || assignmentResume.teamId !== activeTeam?.id) return;
     setWizardSeed(null);
     setWizardOpen(true);
-    setWorkspaceTab('training');
+    setWorkspaceTab('calendar');
   }, [assignmentResume, activeTeam?.id]);
+
+  useEffect(() => {
+    if (workspaceTab === 'programs' && !canManage) setWorkspaceTab('calendar');
+  }, [canManage, workspaceTab]);
 
   const canAssign = canAssignInGroup(activeTeam?.my_role, activeTeam ? groupPermissionFlags(activeTeam) : null);
 
@@ -385,9 +364,6 @@ export default function GroupsHub(props: GroupsHubProps) {
     );
   }
 
-  const selfMember = members.find((m: any) => m.user_id === sessionUserId);
-  const selfStats = selfMember ? memberStats[selfMember.user_id] || { sets: 0, days: 0 } : { sets: 0, days: 0 };
-
   const handleWorkspaceTabChange = (tab: TeamWorkspaceTab) => {
     setWorkspaceTab(tab);
     onWorkspaceTabChange?.(tab);
@@ -401,40 +377,11 @@ export default function GroupsHub(props: GroupsHubProps) {
     }
     setProfileSection(section);
     setTrainingFocusUserId(member.user_id);
-    setWorkspaceTab('training');
+    setWorkspaceTab('calendar');
     onOpenMember(member);
   };
 
   const renderWorkspaceContent = () => {
-    if (workspaceTab === 'overview' && activeTeam) {
-      const current = programRows.find((row) => row.isDefault) || programRows.find((row) => row.status !== 'draft') || null;
-      const quiet = members
-        .filter((m: any) => (memberStats[m.user_id]?.sets || 0) === 0)
-        .map((m: any) => m.display_name || 'Member');
-      const overdueAssignments = Object.values(memberRosterMeta).reduce((sum, meta) => sum + (meta?.assignmentOverdue || 0), 0);
-      const pendingAssignments = Object.values(memberRosterMeta).reduce((sum, meta) => sum + (meta?.assignmentPending || 0), 0);
-      const selfPlan = memberAssignments[sessionUserId];
-      return (
-        <GroupOverview
-          canManage={canManage}
-          memberCount={members.length}
-          activeThisWeek={teamActiveCount}
-          setsThisWeek={teamTotalSets}
-          planName={current?.name || groupProgramForAssign?.name}
-          planStatus={current?.statusLabel}
-          planWeeks={current?.weeks}
-          noActivityNames={quiet}
-          overdueAssignments={overdueAssignments}
-          pendingAssignments={pendingAssignments}
-          pendingInvites={pendingInvites}
-          selfSets={selfStats.sets}
-          selfDays={selfStats.days}
-          selfPlanName={selfPlan?.st_programs?.name || groupProgramForAssign?.name}
-          onViewTraining={() => handleWorkspaceTabChange('training')}
-        />
-      );
-    }
-
     if (workspaceTab === 'members') {
       if (memberWorkoutPanel) return memberWorkoutPanel;
       return (
@@ -480,13 +427,12 @@ export default function GroupsHub(props: GroupsHubProps) {
       );
     }
 
-    if (workspaceTab === 'training') {
+    if (workspaceTab === 'calendar') {
       const current = programRows.find((row) => row.isDefault) || programRows.find((row) => row.status !== 'draft') || null;
       return (
         <GroupTrainingHome
           canManage={canManage}
           current={current}
-          managingPlans={managePlans}
           onView={current ? () => onEditTeamProgram(current.id) : undefined}
           onEditProgram={onEditTeamProgram}
           canAssign={canAssign}
@@ -494,7 +440,7 @@ export default function GroupsHub(props: GroupsHubProps) {
             setWizardSeed(seed || null);
             setWizardOpen(true);
           }}
-          onManagePlans={canManage ? () => setManagePlans((open) => !open) : undefined}
+          onManagePlans={canManage ? () => handleWorkspaceTabChange('programs') : undefined}
           teamName={activeTeam?.name}
           sessionUserId={sessionUserId}
           memberAssignments={memberAssignments}
@@ -525,23 +471,6 @@ export default function GroupsHub(props: GroupsHubProps) {
                   setMessagesOpen(true);
                 }
               : undefined
-          }
-          planLibrary={
-            <TeamProgramsTab
-              canManage={canManage}
-              programRows={programRows}
-              groupName={activeTeam?.name}
-              onOpenPrograms={() => onOpenGroupsProgramWizard('create')}
-              onDuplicate={(id) => onDuplicateProgram(id)}
-              onEdit={onEditTeamProgram}
-              onPublish={onPublishTeamProgram}
-              onAssign={(id) => {
-                setWizardSeed({ programId: id });
-                setWizardOpen(true);
-              }}
-              onDelete={onDeleteProgram}
-              defaultProgramId={activeTeam?.default_program_id}
-            />
           }
           teamId={activeTeam?.id || null}
           focusUserId={trainingFocusUserId}
@@ -584,6 +513,45 @@ export default function GroupsHub(props: GroupsHubProps) {
           classifications={classifications}
           memberClassificationIds={memberClassificationIds}
         />
+      );
+    }
+
+    if (workspaceTab === 'programs' && canManage && activeTeam) {
+      const current = programRows.find((row) => row.isDefault) || programRows.find((row) => row.status !== 'draft') || null;
+      return (
+        <div className="card group-training-card">
+          <div className="group-training-library-head">
+            <div>
+              <h2>Program library</h2>
+              <p className="muted">Publish plans here. Assign Training adds a plan or a workout. Building a program stays in Programs.</p>
+            </div>
+          </div>
+          {current && (
+            <p className="muted group-training-current">
+              Current group program · <b>{current.name}</b>
+              <button type="button" className="btn small secondary" style={{ marginLeft: 8 }} onClick={() => onEditTeamProgram(current.id)}>
+                View
+              </button>
+            </p>
+          )}
+          <div className="group-training-library">
+            <TeamProgramsTab
+              canManage={canManage}
+              programRows={programRows}
+              groupName={activeTeam.name}
+              onOpenPrograms={() => onOpenGroupsProgramWizard('create')}
+              onDuplicate={(id) => onDuplicateProgram(id)}
+              onEdit={onEditTeamProgram}
+              onPublish={onPublishTeamProgram}
+              onAssign={(id) => {
+                setWizardSeed({ programId: id });
+                setWizardOpen(true);
+              }}
+              onDelete={onDeleteProgram}
+              defaultProgramId={activeTeam.default_program_id}
+            />
+          </div>
+        </div>
       );
     }
 
@@ -658,7 +626,7 @@ export default function GroupsHub(props: GroupsHubProps) {
         </div>
       </div>
 
-      <TeamWorkspaceTabs active={workspaceTab} onChange={handleWorkspaceTabChange} />
+      <TeamWorkspaceTabs tabs={visibleGroupWorkspaceTabs(canManage)} active={workspaceTab} onChange={handleWorkspaceTabChange} />
 
       {renderWorkspaceContent()}
 

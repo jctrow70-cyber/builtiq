@@ -1,16 +1,17 @@
 'use client';
 
-import { GROUP_WORKSPACE_TABS, type TeamWorkspaceTab } from '../../../lib/groups/workspaceTabs';
+import type { TeamWorkspaceTab } from '../../../lib/groups/workspaceTabs';
 
 type TeamWorkspaceTabsProps = {
+  tabs: ReadonlyArray<{ id: TeamWorkspaceTab; label: string }>;
   active: TeamWorkspaceTab;
   onChange: (tab: TeamWorkspaceTab) => void;
 };
 
-export default function TeamWorkspaceTabs({ active, onChange }: TeamWorkspaceTabsProps) {
+export default function TeamWorkspaceTabs({ tabs, active, onChange }: TeamWorkspaceTabsProps) {
   return (
     <div className="team-workspace-tabs" role="tablist" aria-label="Group workspace">
-      {GROUP_WORKSPACE_TABS.map((tab) => (
+      {tabs.map((tab) => (
         <button
           key={tab.id}
           type="button"

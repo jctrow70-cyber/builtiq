@@ -244,6 +244,7 @@ button.member-training-week-row{width:100%;background:transparent;border-left:0;
 .member-week-nav,.group-calendar-nav{display:grid;grid-template-columns:36px minmax(0,1fr) 36px;align-items:center;gap:8px;margin:4px 0 8px}
 .member-week-heading{display:flex;flex-direction:column;align-items:center;min-width:0;text-align:center;gap:2px}
 .member-week-heading b{font-size:15px;line-height:1.2}
+.group-calendar-summary{display:block;max-width:100%;font-size:12px;line-height:1.35}
 .member-week-strip,.group-calendar-day-strip{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;min-width:0;overflow:hidden}
 .member-week-cell,.group-calendar-day-strip button{min-width:0;min-height:52px;padding:4px 0;border:0;border-radius:10px;background:transparent;color:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px}
 .member-week-cell span,.group-calendar-day-strip button span{font-size:12px;font-weight:700;letter-spacing:0;color:var(--muted);line-height:1.1}
@@ -339,7 +340,7 @@ button.member-training-week-row{width:100%;background:transparent;border-left:0;
 .team-selector-divider{height:1px;background:var(--line);margin:6px 0}
 .team-selector-action{display:block;width:100%;text-align:left;border:0;background:transparent;color:#c4b5fd;padding:10px 12px;border-radius:8px;cursor:pointer;font-weight:700}
 .team-selector-action:hover{background:#121827}
-.team-workspace-tabs{display:flex;gap:6px;padding-bottom:2px;overflow-x:auto}
+.team-workspace-tabs{display:flex;gap:6px;padding-bottom:2px;overflow-x:auto;max-width:100%}
 .team-workspace-tabs button{flex:1;min-width:0;min-height:44px;border:1px solid var(--line);background:#0f172a;color:var(--muted);border-radius:999px;padding:8px 4px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
 .team-workspace-tabs button.active{border-color:var(--purple);background:#1b1634;color:#fff}
 .team-sheet-backdrop{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;padding:12px}

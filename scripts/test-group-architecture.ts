@@ -20,7 +20,7 @@ import {
   roleLabel,
 } from '../lib/groups/permissions';
 import { DEFAULT_GROUP_PERMISSIONS, groupPermissionFlags } from '../lib/groups/groupPermissions';
-import { GROUP_WORKSPACE_TABS, groupProgressSubjectIds, groupSettingsAccess } from '../lib/groups/workspaceTabs';
+import { GROUP_WORKSPACE_TABS, visibleGroupWorkspaceTabs, groupProgressSubjectIds, groupSettingsAccess } from '../lib/groups/workspaceTabs';
 import { classifySetLogScope } from '../lib/groups/progressScope';
 import {
   groupEnrollmentProvenance,
@@ -489,7 +489,15 @@ assert.equal(
 
 assert.deepEqual(
   GROUP_WORKSPACE_TABS.map((tab) => tab.id),
-  ['overview', 'training', 'members', 'progress']
+  ['calendar', 'members', 'progress']
+);
+assert.deepEqual(
+  visibleGroupWorkspaceTabs(false).map((tab) => tab.id),
+  ['calendar', 'members', 'progress']
+);
+assert.deepEqual(
+  visibleGroupWorkspaceTabs(true).map((tab) => tab.id),
+  ['calendar', 'members', 'progress', 'programs']
 );
 assert.equal(GROUP_WORKSPACE_TABS.some((tab) => tab.id === 'settings'), false);
 assert.deepEqual(groupProgressSubjectIds('amy', ['jesse', 'amy', 'mike'], false), ['amy']);
@@ -511,11 +519,18 @@ const progressUi = readFileSync(new URL('../app/components/groups/TeamProgressTa
 assert.match(progressUi, /Activity/);
 assert.match(progressUi, /GroupScheduleAdherence/);
 const trainingUi = readFileSync(new URL('../app/components/groups/GroupTrainingHome.tsx', import.meta.url), 'utf8');
+const hubUi = readFileSync(new URL('../app/components/groups/GroupsHub.tsx', import.meta.url), 'utf8');
 assert.match(trainingUi, /Assign Training/);
-assert.match(trainingUi, /Program library/);
+assert.match(trainingUi, /useState<'members' \| 'calendar'>\('calendar'\)/);
 assert.match(trainingUi, /\{!selected && \(canManage \|\| canAssign\) &&/);
-assert.match(trainingUi, /\{!selected && canManage &&/);
+assert.doesNotMatch(trainingUi, /Program library/);
 assert.doesNotMatch(trainingUi, /GroupScheduleAdherence/);
+assert.match(hubUi, /Program library/);
+assert.match(hubUi, /workspaceTab === 'programs' && canManage/);
+assert.match(hubUi, /useState<TeamWorkspaceTab>\('calendar'\)/);
+assert.match(hubUi, /visibleGroupWorkspaceTabs\(canManage\)/);
+assert.doesNotMatch(hubUi, /setWorkspaceTab\('overview'\)/);
+assert.doesNotMatch(hubUi, /setWorkspaceTab\('training'\)/);
 const settingsUi = readFileSync(new URL('../app/components/groups/TeamSettingsTab.tsx', import.meta.url), 'utf8');
 assert.match(settingsUi, /Group administration/);
 assert.match(settingsUi, /groupSettingsAccess/);

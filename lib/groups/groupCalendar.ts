@@ -69,6 +69,15 @@ export function visibleCalendarCards<T>(cards: T[], expanded: boolean, limit = C
   return { visible: cards.slice(0, limit), hidden: cards.length - limit };
 }
 
+/** Visible-week card counts. Only a Completed card counts as completed. */
+export function calendarWeekSummary(week: GroupCalendarWeek): { scheduled: number; completed: number } {
+  const cards = week.days.flatMap((day) => day.workouts);
+  return {
+    scheduled: cards.length,
+    completed: cards.filter((card) => card.state === 'Completed').length,
+  };
+}
+
 /**
  * Places group expectations onto the Monday–Sunday week of their saved dates.
  * Program weekday labels are not used to choose the column.

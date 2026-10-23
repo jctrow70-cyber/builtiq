@@ -429,10 +429,12 @@ const recipientSkipped = attachExpectationCompletion(
 assert.equal(recipientSkipped[0].sessionStatus, 'skipped');
 
 const home = readFileSync(new URL('../app/components/groups/GroupTrainingHome.tsx', import.meta.url), 'utf8');
+const hub = readFileSync(new URL('../app/components/groups/GroupsHub.tsx', import.meta.url), 'utf8');
 const loader = readFileSync(new URL('../lib/groups/loadGroupTrainingFacts.ts', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 assert.match(home, /Assign Training/);
-assert.match(home, /Program library/);
+assert.match(hub, /Program library/);
+assert.doesNotMatch(home, /Program library/);
 assert.doesNotMatch(home, /GroupScheduleAdherence/);
 assert.match(home, />\s*Calendar\s*</);
 assert.match(loader, /source_kind', 'group'/);

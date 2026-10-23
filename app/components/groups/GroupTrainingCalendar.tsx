@@ -6,6 +6,7 @@ import {
   adjacentCalendarWeek,
   buildGroupCalendar,
   calendarMemberIds,
+  calendarWeekSummary,
   CALENDAR_DEPENDENCY_NOTICE,
   visibleCalendarCards,
   type GroupCalendarCard,
@@ -138,6 +139,8 @@ export default function GroupTrainingCalendar({
     });
   }, [facts, weekStart, today, teamId, members, visibleUserIds]);
 
+  const weekSummary = week ? calendarWeekSummary(week) : null;
+
   function showWeek(next: string) {
     setWeekStart(next);
     setSelected(null);
@@ -207,7 +210,11 @@ export default function GroupTrainingCalendar({
               Today
             </button>
           )}
-          {week ? <span className="muted">{week.workoutCount} workouts · {week.memberCount} members</span> : null}
+          {weekSummary ? (
+            <span className="muted group-calendar-summary" data-testid="group-calendar-summary">
+              {members.length} members · {weekSummary.scheduled} scheduled · {weekSummary.completed} completed
+            </span>
+          ) : null}
         </div>
         <button type="button" className="member-icon-btn" aria-label="Next week" onClick={() => showWeek(adjacentCalendarWeek(weekStart, 1))}>
           ›

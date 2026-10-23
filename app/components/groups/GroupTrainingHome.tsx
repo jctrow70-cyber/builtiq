@@ -30,8 +30,6 @@ type GroupTrainingHomeProps = {
   onOpenAssignWizard?: (seed?: { memberUserId?: string | null; programId?: string | null }) => void;
   canAssign?: boolean;
   onManagePlans?: () => void;
-  managingPlans: boolean;
-  planLibrary?: ReactNode;
   teamId?: string | null;
   teamName?: string | null;
   sessionUserId?: string | null;
@@ -114,8 +112,6 @@ export default function GroupTrainingHome({
   onOpenAssignWizard,
   canAssign = false,
   onManagePlans,
-  managingPlans,
-  planLibrary,
   teamId,
   teamName,
   sessionUserId,
@@ -153,7 +149,7 @@ export default function GroupTrainingHome({
   const [statusFilter, setStatusFilter] = useState('all');
   const [facts, setFacts] = useState<GroupTrainingFacts | null>(null);
   const [factsTick, setFactsTick] = useState(0);
-  const [trainingView, setTrainingView] = useState<'members' | 'calendar'>('members');
+  const [trainingView, setTrainingView] = useState<'members' | 'calendar'>('calendar');
   const [calendarDate, setCalendarDate] = useState<string | null>(null);
 
   const assignmentKey = useMemo(
@@ -170,6 +166,7 @@ export default function GroupTrainingHome({
   useEffect(() => {
     setSelectedUserId(null);
     setProfileWeekStart(mondayOfWeek(todayYmd()));
+    if (!focusUserId && !calendarFocusDate) setTrainingView('calendar');
   }, [teamId]);
 
   useEffect(() => {
@@ -514,6 +511,7 @@ export default function GroupTrainingHome({
             </div>
             {trainingView === 'calendar' && teamId ? (
               <GroupTrainingCalendar
+                key={teamId}
                 teamId={teamId}
                 teamName={teamName}
                 canSeeAll={canManage || canAssign}
@@ -626,36 +624,6 @@ export default function GroupTrainingHome({
         )}
       </div>
 
-      {!selected && canManage && (
-        <div className="card group-training-card">
-          <div className="group-training-library-head">
-            <div>
-              <h2>Program library</h2>
-              <p className="muted">Publish plans here. Assign Training adds a plan or a workout. Building a program stays in Programs.</p>
-            </div>
-            {onManagePlans && (
-              <button type="button" className="btn secondary" onClick={onManagePlans}>
-                {managingPlans ? 'Hide programs' : 'Show programs'}
-              </button>
-            )}
-          </div>
-          {current && (
-            <p className="muted group-training-current">
-              Current group program · <b>{current.name}</b>
-              {onView && (
-                <button type="button" className="btn small secondary" style={{ marginLeft: 8 }} onClick={onView}>
-                  View
-                </button>
-              )}
-            </p>
-          )}
-          {managingPlans && (
-            <div className="group-training-library">
-              {planLibrary}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }

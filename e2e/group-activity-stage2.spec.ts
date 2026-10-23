@@ -112,10 +112,13 @@ async function openGroup(page: Page, teamName: string) {
     await page.getByRole('option', { name: new RegExp(teamName) }).click();
   }
   await expect(page.locator('.team-selector-value')).toHaveText(teamName);
-  await page.getByRole('tab', { name: 'Training' }).click();
+  await expect(page.locator('.group-calendar')).toBeVisible();
+  await expect(page.getByText('Loading the week…')).toHaveCount(0);
 }
 
 async function openMember(page: Page, name: string) {
+  const membersView = page.getByRole('tablist', { name: 'Training view' }).getByRole('button', { name: 'Members', exact: true });
+  if (await membersView.isVisible()) await membersView.click();
   await page.getByRole('button', { name: new RegExp(name) }).first().click();
   await expect(dayDetail(page)).toBeVisible();
 }
