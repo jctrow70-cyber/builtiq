@@ -1,7 +1,18 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { classificationNamesForMember, roleForUi, type GroupClassification, type MemberRosterMeta } from '../../../lib/groups';
+import {
+  canShowBulkProgramToolbar,
+  filteredSelectionState,
+  freezeRecipientIds,
+  hiddenSelectedCount,
+  joinBulkProgramCandidate,
+  selectionAfterGroupChange,
+  toggleFilteredSelection,
+  toggleMemberSelection,
+  type BulkProgramCandidate,
+} from '../../../lib/groups/bulkProgramAssign';
 import {
   buildMemberDirectory,
   DIRECTORY_STATUS_OPTIONS,
@@ -11,6 +22,7 @@ import {
   type DirectorySort,
   type DirectoryTrainingSnapshot,
 } from '../../../lib/groups/memberDirectory';
+import BulkProgramAssignSheet from './BulkProgramAssignSheet';
 import type { GroupTrainingBoard } from '../../../lib/groups/trainingWorkspace';
 import { mondayOfWeek, sundayOfWeek, todayYmd } from '../../../lib/training/programCalendar';
 
@@ -34,6 +46,8 @@ type GroupMembersDirectoryProps = {
   onSetParticipation?: (member: any, active: boolean) => void;
   onRemoveMember?: (member: any) => void;
   onToggleMemberClassification?: (member: any, classificationId: string, active: boolean) => void;
+  programs?: any[];
+  onTrainingChanged: () => void;
 };
 
 export default function GroupMembersDirectory({
@@ -56,6 +70,8 @@ export default function GroupMembersDirectory({
   onSetParticipation,
   onRemoveMember,
   onToggleMemberClassification,
+  programs = [],
+  onTrainingChanged,
 }: GroupMembersDirectoryProps) {
   const [nameQuery, setNameQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
@@ -64,6 +80,9 @@ export default function GroupMembersDirectory({
   const [sort, setSort] = useState<DirectorySort>('name');
   const [visibleCount, setVisibleCount] = useState(MEMBER_DIRECTORY_PAGE_SIZE);
   const [membershipUserId, setMembershipUserId] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [reviewIds, setReviewIds] = useState<string[] | null>(null);
+  const headerRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setNameQuery('');
@@ -73,6 +92,8 @@ export default function GroupMembersDirectory({
     setSort('name');
     setVisibleCount(MEMBER_DIRECTORY_PAGE_SIZE);
     setMembershipUserId(null);
+    setSelectedIds(selectionAfterGroupChange());
+    setReviewIds(null);
   }, [teamId]);
 
   useEffect(() => {
@@ -121,10 +142,45 @@ export default function GroupMembersDirectory({
     [rows, nameQuery, roleFilter, programFilter, statusFilter, sort]
   );
   const shown = visibleDirectoryRows(filtered, visibleCount);
-  const programs = Array.from(new Set(rows.map((row) => row.programLabel).filter((label): label is string => !!label))).sort((left, right) =>
+  const programOptions = Array.from(new Set(rows.map((row) => row.programLabel).filter((label): label is string => !!label))).sort((left, right) =>
     left.localeCompare(right)
   );
-  const memberByUser = new Map(members.filter((member) => member.user_id).map((member) => [member.user_id, member]));
+  const memberByUser = useMemo(
+    () => new Map(members.filter((member) => member.user_id).map((member) => [member.user_id, member])),
+    [members]
+  );
+  const selected = useMemo(() => new Set(selectedIds), [selectedIds]);
+  const filteredIds = useMemo(() => filtered.map((row) => row.userId), [filtered]);
+  const selectionState = filteredSelectionState(selected, filteredIds);
+  const hiddenSelected = hiddenSelectedCount(selected, filteredIds);
+  const showBulk = canShowBulkProgramToolbar(canAssign);
+  const candidates = useMemo(() => {
+    if (!showBulk) return [] as BulkProgramCandidate[];
+    const boardByUser = new Map((board?.members || []).map((member) => [member.userId, member]));
+    return rows.map((row) => {
+      const source = memberByUser.get(row.userId);
+      const trained = boardByUser.get(row.userId);
+      return joinBulkProgramCandidate({
+        userId: row.userId,
+        name: row.name,
+        membershipStatus: source?.status || 'active',
+        isActiveParticipant: source ? source.is_active_participant !== false : true,
+        programId: trained?.programId || null,
+        programLabel: trained?.planName || null,
+        enrollmentStatus: trained?.enrollmentStatus ?? null,
+        expectationEnabled: trained ? trained.expectationsEnabled : null,
+        planKind: trained?.planKind || null,
+      });
+    });
+  }, [showBulk, rows, board, memberByUser]);
+
+  useEffect(() => {
+    if (headerRef.current) headerRef.current.indeterminate = selectionState === 'some';
+  }, [selectionState]);
+
+  function commitSelection(next: Set<string>) {
+    setSelectedIds(Array.from(next));
+  }
 
   return (
     <div className="card team-roster-card" data-testid="member-directory">
@@ -162,7 +218,7 @@ export default function GroupMembersDirectory({
           Program
           <select value={programFilter} aria-label="Program" onChange={(event) => setProgramFilter(event.target.value)}>
             <option value="all">All programs</option>
-            {programs.map((program) => (
+            {programOptions.map((program) => (
               <option key={program} value={program}>
                 {program}
               </option>
@@ -189,6 +245,35 @@ export default function GroupMembersDirectory({
           </select>
         </label>
       </div>
+      {showBulk && (
+        <div className="bulk-program-toolbar" data-testid="bulk-program-toolbar">
+          <label className="remember-row">
+            <input
+              ref={headerRef}
+              type="checkbox"
+              aria-label="Select all filtered members"
+              checked={selectionState === 'all'}
+              disabled={filteredIds.length === 0}
+              onChange={() => commitSelection(toggleFilteredSelection(selected, filteredIds))}
+            />
+            All filtered
+          </label>
+          <button type="button" className="btn small secondary" disabled={selectedIds.length === 0} onClick={() => setSelectedIds(selectionAfterGroupChange())}>
+            Clear selection
+          </button>
+          <button
+            type="button"
+            className="btn small green"
+            disabled={selectedIds.length === 0 || !trainingReady}
+            onClick={() => setReviewIds(freezeRecipientIds(selectedIds))}
+          >
+            Assign or change program
+          </button>
+          <p className="bulk-program-summary" data-testid="bulk-program-summary" aria-live="polite">
+            {selectedIds.length} selected · {hiddenSelected} hidden by the current filter
+          </p>
+        </div>
+      )}
       {members.length === 0 && <p className="muted">No members yet. Invite people below or share your group invite code.</p>}
       {members.length > 0 && filtered.length === 0 && <p className="muted">No members match that search.</p>}
       <div className="member-directory-list" data-testid="member-directory-list">
@@ -201,6 +286,17 @@ export default function GroupMembersDirectory({
           const membershipOpen = membershipUserId === row.userId;
           return (
             <div key={row.userId} className="member-directory-row" data-testid="member-directory-row">
+              <div className="member-directory-select">
+              {showBulk && (
+                <label className="member-directory-check">
+                  <input
+                    type="checkbox"
+                    aria-label={`Select ${row.name}`}
+                    checked={selected.has(row.userId)}
+                    onChange={() => commitSelection(toggleMemberSelection(selected, row.userId))}
+                  />
+                </label>
+              )}
               <button
                 type="button"
                 className="member-directory-main"
@@ -231,6 +327,7 @@ export default function GroupMembersDirectory({
                   {showActivity && stats.sets > 0 && <span>{stats.sets} group-attributed sets</span>}
                 </span>
               </button>
+              </div>
               {showActivity && rosterMeta && (rosterMeta.recentPr || rosterMeta.assignmentOverdue > 0 || rosterMeta.assignmentPending > 0) && (
                 <div className="member-roster-badges">
                   {rosterMeta.recentPr && <span className="badge progress-pr-badge">PR</span>}
@@ -312,6 +409,18 @@ export default function GroupMembersDirectory({
         <p className="muted member-directory-count">
           Showing {shown.length} of {filtered.length}
         </p>
+      )}
+      {showBulk && reviewIds && (
+        <BulkProgramAssignSheet
+          teamId={teamId}
+          programs={programs}
+          frozenIds={reviewIds}
+          candidates={candidates}
+          today={today}
+          onClose={() => setReviewIds(null)}
+          onTrainingChanged={onTrainingChanged}
+          onAssigned={() => setSelectedIds(selectionAfterGroupChange())}
+        />
       )}
     </div>
   );

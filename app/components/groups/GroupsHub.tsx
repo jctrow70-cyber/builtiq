@@ -261,6 +261,10 @@ export default function GroupsHub(props: GroupsHubProps) {
     () => [...(assignWorkoutPrograms || []), ...(teamPrograms || []), groupProgramForAssign].filter(Boolean),
     [assignWorkoutPrograms, teamPrograms, groupProgramForAssign]
   );
+  const assignmentPrograms = useMemo(
+    () => [...(assignWorkoutPrograms || []), ...(teamPrograms || []), ...(programs || []), groupProgramForAssign].filter(Boolean),
+    [assignWorkoutPrograms, teamPrograms, programs, groupProgramForAssign]
+  );
   const customizePrograms = useMemo(
     () =>
       programs
@@ -487,6 +491,8 @@ export default function GroupsHub(props: GroupsHubProps) {
                   isOwner={isOwner}
                   board={training.board}
                   trainingReady={training.trainingReady}
+                  programs={assignmentPrograms}
+                  onTrainingChanged={training.reload}
                   onRefresh={onRefreshMembers}
                   onOpenMember={(userId) => openTrainingSheet(userId, 'calendar')}
                   onSetMemberRole={onSetMemberRole}
@@ -750,7 +756,7 @@ export default function GroupsHub(props: GroupsHubProps) {
         <AssignTrainingWizard
           teamId={activeTeam.id}
           members={members}
-          programs={[...(assignWorkoutPrograms || []), ...(teamPrograms || []), ...(programs || []), groupProgramForAssign].filter(Boolean)}
+          programs={assignmentPrograms}
           classifications={classifications}
           memberClassificationIds={memberClassificationIds}
           memberAssignments={memberAssignments}

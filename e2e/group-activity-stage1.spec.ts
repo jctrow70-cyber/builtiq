@@ -207,6 +207,7 @@ test.describe('Stage 1 group extras', () => {
     await expect(page.getByRole('tab', { name: 'Programs' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Assign Training' })).toHaveCount(0);
     await page.getByRole('tab', { name: 'Members' }).click();
+    await expect(page.getByTestId('bulk-program-toolbar')).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Membership' })).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Invite member' })).toHaveCount(0);
     const managerRow = page.getByTestId('member-directory-row').filter({ has: page.getByRole('button', { name: 'QA manager' }) });
@@ -249,6 +250,7 @@ test.describe('Stage 1 group extras', () => {
     await expect(page.getByRole('tab', { name: 'Programs' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Assign Training' })).toBeVisible();
     await page.getByRole('tab', { name: 'Members' }).click();
+    await expect(page.getByTestId('bulk-program-toolbar')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Membership' })).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Invite member' })).toHaveCount(0);
     const ownerRow = page.getByTestId('member-directory-row').filter({ has: page.getByRole('button', { name: 'QA owner' }) });
@@ -306,6 +308,33 @@ test.describe('Stage 1 group extras', () => {
     await expect(page.getByText('Log completed strength sets in Training')).toHaveCount(0);
     await expectNoHorizontalOverflow(page);
     await page.screenshot({ path: `test-results/biq0263-ux/${testInfo.project.name}-progress.png`, fullPage: true });
+  });
+
+  test('owner can review a filtered bulk program assignment', async ({ page }) => {
+    const fixture = loadFixture();
+    await signIn(page, fixture.emails.owner, fixture.password);
+    await openGroup(page, fixture.teamName);
+    await page.getByRole('tab', { name: 'Members' }).click();
+    const directory = page.getByTestId('member-directory');
+    await expect(directory.getByTestId('bulk-program-toolbar')).toBeVisible();
+    await directory.getByLabel('Search members').fill('QA member');
+    await expect(directory.getByTestId('member-directory-row')).toHaveCount(1);
+    await directory.getByRole('checkbox', { name: 'Select all filtered members' }).check();
+    await expect(directory.getByTestId('bulk-program-summary')).toContainText('1 selected');
+    await expect(directory.getByRole('button', { name: 'Assign or change program' })).toBeEnabled();
+    await directory.getByRole('button', { name: 'Assign or change program' }).click();
+    const review = page.getByTestId('bulk-program-review');
+    await expect(review).toBeVisible();
+    await expect(review.getByTestId('bulk-program-counts')).toContainText('Selected 1');
+    await expect(review.getByTestId('bulk-program-counts')).toContainText('Confirmed 1');
+    await expect(review.getByText(/Past workouts stay in history/)).toBeVisible();
+    await expect(page.locator('.team-selector-value')).toHaveText(fixture.teamName);
+    await expect(page.getByRole('tab', { name: 'Members' })).toHaveAttribute('aria-selected', 'true');
+    await review.getByRole('button', { name: 'Close' }).click();
+    await expect(review).toHaveCount(0);
+    await expect(directory.getByLabel('Search members')).toHaveValue('QA member');
+    await expect(page.getByRole('tab', { name: 'Members' })).toHaveAttribute('aria-selected', 'true');
+    await expectNoHorizontalOverflow(page);
   });
 
   test('nonmember does not see the disposable group', async ({ page }) => {

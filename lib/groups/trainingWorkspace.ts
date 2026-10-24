@@ -525,6 +525,7 @@ export type GroupTrainingMemberRow = {
   scheduleNeedsReview: boolean;
   scheduleReviewDetail: string | null;
   expectationsEnabled: boolean;
+  enrollmentStatus: string | null;
   nextWorkout: GroupTrainingNextWorkout | null;
   status: GroupTrainingStatus;
   statusLabel: string;
@@ -1097,6 +1098,7 @@ export function buildGroupTrainingBoard(input: {
       scheduleNeedsReview,
       scheduleReviewDetail,
       expectationsEnabled,
+      enrollmentStatus: member.enrollment?.status ? String(member.enrollment.status).toLowerCase() : null,
       nextWorkout,
       status,
       statusLabel: status === 'needs_attention' ? missedStatusLabel(missed) : endingSoon ? 'Program ending soon' : STATUS_LABEL[status],

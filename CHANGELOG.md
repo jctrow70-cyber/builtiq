@@ -11,11 +11,49 @@ Branch:
 Status:
 ```
 
+## BIQ-0264 - Phase 2B.1 bulk assign or change program
+
+Date: 2026-10-23
+Branch: main
+Status: Implemented locally. Not committed. TypeScript passed. Group regression scripts passed. Signed-in Playwright passed 50 tests on desktop and mobile. Disposable QA cleanup restored the baseline.
+
+Summary: Owners, managers, and assign-enabled members can select people in the Members directory and assign or change one published group program. The review freezes the selected member ids, explains exclusions and warnings, and saves with one existing `st_assign_group_programs` transaction. The group default is not changed. Calendar stays the Groups landing screen.
+
+Purpose: Let a group update programs for an explicit set of members without editing training days, pausing, resuming, or logging workouts, and without a new database function.
+
+Files changed:
+- app/components/groups/BulkProgramAssignSheet.tsx
+- app/components/groups/GroupMembersDirectory.tsx
+- app/components/groups/GroupsHub.tsx
+- app/globals.css
+- lib/groups/bulkProgramAssign.ts
+- lib/groups/trainingWorkspace.ts
+- e2e/group-activity-stage1.spec.ts
+- scripts/test-bulk-program-assign.ts
+- package.json
+- CHANGELOG.md
+
+Database changes: None. This uses the existing `st_assign_group_programs` / `st_place_group_program` transaction. `p_set_as_group_default` is false.
+
+Testing steps:
+- TypeScript: node node_modules/typescript/bin/tsc --noEmit --pretty false. Passed.
+- Group scripts: the 18 existing `test:groups` scripts plus scripts/test-bulk-program-assign.ts. All 19 passed. Directory filter and sort of 220 rows took 10.3ms. Building the training board for 220 members took 3.9ms. Building a bulk review for 220 members took 0.1ms and kept all 220 confirmed ids.
+- Signed-in Playwright desktop and mobile: e2e/group-activity-stage1.spec.ts, e2e/group-activity-stage2.spec.ts, and e2e/group-activity-stage3.spec.ts. 50 passed, including the bulk review on both viewports. Ordinary members do not see the bulk toolbar.
+- Disposable QA: scripts/verify-group-activity-stage1-live.ts --keep, then Playwright, then --cleanup. countsMatchBaseline was true.
+
+Known issues:
+- Phase 2B.2 is not started. Edit Training Days, Pause Schedule, and Resume Schedule still need one future security-definer function that accepts a frozen UUID array and calls the existing one-member functions in a single transaction. That function is not implemented and no SQL was added.
+- Review eligibility is advisory. If membership or authorization changes after review, the database rejects the whole transaction and nobody is changed.
+- A request key is remembered in the open review. Repeating that same save in the same review says it was already saved. A new browser session cannot tell a database replay from a first success until that key is acknowledged again.
+- A start on or before today reactivates a paused enrollment and turns expected training back on. A future start excludes paused enrollments so upcoming workouts are not dropped while the enrollment stays paused.
+
+Recommended commit message: Assign or change a program for selected group members
+
 ## BIQ-0264 - Phase 2A unified members directory
 
 Date: 2026-10-23
 Branch: main
-Status: Implemented locally. Not committed. TypeScript passed. Group regression scripts passed. Signed-in Playwright passed 48 tests on desktop and mobile. Disposable QA cleanup restored the baseline.
+Status: Released on main as 22799d0ef2c9e1714899804636331aab582cb7e4. TypeScript passed. Group regression scripts passed. Signed-in Playwright passed 48 tests on desktop and mobile. Disposable QA cleanup restored the baseline.
 
 Summary: Groups keeps the calendar as the landing screen. Members is one directory with search, role, program, and training-status filters, plus sort by name, status, or next activity this week. Opening a permitted member shows the existing training workspace in a sheet. Closing it leaves the directory and calendar where they were.
 
@@ -54,7 +92,7 @@ Known issues:
 - Opening Groups still loads the existing week set-log summary and roster badges for people who can view group progress. Directory search, filter, and sort do not use that result.
 - TeamMembersTab.tsx and GroupTrainingMemberList.tsx remain in the repo and are no longer mounted.
 - GroupOverview.tsx remains unmounted.
-- Phase 2B has not started.
+- Phase 2B had not started in this change. Phase 2B.1 is a later entry.
 
 Recommended commit message: Open member training from one Members directory
 
