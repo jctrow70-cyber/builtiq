@@ -62,6 +62,10 @@ import {
   normalizeServingUnit,
   SERVING_UNIT_OPTIONS,
 } from '../../lib/nutrition/servingUnits';
+import {
+  encodeImageForUpload,
+  nutritionImageScanHttpError,
+} from '../../lib/nutrition/encodeImageForUpload';
 import type { FoodDraft } from './nutrition/NutritionAddFoodTypes';
 import NutritionAddFoodPanel, { type AddFoodView } from './nutrition/NutritionAddFoodPanel';
 import NutritionCopyFoodPanel from './nutrition/NutritionCopyFoodPanel';
@@ -71,13 +75,6 @@ import { addDaysYmd, formatDisplayDate, formatYmd, mondayOfWeek, parseYmd, today
 const RECENT_FOOD_HISTORY_DAYS = 30;
 const RECENT_FOOD_FETCH_LIMIT = 60;
 
-async function encodeImageFile(file: File): Promise<{ image_base64: string; mime_type: string }> {
-  const buffer = await file.arrayBuffer();
-  const bytes = new Uint8Array(buffer);
-  let binary = '';
-  for (let i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i]);
-  return { image_base64: btoa(binary), mime_type: file.type || 'image/jpeg' };
-}
 
 type NutritionTrackerProps = {
   userId: string;
@@ -1399,7 +1396,7 @@ export default function NutritionTracker({
     setAiEstimateError('');
     clearBarcodeResults();
     try {
-      const { image_base64, mime_type } = await encodeImageFile(file);
+      const { image_base64, mime_type } = await encodeImageForUpload(file);
       const res = await fetch('/api/nutrition/scan-label', {
         method: 'POST',
         headers: {
@@ -1409,7 +1406,7 @@ export default function NutritionTracker({
         body: JSON.stringify({ image_base64, mime_type }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || `Label scan failed (${res.status})`);
+      if (!res.ok) throw new Error(nutritionImageScanHttpError(res.status, data?.error, 'label'));
       setAiEstimateResult(data as AiFoodEstimateResult);
       setPickedCatalogId(null);
     } catch (e: any) {
@@ -1431,7 +1428,7 @@ export default function NutritionTracker({
     setAiEstimateError('');
     clearBarcodeResults();
     try {
-      const { image_base64, mime_type } = await encodeImageFile(file);
+      const { image_base64, mime_type } = await encodeImageForUpload(file);
       const res = await fetch('/api/nutrition/scan-meal', {
         method: 'POST',
         headers: {
@@ -1445,7 +1442,7 @@ export default function NutritionTracker({
         }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || `Meal photo scan failed (${res.status})`);
+      if (!res.ok) throw new Error(nutritionImageScanHttpError(res.status, data?.error, 'meal'));
       setAiEstimateResult(data as AiFoodEstimateResult);
       setPickedCatalogId(null);
     } catch (e: any) {

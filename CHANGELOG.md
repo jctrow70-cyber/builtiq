@@ -11,6 +11,37 @@ Branch:
 Status:
 ```
 
+## BIQ-0267 - Compress meal and label photos before upload
+
+Date: 2026-10-24
+Branch: cursor/fix-meal-photo-413-c9d9
+Status: Implemented. Helper unit checks passed. TypeScript (`tsc --noEmit`) passed.
+
+Summary: Meal photo and nutrition label scans now resize/compress images in the browser before sending base64 JSON to the API. This avoids Vercel **413 Payload Too Large** failures from full phone-camera photos. Clearer copy is shown if a 413 still occurs.
+
+Purpose: Phone JPEGs often exceed Vercel’s ~4.5 MB request body once base64-encoded. The previous encoder sent the raw file unchanged, so meal photo scan failed with `Meal photo scan failed (413)`.
+
+Files changed:
+- `lib/nutrition/encodeImageForUpload.ts` — resize to 1600px max edge, JPEG compress toward ~900 KB, 413 error helper
+- `app/components/NutritionTracker.tsx` — meal photo + label scan use the compressor
+- `scripts/test-encode-image-for-upload.ts` — sizing / error-message unit checks
+- `CHANGELOG.md`
+
+Database changes: None.
+
+Testing steps:
+1. Sign in → Nutrition → Add food → **AI meal photo** → choose a large phone photo (several MB).
+2. Confirm the scan no longer shows `Meal photo scan failed (413)` and returns AI food chips (or a non-size API error).
+3. Repeat with **Scan nutrition label** using a large library photo.
+4. Run `npx tsx scripts/test-encode-image-for-upload.ts`.
+5. Run `npx tsc --noEmit`.
+
+Known issues:
+- If `createImageBitmap` fails (rare format / older WebView), the original file is sent only when under 3 MB; larger files show a clear size error.
+- HEIC-only uploads still depend on the browser converting or rejecting the type at the API.
+
+Recommended commit message: Compress meal and label photos to avoid 413 upload failures
+
 ## BIQ-0264 - Phase 2B.1 bulk assign or change program
 
 Date: 2026-10-23
