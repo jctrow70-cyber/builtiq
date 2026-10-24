@@ -12,15 +12,18 @@ import {
 import type { AssignProgramTarget } from './TeamAssignProgramModal';
 import AssignTrainingWizard, { type AssignTrainingSubmit } from './AssignTrainingWizard';
 import type { AssignmentWizardResume } from '../../../lib/groups/assignmentWizard';
+import { canOpenMemberTraining } from '../../../lib/groups/memberDirectory';
 import { canAssignInGroup } from '../../../lib/groups/permissions';
 import { emptyAssignmentCompliance } from '../../../lib/groups/memberPerformance';
 import TeamCreateJoinSheet, { type CreateGroupPayload } from './TeamCreateJoinSheet';
 import GroupClassificationsPanel from './GroupClassificationsPanel';
 import GroupInviteMembersPanel from './GroupInviteMembersPanel';
+import GroupMemberProfileSheet from './GroupMemberProfileSheet';
+import GroupMembersDirectory from './GroupMembersDirectory';
 import GroupTrainingHome from './GroupTrainingHome';
 import MemberPerformancePanel from './MemberPerformancePanel';
 import type { MemberProfileSection } from './MemberTrainingWorkspace';
-import TeamMembersTab from './TeamMembersTab';
+import { useGroupTrainingBoard } from './useGroupTrainingBoard';
 import TeamProgressTab from './TeamProgressTab';
 import TeamProgramsTab from './TeamProgramsTab';
 import TeamSelector from './TeamSelector';
@@ -247,22 +250,55 @@ export default function GroupsHub(props: GroupsHubProps) {
   const [openedConversationId, setOpenedConversationId] = useState<string | null>(null);
   const [wizardSeed, setWizardSeed] = useState<{ memberUserId?: string | null; programId?: string | null } | null>(null);
   const [wizardOpen, setWizardOpen] = useState(false);
-  const [trainingFocusUserId, setTrainingFocusUserId] = useState<string | null>(null);
-  const [trainingFocusDate, setTrainingFocusDate] = useState<string | null>(null);
   const [calendarFocusDate, setCalendarFocusDate] = useState<string | null>(null);
+  const [profileUserId, setProfileUserId] = useState<string | null>(null);
+  const [profileDate, setProfileDate] = useState<string | null>(null);
   const [profileSection, setProfileSection] = useState<MemberProfileSection>('calendar');
+  const [membersVisited, setMembersVisited] = useState(false);
+
+  const canAssign = canAssignInGroup(activeTeam?.my_role, activeTeam ? groupPermissionFlags(activeTeam) : null);
+  const trainingPrograms = useMemo(
+    () => [...(assignWorkoutPrograms || []), ...(teamPrograms || []), groupProgramForAssign].filter(Boolean),
+    [assignWorkoutPrograms, teamPrograms, groupProgramForAssign]
+  );
+  const customizePrograms = useMemo(
+    () =>
+      programs
+        .filter((program: any) => program?.visibility === 'team' && program?.id)
+        .map((program: any) => ({ id: program.id, name: program.name || 'Program' })),
+    [programs]
+  );
+  const training = useGroupTrainingBoard({
+    teamId: activeTeam?.id || null,
+    sessionUserId,
+    canSeeAllTraining: canManage || canAssign,
+    members,
+    memberAssignments,
+    programs: trainingPrograms,
+    defaultProgramId: activeTeam?.default_program_id,
+  });
 
   useEffect(() => {
     if (!groupLogResume?.memberUserId || !groupLogResume.scheduledDate) return;
     setWorkspaceTab('calendar');
     setProfileSection('calendar');
     if (groupLogResume.returnTo === 'group-calendar') {
-      setTrainingFocusUserId(null);
+      setProfileUserId(null);
+      setProfileDate(null);
       setCalendarFocusDate(groupLogResume.scheduledDate);
-    } else {
+    } else if (
+      canOpenMemberTraining({
+        viewerUserId: sessionUserId,
+        subjectUserId: groupLogResume.memberUserId,
+        canManage,
+        canAssign,
+      })
+    ) {
       setCalendarFocusDate(null);
-      setTrainingFocusUserId(groupLogResume.memberUserId);
-      setTrainingFocusDate(groupLogResume.scheduledDate);
+      setProfileUserId(groupLogResume.memberUserId);
+      setProfileDate(groupLogResume.scheduledDate);
+      const member = members.find((item: any) => item.user_id === groupLogResume.memberUserId);
+      if (member && (canManage || member.user_id === sessionUserId)) onOpenMember(member);
     }
     onGroupLogResumeConsumed?.();
   }, [groupLogResume]);
@@ -274,6 +310,9 @@ export default function GroupsHub(props: GroupsHubProps) {
     if (groupLogResumeRef.current?.memberUserId) return;
     setWorkspaceTab('calendar');
     onWorkspaceTabChange?.('calendar');
+    setProfileUserId(null);
+    setProfileDate(null);
+    setMembersVisited(false);
     setSettingsOpen(false);
     setMessagesOpen(false);
     setComposeUserId(null);
@@ -334,7 +373,9 @@ export default function GroupsHub(props: GroupsHubProps) {
     if (workspaceTab === 'programs' && !canManage) setWorkspaceTab('calendar');
   }, [canManage, workspaceTab]);
 
-  const canAssign = canAssignInGroup(activeTeam?.my_role, activeTeam ? groupPermissionFlags(activeTeam) : null);
+  useEffect(() => {
+    if (workspaceTab === 'members') setMembersVisited(true);
+  }, [workspaceTab]);
 
   if (teams.length === 0) {
     return (
@@ -369,156 +410,114 @@ export default function GroupsHub(props: GroupsHubProps) {
     onWorkspaceTabChange?.(tab);
   };
 
-  const openMemberProfile = (member: any, section: MemberProfileSection) => {
-    if (!member?.user_id) return;
-    if (!canManage && member.user_id !== sessionUserId) {
-      onOpenMember(member);
+  const openTrainingSheet = (userId: string, section: MemberProfileSection, date?: string | null) => {
+    if (!userId) return;
+    const member = members.find((item: any) => item.user_id === userId);
+    if (
+      !canOpenMemberTraining({
+        viewerUserId: sessionUserId,
+        subjectUserId: userId,
+        canManage,
+        canAssign,
+      })
+    ) {
+      if (member) onOpenMember(member);
       return;
     }
     setProfileSection(section);
-    setTrainingFocusUserId(member.user_id);
-    setWorkspaceTab('calendar');
-    onOpenMember(member);
+    setProfileDate(date || null);
+    setProfileUserId(userId);
+    if (member && (canManage || userId === sessionUserId)) onOpenMember(member);
   };
 
+  const closeTrainingSheet = () => {
+    setProfileUserId(null);
+    setProfileDate(null);
+  };
+
+  const profileRow = training.board?.members.find((member) => member.userId === profileUserId) || null;
+  const profileSource = members.find((member: any) => member.user_id === profileUserId) || null;
+
   const renderWorkspaceContent = () => {
-    if (workspaceTab === 'members') {
-      if (memberWorkoutPanel) return memberWorkoutPanel;
-      return (
-        <>
-          <TeamMembersTab
+    const currentProgram = programRows.find((row) => row.isDefault) || programRows.find((row) => row.status !== 'draft') || null;
+    return (
+      <>
+        <div hidden={workspaceTab !== 'calendar'}>
+          <GroupTrainingHome
+            canManage={canManage}
+            current={currentProgram}
+            canAssign={canAssign}
+            onOpenAssignWizard={(seed) => {
+              setWizardSeed(seed || null);
+              setWizardOpen(true);
+            }}
+            onManagePlans={canManage ? () => handleWorkspaceTabChange('programs') : undefined}
+            teamName={activeTeam?.name}
             sessionUserId={sessionUserId}
+            teamId={activeTeam?.id || null}
+            onOpenMember={(userId) => openTrainingSheet(userId, 'calendar')}
+            onLogGroupActivity={onLogGroupActivity}
+            calendarFocusDate={calendarFocusDate}
+            onCalendarFocusHandled={() => setCalendarFocusDate(null)}
             members={members}
-            memberStats={memberStats}
-            memberRosterMeta={memberRosterMeta}
-            memberAssignments={memberAssignments}
-            defaultProgram={groupProgramForAssign}
             classifications={classifications}
             memberClassificationIds={memberClassificationIds}
-            canManage={canManage}
-            isOwner={isOwner}
-            onRefresh={onRefreshMembers}
-            onOpenMember={(member) => openMemberProfile(member, 'plan')}
-            onSetMemberRole={onSetMemberRole}
-            onSetParticipation={onSetParticipation}
-            onRemoveMember={onRemoveMember}
-            onToggleMemberClassification={onToggleMemberClassification}
+            reloadKey={training.reloadKey}
+            notice={training.notice}
+            onTrainingChanged={training.reload}
           />
-          {canManage && activeTeam && (
-            <>
-              <GroupInviteMembersPanel
-                teamId={activeTeam.id}
-                teamName={activeTeam.name}
-                accessToken={accessToken}
-                canManage={canManage}
-                canInviteManagers={isOwner || !!activeTeam.managers_can_invite_managers}
-                classifications={classifications}
-              />
-              <GroupClassificationsPanel
-                classifications={classifications}
-                members={members}
-                memberClassificationIds={memberClassificationIds}
-                onCreate={onCreateClassification}
-                onDelete={onDeleteClassification}
-              />
-            </>
-          )}
-        </>
-      );
-    }
-
-    if (workspaceTab === 'calendar') {
-      const current = programRows.find((row) => row.isDefault) || programRows.find((row) => row.status !== 'draft') || null;
-      return (
-        <GroupTrainingHome
-          canManage={canManage}
-          current={current}
-          onView={current ? () => onEditTeamProgram(current.id) : undefined}
-          onEditProgram={onEditTeamProgram}
-          canAssign={canAssign}
-          onOpenAssignWizard={(seed) => {
-            setWizardSeed(seed || null);
-            setWizardOpen(true);
-          }}
-          onManagePlans={canManage ? () => handleWorkspaceTabChange('programs') : undefined}
-          teamName={activeTeam?.name}
-          sessionUserId={sessionUserId}
-          memberAssignments={memberAssignments}
-          programs={[...(assignWorkoutPrograms || []), ...(teamPrograms || []), groupProgramForAssign].filter(Boolean)}
-          defaultProgramId={activeTeam?.default_program_id}
-          customizePrograms={programs
-            .filter((program: any) => program?.visibility === 'team' && program?.id)
-            .map((program: any) => ({ id: program.id, name: program.name || 'Program' }))}
-          onCustomize={onCustomizeProgramForMember}
-          canMessageMember={
-            activeTeam
-              ? (member) =>
-                  canStartDirectConversation({
-                    callerRole: activeTeam.my_role,
-                    callerActive: true,
-                    targetRole: member.role,
-                    targetActive: true,
-                    samePerson: member.user_id === sessionUserId,
-                    flags: groupCommunicationFlags(activeTeam),
-                  })
-              : undefined
-          }
-          onMessageMember={
-            activeTeam
-              ? (member) => {
-                  setOpenedConversationId(null);
-                  setComposeUserId(member.user_id);
-                  setMessagesOpen(true);
-                }
-              : undefined
-          }
-          teamId={activeTeam?.id || null}
-          focusUserId={trainingFocusUserId}
-          focusDate={trainingFocusDate}
-          focusSection={profileSection}
-          onFocusHandled={() => {
-            setTrainingFocusUserId(null);
-            setTrainingFocusDate(null);
-          }}
-          onMemberFocus={(userId) => {
-            const member = members.find((item: any) => item.user_id === userId);
-            if (member && (canManage || member.user_id === sessionUserId)) onOpenMember(member);
-          }}
-          panelUserId={memberDashboard?.user_id || null}
-          progressPanel={
-            memberDashboard && (canManage || memberDashboard.user_id === sessionUserId) ? (
-              <MemberPerformancePanel
-                assignmentCompliance={memberPerformance?.assignmentCompliance || emptyAssignmentCompliance()}
-                history={memberPerformance?.history || []}
-                performanceLogs={memberPerformance?.logs || []}
-                weightUnit={weightUnit}
-                emptyHint="No group-attributed completed sets in this window."
-                teamId={activeTeam?.id || null}
-                userId={memberDashboard.user_id}
-              />
-            ) : undefined
-          }
-          groupLogs={
-            memberDashboard && (canManage || memberDashboard.user_id === sessionUserId)
-              ? performanceLoading
-                ? null
-                : memberPerformance?.logs || []
-              : null
-          }
-          onLogGroupWorkout={onLogGroupWorkout}
-          onLogGroupActivity={onLogGroupActivity}
-          calendarFocusDate={calendarFocusDate}
-          onCalendarFocusHandled={() => setCalendarFocusDate(null)}
-          members={members}
-          classifications={classifications}
-          memberClassificationIds={memberClassificationIds}
-        />
-      );
-    }
-
-    if (workspaceTab === 'programs' && canManage && activeTeam) {
-      const current = programRows.find((row) => row.isDefault) || programRows.find((row) => row.status !== 'draft') || null;
-      return (
+        </div>
+        {(membersVisited || workspaceTab === 'members') && activeTeam && (
+          <div hidden={workspaceTab !== 'members'}>
+            {memberWorkoutPanel ? (
+              memberWorkoutPanel
+            ) : (
+              <>
+                <GroupMembersDirectory
+                  teamId={activeTeam.id}
+                  sessionUserId={sessionUserId}
+                  members={members}
+                  memberStats={memberStats}
+                  memberRosterMeta={memberRosterMeta}
+                  classifications={classifications}
+                  memberClassificationIds={memberClassificationIds}
+                  canManage={canManage}
+                  canAssign={canAssign}
+                  canViewActivity={canViewGroupProgress}
+                  isOwner={isOwner}
+                  board={training.board}
+                  trainingReady={training.trainingReady}
+                  onRefresh={onRefreshMembers}
+                  onOpenMember={(userId) => openTrainingSheet(userId, 'calendar')}
+                  onSetMemberRole={onSetMemberRole}
+                  onSetParticipation={onSetParticipation}
+                  onRemoveMember={onRemoveMember}
+                  onToggleMemberClassification={onToggleMemberClassification}
+                />
+                {canManage && (
+                  <>
+                    <GroupInviteMembersPanel
+                      teamId={activeTeam.id}
+                      teamName={activeTeam.name}
+                      accessToken={accessToken}
+                      canManage={canManage}
+                      canInviteManagers={isOwner || !!activeTeam.managers_can_invite_managers}
+                      classifications={classifications}
+                    />
+                    <GroupClassificationsPanel
+                      classifications={classifications}
+                      members={members}
+                      memberClassificationIds={memberClassificationIds}
+                      onCreate={onCreateClassification}
+                      onDelete={onDeleteClassification}
+                    />
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        )}
+        {workspaceTab === 'programs' && canManage && activeTeam && (
         <div className="card group-training-card">
           <div className="group-training-library-head">
             <div>
@@ -526,10 +525,10 @@ export default function GroupsHub(props: GroupsHubProps) {
               <p className="muted">Publish plans here. Assign Training adds a plan or a workout. Building a program stays in Programs.</p>
             </div>
           </div>
-          {current && (
+          {currentProgram && (
             <p className="muted group-training-current">
-              Current group program · <b>{current.name}</b>
-              <button type="button" className="btn small secondary" style={{ marginLeft: 8 }} onClick={() => onEditTeamProgram(current.id)}>
+              Current group program · <b>{currentProgram.name}</b>
+              <button type="button" className="btn small secondary" style={{ marginLeft: 8 }} onClick={() => onEditTeamProgram(currentProgram.id)}>
                 View
               </button>
             </p>
@@ -552,11 +551,8 @@ export default function GroupsHub(props: GroupsHubProps) {
             />
           </div>
         </div>
-      );
-    }
-
-    if (workspaceTab === 'progress') {
-      return (
+        )}
+        {workspaceTab === 'progress' && activeTeam && (
         <TeamProgressTab
           teamId={activeTeam.id}
           canViewGroupProgress={canViewGroupProgress}
@@ -566,14 +562,13 @@ export default function GroupsHub(props: GroupsHubProps) {
           memberRosterMeta={memberRosterMeta}
           teamActiveCount={teamActiveCount}
           teamTotalSets={teamTotalSets}
-          onOpenMember={(member) => (canManage || member.user_id === sessionUserId ? openMemberProfile(member, 'progress') : onOpenMember(member))}
+          onOpenMember={(member) => openTrainingSheet(member.user_id, 'progress')}
           onRestoreHistory={onRestoreTeamHistory}
           restoreBusy={restoreTeamHistoryBusy}
         />
-      );
-    }
-
-    return null;
+        )}
+      </>
+    );
   };
 
   return (
@@ -629,6 +624,73 @@ export default function GroupsHub(props: GroupsHubProps) {
       <TeamWorkspaceTabs tabs={visibleGroupWorkspaceTabs(canManage)} active={workspaceTab} onChange={handleWorkspaceTabChange} />
 
       {renderWorkspaceContent()}
+
+      {profileUserId && profileRow && profileSource && activeTeam && (
+        <GroupMemberProfileSheet
+          teamId={activeTeam.id}
+          teamName={activeTeam.name || ''}
+          sessionUserId={sessionUserId}
+          member={profileRow}
+          sourceMember={profileSource}
+          canManage={canManage}
+          canAssign={canAssign}
+          section={profileSection}
+          onSection={setProfileSection}
+          initialDate={profileDate}
+          switchMembers={(training.board?.members || []).map((member) => ({ userId: member.userId, name: member.name }))}
+          onSwitchMember={(userId) => openTrainingSheet(userId, profileSection)}
+          progressPanel={
+            memberDashboard && (canManage || memberDashboard.user_id === sessionUserId) ? (
+              <MemberPerformancePanel
+                assignmentCompliance={memberPerformance?.assignmentCompliance || emptyAssignmentCompliance()}
+                history={memberPerformance?.history || []}
+                performanceLogs={memberPerformance?.logs || []}
+                weightUnit={weightUnit}
+                emptyHint="No group-attributed completed sets in this window."
+                teamId={activeTeam.id}
+                userId={memberDashboard.user_id}
+              />
+            ) : undefined
+          }
+          panelUserId={memberDashboard?.user_id || null}
+          groupLogs={
+            memberDashboard && (canManage || memberDashboard.user_id === sessionUserId)
+              ? performanceLoading
+                ? null
+                : memberPerformance?.logs || []
+              : null
+          }
+          programs={trainingPrograms}
+          customizePrograms={customizePrograms}
+          onCustomize={onCustomizeProgramForMember}
+          onEditProgram={onEditTeamProgram}
+          onOpenAssignWizard={(seed) => {
+            setWizardSeed(seed || null);
+            setWizardOpen(true);
+          }}
+          onTrainingChanged={training.reload}
+          onClose={closeTrainingSheet}
+          onMessage={
+            canStartDirectConversation({
+              callerRole: activeTeam.my_role,
+              callerActive: true,
+              targetRole: profileSource.role,
+              targetActive: true,
+              samePerson: profileSource.user_id === sessionUserId,
+              flags: groupCommunicationFlags(activeTeam),
+            })
+              ? () => {
+                  setOpenedConversationId(null);
+                  setComposeUserId(profileSource.user_id);
+                  setMessagesOpen(true);
+                }
+              : undefined
+          }
+          onLogGroupWorkout={onLogGroupWorkout}
+          onLogGroupActivity={onLogGroupActivity}
+          reloadKey={training.reloadKey}
+        />
+      )}
 
       {settingsOpen && activeTeam && (
         <div className="team-sheet-backdrop" onClick={() => setSettingsOpen(false)}>

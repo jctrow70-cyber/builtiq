@@ -170,7 +170,9 @@ const activities = readFileSync(new URL('../lib/groups/groupActivities.ts', impo
 const migration = readFileSync(new URL('../supabase/migrations/20261018_068_group_activity_series.sql', import.meta.url), 'utf8');
 assert.match(profile, /extraActivityLabel/);
 assert.match(profile, /Give this activity a name|Cardio, mobility, or other/);
-assert.match(home, /saveGroupActivity/);
+const sheet = readFileSync(new URL('../app/components/groups/GroupMemberProfileSheet.tsx', import.meta.url), 'utf8');
+assert.match(sheet, /saveGroupActivity/);
+assert.doesNotMatch(sheet, /assignGroupWorkout/);
 assert.doesNotMatch(home, /assignGroupWorkout/);
 assert.match(activities, /st_save_group_activity/);
 assert.doesNotMatch(activities, /st_user_calendar_activities/);

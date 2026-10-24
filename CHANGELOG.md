@@ -11,11 +11,58 @@ Branch:
 Status:
 ```
 
+## BIQ-0264 - Phase 2A unified members directory
+
+Date: 2026-10-23
+Branch: main
+Status: Implemented locally. Not committed. TypeScript passed. Group regression scripts passed. Signed-in Playwright passed 48 tests on desktop and mobile. Disposable QA cleanup restored the baseline.
+
+Summary: Groups keeps the calendar as the landing screen. Members is one directory with search, role, program, and training-status filters, plus sort by name, status, or next activity this week. Opening a permitted member shows the existing training workspace in a sheet. Closing it leaves the directory and calendar where they were.
+
+Purpose: Remove the duplicate member list without widening who can see another person's training, and without a database migration.
+
+Files changed:
+- app/components/groups/GroupsHub.tsx
+- app/components/groups/GroupMembersDirectory.tsx
+- app/components/groups/GroupMemberProfileSheet.tsx
+- app/components/groups/GroupTrainingHome.tsx
+- app/components/groups/GroupTrainingCalendar.tsx
+- app/components/groups/useGroupTrainingBoard.ts
+- app/globals.css
+- lib/groups/memberDirectory.ts
+- lib/groups/loadGroupTrainingFacts.ts
+- e2e/group-activity-stage1.spec.ts
+- e2e/group-activity-stage2.spec.ts
+- scripts/test-member-directory.ts
+- scripts/test-group-architecture.ts
+- scripts/test-group-calendar.ts
+- scripts/test-group-training-workspace.ts
+- scripts/test-group-activity-stage1.ts
+- scripts/test-member-schedule.ts
+- package.json
+- CHANGELOG.md
+
+Database changes: None.
+
+Testing steps:
+- TypeScript: node node_modules/typescript/bin/tsc --noEmit --pretty false. Passed.
+- Group scripts, including scripts/test-member-directory.ts for 220 in-memory rows. All 18 scripts passed. Directory filter and sort of 220 rows took 10.7ms. Building the training board for 220 members took 3.6ms.
+- Signed-in Playwright desktop and mobile: 48 passed. Disposable QA cleanup restored the hosted baseline.
+
+Known issues:
+- Next activity is the loaded Monday–Sunday week. The directory says "Next this week" or "None remaining this week."
+- Opening Groups still loads the existing week set-log summary and roster badges for people who can view group progress. Directory search, filter, and sort do not use that result.
+- TeamMembersTab.tsx and GroupTrainingMemberList.tsx remain in the repo and are no longer mounted.
+- GroupOverview.tsx remains unmounted.
+- Phase 2B has not started.
+
+Recommended commit message: Open member training from one Members directory
+
 ## BIQ-0264 - Phase 1 calendar home
 
 Date: 2026-10-23
 Branch: main
-Status: Implemented locally. TypeScript passed. Group regression scripts passed. Signed-in Playwright passed 46 tests on desktop and mobile. Disposable QA cleanup restored the baseline. Not committed.
+Status: Released on main as 08ff688. TypeScript passed. Group regression scripts passed. Signed-in Playwright passed 46 tests on desktop and mobile. Disposable QA cleanup restored the baseline.
 
 Summary: Groups opens on the selected group's calendar for the current week, with today selected. Primary navigation is Calendar, Members, Progress, and Programs for people who can manage programs. The calendar header shows the group member count, scheduled activities for the visible week, and completed activities for that week.
 
@@ -48,8 +95,7 @@ Testing steps:
 
 Known issues:
 - GroupOverview.tsx remains in the repo and is not on the tab bar. Its member, set, assignment, and invite information stays on the calendar header, Progress, Members, and Programs.
-- The calendar still has the existing member-status list behind the inner Members control. The Members tab remains the roster.
-- Phase 2 has not started.
+- Phase 1 left the inner Members control in place. Phase 2A replaces it with the Members directory and profile sheet.
 
 Recommended commit message: Open Groups on the selected calendar
 

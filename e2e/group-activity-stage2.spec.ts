@@ -97,6 +97,8 @@ async function signIn(page: Page, email: string, password: string) {
 }
 
 async function signOut(page: Page) {
+  const sheet = page.getByTestId('member-profile-sheet');
+  if (await sheet.isVisible()) await sheet.getByRole('button', { name: 'Close' }).click();
   await page.getByRole('button', { name: 'Account menu' }).click();
   await page.getByRole('menuitem', { name: 'Sign out' }).click();
   await expect(page.locator('#signin-email')).toBeVisible();
@@ -117,9 +119,11 @@ async function openGroup(page: Page, teamName: string) {
 }
 
 async function openMember(page: Page, name: string) {
-  const membersView = page.getByRole('tablist', { name: 'Training view' }).getByRole('button', { name: 'Members', exact: true });
-  if (await membersView.isVisible()) await membersView.click();
-  await page.getByRole('button', { name: new RegExp(name) }).first().click();
+  await page.getByRole('tab', { name: 'Members' }).click();
+  const directory = page.getByTestId('member-directory');
+  await expect(directory).toBeVisible();
+  await directory.getByRole('button', { name: new RegExp(name) }).first().click();
+  await expect(page.getByTestId('member-profile-sheet')).toBeVisible();
   await expect(dayDetail(page)).toBeVisible();
 }
 
@@ -214,7 +218,8 @@ test.describe('Stage 2 recurring group extras', () => {
     await selectDay(page, shown);
     await expectLabels(page, title, 'Scheduled');
     await page.locator('.member-profile-toolbar').getByRole('button', { name: 'Members' }).click();
-    await page.getByRole('tablist', { name: 'Training view' }).getByRole('button', { name: 'Calendar' }).click();
+    await expect(page.getByTestId('member-profile-sheet')).toHaveCount(0);
+    await page.getByRole('tab', { name: 'Calendar' }).click();
     await expect(page.locator('.group-calendar')).toBeVisible();
     await page.locator('.group-calendar-filters').getByLabel('Member').selectOption({ label: fixture.memberName });
     const strip = page.locator('.group-calendar-day-strip');

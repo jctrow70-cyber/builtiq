@@ -203,9 +203,11 @@ const actions = readFileSync(new URL('../app/components/groups/WorkoutScheduleAc
 const facts = readFileSync(new URL('../lib/groups/loadGroupTrainingFacts.ts', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../app/globals.css', import.meta.url), 'utf8');
 const tabs = readFileSync(new URL('../lib/groups/workspaceTabs.ts', import.meta.url), 'utf8');
-assert.match(home, /Members/);
-assert.match(home, /Calendar/);
-assert.match(home, /setFactsTick/);
+assert.match(home, /GroupTrainingCalendar/);
+assert.match(home, /onTrainingChanged/);
+assert.doesNotMatch(home, /Training view/);
+assert.match(readFileSync(new URL('../app/components/groups/useGroupTrainingBoard.ts', import.meta.url), 'utf8'), /setFactsTick/);
+assert.match(readFileSync(new URL('../app/components/groups/GroupMembersDirectory.tsx', import.meta.url), 'utf8'), /Search members/);
 assert.match(calendar, /WorkoutScheduleActions/);
 assert.match(calendar, /Previous week/);
 assert.match(calendar, /Next week/);

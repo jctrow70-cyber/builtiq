@@ -96,13 +96,14 @@ export default function GroupTrainingCalendar({
       today,
       viewerUserId,
       memberUserIds: memberIds ? memberIds.split(',') : [],
+      subjectUserId: canSeeAll ? null : viewerUserId,
     }).then((next) => {
       if (!cancelled) setFacts(next);
     });
     return () => {
       cancelled = true;
     };
-  }, [teamId, weekStart, today, viewerUserId, reloadKey, memberIds]);
+  }, [teamId, weekStart, today, viewerUserId, reloadKey, memberIds, canSeeAll]);
 
   useEffect(() => {
     const end = facts?.to;

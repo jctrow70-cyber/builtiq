@@ -98,29 +98,37 @@ async function applyRecipientStatus(
 
 export async function loadGroupTrainingFacts(
   supabase: SupabaseClient,
-  input: { teamId: string; today?: string; viewerUserId?: string | null; memberUserIds?: string[] }
+  input: { teamId: string; today?: string; viewerUserId?: string | null; memberUserIds?: string[]; subjectUserId?: string | null }
 ): Promise<GroupTrainingFacts> {
   const today = input.today || todayYmd();
   const sourceKey = groupSourceKey(input.teamId);
+  const subjectUserId = input.subjectUserId || null;
   await supabase.rpc('st_apply_group_due_segments', { p_team_id: input.teamId, p_today: today });
   const from = mondayOfWeek(today);
   const to = sundayOfWeek(today);
   const weekFrom = from;
 
+  let enrollmentQuery = supabase
+    .from('st_training_enrollments')
+    .select('id, user_id, program_id, status, starts_on, source_kind, source_key, team_id, expectation_enabled')
+    .eq('team_id', input.teamId)
+    .eq('source_kind', 'group')
+    .eq('source_key', sourceKey);
+  let expectationQuery = supabase
+    .from('st_training_expectations')
+    .select('id, user_id, source_key, team_id, origin, scheduled_date, title, day_label, workout_id, excused, assignment_recipient_id')
+    .eq('source_key', sourceKey)
+    .gte('scheduled_date', from)
+    .lte('scheduled_date', to);
+  if (subjectUserId) {
+    enrollmentQuery = enrollmentQuery.eq('user_id', subjectUserId);
+    expectationQuery = expectationQuery.eq('user_id', subjectUserId);
+  }
+
   const [enrollmentResult, expectationResult, statusResult] = await Promise.all([
-    supabase
-      .from('st_training_enrollments')
-      .select('id, user_id, program_id, status, starts_on, source_kind, source_key, team_id, expectation_enabled')
-      .eq('team_id', input.teamId)
-      .eq('source_kind', 'group')
-      .eq('source_key', sourceKey),
-    supabase
-      .from('st_training_expectations')
-      .select('id, user_id, source_key, team_id, origin, scheduled_date, title, day_label, workout_id, excused, assignment_recipient_id')
-      .eq('source_key', sourceKey)
-      .gte('scheduled_date', from)
-      .lte('scheduled_date', to),
-    expectationStatuses(supabase, { teamId: input.teamId, from, to, today }),
+    enrollmentQuery,
+    expectationQuery,
+    expectationStatuses(supabase, { teamId: input.teamId, from, to, today, memberUserId: subjectUserId }),
   ]);
 
   const enrollmentMissing = scheduleSetupMissing(enrollmentResult.error?.message);
@@ -233,13 +241,16 @@ export async function loadGroupTrainingFacts(
     notice = expectationResult.error.message;
   }
 
+  if (subjectUserId) {
+    expectations = expectations.filter((row) => row.userId === subjectUserId);
+  }
   expectations = await applyWorkoutNames(supabase, expectations);
   const extras = expectationResult.error
     ? []
-    : await fetchGroupExtras(supabase, { teamId: input.teamId, from: weekFrom, to: sundayOfWeek(today) });
+    : await fetchGroupExtras(supabase, { teamId: input.teamId, from: weekFrom, to: sundayOfWeek(today), userId: subjectUserId });
 
   return {
-    enrollments,
+    enrollments: subjectUserId ? enrollments.filter((row) => row.userId === subjectUserId) : enrollments,
     expectations,
     expectationsAvailable: !expectationResult.error,
     completionKnown: completionKnown || missedByUser != null,
@@ -371,22 +382,24 @@ export async function loadMemberTrainingWeek(
  */
 export async function loadGroupCalendarWeek(
   supabase: SupabaseClient,
-  input: { teamId: string; weekStart: string; today?: string; viewerUserId?: string | null; memberUserIds?: string[] }
+  input: { teamId: string; weekStart: string; today?: string; viewerUserId?: string | null; memberUserIds?: string[]; subjectUserId?: string | null }
 ): Promise<GroupCalendarWeekFacts> {
   const today = input.today || todayYmd();
   const sourceKey = groupSourceKey(input.teamId);
   const from = mondayOfWeek(input.weekStart);
   const to = sundayOfWeek(from);
-  const expectationResult = await supabase
+  let expectationQuery = supabase
     .from('st_training_expectations')
     .select('id, user_id, source_key, team_id, origin, scheduled_date, title, day_label, workout_id, excused, assignment_recipient_id')
     .eq('source_key', sourceKey)
     .gte('scheduled_date', from)
     .lte('scheduled_date', to)
     .order('scheduled_date', { ascending: true });
+  if (input.subjectUserId) expectationQuery = expectationQuery.eq('user_id', input.subjectUserId);
+  const expectationResult = await expectationQuery;
 
   let expectations: GroupTrainingExpectationInput[] = (expectationResult.data || [])
-    .filter((row: { source_key?: string }) => row.source_key === sourceKey && row.source_key !== 'personal')
+    .filter((row: { source_key?: string; user_id?: string }) => row.source_key === sourceKey && row.source_key !== 'personal' && (!input.subjectUserId || row.user_id === input.subjectUserId))
     .map(
       (row: {
         id: string;
@@ -418,7 +431,13 @@ export async function loadGroupCalendarWeek(
   let completionKnown = false;
   const memberIds = input.memberUserIds || [];
   if (!expectationResult.error) {
-    const statusResult = await expectationStatuses(supabase, { teamId: input.teamId, from, to, today });
+    const statusResult = await expectationStatuses(supabase, {
+      teamId: input.teamId,
+      from,
+      to,
+      today,
+      memberUserId: input.subjectUserId || null,
+    });
     if (!statusResult.error) {
       expectations = applyAuthoritativeExpectationStatus(expectations, statusResult.rows);
     } else if (input.viewerUserId || memberIds.length) {
@@ -454,10 +473,9 @@ export async function loadGroupCalendarWeek(
 
   const missing = scheduleSetupMissing(expectationResult.error?.message);
   expectations = await applyWorkoutNames(supabase, expectations);
-  const extraUserId = 'userId' in input ? String((input as { userId?: string | null }).userId || '') : '';
   const extras = expectationResult.error
     ? []
-    : await fetchGroupExtras(supabase, { teamId: input.teamId, from, to, userId: extraUserId || null });
+    : await fetchGroupExtras(supabase, { teamId: input.teamId, from, to, userId: input.subjectUserId || null });
   return {
     expectations,
     expectationsAvailable: !expectationResult.error,

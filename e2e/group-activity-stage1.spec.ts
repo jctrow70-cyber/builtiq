@@ -48,9 +48,17 @@ async function openGroup(page: Page, teamName: string) {
   await expect(page.getByText('Loading the week…')).toHaveCount(0);
 }
 
+function memberSheet(page: Page) {
+  return page.getByTestId('member-profile-sheet');
+}
+
 async function openListedMember(page: Page, name: string | RegExp) {
-  await page.getByRole('tablist', { name: 'Training view' }).getByRole('button', { name: 'Members', exact: true }).click();
-  await page.getByRole('button', { name: name }).first().click();
+  await page.getByRole('tab', { name: 'Members' }).click();
+  const directory = page.getByTestId('member-directory');
+  await expect(directory).toBeVisible();
+  await directory.getByRole('button', { name }).first().click();
+  await expect(page.getByTestId('member-profile-sheet')).toBeVisible();
+  await expect(page.locator('.member-week-strip')).toBeVisible();
 }
 
 function todayParts() {
@@ -115,15 +123,46 @@ test.describe('Stage 1 group extras', () => {
     await expectNoHorizontalOverflow(page);
   });
 
+  test('member directory keeps search and opens training in a sheet', async ({ page }) => {
+    const fixture = loadFixture();
+    await signIn(page, fixture.emails.owner, fixture.password);
+    await openGroup(page, fixture.teamName);
+    await expect(page.getByRole('tablist', { name: 'Training view' })).toHaveCount(0);
+    await page.getByRole('tab', { name: 'Members' }).click();
+    const search = page.getByLabel('Search members');
+    await search.fill('QA member');
+    await page.getByLabel('Sort members').selectOption('next');
+    await expect(page.getByTestId('member-directory-row')).toHaveCount(1);
+    await page.getByTestId('member-directory').getByRole('button', { name: 'QA member' }).click();
+    const sheet = page.getByTestId('member-profile-sheet');
+    await expect(sheet).toBeVisible();
+    await expect(sheet.locator('.member-week-strip')).toBeVisible();
+    await expect(page.locator('.group-calendar')).toBeHidden();
+    await sheet.getByRole('button', { name: 'Close' }).click();
+    await expect(sheet).toHaveCount(0);
+    await expect(search).toHaveValue('QA member');
+    await expect(page.getByLabel('Sort members')).toHaveValue('next');
+    await page.getByRole('tab', { name: 'Calendar' }).click();
+    await expect(page.locator('.group-calendar')).toBeVisible();
+    await expectTodaySelected(page);
+    await page.getByRole('tab', { name: 'Members' }).click();
+    await expect(search).toHaveValue('QA member');
+    await page.getByRole('button', { name: 'Membership' }).click();
+    await expect(page.getByLabel('Role for QA member')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Invite member' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Classifications' })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+  });
+
   test('owner sees extras and can save another activity', async ({ page }, testInfo) => {
     const fixture = loadFixture();
     const title = testInfo.project.name === 'mobile' ? 'QA mobile stretch' : 'QA desktop stretch';
     await signIn(page, fixture.emails.owner, fixture.password);
     await openGroup(page, fixture.teamName);
     await openListedMember(page, new RegExp(fixture.memberName));
-    await expect(page.getByText('QA cardio').first()).toBeVisible();
-    await expect(page.getByText('Extra', { exact: true }).first()).toBeVisible();
-    await expect(page.getByText('Extra · required').first()).toBeVisible();
+    await expect(memberSheet(page).getByText('QA cardio').first()).toBeVisible();
+    await expect(memberSheet(page).getByText('Extra', { exact: true }).first()).toBeVisible();
+    await expect(memberSheet(page).getByText('Extra · required').first()).toBeVisible();
     await page.getByRole('button', { name: 'Add Activity' }).click();
     await page.getByRole('button', { name: 'Cardio, mobility, or other' }).click();
     const sheet = page.locator('.pd-sheet');
@@ -133,8 +172,8 @@ test.describe('Stage 1 group extras', () => {
     await sheet.getByRole('button', { name: 'Stretch' }).click();
     await sheet.getByPlaceholder('Stretching').fill(title);
     await sheet.getByRole('button', { name: 'Add activity', exact: true }).click();
-    await expect(page.getByText(title).first()).toBeVisible();
-    await expect(page.getByText('Extra', { exact: true }).first()).toBeVisible();
+    await expect(memberSheet(page).getByText(title).first()).toBeVisible();
+    await expect(memberSheet(page).getByText('Extra', { exact: true }).first()).toBeVisible();
     await expectNoHorizontalOverflow(page);
     const saveButton = page.getByRole('button', { name: 'Add Activity' });
     await saveButton.scrollIntoViewIfNeeded();
@@ -154,10 +193,10 @@ test.describe('Stage 1 group extras', () => {
     await sheet.getByPlaceholder('Cardio').fill(title);
     await sheet.getByRole('radio', { name: 'Every week' }).check();
     await sheet.getByRole('button', { name: 'Add activity', exact: true }).click();
-    await expect(page.getByText(title).first()).toBeVisible();
-    await page.getByRole('button', { name: 'Next week' }).click();
-    await expect(page.getByText(title).first()).toBeVisible();
-    await expect(page.getByText('Scheduled').first()).toBeVisible();
+    await expect(memberSheet(page).getByText(title).first()).toBeVisible();
+    await memberSheet(page).getByRole('button', { name: 'Next week' }).click();
+    await expect(memberSheet(page).getByText(title).first()).toBeVisible();
+    await expect(memberSheet(page).getByText('Scheduled').first()).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
 
@@ -167,6 +206,14 @@ test.describe('Stage 1 group extras', () => {
     await openGroup(page, fixture.teamName);
     await expect(page.getByRole('tab', { name: 'Programs' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Assign Training' })).toHaveCount(0);
+    await page.getByRole('tab', { name: 'Members' }).click();
+    await expect(page.getByRole('button', { name: 'Membership' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Invite member' })).toHaveCount(0);
+    const managerRow = page.getByTestId('member-directory-row').filter({ has: page.getByRole('button', { name: 'QA manager' }) });
+    await expect(managerRow).not.toContainText('Loading training…');
+    await expect(managerRow).not.toContainText('Next this week');
+    await expect(managerRow).not.toContainText('None remaining this week');
+    await expect(managerRow.getByRole('button', { name: 'QA manager' })).toBeDisabled();
     await openListedMember(page, /QA member/);
     await page.getByRole('button', { name: 'Add Activity' }).click();
     await expect(page.getByText('Required. Program missed totals stay the same.')).toHaveCount(0);
@@ -181,9 +228,14 @@ test.describe('Stage 1 group extras', () => {
     await openGroup(page, fixture.teamName);
     await expect(page.getByRole('tab', { name: 'Programs' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Assign Training' })).toBeVisible();
+    await page.getByRole('tab', { name: 'Members' }).click();
+    await expect(page.getByRole('heading', { name: 'Invite member' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Classifications' })).toBeVisible();
+    await page.getByRole('button', { name: 'Membership' }).first().click();
+    await expect(page.getByLabel(/Role for/)).toHaveCount(0);
     await openListedMember(page, new RegExp(fixture.memberName));
-    await expect(page.getByText('QA cardio').first()).toBeVisible();
-    await expect(page.getByText('Extra · required').first()).toBeVisible();
+    await expect(memberSheet(page).getByText('QA cardio').first()).toBeVisible();
+    await expect(memberSheet(page).getByText('Extra · required').first()).toBeVisible();
     await page.getByRole('button', { name: 'Add Activity' }).click();
     await expect(page.getByText('Required. Program missed totals stay the same.')).toBeVisible();
     await expectNoHorizontalOverflow(page);
@@ -196,9 +248,15 @@ test.describe('Stage 1 group extras', () => {
     await openGroup(page, assignTeam);
     await expect(page.getByRole('tab', { name: 'Programs' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Assign Training' })).toBeVisible();
+    await page.getByRole('tab', { name: 'Members' }).click();
+    await expect(page.getByRole('button', { name: 'Membership' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Invite member' })).toHaveCount(0);
+    const ownerRow = page.getByTestId('member-directory-row').filter({ has: page.getByRole('button', { name: 'QA owner' }) });
+    await expect(ownerRow).not.toContainText('Loading training…');
+    await expect(ownerRow).toContainText(/Next this week|None remaining this week/);
     await openListedMember(page, /QA owner/);
-    await expect(page.getByText('QA assigned sport').first()).toBeVisible();
-    await expect(page.getByText('Extra · required').first()).toBeVisible();
+    await expect(memberSheet(page).getByText('QA assigned sport').first()).toBeVisible();
+    await expect(memberSheet(page).getByText('Extra · required').first()).toBeVisible();
     await page.getByRole('button', { name: 'Add Activity' }).click();
     await expect(page.getByText('Required. Program missed totals stay the same.')).toBeVisible();
     await expectNoHorizontalOverflow(page);
@@ -230,11 +288,12 @@ test.describe('Stage 1 group extras', () => {
     await expect(dayHeading).toHaveText(selectedDay);
     await expect(page.locator('.member-day-detail').getByRole('button', { name: /Due today/ })).toBeVisible();
     await expect(page.locator('[data-plan-state="loading"], [data-plan-state="ready"]')).toBeVisible();
-    await expect(page.getByText(/BIQ-0263 QA program/)).toBeVisible();
+    await expect(memberSheet(page).getByText(/BIQ-0263 QA program/)).toBeVisible();
     await expect(page.getByText('Custom group plan')).toHaveCount(0);
     await page.screenshot({ path: `test-results/biq0263-ux/${testInfo.project.name}-returned.png`, fullPage: true });
     await page.locator('.member-profile-toolbar').getByRole('button', { name: 'Members' }).click();
-    await page.getByRole('tablist', { name: 'Training view' }).getByRole('button', { name: 'Calendar' }).click();
+    await expect(page.getByTestId('member-profile-sheet')).toHaveCount(0);
+    await page.getByRole('tab', { name: 'Calendar' }).click();
     const groupDay = page.locator('.group-calendar-day.is-selected, .group-calendar-day-strip [data-selected="true"]').locator('visible=true');
     await expect(groupDay.first()).toBeVisible();
     await page.screenshot({ path: `test-results/biq0263-ux/${testInfo.project.name}-group-calendar.png`, fullPage: false });
