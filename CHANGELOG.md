@@ -25,6 +25,7 @@ Files changed:
 - `lib/nutrition/encodeImageForUpload.ts` — resize to 1600px max edge, JPEG compress toward ~900 KB, 413 error helper
 - `app/components/NutritionTracker.tsx` — meal photo + label scan use the compressor
 - `scripts/test-encode-image-for-upload.ts` — sizing / error-message unit checks
+- `scripts/test-encode-image-browser.ts` — Playwright proof: multi-MB synthetic photo compresses under upload target
 - `CHANGELOG.md`
 
 Database changes: None.
@@ -34,11 +35,13 @@ Testing steps:
 2. Confirm the scan no longer shows `Meal photo scan failed (413)` and returns AI food chips (or a non-size API error).
 3. Repeat with **Scan nutrition label** using a large library photo.
 4. Run `npx tsx scripts/test-encode-image-for-upload.ts`.
-5. Run `npx tsc --noEmit`.
+5. Bundle helper then run browser proof: `npx esbuild lib/nutrition/encodeImageForUpload.ts --bundle --format=iife --global-name=EncodeUpload --platform=browser --outfile=/tmp/encode-image-for-upload.iife.js` then `npx tsx scripts/test-encode-image-browser.ts` (observed ~12 MB → ~751 KB).
+6. Run `node node_modules/typescript/bin/tsc --noEmit`.
 
 Known issues:
 - If `createImageBitmap` fails (rare format / older WebView), the original file is sent only when under 3 MB; larger files show a clear size error.
 - HEIC-only uploads still depend on the browser converting or rejecting the type at the API.
+- Full signed-in meal scan against OpenAI was not run in this environment (no local Supabase/OpenAI secrets).
 
 Recommended commit message: Compress meal and label photos to avoid 413 upload failures
 
