@@ -43,7 +43,9 @@ const PROVEN_NAMES = [
   'Dumbbell Shoulder Press',
   'Dumbbell Bench Press',
   'Kettlebell Swing',
+  'Medicine Ball Chest Pass',
   'Medicine-Ball Chest Pass',
+  'Box Jump',
   'Vertical Jump',
   'Broad Jump',
 ];

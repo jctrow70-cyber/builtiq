@@ -11,6 +11,42 @@ Branch:
 Status:
 ```
 
+## BIQ-0268 - Fit 45-minute glute Full Body generation
+
+Date: 2026-10-25
+Branch: cursor/fix-45min-glute-program-gen-7bfe
+Status: Implemented. `npm run test:science` passed. TypeScript (`tsc --noEmit`) passed.
+
+Summary: Program generate no longer hard-fails for a 45-minute Full Body + Glutes intake (Mary’s case). Power Primers resolve to master-catalog names (`Box Jump`, `Medicine Ball Chest Pass`), short sessions prefer Romanian Deadlift over Conventional Deadlift, and duration trim can cut secondary/primary volume when every lift is a compound. Science engine version is `1.4.14`.
+
+Purpose: Mary’s generate showed `Full Body A/C is missing a Power Primer` and `Full Body B is estimated at 64 min vs 45`. The science engine looked up fallback names that are not in the live master catalog, and `trimForDuration` only removed isolation lifts so a 5-compound day could not fit 45 minutes.
+
+Files changed:
+- `lib/scienceEngine/potentiation.ts` — master-named primer candidates, lunge coverage, catalog fallbacks
+- `lib/scienceEngine/exerciseAliases.ts` / `exerciseSelection.ts` — hyphen/space-normalized primer lookup
+- `lib/scienceEngine/duration.ts` — stronger short-session trim (sets, secondaries, trailing primaries)
+- `lib/scienceEngine/generateProgram.ts` — leaner 45-minute Full Body B hinge choice
+- `lib/scienceEngine/generation/orchestrator.ts` — surface only blocking validation errors
+- `lib/scienceEngine/designerCatalog.ts` / `version.ts` — master primer names; science `1.4.14`
+- `lib/scienceEngine/acceptanceCheck.ts` — Mary 45-minute glute regression
+- `CHANGELOG.md`
+
+Database changes: None.
+
+Testing steps:
+1. Sign in as a user with Full Body, 45-minute sessions, Glutes priority, supersets Sometimes, notes about start/end glute work + mid push/pull + core.
+2. Programs → Generate program.
+3. Confirm generate succeeds (no red validation block about Power Primer / 64 vs 45).
+4. Open week 1 Full Body A/B/C and confirm each has a Power Primer badge and stays near 45 minutes.
+5. Run `npm run test:science`.
+6. Run `node node_modules/typescript/bin/tsc --noEmit`.
+
+Known issues:
+- Some 45-minute Full Body days may still warn slightly over target (for example ~52 minutes) without blocking generate.
+- Structure notes (“start and end with glutes”, “push/pull superset”) are still preferences for the AI layer; science packing guarantees duration/primer validity first.
+
+Recommended commit message: Fix 45-minute glute Full Body generate primer and duration failures
+
 ## BIQ-0267 - Compress meal and label photos before upload
 
 Date: 2026-10-24

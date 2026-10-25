@@ -7,7 +7,7 @@ import { assertIntakeScheduleExamples } from '../programDesign/intakePreferences
 import { trainingProfileFromSources } from './profile';
 import { generateProgram } from './generateProgram';
 import { applyAiWeekDesign } from './applyAiDesign';
-import { adaptCatalog } from './catalogAdapter';
+import { adaptCatalog, FALLBACK_CATALOG } from './catalogAdapter';
 import { buildProgramDesignerPrompt } from './programDesigner';
 import { findByName } from './exerciseSelection';
 import { summarizeRecentLogs } from './recentTraining';
@@ -26,7 +26,7 @@ import { runPhase2a1FoundationChecks } from './adaptation/phase2a1Check';
 import { runPhase2a2DecisionChecks } from './adaptation/phase2a2Check';
 import { runPhase2a3ApplyChecks } from './adaptation/apply/phase2a3Check';
 import { runPhase2b1OrchestrationChecks } from './adaptation/phase2b1Check';
-import type { TrainingProfile } from './types';
+import type { CatalogExercise, TrainingProfile } from './types';
 
 function assert(cond: unknown, message: string) {
   if (!cond) throw new Error(message);
@@ -404,6 +404,60 @@ async function run() {
   });
   const daySignatures = gluteWeek.map((w) => w.exercises.slice(0, 3).map((e) => e.name).join('|'));
   assert(new Set(daySignatures).size >= 2, `Glute-focus days should not clone the same first three lifts: ${daySignatures.join(' / ')}`);
+
+  // Mary: 45-minute full body + glute priority must validate (no blocking duration / primer errors).
+  const mary45 = trainingProfileFromSources({
+    profile: { experience_level: 'intermediate', primary_goal: 'hypertrophy' },
+    config: {
+      days: ['Mon', 'Wed', 'Fri'],
+      dayTypes: { Mon: 'Full Body', Wed: 'Full Body', Fri: 'Full Body' },
+      focusMuscles: ['Glutes'],
+      weeks: 4,
+      sessionMinutes: 45,
+      varietyPreference: 'balanced',
+      supersetPreference: 'sometimes',
+      intakeNotes:
+        'Set up the workouts to start and end with glute exercises. In the middle do a push/ pull superset and a core exercise\nPrioritize: Glutes. 45-minute sessions. Split: Full Body.',
+    },
+  });
+  const maryProgram = generateProgram(mary45);
+  const maryCheck = validateProgram(maryProgram, mary45);
+  assert(
+    maryCheck.ok,
+    `45-minute glute full-body should validate, got: ${maryCheck.issues
+      .filter((i) => i.severity === 'error')
+      .map((i) => i.message)
+      .join('; ')}`
+  );
+  maryProgram.workouts
+    .filter((w) => w.week === 1 && w.workoutType === 'Full Body')
+    .forEach((w) => {
+      assert(
+        w.potentiation.length > 0,
+        `${w.name} should include a Power Primer, got none (lifts: ${w.exercises.map((e) => e.name).join(', ')})`
+      );
+    });
+  const masterishPrimers: CatalogExercise[] = FALLBACK_CATALOG.map((ex) => {
+    if (/^vertical jump$/i.test(ex.name)) return { ...ex, name: 'Box Jump' };
+    if (/^medicine-ball chest pass$/i.test(ex.name)) return { ...ex, name: 'Medicine Ball Chest Pass' };
+    return ex;
+  });
+  const maryMasterish = generateProgram(mary45, masterishPrimers);
+  const maryMasterishCheck = validateProgram(maryMasterish, mary45);
+  assert(
+    maryMasterishCheck.ok,
+    `Master-named primers must keep 45-minute glute full-body valid: ${maryMasterishCheck.issues
+      .filter((i) => i.severity === 'error')
+      .map((i) => i.message)
+      .join('; ')}`
+  );
+  assert(
+    maryMasterish.workouts.some((w) => w.week === 1 && /box jump|medicine ball chest pass/i.test(w.potentiation[0]?.name || '')),
+    `Power Primer should resolve to master catalog names, got ${maryMasterish.workouts
+      .filter((w) => w.week === 1)
+      .map((w) => w.potentiation[0]?.name || 'none')
+      .join(', ')}`
+  );
 
   const chestNotePlan = trainingProfileFromSources({
     profile: { experience_level: 'intermediate', primary_goal: 'hypertrophy' },
