@@ -48,8 +48,11 @@ export const EXERCISE_ALIASES: Record<string, string> = {
   'kb swing': 'Kettlebell Swing',
   'squat jump': 'Vertical Jump',
   'box jump': 'Vertical Jump',
-  'mb chest pass': 'Medicine-Ball Chest Pass',
-  'med ball chest pass': 'Medicine-Ball Chest Pass',
+  'vertical jump': 'Box Jump',
+  'mb chest pass': 'Medicine Ball Chest Pass',
+  'med ball chest pass': 'Medicine Ball Chest Pass',
+  'medicine-ball chest pass': 'Medicine Ball Chest Pass',
+  'medicine ball chest pass': 'Medicine Ball Chest Pass',
   'push up': 'Push-Up',
   'push-up + thoracic rotation': 'Push-Up to Toe Touch',
   'push-up to rotation': 'Push-Up to Toe Touch',
@@ -71,21 +74,32 @@ export const EXERCISE_ALIAS_CANDIDATES: Record<string, string[]> = {
   'cable row': ['Machine Row', 'Low Row', 'Seated Cable Row'],
   'seated row': ['Machine Row', 'Low Row', 'Seated Cable Row'],
   'seated cable row': ['Machine Row', 'Low Row', 'Seated Cable Row'],
+  'vertical jump': ['Box Jump', 'Squat Jump', 'Vertical Jump', 'Pogo Jump'],
+  'box jump': ['Box Jump', 'Vertical Jump', 'Squat Jump'],
+  'squat jump': ['Squat Jump', 'Vertical Jump', 'Box Jump'],
+  'medicine-ball chest pass': ['Medicine Ball Chest Pass', 'Medicine-Ball Chest Pass'],
+  'medicine ball chest pass': ['Medicine Ball Chest Pass', 'Medicine-Ball Chest Pass'],
+  'mb chest pass': ['Medicine Ball Chest Pass', 'Medicine-Ball Chest Pass'],
+  'med ball chest pass': ['Medicine Ball Chest Pass', 'Medicine-Ball Chest Pass'],
 };
 
-export function aliasExerciseName(name: string): string {
-  const key = String(name || '')
+/** Collapse punctuation so "Medicine-Ball" matches "Medicine Ball". */
+export function normalizeExerciseLookupKey(name: string): string {
+  return String(name || '')
     .trim()
     .toLowerCase()
-    .replace(/\s+/g, ' ');
+    .replace(/[-–—_/]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+export function aliasExerciseName(name: string): string {
+  const key = normalizeExerciseLookupKey(name);
   return EXERCISE_ALIASES[key] || name;
 }
 
 export function aliasCandidates(name: string): string[] {
-  const key = String(name || '')
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, ' ');
+  const key = normalizeExerciseLookupKey(name);
   if (EXERCISE_ALIAS_CANDIDATES[key]) return EXERCISE_ALIAS_CANDIDATES[key];
   const single = EXERCISE_ALIASES[key];
   return single ? [single] : [];

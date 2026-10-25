@@ -1,5 +1,5 @@
 import { hasEquipmentFilter } from '../training/equipmentFilter';
-import { aliasCandidates, aliasExerciseName } from './exerciseAliases';
+import { aliasCandidates, aliasExerciseName, normalizeExerciseLookupKey } from './exerciseAliases';
 import type { CatalogExercise, ProgramRole, TrainingProfile } from './types';
 import type { MovementPatternId, MuscleId } from './taxonomy';
 
@@ -164,16 +164,17 @@ function namesMatch(exerciseName: string, requested: string): boolean {
 export function findByName(pool: CatalogExercise[], name: string): CatalogExercise | null {
   const raw = String(name || '').trim();
   if (!raw) return null;
-  const key = raw.toLowerCase();
-  const exact = pool.find((ex) => ex.name.toLowerCase() === key);
+  const key = normalizeExerciseLookupKey(raw);
+  const exact = pool.find((ex) => normalizeExerciseLookupKey(ex.name) === key);
   if (exact) return exact;
   for (const candidate of [aliasExerciseName(raw), ...aliasCandidates(raw)]) {
-    const hit = pool.find((ex) => ex.name.toLowerCase() === candidate.toLowerCase());
+    const candidateKey = normalizeExerciseLookupKey(candidate);
+    const hit = pool.find((ex) => normalizeExerciseLookupKey(ex.name) === candidateKey);
     if (hit) return hit;
   }
   const substantial = pool
     .filter((ex) => {
-      const n = ex.name.toLowerCase();
+      const n = normalizeExerciseLookupKey(ex.name);
       if (n.includes(key) && key.length >= 6) return true;
       if (key.includes(n) && n.split(/\s+/).length >= 2) return true;
       return false;

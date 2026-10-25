@@ -64,7 +64,11 @@ export async function runGenerationPipeline(opts: {
   const science = generateProgram(profile, catalog);
   const scienceCheck = validateProgram(science, profile);
   if (!scienceCheck.ok) {
-    throw new Error(scienceCheck.issues.map((i) => i.message).join('; ') || 'Science engine validation failed');
+    const blocking = scienceCheck.issues.filter((i) => i.severity === 'error');
+    throw new Error(
+      (blocking.length ? blocking : scienceCheck.issues).map((i) => i.message).join('; ') ||
+        'Science engine validation failed'
+    );
   }
 
   const { context, catalogById } = buildGenerationContext({
