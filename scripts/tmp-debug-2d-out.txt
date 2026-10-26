@@ -1,0 +1,24 @@
+{
+  "names": [
+    "straight_sets:Hip Thrust",
+    "straight_sets:Conventional Deadlift",
+    "straight_sets:Plank",
+    "superset:Barbell Bench Press",
+    "superset:Dumbbell Row",
+    "straight_sets:Cable Kickback"
+  ],
+  "repairs": [
+    "Normalized Conventional Deadlift from primary to secondary",
+    "Normalized Back Squat from primary to secondary",
+    "Moved Hip Thrust to open the working portion",
+    "Paired Barbell Bench Press with Dumbbell Row as the requested push/pull superset",
+    "Reduced Back Squat to 2 sets for duration",
+    "Reduced Conventional Deadlift to 2 sets for duration",
+    "Removed Back Squat to fit the session"
+  ],
+  "structureErrors": [],
+  "inspect": {
+    "ok": true,
+    "misses": []
+  }
+}

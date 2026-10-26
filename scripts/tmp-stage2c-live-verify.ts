@@ -13,6 +13,7 @@ import { programModelName } from '../lib/scienceEngine/generation/openaiClient';
 import { trainingProfileFromSources } from '../lib/scienceEngine/profile';
 import { scienceProgramToAiPlan } from '../lib/scienceEngine/toAiPlan';
 import { SCIENCE_ENGINE_VERSION } from '../lib/scienceEngine/version';
+import { isCoreMovement } from '../lib/scienceEngine/generation/workingStructure';
 import type { CatalogExercise, TrainingProfile } from '../lib/scienceEngine/types';
 
 const OUT = path.join(process.cwd(), 'scripts/tmp-stage2c-live-verify-report.json');
@@ -114,13 +115,18 @@ function inspectCase(label: string, profile: TrainingProfile, pipeline: Awaited<
   const finalAi = pipeline.run.program;
   const issues = pipeline.initialValidation?.issues || [];
   const days = week1.map((workout) => {
+    const rawAi = pipeline.rawAiProgram?.workouts?.find((row) => row.day_label === workout.dayLabel);
     const ai = finalAi?.workouts?.find((row) => row.day_label === workout.dayLabel);
     const estimated = ai ? estimateSessionFromAi(ai, library, { experienceLevel: profile.experienceLevel }) : workout.estimatedMinutes;
+    const initialEstimated = rawAi
+      ? estimateSessionFromAi(rawAi, library, { experienceLevel: profile.experienceLevel })
+      : null;
     const exercises = workout.exercises || [];
     return {
       day: workout.dayLabel,
       name: workout.name,
       estimated_minutes: estimated,
+      initial_estimated_minutes: initialEstimated,
       science_estimated_minutes: workout.estimatedMinutes,
       duration_class: classifySessionDuration(estimated, minutes),
       working_count: exercises.length,
@@ -170,6 +176,7 @@ function case1() {
       superset_preference: 'sometimes',
       preferred_session_minutes: 60,
       potentiation_preference: 'automatic',
+      available_equipment: ['barbell', 'dumbbell', 'cable', 'machine', 'bench', 'rack'],
     },
     config: {
       days: ['Mon', 'Wed', 'Fri'],
@@ -182,10 +189,11 @@ function case1() {
       supersetPreference: 'sometimes',
       trainingSplit: 'hybrid',
       focusMuscles: ['Chest'],
+      availableEquipment: ['barbell', 'dumbbell', 'cable', 'machine', 'bench', 'rack'],
       intakeNotes: notes,
     },
   });
-  return { profile, prompt: notes, name: 'Stage 2C live A hypertrophy 3x60' };
+  return { profile, prompt: notes, name: 'Stage 2D live A hypertrophy 3x60' };
 }
 
 function case2() {
@@ -198,6 +206,7 @@ function case2() {
       warmup_duration: 'standard',
       preferred_session_minutes: 45,
       superset_preference: 'sometimes',
+      available_equipment: ['barbell', 'dumbbell', 'cable', 'machine', 'bench', 'rack'],
     },
     config: {
       days: ['Mon', 'Fri'],
@@ -207,16 +216,17 @@ function case2() {
       primaryGoal: 'athletic_performance',
       experienceLevel: 'intermediate',
       focusMuscles: ['Chest', 'Hamstrings', 'Glutes'],
+      availableEquipment: ['barbell', 'dumbbell', 'cable', 'machine', 'bench', 'rack'],
       intakeNotes: notes,
       supersetPreference: 'sometimes',
     },
   });
-  return { profile, prompt: notes, name: 'Stage 2C live B athletic 2x45' };
+  return { profile, prompt: notes, name: 'Stage 2D live B athletic 2x45' };
 }
 
 function case3() {
   const notes =
-    'Intermediate hypertrophy. 3 days Monday Wednesday Friday. 45 minutes. Glute priority. Start and end the working portion with glute exercises. In the middle include a push/pull superset and a core exercise.';
+    'Set up the workouts to start and end with glute exercises. In the middle do a push/pull superset and a core exercise.';
   const profile = trainingProfileFromSources({
     profile: { experience_level: 'intermediate', primary_goal: 'hypertrophy', birth_year: 1990 },
     trainingProfile: {
@@ -226,6 +236,7 @@ function case3() {
       variety_preference: 'balanced',
       superset_preference: 'sometimes',
       potentiation_preference: 'automatic',
+      available_equipment: ['barbell', 'dumbbell', 'cable', 'machine', 'bench', 'rack'],
     },
     config: {
       days: ['Mon', 'Wed', 'Fri'],
@@ -235,12 +246,13 @@ function case3() {
       primaryGoal: 'hypertrophy',
       experienceLevel: 'intermediate',
       focusMuscles: ['Glutes'],
+      availableEquipment: ['barbell', 'dumbbell', 'cable', 'machine', 'bench', 'rack'],
       varietyPreference: 'balanced',
       supersetPreference: 'sometimes',
-      intakeNotes: notes,
+      intakeNotes: `Intermediate hypertrophy. 3 days Monday Wednesday Friday. 45 minutes. Glute priority. ${notes}`,
     },
   });
-  return { profile, prompt: notes, name: 'Stage 2C live C glute 3x45' };
+  return { profile, prompt: profile.intakeNotes, name: 'Stage 2D live C glute 3x45' };
 }
 
 function requirementReview(id: string, inspected: ReturnType<typeof inspectCase>, profile: TrainingProfile) {
@@ -294,7 +306,7 @@ function requirementReview(id: string, inspected: ReturnType<typeof inspectCase>
       const hasSuperset = day.working.some((ex) => ex.superset);
       if (hasSuperset) kept.push(`${day.day} has a superset`);
       else missed.push(`${day.day} has no push/pull superset`);
-      if (day.working.some((ex) => /plank|pallof|dead bug|crunch|carry|core/i.test(ex.name) || ex.pattern.startsWith('core'))) {
+      if (day.working.some((ex) => isCoreMovement({ name: ex.name, movement_pattern: ex.pattern }))) {
         kept.push(`${day.day} includes core work`);
       } else missed.push(`${day.day} is missing a core exercise`);
       if (day.primer.length) missed.push(`${day.day} included a hypertrophy primer (${day.primer.join(', ')})`);

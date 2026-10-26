@@ -1,0 +1,1 @@
+Coordinate AI repair and stop science-seed duration from blocking generation

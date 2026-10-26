@@ -32,10 +32,11 @@ type DaySlot = {
   preferPressRange?: boolean;
 };
 
-function fullBodySlots(variantIndex: number): DaySlot[] {
+function fullBodySlots(variantIndex: number, sessionMinutes = 60): DaySlot[] {
+  const short = sessionMinutes <= 45;
   const rotations: DaySlot[][] = [
     [
-      { muscle: 'quads', role: 'primary', pattern: 'squat', preferred: ['Back Squat', 'Goblet Squat'] },
+      { muscle: 'quads', role: 'primary', pattern: 'squat', preferred: short ? ['Goblet Squat', 'Back Squat'] : ['Back Squat', 'Goblet Squat'] },
       { muscle: 'chest', role: 'primary', pattern: 'horizontal_push', preferred: ['Barbell Bench Press', 'Bench Press'], preferPressRange: true },
       { muscle: 'upper_back', role: 'primary', pattern: 'horizontal_pull', preferred: ['Bent-Over Row', 'Pendlay Row', 'Barbell Row'] },
       { muscle: 'hamstrings', role: 'secondary', pattern: 'hinge', preferred: ['Romanian Deadlift', 'Dumbbell RDL'] },
@@ -44,7 +45,15 @@ function fullBodySlots(variantIndex: number): DaySlot[] {
       { muscle: 'abs', role: 'accessory', preferred: ['Plank'] },
     ],
     [
-      { muscle: 'hamstrings', role: 'primary', pattern: 'hinge', preferred: ['Conventional Deadlift', 'Trap Bar Deadlift', 'Romanian Deadlift'] },
+      {
+        muscle: 'hamstrings',
+        role: 'primary',
+        pattern: 'hinge',
+        // Conventional deadlift + three other compounds overshoots a 45-minute clock.
+        preferred: short
+          ? ['Romanian Deadlift', 'Dumbbell RDL', 'Trap Bar Deadlift']
+          : ['Conventional Deadlift', 'Trap Bar Deadlift', 'Romanian Deadlift'],
+      },
       { muscle: 'front_delts', role: 'primary', pattern: 'vertical_push', preferred: ['Overhead Press', 'Dumbbell Shoulder Press'] },
       { muscle: 'lats', role: 'primary', pattern: 'vertical_pull', preferred: ['Pull-Up', 'Chin-Up', 'Lat Pulldown'] },
       { muscle: 'quads', role: 'secondary', pattern: 'lunge', preferred: ['Walking Lunge', 'Bulgarian Split Squat', 'Leg Press'] },
@@ -108,7 +117,7 @@ function emphasisSlots(profile: TrainingProfile, variantIndex: number): DaySlot[
 function slotsForDay(type: SplitDay['workoutType'], variantIndex: number, profile: TrainingProfile): DaySlot[] {
   const emphasized = type === 'Cardio' || type === 'Mobility' ? null : emphasisSlots(profile, variantIndex);
   if (emphasized && (type === 'Full Body' || profile.hardRequirements?.identicalDays)) return emphasized;
-  if (type === 'Full Body') return fullBodySlots(variantIndex);
+  if (type === 'Full Body') return fullBodySlots(variantIndex, profile.preferredSessionMinutes || 60);
   if (type === 'Upper Body' || type === 'Push') {
     if (variantIndex % 2 === 0) {
       return [

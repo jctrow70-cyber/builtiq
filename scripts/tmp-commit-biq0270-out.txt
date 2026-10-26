@@ -1,0 +1,42 @@
+[main b26ad59] Coordinate AI repair and stop science-seed duration from blocking generation
+ M app/components/NutritionTracker.tsx
+ M lib/scienceEngine/designerCatalog.ts
+ M lib/scienceEngine/exerciseAliases.ts
+ M lib/scienceEngine/exerciseSelection.ts
+ M lib/scienceEngine/generateProgram.ts
+ M lib/scienceEngine/potentiation.ts
+ M lib/supabaseClient.ts
+ M lib/supabaseServer.ts
+ M scripts/tmp-stage2c-live-verify-out.txt
+ M scripts/tmp-stage2c-live-verify-report.json
+ M scripts/tmp-stage2c-live-verify.ts
+?? lib/nutrition/encodeImageForUpload.ts
+?? scripts/test-ai-estimate-auth-message.ts
+?? scripts/test-encode-image-browser.ts
+?? scripts/test-encode-image-for-upload.ts
+?? scripts/tmp-commit-biq0270-out.txt
+?? scripts/tmp-commit-biq0270.cmd
+?? scripts/tmp-commit-msg.txt
+?? scripts/tmp-debug-2d-out.txt
+?? scripts/tmp-debug-2d-structure.ts
+?? scripts/tmp-git-status-out.txt
+?? scripts/tmp-git-status.cmd
+?? scripts/tmp-inspect-cached-out.txt
+?? scripts/tmp-inspect-cached.cmd
+?? scripts/tmp-inspect-merge-out.txt
+?? scripts/tmp-inspect-merge-out.txt.ours-cl-head.txt
+?? scripts/tmp-inspect-merge-out.txt.ours-duration
+?? scripts/tmp-inspect-merge-out.txt.theirs-duration
+?? scripts/tmp-inspect-merge.cmd
+?? scripts/tmp-run-debug-2d.cmd
+?? scripts/tmp-run-science-tests.cmd
+?? scripts/tmp-science-test-out.txt
+?? scripts/tmp-show-staged-trim-out.txt.duration
+?? scripts/tmp-show-staged-trim.cmd
+?? scripts/tmp-stage-biq0270-out.txt
+?? scripts/tmp-stage-biq0270.cmd
+----- 
+b26ad59 Coordinate AI repair and stop science-seed duration from blocking generation
+de006f9 multi change
+23d6f98 BIQ-0269 Note auth message test and tsc passed in CHANGELOG
+----- 
