@@ -15,7 +15,7 @@ Status:
 
 Date: 2026-10-26
 Branch: cursor/fix-ai-estimate-auth-session-e381
-Status: Implemented. Message mapping test passed. TypeScript (`tsc --noEmit`) pending before merge.
+Status: Implemented. `npx tsx scripts/test-ai-estimate-auth-message.ts` passed. TypeScript (`tsc --noEmit`) passed.
 
 Summary: Nutrition **Estimate with AI** (and barcode / label / meal photo) no longer fails with the raw Supabase error **Auth session missing!** when the browser still has a JWT. The client refreshes near-expiry tokens, retries once after a 401, and shows a clear sign-out/sign-in prompt when the Auth session is truly gone. Server auth helper maps the same error and disables session persistence on request-scoped clients.
 
