@@ -1,7 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { supabase } from '../../lib/supabaseClient';
+import {
+  friendlySessionExpiredMessage,
+  getFreshAccessToken,
+  refreshAccessToken,
+  supabase,
+} from '../../lib/supabaseClient';
 import NutritionWeeklyTrendChart from './NutritionWeeklyTrendChart';
 import NutritionMacroDashboard from './NutritionMacroDashboard';
 import {
@@ -1234,10 +1239,42 @@ export default function NutritionTracker({
   }
 
   async function getAuthToken(): Promise<string | null> {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    return session?.access_token || null;
+    return getFreshAccessToken();
+  }
+
+  function nutritionAuthError(message?: string | null, fallback = 'Request failed.') {
+    return friendlySessionExpiredMessage(message) || String(message || '').trim() || fallback;
+  }
+
+  /** POST JSON to an authenticated nutrition API; refresh + retry once on expired Auth session. */
+  async function fetchNutritionApi(path: string, body: Record<string, unknown>) {
+    let token = await getAuthToken();
+    if (!token) return { ok: false as const, status: 401, data: { error: 'Sign in required.' } };
+
+    const post = (accessToken: string) =>
+      fetch(path, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(body),
+      });
+
+    let res = await post(token);
+    let data = await res.json().catch(() => ({}));
+
+    // Stale JWT can pass getSession() but fail Auth getUser (session_not_found).
+    // Refresh once and retry before surfacing the error.
+    if (res.status === 401) {
+      token = await refreshAccessToken();
+      if (token) {
+        res = await post(token);
+        data = await res.json().catch(() => ({}));
+      }
+    }
+
+    return { ok: res.ok, status: res.status, data };
   }
 
   async function lookupBarcodeProduct(code?: string) {
@@ -1246,12 +1283,6 @@ export default function NutritionTracker({
       setBarcodeError('Enter a valid UPC or EAN barcode.');
       return;
     }
-    const token = await getAuthToken();
-    if (!token) {
-      setBarcodeError('Sign in to look up barcodes.');
-      return;
-    }
-
     setBarcodeLoading(true);
     setBarcodeError('');
     clearBarcodeResults();
@@ -1260,18 +1291,10 @@ export default function NutritionTracker({
     closeBarcodeScanner();
 
     try {
-      const res = await fetch('/api/nutrition/barcode', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ barcode }),
-      });
-      const raw = await res.json().catch(() => ({}));
-      if (!res.ok) {
+      const { ok, status, data: raw } = await fetchNutritionApi('/api/nutrition/barcode', { barcode });
+      if (!ok) {
         const err = raw as { error?: string };
-        throw new Error(err?.error || `Lookup failed (${res.status})`);
+        throw new Error(nutritionAuthError(err?.error, `Lookup failed (${status})`));
       }
       const data = raw as BarcodeLookupResponse;
       setBarcodeValue(data.barcode || barcode);
@@ -1386,8 +1409,6 @@ export default function NutritionTracker({
 
   async function scanNutritionLabel(file: File | null) {
     if (!file) return;
-    const token = await getAuthToken();
-    if (!token) return alert('Sign in to scan nutrition labels.');
 
     setLabelScanning(true);
     setLabelScanError('');
@@ -1397,16 +1418,18 @@ export default function NutritionTracker({
     clearBarcodeResults();
     try {
       const { image_base64, mime_type } = await encodeImageForUpload(file);
-      const res = await fetch('/api/nutrition/scan-label', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ image_base64, mime_type }),
+      const { ok, status, data } = await fetchNutritionApi('/api/nutrition/scan-label', {
+        image_base64,
+        mime_type,
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(nutritionImageScanHttpError(res.status, data?.error, 'label'));
+      if (!ok) {
+        throw new Error(
+          nutritionAuthError(
+            (data as { error?: string })?.error,
+            nutritionImageScanHttpError(status, (data as { error?: string })?.error, 'label')
+          )
+        );
+      }
       setAiEstimateResult(data as AiFoodEstimateResult);
       setPickedCatalogId(null);
     } catch (e: any) {
@@ -1418,8 +1441,6 @@ export default function NutritionTracker({
 
   async function scanMealPhoto(file: File | null) {
     if (!file) return;
-    const token = await getAuthToken();
-    if (!token) return alert('Sign in to scan meal photos.');
 
     setMealPhotoScanning(true);
     setMealPhotoScanError('');
@@ -1429,20 +1450,19 @@ export default function NutritionTracker({
     clearBarcodeResults();
     try {
       const { image_base64, mime_type } = await encodeImageForUpload(file);
-      const res = await fetch('/api/nutrition/scan-meal', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          image_base64,
-          mime_type,
-          meal_type: addDraft.meal_type,
-        }),
+      const { ok, status, data } = await fetchNutritionApi('/api/nutrition/scan-meal', {
+        image_base64,
+        mime_type,
+        meal_type: addDraft.meal_type,
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(nutritionImageScanHttpError(res.status, data?.error, 'meal'));
+      if (!ok) {
+        throw new Error(
+          nutritionAuthError(
+            (data as { error?: string })?.error,
+            nutritionImageScanHttpError(status, (data as { error?: string })?.error, 'meal')
+          )
+        );
+      }
       setAiEstimateResult(data as AiFoodEstimateResult);
       setPickedCatalogId(null);
     } catch (e: any) {
@@ -1455,10 +1475,6 @@ export default function NutritionTracker({
   async function estimateWithAi() {
     const description = aiDescribe.trim();
     if (description.length < 4) return alert('Describe your food (e.g. 6 oz chicken breast and rice).');
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session?.access_token) return alert('Sign in to use AI food estimates.');
 
     setAiEstimating(true);
     setAiEstimateError('');
@@ -1468,16 +1484,15 @@ export default function NutritionTracker({
     setBarcodeError('');
     clearBarcodeResults();
     try {
-      const res = await fetch('/api/nutrition/estimate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ description, meal_type: addDraft.meal_type }),
+      const { ok, status, data } = await fetchNutritionApi('/api/nutrition/estimate', {
+        description,
+        meal_type: addDraft.meal_type,
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || `Estimate failed (${res.status})`);
+      if (!ok) {
+        throw new Error(
+          nutritionAuthError((data as { error?: string })?.error, `Estimate failed (${status})`)
+        );
+      }
       setAiEstimateResult(data as AiFoodEstimateResult);
       if ((data as AiFoodEstimateResult)?.items?.length === 1) {
         setPickedCatalogId(null);

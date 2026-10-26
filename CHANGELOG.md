@@ -11,6 +11,39 @@ Branch:
 Status:
 ```
 
+## BIQ-0269 - Fix AI estimate Auth session missing
+
+Date: 2026-10-26
+Branch: cursor/fix-ai-estimate-auth-session-e381
+Status: Implemented. Message mapping test passed. TypeScript (`tsc --noEmit`) pending before merge.
+
+Summary: Nutrition **Estimate with AI** (and barcode / label / meal photo) no longer fails with the raw Supabase error **Auth session missing!** when the browser still has a JWT. The client refreshes near-expiry tokens, retries once after a 401, and shows a clear sign-out/sign-in prompt when the Auth session is truly gone. Server auth helper maps the same error and disables session persistence on request-scoped clients.
+
+Purpose: Logged-in users saw **Auth session missing!** under Estimate with AI because `getSession()` can return a JWT whose `session_id` is no longer in `auth.sessions`. Server `getUser(token)` rejects that; PostgREST RLS can still work until the JWT expires.
+
+Files changed:
+- `lib/supabaseClient.ts` — `getFreshAccessToken`, `refreshAccessToken`, `friendlySessionExpiredMessage`
+- `lib/supabaseServer.ts` — non-persistent request client; friendlier requireAuthUser error
+- `app/components/NutritionTracker.tsx` — shared `fetchNutritionApi` with refresh+retry for estimate/barcode/label/meal
+- `scripts/test-ai-estimate-auth-message.ts` — message mapping check
+- `CHANGELOG.md`
+
+Database changes: None.
+
+Testing steps:
+1. Sign in on mobile or desktop → Nutrition → Add food → **AI estimate**.
+2. Enter `2 tablespoons half and half` → **Estimate with AI**.
+3. Confirm macros return (no red **Auth session missing!**).
+4. Optionally leave the tab idle past access-token lifetime, then estimate again — should refresh or ask to sign in again clearly.
+5. Run `npx tsx scripts/test-ai-estimate-auth-message.ts`.
+6. Run `node node_modules/typescript/bin/tsc --noEmit`.
+
+Known issues:
+- If the refresh token is also revoked, the user must sign out and sign back in (expected).
+- Other app API callers (program generate, bug reports) still use React `session.access_token` without this retry helper.
+
+Recommended commit message: Fix AI estimate Auth session missing with refresh and clearer error
+
 ## BIQ-0268 - Fit 45-minute glute Full Body generation
 
 Date: 2026-10-25
