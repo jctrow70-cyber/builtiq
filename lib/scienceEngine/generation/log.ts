@@ -2,14 +2,33 @@ import { DESIGNER_PROMPT_VERSION, SCIENCE_ENGINE_VERSION } from '../version';
 import { outputBudgetSnapshot } from './failureStage';
 import type { GenerationRun } from './types';
 
+function originalAiSnapshot(program: GenerationRun['rawAiProgram']) {
+  if (!program) return null;
+  return {
+    summary: program.summary,
+    days: (program.workouts || []).map((workout) => ({
+      day_label: workout.day_label,
+      name: workout.name,
+      exercise_ids: (workout.strength || []).flatMap((block) => (block.exercises || []).map((ex) => ex.exercise_id)),
+    })),
+  };
+}
+
 export function generationRunDiagnostics(run: GenerationRun) {
+  const issues = run.validation?.issues || [];
+  const repairs = run.repairs || [];
   return {
     ok: run.validation?.ok ?? false,
     outcome: run.outcome,
     initial_failure_stage: run.initialFailureStage,
-    issues: run.validation?.issues || [],
+    issues,
     initial: run.initialValidation,
-    repairs: run.repairs || [],
+    repairs,
+    required_repairs: repairs.filter((repair) => (repair.kind || 'required') === 'required'),
+    optional_repairs: repairs.filter((repair) => repair.kind === 'optional'),
+    remaining_errors: issues.filter((issue) => issue.severity === 'error'),
+    remaining_warnings: issues.filter((issue) => issue.severity !== 'error'),
+    original_ai: originalAiSnapshot(run.rawAiProgram),
     schema_issues: run.schemaIssues || [],
     response_status: run.responseStatus,
     incomplete_reason: run.incompleteReason,

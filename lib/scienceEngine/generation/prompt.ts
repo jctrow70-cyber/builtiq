@@ -4,7 +4,7 @@ import type { DesignerExercise, GenerationContext } from './types';
 function durationTargetGuidance(minutes: number) {
   const requested = Math.max(1, Number(minutes) || 60);
   const targetLow = Math.max(15, requested - 5);
-  return `The ${requested}-minute request is a time budget, not a target to fill. About ${targetLow}-${requested} minutes is plenty when the work is meaningful. Do not pack filler, and do not drop useful primary or secondary work only to finish early.`;
+  return `Aim at about ${requested} minutes, not the hard overrun cap. About ${targetLow}-${requested} minutes is the successful range. A few minutes over is only a warning; do not treat that slack as the planned length. Do not pack filler, and do not drop useful primary or requested work only to finish early.`;
 }
 
 export type PromptExercise = {
@@ -78,6 +78,7 @@ export function slimContextForPrompt(context: GenerationContext) {
       required_muscles: context.hard_requirements.requiredMuscles,
       waived_major_muscles: context.hard_requirements.waivedMajorMuscles,
       extended_warmup: context.hard_requirements.extendedWarmup,
+      working_structure: context.hard_requirements.workingStructure,
     },
     weekly_volume_targets: context.weekly_volume_targets.map((t) => ({
       muscle: t.muscle,
@@ -114,6 +115,22 @@ export function buildDesignerInstructions(context: GenerationContext): string {
   const emphasisRule = emphasisBits.length
     ? `- Hard emphasis: ${emphasisBits.join('; ')}. Keep that emphasis. Major muscles outside it are optional this week.`
     : '';
+  const structure = hard?.workingStructure;
+  const structureRule = structure
+    ? `- Working-portion structure (not warm-up or cooldown): ${[
+        structure.openMuscle ? `start with a ${structure.openMuscle} exercise` : '',
+        structure.middlePushPullSuperset ? 'include a structured push/pull superset in the middle' : '',
+        structure.middleCore ? 'include a core exercise in the middle' : '',
+        structure.closeMuscle ? `end with a ${structure.closeMuscle} exercise` : '',
+      ]
+        .filter(Boolean)
+        .join('; ')}. Use strength block type "superset" for the push/pull pair. A requested antagonist push/pull pair may stay as a structured superset even when both lifts are compounds; do not split it into straight sets.`
+    : '';
+  const equipment = (context.athlete.equipment || []).map((item) => String(item).toLowerCase());
+  const gymReady = !equipment.length || equipment.some((item) => /barbell|dumbbell|cable|machine|full.?gym|rack|bench/i.test(item));
+  const selectionRule = gymReady
+    ? '- Exercise choice: the athlete has gym equipment. Prefer loadable, progressive lifts that match the goal and experience. Bodyweight work is allowed when it is the best choice, not as the default for an intermediate full-gym session.'
+    : '- Exercise choice: match the available equipment. Bodyweight and limited-equipment options are appropriate here.';
   const warmupBand = context.constraints.warmup_minutes;
   const pref = String(context.athlete.superset_preference || 'sometimes').toLowerCase();
   const supersetRule = /frequent|often|always/.test(pref)
@@ -136,7 +153,7 @@ ${goalGuidance(context.athlete.primary_goal)}
 ${balanceGuidance(hard)}
 ${identical ? 'This request wants the same workout on each day. Repeat it.' : 'Use a different emphasis on each day when that serves the goal.'}
 
-Volume: minimum_working_sets is the useful floor, target_working_sets is preferred, practical_max_sets is an advisory ceiling. Preferred targets are not mandatory minimums. A small indirect-credit overage is acceptable. Do not add redundant patterns just to hit a number.
+Volume: minimum_working_sets is the useful floor, target_working_sets is preferred, practical_max_sets is an advisory ceiling. Preferred targets are not mandatory minimums. Do not pile a priority muscle past the practical maximum while other important muscles sit at zero. A small indirect-credit overage is acceptable. Do not add redundant patterns just to hit a number. Do not force full-body balance onto a specialized request.
 
 Duration: ${durationTargetGuidance(context.constraints.session_minutes)} Count working sets, rest, warm-up, primers, and supersets. Do not add filler to use leftover minutes.
 
@@ -147,6 +164,8 @@ Hard constraints:
 - Equipment must match the athlete list. Bodyweight mobility is allowed.
 ${cloneRule}
 ${emphasisRule}
+${structureRule}
+${selectionRule}
 - ${supersetRule}
 - Dynamic warm-up: targeted drills from warmup_ids that prepare THIS day's joints and patterns. Prefer ${Math.min(2, warmup.max)} movements. ${warmup.max} is a ceiling, not a quota. One well-chosen drill is enough when it covers the session. Do not pad to a count. No duplicate exercise_ids. Warm-up time target is ${warmupBand.min}-${warmupBand.max} minutes. ${hard?.extendedWarmup ? 'An extended warm-up was requested, so the top of that range is allowed.' : 'Do not pad the warm-up.'} ${identical ? 'The repeated day uses that same warm-up.' : 'Different training days should not share one generic warm-up.'} Dynamic warm-up, power primer, and ramp-up sets are different components. Ankle or hip mobility belongs only on days that squat, hinge, or lunge.
 - Power primers are optional explosive prep (jump, throw, swing), about 2-3 x 3-5, or a short ballistic swing. Do not put a normal squat, press, or row in potentiation. For hypertrophy, general fitness, and fat-loss support, omit the primer unless the athlete asked for athletic or power work. For athletic performance, include a short primer only when it helps the primary lift. An empty potentiation array is valid. Do not add a power exercise just to fill the slot.
@@ -187,7 +206,7 @@ function goalGuidance(goal: string): string {
     return 'Goal strength: high-quality primary lifts, strength rep ranges, enough rest to repeat the set, and the same primaries long enough to overload.';
   }
   if (value === 'athletic_performance') {
-    return 'Goal athletic performance: movement preparation, one short explosive primer when it fits, primary strength, then a secondary lift or athletic accessory, and an optional finisher if time remains. Not every session needs every piece. In a 45-minute session, use about 3 quality working sets on the heavy lifts and keep their rest. Leave room for the requested muscles, such as a glute or hamstring accessory, instead of putting 4 sets on two heavy compounds. When supersets are allowed, one pair of complementary lower-fatigue movements after the main lifts is useful. Do not superset two heavy compounds. Keep explosive work fast and low fatigue.';
+    return 'Goal athletic performance: movement preparation, one short explosive primer when it fits, a loadable primary strength lift, a complementary secondary, and an optional athletic accessory. Combine strength, a little power, and some unilateral work when time allows. In a 45-minute session, use about 3 quality working sets on the heavy lifts and keep their rest. Leave room for the requested muscles instead of stacking extra sets on one pattern. When the athlete has a full gym, prefer a barbell or dumbbell press over a push-up as the primary unless ability or equipment says otherwise. When supersets are allowed, one pair of complementary lower-fatigue movements after the main lifts is useful. Do not superset two heavy compounds. Keep explosive work fast and low fatigue.';
   }
   if (value === 'muscular_endurance') {
     return 'Goal endurance: develop the relevant endurance quality. Do not add strength volume the session does not need.';

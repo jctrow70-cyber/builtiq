@@ -11,37 +11,30 @@ Branch:
 Status:
 ```
 
-## BIQ-0267 - Stage 2C programming quality: primers, duration, warm-up, and bodyweight ramps
+## BIQ-0270 - Stage 2D coordinated repair, feasibility, and programming quality
 
-Date: 2026-10-25
+Date: 2026-10-26
 Branch: main
-Status: Implemented locally. Not committed. No database change.
+Status: Implemented. Committed locally. Not pushed. No database change.
 
-Summary: Hypertrophy and other non-athletic goals no longer require a power primer. A 60-minute request now warns above 60 and repair trims redundant warm-ups and optional primers before productive lifts. Dynamic warm-ups are targeted instead of padded to a count. Pull-ups, chin-ups, dips, and push-ups do not get full-bodyweight ramp reps when capacity is unknown.
+Summary: A feasible AI request is no longer blocked because the preliminary science template ran long. Repair now coordinates rest, volume, duration, and requested working-portion structure, aims at the requested clock, and keeps `ai` when only optional quality trims ran. `final_ok` means no error-severity issues remain; warnings stay advisory. Requested structure cannot accept leftover safety or equipment errors. Science engine is `1.4.15`. Designer prompt is `designer@2.8`.
 
-Purpose: The latest 3-day hypertrophy generate showed "Built with AI, then adjusted to fit the rules," 67- and 72-minute duration notes, missing-primer warnings, four warm-up drills plus a primer and bench ramps, and a 5-rep pull-up warm-up before 3x6-8. Those came from automatic primer injection, a 65-minute "on target" band, a 2-4 warm-up quota, and percentage ramps on relative-load lifts.
+Purpose: Stage 2C live verification showed a 3x45 glute request never reached the model (57-minute science seed), a 45-minute athletic week finishing at 50 without aiming at 45, sequential repairs creating volume imbalance, and a valid 60-minute week marked `ai_repaired` after optional duration trim.
 
 Files changed:
-- lib/scienceEngine/primerPolicy.ts
-- lib/scienceEngine/potentiation.ts
-- lib/scienceEngine/validator.ts
-- lib/scienceEngine/feasibility.ts
-- lib/scienceEngine/applyAiDesign.ts
-- lib/scienceEngine/generateProgram.ts
-- lib/scienceEngine/duration.ts
-- lib/scienceEngine/warmup.ts
-- lib/scienceEngine/rampUp.ts
-- lib/scienceEngine/explain.ts
 - lib/scienceEngine/version.ts
-- lib/scienceEngine/generation/hardRequirements.ts
-- lib/scienceEngine/generation/prompt.ts
+- lib/scienceEngine/duration.ts
+- lib/scienceEngine/scienceSeed.ts
+- lib/scienceEngine/generation/orchestrator.ts
 - lib/scienceEngine/generation/repairAiProgram.ts
-- lib/scienceEngine/generation/ramps.ts
-- lib/scienceEngine/generation/context.ts
+- lib/scienceEngine/generation/validateAiProgram.ts
+- lib/scienceEngine/generation/hardRequirements.ts
+- lib/scienceEngine/generation/workingStructure.ts
+- lib/scienceEngine/generation/prompt.ts
 - lib/scienceEngine/generation/types.ts
-- lib/scienceEngine/generation/stage2cCheck.ts
+- lib/scienceEngine/generation/log.ts
+- lib/scienceEngine/generation/stage2dCheck.ts
 - lib/scienceEngine/generation/phase1Check.ts
-- lib/scienceEngine/generation/instructionAdherenceCheck.ts
 - lib/scienceEngine/acceptanceCheck.ts
 - CHANGELOG.md
 - DECISIONS.md
@@ -50,20 +43,52 @@ Files changed:
 Database changes: None.
 
 Testing steps:
-- `npm run test:science` passed, including Stage 2B, Stage 2C, Phase 1, and Phase 2A/2B.1.
-- Generate a 3-day intermediate hypertrophy hybrid program, 60 minutes, chest priority, full gym, balanced variety, supersets left to BuildIQ.
-- Confirm the program criteria status matches `st_generation_runs.generation_method`.
-- Confirm hypertrophy days omit medicine-ball throws and jumps unless athletic work was requested, and that omitting them does not create a validation error.
-- Confirm preview and saved session estimates use the same estimator and land at or below 60 minutes, or explain why they cannot.
-- Confirm each day has a short targeted warm-up, not a fixed four-drill block plus a primer plus three ramps.
-- Confirm pull-up, chin-up, dip, and push-up cards do not show a full-bodyweight warm-up set when capacity is unknown.
+- `npm run test:science` passed, including Stage 2B, 2C, 2D, Phase 1, and Phase 2A/2B.1.
+- Live gpt-5.4 Cases A/B/C ran against `st_exercise_catalog` (264 rows). No programs were written to user accounts.
+- Case A: model called, `ai_repaired`, 57/65/61 → 53/59/58 vs 60. Chest stayed the emphasis without a hard over-max after set trims.
+- Case B: model called, `ai` after optional warmup/primer trim only, 48 → 45 on identical Monday/Friday gym sessions.
+- Case C: model called (no science-seed block), `ai_repaired`, final_ok. Working order kept glute open/close and structured push/pull supersets. Persist map matched.
 
 Known issues:
-- Live diagnostics for the earlier generate were not re-fetched in this change. The saved banner means `ai_repaired`; duration notes of 67 and 72 match the old 65-minute on-target band and warning-only 60-minute repair.
-- Athletic performance can still include a short primer. That omission is only a warning.
-- Bodyweight ramps stay off unless a known max-rep capacity is well above the working range. Assisted variations are not auto-inserted as extra catalog rows.
+- Live 45-minute structured days can still finish a few minutes over (Case C Wed 50, Fri 47) when rest is raised and the requested sequence is protected.
+- Specialized glute weeks can still sit well above the preferred glute target because useful-minimum fill for other majors is not forced.
+- Cable Chop and other rotation/anti-rotation core work are recognized by the shared core helper used in parsing, validation, repair, and live diagnostics.
+- The model may still choose bodyweight primaries; the prompt now prefers loadable gym lifts when equipment exists, but that is not a ban.
 
-Recommended commit message: Make hypertrophy primers optional and keep 60-minute sessions on the clock
+Recommended commit message: Coordinate AI repair and stop science-seed duration from blocking generation
+
+## BIQ-0269 - Fix AI estimate Auth session missing
+
+Date: 2026-10-26
+Branch: cursor/fix-ai-estimate-auth-session-e381
+Status: Implemented. `npx tsx scripts/test-ai-estimate-auth-message.ts` passed. TypeScript (`tsc --noEmit`) passed.
+
+Summary: Nutrition **Estimate with AI** (and barcode / label / meal photo) no longer fails with the raw Supabase error **Auth session missing!** when the browser still has a JWT. The client refreshes near-expiry tokens, retries once after a 401, and shows a clear sign-out/sign-in prompt when the Auth session is truly gone. Server auth helper maps the same error and disables session persistence on request-scoped clients.
+
+Purpose: Logged-in users saw **Auth session missing!** under Estimate with AI because `getSession()` can return a JWT whose `session_id` is no longer in `auth.sessions`. Server `getUser(token)` rejects that; PostgREST RLS can still work until the JWT expires.
+
+Files changed:
+- `lib/supabaseClient.ts` — `getFreshAccessToken`, `refreshAccessToken`, `friendlySessionExpiredMessage`
+- `lib/supabaseServer.ts` — non-persistent request client; friendlier requireAuthUser error
+- `app/components/NutritionTracker.tsx` — shared `fetchNutritionApi` with refresh+retry for estimate/barcode/label/meal
+- `scripts/test-ai-estimate-auth-message.ts` — message mapping check
+- `CHANGELOG.md`
+
+Database changes: None.
+
+Testing steps:
+1. Sign in on mobile or desktop → Nutrition → Add food → **AI estimate**.
+2. Enter `2 tablespoons half and half` → **Estimate with AI**.
+3. Confirm macros return (no red **Auth session missing!**).
+4. Optionally leave the tab idle past access-token lifetime, then estimate again — should refresh or ask to sign in again clearly.
+5. Run `npx tsx scripts/test-ai-estimate-auth-message.ts`.
+6. Run `node node_modules/typescript/bin/tsc --noEmit`.
+
+Known issues:
+- If the refresh token is also revoked, the user must sign out and sign back in (expected).
+- Other app API callers (program generate, bug reports) still use React `session.access_token` without this retry helper.
+
+Recommended commit message: Fix AI estimate Auth session missing with refresh and clearer error
 
 ## BIQ-0264 - Phase 2B.2 database safety remediation
 
@@ -133,6 +158,76 @@ Known issues:
 - This stage does not add a screen. The app does not call the new function yet.
 
 Recommended commit message: Batch group training days, pause, and resume
+
+## BIQ-0268 - Fit 45-minute glute Full Body generation
+
+Date: 2026-10-25
+Branch: cursor/fix-45min-glute-program-gen-7bfe
+Status: Implemented. `npm run test:science` passed. TypeScript (`tsc --noEmit`) passed.
+
+Summary: Program generate no longer hard-fails for a 45-minute Full Body + Glutes intake (Mary’s case). Power Primers resolve to master-catalog names (`Box Jump`, `Medicine Ball Chest Pass`), short sessions prefer Romanian Deadlift over Conventional Deadlift, and duration trim can cut secondary/primary volume when every lift is a compound. Science engine version is `1.4.14`.
+
+Purpose: Mary’s generate showed `Full Body A/C is missing a Power Primer` and `Full Body B is estimated at 64 min vs 45`. The science engine looked up fallback names that are not in the live master catalog, and `trimForDuration` only removed isolation lifts so a 5-compound day could not fit 45 minutes.
+
+Files changed:
+- `lib/scienceEngine/potentiation.ts` — master-named primer candidates, lunge coverage, catalog fallbacks
+- `lib/scienceEngine/exerciseAliases.ts` / `exerciseSelection.ts` — hyphen/space-normalized primer lookup
+- `lib/scienceEngine/duration.ts` — stronger short-session trim (sets, secondaries, trailing primaries)
+- `lib/scienceEngine/generateProgram.ts` — leaner 45-minute Full Body B hinge choice
+- `lib/scienceEngine/generation/orchestrator.ts` — surface only blocking validation errors
+- `lib/scienceEngine/designerCatalog.ts` / `version.ts` — master primer names; science `1.4.14`
+- `lib/scienceEngine/acceptanceCheck.ts` — Mary 45-minute glute regression
+- `CHANGELOG.md`
+
+Database changes: None.
+
+Testing steps:
+1. Sign in as a user with Full Body, 45-minute sessions, Glutes priority, supersets Sometimes, notes about start/end glute work + mid push/pull + core.
+2. Programs → Generate program.
+3. Confirm generate succeeds (no red validation block about Power Primer / 64 vs 45).
+4. Open week 1 Full Body A/B/C and confirm each has a Power Primer badge and stays near 45 minutes.
+5. Run `npm run test:science`.
+6. Run `node node_modules/typescript/bin/tsc --noEmit`.
+
+Known issues:
+- Some 45-minute Full Body days may still warn slightly over target (for example ~52 minutes) without blocking generate.
+- Structure notes (“start and end with glutes”, “push/pull superset”) are still preferences for the AI layer; science packing guarantees duration/primer validity first.
+
+Recommended commit message: Fix 45-minute glute Full Body generate primer and duration failures
+
+## BIQ-0267 - Compress meal and label photos before upload
+
+Date: 2026-10-24
+Branch: cursor/fix-meal-photo-413-c9d9
+Status: Implemented. Helper unit checks passed. TypeScript (`tsc --noEmit`) passed.
+
+Summary: Meal photo and nutrition label scans now resize/compress images in the browser before sending base64 JSON to the API. This avoids Vercel **413 Payload Too Large** failures from full phone-camera photos. Clearer copy is shown if a 413 still occurs.
+
+Purpose: Phone JPEGs often exceed Vercel’s ~4.5 MB request body once base64-encoded. The previous encoder sent the raw file unchanged, so meal photo scan failed with `Meal photo scan failed (413)`.
+
+Files changed:
+- `lib/nutrition/encodeImageForUpload.ts` — resize to 1600px max edge, JPEG compress toward ~900 KB, 413 error helper
+- `app/components/NutritionTracker.tsx` — meal photo + label scan use the compressor
+- `scripts/test-encode-image-for-upload.ts` — sizing / error-message unit checks
+- `scripts/test-encode-image-browser.ts` — Playwright proof: multi-MB synthetic photo compresses under upload target
+- `CHANGELOG.md`
+
+Database changes: None.
+
+Testing steps:
+1. Sign in → Nutrition → Add food → **AI meal photo** → choose a large phone photo (several MB).
+2. Confirm the scan no longer shows `Meal photo scan failed (413)` and returns AI food chips (or a non-size API error).
+3. Repeat with **Scan nutrition label** using a large library photo.
+4. Run `npx tsx scripts/test-encode-image-for-upload.ts`.
+5. Bundle helper then run browser proof: `npx esbuild lib/nutrition/encodeImageForUpload.ts --bundle --format=iife --global-name=EncodeUpload --platform=browser --outfile=/tmp/encode-image-for-upload.iife.js` then `npx tsx scripts/test-encode-image-browser.ts` (observed ~12 MB → ~751 KB).
+6. Run `node node_modules/typescript/bin/tsc --noEmit`.
+
+Known issues:
+- If `createImageBitmap` fails (rare format / older WebView), the original file is sent only when under 3 MB; larger files show a clear size error.
+- HEIC-only uploads still depend on the browser converting or rejecting the type at the API.
+- Full signed-in meal scan against OpenAI was not run in this environment (no local Supabase/OpenAI secrets).
+
+Recommended commit message: Compress meal and label photos to avoid 413 upload failures
 
 ## BIQ-0264 - Phase 2B.1 bulk assign or change program
 

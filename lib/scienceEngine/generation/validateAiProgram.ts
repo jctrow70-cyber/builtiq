@@ -21,6 +21,7 @@ import type {
   ValidationIssue,
   ValidationResult,
 } from './types';
+import { hasWorkingStructure, inspectWorkingStructure, isPullPattern, isPushPattern } from './workingStructure';
 
 const HEAVY_PATTERNS = new Set(['squat', 'hinge', 'horizontal_push', 'vertical_push', 'horizontal_pull']);
 
@@ -52,6 +53,7 @@ export function validateAiProgram(
   validateRequestedEmphasis(week1, library, context, issues);
   validatePatternCoverage(week1, library, context, issues);
   validateSupersetPreference(week1, context, issues);
+  validateWorkingStructure(week1, library, context, issues);
 
   return { ok: issues.every((i) => i.severity !== 'error'), issues };
 }
@@ -180,7 +182,9 @@ function validateWorkout(
   });
 
   workout.strength.forEach((block) => {
-    if (block.type !== 'straight_sets') validateSuperset(block.exercises, library, workout.day_label, issues);
+    if (block.type !== 'straight_sets') {
+      validateSuperset(block.exercises, library, workout.day_label, issues, context);
+    }
   });
 
   const families = strength.map((ex) => movementFamily(library.get(ex.exercise_id)?.name || ''));
@@ -323,20 +327,35 @@ function validateSuperset(
   exercises: AiStrengthExercise[],
   library: Map<string, DesignerExercise>,
   day: string,
-  issues: ValidationIssue[]
+  issues: ValidationIssue[],
+  context?: GenerationContext
 ) {
   if (exercises.length < 2) return;
   const items = exercises.map((ex) => ({ ex, meta: library.get(ex.exercise_id) })).filter((row) => row.meta);
   const heavy = items.filter((row) => isHeavyCompound(row.meta!));
+  const requestedPushPull =
+    Boolean(context?.hard_requirements?.workingStructure?.middlePushPullSuperset) &&
+    items.some((row) => isPushPattern(row.meta!.movement_pattern)) &&
+    items.some((row) => isPullPattern(row.meta!.movement_pattern));
   if (heavy.length >= 2) {
-    issues.push(
-      err(
-        'SUPERSET_HEAVY_PAIR',
-        `Heavy compounds ${heavy.map((h) => h.meta!.name).join(' + ')} should not share a superset`,
-        day
-      )
-    );
-    return;
+    if (requestedPushPull) {
+      issues.push(
+        warn(
+          'SUPERSET_HEAVY_PAIR',
+          `Requested push/pull superset pairs heavy compounds ${heavy.map((h) => h.meta!.name).join(' + ')}. Kept because the user asked for that pairing.`,
+          day
+        )
+      );
+    } else {
+      issues.push(
+        err(
+          'SUPERSET_HEAVY_PAIR',
+          `Heavy compounds ${heavy.map((h) => h.meta!.name).join(' + ')} should not share a superset`,
+          day
+        )
+      );
+      return;
+    }
   }
   const primary = items.find((row) => row.ex.role === 'primary');
   if (primary && heavy.includes(primary)) {
@@ -521,6 +540,13 @@ function validateWeeklyVolume(
   const hypertrophy = goalUsesHypertrophyBias(context.athlete.primary_goal as any);
   const waived = new Set(context.hard_requirements?.waivedMajorMuscles || []);
   const required = new Set(context.hard_requirements?.requiredMuscles || []);
+  const specialized = Boolean(
+    context.hard_requirements?.upperPush ||
+      context.hard_requirements?.lowerPull ||
+      (waived.size && required.size) ||
+      hasWorkingStructure(context.hard_requirements?.workingStructure)
+  );
+  const priorities = new Set(context.athlete.priority_muscles || []);
   context.weekly_volume_targets.forEach((target) => {
     const got = credits[target.muscle] || 0;
     const ratio = target.target_working_sets > 0 ? got / target.target_working_sets : 1;
@@ -549,6 +575,12 @@ function validateWeeklyVolume(
 
     const floor = target.minimum_working_sets ?? 1;
     if (tier === 'major') {
+      if (specialized && !required.has(target.muscle as MuscleId) && !priorities.has(target.muscle)) {
+        if (got < 1) {
+          issues.push(info('VOLUME_OFF', `${target.muscle} was left out of this specialized week.`));
+        }
+        return;
+      }
       if (got < 1) {
         issues.push(err('VOLUME_OFF', `Major hypertrophy target ${target.muscle} has no meaningful working-set credit.`));
       } else if (hypertrophy && got < floor) {
@@ -713,6 +745,23 @@ function validateSupersetPreference(workouts: AiWorkoutPlan[], context: Generati
   }
 }
 
+function validateWorkingStructure(
+  workouts: AiWorkoutPlan[],
+  library: Map<string, DesignerExercise>,
+  context: GenerationContext,
+  issues: ValidationIssue[]
+) {
+  const structure = context.hard_requirements?.workingStructure;
+  if (!hasWorkingStructure(structure) || !structure) return;
+  workouts.forEach((workout) => {
+    if (isAddon(workout, context)) return;
+    const result = inspectWorkingStructure(workout, structure, library);
+    result.misses.forEach((message) => {
+      issues.push(err('WORKING_STRUCTURE', `${workout.name || workout.day_label}: ${message}`, workout.day_label));
+    });
+  });
+}
+
 function flattenStrength(workout: AiWorkoutPlan): AiStrengthExercise[] {
   return (workout.strength || []).flatMap((block) => block.exercises || []);
 }
@@ -767,8 +816,9 @@ function prescriptionsMatch(a: AiStrengthExercise, b: AiStrengthExercise): boole
 }
 
 function justifiedFrequency(context: GenerationContext): boolean {
+  if (hasWorkingStructure(context.hard_requirements?.workingStructure)) return true;
   const text = `${context.athlete.notes} ${context.athlete.primary_goal} ${context.request.user_request}`.toLowerCase();
-  return /specializ|frequency|3x|three times|every session|every day|high frequency/.test(text);
+  return /specializ|frequency|3x|three times|every session|every day|high frequency|start and end|working portion/.test(text);
 }
 
 function err(code: string, message: string, day_label?: string, exercise_id?: string): ValidationIssue {

@@ -1,5 +1,6 @@
 import { assessProgrammingFeasibility, ProgrammingConflictError } from '../feasibility';
 import { generateProgram } from '../generateProgram';
+import { makeScienceFallbackFeasible } from '../scienceSeed';
 import { validateProgram } from '../validator';
 import { DESIGNER_PROMPT_VERSION, SCIENCE_ENGINE_VERSION } from '../version';
 import type { CatalogExercise, ScienceProgram, TrainingProfile } from '../types';
@@ -13,7 +14,7 @@ import { mapAiWeekToScience } from './mapper';
 import { classifyModelResult, finalOutcome, outcomeMessage } from './failureStage';
 import { programModelName, requestWeekProgram, type ModelCallResult } from './openaiClient';
 import { buildDesignerInstructions, buildDesignerUserContent } from './prompt';
-import { applyDurationEfficiency, enforceSessionConstraints, repairAiProgram } from './repairAiProgram';
+import { applyDurationEfficiency, requiredRepairs, repairAiProgram } from './repairAiProgram';
 import { validateAiProgram } from './validateAiProgram';
 import type {
   AiWeekProgram,
@@ -61,11 +62,8 @@ export async function runGenerationPipeline(opts: {
   const profile = applyRequestToProfile(opts.profile, opts.userPrompt);
   const conflict = assessProgrammingFeasibility(profile);
   if (conflict) throw new ProgrammingConflictError(conflict);
-  const science = generateProgram(profile, catalog);
-  const scienceCheck = validateProgram(science, profile);
-  if (!scienceCheck.ok) {
-    throw new Error(scienceCheck.issues.map((i) => i.message).join('; ') || 'Science engine validation failed');
-  }
+  const science = makeScienceFallbackFeasible(generateProgram(profile, catalog), profile);
+  validateProgram(science, profile);
 
   const { context, catalogById } = buildGenerationContext({
     profile,
@@ -141,34 +139,32 @@ export async function runGenerationPipeline(opts: {
   }
 
   let working: AiWeekProgram | null = classified.program;
-  let repairs: DeterministicRepair[] = [];
-  if (working) {
-    const constrained = enforceSessionConstraints(working, context, catalogById);
-    working = constrained.program;
-    repairs = constrained.repairs;
-  }
   const initialValidation = validateAiProgram(working, context, catalogById);
+  let repairs: DeterministicRepair[] = [];
   let validation = initialValidation;
-
-  if (working && !validation.ok) {
+  if (working && !initialValidation.ok) {
     const repaired = repairAiProgram(working, context, catalogById);
     working = repaired.program;
-    repairs = [...repairs, ...repaired.repairs];
+    repairs = repaired.repairs;
     validation = validateAiProgram(working, context, catalogById);
-  } else if (working && validation.issues.some((issue) => issue.code === 'DURATION_OVER' && issue.severity === 'warning')) {
+  } else if (
+    working &&
+    initialValidation.issues.some((issue) => issue.code === 'DURATION_OVER')
+  ) {
     const tightened = applyDurationEfficiency(working, context, catalogById);
     if (tightened.repairs.length) {
       working = tightened.program;
-      repairs = tightened.repairs;
+      repairs = tightened.repairs.map((repair) => ({ ...repair, kind: repair.kind || 'optional' }));
       validation = validateAiProgram(working, context, catalogById);
     }
   }
 
+  const hardRepairs = requiredRepairs(repairs);
   const outcome = finalOutcome({
     stage: 'parsed_program',
     initialOk: initialValidation.ok,
     finalOk: Boolean(working) && validation.ok,
-    repairAttempted: !initialValidation.ok || repairs.length > 0,
+    repairAttempted: !initialValidation.ok || hardRepairs.length > 0,
   });
   const initialFailureStage = initialValidation.ok ? null : ('programming_validation_failure' as const);
   if (working && validation.ok) {
@@ -295,6 +291,7 @@ async function finish(opts: {
     schemaIssues: opts.schemaIssues || [],
     initialFailureStage: opts.initialFailureStage ?? null,
     rawOutput: opts.raw,
+    rawAiProgram: opts.rawAiProgram || null,
   };
   const generationRunId = await persistGenerationRun(opts.supabase, opts.userId || null, null, run);
   return {

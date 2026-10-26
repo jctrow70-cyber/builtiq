@@ -1,5 +1,6 @@
 import { MAJOR_MUSCLES, type MuscleId } from '../taxonomy';
 import type { TrainingProfile } from '../types';
+import { parseWorkingStructure, type WorkingStructure } from './workingStructure';
 
 /** Structured constraints parsed from the request. Preferences stay in free text. */
 export type HardRequirements = {
@@ -12,6 +13,7 @@ export type HardRequirements = {
   extendedWarmup: boolean;
   warmupMin: number;
   warmupMax: number;
+  workingStructure: WorkingStructure | null;
 };
 
 const MUSCLE_WORDS: Array<{ muscle: MuscleId; pattern: RegExp }> = [
@@ -104,6 +106,7 @@ export function resolveHardRequirements(
     extendedWarmup,
     warmupMin: bounds.min,
     warmupMax: bounds.max,
+    workingStructure: parseWorkingStructure(raw),
   };
 }
 

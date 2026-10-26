@@ -14,7 +14,7 @@ import { goalUsesHypertrophyBias } from '../rules';
 import type { CatalogExercise, PrimaryGoal } from '../types';
 import type { MuscleId } from '../taxonomy';
 import { findDesignerById } from './matchById';
-import { isWorkingIsolationAsCooldown, muscleTier, restBand, whyAgreesWithExercise } from './qualityRules';
+import { isCooldownEligible, isWorkingIsolationAsCooldown, muscleTier, restBand } from './qualityRules';
 import type {
   AiPrepItem,
   AiStrengthExercise,
@@ -25,6 +25,16 @@ import type {
   GenerationContext,
   StrengthRole,
 } from './types';
+import {
+  flattenWorking,
+  hasWorkingStructure,
+  inspectWorkingStructure,
+  isCoreExercise,
+  isFocusAnchor,
+  isPullPattern,
+  isPushPattern,
+  structureProtectedIds,
+} from './workingStructure';
 
 const HEAVY_PATTERNS = new Set(['squat', 'hinge', 'horizontal_push', 'vertical_push', 'horizontal_pull']);
 
@@ -36,14 +46,37 @@ export function repairAiProgram(
   const next = JSON.parse(JSON.stringify(program)) as AiWeekProgram;
   const repairs: DeterministicRepair[] = [];
   const library = libraryFromContext(context);
+  const MAX_PASSES = 3;
 
-  (next.workouts || []).forEach((workout) => {
-    repairWorkout(workout, context, library, catalogById, repairs);
-  });
-  repairWeeklyVolume(next, context, library, catalogById, repairs);
-  (next.workouts || []).forEach((workout) => efficiencyPass(workout, context, library, repairs));
-  const constrained = enforceSessionConstraints(next, context, catalogById);
-  return { program: constrained.program, repairs: [...repairs, ...constrained.repairs] };
+  for (let pass = 0; pass < MAX_PASSES; pass += 1) {
+    const before = repairs.length;
+    const constrained = enforceSessionConstraints(next, context, catalogById);
+    next.workouts = constrained.program.workouts;
+    repairs.push(...constrained.repairs);
+
+    (next.workouts || []).forEach((workout) => {
+      repairWorkout(workout, context, library, catalogById, repairs);
+    });
+    rebalanceWeeklyVolume(next, context, library, catalogById, repairs);
+    (next.workouts || []).forEach((workout) => {
+      preserveWorkingStructure(workout, context, library, catalogById, repairs);
+      const protect = structureProtectedIds(workout, context.hard_requirements?.workingStructure, library);
+      repairs.forEach((repair) => {
+        if ((repair.code === 'VOLUME_OFF' || repair.code === 'WORKING_STRUCTURE') && repair.exercise_id) {
+          protect.add(repair.exercise_id);
+        }
+      });
+      trimDuration(workout, context, library, repairs, protect);
+    });
+    copyIdenticalDays(next, context, repairs);
+    if (repairs.length === before) break;
+  }
+
+  return { program: next, repairs };
+}
+
+export function requiredRepairs(repairs: DeterministicRepair[]): DeterministicRepair[] {
+  return (repairs || []).filter((repair) => (repair.kind || 'required') === 'required');
 }
 
 export function enforceSessionConstraints(
@@ -204,10 +237,9 @@ function repairWorkout(
     (block.exercises || []).forEach((ex) => repairStrengthItem(ex, block.type !== 'straight_sets', workout, context, library, repairs));
   });
 
-  splitHeavySupersets(workout, library, repairs);
+  splitHeavySupersets(workout, library, repairs, context);
   normalizeLoneBlocks(workout);
   normalizeRoles(workout, library, context, repairs);
-  trimDuration(workout, context, library, repairs);
 }
 
 function repairPrep(
@@ -275,15 +307,6 @@ function repairPrep(
     repairs.push({
       code: 'LATERALITY_MISMATCH',
       action: `Removed /side from ${meta.name} ${kind}`,
-      day_label: workout.day_label,
-      exercise_id: meta.exercise_id,
-    });
-  }
-  if (meta && item.why && !whyAgreesWithExercise(item.why, meta)) {
-    item.why = kind === 'cooldown' ? `Ease ${meta.primary_muscles.join(', ') || meta.name}` : `Prep ${meta.primary_muscles.join(', ') || meta.name}`;
-    repairs.push({
-      code: 'WHY_MISMATCH',
-      action: `Rewrote why for ${meta.name}`,
       day_label: workout.day_label,
       exercise_id: meta.exercise_id,
     });
@@ -400,31 +423,34 @@ function repairStrengthItem(
     });
   }
 
-  if (ex.why && !whyAgreesWithExercise(ex.why, meta)) {
-    ex.why = `${ex.role} ${meta.movement_pattern} for ${meta.primary_muscles.join(', ') || meta.name}`;
-    repairs.push({
-      code: 'WHY_MISMATCH',
-      action: `Rewrote why for ${meta.name}`,
-      day_label: workout.day_label,
-      exercise_id: ex.exercise_id,
-    });
-  }
 }
 
 function isHeavyCompound(ex: DesignerExercise): boolean {
   return ex.exercise_kind === 'compound' && ex.fatigue_cost !== 'low' && HEAVY_PATTERNS.has(ex.movement_pattern);
 }
 
-function splitHeavySupersets(workout: AiWorkoutPlan, library: Map<string, DesignerExercise>, repairs: DeterministicRepair[]) {
+function splitHeavySupersets(
+  workout: AiWorkoutPlan,
+  library: Map<string, DesignerExercise>,
+  repairs: DeterministicRepair[],
+  context?: GenerationContext
+) {
   const next: AiWorkoutPlan['strength'] = [];
   (workout.strength || []).forEach((block) => {
     if (block.type === 'straight_sets' || (block.exercises || []).length < 2) {
       next.push(block);
       return;
     }
-    const heavy = (block.exercises || [])
-      .map((ex) => library.get(ex.exercise_id))
-      .filter((meta): meta is DesignerExercise => !!meta && isHeavyCompound(meta));
+    const metas = (block.exercises || []).map((ex) => library.get(ex.exercise_id));
+    const requestedPushPull =
+      Boolean(context?.hard_requirements?.workingStructure?.middlePushPullSuperset) &&
+      metas.some((meta) => meta && isPushPattern(meta.movement_pattern)) &&
+      metas.some((meta) => meta && isPullPattern(meta.movement_pattern));
+    if (requestedPushPull) {
+      next.push(block);
+      return;
+    }
+    const heavy = metas.filter((meta): meta is DesignerExercise => !!meta && isHeavyCompound(meta));
     if (heavy.length >= 2) {
       block.exercises.forEach((ex) => next.push({ type: 'straight_sets', exercises: [ex] }));
       repairs.push({
@@ -535,7 +561,8 @@ function wouldCauseAllHighFatigue(
 function dropWarmupExtra(
   workout: AiWorkoutPlan,
   library: Map<string, DesignerExercise>,
-  repairs: DeterministicRepair[]
+  repairs: DeterministicRepair[],
+  kind: DeterministicRepair['kind'] = 'required'
 ): boolean {
   const drop = [...(workout.warmup || [])].reverse().find((item) => !isGeneralWarmup(item, library));
   if (!drop) return false;
@@ -545,6 +572,7 @@ function dropWarmupExtra(
     action: `Removed extra warmup ${library.get(drop.exercise_id)?.name || drop.exercise_id} to fit the session`,
     day_label: workout.day_label,
     exercise_id: drop.exercise_id,
+    kind,
   });
   return true;
 }
@@ -572,11 +600,12 @@ function trimDuration(
     normalizeLoneBlocks(workout);
     const estimated = estimateSessionFromAi(workout, library, { experienceLevel: context.athlete.experience_level });
     const over = classifySessionDuration(estimated, minutes).over;
-    if (strictBudget ? over === 'ok' : estimated <= minutes) break;
+    if (estimated <= minutes) break;
+    const kind: DeterministicRepair['kind'] = over === 'error' ? 'required' : 'optional';
 
     // A. Unnecessary/redundant warmup volume
     const extras = (workout.warmup || []).filter((item) => !isGeneralWarmup(item, library));
-    if ((workout.warmup || []).length > warmupFloor && extras.length && dropWarmupExtra(workout, library, repairs)) {
+    if ((workout.warmup || []).length > warmupFloor && extras.length && dropWarmupExtra(workout, library, repairs, kind)) {
       guard += 1;
       continue;
     }
@@ -586,8 +615,9 @@ function trimDuration(
       if (timing.kind === 'time' && timing.seconds > 300) {
         general.prescription = '5 minutes';
         repairs.push({
-          code: 'DURATION_OVER',
-          action: `Capped ${library.get(general.exercise_id)?.name || general.exercise_id} general warmup at 5 minutes`,
+        code: 'DURATION_OVER',
+        kind,
+        action: `Capped ${library.get(general.exercise_id)?.name || general.exercise_id} general warmup at 5 minutes`,
           day_label: workout.day_label,
           exercise_id: general.exercise_id,
         });
@@ -602,6 +632,7 @@ function trimDuration(
       primer.sets = 2;
       repairs.push({
         code: 'DURATION_OVER',
+        kind,
         action: `Reduced ${library.get(primer.exercise_id)?.name || primer.exercise_id} primer to 2 sets`,
         day_label: workout.day_label,
         exercise_id: primer.exercise_id,
@@ -614,6 +645,7 @@ function trimDuration(
       workout.potentiation = workout.potentiation.slice(0, -1);
       repairs.push({
         code: 'DURATION_OVER',
+        kind,
         action: `Removed ${keepPrimer ? 'extra' : 'optional'} primer ${library.get(extraPrimer.exercise_id)?.name || extraPrimer.exercise_id}`,
         day_label: workout.day_label,
         exercise_id: extraPrimer.exercise_id,
@@ -622,7 +654,7 @@ function trimDuration(
       continue;
     }
 
-    if ((workout.warmup || []).length > warmupFloor && dropWarmupExtra(workout, library, repairs)) {
+    if ((workout.warmup || []).length > warmupFloor && dropWarmupExtra(workout, library, repairs, kind)) {
       guard += 1;
       continue;
     }
@@ -640,6 +672,7 @@ function trimDuration(
       extraSets.working_sets -= 1;
       repairs.push({
         code: 'DURATION_OVER',
+        kind,
         action: `Reduced ${library.get(extraSets.exercise_id)?.name || extraSets.exercise_id} to ${extraSets.working_sets} sets for duration`,
         day_label: workout.day_label,
         exercise_id: extraSets.exercise_id,
@@ -649,7 +682,7 @@ function trimDuration(
     }
 
     // D. Accessory supersets when preference allows (before deleting the last accessory)
-    if (allowSuperset && pairAccessorySuperset(workout, library, repairs)) {
+    if (allowSuperset && pairAccessorySuperset(workout, library, repairs, kind, protectIds)) {
       guard += 1;
       continue;
     }
@@ -661,6 +694,7 @@ function trimDuration(
       removeStrengthExercise(workout, dropNonPriority.exercise_id);
       repairs.push({
         code: 'DURATION_OVER',
+        kind,
         action: `Removed ${library.get(dropNonPriority.exercise_id)?.name || dropNonPriority.exercise_id} to fit the session`,
         day_label: workout.day_label,
         exercise_id: dropNonPriority.exercise_id,
@@ -677,6 +711,7 @@ function trimDuration(
       bulkyPrimary.working_sets -= 1;
       repairs.push({
         code: 'DURATION_OVER',
+        kind,
         action: `Reduced ${library.get(bulkyPrimary.exercise_id)?.name || bulkyPrimary.exercise_id} to ${bulkyPrimary.working_sets} sets so a requested accessory can stay`,
         day_label: workout.day_label,
         exercise_id: bulkyPrimary.exercise_id,
@@ -690,6 +725,7 @@ function trimDuration(
       removeStrengthExercise(workout, dropAccessory.exercise_id);
       repairs.push({
         code: 'DURATION_OVER',
+        kind,
         action: `Removed ${library.get(dropAccessory.exercise_id)?.name || dropAccessory.exercise_id} to fit the session`,
         day_label: workout.day_label,
         exercise_id: dropAccessory.exercise_id,
@@ -703,6 +739,7 @@ function trimDuration(
       workout.cooldown = workout.cooldown.slice(0, -1);
       repairs.push({
         code: 'DURATION_OVER',
+        kind,
         action: `Removed optional cooldown ${library.get(drop.exercise_id)?.name || drop.exercise_id} to fit the session`,
         day_label: workout.day_label,
         exercise_id: drop.exercise_id,
@@ -717,6 +754,7 @@ function trimDuration(
       secondary.working_sets -= 1;
       repairs.push({
         code: 'DURATION_OVER',
+        kind,
         action: `Reduced ${library.get(secondary.exercise_id)?.name || secondary.exercise_id} to ${secondary.working_sets} sets for duration`,
         day_label: workout.day_label,
         exercise_id: secondary.exercise_id,
@@ -730,6 +768,7 @@ function trimDuration(
         removeStrengthExercise(workout, drop.exercise_id);
         repairs.push({
           code: 'DURATION_OVER',
+          kind,
           action: `Removed ${library.get(drop.exercise_id)?.name || drop.exercise_id} to fit the session`,
           day_label: workout.day_label,
           exercise_id: drop.exercise_id,
@@ -746,6 +785,7 @@ function trimDuration(
       heavyPrimary.working_sets -= 1;
       repairs.push({
         code: 'DURATION_OVER',
+        kind,
         action: `Reduced ${library.get(heavyPrimary.exercise_id)?.name || heavyPrimary.exercise_id} to ${heavyPrimary.working_sets} sets for duration`,
         day_label: workout.day_label,
         exercise_id: heavyPrimary.exercise_id,
@@ -770,15 +810,18 @@ function efficiencyPass(
   let guard = 0;
   while (guard < 8) {
     normalizeLoneBlocks(workout);
-    if (sessionOver(workout, context, library).over === 'ok') break;
+    const estimated = estimateSessionFromAi(workout, library, { experienceLevel: context.athlete.experience_level });
+    if (estimated <= context.constraints.session_minutes) break;
+    const kind: DeterministicRepair['kind'] =
+      sessionOver(workout, context, library).over === 'error' ? 'required' : 'optional';
 
-    if (allowSuperset && pairAccessorySuperset(workout, library, repairs)) {
+    if (allowSuperset && pairAccessorySuperset(workout, library, repairs, kind, protectIds)) {
       guard += 1;
       continue;
     }
 
     const extras = (workout.warmup || []).filter((item) => !isGeneralWarmup(item, library));
-    if (extras.length > 2 && dropWarmupExtra(workout, library, repairs)) {
+    if (extras.length > 2 && dropWarmupExtra(workout, library, repairs, kind)) {
       guard += 1;
       continue;
     }
@@ -791,6 +834,7 @@ function efficiencyPass(
       accessory.working_sets -= 1;
       repairs.push({
         code: 'DURATION_OVER',
+        kind,
         action: `Reduced ${library.get(accessory.exercise_id)?.name || accessory.exercise_id} to ${accessory.working_sets} sets for duration`,
         day_label: workout.day_label,
         exercise_id: accessory.exercise_id,
@@ -806,6 +850,7 @@ function efficiencyPass(
       secondary.working_sets -= 1;
       repairs.push({
         code: 'DURATION_OVER',
+        kind,
         action: `Reduced ${library.get(secondary.exercise_id)?.name || secondary.exercise_id} to ${secondary.working_sets} sets for duration`,
         day_label: workout.day_label,
         exercise_id: secondary.exercise_id,
@@ -820,14 +865,16 @@ function efficiencyPass(
 function pairAccessorySuperset(
   workout: AiWorkoutPlan,
   library: Map<string, DesignerExercise>,
-  repairs: DeterministicRepair[]
+  repairs: DeterministicRepair[],
+  kind: DeterministicRepair['kind'] = 'optional',
+  protectIds: Set<string> = new Set()
 ): boolean {
   const unpaired: Array<{ ex: AiStrengthExercise; meta: DesignerExercise; blockIndex: number }> = [];
   (workout.strength || []).forEach((block, blockIndex) => {
     if (block.type !== 'straight_sets' || (block.exercises || []).length !== 1) return;
     const ex = block.exercises[0];
     const meta = library.get(ex.exercise_id);
-    if (!ex || !meta || ex.role === 'primary') return;
+    if (!ex || !meta || ex.role === 'primary' || protectIds.has(ex.exercise_id)) return;
     const accessory = ex.role === 'isolation' || ex.role === 'accessory';
     const pairableSecondary = ex.role === 'secondary' && !isHeavyCompound(meta);
     if (!accessory && !pairableSecondary) return;
@@ -852,6 +899,7 @@ function pairAccessorySuperset(
       workout.strength.splice(drop, 1);
       repairs.push({
         code: 'DURATION_OVER',
+        kind,
         action: `Superset ${firstMeta.name} with ${secondMeta.name} to save rest time`,
         day_label: workout.day_label,
         exercise_id: first.exercise_id,
@@ -914,58 +962,334 @@ function creditsForExercise(
   return creditSets(contributionsForExercise(row as CatalogExercise), sets);
 }
 
-function repairWeeklyVolume(
+function isSpecializedRequest(context: GenerationContext): boolean {
+  const hard = context.hard_requirements;
+  return Boolean(
+    hard?.upperPush ||
+      hard?.lowerPull ||
+      ((hard?.waivedMajorMuscles || []).length && (hard?.requiredMuscles || []).length) ||
+      hasWorkingStructure(hard?.workingStructure)
+  );
+}
+
+function rebalanceWeeklyVolume(
   program: AiWeekProgram,
   context: GenerationContext,
   library: Map<string, DesignerExercise>,
   catalogById: Map<string, CatalogExercise>,
   repairs: DeterministicRepair[]
 ) {
-  if (!goalUsesHypertrophyBias(context.athlete.primary_goal as any) && !(context.hard_requirements?.requiredMuscles || []).length) return;
   const workouts = program.workouts || [];
   if (!workouts.length) return;
   const identical = Boolean(context.hard_requirements?.identicalDays);
   const scope = identical ? workouts.slice(0, 1) : workouts;
   const sessions = identical ? Math.max(1, workouts.length) : 1;
   const waived = new Set(context.hard_requirements?.waivedMajorMuscles || []);
+  const required = new Set(context.hard_requirements?.requiredMuscles || []);
+  const specialized = isSpecializedRequest(context);
+  const hypertrophy = goalUsesHypertrophyBias(context.athlete.primary_goal as any);
+  const priorities = new Set(context.athlete.priority_muscles || []);
+
+  const gotOf = (muscle: string) => (weeklyCredits(scope, library, catalogById)[muscle] || 0) * sessions;
+
+  context.weekly_volume_targets.forEach((target) => {
+    if (waived.has(target.muscle as MuscleId)) return;
+    const practical = target.practical_max_sets || 0;
+    if (practical > 0 && gotOf(target.muscle) > practical) {
+      reduceMuscleSets(scope, library, catalogById, target.muscle, gotOf(target.muscle) - practical, repairs);
+    }
+  });
+
+  if (!hypertrophy && !required.size) return;
 
   context.weekly_volume_targets.forEach((target) => {
     const tier = muscleTier(target.muscle, target.priority);
-    if (tier !== 'major') return;
     if (waived.has(target.muscle as MuscleId)) return;
-    for (let step = 0; step < 4; step += 1) {
-      const credits = weeklyCredits(scope, library, catalogById);
-      const got = (credits[target.muscle] || 0) * sessions;
-      const floor = target.minimum_working_sets ?? Math.max(1, Math.round((target.target_working_sets || 0) * 0.5));
-      if (got >= floor) return;
-
+    if (specialized && !required.has(target.muscle as MuscleId) && !priorities.has(target.muscle)) return;
+    if (tier !== 'major' && !required.has(target.muscle as MuscleId) && !priorities.has(target.muscle)) return;
+    const floor = target.minimum_working_sets ?? Math.max(1, Math.round((target.target_working_sets || 0) * 0.5));
+    for (let step = 0; step < 3; step += 1) {
+      if (gotOf(target.muscle) >= floor) break;
       const existing = findExistingCreditExercise(scope, library, catalogById, target.muscle);
       const existingMeta = existing ? library.get(existing.ex.exercise_id) : null;
       const perSet = existingMeta ? creditsForExercise(existingMeta, catalogById, 1)[target.muscle] || 0 : 0;
-      if (existing && existing.ex.working_sets < 6 && perSet >= 1) {
+      if (existing && existing.ex.working_sets < 4 && perSet >= 1) {
         existing.ex.working_sets += 1;
         repairs.push({
           code: 'VOLUME_OFF',
-          action: `Added 1 set of ${existingMeta?.name || existing.ex.exercise_id} for ${target.muscle}`,
+          action: `Added 1 set of ${existingMeta?.name || existing.ex.exercise_id} for ${target.muscle} useful minimum`,
           day_label: existing.day,
           exercise_id: existing.ex.exercise_id,
+          kind: 'required',
         });
         continue;
       }
-
       const added = addLibraryIsolation(scope, context, library, catalogById, target.muscle);
-      if (!added) return;
+      if (!added) break;
       repairs.push({
         code: 'VOLUME_OFF',
-        action: `Added ${added.name} for ${target.muscle}`,
+        action: `Added ${added.name} for ${target.muscle} useful minimum`,
         day_label: added.day,
         exercise_id: added.exercise_id,
+        kind: 'required',
       });
-      const day = scope.find((w) => w.day_label === added.day);
-      if (day) trimDuration(day, context, library, repairs, new Set([added.exercise_id]));
     }
   });
-  scope.forEach((workout) => trimDuration(workout, context, library, repairs));
+}
+
+function reduceMuscleSets(
+  workouts: AiWorkoutPlan[],
+  library: Map<string, DesignerExercise>,
+  catalogById: Map<string, CatalogExercise>,
+  muscle: string,
+  overage: number,
+  repairs: DeterministicRepair[]
+) {
+  let remaining = overage;
+  const candidates = workouts.flatMap((workout) =>
+    flattenStrength(workout).map((ex) => ({ workout, ex, meta: library.get(ex.exercise_id) }))
+  ).filter((row) => {
+    if (!row.meta) return false;
+    const credit = creditsForExercise(row.meta, catalogById, 1)[muscle] || 0;
+    return credit >= 0.75 && (row.ex.role === 'isolation' || row.ex.role === 'accessory' || row.ex.working_sets > 3);
+  });
+  candidates.sort((a, b) => {
+    const roleScore = (role: string) => (role === 'isolation' ? 0 : role === 'accessory' ? 1 : 2);
+    return roleScore(a.ex.role) - roleScore(b.ex.role) || b.ex.working_sets - a.ex.working_sets;
+  });
+  for (const row of candidates) {
+    if (remaining <= 0) break;
+    if (row.ex.working_sets <= 2 && row.ex.role === 'primary') continue;
+    if (row.ex.working_sets <= 2) continue;
+    row.ex.working_sets -= 1;
+    remaining -= creditsForExercise(row.meta!, catalogById, 1)[muscle] || 1;
+    repairs.push({
+      code: 'VOLUME_OFF',
+      action: `Reduced ${row.meta?.name || row.ex.exercise_id} to ${row.ex.working_sets} sets so ${muscle} stays near its practical maximum`,
+      day_label: row.workout.day_label,
+      exercise_id: row.ex.exercise_id,
+      kind: 'optional',
+    });
+  }
+}
+
+function preserveWorkingStructure(
+  workout: AiWorkoutPlan,
+  context: GenerationContext,
+  library: Map<string, DesignerExercise>,
+  catalogById: Map<string, CatalogExercise>,
+  repairs: DeterministicRepair[]
+) {
+  const structure = context.hard_requirements?.workingStructure;
+  if (!hasWorkingStructure(structure) || !structure) return;
+  const inspect = inspectWorkingStructure(workout, structure, library);
+  if (inspect.ok) return;
+
+  const used = new Set(flattenWorking(workout).map((ex) => ex.exercise_id));
+  const pick = (test: (meta: DesignerExercise) => boolean) =>
+    context.candidate_library.find((ex) => !used.has(ex.exercise_id) && test(ex)) ||
+    Array.from(library.values()).find((ex) => !used.has(ex.exercise_id) && test(ex));
+
+  if (structure.openMuscle || structure.closeMuscle) {
+    const focus = structure.openMuscle || structure.closeMuscle || 'glutes';
+    const working = flattenWorking(workout);
+    const anchors = working.filter((ex) => isFocusAnchor(library.get(ex.exercise_id), focus));
+    if (!anchors.length) {
+      const opener = pick((ex) => isFocusAnchor(ex, focus));
+      if (opener) {
+        insertStraight(workout, 0, makeAccessory(opener, 'secondary', focus));
+        used.add(opener.exercise_id);
+        repairs.push({
+          code: 'WORKING_STRUCTURE',
+          action: `Added ${opener.name} so the working portion can start with ${focus}`,
+          day_label: workout.day_label,
+          exercise_id: opener.exercise_id,
+          kind: 'required',
+        });
+      }
+    }
+    const refreshed = flattenWorking(workout);
+    const openAnchor = refreshed.find((ex) => isFocusAnchor(library.get(ex.exercise_id), focus));
+    if (openAnchor && refreshed[0]?.exercise_id !== openAnchor.exercise_id) {
+      moveExercise(workout, openAnchor.exercise_id, 0);
+      repairs.push({
+        code: 'WORKING_STRUCTURE',
+        action: `Moved ${library.get(openAnchor.exercise_id)?.name || openAnchor.exercise_id} to open the working portion`,
+        day_label: workout.day_label,
+        exercise_id: openAnchor.exercise_id,
+        kind: 'required',
+      });
+    }
+    const afterOpen = flattenWorking(workout);
+    const closeAnchors = afterOpen.filter(
+      (ex) => isFocusAnchor(library.get(ex.exercise_id), focus) && ex.exercise_id !== afterOpen[0]?.exercise_id
+    );
+    const last = afterOpen[afterOpen.length - 1];
+    if (closeAnchors.length && last && last.exercise_id !== closeAnchors[closeAnchors.length - 1].exercise_id) {
+      const closer = closeAnchors[closeAnchors.length - 1];
+      moveExercise(workout, closer.exercise_id, -1);
+      repairs.push({
+        code: 'WORKING_STRUCTURE',
+        action: `Moved ${library.get(closer.exercise_id)?.name || closer.exercise_id} to finish the working portion`,
+        day_label: workout.day_label,
+        exercise_id: closer.exercise_id,
+        kind: 'required',
+      });
+    } else if (structure.closeMuscle && !closeAnchors.length) {
+      const finisher = pick((ex) => isFocusAnchor(ex, focus));
+      if (finisher) {
+        insertStraight(workout, -1, makeAccessory(finisher, 'accessory', focus));
+        used.add(finisher.exercise_id);
+        repairs.push({
+          code: 'WORKING_STRUCTURE',
+          action: `Added ${finisher.name} so the working portion can end with ${focus}`,
+          day_label: workout.day_label,
+          exercise_id: finisher.exercise_id,
+          kind: 'required',
+        });
+      }
+    }
+  }
+
+  if (structure.middlePushPullSuperset) {
+    const hasPair = (workout.strength || []).some((block) => {
+      if (block.type === 'straight_sets' || (block.exercises || []).length < 2) return false;
+      const metas = block.exercises.map((ex) => library.get(ex.exercise_id));
+      return metas.some((meta) => meta && isPushPattern(meta.movement_pattern)) &&
+        metas.some((meta) => meta && isPullPattern(meta.movement_pattern));
+    });
+    if (!hasPair) {
+      const working = flattenWorking(workout);
+      const middle = working.slice(1, Math.max(1, working.length - 1));
+      const push = middle.find((ex) => isPushPattern(library.get(ex.exercise_id)?.movement_pattern || ''));
+      const pull = middle.find((ex) => isPullPattern(library.get(ex.exercise_id)?.movement_pattern || '') && ex.exercise_id !== push?.exercise_id);
+      if (push && pull) {
+        pairNamedSuperset(workout, push.exercise_id, pull.exercise_id);
+        repairs.push({
+          code: 'WORKING_STRUCTURE',
+          action: `Paired ${library.get(push.exercise_id)?.name} with ${library.get(pull.exercise_id)?.name} as the requested push/pull superset`,
+          day_label: workout.day_label,
+          exercise_id: push.exercise_id,
+          kind: 'required',
+        });
+      } else {
+        const addPush = push ? null : pick((ex) => isPushPattern(ex.movement_pattern) && !isHeavyCompound(ex)) || pick((ex) => isPushPattern(ex.movement_pattern));
+        const addPull = pull ? null : pick((ex) => isPullPattern(ex.movement_pattern) && !isHeavyCompound(ex)) || pick((ex) => isPullPattern(ex.movement_pattern));
+        const first = push || (addPush ? makeAccessory(addPush, 'secondary', 'chest') : null);
+        const second = pull || (addPull ? makeAccessory(addPull, 'secondary', 'lats') : null);
+        if (first && second) {
+          const insertAt = Math.min(Math.max(1, (workout.strength || []).length - 1), (workout.strength || []).length);
+          workout.strength.splice(insertAt, 0, { type: 'superset', exercises: [first, second] });
+          if (addPush) used.add(addPush.exercise_id);
+          if (addPull) used.add(addPull.exercise_id);
+          repairs.push({
+            code: 'WORKING_STRUCTURE',
+            action: `Inserted a push/pull superset (${library.get(first.exercise_id)?.name} + ${library.get(second.exercise_id)?.name})`,
+            day_label: workout.day_label,
+            exercise_id: first.exercise_id,
+            kind: 'required',
+          });
+        } else {
+          repairs.push({
+            code: 'WORKING_STRUCTURE',
+            action: 'Could not form the requested push/pull superset without dropping a required lift',
+            day_label: workout.day_label,
+            kind: 'required',
+          });
+        }
+      }
+    }
+  }
+
+  if (structure.middleCore) {
+    const working = flattenWorking(workout);
+    const middle = working.slice(1, Math.max(1, working.length - 1));
+    const core = middle.find((ex) => isCoreExercise(library.get(ex.exercise_id))) ||
+      working.find((ex) => isCoreExercise(library.get(ex.exercise_id)));
+    if (core && (working[0]?.exercise_id === core.exercise_id || working[working.length - 1]?.exercise_id === core.exercise_id)) {
+      moveExercise(workout, core.exercise_id, Math.min(2, Math.max(1, (workout.strength || []).length - 2)));
+      repairs.push({
+        code: 'WORKING_STRUCTURE',
+        action: `Moved ${library.get(core.exercise_id)?.name || core.exercise_id} into the middle of the working portion`,
+        day_label: workout.day_label,
+        exercise_id: core.exercise_id,
+        kind: 'required',
+      });
+    } else if (!core) {
+      const added = pick((ex) => isCoreExercise(ex));
+      if (added) {
+        insertStraight(workout, Math.min(2, Math.max(1, (workout.strength || []).length - 1)), makeAccessory(added, 'accessory', 'abs'));
+        repairs.push({
+          code: 'WORKING_STRUCTURE',
+          action: `Added ${added.name} as the requested middle core exercise`,
+          day_label: workout.day_label,
+          exercise_id: added.exercise_id,
+          kind: 'required',
+        });
+      }
+    }
+  }
+
+  void catalogById;
+}
+
+function makeAccessory(ex: DesignerExercise, role: StrengthRole, muscle: string): AiStrengthExercise {
+  return {
+    exercise_id: ex.exercise_id,
+    role,
+    working_sets: role === 'primary' ? 3 : 2,
+    rep_min: ex.default_rep_min || 8,
+    rep_max: ex.default_rep_max || 12,
+    target_rir: 2,
+    rest_seconds: role === 'isolation' || role === 'accessory' ? 60 : 90,
+    reps_per_side: ex.laterality === 'unilateral',
+    measurement_type: ex.measurement_type,
+    ramp_sets: [],
+    why: `${role} ${ex.movement_pattern} for ${muscle}`,
+  };
+}
+
+function insertStraight(workout: AiWorkoutPlan, index: number, exercise: AiStrengthExercise) {
+  const block = { type: 'straight_sets' as const, exercises: [exercise] };
+  if (index < 0 || index >= (workout.strength || []).length) {
+    workout.strength.push(block);
+    return;
+  }
+  workout.strength.splice(index, 0, block);
+}
+
+function moveExercise(workout: AiWorkoutPlan, exerciseId: string, index: number) {
+  let found: AiStrengthExercise | null = null;
+  workout.strength = (workout.strength || [])
+    .map((block) => {
+      const hit = block.exercises.find((ex) => ex.exercise_id === exerciseId);
+      if (hit && block.exercises.length === 1) {
+        found = hit;
+        return { ...block, exercises: [] };
+      }
+      if (hit) {
+        found = hit;
+        return { ...block, exercises: block.exercises.filter((ex) => ex.exercise_id !== exerciseId) };
+      }
+      return block;
+    })
+    .filter((block) => block.exercises.length);
+  if (!found) return;
+  insertStraight(workout, index < 0 ? workout.strength.length : index, found);
+}
+
+function pairNamedSuperset(workout: AiWorkoutPlan, firstId: string, secondId: string) {
+  const first = flattenWorking(workout).find((ex) => ex.exercise_id === firstId);
+  const second = flattenWorking(workout).find((ex) => ex.exercise_id === secondId);
+  if (!first || !second) return;
+  workout.strength = (workout.strength || [])
+    .map((block) => ({
+      ...block,
+      exercises: block.exercises.filter((ex) => ex.exercise_id !== firstId && ex.exercise_id !== secondId),
+    }))
+    .filter((block) => block.exercises.length);
+  const insertAt = Math.min(Math.max(1, workout.strength.length - 1), workout.strength.length);
+  workout.strength.splice(insertAt, 0, { type: 'superset', exercises: [first, second] });
 }
 
 function findExistingCreditExercise(
@@ -978,8 +1302,9 @@ function findExistingCreditExercise(
     for (const ex of flattenStrength(workout)) {
       const meta = library.get(ex.exercise_id);
       if (!meta) continue;
+      if (!isWorkingVolumeCandidate(meta)) continue;
       const credits = creditsForExercise(meta, catalogById, 1);
-      if ((credits[muscle] || 0) > 0 && ex.working_sets < 6) {
+      if ((credits[muscle] || 0) >= 1 && ex.working_sets < 6) {
         return { day: workout.day_label, ex };
       }
     }
@@ -997,8 +1322,8 @@ function addLibraryIsolation(
   const used = new Set(workouts.flatMap((w) => flattenStrength(w).map((ex) => ex.exercise_id)));
   const unused = Array.from(library.values()).filter((ex) => {
     if (used.has(ex.exercise_id)) return false;
-    if (ex.warmup_eligible && !ex.program_roles.some((r) => r !== 'warmup' && r !== 'power')) return false;
-    return (creditsForExercise(ex, catalogById, 1)[muscle] || 0) > 0;
+    if (!isWorkingVolumeCandidate(ex)) return false;
+    return (creditsForExercise(ex, catalogById, 1)[muscle] || 0) >= 1;
   });
   const candidate =
     unused.find((ex) => (creditsForExercise(ex, catalogById, 1)[muscle] || 0) >= 1) ||
@@ -1007,8 +1332,8 @@ function addLibraryIsolation(
   const targetDay = workouts.slice().sort((a, b) => flattenStrength(a).length - flattenStrength(b).length)[0];
   if (!targetDay) return null;
   const role: StrengthRole = candidate.exercise_kind === 'isolation' ? 'isolation' : 'accessory';
-  targetDay.strength.push({
-    type: 'straight_sets',
+  const block = {
+    type: 'straight_sets' as const,
     exercises: [
       {
         exercise_id: candidate.exercise_id,
@@ -1024,6 +1349,22 @@ function addLibraryIsolation(
         why: `${role} ${candidate.movement_pattern} for ${muscle}`,
       },
     ],
-  });
+  };
+  const closeProtected = Boolean(context.hard_requirements?.workingStructure?.closeMuscle);
+  const insertAt = closeProtected ? Math.max(1, (targetDay.strength || []).length - 1) : (targetDay.strength || []).length;
+  targetDay.strength.splice(insertAt, 0, block);
   return { name: candidate.name, day: targetDay.day_label, exercise_id: candidate.exercise_id };
+}
+
+function isWorkingVolumeCandidate(ex: DesignerExercise): boolean {
+  if (isCooldownEligible(ex)) return false;
+  if (/stretch|pose|mobility|foam roll|rotation|mobilization|wall slide|inchworm|thoracic|90\/90|world.?s greatest|child/i.test(ex.name)) {
+    return false;
+  }
+  if (ex.warmup_eligible) return false;
+  if (ex.cooldown_eligible && !ex.program_roles.some((role) => ['primary', 'secondary', 'isolation', 'accessory'].includes(role))) {
+    return false;
+  }
+  return ex.exercise_kind === 'compound' || ex.exercise_kind === 'isolation' ||
+    ex.program_roles.some((role) => ['primary', 'secondary', 'isolation', 'accessory'].includes(role));
 }

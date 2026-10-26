@@ -199,6 +199,8 @@ export async function runPhase1GenerationChecks() {
   assert(mon!.estimatedMinutes > 45 && mon!.estimatedMinutes < 75, `Deterministic Monday duration should be realistic, got ${mon!.estimatedMinutes}`);
   const sixty = sessionDurationTolerance(60);
   assert(sixty.warnDelta === 0 && sixty.errorDelta === 9, `60-minute bands should warn above 60 and error at 70+, got ${sixty.warnDelta}/${sixty.errorDelta}`);
+  const fortyFive = sessionDurationTolerance(45);
+  assert(fortyFive.warnDelta === 0 && fortyFive.errorDelta === 8, `45-minute bands should warn above 45 and error at 54+, got ${fortyFive.warnDelta}/${fortyFive.errorDelta}`);
   assert(classifySessionDuration(60, 60).over === 'ok', '60 vs 60 should be on target');
   assert(classifySessionDuration(61, 60).over === 'warning', '61 vs 60 should be a repairable warning');
   assert(classifySessionDuration(69, 60).over === 'warning', '69 vs 60 should stay a warning');

@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 115 - Coordinated repair and science-seed preflight
+
+Date: 2026-10-26
+Status: Accepted
+Category: Training / Program generation
+
+### Decision
+
+Feasibility is the only preflight that can block a generation request. An imperfect science template, including a session that estimates over the requested clock, does not prevent the model from designing a week. Deterministic repair evaluates the week together: safety and eligibility, required rest, useful-minimum volume, requested working-portion structure, then duration toward the requested minutes. Advisory duration overrun is not treated as the planned length. Optional quality trims are recorded but keep the `ai` outcome. Required repairs keep `ai_repaired`. Preferred weekly set targets stay preferred, not universal requirements. Explicit start/end muscle order and a middle push/pull superset apply to the working portion only. A user-requested antagonist push/pull pair stays a structured superset; it is an advisory note, not a hard heavy-pair error. Open/close anchors must be the requested muscle, not an incidental secondary credit such as a squat counting as glute work. Requested structure never accepts a week that still has safety, equipment, eligibility, schema, or other error-severity programming failures. `final_ok` is true only when no error-severity issues remain. Advisory duration and volume notes stay `warning` or `info`. Generation-run diagnostics store the original AI week, required vs optional repairs, remaining errors, and remaining warnings.
+
+### Reason
+
+Stage 2C live verification never called the model for a feasible 3x45 glute-priority request because the science seed was 57 minutes. Sequential rest-then-volume-then-duration repairs also left 50-minute athletic sessions and lopsided weekly volume, and a valid 60-minute week was marked repaired after optional warmup trims.
+
+### Alternatives Considered
+
+Suppress duration errors on the science seed. Replace the AI week with a rigid template. Treat the advisory tolerance as the target length. Add a fourth outcome category.
+
+### Impact
+
+Science engine version is `1.4.15`. Designer prompt version is `designer@2.8`. The model, output-token cap, catalog, and Program Design UI are unchanged.
+
+---
+
 ## Decision 114 - Hypertrophy does not need a power primer
 
 Date: 2026-10-25

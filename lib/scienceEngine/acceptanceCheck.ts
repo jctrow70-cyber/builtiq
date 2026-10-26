@@ -7,17 +7,19 @@ import { assertIntakeScheduleExamples } from '../programDesign/intakePreferences
 import { trainingProfileFromSources } from './profile';
 import { generateProgram } from './generateProgram';
 import { applyAiWeekDesign } from './applyAiDesign';
-import { adaptCatalog } from './catalogAdapter';
+import { adaptCatalog, FALLBACK_CATALOG } from './catalogAdapter';
 import { buildProgramDesignerPrompt } from './programDesigner';
 import { findByName } from './exerciseSelection';
 import { summarizeRecentLogs } from './recentTraining';
 import { evaluateProgression } from './progression';
 import { validateProgram } from './validator';
+import { classifySessionDuration } from './duration';
 import { runInstructionAdherenceChecks } from './generation/instructionAdherenceCheck';
 import { runGenerationCriteriaChecks } from '../programDesign/generationCriteriaCheck';
 import { runFailureStageChecks } from './generation/failureStageCheck';
 import { runStage2bChecks } from './generation/stage2bCheck';
 import { runStage2cChecks } from './generation/stage2cCheck';
+import { runStage2dChecks } from './generation/stage2dCheck';
 import { runQualityCorrectionChecks } from './generation/qualityCorrectionCheck';
 import { runPhase1GenerationChecks } from './generation/phase1Check';
 import { runGenerationCatalogPolicyChecks } from './generation/catalogEligibilityCheck';
@@ -26,7 +28,7 @@ import { runPhase2a1FoundationChecks } from './adaptation/phase2a1Check';
 import { runPhase2a2DecisionChecks } from './adaptation/phase2a2Check';
 import { runPhase2a3ApplyChecks } from './adaptation/apply/phase2a3Check';
 import { runPhase2b1OrchestrationChecks } from './adaptation/phase2b1Check';
-import type { TrainingProfile } from './types';
+import type { CatalogExercise, TrainingProfile } from './types';
 
 function assert(cond: unknown, message: string) {
   if (!cond) throw new Error(message);
@@ -403,6 +405,57 @@ async function run() {
   const daySignatures = gluteWeek.map((w) => w.exercises.slice(0, 3).map((e) => e.name).join('|'));
   assert(new Set(daySignatures).size >= 2, `Glute-focus days should not clone the same first three lifts: ${daySignatures.join(' / ')}`);
 
+  // Mary: 45-minute full body + glute priority must not hard-fail duration. Hypertrophy omits primers.
+  const mary45 = trainingProfileFromSources({
+    profile: { experience_level: 'intermediate', primary_goal: 'hypertrophy' },
+    config: {
+      days: ['Mon', 'Wed', 'Fri'],
+      dayTypes: { Mon: 'Full Body', Wed: 'Full Body', Fri: 'Full Body' },
+      focusMuscles: ['Glutes'],
+      weeks: 4,
+      sessionMinutes: 45,
+      varietyPreference: 'balanced',
+      supersetPreference: 'sometimes',
+      intakeNotes:
+        'Set up the workouts to start and end with glute exercises. In the middle do a push/ pull superset and a core exercise\nPrioritize: Glutes. 45-minute sessions. Split: Full Body.',
+    },
+  });
+  const maryProgram = generateProgram(mary45);
+  const maryCheck = validateProgram(maryProgram, mary45);
+  assert(
+    maryCheck.ok,
+    `45-minute glute full-body should validate, got: ${maryCheck.issues
+      .filter((i) => i.severity === 'error')
+      .map((i) => i.message)
+      .join('; ')}`
+  );
+  maryProgram.workouts
+    .filter((w) => w.week === 1 && w.workoutType === 'Full Body')
+    .forEach((w) => {
+      assert(
+        w.potentiation.length === 0,
+        `${w.name} hypertrophy fallback should omit a Power Primer, got ${w.potentiation.map((item) => item.name).join(', ')}`
+      );
+      assert(
+        classifySessionDuration(w.estimatedMinutes, 45).over !== 'error',
+        `${w.name} is ${w.estimatedMinutes} min vs 45`
+      );
+    });
+  const masterishPrimers: CatalogExercise[] = FALLBACK_CATALOG.map((ex) => {
+    if (/^vertical jump$/i.test(ex.name)) return { ...ex, name: 'Box Jump' };
+    if (/^medicine-ball chest pass$/i.test(ex.name)) return { ...ex, name: 'Medicine Ball Chest Pass' };
+    return ex;
+  });
+  const maryMasterish = generateProgram(mary45, masterishPrimers);
+  const maryMasterishCheck = validateProgram(maryMasterish, mary45);
+  assert(
+    maryMasterishCheck.ok,
+    `45-minute glute full-body should stay valid with master-named catalog rows: ${maryMasterishCheck.issues
+      .filter((i) => i.severity === 'error')
+      .map((i) => i.message)
+      .join('; ')}`
+  );
+
   const chestNotePlan = trainingProfileFromSources({
     profile: { experience_level: 'intermediate', primary_goal: 'hypertrophy' },
     config: {
@@ -555,6 +608,7 @@ async function run() {
   await runFailureStageChecks();
   await runStage2bChecks();
   await runStage2cChecks();
+  await runStage2dChecks();
   await runQualityCorrectionChecks();
   await runPhase1GenerationChecks();
   await runInstructionAdherenceChecks();

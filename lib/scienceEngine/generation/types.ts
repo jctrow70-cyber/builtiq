@@ -205,6 +205,8 @@ export type DeterministicRepair = {
   action: string;
   day_label?: string;
   exercise_id?: string;
+  /** Required repairs change the outcome to ai_repaired. Optional quality trims stay on ai. */
+  kind?: 'required' | 'optional';
 };
 
 export type ValidationIssue = {
@@ -248,4 +250,6 @@ export type GenerationRun = {
   /** Set when the parsed week failed programming rules before repair. */
   initialFailureStage: GenerationOutcome | null;
   rawOutput: unknown;
+  /** Model week before deterministic repair, when a program was parsed. */
+  rawAiProgram?: AiWeekProgram | null;
 };

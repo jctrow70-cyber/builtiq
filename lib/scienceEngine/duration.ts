@@ -43,12 +43,24 @@ export function minStrengthMoves(minutes: number): number {
  */
 export function sessionDurationTolerance(requestedMinutes: number): { warnDelta: number; errorDelta: number } {
   const minutes = Math.max(1, Number(requestedMinutes) || 60);
-  if (minutes === 60) {
-    return { warnDelta: 0, errorDelta: 9 };
-  }
   return {
-    warnDelta: Math.max(5, Math.round(minutes * 0.1)),
-    errorDelta: Math.max(8, Math.round(minutes * 0.15)),
+    warnDelta: 0,
+    errorDelta: minutes === 60 ? 9 : Math.max(8, Math.round(minutes * 0.15)),
+  };
+}
+
+/** Requested clock, advisory overrun (warning), and hard feasibility cap (error). */
+export function durationBands(requestedMinutes: number): {
+  requested: number;
+  advisoryLimit: number;
+  hardLimit: number;
+} {
+  const requested = Math.max(1, Number(requestedMinutes) || 60);
+  const { warnDelta, errorDelta } = sessionDurationTolerance(requested);
+  return {
+    requested,
+    advisoryLimit: requested + warnDelta,
+    hardLimit: requested + errorDelta,
   };
 }
 
@@ -221,7 +233,14 @@ export function trimForDuration(workout: ScienceWorkout, profile: TrainingProfil
   const limit = profile.preferredSessionMinutes || 60;
   const { errorDelta } = sessionDurationTolerance(limit);
   const minMoves = minStrengthMoves(limit);
-  let next = { ...workout, exercises: workout.exercises.slice() };
+  const hardCap = limit + errorDelta;
+  let next = {
+    ...workout,
+    exercises: workout.exercises.slice(),
+    warmup: workout.warmup.slice(),
+    potentiation: workout.potentiation.slice(),
+    cooldown: (workout.cooldown || []).slice(),
+  };
   const refresh = () => {
     next.estimatedMinutes = estimateWorkoutMinutes({
       warmupItems: next.warmup,
@@ -233,16 +252,17 @@ export function trimForDuration(workout: ScienceWorkout, profile: TrainingProfil
   };
   refresh();
 
+  const warmupFloor =
+    profile.warmupDuration === 'extended' || profile.warmupStyle === 'athletic' || profile.warmupStyle === 'mobility_focused'
+      ? 3
+      : 1;
+
   while (next.estimatedMinutes > limit) {
     if (next.potentiation.length && !shouldGeneratePowerPrimer(primerPolicyFromProfile(profile))) {
       next.potentiation = next.potentiation.slice(0, -1);
       refresh();
       continue;
     }
-    const warmupFloor =
-      profile.warmupDuration === 'extended' || profile.warmupStyle === 'athletic' || profile.warmupStyle === 'mobility_focused'
-        ? 3
-        : 1;
     if (next.warmup.length > warmupFloor) {
       next.warmup = next.warmup.slice(0, -1);
       refresh();
@@ -251,14 +271,75 @@ export function trimForDuration(workout: ScienceWorkout, profile: TrainingProfil
     break;
   }
 
-  while (next.estimatedMinutes > limit + errorDelta && next.exercises.length > minMoves) {
-    const idx = next.exercises
+  let guard = 0;
+  while (next.estimatedMinutes > hardCap && guard < 24) {
+    guard += 1;
+    const softIdx = next.exercises
       .map((ex, i) => ({ ex, i }))
       .reverse()
-      .find((row) => (row.ex.role === 'isolation' || row.ex.role === 'accessory') && !keepsExplicitQuota(profile, next.exercises, row.ex))?.i;
-    if (idx == null) break;
-    next.exercises.splice(idx, 1);
-    refresh();
+      .find((row) => (row.ex.role === 'isolation' || row.ex.role === 'accessory') && !keepsPriorityOrQuota(profile, next.exercises, row.ex))?.i;
+    if (softIdx != null && next.exercises.length > minMoves) {
+      next.exercises.splice(softIdx, 1);
+      refresh();
+      continue;
+    }
+
+    // 2. Cut extra primer volume / extras before touching strength.
+    if (next.potentiation.some((ex) => ex.sets > 2)) {
+      next.potentiation = next.potentiation.map((ex) => (ex.sets > 2 ? { ...ex, sets: 2 } : ex));
+      refresh();
+      continue;
+    }
+    if (next.potentiation.length > 1) {
+      next.potentiation = next.potentiation.slice(0, 1);
+      refresh();
+      continue;
+    }
+
+    // 3. Trim an oversized warm-up list on short sessions.
+    const warmupMax = profile.hardRequirements?.warmupMax ?? (limit <= 45 ? 3 : 4);
+    if (next.warmup.length > Math.max(2, Math.min(warmupMax, limit <= 45 ? 2 : warmupMax))) {
+      next.warmup = next.warmup.slice(0, Math.max(2, limit <= 45 ? 2 : warmupMax - 1));
+      refresh();
+      continue;
+    }
+
+    // 4. Reduce sets on trailing secondary / non-opener primary work (keep ≥2).
+    const setCut = next.exercises
+      .map((ex, i) => ({ ex, i }))
+      .reverse()
+      .find((row) => row.i > 0 && row.ex.sets > 2 && (row.ex.role === 'secondary' || row.ex.role === 'primary'));
+    if (setCut) {
+      next.exercises[setCut.i] = { ...setCut.ex, sets: setCut.ex.sets - 1 };
+      refresh();
+      continue;
+    }
+
+    // 5. Drop a secondary that is not protecting a priority/quota muscle.
+    const secondaryIdx = next.exercises
+      .map((ex, i) => ({ ex, i }))
+      .reverse()
+      .find((row) => row.ex.role === 'secondary' && !keepsPriorityOrQuota(profile, next.exercises, row.ex))?.i;
+    if (secondaryIdx != null && next.exercises.length > minMoves) {
+      next.exercises.splice(secondaryIdx, 1);
+      refresh();
+      continue;
+    }
+
+    // 6. Last resort on short sessions: drop a trailing primary that is not the sole priority hit.
+    if (limit <= 45 && next.exercises.length > minMoves) {
+      const dropIdx = next.exercises
+        .map((ex, i) => ({ ex, i }))
+        .reverse()
+        .find((row) => row.i > 0 && row.ex.role === 'primary' && !keepsPriorityOrQuota(profile, next.exercises, row.ex))?.i;
+      if (dropIdx != null) {
+        next.exercises.splice(dropIdx, 1);
+        refresh();
+        continue;
+      }
+    }
+
+    break;
   }
   return next;
 }
@@ -282,5 +363,19 @@ function keepsExplicitQuota(profile: TrainingProfile, exercises: ExercisePrescri
     if (need < 1 || !countsTowardQuota(exercise, muscle)) return false;
     const dedicated = exercises.filter((row) => countsTowardQuota(row, muscle)).length;
     return dedicated <= need;
+  });
+}
+
+/** Protect note quotas and the last dedicated lift for a priority muscle. */
+function keepsPriorityOrQuota(
+  profile: TrainingProfile,
+  exercises: ExercisePrescription[],
+  exercise: ExercisePrescription
+): boolean {
+  if (keepsExplicitQuota(profile, exercises, exercise)) return true;
+  return (profile.priorityMuscles || []).some((muscle) => {
+    if (!countsTowardQuota(exercise, muscle)) return false;
+    const dedicated = exercises.filter((row) => countsTowardQuota(row, muscle)).length;
+    return dedicated <= 1;
   });
 }
