@@ -1,0 +1,1006 @@
+{
+  "generated_at": "2026-10-26T22:41:55.565Z",
+  "science_version": "1.4.14",
+  "model": "gpt-5.4",
+  "env_loaded": true,
+  "has_openai_key": true,
+  "live": false,
+  "limitation": "Live AI did not complete for C.",
+  "catalog_source": "st_exercise_catalog",
+  "cases": [
+    {
+      "id": "A",
+      "request": {
+        "goal": "hypertrophy",
+        "days": [
+          "Mon",
+          "Wed",
+          "Fri"
+        ],
+        "minutes": 60,
+        "notes": "Intermediate. Build muscle / hypertrophy. 3 days Monday Wednesday Friday. 60 minutes. Hybrid / full body. Chest priority. Balanced variety. Supersets: let BuildIQ decide.",
+        "hard_requirements": {
+          "identicalDays": false,
+          "upperPush": false,
+          "lowerPull": false,
+          "requiredMuscles": [],
+          "waivedMajorMuscles": [],
+          "extendedWarmup": false,
+          "warmupMin": 1,
+          "warmupMax": 3
+        }
+      },
+      "wall_ms": 36103,
+      "label": "A",
+      "method": "ai_repaired",
+      "outcome": "ai_repaired",
+      "model": "gpt-5.4-2026-03-05",
+      "science_version": "1.4.14",
+      "prompt_version": "designer@2.7",
+      "openai_calls": 1,
+      "ai_error": null,
+      "initial_ok": true,
+      "initial_errors": [],
+      "initial_warnings": [
+        {
+          "code": "REST_TOO_SHORT",
+          "severity": "warning",
+          "message": "Incline Press rests 75s; secondary compound work usually needs 90-150s.",
+          "day_label": "Mon",
+          "exercise_id": "581ba89b-76c0-4929-a143-2aac2cf14192"
+        },
+        {
+          "code": "REST_TOO_SHORT",
+          "severity": "warning",
+          "message": "Cable Crunch rests 75s; accessory compound work usually needs 90-150s.",
+          "day_label": "Mon",
+          "exercise_id": "6a353aff-0fa7-4255-871e-dcc14b6b6bb5"
+        },
+        {
+          "code": "DURATION_OVER",
+          "severity": "warning",
+          "message": "A — Chest + Squat Foundation is estimated at 62 min vs 60",
+          "day_label": "Mon"
+        },
+        {
+          "code": "REST_TOO_SHORT",
+          "severity": "warning",
+          "message": "Assisted Pull-Up rests 120s; primary compound work usually needs 150-210s.",
+          "day_label": "Wed",
+          "exercise_id": "e9e34e71-ad77-4fdb-8d86-1179cd5ecc05"
+        },
+        {
+          "code": "REST_TOO_SHORT",
+          "severity": "warning",
+          "message": "Bulgarian Split Squat rests 90s; secondary compound work usually needs 120-180s.",
+          "day_label": "Wed",
+          "exercise_id": "26781050-0c19-43f3-b026-d26fa79c5630"
+        },
+        {
+          "code": "DURATION_OVER",
+          "severity": "warning",
+          "message": "B — Hinge + Vertical Pull is estimated at 65 min vs 60",
+          "day_label": "Wed"
+        },
+        {
+          "code": "REST_TOO_SHORT",
+          "severity": "warning",
+          "message": "Dip rests 105s; primary compound work usually needs 120-180s.",
+          "day_label": "Fri",
+          "exercise_id": "9479211f-b4d7-47bd-b69f-5da631d061bd"
+        },
+        {
+          "code": "REST_TOO_SHORT",
+          "severity": "warning",
+          "message": "Hip Thrust rests 105s; secondary compound work usually needs 120-180s.",
+          "day_label": "Fri",
+          "exercise_id": "f036f8c8-1819-49ae-875c-a91a2c8dc6c2"
+        },
+        {
+          "code": "DURATION_OVER",
+          "severity": "warning",
+          "message": "C — Quad + Chest Finish is estimated at 62 min vs 60",
+          "day_label": "Fri"
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "warning",
+          "message": "chest working sets (17) vs preferred 11."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "warning",
+          "message": "upper_back working sets (5) vs preferred 10."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "info",
+          "message": "lats planned 7.5 vs target 10."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "info",
+          "message": "front_delts planned 11.5 vs target 6."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "warning",
+          "message": "Secondary hypertrophy muscle side_delts has no direct/meaningful stimulus."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "warning",
+          "message": "rear_delts working sets (1.5) are well below the 6 target."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "info",
+          "message": "Optional forearms has no direct work; indirect stimulus may be enough."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "info",
+          "message": "Optional calves has no direct work; indirect stimulus may be enough."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "info",
+          "message": "Optional hip_flexors has no direct work; indirect stimulus may be enough."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "info",
+          "message": "Optional obliques has no direct work; indirect stimulus may be enough."
+        }
+      ],
+      "final_ok": true,
+      "final_issues": [
+        {
+          "code": "REST_TOO_SHORT",
+          "severity": "warning",
+          "message": "Incline Press rests 75s; secondary compound work usually needs 90-150s.",
+          "day_label": "Mon",
+          "exercise_id": "581ba89b-76c0-4929-a143-2aac2cf14192"
+        },
+        {
+          "code": "REST_TOO_SHORT",
+          "severity": "warning",
+          "message": "Cable Crunch rests 75s; accessory compound work usually needs 90-150s.",
+          "day_label": "Mon",
+          "exercise_id": "6a353aff-0fa7-4255-871e-dcc14b6b6bb5"
+        },
+        {
+          "code": "REST_TOO_SHORT",
+          "severity": "warning",
+          "message": "Assisted Pull-Up rests 120s; primary compound work usually needs 150-210s.",
+          "day_label": "Wed",
+          "exercise_id": "e9e34e71-ad77-4fdb-8d86-1179cd5ecc05"
+        },
+        {
+          "code": "REST_TOO_SHORT",
+          "severity": "warning",
+          "message": "Bulgarian Split Squat rests 90s; secondary compound work usually needs 120-180s.",
+          "day_label": "Wed",
+          "exercise_id": "26781050-0c19-43f3-b026-d26fa79c5630"
+        },
+        {
+          "code": "REST_TOO_SHORT",
+          "severity": "warning",
+          "message": "Dip rests 105s; primary compound work usually needs 120-180s.",
+          "day_label": "Fri",
+          "exercise_id": "9479211f-b4d7-47bd-b69f-5da631d061bd"
+        },
+        {
+          "code": "REST_TOO_SHORT",
+          "severity": "warning",
+          "message": "Hip Thrust rests 105s; secondary compound work usually needs 120-180s.",
+          "day_label": "Fri",
+          "exercise_id": "f036f8c8-1819-49ae-875c-a91a2c8dc6c2"
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "info",
+          "message": "chest is slightly above the practical maximum (15 vs 13)."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "warning",
+          "message": "upper_back working sets (5) vs preferred 10."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "info",
+          "message": "lats planned 7.5 vs target 10."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "warning",
+          "message": "Secondary hypertrophy muscle side_delts has no direct/meaningful stimulus."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "warning",
+          "message": "rear_delts working sets (1.5) are well below the 6 target."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "info",
+          "message": "Optional forearms has no direct work; indirect stimulus may be enough."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "info",
+          "message": "Optional calves has no direct work; indirect stimulus may be enough."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "info",
+          "message": "Optional hip_flexors has no direct work; indirect stimulus may be enough."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "info",
+          "message": "Optional obliques has no direct work; indirect stimulus may be enough."
+        }
+      ],
+      "repairs": [
+        {
+          "code": "DURATION_OVER",
+          "action": "Removed extra warmup Knee-to-Wall Ankle Mobilization to fit the session",
+          "day_label": "Mon",
+          "exercise_id": "92a1cb43-2d26-4f61-ab2f-f92d032ec660"
+        },
+        {
+          "code": "DURATION_OVER",
+          "action": "Removed extra warmup Scapular Pull-Up to fit the session",
+          "day_label": "Wed",
+          "exercise_id": "aa95b5b4-26ee-4511-849f-5bfe20987760"
+        },
+        {
+          "code": "DURATION_OVER",
+          "action": "Removed Chest Fly to fit the session",
+          "day_label": "Wed",
+          "exercise_id": "ba21683d-7309-45e5-ab52-14aca596f776"
+        },
+        {
+          "code": "DURATION_OVER",
+          "action": "Removed extra warmup Band Pull-Apart to fit the session",
+          "day_label": "Fri",
+          "exercise_id": "11b1ea29-fd8c-4002-9d21-50c8ec0802c8"
+        }
+      ],
+      "days": [
+        {
+          "day": "Mon",
+          "name": "A — Chest + Squat Foundation",
+          "estimated_minutes": 60,
+          "science_estimated_minutes": 60,
+          "duration_class": {
+            "over": "ok",
+            "under": "ok"
+          },
+          "working_count": 6,
+          "working": [
+            {
+              "name": "Bench Press",
+              "role": "primary",
+              "sets": 4,
+              "reps": "6-8",
+              "rest": 120,
+              "pattern": "horizontal_push",
+              "superset": null,
+              "warmup_sets": 3
+            },
+            {
+              "name": "Back Squat",
+              "role": "primary",
+              "sets": 3,
+              "reps": "6-8",
+              "rest": 150,
+              "pattern": "squat",
+              "superset": null,
+              "warmup_sets": 1
+            },
+            {
+              "name": "Chest-Supported Row",
+              "role": "secondary",
+              "sets": 3,
+              "reps": "8-10",
+              "rest": 90,
+              "pattern": "horizontal_pull",
+              "superset": null,
+              "warmup_sets": 0
+            },
+            {
+              "name": "Romanian Deadlift",
+              "role": "secondary",
+              "sets": 3,
+              "reps": "8-10",
+              "rest": 120,
+              "pattern": "hinge",
+              "superset": null,
+              "warmup_sets": 0
+            },
+            {
+              "name": "Incline Press",
+              "role": "secondary",
+              "sets": 3,
+              "reps": "8-10",
+              "rest": 75,
+              "pattern": "horizontal_push",
+              "superset": "ai-Mon-1",
+              "warmup_sets": 0
+            },
+            {
+              "name": "Cable Crunch",
+              "role": "accessory",
+              "sets": 3,
+              "reps": "10-15",
+              "rest": 75,
+              "pattern": "core_flexion",
+              "superset": "ai-Mon-1",
+              "warmup_sets": 0
+            }
+          ],
+          "warmup": [
+            "Scapular Push-Up"
+          ],
+          "primer": [],
+          "cooldown": [
+            "Doorway Pec Stretch",
+            "Quad Stretch"
+          ]
+        },
+        {
+          "day": "Wed",
+          "name": "B — Hinge + Vertical Pull",
+          "estimated_minutes": 60,
+          "science_estimated_minutes": 60,
+          "duration_class": {
+            "over": "ok",
+            "under": "ok"
+          },
+          "working_count": 5,
+          "working": [
+            {
+              "name": "Romanian Deadlift",
+              "role": "primary",
+              "sets": 4,
+              "reps": "6-8",
+              "rest": 150,
+              "pattern": "hinge",
+              "superset": null,
+              "warmup_sets": 3
+            },
+            {
+              "name": "Assisted Pull-Up",
+              "role": "primary",
+              "sets": 3,
+              "reps": "6-10",
+              "rest": 120,
+              "pattern": "vertical_pull",
+              "superset": null,
+              "warmup_sets": 1
+            },
+            {
+              "name": "Bulgarian Split Squat",
+              "role": "secondary",
+              "sets": 3,
+              "reps": "8-10",
+              "rest": 90,
+              "pattern": "squat",
+              "superset": null,
+              "warmup_sets": 0
+            },
+            {
+              "name": "Seated Overhead Press",
+              "role": "secondary",
+              "sets": 3,
+              "reps": "8-10",
+              "rest": 90,
+              "pattern": "vertical_push",
+              "superset": null,
+              "warmup_sets": 0
+            },
+            {
+              "name": "Incline Press",
+              "role": "secondary",
+              "sets": 3,
+              "reps": "8-12",
+              "rest": 90,
+              "pattern": "horizontal_push",
+              "superset": null,
+              "warmup_sets": 0
+            }
+          ],
+          "warmup": [
+            "World's Greatest Stretch"
+          ],
+          "primer": [],
+          "cooldown": [
+            "Hamstring Stretch",
+            "Lat Stretch"
+          ]
+        },
+        {
+          "day": "Fri",
+          "name": "C — Quad + Chest Finish",
+          "estimated_minutes": 60,
+          "science_estimated_minutes": 60,
+          "duration_class": {
+            "over": "ok",
+            "under": "ok"
+          },
+          "working_count": 6,
+          "working": [
+            {
+              "name": "Front Squat",
+              "role": "primary",
+              "sets": 4,
+              "reps": "6-8",
+              "rest": 150,
+              "pattern": "squat",
+              "superset": null,
+              "warmup_sets": 3
+            },
+            {
+              "name": "Dip",
+              "role": "primary",
+              "sets": 3,
+              "reps": "8-10",
+              "rest": 105,
+              "pattern": "vertical_push",
+              "superset": null,
+              "warmup_sets": 0
+            },
+            {
+              "name": "Diverging Row",
+              "role": "secondary",
+              "sets": 3,
+              "reps": "8-12",
+              "rest": 90,
+              "pattern": "horizontal_pull",
+              "superset": null,
+              "warmup_sets": 0
+            },
+            {
+              "name": "Hip Thrust",
+              "role": "secondary",
+              "sets": 3,
+              "reps": "8-12",
+              "rest": 105,
+              "pattern": "hinge",
+              "superset": null,
+              "warmup_sets": 0
+            },
+            {
+              "name": "Chin-Up",
+              "role": "secondary",
+              "sets": 3,
+              "reps": "6-10",
+              "rest": 120,
+              "pattern": "vertical_pull",
+              "superset": null,
+              "warmup_sets": 0
+            },
+            {
+              "name": "Pec Deck",
+              "role": "isolation",
+              "sets": 2,
+              "reps": "12-15",
+              "rest": 60,
+              "pattern": "other",
+              "superset": null,
+              "warmup_sets": 0
+            }
+          ],
+          "warmup": [
+            "Deep Squat Hold"
+          ],
+          "primer": [],
+          "cooldown": [
+            "Hip Flexor Stretch",
+            "Child's Pose"
+          ]
+        }
+      ],
+      "persist": {
+        "matched": true,
+        "mismatches": [],
+        "persist_days": 3
+      },
+      "requirements": {
+        "kept": [
+          "Mon omitted a power primer",
+          "Mon warm-up stayed targeted (Scapular Push-Up)",
+          "Mon duration 60 min",
+          "Wed omitted a power primer",
+          "Wed warm-up stayed targeted (World's Greatest Stretch)",
+          "Wed duration 60 min",
+          "Fri omitted a power primer",
+          "Fri warm-up stayed targeted (Deep Squat Hold)",
+          "Fri duration 60 min",
+          "Chest work appears on at least two days",
+          "In-memory persist payload matches the final science week"
+        ],
+        "missed": [],
+        "concerns": [
+          "Wed assigned bodyweight ramp sets"
+        ]
+      }
+    },
+    {
+      "id": "B",
+      "request": {
+        "goal": "athletic_performance",
+        "days": [
+          "Mon",
+          "Fri"
+        ],
+        "minutes": 45,
+        "notes": "Athletic performance. Intermediate. 2 days, Monday and Friday. 45 minutes. Both days should use the same workout. Emphasize upper-body push and lower-body pull. Priority chest, hamstrings, and glutes. De-emphasize upper back, lats, and quads.",
+        "hard_requirements": {
+          "identicalDays": true,
+          "upperPush": true,
+          "lowerPull": true,
+          "requiredMuscles": [
+            "chest",
+            "hamstrings",
+            "glutes"
+          ],
+          "waivedMajorMuscles": [
+            "upper_back",
+            "lats",
+            "quads"
+          ],
+          "extendedWarmup": false,
+          "warmupMin": 1,
+          "warmupMax": 2
+        }
+      },
+      "wall_ms": 23764,
+      "label": "B",
+      "method": "ai_repaired",
+      "outcome": "ai_repaired",
+      "model": "gpt-5.4-2026-03-05",
+      "science_version": "1.4.14",
+      "prompt_version": "designer@2.7",
+      "openai_calls": 1,
+      "ai_error": null,
+      "initial_ok": false,
+      "initial_errors": [
+        {
+          "code": "REST_TOO_SHORT",
+          "severity": "error",
+          "message": "Single-Leg Romanian Deadlift rests 90s; primary high-fatigue compound work is likely to lose performance below 120s.",
+          "day_label": "Mon",
+          "exercise_id": "014b8ff9-c2d4-4b56-b4b9-8e2c3a4a9ed1"
+        },
+        {
+          "code": "REST_TOO_SHORT",
+          "severity": "error",
+          "message": "Single-Leg Romanian Deadlift rests 90s; primary high-fatigue compound work is likely to lose performance below 120s.",
+          "day_label": "Fri",
+          "exercise_id": "014b8ff9-c2d4-4b56-b4b9-8e2c3a4a9ed1"
+        }
+      ],
+      "initial_warnings": [
+        {
+          "code": "REST_TOO_SHORT",
+          "severity": "warning",
+          "message": "Push-Up rests 90s; primary compound work usually needs 120-180s.",
+          "day_label": "Mon",
+          "exercise_id": "f4e97608-4829-4975-9cde-fe61215988c8"
+        },
+        {
+          "code": "REST_TOO_SHORT",
+          "severity": "warning",
+          "message": "Single-Leg Hip Thrust rests 75s; secondary compound work usually needs 120-180s.",
+          "day_label": "Mon",
+          "exercise_id": "cc07a43f-16cf-4aa9-9662-c07e8fa2fe50"
+        },
+        {
+          "code": "REST_TOO_SHORT",
+          "severity": "warning",
+          "message": "Incline Push-Up rests 60s; accessory compound work usually needs 75-150s.",
+          "day_label": "Mon",
+          "exercise_id": "cfeca5e9-3588-43e0-8c42-2965a7d41be3"
+        },
+        {
+          "code": "REST_TOO_SHORT",
+          "severity": "warning",
+          "message": "Push-Up rests 90s; primary compound work usually needs 120-180s.",
+          "day_label": "Fri",
+          "exercise_id": "f4e97608-4829-4975-9cde-fe61215988c8"
+        },
+        {
+          "code": "REST_TOO_SHORT",
+          "severity": "warning",
+          "message": "Single-Leg Hip Thrust rests 75s; secondary compound work usually needs 120-180s.",
+          "day_label": "Fri",
+          "exercise_id": "cc07a43f-16cf-4aa9-9662-c07e8fa2fe50"
+        },
+        {
+          "code": "REST_TOO_SHORT",
+          "severity": "warning",
+          "message": "Incline Push-Up rests 60s; accessory compound work usually needs 75-150s.",
+          "day_label": "Fri",
+          "exercise_id": "cfeca5e9-3588-43e0-8c42-2965a7d41be3"
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "info",
+          "message": "chest is slightly above the practical maximum (10 vs 8)."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "warning",
+          "message": "side_delts working sets (0) are well below the 3 target."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "warning",
+          "message": "rear_delts working sets (0) are well below the 3 target."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "warning",
+          "message": "biceps working sets (0) are well below the 3 target."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "info",
+          "message": "Optional forearms has no direct work; indirect stimulus may be enough."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "warning",
+          "message": "hamstrings working sets (12) vs preferred 5."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "info",
+          "message": "glutes is slightly above the practical maximum (9 vs 8)."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "info",
+          "message": "Optional adductors has no direct work; indirect stimulus may be enough."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "info",
+          "message": "Optional hip_flexors has no direct work; indirect stimulus may be enough."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "info",
+          "message": "Optional obliques has no direct work; indirect stimulus may be enough."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "info",
+          "message": "Optional spinal_erectors has no direct work; indirect stimulus may be enough."
+        }
+      ],
+      "final_ok": true,
+      "final_issues": [
+        {
+          "code": "REST_TOO_SHORT",
+          "severity": "warning",
+          "message": "Push-Up rests 90s; primary compound work usually needs 120-180s.",
+          "day_label": "Mon",
+          "exercise_id": "f4e97608-4829-4975-9cde-fe61215988c8"
+        },
+        {
+          "code": "REST_TOO_SHORT",
+          "severity": "warning",
+          "message": "Single-Leg Hip Thrust rests 75s; secondary compound work usually needs 120-180s.",
+          "day_label": "Mon",
+          "exercise_id": "cc07a43f-16cf-4aa9-9662-c07e8fa2fe50"
+        },
+        {
+          "code": "REST_TOO_SHORT",
+          "severity": "warning",
+          "message": "Incline Push-Up rests 60s; accessory compound work usually needs 75-150s.",
+          "day_label": "Mon",
+          "exercise_id": "cfeca5e9-3588-43e0-8c42-2965a7d41be3"
+        },
+        {
+          "code": "REST_TOO_SHORT",
+          "severity": "warning",
+          "message": "Push-Up rests 90s; primary compound work usually needs 120-180s.",
+          "day_label": "Fri",
+          "exercise_id": "f4e97608-4829-4975-9cde-fe61215988c8"
+        },
+        {
+          "code": "REST_TOO_SHORT",
+          "severity": "warning",
+          "message": "Single-Leg Hip Thrust rests 75s; secondary compound work usually needs 120-180s.",
+          "day_label": "Fri",
+          "exercise_id": "cc07a43f-16cf-4aa9-9662-c07e8fa2fe50"
+        },
+        {
+          "code": "REST_TOO_SHORT",
+          "severity": "warning",
+          "message": "Incline Push-Up rests 60s; accessory compound work usually needs 75-150s.",
+          "day_label": "Fri",
+          "exercise_id": "cfeca5e9-3588-43e0-8c42-2965a7d41be3"
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "info",
+          "message": "chest is slightly above the practical maximum (10 vs 8)."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "warning",
+          "message": "side_delts working sets (0) are well below the 3 target."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "warning",
+          "message": "rear_delts working sets (0) are well below the 3 target."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "warning",
+          "message": "biceps working sets (0) are well below the 3 target."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "info",
+          "message": "Optional forearms has no direct work; indirect stimulus may be enough."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "warning",
+          "message": "hamstrings working sets (12) vs preferred 5."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "info",
+          "message": "glutes is slightly above the practical maximum (9 vs 8)."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "info",
+          "message": "Optional adductors has no direct work; indirect stimulus may be enough."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "info",
+          "message": "Optional hip_flexors has no direct work; indirect stimulus may be enough."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "info",
+          "message": "Optional obliques has no direct work; indirect stimulus may be enough."
+        },
+        {
+          "code": "VOLUME_OFF",
+          "severity": "info",
+          "message": "Optional spinal_erectors has no direct work; indirect stimulus may be enough."
+        }
+      ],
+      "repairs": [
+        {
+          "code": "REST_TOO_SHORT",
+          "action": "Raised Single-Leg Romanian Deadlift rest 90s → 150s",
+          "day_label": "Mon",
+          "exercise_id": "014b8ff9-c2d4-4b56-b4b9-8e2c3a4a9ed1"
+        },
+        {
+          "code": "REST_TOO_SHORT",
+          "action": "Raised Single-Leg Romanian Deadlift rest 90s → 150s",
+          "day_label": "Fri",
+          "exercise_id": "014b8ff9-c2d4-4b56-b4b9-8e2c3a4a9ed1"
+        }
+      ],
+      "days": [
+        {
+          "day": "Mon",
+          "name": "Athletic Push + Hinge Session",
+          "estimated_minutes": 50,
+          "science_estimated_minutes": 50,
+          "duration_class": {
+            "over": "ok",
+            "under": "ok"
+          },
+          "working_count": 5,
+          "working": [
+            {
+              "name": "Single-Leg Romanian Deadlift",
+              "role": "primary",
+              "sets": 3,
+              "reps": "6-8",
+              "rest": 150,
+              "pattern": "hinge",
+              "superset": null,
+              "warmup_sets": 3
+            },
+            {
+              "name": "Push-Up",
+              "role": "primary",
+              "sets": 3,
+              "reps": "8-15",
+              "rest": 90,
+              "pattern": "horizontal_push",
+              "superset": null,
+              "warmup_sets": 0
+            },
+            {
+              "name": "Nordic Hamstring Curl",
+              "role": "secondary",
+              "sets": 2,
+              "reps": "4-6",
+              "rest": 75,
+              "pattern": "other",
+              "superset": "ai-Mon-1",
+              "warmup_sets": 0
+            },
+            {
+              "name": "Single-Leg Hip Thrust",
+              "role": "secondary",
+              "sets": 2,
+              "reps": "8-12",
+              "rest": 75,
+              "pattern": "hinge",
+              "superset": "ai-Mon-1",
+              "warmup_sets": 0
+            },
+            {
+              "name": "Incline Push-Up",
+              "role": "accessory",
+              "sets": 2,
+              "reps": "10-15",
+              "rest": 60,
+              "pattern": "horizontal_push",
+              "superset": null,
+              "warmup_sets": 0
+            }
+          ],
+          "warmup": [
+            "World's Greatest Stretch",
+            "Scapular Push-Up"
+          ],
+          "primer": [
+            "Broad Jump"
+          ],
+          "cooldown": [
+            "Hamstring Stretch",
+            "Doorway Pec Stretch"
+          ]
+        },
+        {
+          "day": "Fri",
+          "name": "Athletic Push + Hinge Session",
+          "estimated_minutes": 50,
+          "science_estimated_minutes": 50,
+          "duration_class": {
+            "over": "ok",
+            "under": "ok"
+          },
+          "working_count": 5,
+          "working": [
+            {
+              "name": "Single-Leg Romanian Deadlift",
+              "role": "primary",
+              "sets": 3,
+              "reps": "6-8",
+              "rest": 150,
+              "pattern": "hinge",
+              "superset": null,
+              "warmup_sets": 3
+            },
+            {
+              "name": "Push-Up",
+              "role": "primary",
+              "sets": 3,
+              "reps": "8-15",
+              "rest": 90,
+              "pattern": "horizontal_push",
+              "superset": null,
+              "warmup_sets": 0
+            },
+            {
+              "name": "Nordic Hamstring Curl",
+              "role": "secondary",
+              "sets": 2,
+              "reps": "4-6",
+              "rest": 75,
+              "pattern": "other",
+              "superset": "ai-Fri-1",
+              "warmup_sets": 0
+            },
+            {
+              "name": "Single-Leg Hip Thrust",
+              "role": "secondary",
+              "sets": 2,
+              "reps": "8-12",
+              "rest": 75,
+              "pattern": "hinge",
+              "superset": "ai-Fri-1",
+              "warmup_sets": 0
+            },
+            {
+              "name": "Incline Push-Up",
+              "role": "accessory",
+              "sets": 2,
+              "reps": "10-15",
+              "rest": 60,
+              "pattern": "horizontal_push",
+              "superset": null,
+              "warmup_sets": 0
+            }
+          ],
+          "warmup": [
+            "World's Greatest Stretch",
+            "Scapular Push-Up"
+          ],
+          "primer": [
+            "Broad Jump"
+          ],
+          "cooldown": [
+            "Hamstring Stretch",
+            "Doorway Pec Stretch"
+          ]
+        }
+      ],
+      "persist": {
+        "matched": true,
+        "mismatches": [],
+        "persist_days": 2
+      },
+      "requirements": {
+        "kept": [
+          "Monday and Friday are identical",
+          "Upper-body push is present",
+          "Lower-body pull / hinge is present",
+          "Mon duration 50 min",
+          "Fri duration 50 min",
+          "In-memory persist payload matches the final science week",
+          "Hard requirement parser saw identical days"
+        ],
+        "missed": [],
+        "concerns": []
+      }
+    },
+    {
+      "id": "C",
+      "request": {
+        "goal": "hypertrophy",
+        "days": [
+          "Mon",
+          "Wed",
+          "Fri"
+        ],
+        "minutes": 45,
+        "notes": "Intermediate hypertrophy. 3 days Monday Wednesday Friday. 45 minutes. Glute priority. Start and end the working portion with glute exercises. In the middle include a push/pull superset and a core exercise."
+      },
+      "wall_ms": 17,
+      "live_ai_ran": false,
+      "method": null,
+      "outcome": null,
+      "openai_calls": 0,
+      "repairs": [],
+      "days": [],
+      "error": "Full Body B is estimated at 57 min vs 45.",
+      "persist": {
+        "matched": false,
+        "mismatches": [
+          "pipeline threw before persist mapping"
+        ]
+      },
+      "requirements": {
+        "kept": [],
+        "missed": [
+          "Pipeline failed before a live result: Full Body B is estimated at 57 min vs 45."
+        ],
+        "concerns": []
+      }
+    }
+  ],
+  "catalog_note": null,
+  "catalog_count": 264
+}

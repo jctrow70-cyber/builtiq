@@ -1,0 +1,101 @@
+{
+  "live": false,
+  "catalog_source": "st_exercise_catalog",
+  "catalog_count": 264,
+  "cases": [
+    {
+      "id": "A",
+      "method": "ai_repaired",
+      "outcome": "ai_repaired",
+      "initial_ok": true,
+      "final_ok": true,
+      "error": null,
+      "repairs": 4,
+      "days": [
+        {
+          "day": "Mon",
+          "minutes": 60,
+          "working": 6,
+          "warmup": [
+            "Scapular Push-Up"
+          ],
+          "primer": []
+        },
+        {
+          "day": "Wed",
+          "minutes": 60,
+          "working": 5,
+          "warmup": [
+            "World's Greatest Stretch"
+          ],
+          "primer": []
+        },
+        {
+          "day": "Fri",
+          "minutes": 60,
+          "working": 6,
+          "warmup": [
+            "Deep Squat Hold"
+          ],
+          "primer": []
+        }
+      ],
+      "persist_matched": true,
+      "missed": [],
+      "concerns": [
+        "Wed assigned bodyweight ramp sets"
+      ]
+    },
+    {
+      "id": "B",
+      "method": "ai_repaired",
+      "outcome": "ai_repaired",
+      "initial_ok": false,
+      "final_ok": true,
+      "error": null,
+      "repairs": 2,
+      "days": [
+        {
+          "day": "Mon",
+          "minutes": 50,
+          "working": 5,
+          "warmup": [
+            "World's Greatest Stretch",
+            "Scapular Push-Up"
+          ],
+          "primer": [
+            "Broad Jump"
+          ]
+        },
+        {
+          "day": "Fri",
+          "minutes": 50,
+          "working": 5,
+          "warmup": [
+            "World's Greatest Stretch",
+            "Scapular Push-Up"
+          ],
+          "primer": [
+            "Broad Jump"
+          ]
+        }
+      ],
+      "persist_matched": true,
+      "missed": [],
+      "concerns": []
+    },
+    {
+      "id": "C",
+      "method": null,
+      "outcome": null,
+      "error": "Full Body B is estimated at 57 min vs 45.",
+      "repairs": 0,
+      "days": [],
+      "persist_matched": false,
+      "missed": [
+        "Pipeline failed before a live result: Full Body B is estimated at 57 min vs 45."
+      ],
+      "concerns": []
+    }
+  ]
+}

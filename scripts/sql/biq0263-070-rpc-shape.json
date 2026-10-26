@@ -1,0 +1,206 @@
+{
+  "st_list_group_activities": {
+    "parameterNames": [
+      {
+        "name": "args",
+        "inn": "body",
+        "schema": {
+          "properties": {
+            "p_from": {
+              "format": "date",
+              "type": "string"
+            },
+            "p_team_id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "p_to": {
+              "format": "date",
+              "type": "string"
+            },
+            "p_user_id": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          "required": [
+            "p_team_id",
+            "p_from",
+            "p_to"
+          ],
+          "type": "object"
+        }
+      },
+      {}
+    ],
+    "bodySchema": null,
+    "responseSchema": {
+      "description": "OK"
+    }
+  },
+  "st_save_group_activity": {
+    "parameterNames": [
+      {
+        "name": "args",
+        "inn": "body",
+        "schema": {
+          "properties": {
+            "p_activity_type": {
+              "format": "text",
+              "type": "string"
+            },
+            "p_details": {
+              "format": "jsonb"
+            },
+            "p_duration_minutes": {
+              "format": "integer",
+              "type": "integer"
+            },
+            "p_notes": {
+              "format": "text",
+              "type": "string"
+            },
+            "p_occurrence_date": {
+              "format": "date",
+              "type": "string"
+            },
+            "p_program_id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "p_recipient_user_ids": {
+              "format": "uuid[]",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "p_recurrence": {
+              "format": "text",
+              "type": "string"
+            },
+            "p_recurrence_until": {
+              "format": "date",
+              "type": "string"
+            },
+            "p_recurrence_weekdays": {
+              "format": "smallint[]",
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "p_request_key": {
+              "format": "text",
+              "type": "string"
+            },
+            "p_required": {
+              "format": "boolean",
+              "type": "boolean"
+            },
+            "p_team_id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "p_title": {
+              "format": "text",
+              "type": "string"
+            },
+            "p_workout_id": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          "required": [
+            "p_team_id",
+            "p_activity_type",
+            "p_title",
+            "p_occurrence_date",
+            "p_recipient_user_ids",
+            "p_request_key"
+          ],
+          "type": "object"
+        }
+      },
+      {}
+    ],
+    "bodySchema": null,
+    "responseSchema": {
+      "description": "OK"
+    }
+  },
+  "st_save_group_strength_workout": {
+    "parameterNames": [
+      {
+        "name": "args",
+        "inn": "body",
+        "schema": {
+          "properties": {
+            "p_exercises": {
+              "format": "jsonb"
+            },
+            "p_notes": {
+              "format": "text",
+              "type": "string"
+            },
+            "p_occurrence_date": {
+              "format": "date",
+              "type": "string"
+            },
+            "p_recipient_user_ids": {
+              "format": "uuid[]",
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "p_recurrence": {
+              "format": "text",
+              "type": "string"
+            },
+            "p_recurrence_until": {
+              "format": "date",
+              "type": "string"
+            },
+            "p_recurrence_weekdays": {
+              "format": "smallint[]",
+              "items": {
+                "type": "integer"
+              },
+              "type": "array"
+            },
+            "p_request_key": {
+              "format": "text",
+              "type": "string"
+            },
+            "p_required": {
+              "format": "boolean",
+              "type": "boolean"
+            },
+            "p_team_id": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "p_title": {
+              "format": "text",
+              "type": "string"
+            }
+          },
+          "required": [
+            "p_team_id",
+            "p_title",
+            "p_occurrence_date",
+            "p_recipient_user_ids",
+            "p_request_key"
+          ],
+          "type": "object"
+        }
+      },
+      {}
+    ],
+    "bodySchema": null,
+    "responseSchema": {
+      "description": "OK"
+    }
+  }
+}

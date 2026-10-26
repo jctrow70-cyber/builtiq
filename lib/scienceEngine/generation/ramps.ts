@@ -1,5 +1,5 @@
 import { RAMP_REST_SECONDS } from '../durationConstants';
-import { generateRampSets, rampCountFor } from '../rampUp';
+import { generateRampSets, isRelativeLoadExercise, knownCapacityAllowsBodyweightRamp, rampCountFor } from '../rampUp';
 import type { TrainingProfile } from '../types';
 import { isRampEligible } from './qualityRules';
 import type { AiRampSet, DesignerExercise, StrengthRole } from './types';
@@ -22,8 +22,14 @@ export type RampSlotInput = {
  *    They still need pattern-specific ramps, but not a second full opener.
  * 4. Isolation, accessory, and warmup-only cards get 0 ramps.
  */
-export function rampSetsForSlot(input: RampSlotInput, profile?: Pick<TrainingProfile, 'experienceLevel'> | TrainingProfile): AiRampSet[] {
+export function rampSetsForSlot(input: RampSlotInput, profile?: Pick<TrainingProfile, 'experienceLevel' | 'workingLoads'> | TrainingProfile): AiRampSet[] {
   if (!isRampEligible(input.exercise, input.role, input.repMax)) return [];
+  if (isRelativeLoadExercise(input.exercise) && !knownCapacityAllowsBodyweightRamp({
+    workingRepMax: input.repMax,
+    knownMaxReps: bodyweightCapacityReps(input.exercise.name, profile),
+  })) {
+    return [];
+  }
   const experience = String(input.experienceLevel || profile?.experienceLevel || 'intermediate').toLowerCase();
   const heavy = input.repMax <= 6;
 
@@ -61,6 +67,18 @@ export function standardRampSets(profile: TrainingProfile, workingRepMax: number
     percent_of_working: row.percent,
     reps: row.reps,
   }));
+}
+
+function bodyweightCapacityReps(
+  name: string,
+  profile?: Pick<TrainingProfile, 'workingLoads'> | TrainingProfile
+): number | null {
+  const loads = profile && 'workingLoads' in profile ? profile.workingLoads : undefined;
+  if (!loads) return null;
+  const key = Object.keys(loads).find((item) => item.toLowerCase() === name.toLowerCase() || name.toLowerCase().includes(item.toLowerCase()));
+  if (!key) return null;
+  const value = Number(loads[key]);
+  return Number.isFinite(value) && value > 0 ? value : null;
 }
 
 export function assignSessionRamps<T extends { exercise_id: string; role: StrengthRole; rep_max: number }>(

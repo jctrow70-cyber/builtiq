@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 114 - Hypertrophy does not need a power primer
+
+Date: 2026-10-25
+Status: Accepted
+Category: Training / Program generation
+
+### Decision
+
+Power primers stay eligible only as explosive jumps, throws, swings, or Olympic lifts. They are generated for athletic performance or an athletic preference. Hypertrophy, general fitness, strength, and fat-loss programs omit them unless the athlete asked for athletic work. Omitting a primer is never a validation error. If a session is over the requested clock, repair drops redundant warm-ups and optional primers before productive strength work or rest. A 60-minute request targets 60 minutes or less. Dynamic warm-ups are chosen for the day's patterns and are not padded to a count. Relative-load lifts (pull-up, chin-up, dip, push-up) do not receive full-bodyweight ramp reps when capacity is unknown.
+
+### Reason
+
+The latest hypertrophy generate added a medicine-ball chest pass, broad jump, and squat jump, warned about missing primers, estimated Monday at 67 minutes and Wednesday at 72, and prescribed five full pull-up warm-up reps before 3x6-8. Those were validator and ramp artifacts, not useful programming.
+
+### Alternatives Considered
+
+Keep automatic primers on every primary day. Cut rest to hit 60 minutes. Keep a 2-4 warm-up quota. Prescribe assisted pull-up catalog rows automatically.
+
+### Impact
+
+Science engine version is `1.4.14`. Designer prompt version is `designer@2.7`. The model, output-token cap, catalog, and Program Design UI are unchanged. Stage 2D is not started.
+
+---
+
 ## Decision Format
 
 ```text

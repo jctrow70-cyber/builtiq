@@ -1,5 +1,6 @@
 import { creditSets, contributionsForExercise } from '../contributions';
 import { classifySessionDuration, estimateSessionFromAi, minStrengthMoves } from '../duration';
+import { shouldGeneratePowerPrimer } from '../primerPolicy';
 import { parsePrescriptionTiming } from '../prescriptionTime';
 import {
   classifyPowerExercise,
@@ -70,8 +71,7 @@ export function applyDurationEfficiency(
   const repairs: DeterministicRepair[] = [];
   const library = libraryFromContext(context);
   (next.workouts || []).forEach((workout) => {
-    if (context.constraints.session_minutes <= 45) trimDuration(workout, context, library, repairs);
-    else efficiencyPass(workout, context, library, repairs);
+    trimDuration(workout, context, library, repairs);
   });
   return { program: next, repairs };
 }
@@ -559,18 +559,24 @@ function trimDuration(
   const minutes = context.constraints.session_minutes;
   const strictBudget = minutes <= 45;
   const minMoves = Math.min(4, minStrengthMoves(minutes));
-  const warmupMin = context.hard_requirements?.warmupMin ?? context.constraints.dynamic_warmup_exercises?.min ?? 2;
+  const warmupFloor = 1;
   const pref = String(context.athlete.superset_preference || '').toLowerCase();
   const allowSuperset = /sometimes|often|always|frequently|yes/.test(pref);
+  const keepPrimer = shouldGeneratePowerPrimer({
+    primaryGoal: context.athlete.primary_goal,
+    potentiationPreference: context.athlete.potentiation_preference,
+    trainingFeel: context.athlete.training_feel,
+  });
   let guard = 0;
   while (guard < 24) {
     normalizeLoneBlocks(workout);
-    const over = sessionOver(workout, context, library).over;
-    if (strictBudget ? over === 'ok' : over !== 'error') break;
+    const estimated = estimateSessionFromAi(workout, library, { experienceLevel: context.athlete.experience_level });
+    const over = classifySessionDuration(estimated, minutes).over;
+    if (strictBudget ? over === 'ok' : estimated <= minutes) break;
 
     // A. Unnecessary/redundant warmup volume
     const extras = (workout.warmup || []).filter((item) => !isGeneralWarmup(item, library));
-    if ((workout.warmup || []).length > warmupMin && extras.length > 2 && dropWarmupExtra(workout, library, repairs)) {
+    if ((workout.warmup || []).length > warmupFloor && extras.length && dropWarmupExtra(workout, library, repairs)) {
       guard += 1;
       continue;
     }
@@ -603,12 +609,12 @@ function trimDuration(
       guard += 1;
       continue;
     }
-    if ((workout.potentiation || []).length > 1) {
+    if ((workout.potentiation || []).length > (keepPrimer ? 1 : 0)) {
       const extraPrimer = workout.potentiation[workout.potentiation.length - 1];
       workout.potentiation = workout.potentiation.slice(0, -1);
       repairs.push({
         code: 'DURATION_OVER',
-        action: `Removed extra primer ${library.get(extraPrimer.exercise_id)?.name || extraPrimer.exercise_id}`,
+        action: `Removed ${keepPrimer ? 'extra' : 'optional'} primer ${library.get(extraPrimer.exercise_id)?.name || extraPrimer.exercise_id}`,
         day_label: workout.day_label,
         exercise_id: extraPrimer.exercise_id,
       });
@@ -616,7 +622,7 @@ function trimDuration(
       continue;
     }
 
-    if ((workout.warmup || []).length > warmupMin && extras.length > 1 && dropWarmupExtra(workout, library, repairs)) {
+    if ((workout.warmup || []).length > warmupFloor && dropWarmupExtra(workout, library, repairs)) {
       guard += 1;
       continue;
     }

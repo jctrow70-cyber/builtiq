@@ -98,7 +98,7 @@ export function buildDesignerInstructions(context: GenerationContext): string {
   const single = context.request.mode === 'single_session';
   const hard = context.hard_requirements;
   const identical = Boolean(hard?.identicalDays) && !single;
-  const warmup = context.constraints.dynamic_warmup_exercises || { min: 2, max: 4 };
+  const warmup = context.constraints.dynamic_warmup_exercises || { min: 1, max: 3 };
   const opener = single
     ? 'Design ONE training session for the supplied day.'
     : identical
@@ -148,8 +148,8 @@ Hard constraints:
 ${cloneRule}
 ${emphasisRule}
 - ${supersetRule}
-- Dynamic warm-up: ${warmup.min}-${warmup.max} unique exercises from warmup_ids that prepare THIS day's joints and patterns. No duplicate exercise_ids. Warm-up time target is ${warmupBand.min}-${warmupBand.max} minutes. ${hard?.extendedWarmup ? 'An extended warm-up was requested, so the top of that range is allowed.' : 'Do not pad the warm-up.'} ${identical ? 'The repeated day uses that same warm-up.' : 'Different training days should not share one generic warm-up.'} Dynamic warm-up, power primer, and ramp-up sets are different components.
-- Power primers are optional explosive prep (jump, throw, swing), about 2-3 x 3-5, or a short ballistic swing. Do not put a normal squat, press, or row in potentiation. Omit the primer when none fits the experience, equipment, or goal. Do not add a power exercise to every athletic session.
+- Dynamic warm-up: targeted drills from warmup_ids that prepare THIS day's joints and patterns. Prefer ${Math.min(2, warmup.max)} movements. ${warmup.max} is a ceiling, not a quota. One well-chosen drill is enough when it covers the session. Do not pad to a count. No duplicate exercise_ids. Warm-up time target is ${warmupBand.min}-${warmupBand.max} minutes. ${hard?.extendedWarmup ? 'An extended warm-up was requested, so the top of that range is allowed.' : 'Do not pad the warm-up.'} ${identical ? 'The repeated day uses that same warm-up.' : 'Different training days should not share one generic warm-up.'} Dynamic warm-up, power primer, and ramp-up sets are different components. Ankle or hip mobility belongs only on days that squat, hinge, or lunge.
+- Power primers are optional explosive prep (jump, throw, swing), about 2-3 x 3-5, or a short ballistic swing. Do not put a normal squat, press, or row in potentiation. For hypertrophy, general fitness, and fat-loss support, omit the primer unless the athlete asked for athletic or power work. For athletic performance, include a short primer only when it helps the primary lift. An empty potentiation array is valid. Do not add a power exercise just to fill the slot.
 - Cooldown is stretch, mobility, or breathing only.
 - why: one short clause, muscles that actually belong to the exercise.
 

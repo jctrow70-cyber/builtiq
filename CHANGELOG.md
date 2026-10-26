@@ -11,6 +11,129 @@ Branch:
 Status:
 ```
 
+## BIQ-0267 - Stage 2C programming quality: primers, duration, warm-up, and bodyweight ramps
+
+Date: 2026-10-25
+Branch: main
+Status: Implemented locally. Not committed. No database change.
+
+Summary: Hypertrophy and other non-athletic goals no longer require a power primer. A 60-minute request now warns above 60 and repair trims redundant warm-ups and optional primers before productive lifts. Dynamic warm-ups are targeted instead of padded to a count. Pull-ups, chin-ups, dips, and push-ups do not get full-bodyweight ramp reps when capacity is unknown.
+
+Purpose: The latest 3-day hypertrophy generate showed "Built with AI, then adjusted to fit the rules," 67- and 72-minute duration notes, missing-primer warnings, four warm-up drills plus a primer and bench ramps, and a 5-rep pull-up warm-up before 3x6-8. Those came from automatic primer injection, a 65-minute "on target" band, a 2-4 warm-up quota, and percentage ramps on relative-load lifts.
+
+Files changed:
+- lib/scienceEngine/primerPolicy.ts
+- lib/scienceEngine/potentiation.ts
+- lib/scienceEngine/validator.ts
+- lib/scienceEngine/feasibility.ts
+- lib/scienceEngine/applyAiDesign.ts
+- lib/scienceEngine/generateProgram.ts
+- lib/scienceEngine/duration.ts
+- lib/scienceEngine/warmup.ts
+- lib/scienceEngine/rampUp.ts
+- lib/scienceEngine/explain.ts
+- lib/scienceEngine/version.ts
+- lib/scienceEngine/generation/hardRequirements.ts
+- lib/scienceEngine/generation/prompt.ts
+- lib/scienceEngine/generation/repairAiProgram.ts
+- lib/scienceEngine/generation/ramps.ts
+- lib/scienceEngine/generation/context.ts
+- lib/scienceEngine/generation/types.ts
+- lib/scienceEngine/generation/stage2cCheck.ts
+- lib/scienceEngine/generation/phase1Check.ts
+- lib/scienceEngine/generation/instructionAdherenceCheck.ts
+- lib/scienceEngine/acceptanceCheck.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- `npm run test:science` passed, including Stage 2B, Stage 2C, Phase 1, and Phase 2A/2B.1.
+- Generate a 3-day intermediate hypertrophy hybrid program, 60 minutes, chest priority, full gym, balanced variety, supersets left to BuildIQ.
+- Confirm the program criteria status matches `st_generation_runs.generation_method`.
+- Confirm hypertrophy days omit medicine-ball throws and jumps unless athletic work was requested, and that omitting them does not create a validation error.
+- Confirm preview and saved session estimates use the same estimator and land at or below 60 minutes, or explain why they cannot.
+- Confirm each day has a short targeted warm-up, not a fixed four-drill block plus a primer plus three ramps.
+- Confirm pull-up, chin-up, dip, and push-up cards do not show a full-bodyweight warm-up set when capacity is unknown.
+
+Known issues:
+- Live diagnostics for the earlier generate were not re-fetched in this change. The saved banner means `ai_repaired`; duration notes of 67 and 72 match the old 65-minute on-target band and warning-only 60-minute repair.
+- Athletic performance can still include a short primer. That omission is only a warning.
+- Bodyweight ramps stay off unless a known max-rep capacity is well above the working range. Assisted variations are not auto-inserted as extra catalog rows.
+
+Recommended commit message: Make hypertrophy primers optional and keep 60-minute sessions on the clock
+
+## BIQ-0264 - Phase 2B.2 database safety remediation
+
+Date: 2026-10-24
+Branch: main
+Status: Implemented locally. Not applied to hosted Supabase. Not committed. UI not started.
+
+Summary: Existing groups gain a nullable `st_teams.timezone` and stay null. The batch schedule function requires a valid group timezone and uses that zone's server date. A separate migration locks enrollments before expectation rows and sorts bulk program assignment by member id. Direct execute is revoked from refresh, sync, and withdraw. `service_role` can still call withdraw for QA cleanup.
+
+Purpose: Close the caller-controlled date window, the two deadlock cycles, and the unauthenticated execute path before any hosted apply.
+
+Files changed:
+- supabase/migrations/20261024_072_group_member_schedule_batch.sql
+- supabase/migrations/20261024_073_group_timezone.sql
+- supabase/migrations/20261024_074_schedule_lock_order.sql
+- supabase/migrations/20261024_075_schedule_internal_grants.sql
+- scripts/sql/biq0264-072-schedule-batch-tests.sql
+- scripts/sql/biq0264-075-hosted-preflight.sql
+- scripts/test-group-member-schedule-batch.ts
+- CHANGELOG.md
+
+Database changes: Local files only. Migrations 068 through 071 were not edited. No timezone backfill. No hosted apply.
+
+Testing steps:
+- Disposable Postgres 18.4: SQL suite passed, including null and invalid timezones, group-date boundaries, rollback, revoked execute, service_role withdraw, and single-member scheduling with a null group timezone. Lock regression passed: refresh and a single-member edit waited on the enrollment lock, and an overlapping batch plus program assignment committed with no deadlock. 200-member edit_days: 692 ms, 3000 expectation rows before and after, statement timeout 2min and not hit.
+
+Known issues:
+- Existing groups have a null timezone until an owner sets one. The bulk RPC rejects them. One-member schedule calls still use their existing date window.
+- New group creation does not ask for a timezone until a later UI change.
+- Hosted grants must be read with scripts/sql/biq0264-075-hosted-preflight.sql before applying 075. This change did not query or modify hosted Supabase.
+- Direct refresh and unsorted assignment could deadlock before 074. Apply 074 with 072.
+
+Recommended commit message: Require a group timezone and close schedule lock and grant gaps
+
+## BIQ-0264 - Phase 2B.2 Stage 2 batch training days, pause, and resume
+
+Date: 2026-10-24
+Branch: main
+Status: Implemented locally. Not applied to hosted Supabase. Not committed. Not released.
+
+Summary: One security-definer function, `st_apply_group_member_schedules`, edits training days, pauses, or resumes an explicit set of group members in one transaction. A bad member rolls the whole batch back. The same team and request key with the same payload returns the first result. A different payload raises. Already paused and already resumed members stay in the count and are not written again.
+
+Purpose: Let a group change schedules for a frozen member list without a per-member round trip, without changing personal training, and without a new group timezone.
+
+Files changed:
+- supabase/migrations/20261024_072_group_member_schedule_batch.sql
+- scripts/sql/biq0264-072-disposable-fixture.sql
+- scripts/sql/biq0264-072-disposable-triggers.sql
+- scripts/sql/biq0264-072-schedule-batch-tests.sql
+- scripts/test-group-member-schedule-batch.ts
+- package.json
+- CHANGELOG.md
+
+Database changes: Local migration only. It creates `st_group_schedule_requests` and `st_apply_group_member_schedules`. The table has row level security and no client grants. The function is granted to authenticated and checks `auth.uid()` plus `st_user_can_assign_in_group`. It was not applied to hosted Supabase. Migrations 068 through 071 were not edited. Grants on `st_refresh_enrollment_expectations`, `st_sync_enrollment_schedule`, and `st_withdraw_future_program_expectations` were not changed.
+
+Testing steps:
+- Source checks passed, including an empty git diff for migrations 068 through 071. TypeScript `tsc --noEmit` passed. The source script is the last step of `test:groups` and does not open a database unless `BIQ_RUN_SQL=1`.
+- Disposable Postgres 18.4 on 127.0.0.1:55432, database biq072. The SQL suite passed: owner, manager, and assign-flag success; ordinary member, anon, and another group rejected; mixed-list rollback; idempotency; the one-day window without clamping; pause and resume history; a future logged workout; weekday mismatch; group-activity collision; paused and ended enrollment; participation; personal training.
+- Two sessions: the same key returned one fresh result and one replay; a different payload raised; two different keys both committed.
+- A second session holding the enrollment `FOR UPDATE` was not blocked. `st_set_member_training_schedule` waited on `FOR KEY SHARE` and hit lock_timeout. That is not a deadlock.
+- 200-member `edit_days` on a 6-week Monday/Wednesday/Friday program, remeasured on disposable Postgres after the safety review: 610 ms by the database clock, 3000 expectation rows before and 3000 after, statement timeout set to 120s and not hit. The 787 ms and 718 ms figures were not kept.
+
+Known issues:
+- The caller-controlled one-day window was replaced by the group timezone rule in the remediation entry above. Existing groups stay null until an owner sets a timezone.
+- `st_refresh_enrollment_expectations`, `st_sync_enrollment_schedule`, and `st_withdraw_future_program_expectations` still have no revoke in the migrations. On the disposable database their privilege list is empty, so anon, authenticated, and public can execute them. A rolled-back call as anon, and again as authenticated, deleted another enrollment's 15 expectation rows. Calling refresh directly can deadlock with this batch because it locks expectation rows before the enrollment. `st_assign_group_programs` still locks members in unsorted array order and can deadlock with this batch. Either failure rolls the batch back.
+- Group-activity overlap is still the 071 trigger. A collision fails the batch and leaves the activity row.
+- This stage does not add a screen. The app does not call the new function yet.
+
+Recommended commit message: Batch group training days, pause, and resume
+
 ## BIQ-0264 - Phase 2B.1 bulk assign or change program
 
 Date: 2026-10-23
@@ -42,7 +165,7 @@ Testing steps:
 - Disposable QA: scripts/verify-group-activity-stage1-live.ts --keep, then Playwright, then --cleanup. countsMatchBaseline was true.
 
 Known issues:
-- Phase 2B.2 is not started. Edit Training Days, Pause Schedule, and Resume Schedule still need one future security-definer function that accepts a frozen UUID array and calls the existing one-member functions in a single transaction. That function is not implemented and no SQL was added.
+- Phase 2B.2 database work is recorded in the entry above. The Members screen still has no bulk Edit Training Days, Pause Schedule, or Resume Schedule control.
 - Review eligibility is advisory. If membership or authorization changes after review, the database rejects the whole transaction and nobody is changed.
 - A request key is remembered in the open review. Repeating that same save in the same review says it was already saved. A new browser session cannot tell a database replay from a first success until that key is acknowledged again.
 - A start on or before today reactivates a paused enrollment and turns expected training back on. A future start excludes paused enrollments so upcoming workouts are not dropped while the enrollment stays paused.

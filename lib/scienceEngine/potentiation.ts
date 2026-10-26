@@ -3,6 +3,7 @@ import type { MovementPatternId } from './taxonomy';
 import { findByName } from './exerciseSelection';
 import { isExplosivePrimer } from './powerPrescription';
 import { prescribeExercise } from './prescription';
+import { primerPolicyFromProfile, shouldGeneratePowerPrimer } from './primerPolicy';
 
 type PrimerPick = { name: string; sets: number; reps: string; minExp?: TrainingProfile['experienceLevel'] };
 
@@ -24,7 +25,7 @@ export function generatePotentiation(opts: {
   primary?: CatalogExercise | null;
   catalog: CatalogExercise[];
 }): { items: ExercisePrescription[]; fatigueScore: number } {
-  if (opts.profile.potentiationPreference === 'off') return { items: [], fatigueScore: 1 };
+  if (!shouldGeneratePowerPrimer(primerPolicyFromProfile(opts.profile))) return { items: [], fatigueScore: 1 };
 
   const pattern: MovementPatternId | undefined = opts.primary?.movementPattern;
   const options = (pattern && PRIMER_BY_PATTERN[pattern]) || PRIMER_BY_PATTERN.horizontal_push;

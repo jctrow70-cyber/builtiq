@@ -1,0 +1,381 @@
+{
+  "checked_at": "2026-10-22T00:32:55.788Z",
+  "via": "postgrest",
+  "openapi_status": 200,
+  "functions": [
+    {
+      "path": "/rpc/st_group_activity_assert_outside",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_group_strength_date_has_performance",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_group_activity_require_change",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_save_group_activity",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_group_activity_effective_workout",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_remove_group_activity_recipient",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_list_group_activities",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_pin_group_strength_history",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_ensure_group_strength_shelf",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_user_can_read_group_activity",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_group_activity_rule_overlaps",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_restore_group_activity_occurrence",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_edit_group_strength_series",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_edit_group_activity_occurrence",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_group_strength_workout_has_performance",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_edit_group_activity_series",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_edit_group_strength_occurrence",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_list_group_conversations",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_user_can_read_group_strength_workout",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_group_activity_assert_clear",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_edit_group_activity_future",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_save_group_strength_workout",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_clone_group_strength_workout",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_group_activity_lock",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_edit_group_strength_future",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_skip_group_activity_occurrence",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_user_can_change_group_activity",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_group_activity_slot_open",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_save_group_schedule_profile",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_group_activity_ensure_occurrence",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_complete_group_activity_occurrence",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_group_activity_date_taken",
+      "params": [
+        "args",
+        null
+      ]
+    },
+    {
+      "path": "/rpc/st_end_group_activity_series",
+      "params": [
+        "args",
+        null
+      ]
+    }
+  ],
+  "columns": [
+    {
+      "table": "st_programs",
+      "column": "program_use",
+      "status": 200,
+      "ok": true,
+      "error": null
+    },
+    {
+      "table": "st_programs",
+      "column": "name,status,visibility,owner_user_id,team_id",
+      "status": 200,
+      "ok": true,
+      "error": null
+    },
+    {
+      "table": "st_group_activity_occurrences",
+      "column": "workout_id",
+      "status": 200,
+      "ok": true,
+      "error": null
+    },
+    {
+      "table": "st_group_activity_occurrences",
+      "column": "id,completed,snapshotted",
+      "status": 200,
+      "ok": true,
+      "error": null
+    },
+    {
+      "table": "st_group_activity_recipients",
+      "column": "removed_on",
+      "status": 200,
+      "ok": true,
+      "error": null
+    },
+    {
+      "table": "st_group_activity_recipients",
+      "column": "series_id,user_id",
+      "status": 200,
+      "ok": true,
+      "error": null
+    },
+    {
+      "table": "st_group_activity_series",
+      "column": "id,workout_id,recurrence",
+      "status": 200,
+      "ok": true,
+      "error": null
+    },
+    {
+      "table": "st_workouts",
+      "column": "id,program_id,week,day_order,day_label,workout_type,week_status",
+      "status": 200,
+      "ok": true,
+      "error": null
+    },
+    {
+      "table": "st_exercises",
+      "column": "section,catalog_exercise_id,equipment,exercise_type,superset_label,superset_order,program_role,measurement_type,laterality",
+      "status": 200,
+      "ok": true,
+      "error": null
+    },
+    {
+      "table": "st_planned_sets",
+      "column": "target_rir,rest_seconds,rep_min,rep_max,set_type",
+      "status": 200,
+      "ok": true,
+      "error": null
+    },
+    {
+      "table": "st_set_logs",
+      "column": "planned_set_id,exercise_id,user_id,log_date,completed,actual_weight,actual_reps,actual_duration,actual_distance",
+      "status": 200,
+      "ok": true,
+      "error": null
+    },
+    {
+      "table": "st_training_enrollments",
+      "column": "program_id",
+      "status": 200,
+      "ok": true,
+      "error": null
+    },
+    {
+      "table": "st_training_program_segments",
+      "column": "program_id",
+      "status": 200,
+      "ok": true,
+      "error": null
+    },
+    {
+      "table": "st_training_expectations",
+      "column": "program_id",
+      "status": 200,
+      "ok": true,
+      "error": null
+    }
+  ],
+  "counts": [
+    {
+      "table": "st_programs",
+      "status": 206,
+      "count": "82"
+    },
+    {
+      "table": "st_workouts",
+      "status": 206,
+      "count": "838"
+    },
+    {
+      "table": "st_group_activity_series",
+      "status": 200,
+      "count": "1"
+    },
+    {
+      "table": "st_group_activity_occurrences",
+      "status": 200,
+      "count": "1"
+    },
+    {
+      "table": "st_group_activity_recipients",
+      "status": 200,
+      "count": "1"
+    }
+  ],
+  "programs": {
+    "programRows": 82,
+    "nullName": 0,
+    "nullOwner": 0,
+    "nullStatus": 0,
+    "visibility": [
+      "personal",
+      "team"
+    ],
+    "status": [
+      "active",
+      "archived",
+      "draft",
+      "published"
+    ]
+  }
+}

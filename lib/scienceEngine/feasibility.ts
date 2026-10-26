@@ -1,5 +1,6 @@
 import { estimateWorkoutMinutes, sessionDurationTolerance } from './duration';
 import { restBand } from './generation/qualityRules';
+import { primerPolicyFromProfile, shouldGeneratePowerPrimer } from './primerPolicy';
 import { rampCountFor } from './rampUp';
 import type { ExercisePrescription, PrimaryGoal, TrainingProfile, WarmupItem } from './types';
 
@@ -88,14 +89,18 @@ function minimumSessionMinutes(profile: TrainingProfile, movementCount: number):
       }),
     0
   );
-  const warmupCount = Math.max(2, profile.hardRequirements?.warmupMin || 2);
+  const hard = profile.hardRequirements;
+  const warmupCount =
+    hard?.extendedWarmup || profile.warmupDuration === 'extended' || profile.warmupStyle === 'athletic'
+      ? Math.max(3, hard?.warmupMax || 4)
+      : Math.max(1, hard?.warmupMin || 1);
   const warmupItems: WarmupItem[] = Array.from({ length: warmupCount }, (_, index) => ({
     name: `Prep ${index + 1}`,
     category: 'raise',
     reps: '8',
     sets: 1,
   }));
-  const includePrimer = profile.potentiationPreference !== 'off';
+  const includePrimer = shouldGeneratePowerPrimer(primerPolicyFromProfile(profile));
   return estimateWorkoutMinutes({
     warmupItems,
     potentiation: includePrimer ? [workingLift('Vertical Jump', 75, 2, 'power')] : [],

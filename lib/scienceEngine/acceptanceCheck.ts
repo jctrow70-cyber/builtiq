@@ -79,12 +79,10 @@ async function run() {
   assert(bench!.targetRir === 2, `Bench RIR should be 2, got ${bench!.targetRir}`);
 
   const warmupNames = upperA!.warmup.map((w) => w.name.toLowerCase()).join(' | ');
-  assert(upperA!.warmup.length >= 2 && upperA!.warmup.length <= 4, `Upper A warm-up should be 2-4 moves, got ${warmupNames}`);
-  assert(/push-up|row|scapular|thoracic/i.test(warmupNames), `Upper A warm-up should prep press/row patterns, got ${warmupNames}`);
+  assert(upperA!.warmup.length >= 1 && upperA!.warmup.length <= 3, `Upper A warm-up should be 1-3 targeted moves, got ${warmupNames}`);
+  assert(/push-up|row|scapular|thoracic|inchworm/i.test(warmupNames), `Upper A warm-up should prep press/row patterns, got ${warmupNames}`);
 
-  const primer = upperA!.potentiation[0];
-  assert(primer && /chest pass|medicine/i.test(primer.name), `Expected medicine-ball chest pass, got ${primer?.name}`);
-  assert(primer!.sets === 2 && primer!.repMax >= 3, `Primer should be 2x3-4, got ${primer!.sets}x${primer!.repMin}-${primer!.repMax}`);
+  assert(upperA!.potentiation.length === 0, `Hypertrophy should omit a power primer, got ${upperA!.potentiation.map((item) => item.name).join(', ')}`);
 
   assert(upperA!.rampSets.length >= 3, `Expected bench ramp sets, got ${upperA!.rampSets.length}`);
   const rampWeights = upperA!.rampSets.map((r) => r.weight).filter(Boolean);
@@ -550,7 +548,7 @@ async function run() {
   console.log(`Chest target: ${chest?.targetSets}`);
   console.log(`Bench: ${bench!.sets} x ${bench!.repMin}-${bench!.repMax} @ ${bench!.targetRir} RIR`);
   console.log(`Warm-up: ${upperA!.warmup.map((w) => w.name).join(', ')}`);
-  console.log(`Power Primer: ${primer!.name} ${primer!.sets} x ${primer!.repMin}-${primer!.repMax}`);
+  console.log(`Power Primer: ${upperA!.potentiation[0]?.name || 'omitted'}`);
   console.log(`Ramp: ${upperA!.rampSets.map((r) => `${r.weight || r.percent} x ${r.reps}`).join(', ')}`);
   runCatalogCleanupChecks();
   runGenerationCatalogPolicyChecks();

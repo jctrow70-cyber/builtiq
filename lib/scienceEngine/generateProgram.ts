@@ -8,6 +8,7 @@ import { filterEligibleExercises, findByName, pickExercise } from './exerciseSel
 import { prescribeExercise } from './prescription';
 import { generateWarmup } from './warmup';
 import { generatePotentiation } from './potentiation';
+import { primerPolicyFromProfile, shouldGeneratePowerPrimer } from './primerPolicy';
 import { benchRampExample, generateRampSets, isPrimaryLift } from './rampUp';
 import { maxStrengthMoves, trimForDuration, estimateWorkoutMinutes } from './duration';
 import { validateProgram } from './validator';
@@ -634,12 +635,9 @@ function fillMuscleQuotas(opts: {
     if (need < 1) return;
     const pool = slotPoolForMuscle(muscle, opts.variantIndex);
     let guard = 0;
-    while (
-      opts.exercises.filter((ex) => isDedicatedForMuscle(ex, muscle)).length < need &&
-      opts.exercises.length < opts.maxMoves &&
-      guard < 6
-    ) {
+    while (opts.exercises.filter((ex) => isDedicatedForMuscle(ex, muscle)).length < need && guard < 6) {
       guard += 1;
+      if (opts.exercises.length >= opts.maxMoves && !dropReplaceableForQuota(opts, muscle)) break;
       const slot = pool[guard % pool.length];
       const picked = pickExercise(opts.catalog, {
         profile: opts.profile,
@@ -668,6 +666,38 @@ function fillMuscleQuotas(opts: {
       });
     }
   });
+}
+
+function dropReplaceableForQuota(
+  opts: {
+    profile: TrainingProfile;
+    day: SplitDay;
+    exercises: ExercisePrescription[];
+    sessionNames: string[];
+    already: string[];
+  },
+  needed: MuscleId
+): boolean {
+  const protectedMuscles = quotaMusclesForDay(opts.profile, opts.day);
+  const idx = [...opts.exercises]
+    .map((ex, i) => ({ ex, i }))
+    .reverse()
+    .find((row) => {
+      if (row.ex.role === 'primary') return false;
+      if (isDedicatedForMuscle(row.ex, needed)) return false;
+      return !protectedMuscles.some(
+        (muscle) =>
+          isDedicatedForMuscle(row.ex, muscle) &&
+          opts.exercises.filter((item) => isDedicatedForMuscle(item, muscle)).length <= muscleQuotaForDay(opts.profile, opts.day, muscle)
+      );
+    })?.i;
+  if (idx == null) return false;
+  const removed = opts.exercises.splice(idx, 1)[0];
+  const nameIdx = opts.sessionNames.findIndex((name) => name === removed.name);
+  if (nameIdx >= 0) opts.sessionNames.splice(nameIdx, 1);
+  const alreadyIdx = opts.already.lastIndexOf(removed.name);
+  if (alreadyIdx >= 0) opts.already.splice(alreadyIdx, 1);
+  return true;
 }
 
 function shouldFillSession(profile: TrainingProfile, workoutType: SplitDay['workoutType']): boolean {
@@ -915,5 +945,8 @@ function buildAddonWorkout(opts: {
 function buildSummary(profile: TrainingProfile, split: SplitDay[], volume: VolumeTarget[]): string {
   const types = split.map((d) => d.workoutType).join(', ');
   const chest = volume.find((v) => v.muscle === 'chest');
-  return `BuiltIQ Science Engine ${SCIENCE_ENGINE_VERSION} built a ${profile.experienceLevel} ${profile.primaryGoal.replace(/_/g, ' ')} plan on ${types}. Weekly volume starts at a productive dose rather than a maximum. ${chest ? `Chest target is ${chest.targetSets} effective sets.` : ''} Dynamic warm-up, Power Primer, and lift-specific ramp-up are included before working sets.`;
+  const primerNote = shouldGeneratePowerPrimer(primerPolicyFromProfile(profile))
+    ? 'Dynamic warm-up, a short Power Primer when it helps the primary lift, and lift-specific ramp-up are included before working sets.'
+    : 'Dynamic warm-up and lift-specific ramp-up are included before working sets. Power primers stay off unless athletic work is requested.';
+  return `BuiltIQ Science Engine ${SCIENCE_ENGINE_VERSION} built a ${profile.experienceLevel} ${profile.primaryGoal.replace(/_/g, ' ')} plan on ${types}. Weekly volume starts at a productive dose rather than a maximum. ${chest ? `Chest target is ${chest.targetSets} effective sets.` : ''} ${primerNote}`;
 }

@@ -77,6 +77,7 @@ export type GenerationContext = {
     pain_areas: string[];
     limitations: string[];
     notes: string;
+    potentiation_preference?: string;
   };
   schedule: {
     days: Array<{ day_label: string; requested_type: string }>;

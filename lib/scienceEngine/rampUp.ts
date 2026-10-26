@@ -1,5 +1,24 @@
 import type { RampSet, TrainingProfile } from './types';
 
+const RELATIVE_LOAD_NAME = /\b(pull-?ups?|chin-?ups?|dips?|push-?ups?)\b/i;
+
+export function isRelativeLoadExercise(ex: { name?: string; equipment?: string[] }): boolean {
+  const name = String(ex.name || '');
+  if (/weighted|band.?assist|assisted|machine|smith/i.test(name)) return false;
+  if (RELATIVE_LOAD_NAME.test(name)) return true;
+  return false;
+}
+
+/** Full-bodyweight ramps are only safe when known capacity is well above the working range. */
+export function knownCapacityAllowsBodyweightRamp(opts: {
+  workingRepMax: number;
+  knownMaxReps?: number | null;
+}): boolean {
+  const known = Number(opts.knownMaxReps);
+  if (!Number.isFinite(known) || known <= 0) return false;
+  return known >= opts.workingRepMax + 6;
+}
+
 /** How many preparation sets a lift needs. Not a fixed four-stage rule. */
 export function rampCountFor(opts: { workingRepMax: number; experienceLevel?: string; opener?: boolean }): number {
   const experience = String(opts.experienceLevel || 'intermediate').toLowerCase();

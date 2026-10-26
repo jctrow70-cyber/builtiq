@@ -61,6 +61,7 @@ export function buildGenerationContext(opts: {
       pain_areas: profile.painAreas,
       limitations: profile.injuryLimitations,
       notes: profile.intakeNotes || '',
+      potentiation_preference: profile.potentiationPreference,
     },
     schedule: {
       days: program.split.map((day) => ({

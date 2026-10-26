@@ -16,7 +16,9 @@ export function explainProgression(result: ProgressionResult, exerciseName: stri
 export function explainWarmup(workout: ScienceWorkout): string {
   const muscles = workout.exercises.flatMap((ex) => ex.primaryMuscles).filter((m, i, arr) => arr.indexOf(m) === i);
   const muscleText = muscles.slice(0, 4).map((m) => m.replace('_', ' ')).join(', ') || 'the muscles trained today';
-  return `Today's warm-up prepares ${muscleText} through dynamic movement before transitioning into explosive preparation for your first major lift.`;
+  return workout.potentiation.length
+    ? `Today's warm-up prepares ${muscleText} through targeted movement before a short explosive primer and the first working lift.`
+    : `Today's warm-up prepares ${muscleText} through targeted movement before the first working lift.`;
 }
 
 export function explainPowerPrimer(workout: ScienceWorkout): string {

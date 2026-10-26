@@ -384,7 +384,7 @@ function isLowerBodyWarmupName(name: string): boolean {
 }
 
 function resolvePrimer(raw: any, primary: CatalogExercise | null, catalog: CatalogExercise[], profile: TrainingProfile) {
-  if (raw === null) return [];
+  if (raw === null || (Array.isArray(raw) && raw.length === 0)) return [];
   if (raw?.name) {
     const hit = findByName(catalog, String(raw.name)) || catalogStub(String(raw.name));
     return [

@@ -3,13 +3,22 @@
  * Imported from lib/scienceEngine/acceptanceCheck.ts
  */
 import { FALLBACK_CATALOG } from '../catalogAdapter';
+import { classifySessionDuration } from '../duration';
 import { generateProgram } from '../generateProgram';
 import { isExplosivePrimer } from '../powerPrescription';
+import { shouldGeneratePowerPrimer } from '../primerPolicy';
 import { trainingProfileFromSources } from '../profile';
+import { isRelativeLoadExercise } from '../rampUp';
+import { generateWarmup } from '../warmup';
+import { validateProgram } from '../validator';
 import { buildGenerationContext } from './context';
+import { warmupExerciseBounds } from './hardRequirements';
+import { toDesignerExercise } from './library';
 import { programMaxOutputTokens } from './openaiClient';
 import { runGenerationPipeline } from './orchestrator';
 import { buildDesignerInstructions, slimContextForPrompt } from './prompt';
+import { assignSessionRamps } from './ramps';
+import { repairAiProgram } from './repairAiProgram';
 import type { AiStrengthExercise, AiWeekProgram, AiWorkoutPlan } from './types';
 
 function assert(cond: unknown, message: string) {
@@ -245,5 +254,69 @@ export async function runStage2cChecks() {
   const names = (monday?.exercises || []).map((exercise) => exercise.name);
   const templateNames = science.workouts.find((workout) => workout.week === 1 && workout.dayLabel === 'Mon')?.exercises.map((exercise) => exercise.name) || [];
   assert(names.join('|') !== templateNames.join('|'), 'E Monday was replaced by the science template');
-  console.log('BIQ-0258 Stage 2C designer programming checks passed');
+
+  assert(!shouldGeneratePowerPrimer({ primaryGoal: 'hypertrophy', potentiationPreference: 'automatic' }), 'Hypertrophy automatic must not require a primer');
+  assert(shouldGeneratePowerPrimer({ primaryGoal: 'athletic_performance' }), 'Athletic performance may generate a primer');
+  assert(shouldGeneratePowerPrimer({ primaryGoal: 'hypertrophy', trainingFeel: ['athletic'] }), 'Athletic feel may generate a primer');
+  const hypertrophyWeek = generateProgram(hypertrophy, FALLBACK_CATALOG).workouts.filter((workout) => workout.week === 1);
+  hypertrophyWeek.forEach((workout) => {
+    assert(workout.potentiation.length === 0, `${workout.dayLabel} hypertrophy fallback added ${workout.potentiation.map((item) => item.name).join(', ')}`);
+    assert(workout.warmup.length >= 1 && workout.warmup.length <= 3, `${workout.dayLabel} warmup count ${workout.warmup.length}`);
+    assert(!workout.warmup.some((item) => /ankle|world'?s greatest/i.test(item.name)), `${workout.dayLabel} used a lower-body mobility drill that may not match the session`);
+  });
+  const hypertrophyCheck = validateProgram(generateProgram(hypertrophy, FALLBACK_CATALOG), hypertrophy);
+  assert(
+    !hypertrophyCheck.issues.some((issue) => issue.code === 'PRIMER'),
+    `Omitting a hypertrophy primer must not warn: ${hypertrophyCheck.issues.map((issue) => issue.message).join('; ')}`
+  );
+  assert(warmupExerciseBounds({ sessionMinutes: 60, warmupStyle: 'dynamic', warmupDuration: 'standard' }).max === 3, '60-minute dynamic warm-up ceiling is 3');
+  const upperWarm = generateWarmup({
+    workoutType: 'Upper Body',
+    muscles: ['chest', 'lats'],
+    profile: hypertrophy,
+    catalog: FALLBACK_CATALOG,
+    sessionPatterns: ['horizontal_push', 'vertical_pull'],
+  });
+  assert(upperWarm.items.length <= 2, `Upper hypertrophy warm-up should stay short, got ${upperWarm.items.map((item) => item.name).join(', ')}`);
+  assert(isRelativeLoadExercise({ name: 'Pull-Up' }) && isRelativeLoadExercise({ name: 'Chin-Up' }) && isRelativeLoadExercise({ name: 'Chest Dip' }) && isRelativeLoadExercise({ name: 'Push-Up' }), 'Bodyweight compounds are relative-load movements');
+  assert(!isRelativeLoadExercise({ name: 'Weighted Pull-Up' }), 'Weighted pull-ups can still use load ramps');
+  const pullUpId = idOf('Pull-Up');
+  const pullCard = FALLBACK_CATALOG.find((exercise) => exercise.name === 'Pull-Up');
+  assert(pullCard, 'Fallback catalog must include Pull-Up');
+  const pullLibrary = new Map([[pullUpId, toDesignerExercise(pullCard!)]]);
+  const pullRamps = assignSessionRamps([{ exercise_id: pullUpId, role: 'primary', rep_max: 8 }], pullLibrary, 'intermediate');
+  assert(pullRamps[0].ramp_sets.length === 0, 'Unknown pull-up capacity must not get full-bodyweight ramp reps');
+  assert(
+    athleticProgram.workouts.some((workout) => workout.week === 1 && workout.potentiation.length > 0),
+    'Athletic fallback should still be allowed to use a primer'
+  );
+  const longMonday = {
+    ...week.workouts[0],
+    warmup: [
+      { exercise_id: idOf('Scapular Push-Up'), sets: 1, prescription: '8', why: 'Scap prep' },
+      { exercise_id: idOf('Band Row'), sets: 1, prescription: '12', why: 'Pull prep' },
+      { exercise_id: idOf('Goblet Squat'), sets: 1, prescription: '8', why: 'Squat prep' },
+    ],
+    potentiation: [{ exercise_id: idOf('Medicine-Ball Chest Pass'), sets: 2, prescription: '4', why: 'Explosive prep' }],
+  };
+  const crowded = {
+    schema_version: '2.0',
+    summary: 'Over time',
+    coaching_notes: '',
+    workouts: [longMonday, week.workouts[1], week.workouts[2]],
+  };
+  const trimmed = repairAiProgram(crowded, buildGenerationContext({
+    profile: hypertrophy,
+    program: generateProgram(hypertrophy, FALLBACK_CATALOG),
+    catalog: FALLBACK_CATALOG,
+    userPrompt: 'Build muscle. 3 days. 60 minutes.',
+    programName: 'Duration',
+    mode: 'full_program',
+  }).context, new Map(FALLBACK_CATALOG.map((ex) => [String(ex.id), ex])));
+  assert(
+    trimmed.program.workouts[0].potentiation.length === 0,
+    `Duration repair should drop a hypertrophy primer, got ${trimmed.program.workouts[0].potentiation.map((item) => item.exercise_id).join(', ')}`
+  );
+  assert(classifySessionDuration(61, 60).over === 'warning', 'Anything over 60 minutes should warn');
+  console.log('BIQ-0267 Stage 2C designer programming checks passed');
 }

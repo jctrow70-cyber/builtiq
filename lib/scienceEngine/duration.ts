@@ -14,6 +14,7 @@ import {
 import { buildEffectiveWorkout, estimateEffectiveBreakdown, estimateEffectiveMinutes } from './generation/effectiveWorkout';
 import type { AiWorkoutPlan, DesignerExercise } from './generation/types';
 import { powerRestSecondsFor } from './powerPrescription';
+import { primerPolicyFromProfile, shouldGeneratePowerPrimer } from './primerPolicy';
 import { prepItemSeconds } from './prescriptionTime';
 import type { MuscleId } from './taxonomy';
 import type { ExercisePrescription, ScienceWorkout, TrainingProfile, WarmupItem } from './types';
@@ -37,13 +38,13 @@ export function minStrengthMoves(minutes: number): number {
 }
 
 /**
- * 60-minute requests use a practical target band: 55–65 on target, 66–69
- * repairable overage, 70+ hard error. Other lengths keep ~10% / ~15% with floors.
+ * 60-minute requests target at or below 60. 61–69 is a repairable warning.
+ * 70+ is a hard error. Other lengths keep ~10% / ~15% with floors.
  */
 export function sessionDurationTolerance(requestedMinutes: number): { warnDelta: number; errorDelta: number } {
   const minutes = Math.max(1, Number(requestedMinutes) || 60);
   if (minutes === 60) {
-    return { warnDelta: 5, errorDelta: 9 };
+    return { warnDelta: 0, errorDelta: 9 };
   }
   return {
     warnDelta: Math.max(5, Math.round(minutes * 0.1)),
@@ -231,6 +232,24 @@ export function trimForDuration(workout: ScienceWorkout, profile: TrainingProfil
     });
   };
   refresh();
+
+  while (next.estimatedMinutes > limit) {
+    if (next.potentiation.length && !shouldGeneratePowerPrimer(primerPolicyFromProfile(profile))) {
+      next.potentiation = next.potentiation.slice(0, -1);
+      refresh();
+      continue;
+    }
+    const warmupFloor =
+      profile.warmupDuration === 'extended' || profile.warmupStyle === 'athletic' || profile.warmupStyle === 'mobility_focused'
+        ? 3
+        : 1;
+    if (next.warmup.length > warmupFloor) {
+      next.warmup = next.warmup.slice(0, -1);
+      refresh();
+      continue;
+    }
+    break;
+  }
 
   while (next.estimatedMinutes > limit + errorDelta && next.exercises.length > minMoves) {
     const idx = next.exercises

@@ -198,9 +198,9 @@ export async function runPhase1GenerationChecks() {
   assert(mapped.explanations.some((line) => /week-1 template/i.test(line)), 'Later weeks must be described as unprogressed week-1 copies');
   assert(mon!.estimatedMinutes > 45 && mon!.estimatedMinutes < 75, `Deterministic Monday duration should be realistic, got ${mon!.estimatedMinutes}`);
   const sixty = sessionDurationTolerance(60);
-  assert(sixty.warnDelta === 5 && sixty.errorDelta === 9, `60-minute bands should be 55–65 / 70+, got ${sixty.warnDelta}/${sixty.errorDelta}`);
-  assert(classifySessionDuration(65, 60).over === 'ok', '65 vs 60 should be on target');
-  assert(classifySessionDuration(66, 60).over === 'warning', '66 vs 60 should be repairable overage');
+  assert(sixty.warnDelta === 0 && sixty.errorDelta === 9, `60-minute bands should warn above 60 and error at 70+, got ${sixty.warnDelta}/${sixty.errorDelta}`);
+  assert(classifySessionDuration(60, 60).over === 'ok', '60 vs 60 should be on target');
+  assert(classifySessionDuration(61, 60).over === 'warning', '61 vs 60 should be a repairable warning');
   assert(classifySessionDuration(69, 60).over === 'warning', '69 vs 60 should stay a warning');
   assert(classifySessionDuration(70, 60).over === 'error', '70 vs 60 should error');
   assert(classifySessionDuration(38, 30).over !== 'error', 'Short sessions must not use a 3-minute error band');

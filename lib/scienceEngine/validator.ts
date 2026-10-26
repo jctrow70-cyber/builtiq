@@ -1,5 +1,6 @@
 import { classifySessionDuration } from './duration';
 import { warmupExerciseBounds } from './generation/hardRequirements';
+import { missingPrimerSeverity, primerPolicyFromProfile } from './primerPolicy';
 import type { ScienceProgram, TrainingProfile, ValidationIssue, ValidationResult } from './types';
 import { preferredExposuresPerWeek } from './volume';
 
@@ -30,14 +31,19 @@ export function validateProgram(program: ScienceProgram, profile: TrainingProfil
           warmupStyle: profile.warmupStyle,
           warmupDuration: profile.warmupDuration,
         });
-    if (!addonDay && profile.warmupStyle !== 'minimal' && workout.warmup.length < warmupBounds.min) {
-      issues.push(err('WARMUP', `${workout.name} warm-up is too thin for a dynamic preparation block.`));
+    if (!addonDay && profile.warmupStyle !== 'minimal' && workout.warmup.length === 0) {
+      issues.push(err('WARMUP', `${workout.name} needs at least one targeted warm-up.`));
     }
     if (!addonDay && workout.warmup.length > warmupBounds.max) {
       issues.push(err('WARMUP', `${workout.name} has ${workout.warmup.length} dynamic warm-ups; keep it to ${warmupBounds.max}.`));
     }
-    if (!addonDay && profile.potentiationPreference !== 'off' && workout.exercises.some((ex) => ex.role === 'primary') && !workout.potentiation.length) {
-      issues.push(warn('PRIMER', `${workout.name} is missing a Power Primer.`));
+    if (
+      !addonDay &&
+      missingPrimerSeverity(primerPolicyFromProfile(profile)) === 'warning' &&
+      workout.exercises.some((ex) => ex.role === 'primary') &&
+      !workout.potentiation.length
+    ) {
+      issues.push(warn('PRIMER', `${workout.name} omitted a Power Primer. That is allowed when it does not help the session.`));
     }
     const families = workout.exercises.map((ex) => pressFamily(ex.name)).filter(Boolean);
     if (families.filter((f) => f === 'flat_press').length > 1) {

@@ -48,13 +48,13 @@ export function warmupExerciseBounds(input: {
   const minutes = Math.max(1, Number(input.sessionMinutes) || 60);
   const style = input.warmupStyle || 'dynamic';
   const duration = input.warmupDuration || 'standard';
-  if (style === 'minimal' || duration === 'quick') return { min: 2, max: 3 };
+  if (style === 'minimal' || duration === 'quick') return { min: 1, max: 2 };
   if (input.extendedWarmup || duration === 'extended' || style === 'athletic' || style === 'mobility_focused') {
-    return { min: 3, max: 6 };
+    return { min: 1, max: 5 };
   }
-  if (minutes <= 45) return { min: 2, max: 3 };
-  if (minutes >= 90) return { min: 3, max: 5 };
-  return { min: 2, max: 4 };
+  if (minutes <= 45) return { min: 1, max: 2 };
+  if (minutes >= 90) return { min: 1, max: 4 };
+  return { min: 1, max: 3 };
 }
 
 export function resolveHardRequirements(

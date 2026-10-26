@@ -92,8 +92,8 @@ export async function runInstructionAdherenceChecks() {
   assert(parsed.waivedMajorMuscles.includes('quads') && parsed.waivedMajorMuscles.includes('lats'), 'Opposite majors are waived, not deleted from the catalog');
   assert(!parsed.waivedMajorMuscles.includes('chest'), 'A required muscle cannot be waived');
   assert(!requestsIdenticalDays('Make the days different, not identical'), 'A rejection of identical days must stay a preference for variety');
-  assert(warmupExerciseBounds({ sessionMinutes: 60, warmupStyle: 'dynamic', warmupDuration: 'standard' }).max === 4, 'A standard 60-minute session caps dynamic warm-ups at 4');
-  assert(warmupExerciseBounds({ sessionMinutes: 60, warmupDuration: 'extended', extendedWarmup: true }).max === 6, 'An extended warm-up may use up to 6 drills');
+  assert(warmupExerciseBounds({ sessionMinutes: 60, warmupStyle: 'dynamic', warmupDuration: 'standard' }).max === 3, 'A standard 60-minute session caps dynamic warm-ups at 3');
+  assert(warmupExerciseBounds({ sessionMinutes: 60, warmupDuration: 'extended', extendedWarmup: true }).max === 5, 'An extended warm-up may use up to 5 drills');
 
   const profile = emphasisProfile(60);
   const program = generateProgram(profile, FALLBACK_CATALOG);
@@ -274,6 +274,12 @@ export async function runInstructionAdherenceChecks() {
     FALLBACK_CATALOG
   );
   const extendedWarm = extended.workouts.filter((workout) => workout.week === 1)[0].warmup;
-  assert(extendedWarm.length >= 3 && extendedWarm.length <= 6, `Extended warm-up should be allowed past 4 and capped at 6, got ${extendedWarm.length}`);
-  assert(extendedWarm.length > 4, `Extended athletic warm-up should be allowed to exceed the standard cap, got ${extendedWarm.map((item) => item.name).join(', ')}`);
+  const extendedBounds = warmupExerciseBounds({
+    sessionMinutes: 60,
+    warmupStyle: 'athletic',
+    warmupDuration: 'extended',
+    extendedWarmup: true,
+  });
+  assert(extendedBounds.max === 5 && extendedBounds.max > warmupExerciseBounds({ sessionMinutes: 60, warmupStyle: 'dynamic', warmupDuration: 'standard' }).max, 'Extended athletic warm-up must be allowed past the standard cap');
+  assert(extendedWarm.length >= 3 && extendedWarm.length <= extendedBounds.max, `Extended warm-up should stay targeted and under the extended cap, got ${extendedWarm.map((item) => item.name).join(', ')}`);
 }

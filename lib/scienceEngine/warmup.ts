@@ -65,7 +65,7 @@ export function generateWarmup(opts: {
   const rules = getScienceRules();
   const style = opts.profile.warmupStyle || 'dynamic';
   const durationPref = opts.profile.warmupDuration || 'standard';
-  const rounds = style === 'minimal' ? 1 : durationPref === 'extended' ? 3 : rules.warmupRounds;
+  const rounds = style === 'minimal' || durationPref !== 'extended' ? 1 : Math.min(2, rules.warmupRounds);
   const bounds = opts.profile.hardRequirements
     ? { min: opts.profile.hardRequirements.warmupMin, max: opts.profile.hardRequirements.warmupMax }
     : warmupExerciseBounds({
@@ -73,21 +73,22 @@ export function generateWarmup(opts: {
         warmupStyle: style,
         warmupDuration: durationPref,
       });
+  const preferred = preferredWarmupCount({
+    max: bounds.max,
+    minutes: opts.profile.preferredSessionMinutes,
+    style,
+    durationPref,
+  });
+  const patterns = opts.sessionPatterns || [];
   const templateId = warmupTemplateFor(opts.workoutType, opts.muscles);
-  const fromSession = sessionPrepMoves(opts.sessionPatterns || [], Math.max(bounds.max, 5));
-  // Upper/chest templates stay on upper prep. Session squat/lunge primers are for mixed or lower days.
-  const useSessionPrep = templateId !== 'upper_body' && fromSession.length >= 3;
-  let moves = dedupeMoves(useSessionPrep ? fromSession : WARMUP_TEMPLATES[templateId]);
-  const seen = new Set(moves.map((move) => move.name.toLowerCase()));
-  if (moves.length < bounds.min) {
-    for (const extra of WARMUP_TEMPLATES[templateId]) {
-      if (moves.length >= bounds.min) break;
-      if (seen.has(extra.name.toLowerCase())) continue;
-      seen.add(extra.name.toLowerCase());
-      moves.push(extra);
-    }
-  }
-  moves = moves.slice(0, bounds.max);
+  const moves = selectTargetedWarmupMoves({
+    patterns,
+    templateId,
+    workoutType: opts.workoutType,
+    max: bounds.max,
+    preferred,
+    fillToPreferred: durationPref === 'extended' || style === 'athletic' || style === 'mobility_focused',
+  });
 
   const items = toWarmupItems(moves, rounds).map((item) => {
     const hit = findByName(opts.catalog, item.name);
@@ -99,29 +100,85 @@ export function generateWarmup(opts: {
   return { items, fatigueScore, durationMinutes };
 }
 
-function sessionPrepMoves(patterns: string[], max: number): LibraryMove[] {
+function preferredWarmupCount(opts: {
+  max: number;
+  minutes?: number;
+  style: string;
+  durationPref: string;
+}): number {
+  if (opts.style === 'athletic' || opts.style === 'mobility_focused' || opts.durationPref === 'extended') {
+    return Math.min(opts.max, 4);
+  }
+  const minutes = Math.max(1, Number(opts.minutes) || 60);
+  if (minutes <= 45) return Math.min(opts.max, 2);
+  return Math.min(opts.max, 2);
+}
+
+function hasLowerPattern(patterns: string[]): boolean {
+  return patterns.some((pattern) => ['squat', 'hinge', 'lunge'].includes(pattern));
+}
+
+function hasUpperPattern(patterns: string[]): boolean {
+  return patterns.some((pattern) =>
+    ['horizontal_push', 'vertical_push', 'horizontal_pull', 'vertical_pull', 'shoulder_abduction'].includes(pattern)
+  );
+}
+
+function selectTargetedWarmupMoves(opts: {
+  patterns: string[];
+  templateId: WarmupTemplateId;
+  workoutType: SplitDayType;
+  max: number;
+  preferred: number;
+  fillToPreferred?: boolean;
+}): LibraryMove[] {
   const seen = new Set<string>();
   const moves: LibraryMove[] = [];
-  for (const pattern of patterns) {
-    for (const move of PREP_BY_PATTERN[pattern] || []) {
-      if (seen.has(move.name) || moves.length >= max) continue;
-      seen.add(move.name);
-      moves.push(move);
+  const add = (move: LibraryMove | undefined) => {
+    if (!move || moves.length >= opts.max) return;
+    const key = move.name.toLowerCase();
+    if (seen.has(key)) return;
+    if (isAnkleOnlyMove(move) && !hasLowerPattern(opts.patterns)) return;
+    seen.add(key);
+    moves.push(move);
+  };
+
+  const raise = pickGeneralRaise(opts.patterns, opts.templateId, opts.workoutType);
+  add(raise);
+
+  const uniquePatterns = [...new Set(opts.patterns.filter(Boolean))];
+  for (const pattern of uniquePatterns) {
+    if (moves.length >= opts.preferred) break;
+    add(PREP_BY_PATTERN[pattern]?.[0]);
+  }
+
+  if (opts.fillToPreferred) {
+    for (const extra of WARMUP_TEMPLATES[opts.templateId] || []) {
+      if (moves.length >= opts.preferred) break;
+      add(extra);
     }
+  }
+  if (!moves.length) {
+    add(WARMUP_TEMPLATES[opts.templateId][0] || WARMUP_TEMPLATES.default[0]);
   }
   return moves;
 }
 
-function dedupeMoves(moves: LibraryMove[]): LibraryMove[] {
-  const seen = new Set<string>();
-  const out: LibraryMove[] = [];
-  moves.forEach((move) => {
-    const key = move.name.toLowerCase();
-    if (seen.has(key)) return;
-    seen.add(key);
-    out.push(move);
-  });
-  return out;
+function pickGeneralRaise(patterns: string[], templateId: WarmupTemplateId, workoutType: SplitDayType): LibraryMove {
+  if (hasLowerPattern(patterns) && hasUpperPattern(patterns)) {
+    return { name: 'Inchworm', category: 'raise', reps: '5', muscleGroup: 'abs' };
+  }
+  if (hasLowerPattern(patterns) || workoutType === 'Lower Body' || workoutType === 'Legs') {
+    return { name: 'Goblet Squat', category: 'raise', reps: '8', muscleGroup: 'quads' };
+  }
+  if (templateId === 'upper_body' || hasUpperPattern(patterns)) {
+    return { name: 'Inchworm', category: 'raise', reps: '5', muscleGroup: 'abs' };
+  }
+  return WARMUP_TEMPLATES[templateId][0] || { name: 'Inchworm', category: 'raise', reps: '5', muscleGroup: 'abs' };
+}
+
+function isAnkleOnlyMove(move: LibraryMove): boolean {
+  return /ankle|knee-to-wall|world'?s greatest/i.test(move.name);
 }
 
 export function warmupFatigueLabel(score: number): 'very_low' | 'low' | 'moderate' {
