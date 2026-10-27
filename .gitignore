@@ -39,6 +39,7 @@ coverage/
 
 # Local debug scripts (never commit secrets)
 .tmp-*.cmd
+scripts/tmp-*
 scripts/bug-reports-out.json
 scripts/_tmp-*
 

@@ -1,1 +1,0 @@
-Add shared Conditioning sections, working-set summaries, and edit-scope labels

@@ -24,7 +24,7 @@ Keep the workout list as the default. Build a new month data model. Open the edi
 
 ### Impact
 
-No database schema change. Training remains the logging surface.
+No database schema change. Training remains the logging surface. Phase C is not started. Planned follow-ups: a more compact group edit-scope control, clearer save feedback if the editor keeps immediate saves, a more scannable workout-details view, and Training week-cell summaries that match Program Design. Day / Week / Month and the full-month calendar stay.
 
 ---
 

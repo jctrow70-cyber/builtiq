@@ -11,6 +11,39 @@ Branch:
 Status:
 ```
 
+## BIQ-0273 - Remove committed temporary verification scripts
+
+Date: 2026-10-27
+Branch: main
+Status: Implemented. Local cleanup commit. Not pushed. No database change.
+
+Summary: Temporary `scripts/tmp-*` helpers that landed in `cf28de0` are removed from the current tree. Legitimate `scripts/test-*.ts` files stay. `.gitignore` now ignores `scripts/tmp-*`. Phase C Program Design follow-ups are documented only.
+
+Purpose: Keep verification helpers and their output out of the repo without rewriting the already-pushed Phase B commit.
+
+Files changed:
+- .gitignore
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+- scripts/tmp-* (removed from the current tree)
+
+Database changes: None.
+
+Testing steps:
+- `git ls-files scripts | findstr tmp-` should be empty
+- `npx tsx scripts/test-program-calendar-view.ts`
+- `npx tsx scripts/test-workout-preview.ts`
+- `npx tsx scripts/test-customize-for-me.ts`
+- `npm run test:science`
+- `npx tsc --noEmit`
+
+Known issues:
+- Deleting these files from the current branch does not remove them from Git history. `cf28de0` still contains the helpers.
+- No credential values were found in the committed files. The sign-in helper could mint a local magic link from `.env.local`; its output file was never committed.
+
+Recommended commit message: Remove temporary verification scripts and document Program Design next steps
+
 ## BIQ-0272 - Fix production typecheck on targeted warm-up patterns
 
 Date: 2026-10-26
@@ -81,7 +114,7 @@ Testing steps:
 - Use in Training / Push / week copy / import still available
 
 Known issues:
-- Phase C (shared Training week-cell summaries) is not started
+- Phase C is not started. Planned only: reduce the vertical footprint of group Everyone / Only me controls; review whether immediate-save editing needs clearer save feedback; polish workout details for scanning; align Training calendar summaries with Program Design; keep Day / Week / Month and the full-month calendar
 - Preferred calendar view is stored in localStorage and does not sync across devices
 - Completed-day styling is not shown in Program Design because authoring has no session completion state
 - Legacy bridged workouts cannot use the Move control (they have no `st_program_activities` row)
