@@ -199,6 +199,15 @@ export function findPersonalizedCopyOf(
   );
 }
 
+/** True when Just me would duplicate a live group plan instead of opening an existing copy. */
+export function willCreatePersonalizedCopy(
+  liveProgram: ProgramDesignRecord | null | undefined,
+  personalPrograms: ProgramDesignRecord[] = []
+): boolean {
+  if (!isLiveGroupProgram(liveProgram)) return false;
+  return !findPersonalizedCopyOf(liveProgram.id, personalPrograms);
+}
+
 /** Group programs that are live or scheduled for Training handoff (not drafts/archived). */
 export function isGroupEnrollmentCandidate(program: ProgramDesignRecord, today = todayYmd()): boolean {
   if (program.visibility !== 'team') return false;

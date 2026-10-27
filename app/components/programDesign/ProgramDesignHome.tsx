@@ -706,6 +706,7 @@ export default function ProgramDesignHome({
               : null
           }
           audienceBusy={followBusy}
+          personalPrograms={personalPrograms}
           onEditAudienceChange={showGroupAudience ? handleEditAudience : undefined}
           onBack={() => {
             setEditing(null);

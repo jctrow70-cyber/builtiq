@@ -38,6 +38,7 @@ type WorkoutTemplateEditorProps = {
   allWorkouts: any[];
   canEdit: boolean;
   onBack: () => void;
+  backLabel?: string;
   onReload: () => Promise<void>;
 };
 
@@ -47,6 +48,7 @@ export default function WorkoutTemplateEditor({
   allWorkouts,
   canEdit,
   onBack,
+  backLabel = '← Back to workouts',
   onReload,
 }: WorkoutTemplateEditorProps) {
   const [catalog, setCatalog] = useState<any[]>([]);
@@ -418,7 +420,7 @@ export default function WorkoutTemplateEditor({
   return (
     <div className="pd-template-editor">
       <button type="button" className="pd-back" onClick={onBack}>
-        ← Back to workouts
+        {backLabel}
       </button>
       <div className="card training-workout-panel">
         <div className="topline" style={{ justifyContent: 'space-between' }}>

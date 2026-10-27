@@ -146,7 +146,7 @@ function selectTargetedWarmupMoves(opts: {
   const raise = pickGeneralRaise(opts.patterns, opts.templateId, opts.workoutType);
   add(raise);
 
-  const uniquePatterns = [...new Set(opts.patterns.filter(Boolean))];
+  const uniquePatterns = Array.from(new Set(opts.patterns.filter(Boolean)));
   for (const pattern of uniquePatterns) {
     if (moves.length >= opts.preferred) break;
     add(PREP_BY_PATTERN[pattern]?.[0]);

@@ -188,3 +188,63 @@ export function summarizeExercise(ex: any): string {
 export function workoutHasExercises(workout: any): boolean {
   return (workout?.st_exercises || []).length > 0;
 }
+
+export function workingExercises(workout: any) {
+  return [...sectionExercises(workout, 'strength'), ...sectionExercises(workout, 'conditioning')];
+}
+
+export function workingExerciseCount(workout: any): number {
+  return workingExercises(workout).length;
+}
+
+export function workoutFocusLabel(workout: any): string {
+  const type = String(workout?.workout_type || '').trim();
+  if (type) return type;
+  return workoutPrimaryFocus(workout) || String(workout?.day_label || 'Workout');
+}
+
+export function workoutPrimaryFocus(workout: any): string {
+  const muscles = workingExercises(workout)
+    .map((ex: any) => String(ex?.muscle_group || '').trim())
+    .filter(Boolean);
+  return Array.from(new Set(muscles)).slice(0, 2).join(' + ') || 'Strength';
+}
+
+export function previewExerciseNames(workout: any, limit = 3): string[] {
+  return workingExercises(workout)
+    .map((ex: any) => String(ex?.name || '').trim())
+    .filter(Boolean)
+    .slice(0, Math.max(0, limit));
+}
+
+export function exerciseRestLabel(ex: any): string | null {
+  const fromExercise = Number(ex?.rest_seconds);
+  const fromSets = plannedSets(ex)
+    .map((set) => Number(set?.rest_seconds))
+    .find((value) => Number.isFinite(value) && value > 0);
+  const rest = Number.isFinite(fromExercise) && fromExercise > 0 ? fromExercise : fromSets;
+  if (!rest) return null;
+  if (rest >= 60) {
+    const minutes = rest / 60;
+    return Number.isInteger(minutes) ? `${minutes} min rest` : `${minutes.toFixed(1)} min rest`;
+  }
+  return `${rest}s rest`;
+}
+
+export function groupedPreviewSections(workout: any) {
+  const sections = WORKOUT_SECTIONS.map((sec) => ({
+    ...sec,
+    list: sectionExercises(workout, sec.id),
+  })).filter((sec) => sec.list.length);
+  const other = (workout?.st_exercises || []).filter((e: any) => !isKnownWorkoutSection(exerciseSection(e)));
+  if (other.length) sections.push({ id: 'other', label: 'Other', list: other });
+  return sections;
+}
+
+export function dayDurationMinutes(activities: Array<{ duration_minutes?: number | null }>, workout?: any): number | null {
+  const fromActivities = (activities || []).reduce((sum, activity) => sum + (Number(activity?.duration_minutes) || 0), 0);
+  if (fromActivities > 0) return fromActivities;
+  const count = workingExerciseCount(workout);
+  if (!count) return null;
+  return Math.max(30, count * 8);
+}

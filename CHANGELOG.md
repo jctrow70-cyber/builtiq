@@ -11,13 +11,92 @@ Branch:
 Status:
 ```
 
-## BIQ-0271 - Program Design redesign Phase A: sections, summaries, edit-scope labels
+## BIQ-0272 - Fix production typecheck on targeted warm-up patterns
 
 Date: 2026-10-26
 Branch: main
 Status: Implemented. Not committed. No database change.
 
-Summary: Program Design and Training now share four workout sections — Warm-up, Strength, Conditioning, and Cooldown. Exercise summaries lead with working sets and list ramp-up, backoff, drop, and AMRAP sets separately. Edit-scope labels name personal, group, just-me, and trainer-client programs without changing enrollment or assignment rules. Phase B calendar-strip UI is not started.
+Summary: Targeted warm-up selection dedupes session patterns with `Array.from(new Set(...))` so `next build` typechecks under the es5 TypeScript target.
+
+Purpose: The Vercel production build failed while checking types. Spreading a `Set` requires `downlevelIteration` or an es2015+ target, and this project compiles with `target: es5`.
+
+Files changed:
+- lib/scienceEngine/warmup.ts
+- CHANGELOG.md
+
+Database changes: None.
+
+Testing steps:
+- `npx tsc --noEmit --pretty false --incremental false` reports no error in `lib/scienceEngine/warmup.ts`
+- Deploy or run `npm run build` and confirm the typecheck step passes the warm-up file
+
+Known issues: None for this change.
+
+Recommended commit message: Fix es5 typecheck when deduping warm-up patterns
+
+## BIQ-0271 - Program Design redesign Phase B: calendar-first editor
+
+Date: 2026-10-26
+Branch: main
+Status: Implemented. Not committed. No database change.
+
+Summary: Program Design now opens on a compact Day / Week / Month calendar instead of a stacked workout list. Week view is a Monday–Sunday strip. Selecting a day shows a compact workout summary with separate View details and Edit workout actions. Month view reuses the existing program-date month grid and activity-type dots. Personal, group, just-me, and trainer-client scope labels stay in view. Enrollment and assignment rules are unchanged. After browser QA, criteria collapse into Program details, Edit uses a focused view, Day/Week/Month each have one date bar, group scope wraps, Add activity is compact, and Just me asks before creating a copy.
+
+Purpose: Make programs easier to scan on a phone without creating a second calendar model or entering the editor by default.
+
+Files changed:
+- lib/programDesign/programCalendarView.ts
+- lib/programDesign/workoutPreview.ts
+- lib/programDesign/enrollment.ts
+- lib/programDesign/programDesignApi.ts
+- app/components/programDesign/ProgramCalendarEditor.tsx
+- app/components/programDesign/ProgramDesignHome.tsx
+- app/components/programDesign/ProgramCriteriaPanel.tsx
+- app/components/programDesign/WeeklyHealthCalendar.tsx
+- app/components/programDesign/ProgramMonthCalendar.tsx
+- app/components/programDesign/ProgramDaySummary.tsx
+- app/components/programDesign/ProgramWorkoutPlan.tsx
+- app/components/programDesign/WorkoutPreview.tsx
+- app/components/training/WorkoutTemplateEditor.tsx
+- app/globals.css
+- scripts/test-program-calendar-view.ts
+- scripts/test-customize-for-me.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None. `updateProgramActivity` can now write `week_number` and `day_of_week` on existing activity rows.
+
+Testing steps:
+- `npx tsx scripts/test-program-calendar-view.ts`
+- `npx tsx scripts/test-workout-preview.ts`
+- `npx tsx scripts/test-customize-for-me.ts`
+- Programs → open a personal plan: name, week, Day/Week/Month, and calendar appear before Program details
+- Confirm one date bar per view: Previous day / Today / Next day, Previous week / This week / Next week, Previous month / This month / Next month
+- Selected-day summary shows name, focus, duration, working-exercise count, and a short exercise list — not the full section preview
+- View details → Edit workout hides calendar chrome; Done / Back returns to the same day
+- Open a live group plan: Editing for Everyone / Only me wraps; Only me asks before creating a copy and reuses an existing just-me copy
+- Add activity shows as + Add with accessible name Add activity
+- Use in Training / Push / week copy / import still available
+
+Known issues:
+- Phase C (shared Training week-cell summaries) is not started
+- Preferred calendar view is stored in localStorage and does not sync across devices
+- Completed-day styling is not shown in Program Design because authoring has no session completion state
+- Legacy bridged workouts cannot use the Move control (they have no `st_program_activities` row)
+- WorkoutTemplateEditor still saves field changes immediately; there is no separate unsaved-draft prompt
+- The existing Et plan 4 (just me) QA copy was left in place and was not deleted
+
+Recommended commit message: Open Program Design on a compact day, week, and month calendar
+
+## BIQ-0271 - Program Design redesign Phase A: sections, summaries, edit-scope labels
+
+Date: 2026-10-26
+Branch: main
+Status: Implemented. Committed locally as `cd94a81`. Not pushed. No database change.
+
+Summary: Program Design and Training now share four workout sections — Warm-up, Strength, Conditioning, and Cooldown. Exercise summaries lead with working sets and list ramp-up, backoff, drop, and AMRAP sets separately. Edit-scope labels name personal, group, just-me, and trainer-client programs without changing enrollment or assignment rules.
 
 Purpose: Make existing programs easier to read and edit before the mobile-first calendar redesign. Saved workouts keep their section and set records.
 
@@ -53,7 +132,6 @@ Testing steps:
 - Group editor still switches Everyone / Just me; personal programs only show a label
 
 Known issues:
-- Phase B (horizontal Monday–Sunday strip) is not implemented
 - Empty Conditioning headers appear in the Training logger and template editor so users can add work there
 - Older leftover group snapshots still label as a personal program; enrollment behavior is unchanged
 - Science persist still writes cardio-day lifts with `section: strength` and `program_role: conditioning`; display maps those into Conditioning without rewriting the row

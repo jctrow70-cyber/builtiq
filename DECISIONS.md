@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 117 - Calendar-first Program Design
+
+Date: 2026-10-26
+Status: Accepted
+Category: Program Design
+
+### Decision
+
+Program Design opens on a compact calendar. Week is the default: a horizontal Monday–Sunday strip with the selected day's workout summary underneath. Day shows one date. Month reuses the existing program-date month grid and activity-type dots. Criteria and advanced metadata stay in a collapsed Program details disclosure. View details is the full section preview. Edit workout opens the existing `WorkoutTemplateEditor` in a focused view and returns to the same day. The last explicit Day / Week / Month choice is remembered in localStorage. Switching a live group plan to Only me asks first and reuses an existing just-me copy. Enrollment, permissions, and assignment rules do not change.
+
+### Reason
+
+Stacked week cards and jumping straight into the editor made programs hard to scan on a phone. A second calendar model would split Training and Program Design.
+
+### Alternatives Considered
+
+Keep the workout list as the default. Build a new month data model. Open the editor when a day is selected.
+
+### Impact
+
+No database schema change. Training remains the logging surface.
+
+---
+
 ## Decision 116 - Shared workout sections and working-set summaries
 
 Date: 2026-10-26

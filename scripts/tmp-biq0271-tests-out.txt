@@ -1,0 +1,10 @@
+cwd=C:\Users\JesseTrowbridge\OneDrive - Tegria\Documents\GitHub\builtiq
+=== test-workout-preview === 
+workout preview Phase A checks passed
+PREVIEW_EXIT=0 
+=== test-customize-for-me === 
+OK: customize-for-me checks passed
+CUSTOMIZE_EXIT=0 
+=== test-group-strength-workout === 
+group strength workout phase 3b checks passed
+GROUP_STRENGTH_EXIT=0 

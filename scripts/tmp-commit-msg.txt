@@ -1,1 +1,1 @@
-Coordinate AI repair and stop science-seed duration from blocking generation
+Add shared Conditioning sections, working-set summaries, and edit-scope labels

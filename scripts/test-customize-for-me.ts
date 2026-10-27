@@ -14,6 +14,7 @@ import {
   programEditScopeCopy,
   programEditScopeKind,
   shouldKeepPersonalizedFollow,
+  willCreatePersonalizedCopy,
 } from '../lib/programDesign/enrollment';
 import { matchCopiedWorkout, syncMemberGroupEnrollment } from '../lib/programDesign/followProgram';
 import type { ProgramDesignRecord } from '../lib/programDesign/types';
@@ -94,6 +95,9 @@ assert.equal(needsJustMeCopy(justMe), false);
 assert.equal(isLeftoverGroupSnapshot(justMe), false);
 assert.equal(isLeftoverGroupSnapshot(liveTeam), false);
 
+assert.equal(willCreatePersonalizedCopy(liveTeam, []), true);
+assert.equal(willCreatePersonalizedCopy(liveTeam, [justMe]), false);
+assert.equal(willCreatePersonalizedCopy(justMe, [justMe]), false);
 assert.equal(personalizedFollowName('Group Plan'), 'Group Plan (just me)');
 assert.equal(personalizedFollowName('Group Plan (just me)'), 'Group Plan (just me)');
 assert.equal(personalizedFollowName('Group Plan (copy)'), 'Group Plan (just me)');

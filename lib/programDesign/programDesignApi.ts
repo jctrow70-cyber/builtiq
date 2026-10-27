@@ -336,7 +336,7 @@ export async function createActivitiesFromWorkouts(
 export async function updateProgramActivity(
   supabase: SupabaseClient,
   activityId: string,
-  draft: Partial<ActivityDraft> & { sort_order?: number }
+  draft: Partial<ActivityDraft> & { sort_order?: number; week_number?: number; day_of_week?: number }
 ): Promise<{ error: string | null }> {
   const patch: Record<string, unknown> = {};
   if (draft.activity_type) patch.activity_type = draft.activity_type;
@@ -345,6 +345,8 @@ export async function updateProgramActivity(
   if (draft.notes != null) patch.notes = draft.notes.trim();
   if (draft.details) patch.details = draft.details;
   if (draft.sort_order != null) patch.sort_order = draft.sort_order;
+  if (draft.week_number != null) patch.week_number = draft.week_number;
+  if (draft.day_of_week != null) patch.day_of_week = draft.day_of_week;
   const { error } = await supabase.from('st_program_activities').update(patch).eq('id', activityId);
   if (error) return { error: error.message || 'Could not update activity' };
   return { error: null };

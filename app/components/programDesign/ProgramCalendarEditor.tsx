@@ -4,16 +4,19 @@ import { useEffect, useMemo, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import SectionHeader from '../ui/SectionHeader';
 import WeeklyHealthCalendar from './WeeklyHealthCalendar';
+import ProgramMonthCalendar from './ProgramMonthCalendar';
+import ProgramDaySummary from './ProgramDaySummary';
 import AddActivitySheet from './AddActivitySheet';
 import ImportWorkoutsSheet from './ImportWorkoutsSheet';
 import PushToMembersSheet from './PushToMembersSheet';
-import ProgramWorkoutPlan from './ProgramWorkoutPlan';
+import ProgramWorkoutPlan, { type WorkoutFocusMode } from './ProgramWorkoutPlan';
 import ProgramCriteriaPanel from './ProgramCriteriaPanel';
 import SegmentedControl from '../ui/SegmentedControl';
-import { cycleLengthOf, formatProgramRange, programDateRange } from '../../../lib/programDesign/cycle';
+import { cycleLengthOf, dateForProgramDay, formatProgramRange, programDateRange } from '../../../lib/programDesign/cycle';
 import { lifecycleLabel, lifecycleStatusOf } from '../../../lib/programDesign/lifecycle';
-import { programEditAudience, programEditScopeCopy } from '../../../lib/programDesign/enrollment';
+import { programEditAudience, programEditScopeCopy, willCreatePersonalizedCopy } from '../../../lib/programDesign/enrollment';
 import {
+  activitiesForDay,
   activitiesFromLegacyWorkouts,
   copyWeekActivities,
   createProgramActivity,
@@ -32,6 +35,20 @@ import type {
   ProgramLifecycleStatus,
 } from '../../../lib/programDesign/types';
 import { draftWeekdays } from '../../../lib/programDesign/recurrence';
+import {
+  monthCalendarCells,
+  monthLabel as formatMonthLabel,
+  shiftYearMonth,
+  yearMonthOf,
+} from '../../../lib/programDesign/trainingSchedule';
+import {
+  defaultProgramDate,
+  readPreferredCalendarView,
+  rememberCalendarView,
+  selectProgramDate,
+  type ProgramCalendarView,
+} from '../../../lib/programDesign/programCalendarView';
+import { addDaysYmd, todayYmd } from '../../../lib/training/programCalendar';
 
 type ProgramCalendarEditorProps = {
   supabase: SupabaseClient;
@@ -39,13 +56,12 @@ type ProgramCalendarEditorProps = {
   programs: ProgramDesignRecord[];
   ownerUserId: string;
   canEdit: boolean;
-  /** Owner/editor of the live group template. Members can only pick Just me. */
   canEditGroupTemplate?: boolean;
   isFollowing?: boolean;
   groups?: { id: string; name: string; my_role?: string | null }[];
-  /** When set, owners/managers can push this program to group members. */
   pushTeamId?: string | null;
   audienceBusy?: boolean;
+  personalPrograms?: ProgramDesignRecord[];
   onEditAudienceChange?: (next: 'group' | 'me') => Promise<void>;
   onBack: () => void;
   onProgramChange: (program: ProgramDesignRecord) => void;
@@ -66,6 +82,7 @@ export default function ProgramCalendarEditor({
   groups = [],
   pushTeamId = null,
   audienceBusy = false,
+  personalPrograms = [],
   onEditAudienceChange,
   onBack,
   onProgramChange,
@@ -74,8 +91,17 @@ export default function ProgramCalendarEditor({
   onBuildWorkouts,
   justBuiltMessage = null,
 }: ProgramCalendarEditorProps) {
-  const [week, setWeek] = useState(1);
+  const totalWeeks = cycleLengthOf(program);
+  const { start, end } = programDateRange(program);
+  const initialDate = defaultProgramDate(start, totalWeeks);
+  const initialPick = selectProgramDate(start, initialDate, totalWeeks);
+
+  const [week, setWeek] = useState(initialPick.week);
+  const [selectedDate, setSelectedDate] = useState(initialPick.date);
+  const [calendarView, setCalendarView] = useState<ProgramCalendarView>('week');
+  const [yearMonth, setYearMonth] = useState(yearMonthOf(initialPick.date));
   const [activities, setActivities] = useState<ProgramActivity[]>([]);
+  const [workouts, setWorkouts] = useState<any[]>([]);
   const [tableReady, setTableReady] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -85,16 +111,21 @@ export default function ProgramCalendarEditor({
   const [importOpen, setImportOpen] = useState(false);
   const [pushOpen, setPushOpen] = useState(false);
   const [hasExercises, setHasExercises] = useState(false);
-  const [pane, setPane] = useState<'workouts' | 'calendar' | null>(null);
   const [openWorkoutId, setOpenWorkoutId] = useState<string | null>(null);
+  const [openMode, setOpenMode] = useState<WorkoutFocusMode | null>(null);
+  const [editReturn, setEditReturn] = useState<WorkoutFocusMode | null>(null);
+  const [pendingAudience, setPendingAudience] = useState<'me' | null>(null);
 
-  const totalWeeks = cycleLengthOf(program);
-  const { start, end } = programDateRange(program);
   const status = lifecycleStatusOf(program);
   const inclusive = !!program.inclusive_plan;
   const audience = programEditAudience(program);
   const scopeCopy = programEditScopeCopy(program);
   const groupName = groups.find((g) => g.id === program.team_id)?.name;
+  const selectedDay = selectProgramDate(start, selectedDate, totalWeeks).dayOfWeek;
+
+  useEffect(() => {
+    setCalendarView(readPreferredCalendarView());
+  }, []);
 
   async function reload() {
     setLoading(true);
@@ -127,13 +158,29 @@ export default function ProgramCalendarEditor({
   }
 
   useEffect(() => {
-    setPane(null);
+    const pick = selectProgramDate(start, defaultProgramDate(start, totalWeeks), totalWeeks);
+    setWeek(pick.week);
+    setSelectedDate(pick.date);
+    setYearMonth(yearMonthOf(pick.date));
+    setOpenWorkoutId(null);
+    setOpenMode(null);
+    setEditReturn(null);
+    setPendingAudience(null);
     void reload();
   }, [program.id]);
 
-  useEffect(() => {
-    if (pane == null && !loading) setPane(hasExercises || justBuiltMessage || !inclusive ? 'workouts' : 'calendar');
-  }, [loading, hasExercises, justBuiltMessage, pane]);
+  const dayActivities = useMemo(
+    () => activitiesForDay(activities, week, selectedDay),
+    [activities, week, selectedDay]
+  );
+  const selectedWorkout = useMemo(() => {
+    const workoutId = dayActivities.find((activity) => activity.workout_id)?.workout_id;
+    return (workouts || []).find((workout) => workout.id === workoutId) || null;
+  }, [dayActivities, workouts]);
+  const monthCells = useMemo(
+    () => monthCalendarCells(program, activities, yearMonth, todayYmd()),
+    [program, activities, yearMonth]
+  );
 
   const hasStrengthActivities = useMemo(
     () => activities.some((a) => a.activity_type === 'strength' && a.workout_id && a.week_number === week),
@@ -145,12 +192,82 @@ export default function ProgramCalendarEditor({
     return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][sheetDay] || 'Day';
   }, [sheetDay]);
 
+  function applyDate(dateYmd: string) {
+    const pick = selectProgramDate(start, dateYmd, totalWeeks);
+    setWeek(pick.week);
+    setSelectedDate(pick.date);
+    setYearMonth(yearMonthOf(pick.date));
+  }
+
+  function changeView(next: ProgramCalendarView) {
+    setCalendarView(next);
+    rememberCalendarView(next);
+    setOpenMode(null);
+    setOpenWorkoutId(null);
+    setEditReturn(null);
+  }
+
+  function openWorkout(workoutId: string, mode: WorkoutFocusMode, from: WorkoutFocusMode | 'calendar' = 'calendar') {
+    setOpenWorkoutId(workoutId);
+    setOpenMode(mode);
+    setEditReturn(mode === 'edit' && from === 'details' ? 'details' : null);
+  }
+
+  function closeWorkoutFocus() {
+    if (openMode === 'edit' && editReturn === 'details' && openWorkoutId) {
+      setOpenMode('details');
+      setEditReturn(null);
+      return;
+    }
+    setOpenMode(null);
+    setOpenWorkoutId(null);
+    setEditReturn(null);
+  }
+
+  function selectedWorkoutId() {
+    return selectedWorkout?.id || dayActivities.find((activity) => activity.workout_id)?.workout_id || null;
+  }
+
+  function requestAudienceChange(next: 'group' | 'me') {
+    if (!onEditAudienceChange || next === audience || audienceBusy) return;
+    if (next === 'me') {
+      setPendingAudience('me');
+      return;
+    }
+    void onEditAudienceChange(next).catch((e) => setError(e?.message || 'Could not switch who edits apply to'));
+  }
+
+  function changeWeek(nextWeek: number) {
+    const bounded = Math.max(1, Math.min(totalWeeks, nextWeek));
+    applyDate(dateForProgramDay(start, bounded, selectedDay));
+  }
+
+  function openAdd(day = selectedDay) {
+    if (!canEdit) return;
+    setEditing(null);
+    setSheetDay(day);
+  }
+
+  function openActivity(activity: ProgramActivity) {
+    if (activity.workout_id && hasExercises && activity.activity_type === 'strength') {
+      applyDate(dateForProgramDay(start, activity.week_number, activity.day_of_week));
+      openWorkout(activity.workout_id, 'details');
+      return;
+    }
+    setEditing(activity);
+    setSheetDay(activity.day_of_week);
+  }
+
   async function saveActivity(draft: ActivityDraft) {
     if (!canEdit) return;
     if (editing && editing.id.startsWith('legacy-')) return;
     const isNewStrength = !editing && draft.activity_type === 'strength';
     if (editing) {
-      const { error: updateError } = await updateProgramActivity(supabase, editing.id, draft);
+      const { error: updateError } = await updateProgramActivity(supabase, editing.id, {
+        ...draft,
+        week_number: week,
+        day_of_week: sheetDay ?? selectedDay,
+      });
       if (updateError) throw new Error(updateError);
     } else if (sheetDay != null) {
       const days = draftWeekdays(draft, sheetDay);
@@ -174,9 +291,7 @@ export default function ProgramCalendarEditor({
     setSheetDay(null);
     setEditing(null);
     await reload();
-    if (isNewStrength) {
-      setImportOpen(true);
-    }
+    if (isNewStrength) setImportOpen(true);
   }
 
   async function removeActivity() {
@@ -205,7 +320,7 @@ export default function ProgramCalendarEditor({
       setError(copyError);
       return;
     }
-    setWeek(target);
+    changeWeek(target);
     await reload();
   }
 
@@ -260,50 +375,29 @@ export default function ProgramCalendarEditor({
       return;
     }
     onProgramChange({ ...program, inclusive_plan: next });
-    if (next) setPane('calendar');
-    else setPane('workouts');
   }
+
+  const focusingWorkout = openMode === 'details' || openMode === 'edit';
+  const creatingPersonalizedCopy = willCreatePersonalizedCopy(program, personalPrograms);
+  const atFirstDay = selectedDate <= start;
+  const atLastDay = selectedDate >= end;
 
   return (
     <div className="pd-editor">
-      <button type="button" className="pd-back" onClick={onBack}>
-        ← Back to programs
-      </button>
-      <SectionHeader
-        title={program.name}
-        subtitle={`${formatProgramRange(start, end)} · Week ${week} of ${totalWeeks}${inclusive ? ' · All-inclusive' : ' · Training'}`}
-        actions={<span className="ui-badge">{lifecycleLabel(status)}</span>}
-      />
+      {!focusingWorkout && (
+        <button type="button" className="pd-back" onClick={onBack}>
+          ← Back to programs
+        </button>
+      )}
+      {!focusingWorkout && (
+        <SectionHeader
+          title={program.name}
+          subtitle={`${formatProgramRange(start, end)} · Week ${week} of ${totalWeeks}${inclusive ? ' · All-inclusive' : ' · Training'}`}
+          actions={<span className="ui-badge">{lifecycleLabel(status)}</span>}
+        />
+      )}
 
-      <ProgramCriteriaPanel value={program.generation_criteria} />
-
-      {audience === 'group' && onEditAudienceChange ? (
-        <fieldset className="pd-scope">
-          <legend>These edits apply to</legend>
-          <SegmentedControl
-            ariaLabel="These edits apply to"
-            value={audience}
-            onChange={(v) => {
-              if (v === audience || audienceBusy) return;
-              void onEditAudienceChange(v).catch((e) => setError(e?.message || 'Could not switch who edits apply to'));
-            }}
-            options={[
-              {
-                value: 'group',
-                label: groupName ? `Everyone in ${groupName}` : 'Everyone in the group',
-                disabled: !canEditGroupTemplate && audience !== 'group',
-              },
-              { value: 'me', label: 'Just me' },
-            ]}
-            size="sm"
-          />
-          <p className="muted" style={{ marginTop: 8 }}>
-            {audienceBusy
-              ? 'Switching…'
-              : `${scopeCopy.title} — ${scopeCopy.detail} Just me makes a personalized copy that affects only you.`}
-          </p>
-        </fieldset>
-      ) : (
+      {!focusingWorkout && !(audience === 'group' && onEditAudienceChange) && (
         <p className="muted pd-scope-note">
           <strong>{scopeCopy.title}</strong>
           {' — '}
@@ -311,74 +405,99 @@ export default function ProgramCalendarEditor({
         </p>
       )}
 
-      <div className="pd-week-bar">
-        <button type="button" className="btn small secondary" disabled={week <= 1} onClick={() => setWeek((w) => w - 1)}>
-          Previous
-        </button>
-        <p className="pd-week-label">Week {week}</p>
-        <button
-          type="button"
-          className="btn small secondary"
-          disabled={week >= totalWeeks}
-          onClick={() => setWeek((w) => w + 1)}
-        >
-          Next
-        </button>
-      </div>
-
-      {canEdit && inclusive && (
-        <div className="pd-week-actions">
-          <button type="button" className="btn small secondary" disabled={busy} onClick={() => void copyCurrentWeek()}>
-            Copy week
-          </button>
-          <button type="button" className="btn small secondary" disabled={busy} onClick={() => void copyToRemaining()}>
-            Copy to remaining weeks
-          </button>
-          {hasStrengthActivities && (
-            <button type="button" className="btn small accent" disabled={busy} onClick={() => setImportOpen(true)}>
-              Import exercises from program
+      {!focusingWorkout && audience === 'group' && onEditAudienceChange && (
+        <fieldset className="pd-scope">
+          <legend>Editing for</legend>
+          <div className="pd-scope-stack" role="radiogroup" aria-label="Editing for">
+            <button
+              type="button"
+              role="radio"
+              aria-checked="true"
+              className="pd-scope-choice active"
+              disabled={!canEditGroupTemplate}
+              onClick={() => requestAudienceChange('group')}
+            >
+              <b>{groupName ? `Everyone in ${groupName}` : 'Everyone in the group'}</b>
+              <span>Changes affect assigned members.</span>
             </button>
-          )}
-        </div>
-      )}
-      {canEdit && !inclusive && hasStrengthActivities && (
-        <div className="pd-week-actions">
-          <button type="button" className="btn small accent" disabled={busy} onClick={() => setImportOpen(true)}>
-            Import exercises from program
-          </button>
-        </div>
-      )}
-      {justBuiltMessage && (
-        <div className="ai-wiz-coach">
-          <p>Your workouts are ready. Review them below and edit anything you want to change.</p>
-          <p>{justBuiltMessage}</p>
-        </div>
+            <button
+              type="button"
+              role="radio"
+              aria-checked="false"
+              className="pd-scope-choice"
+              onClick={() => requestAudienceChange('me')}
+            >
+              <b>Only me</b>
+              <span>{creatingPersonalizedCopy ? 'Creates a private copy. The group plan stays the same.' : 'Open your private copy. The group plan stays the same.'}</span>
+            </button>
+          </div>
+          {audienceBusy && <p className="muted">Switching…</p>}
+        </fieldset>
       )}
 
-      {inclusive ? (
+      {!focusingWorkout && (
         <SegmentedControl
-          ariaLabel="Program editor"
-          value={pane || (hasExercises ? 'workouts' : 'calendar')}
-          onChange={(v) => setPane(v as 'workouts' | 'calendar')}
+          ariaLabel="Program calendar"
+          value={calendarView}
+          onChange={(v) => changeView(v as ProgramCalendarView)}
           options={[
-            { value: 'workouts', label: 'Workouts' },
-            { value: 'calendar', label: 'Week plan' },
+            { value: 'day', label: 'Day' },
+            { value: 'week', label: 'Week' },
+            { value: 'month', label: 'Month' },
           ]}
           size="sm"
         />
-      ) : (
-        <p className="muted pd-note">
-          This is a training program. Build and edit workouts here. Add walks, yoga, or sport on the Training calendar, or turn on an all-inclusive week below if you want those on this plan.
-        </p>
       )}
 
-      {!tableReady && (
+      {!focusingWorkout && calendarView === 'day' && (
+        <div className="pd-week-bar">
+          <button type="button" className="btn small secondary" disabled={atFirstDay} onClick={() => applyDate(addDaysYmd(selectedDate, -1))}>
+            Previous day
+          </button>
+          <button type="button" className="btn small secondary" onClick={() => applyDate(todayYmd())}>
+            Today
+          </button>
+          <button type="button" className="btn small secondary" disabled={atLastDay} onClick={() => applyDate(addDaysYmd(selectedDate, 1))}>
+            Next day
+          </button>
+        </div>
+      )}
+
+      {!focusingWorkout && calendarView === 'week' && (
+        <div className="pd-week-bar">
+          <button type="button" className="btn small secondary" disabled={week <= 1} onClick={() => changeWeek(week - 1)}>
+            Previous week
+          </button>
+          <button type="button" className="btn small secondary" onClick={() => applyDate(defaultProgramDate(start, totalWeeks))}>
+            This week
+          </button>
+          <button type="button" className="btn small secondary" disabled={week >= totalWeeks} onClick={() => changeWeek(week + 1)}>
+            Next week
+          </button>
+        </div>
+      )}
+
+      {!focusingWorkout && calendarView === 'month' && (
+        <div className="pd-week-bar">
+          <button type="button" className="btn small secondary" onClick={() => setYearMonth((value) => shiftYearMonth(value, -1))}>
+            Previous month
+          </button>
+          <button type="button" className="btn small secondary" onClick={() => setYearMonth(yearMonthOf(todayYmd()))}>
+            This month
+          </button>
+          <button type="button" className="btn small secondary" onClick={() => setYearMonth((value) => shiftYearMonth(value, 1))}>
+            Next month
+          </button>
+        </div>
+      )}
+
+      {!tableReady && !focusingWorkout && (
         <p className="pd-note">
           Calendar activities will save after the Program Design migration is applied in Supabase.
         </p>
       )}
       {error && <p className="pd-error">{error}</p>}
-      {!loading && canEdit && !hasExercises && !justBuiltMessage && onBuildWorkouts && (
+      {!focusingWorkout && !loading && canEdit && !hasExercises && !justBuiltMessage && onBuildWorkouts && (
         <div className="pd-note" style={{ marginBottom: 12 }}>
           <p>This program does not have exercises yet. Build the actual workouts to fill the calendar.</p>
           <button type="button" className="btn green" style={{ marginTop: 8 }} onClick={onBuildWorkouts}>
@@ -386,89 +505,135 @@ export default function ProgramCalendarEditor({
           </button>
         </div>
       )}
-      {loading ? (
+
+      {loading && !focusingWorkout ? (
         <p className="muted">Loading this week…</p>
-      ) : pane === 'calendar' && inclusive ? (
-        <WeeklyHealthCalendar
-          startMonday={start}
-          weekNumber={week}
-          activities={activities}
-          onAddActivity={(day) => {
-            if (!canEdit) return;
-            setEditing(null);
-            setSheetDay(day);
-          }}
-          onOpenActivity={(activity) => {
-            if (activity.workout_id && hasExercises) {
-              setOpenWorkoutId(activity.workout_id);
-              setPane('workouts');
-              return;
-            }
-            setEditing(activity);
-            setSheetDay(activity.day_of_week);
-          }}
-        />
       ) : (
-        <ProgramWorkoutPlan
-          key={program.id}
-          supabase={supabase}
-          programId={program.id}
-          week={week}
-          canEdit={canEdit && !audienceBusy}
-          openWorkoutId={openWorkoutId}
-          onOpenHandled={() => setOpenWorkoutId(null)}
-          onLoaded={(info) => setHasExercises(info.hasExercises)}
-        />
+        <>
+          {!focusingWorkout && calendarView === 'week' && (
+            <WeeklyHealthCalendar
+              startMonday={start}
+              weekNumber={week}
+              activities={activities}
+              variant="strip"
+              selectedDay={selectedDay}
+              onSelectDay={(day) => applyDate(dateForProgramDay(start, week, day))}
+              onAddActivity={openAdd}
+              onOpenActivity={openActivity}
+            />
+          )}
+          {!focusingWorkout && calendarView === 'month' && (
+            <>
+              <p className="pd-week-label">{formatMonthLabel(yearMonth)}</p>
+              <ProgramMonthCalendar
+                monthLabel={formatMonthLabel(yearMonth)}
+                monthCells={monthCells}
+                selectedDate={selectedDate}
+                onSelectDate={applyDate}
+              />
+            </>
+          )}
+
+          {!focusingWorkout && (
+            <ProgramDaySummary
+              date={selectedDate}
+              activities={dayActivities}
+              workout={selectedWorkout}
+              canEdit={canEdit && !audienceBusy}
+              onAddActivity={() => openAdd(selectedDay)}
+              onOpenActivity={openActivity}
+              onMoveActivity={(activity, dayOfWeek) => {
+                if (!canEdit || activity.id.startsWith('legacy-')) return;
+                void updateProgramActivity(supabase, activity.id, { week_number: week, day_of_week: dayOfWeek }).then(
+                  (result) => {
+                    if (result.error) setError(result.error);
+                    else {
+                      applyDate(dateForProgramDay(start, week, dayOfWeek));
+                      void reload();
+                    }
+                  }
+                );
+              }}
+              onViewDetails={() => {
+                const workoutId = selectedWorkoutId();
+                if (!workoutId) return;
+                openWorkout(workoutId, 'details');
+              }}
+              onEditWorkout={() => {
+                const workoutId = selectedWorkoutId();
+                if (!workoutId) return;
+                openWorkout(workoutId, 'edit', 'calendar');
+              }}
+            />
+          )}
+
+          {justBuiltMessage && !focusingWorkout && (
+            <div className="ai-wiz-coach">
+              <p>Your workouts are ready. Review a day below and edit only when you want to change it.</p>
+              <p>{justBuiltMessage}</p>
+            </div>
+          )}
+
+          <ProgramWorkoutPlan
+            key={program.id}
+            supabase={supabase}
+            programId={program.id}
+            week={week}
+            canEdit={canEdit && !audienceBusy}
+            hideList
+            openWorkoutId={openWorkoutId}
+            openMode={openMode}
+            backLabel={editReturn === 'details' ? '← Back to workout details' : '← Done'}
+            onModeChange={(mode) => {
+              if (mode === 'edit' && openWorkoutId) openWorkout(openWorkoutId, 'edit', 'details');
+            }}
+            onCloseFocus={closeWorkoutFocus}
+            onLoaded={(info) => {
+              setHasExercises(info.hasExercises);
+              setWorkouts(info.workouts || []);
+            }}
+          />
+        </>
       )}
 
-      <div className="pd-status-row">
-        {onFollow && !isFollowing && status !== 'draft' && status !== 'archived' && (
-          <button type="button" className="btn green" disabled={busy} onClick={() => void onFollow()}>
-            Use in Training
-          </button>
-        )}
-        {isFollowing && <span className="ui-badge">In Training</span>}
-        {canEdit && pushTeamId && (
-          <button type="button" className="btn green" disabled={busy} onClick={() => setPushOpen(true)}>
-            Push to members
-          </button>
-        )}
-        {onShareWithGroup && canEdit && groups.length > 0 && (
-          <select
-            aria-label="Share with group"
-            defaultValue=""
-            onChange={(e) => {
-              const id = e.target.value;
-              if (id) void onShareWithGroup(id);
-              e.target.value = '';
-            }}
-          >
-            <option value="">Share with group…</option>
-            {groups.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.name}
-              </option>
-            ))}
-          </select>
-        )}
-      </div>
-      {isFollowing && program.visibility === 'team' && !canEdit && (
+      {!focusingWorkout && (
+        <div className="pd-status-row">
+          {onFollow && !isFollowing && status !== 'draft' && status !== 'archived' && (
+            <button type="button" className="btn green" disabled={busy} onClick={() => void onFollow()}>
+              Use in Training
+            </button>
+          )}
+          {isFollowing && <span className="ui-badge">In Training</span>}
+          {canEdit && pushTeamId && (
+            <button type="button" className="btn green" disabled={busy} onClick={() => setPushOpen(true)}>
+              Push to members
+            </button>
+          )}
+          {onShareWithGroup && canEdit && groups.length > 0 && (
+            <select
+              aria-label="Share with group"
+              defaultValue=""
+              onChange={(e) => {
+                const id = e.target.value;
+                if (id) void onShareWithGroup(id);
+                e.target.value = '';
+              }}
+            >
+              <option value="">Share with group…</option>
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
+      {!focusingWorkout && isFollowing && program.visibility === 'team' && !canEdit && (
         <p className="muted">Live group plan. Owner and manager workout edits appear here after you reopen this screen.</p>
       )}
 
-      {canEdit && (
-        <label className="remember-row" style={{ marginTop: 16 }}>
-          <input
-            type="checkbox"
-            checked={inclusive}
-            disabled={busy}
-            onChange={(e) => void toggleInclusive(e.target.checked)}
-          />
-          All-inclusive plan — include cardio, mobility, sport, and rest on this program (can push to a group)
-        </label>
-      )}
-
-      {canEdit && (
+      {!focusingWorkout && canEdit && (
         <div className="pd-status-row">
           {status === 'draft' && (
             <button type="button" className="btn secondary" disabled={busy} onClick={() => void changeStatus('scheduled')}>
@@ -491,6 +656,46 @@ export default function ProgramCalendarEditor({
             </button>
           )}
         </div>
+      )}
+
+      {!focusingWorkout && (
+        <ProgramCriteriaPanel value={program.generation_criteria}>
+          {!inclusive && (
+            <p className="muted pd-note">
+              This is a training program. Add walks, yoga, or sport on the Training calendar, or turn on an all-inclusive week below if you want those on this plan.
+            </p>
+          )}
+          {canEdit && (
+            <label className="remember-row" style={{ marginTop: 12 }}>
+              <input
+                type="checkbox"
+                checked={inclusive}
+                disabled={busy}
+                onChange={(e) => void toggleInclusive(e.target.checked)}
+              />
+              All-inclusive plan — include cardio, mobility, sport, and rest on this program (can push to a group)
+            </label>
+          )}
+          {canEdit && (
+            <div className="pd-week-actions" style={{ marginTop: 12 }}>
+              {inclusive && (
+                <>
+                  <button type="button" className="btn small secondary" disabled={busy} onClick={() => void copyCurrentWeek()}>
+                    Copy week
+                  </button>
+                  <button type="button" className="btn small secondary" disabled={busy} onClick={() => void copyToRemaining()}>
+                    Copy to remaining weeks
+                  </button>
+                </>
+              )}
+              {hasStrengthActivities && (
+                <button type="button" className="btn small accent" disabled={busy} onClick={() => setImportOpen(true)}>
+                  Import exercises from program
+                </button>
+              )}
+            </div>
+          )}
+        </ProgramCriteriaPanel>
       )}
 
       {sheetDay != null && (
@@ -535,6 +740,40 @@ export default function ProgramCalendarEditor({
             onProgramChange({ ...program, status: program.status === 'draft' ? 'published' : program.status });
           }}
         />
+      )}
+
+      {pendingAudience === 'me' && (
+        <div className="panel-overlay" onClick={() => setPendingAudience(null)}>
+          <div
+            className="card pd-copy-confirm"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="pd-copy-confirm-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 id="pd-copy-confirm-title">{creatingPersonalizedCopy ? 'Create your own copy?' : 'Open your copy?'}</h2>
+            <p>
+              {creatingPersonalizedCopy
+                ? "Create your own copy of this group program? Changes to your copy won't affect anyone else."
+                : 'You already have a private copy of this group program. Open it to keep editing just for you.'}
+            </p>
+            <div className="pd-day-summary-actions">
+              <button type="button" className="btn secondary" onClick={() => setPendingAudience(null)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn green"
+                onClick={() => {
+                  setPendingAudience(null);
+                  void onEditAudienceChange?.('me').catch((e) => setError(e?.message || 'Could not switch who edits apply to'));
+                }}
+              >
+                {creatingPersonalizedCopy ? 'Create my copy' : 'Open my copy'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

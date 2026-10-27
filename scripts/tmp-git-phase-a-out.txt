@@ -1,0 +1,54 @@
+=== STATUS ===
+ M CHANGELOG.md
+ M DECISIONS.md
+ M ROADMAP.md
+ M app/components/programDesign/ProgramCalendarEditor.tsx
+ M app/components/programDesign/ProgramDesignHome.tsx
+ M app/components/programDesign/ProgramWorkoutPlan.tsx
+ M app/components/training/WorkoutPlanSheet.tsx
+ M app/globals.css
+ M app/page.tsx
+ M lib/programDesign/enrollment.ts
+ M lib/programDesign/workoutPreview.ts
+ M lib/scienceEngine/adaptation/phase2b1Check.ts
+ M lib/training/adaptationOrchestration.ts
+ M lib/training/catalogSearch.ts
+ M lib/training/workoutTemplate.ts
+ M scripts/test-customize-for-me.ts
+?? scripts/test-workout-preview.ts
+?? scripts/tmp-biq0271-tests-out.txt
+?? scripts/tmp-biq0271-tests.cmd
+?? scripts/tmp-biq0271-verify-out.txt
+?? scripts/tmp-biq0271-verify.cmd
+?? scripts/tmp-git-phase-a-out.txt
+?? scripts/tmp-git-phase-a.cmd
+=== BRANCH === 
+main
+=== LOG === 
+29ce016 test
+b26ad59 Coordinate AI repair and stop science-seed duration from blocking generation
+de006f9 multi change
+23d6f98 BIQ-0269 Note auth message test and tsc passed in CHANGELOG
+4da67a8 BIQ-0269 Fix AI estimate Auth session missing with refresh and clearer error
+05b195d Merge branch 'cursor/fix-45min-glute-program-gen-7bfe'
+a95460d BIQ-0268 Fix 45-minute glute Full Body generate primer and duration failures
+06fc181 BIQ-0267 Add browser proof for meal photo compression
+=== DIFF STAT === 
+ CHANGELOG.md                                       |  49 ++++++
+ DECISIONS.md                                       |  24 +++
+ ROADMAP.md                                         |   2 +-
+ .../programDesign/ProgramCalendarEditor.tsx        |  13 +-
+ app/components/programDesign/ProgramDesignHome.tsx |  15 +-
+ .../programDesign/ProgramWorkoutPlan.tsx           |  32 ++--
+ app/components/training/WorkoutPlanSheet.tsx       |  52 ++++--
+ app/globals.css                                    |   1 +
+ app/page.tsx                                       |   7 +-
+ lib/programDesign/enrollment.ts                    |  58 +++++++
+ lib/programDesign/workoutPreview.ts                | 182 ++++++++++++++++++---
+ lib/scienceEngine/adaptation/phase2b1Check.ts      |   1 +
+ lib/training/adaptationOrchestration.ts            |  10 +-
+ lib/training/catalogSearch.ts                      |   4 +-
+ lib/training/workoutTemplate.ts                    |   9 +-
+ scripts/test-customize-for-me.ts                   |   7 +
+ 16 files changed, 397 insertions(+), 69 deletions(-)
+=== STAGED STAT === 

@@ -3,12 +3,16 @@
 import { activityTypeShortLabel, formatDuration } from '../../../lib/programDesign/activityTypes';
 import { dateForProgramDay, formatMediumDate, weekdayLabel } from '../../../lib/programDesign/cycle';
 import { activitiesForDay } from '../../../lib/programDesign/programDesignApi';
+import { programDayState } from '../../../lib/programDesign/programCalendarView';
 import { WEEKDAY_LABELS, type ProgramActivity } from '../../../lib/programDesign/types';
 
 type WeeklyHealthCalendarProps = {
   startMonday: string;
   weekNumber: number;
   activities: ProgramActivity[];
+  variant?: 'strip' | 'stack';
+  selectedDay?: number;
+  onSelectDay?: (dayOfWeek: number) => void;
   onAddActivity: (dayOfWeek: number) => void;
   onOpenActivity: (activity: ProgramActivity) => void;
 };
@@ -17,9 +21,44 @@ export default function WeeklyHealthCalendar({
   startMonday,
   weekNumber,
   activities,
+  variant = 'strip',
+  selectedDay = 0,
+  onSelectDay,
   onAddActivity,
   onOpenActivity,
 }: WeeklyHealthCalendarProps) {
+  if (variant === 'strip') {
+    return (
+      <div className="pd-week-strip" role="list" aria-label="Weekly program calendar">
+        {WEEKDAY_LABELS.map((label, dayOfWeek) => {
+          const date = dateForProgramDay(startMonday, weekNumber, dayOfWeek);
+          const dayActivities = activitiesForDay(activities, weekNumber, dayOfWeek);
+          const state = programDayState(dayActivities);
+          const selected = selectedDay === dayOfWeek;
+          return (
+            <button
+              key={label}
+              type="button"
+              role="listitem"
+              className={`pd-strip-day pd-strip-day--${state}${selected ? ' pd-strip-day--selected' : ''}`}
+              onClick={() => onSelectDay?.(dayOfWeek)}
+              aria-pressed={selected}
+              aria-label={`${weekdayLabel(dayOfWeek)} ${formatMediumDate(date)}${state === 'rest' ? ', rest' : `, ${dayActivities.length} scheduled`}`}
+            >
+              <span className="pd-strip-dow">{label}</span>
+              <span className="pd-strip-num">{Number(date.slice(8, 10))}</span>
+              <span className="pd-strip-marks" aria-hidden="true">
+                {state === 'rest' ? <i className="pd-strip-quiet" /> : dayActivities.slice(0, 3).map((activity) => (
+                  <i key={activity.id} className={`te-dot te-dot--${activity.activity_type || 'strength'}`} />
+                ))}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
     <div className="pd-calendar" role="list" aria-label="Weekly health calendar">
       {WEEKDAY_LABELS.map((label, dayOfWeek) => {

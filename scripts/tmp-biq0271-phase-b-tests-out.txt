@@ -1,0 +1,13 @@
+=== calendar view ===
+program calendar view Phase B checks passed
+CAL_EXIT=0 
+=== workout preview === 
+workout preview Phase A checks passed
+PREVIEW_EXIT=0 
+=== customize === 
+OK: customize-for-me checks passed
+CUSTOMIZE_EXIT=0 
+=== tsc === 
+lib/scienceEngine/warmup.ts(149,30): error TS2802: Type 'Set<string>' can only be iterated through when using the '--downlevelIteration' flag or with a '--target' of 'es2015' or higher.
+TSC_EXIT=1 
+DONE 
