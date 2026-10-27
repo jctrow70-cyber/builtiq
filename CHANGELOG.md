@@ -11,13 +11,13 @@ Branch:
 Status:
 ```
 
-## BIQ-0273 - Remove committed temporary verification scripts
+## BIQ-0275 - Remove committed temporary verification scripts
 
 Date: 2026-10-27
 Branch: main
-Status: Implemented. Local cleanup commit. Not pushed. No database change.
+Status: Implemented. Local cleanup commit `4b16820`. Not pushed. No database change.
 
-Summary: Temporary `scripts/tmp-*` helpers that landed in `cf28de0` are removed from the current tree. Legitimate `scripts/test-*.ts` files stay. `.gitignore` now ignores `scripts/tmp-*`. Phase C Program Design follow-ups are documented only.
+Summary: Temporary `scripts/tmp-*` helpers that landed in `cf28de0` are removed from the current tree. Legitimate `scripts/test-*.ts` files stay. `.gitignore` now ignores `scripts/tmp-*`. Phase C Program Design follow-ups are documented only. Numbered 0275 after merge because incoming main already used 0273 and 0274.
 
 Purpose: Keep verification helpers and their output out of the repo without rewriting the already-pushed Phase B commit.
 
@@ -43,6 +43,72 @@ Known issues:
 - No credential values were found in the committed files. The sign-in helper could mint a local magic link from `.env.local`; its output file was never committed.
 
 Recommended commit message: Remove temporary verification scripts and document Program Design next steps
+
+## BIQ-0274 - Romanian Deadlift Smith Machine equipment
+
+Date: 2026-10-27
+Branch: cursor/romanian-deadlift-smith-e634
+Status: Implemented. No schema migration. Live catalog apply script available.
+
+Summary: Romanian Deadlift (master 73) can use Smith Machine on the existing master card, same pattern as Deadlift (71). No separate Smith RDL card.
+
+Purpose: Users need Smith Machine as an implement option when logging or planning Romanian Deadlift. Master 73 listed Barbell, Dumbbell, Kettlebell, and Cable only.
+
+Files changed:
+- `lib/training/masterCatalog.ts`
+- `lib/training/catalogCleanupCheck.ts`
+- `scripts/apply-romanian-deadlift-smith.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+
+Database changes: No schema migration. Data-only on live `st_exercise_catalog` master 73 via `scripts/apply-romanian-deadlift-smith.ts`: add Smith Machine to `coaching_metadata.compatible_equipment`. History and planned set logs are not rewritten.
+
+Testing steps:
+1. `npx tsx lib/training/catalogCleanupCheck.ts` (or `npm run test:science`)
+2. Training → add or open Romanian Deadlift → confirm Smith Machine appears in the equipment dropdown
+3. Select Smith Machine, save, reload — equipment stays Smith Machine
+4. Confirm completed history rows keep their previously saved equipment
+
+Known issues:
+- Already-planned Romanian Deadlift rows keep their saved equipment until the user changes the dropdown
+- Live Supabase catalogs need `npx tsx scripts/apply-romanian-deadlift-smith.ts` (with service role) until the next master sync
+
+Recommended commit message: BIQ-0274 Add Smith Machine to Romanian Deadlift equipment
+
+## BIQ-0273 - Retry set logging after Safari Load failed
+
+Date: 2026-10-27
+Branch: cursor/fix-set-log-load-failed-4f0d
+Status: Implemented. No database change.
+
+Summary: Saving weight, reps, Done, or extra sets no longer stops on the first Safari/iOS `TypeError: Load failed` / network blip. Set-log and workout-session writes retry a couple of times, then show a clear retry message instead of the raw TypeError text.
+
+Purpose: Mobile logging was failing intermittently with "type load failed" because Safari reports aborted or flaky fetches as `TypeError: Load failed`. Catalog add/replace already mapped that message; the Training set logger still surfaced it raw and did not retry.
+
+Files changed:
+- `lib/networkErrors.ts`
+- `lib/supabaseClient.ts`
+- `app/page.tsx`
+- `lib/training/workoutSessions.ts`
+- `scripts/test-set-log-network-retry.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+
+Database changes: None. Existing `st_set_logs` history is unchanged.
+
+Testing steps:
+1. `npx tsx scripts/test-set-log-network-retry.ts`
+2. On Training (preferably iPhone Safari), open a workout and log weight/reps on a set
+3. Check Done on a set — it should save without a TypeError alert
+4. Add an extra set and edit a field — same
+5. If the network is briefly interrupted, the save should retry and either succeed or show the friendly "Could not reach BuildIQ" message
+6. Confirm Progress still shows the completed set after reload
+
+Known issues:
+- Persistent offline / blocked Supabase access still cannot save; the user must retry when connectivity returns
+- Cloud agent could not reproduce against a live signed-in mobile session in this environment
+
+Recommended commit message: BIQ-0273 Retry set logging after Safari Load failed
 
 ## BIQ-0272 - Fix production typecheck on targeted warm-up patterns
 

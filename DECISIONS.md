@@ -4,6 +4,56 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 119 - Romanian Deadlift keeps one card with Smith Machine
+
+Date: 2026-10-27
+Status: Accepted
+Category: Exercise Library
+
+### Decision
+
+Romanian Deadlift stays one master card (73) with Smith Machine on `compatible_equipment`, matching Deadlift (71) and Reverse Lunge + Smith. Do not create a Smith Romanian Deadlift card.
+
+### Reason
+
+Smith RDL is an implement variant of the same hinge movement, not a separate exercise. A second master card would split history and progress series.
+
+### Alternatives Considered
+
+- Separate Smith Romanian Deadlift master card — rejected; same architecture as Deadlift (71) and Reverse Lunge (63)
+- Leave RDL on free-weight implements only — rejected; users need Smith as a logged option
+
+### Impact
+
+- Romanian Deadlift equipment dropdown includes Smith Machine
+- Completed history and planned rows are not rewritten; users change equipment when they want Smith
+
+---
+
+## Decision 118 - Retry set-log writes on Safari Load failed
+
+Date: 2026-10-27
+Status: Accepted
+Category: Training / Reliability
+
+### Decision
+
+Training set-log inserts/updates and workout-session upserts retry up to three times when the Supabase client reports a transient network failure (`Load failed`, `TypeError: Load failed`, `Failed to fetch`, and similar). After retries, the UI shows `friendlyWriteError` instead of the raw TypeError. Schema and validation errors still fail on the first response. History snapshots and RLS rules are unchanged.
+
+### Reason
+
+Mobile Safari often surfaces aborted or flaky fetches as `TypeError: Load failed` while logging sets. Catalog fetch and Training add-exercise already mapped that message; the set logger still alerted the raw text and did not retry, so intermittent network blips looked like a permanent logging failure.
+
+### Alternatives Considered
+
+Optimistic local-only logging with later sync. A service-worker offline queue. Leaving the raw TypeError and asking users to retry manually.
+
+### Impact
+
+No database change. Slightly longer wait before a true network failure is shown. Duplicate-key races remain handled by the existing update-on-conflict path.
+
+---
+
 ## Decision 117 - Calendar-first Program Design
 
 Date: 2026-10-26

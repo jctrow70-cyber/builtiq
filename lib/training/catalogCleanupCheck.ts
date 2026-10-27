@@ -111,6 +111,16 @@ export function runCatalogCleanupChecks() {
     );
   });
 
+  const romanianDeadlift = mapped.find((row) => row.record.id === '73');
+  assert(romanianDeadlift, 'Romanian Deadlift exists');
+  const romanianEq = compatibleEquipmentOptions(romanianDeadlift.catalog);
+  ['Barbell', 'Dumbbell', 'Kettlebell', 'Cable', 'Smith Machine'].forEach((item) => {
+    assert(
+      romanianEq.some((eq) => eq.toLowerCase() === item.toLowerCase()),
+      `Romanian Deadlift missing ${item}: ${romanianEq.join(', ')}`
+    );
+  });
+
   const inverted = mapped.find((row) => row.record.id === '25');
   const invertedEq = compatibleEquipmentOptions(inverted?.catalog);
   assert(
