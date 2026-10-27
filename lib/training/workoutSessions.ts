@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { PainFlag, SessionStatus, SkipReason, WorkoutFeel } from '../scienceEngine/adaptation/types';
+import { friendlyWriteError, retryTransientSupabaseWrite } from '../networkErrors';
 
 export type WorkoutSessionRow = {
   id?: string;
@@ -58,13 +59,15 @@ export async function upsertWorkoutSession(
   supabase: SupabaseClient,
   row: WorkoutSessionRow
 ): Promise<{ data: WorkoutSessionRow | null; error: string | null; pendingMigration: boolean }> {
-  const { data: existing, error: readError } = await supabase
-    .from('st_workout_sessions')
-    .select('expectation_id, source_key, scheduled_date, feedback_id, completed_at')
-    .eq('user_id', row.user_id)
-    .eq('workout_id', row.workout_id)
-    .eq('log_date', row.log_date)
-    .maybeSingle();
+  const { data: existing, error: readError } = await retryTransientSupabaseWrite(() =>
+    supabase
+      .from('st_workout_sessions')
+      .select('expectation_id, source_key, scheduled_date, feedback_id, completed_at')
+      .eq('user_id', row.user_id)
+      .eq('workout_id', row.workout_id)
+      .eq('log_date', row.log_date)
+      .maybeSingle()
+  );
   const stored = readError ? null : (existing as WorkoutSessionRow | null);
   const link = preservedSessionLink(stored, row);
   const payload = {
@@ -84,20 +87,24 @@ export async function upsertWorkoutSession(
     source_key: link.source_key,
     scheduled_date: link.scheduled_date,
   };
-  let { data, error } = await supabase
-    .from('st_workout_sessions')
-    .upsert(linked, { onConflict: 'user_id,workout_id,log_date' })
-    .select()
-    .maybeSingle();
-  if (error && /expectation_id|source_key|scheduled_date/i.test(error.message || '')) {
-    ({ data, error } = await supabase
+  let { data, error } = await retryTransientSupabaseWrite(() =>
+    supabase
       .from('st_workout_sessions')
-      .upsert(payload, { onConflict: 'user_id,workout_id,log_date' })
+      .upsert(linked, { onConflict: 'user_id,workout_id,log_date' })
       .select()
-      .maybeSingle());
+      .maybeSingle()
+  );
+  if (error && /expectation_id|source_key|scheduled_date/i.test(error.message || '')) {
+    ({ data, error } = await retryTransientSupabaseWrite(() =>
+      supabase
+        .from('st_workout_sessions')
+        .upsert(payload, { onConflict: 'user_id,workout_id,log_date' })
+        .select()
+        .maybeSingle()
+    ));
   }
   if (missingTable(error)) return { data: null, error: error?.message || 'st_workout_sessions missing', pendingMigration: true };
-  if (error) return { data: null, error: error.message, pendingMigration: false };
+  if (error) return { data: null, error: friendlyWriteError(error), pendingMigration: false };
   return { data: (data as WorkoutSessionRow) || null, error: null, pendingMigration: false };
 }
 

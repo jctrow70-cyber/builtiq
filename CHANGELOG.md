@@ -11,6 +11,41 @@ Branch:
 Status:
 ```
 
+## BIQ-0273 - Retry set logging after Safari Load failed
+
+Date: 2026-10-27
+Branch: cursor/fix-set-log-load-failed-4f0d
+Status: Implemented. No database change.
+
+Summary: Saving weight, reps, Done, or extra sets no longer stops on the first Safari/iOS `TypeError: Load failed` / network blip. Set-log and workout-session writes retry a couple of times, then show a clear retry message instead of the raw TypeError text.
+
+Purpose: Mobile logging was failing intermittently with "type load failed" because Safari reports aborted or flaky fetches as `TypeError: Load failed`. Catalog add/replace already mapped that message; the Training set logger still surfaced it raw and did not retry.
+
+Files changed:
+- `lib/networkErrors.ts`
+- `lib/supabaseClient.ts`
+- `app/page.tsx`
+- `lib/training/workoutSessions.ts`
+- `scripts/test-set-log-network-retry.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+
+Database changes: None. Existing `st_set_logs` history is unchanged.
+
+Testing steps:
+1. `npx tsx scripts/test-set-log-network-retry.ts`
+2. On Training (preferably iPhone Safari), open a workout and log weight/reps on a set
+3. Check Done on a set — it should save without a TypeError alert
+4. Add an extra set and edit a field — same
+5. If the network is briefly interrupted, the save should retry and either succeed or show the friendly "Could not reach BuildIQ" message
+6. Confirm Progress still shows the completed set after reload
+
+Known issues:
+- Persistent offline / blocked Supabase access still cannot save; the user must retry when connectivity returns
+- Cloud agent could not reproduce against a live signed-in mobile session in this environment
+
+Recommended commit message: BIQ-0273 Retry set logging after Safari Load failed
+
 ## BIQ-0272 - Fix production typecheck on targeted warm-up patterns
 
 Date: 2026-10-26

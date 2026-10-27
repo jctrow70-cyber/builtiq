@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 118 - Retry set-log writes on Safari Load failed
+
+Date: 2026-10-27
+Status: Accepted
+Category: Training / Reliability
+
+### Decision
+
+Training set-log inserts/updates and workout-session upserts retry up to three times when the Supabase client reports a transient network failure (`Load failed`, `TypeError: Load failed`, `Failed to fetch`, and similar). After retries, the UI shows `friendlyWriteError` instead of the raw TypeError. Schema and validation errors still fail on the first response. History snapshots and RLS rules are unchanged.
+
+### Reason
+
+Mobile Safari often surfaces aborted or flaky fetches as `TypeError: Load failed` while logging sets. Catalog fetch and Training add-exercise already mapped that message; the set logger still alerted the raw text and did not retry, so intermittent network blips looked like a permanent logging failure.
+
+### Alternatives Considered
+
+Optimistic local-only logging with later sync. A service-worker offline queue. Leaving the raw TypeError and asking users to retry manually.
+
+### Impact
+
+No database change. Slightly longer wait before a true network failure is shown. Duplicate-key races remain handled by the existing update-on-conflict path.
+
+---
+
 ## Decision 117 - Calendar-first Program Design
 
 Date: 2026-10-26

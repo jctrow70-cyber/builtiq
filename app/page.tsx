@@ -10,7 +10,7 @@ import WarmupExerciseCard from './components/training/WarmupExerciseCard';
 import ExerciseSessionHistoryModal from './components/training/ExerciseSessionHistoryModal';
 import SectionHeader from './components/ui/SectionHeader';
 import { DEFAULT_THEME_ID } from '../lib/theme/themes';
-import { supabase, friendlyAuthError, friendlyWriteError, getSupabaseConfigError } from '../lib/supabaseClient';
+import { supabase, friendlyAuthError, friendlyWriteError, getSupabaseConfigError, retryTransientSupabaseWrite } from '../lib/supabaseClient';
 import { buildExerciseSessionHistory } from '../lib/training/exerciseSessionHistory';
 import { EXERCISE_TYPES, exerciseTypeOf, inferExerciseType, assignmentTypeLabel, isCardioType, isMobilityStretchExercise } from '../lib/training/exerciseTypes';
 import { detectSetPersonalRecord } from '../lib/training/progressAnalytics';
@@ -2243,9 +2243,13 @@ export default function Page(){
   if(!canLog())return;
   return upsertSetLog(sid,{[field]:value},opts);
  }
+ async function writeSetLogRow(run:()=>PromiseLike<{data:any;error:any}>){
+  return retryTransientSupabaseWrite(run,{attempts:3,delayMs:400});
+ }
  async function upsertSetLog(sid:string,fieldUpdates:Record<string,any>,opts?:{completed?:boolean}){
   if(!canLog())return;
   const run=async()=>{
+  try{
   const old=logsRef.current[sid]||{};
   const located=findSetInProgram(activeProgramForLogging(),sid,extraWorkoutsForLogging());
   if(!located) {alert('Could not save log for this set.');return;}
@@ -2281,23 +2285,23 @@ export default function Page(){
   const missingColumn=/actual_rir|pain_score|snapshot_|invalid input syntax for type (smallint|integer|numeric|uuid)/i;
   let body:any=old?.id?{...payload}:{...payload,...snapshots};
   let{data,error}=old?.id
-    ?await supabase.from('st_set_logs').update(payload).eq('id',old.id).eq('user_id',uid).select().single()
-    :await supabase.from('st_set_logs').insert(body).select().single();
+    ?await writeSetLogRow(()=>supabase.from('st_set_logs').update(payload).eq('id',old.id).eq('user_id',uid).select().single())
+    :await writeSetLogRow(()=>supabase.from('st_set_logs').insert(body).select().single());
   if(!old?.id && error && /duplicate key|23505/i.test(`${error.code||''} ${error.message||''}`)){
-    ({data,error}=await supabase.from('st_set_logs').update(payload).eq('planned_set_id',sid).eq('user_id',uid).eq('log_date',logDay).select().single());
+    ({data,error}=await writeSetLogRow(()=>supabase.from('st_set_logs').update(payload).eq('planned_set_id',sid).eq('user_id',uid).eq('log_date',logDay).select().single()));
   }
   for(let attempt=0;error && missingColumn.test(error.message||'') && attempt<8;attempt++){
     body=stripUnavailableLogColumns(body, error.message);
     if(old?.id){
-      ({data,error}=await supabase.from('st_set_logs').update(stripUnavailableLogColumns(payload, error.message)).eq('id',old.id).eq('user_id',uid).select().single());
+      ({data,error}=await writeSetLogRow(()=>supabase.from('st_set_logs').update(stripUnavailableLogColumns(payload, error.message)).eq('id',old.id).eq('user_id',uid).select().single()));
     }else{
-      ({data,error}=await supabase.from('st_set_logs').insert(body).select().single());
+      ({data,error}=await writeSetLogRow(()=>supabase.from('st_set_logs').insert(body).select().single()));
       if(error && /duplicate key|23505/i.test(`${error.code||''} ${error.message||''}`)){
-        ({data,error}=await supabase.from('st_set_logs').update(payload).eq('planned_set_id',sid).eq('user_id',uid).eq('log_date',logDay).select().single());
+        ({data,error}=await writeSetLogRow(()=>supabase.from('st_set_logs').update(payload).eq('planned_set_id',sid).eq('user_id',uid).eq('log_date',logDay).select().single()));
       }
     }
   }
-  if(error){alert(error.message);return;}
+  if(error){alert(friendlyWriteError(error,'Could not save that set. Please try again.'));return;}
   setLogs((prev:any)=>{
     const next={...prev,[sid]:data};
     logsRef.current=next;
@@ -2342,7 +2346,7 @@ export default function Page(){
       if(savedSession.pendingMigration)setPhase2a1Pending(true);
       if(savedSession.error||savedSession.pendingMigration){
         if(completedSessionKeyRef.current===sessionKey)completedSessionKeyRef.current=null;
-        if(savedSession.error)alert(savedSession.error);
+        if(savedSession.error)alert(friendlyWriteError(savedSession.error,'Your set was saved. Workout completion could not finish — try again.'));
       }else if(workout?.id===draft.workoutId){
         setSessionOutcome('completed');
         if(activity) await completeOpenGroupActivity(activity);
@@ -2358,6 +2362,9 @@ export default function Page(){
    }
   }
   return data;
+  }catch(e){
+   alert(friendlyWriteError(e,'Could not save that set. Please try again.'));
+  }
   };
   const prev=upsertQueueRef.current[sid];
   const next=(prev?prev.catch(()=>{}).then(run):run());
@@ -2482,21 +2489,29 @@ export default function Page(){
     set_type:'working',
     ...snapshots
   };
-  const {data,error}=await supabase.from('st_set_logs').insert(extraSetInsertPayload(row)).select().single();
+  try{
+  const {data,error}=await writeSetLogRow(()=>supabase.from('st_set_logs').insert(extraSetInsertPayload(row)).select().single());
   if(error){
     if(/is_extra_set|extra_set_number|does not exist/i.test(error.message||'')){setPhase2a1Pending(true);alert('Extra sets need the Phase 2A.1 migration.');return;}
-    return alert(error.message);
+    return alert(friendlyWriteError(error,'Could not add that extra set. Please try again.'));
   }
   setExtraSetLogs((prev)=>[...prev,data as ExtraSetLog]);
+  }catch(e){
+   alert(friendlyWriteError(e,'Could not add that extra set. Please try again.'));
+  }
  }
  async function saveExtraSetField(extraId:string,field:string,value:string,opts?:{completed?:boolean}){
   if(String(field).startsWith('snapshot_'))return;
   const patch:any={[field]:value};
   if(opts?.completed!==undefined)patch.completed=opts.completed;
   if(field==='completed')patch.completed=opts?.completed??value==='true';
-  const {error}=await supabase.from('st_set_logs').update(patch).eq('id',extraId);
-  if(error)return alert(error.message);
+  try{
+  const {error}=await writeSetLogRow(()=>supabase.from('st_set_logs').update(patch).eq('id',extraId));
+  if(error)return alert(friendlyWriteError(error,'Could not save that set. Please try again.'));
   setExtraSetLogs((prev)=>prev.map((row)=>row.id===extraId?{...row,...patch}:row));
+  }catch(e){
+   alert(friendlyWriteError(e,'Could not save that set. Please try again.'));
+  }
  }
  async function skipExercise(ex:any){
   if(!session?.user||!workout)return;

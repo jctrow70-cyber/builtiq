@@ -1,4 +1,9 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import {
+  friendlyWriteError,
+  isTransientNetworkError,
+  retryTransientSupabaseWrite,
+} from './networkErrors';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
@@ -13,30 +18,7 @@ export function getSupabaseConfigError(): string | null {
   return null;
 }
 
-function isTransientNetworkMessage(message?: string | null) {
-  const msg = String(message || '').trim();
-  const lower = msg.toLowerCase();
-  return (
-    !msg ||
-    lower === 'load failed' ||
-    lower === 'failed to fetch' ||
-    lower === 'typeerror: load failed' ||
-    lower.includes('networkerror') ||
-    lower.includes('network request failed') ||
-    lower.includes('access control')
-  );
-}
-
-export function friendlyWriteError(error?: unknown, fallback = 'Something went wrong. Please try again.') {
-  const msg =
-    error && typeof error === 'object' && 'message' in error
-      ? String((error as { message?: unknown }).message || '')
-      : String(error || '');
-  if (isTransientNetworkMessage(msg)) {
-    return 'Could not reach BuildIQ just then (Load failed / network). Check your connection and try again.';
-  }
-  return msg || fallback;
-}
+export { friendlyWriteError, isTransientNetworkError, retryTransientSupabaseWrite };
 
 /** Maps Auth session_not_found / missing-session errors to a clear re-login prompt. */
 export function friendlySessionExpiredMessage(message?: string | null): string | null {
@@ -55,7 +37,7 @@ export function friendlyAuthError(message?: string | null): string {
   const sessionExpired = friendlySessionExpiredMessage(message);
   if (sessionExpired) return sessionExpired;
 
-  if (isTransientNetworkMessage(message)) {
+  if (isTransientNetworkError(message) || !String(message || '').trim()) {
     return 'Could not reach Supabase from this device (Load failed / network). Check: 1) Vercel has NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_ANON_KEY, 2) Supabase → Authentication → URL Configuration includes your Vercel site URL, 3) try Chrome or disable content blockers, then retry.';
   }
 
