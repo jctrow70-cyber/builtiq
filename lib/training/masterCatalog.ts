@@ -418,6 +418,19 @@ export function loadMasterLibraryRecords(): MasterLibraryRecord[] {
     });
   }
 
+  const romanianDeadlift = byId.get('73');
+  if (romanianDeadlift) {
+    const compatible = new Set(splitList(romanianDeadlift.compatible_equipment));
+    compatible.add(romanianDeadlift.default_equipment || 'Barbell');
+    compatible.add('Barbell');
+    compatible.add('Smith Machine');
+    byId.set('73', {
+      ...romanianDeadlift,
+      default_equipment: romanianDeadlift.default_equipment || 'Barbell',
+      compatible_equipment: Array.from(compatible).join('; '),
+    });
+  }
+
   return Array.from(byId.values()).sort((a, b) => Number(a.id) - Number(b.id));
 }
 
