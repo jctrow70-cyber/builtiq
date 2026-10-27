@@ -11,6 +11,55 @@ Branch:
 Status:
 ```
 
+## BIQ-0271 - Program Design redesign Phase A: sections, summaries, edit-scope labels
+
+Date: 2026-10-26
+Branch: main
+Status: Implemented. Not committed. No database change.
+
+Summary: Program Design and Training now share four workout sections — Warm-up, Strength, Conditioning, and Cooldown. Exercise summaries lead with working sets and list ramp-up, backoff, drop, and AMRAP sets separately. Edit-scope labels name personal, group, just-me, and trainer-client programs without changing enrollment or assignment rules. Phase B calendar-strip UI is not started.
+
+Purpose: Make existing programs easier to read and edit before the mobile-first calendar redesign. Saved workouts keep their section and set records.
+
+Files changed:
+- lib/programDesign/workoutPreview.ts
+- lib/programDesign/enrollment.ts
+- lib/training/workoutTemplate.ts
+- lib/training/catalogSearch.ts
+- lib/training/adaptationOrchestration.ts
+- lib/scienceEngine/adaptation/phase2b1Check.ts
+- app/page.tsx
+- app/components/programDesign/ProgramCalendarEditor.tsx
+- app/components/programDesign/ProgramDesignHome.tsx
+- app/components/programDesign/ProgramWorkoutPlan.tsx
+- app/components/training/WorkoutPlanSheet.tsx
+- app/globals.css
+- scripts/test-workout-preview.ts
+- scripts/test-customize-for-me.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None. Stored `st_exercises.section` and `st_planned_sets` values are not rewritten.
+
+Testing steps:
+- `npx tsx scripts/test-workout-preview.ts`
+- `npx tsx scripts/test-customize-for-me.ts`
+- `npx tsc --noEmit`
+- Open Programs → existing personal and group programs still list Warm-up / Strength / Cooldown work
+- A cardio or `program_role: conditioning` exercise appears under Conditioning
+- Bench with ramp-up + working sets shows working prescription first
+- Training Start Workout / set logger still records the same planned sets
+- Group editor still switches Everyone / Just me; personal programs only show a label
+
+Known issues:
+- Phase B (horizontal Monday–Sunday strip) is not implemented
+- Empty Conditioning headers appear in the Training logger and template editor so users can add work there
+- Older leftover group snapshots still label as a personal program; enrollment behavior is unchanged
+- Science persist still writes cardio-day lifts with `section: strength` and `program_role: conditioning`; display maps those into Conditioning without rewriting the row
+
+Recommended commit message: Add shared Conditioning sections, working-set summaries, and edit-scope labels
+
 ## BIQ-0270 - Stage 2D coordinated repair, feasibility, and programming quality
 
 Date: 2026-10-26

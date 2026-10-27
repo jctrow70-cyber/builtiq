@@ -7,8 +7,9 @@ import { fetchProgramWorkoutTree } from '../../../lib/programDesign/programDesig
 import {
   WORKOUT_SECTIONS,
   exerciseSection,
+  isKnownWorkoutSection,
   sectionExercises,
-  summarizeExercise,
+  summarizeExerciseParts,
 } from '../../../lib/programDesign/workoutPreview';
 
 type ProgramWorkoutPlanProps = {
@@ -120,8 +121,7 @@ function WorkoutPreview({ workout }: { workout: any }) {
     ...sec,
     list: sectionExercises(workout, sec.id),
   })).filter((sec) => sec.list.length);
-  const known = new Set(WORKOUT_SECTIONS.map((s) => s.id));
-  const other = (workout?.st_exercises || []).filter((e: any) => !known.has(exerciseSection(e)));
+  const other = (workout?.st_exercises || []).filter((e: any) => !isKnownWorkoutSection(exerciseSection(e)));
   if (other.length) sections.push({ id: 'other', label: 'Other', list: other });
   if (!sections.length) return <p className="muted">No exercises on this day yet.</p>;
   return (
@@ -129,15 +129,23 @@ function WorkoutPreview({ workout }: { workout: any }) {
       {sections.map((sec) => (
         <section key={sec.id} className="te-plan-section">
           <h3>{sec.label}</h3>
-          {sec.list.map((ex: any) => (
-            <div key={ex.id} className="te-plan-ex">
-              <b>{ex.name}</b>
-              <span className="muted">
-                {ex.muscle_group ? `${ex.muscle_group} · ` : ''}
-                {summarizeExercise(ex)}
-              </span>
-            </div>
-          ))}
+          {sec.list.map((ex: any) => {
+            const summary = summarizeExerciseParts(ex);
+            return (
+              <div key={ex.id} className="te-plan-ex">
+                <b>{ex.name}</b>
+                <span>
+                  {ex.muscle_group ? `${ex.muscle_group} · ` : ''}
+                  {summary.primary}
+                </span>
+                {summary.extras.map((line) => (
+                  <span key={line} className="muted">
+                    {line}
+                  </span>
+                ))}
+              </div>
+            );
+          })}
         </section>
       ))}
     </div>

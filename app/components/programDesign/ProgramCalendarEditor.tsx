@@ -12,7 +12,7 @@ import ProgramCriteriaPanel from './ProgramCriteriaPanel';
 import SegmentedControl from '../ui/SegmentedControl';
 import { cycleLengthOf, formatProgramRange, programDateRange } from '../../../lib/programDesign/cycle';
 import { lifecycleLabel, lifecycleStatusOf } from '../../../lib/programDesign/lifecycle';
-import { programEditAudience } from '../../../lib/programDesign/enrollment';
+import { programEditAudience, programEditScopeCopy } from '../../../lib/programDesign/enrollment';
 import {
   activitiesFromLegacyWorkouts,
   copyWeekActivities,
@@ -93,6 +93,7 @@ export default function ProgramCalendarEditor({
   const status = lifecycleStatusOf(program);
   const inclusive = !!program.inclusive_plan;
   const audience = programEditAudience(program);
+  const scopeCopy = programEditScopeCopy(program);
   const groupName = groups.find((g) => g.id === program.team_id)?.name;
 
   async function reload() {
@@ -276,7 +277,7 @@ export default function ProgramCalendarEditor({
 
       <ProgramCriteriaPanel value={program.generation_criteria} />
 
-      {audience === 'group' && onEditAudienceChange && (
+      {audience === 'group' && onEditAudienceChange ? (
         <fieldset className="pd-scope">
           <legend>These edits apply to</legend>
           <SegmentedControl
@@ -299,9 +300,15 @@ export default function ProgramCalendarEditor({
           <p className="muted" style={{ marginTop: 8 }}>
             {audienceBusy
               ? 'Switching…'
-              : 'Changes update the live group plan for every member. Just me makes a private copy for Training.'}
+              : `${scopeCopy.title} — ${scopeCopy.detail} Just me makes a personalized copy that affects only you.`}
           </p>
         </fieldset>
+      ) : (
+        <p className="muted pd-scope-note">
+          <strong>{scopeCopy.title}</strong>
+          {' — '}
+          {scopeCopy.detail}
+        </p>
       )}
 
       <div className="pd-week-bar">

@@ -19,6 +19,7 @@ import {
   liveTemplateId,
   personalLibraryBuckets,
   programEditAudience,
+  programEditScopeCopy,
   suggestedNextGroupStart,
 } from '../../../lib/programDesign/enrollment';
 import { cycleLengthOf, formatCycleLength, formatProgramRange, generationWeeksOf, nextMondayFrom, programDateRange } from '../../../lib/programDesign/cycle';
@@ -281,15 +282,16 @@ export default function ProgramDesignHome({
   const followingGroupName = following?.team_id
     ? teams.find((t) => t.id === following.team_id)?.name
     : undefined;
+  const followingScope = following ? programEditScopeCopy(following) : null;
   const followingExtra = !following
     ? undefined
     : followingJustMe
-      ? 'Just me copy · group plan unchanged'
+      ? `${followingScope?.title} — ${followingScope?.detail}`
       : followingGroupSourced
         ? followingGroupName
-          ? `Group plan · ${followingGroupName}`
-          : 'Group plan'
-        : 'For me';
+          ? `${followingScope?.title} · ${followingGroupName}`
+          : followingScope?.title
+        : followingScope?.title;
 
   async function beginCreate(nextScope: ProgramScope = scope) {
     setError('');
@@ -868,7 +870,10 @@ export default function ProgramDesignHome({
               <h2>Just me copies</h2>
               <p className="muted">Private copies of a group plan. The group plan is unchanged.</p>
               {renderProgramRows(personalBuckets.justMeCopies, {
-                extra: () => 'Just me · group plan unchanged',
+                extra: (program) => {
+                  const copy = programEditScopeCopy(program);
+                  return `${copy.title} — ${copy.detail}`;
+                },
                 offerFollow: true,
               })}
             </div>

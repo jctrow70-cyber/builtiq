@@ -1,8 +1,18 @@
 import { addDaysYmd, todayYmd } from '../training/programCalendar';
 import { normalizeRole } from '../groups/permissions';
+import { isExplicitIndividualAssignment } from '../groups/trainingSources';
 import { nextMondayFrom, programDateRange } from './cycle';
 import { lifecycleStatusOf } from './lifecycle';
 import type { ProgramDesignRecord } from './types';
+
+export type ProgramEditScopeKind = 'personal' | 'group' | 'personalized_copy' | 'trainer_client';
+
+export type ProgramEditScopeCopy = {
+  kind: ProgramEditScopeKind;
+  title: string;
+  shortLabel: string;
+  detail: string;
+};
 
 /** True only for group Members — not Owner or Manager. */
 export function isAutoEnrolledMemberRole(role: string | null | undefined): boolean {
@@ -116,6 +126,54 @@ export function programEditAudience(
   if (isPersonalizedGroupFollow(program)) return 'me';
   if (isLiveGroupProgram(program)) return 'group';
   return null;
+}
+
+/** Display kind only. Does not change enrollment, audience, or assignment rules. */
+export function programEditScopeKind(
+  program: ProgramDesignRecord | null | undefined,
+  opts?: { assignmentType?: string | null }
+): ProgramEditScopeKind {
+  if (isPersonalizedGroupFollow(program)) return 'personalized_copy';
+  if (isLiveGroupProgram(program)) return 'group';
+  if (isExplicitIndividualAssignment(opts?.assignmentType)) return 'trainer_client';
+  return 'personal';
+}
+
+export function programEditScopeCopy(
+  program: ProgramDesignRecord | null | undefined,
+  opts?: { assignmentType?: string | null }
+): ProgramEditScopeCopy {
+  const kind = programEditScopeKind(program, opts);
+  if (kind === 'group') {
+    return {
+      kind,
+      title: 'Group program',
+      shortLabel: 'Group program',
+      detail: 'Changes affect assigned members.',
+    };
+  }
+  if (kind === 'personalized_copy') {
+    return {
+      kind,
+      title: 'Personalized group copy',
+      shortLabel: 'Just me',
+      detail: 'Changes affect only me. The group plan stays the same.',
+    };
+  }
+  if (kind === 'trainer_client') {
+    return {
+      kind,
+      title: 'Individual trainer-client program',
+      shortLabel: 'Trainer-client',
+      detail: 'This plan is assigned to an individual client.',
+    };
+  }
+  return {
+    kind: 'personal',
+    title: 'Personal program',
+    shortLabel: 'Personal',
+    detail: 'Changes apply only to this program.',
+  };
 }
 
 /** Keep Training on a just-me copy of this live group plan (do not auto-switch). */

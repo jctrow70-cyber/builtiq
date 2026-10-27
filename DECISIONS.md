@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 116 - Shared workout sections and working-set summaries
+
+Date: 2026-10-26
+Status: Accepted
+Category: Program Design / Training
+
+### Decision
+
+Program Design and Training share one four-section workout model: Warm-up, Strength, Conditioning, and Cooldown. Existing stored values stay as written. Display mapping treats `cardio`, `metcon`, `finisher`, and `program_role: conditioning` as Conditioning. Exercise summaries lead with working sets and mention ramp-up, backoff, drop, and AMRAP sets separately. Edit-scope copy names personal, group, personalized just-me, and trainer-client programs. `programEditAudience`, `needsJustMeCopy`, and assignment rules do not change. Phase B will use a compact horizontal Monday–Sunday strip with the selected day's workout below it; that layout is not started here.
+
+### Reason
+
+Users need a clearer plan before the mobile calendar redesign. A second workout model, a data migration, or mixing ramp reps into the working-set line would make later canned and goal-based programs harder to share with Training.
+
+### Alternatives Considered
+
+Rewrite stored sections to `conditioning`. Keep cardio work inside Strength. Build a separate Program Design summary format.
+
+### Impact
+
+No database change. No AI generation change. Training logging still uses `st_planned_sets` and the existing set logger.
+
+---
+
 ## Decision 115 - Coordinated repair and science-seed preflight
 
 Date: 2026-10-26

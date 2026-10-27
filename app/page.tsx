@@ -93,6 +93,7 @@ import {
 } from '../lib/programDesign/activityCompletion';
 import type { TrainingDayItem } from '../lib/programDesign/trainingSchedule';
 import { isAutoEnrolledMemberRole, isLiveGroupProgram, isPersonalizedGroupFollow, needsJustMeCopy } from '../lib/programDesign/enrollment';
+import { exerciseSection as sharedExerciseSection } from '../lib/programDesign/workoutPreview';
 import { weekdayIndexFromYmd } from '../lib/programDesign/recurrence';
 import { customizeFollowedProgramForMe, matchCopiedWorkout, syncMemberGroupEnrollment } from '../lib/programDesign/followProgram';
 import { orderGroupsForEnrollment } from '../lib/groups/trainingSources';
@@ -118,13 +119,13 @@ import type { AssignProgramTarget } from './components/groups/TeamAssignProgramM
 
 const NAV=['Dashboard','Training','Programs','Groups','Nutrition','Progress','AI Coach','Settings'];
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-const SECTIONS=[{id:'warmup',label:'Warm Up / Prep'},{id:'strength',label:'Strength'},{id:'cooldown',label:'Cooldown / Stretch'}];
-const SECTION_SORT_BASE:any={warmup:0,strength:100,cooldown:200};
+const SECTIONS=[{id:'warmup',label:'Warm Up / Prep'},{id:'strength',label:'Strength'},{id:'conditioning',label:'Conditioning'},{id:'cooldown',label:'Cooldown / Stretch'}];
+const SECTION_SORT_BASE:any={warmup:0,strength:100,conditioning:200,cooldown:300};
 const sectionDefaultSets=(section:string)=>section==='warmup'||section==='cooldown'?1:3;
 const workoutExerciseCount=(w:any)=>SECTIONS.reduce((n:number,sec:any)=>n+sectionExercises(w,sec.id).length,0);
 const workoutExercisesInOrder=(w:any)=>SECTIONS.flatMap((sec:any)=>sectionExercises(w,sec.id));
 const addPanelSectionLabel=(section:string)=>SECTIONS.find((s:any)=>s.id===section)?.label||section;
-const exerciseSection=(ex:any)=>ex?.section||'strength';
+const exerciseSection=(ex:any)=>sharedExerciseSection(ex);
 const sectionExercises=(workout:any,section:string)=>(workout?.st_exercises||[]).filter((e:any)=>exerciseSection(e)===section).sort((a:any,b:any)=>{const d=(a.sort_order||0)-(b.sort_order||0);if(d)return d;return (a.superset_order||0)-(b.superset_order||0);});
 const nextSortOrder=(workout:any,section:string)=>{const list=sectionExercises(workout,section);const base=SECTION_SORT_BASE[section]??100;return list.length?Math.max(...list.map((e:any)=>e.sort_order||0))+1:base;};
 const makeSupersetGroupId=()=>(typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():`ss-${Date.now()}-${Math.random().toString(36).slice(2,8)}`);

@@ -1207,6 +1207,7 @@ label{color:var(--textSecondary)}
 .pd-end-card b{font-size:15px}
 .pd-week-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 0 10px}
 .pd-week-label{margin:0;font-weight:900}
+.pd-scope-note{margin:0 0 12px}
 .pd-week-actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
 .pd-status-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
 .pd-calendar{display:grid;gap:10px}

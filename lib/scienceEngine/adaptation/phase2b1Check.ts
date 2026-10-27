@@ -399,6 +399,7 @@ export async function runPhase2b1OrchestrationChecks() {
   assert(otherProg.results[0]?.event.program_id === 'prog-b', '17: event stays on the source program');
 
   assert(!shouldEvaluateExercise({ section: 'warmup', catalog_exercise_id: CAT, program_role: 'warmup' }), 'warmup not evaluated');
+  assert(!shouldEvaluateExercise({ section: 'conditioning', catalog_exercise_id: CAT, program_role: 'conditioning' }), 'conditioning not evaluated');
   assert(!shouldEvaluateExercise({ section: 'strength', program_role: 'primary' }), 'no catalog id skipped');
 
   const persistOrder: string[] = [];

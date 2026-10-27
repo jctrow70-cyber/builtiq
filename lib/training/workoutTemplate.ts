@@ -1,15 +1,20 @@
 import { inferExerciseType } from './exerciseTypes';
-import { exerciseSection, sectionExercises } from '../programDesign/workoutPreview';
+import {
+  exerciseSection,
+  SECTION_SORT_BASE as SHARED_SECTION_SORT_BASE,
+  sectionExercises,
+} from '../programDesign/workoutPreview';
 import { defaultCatalogEquipment } from './exerciseEquipment';
 import { prescriptionColumnsFromSources } from './prescriptionMeta';
 
 export const WORKOUT_TEMPLATE_SECTIONS = [
   { id: 'warmup', label: 'Warm Up / Prep' },
   { id: 'strength', label: 'Strength' },
+  { id: 'conditioning', label: 'Conditioning' },
   { id: 'cooldown', label: 'Cooldown / Stretch' },
 ];
 
-export const SECTION_SORT_BASE: Record<string, number> = { warmup: 0, strength: 100, cooldown: 200 };
+export const SECTION_SORT_BASE: Record<string, number> = { ...SHARED_SECTION_SORT_BASE };
 
 export type AddPanelMode = 'normal' | 'superset';
 export type AddPanelStep = 'search' | 'custom' | 'configure';

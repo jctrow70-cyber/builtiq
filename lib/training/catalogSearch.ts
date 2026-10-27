@@ -92,7 +92,7 @@ export type CatalogSearchOptions = {
   query?: string;
   filters?: CatalogSearchFilters;
   limit?: number;
-  /** Picker section: strength, cardio, warmup, cooldown */
+  /** Picker section: strength, cardio, conditioning, warmup, cooldown */
   section?: string;
 };
 
@@ -153,7 +153,7 @@ function contextScore(item: any, section?: string) {
   if (!sec) return 0;
   const cardio = catalogItemIsCardio(item);
   const strengthLike = isStrengthLike(resolvedExerciseType(item)) && !cardio;
-  if (sec === 'cardio') return cardio ? 90 : -50;
+  if (sec === 'cardio' || sec === 'conditioning') return cardio ? 90 : -50;
   if (sec === 'strength') return strengthLike ? 90 : cardio ? -80 : 20;
   if (sec === 'warmup' || sec === 'cooldown') return cardio ? -15 : 10;
   return 0;

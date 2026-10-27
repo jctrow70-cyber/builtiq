@@ -11,6 +11,8 @@ import {
   needsJustMeCopy,
   personalizedFollowName,
   programEditAudience,
+  programEditScopeCopy,
+  programEditScopeKind,
   shouldKeepPersonalizedFollow,
 } from '../lib/programDesign/enrollment';
 import { matchCopiedWorkout, syncMemberGroupEnrollment } from '../lib/programDesign/followProgram';
@@ -82,6 +84,11 @@ assert.equal(programEditAudience(liveTeam), 'group');
 assert.equal(programEditAudience(justMe), 'me');
 assert.equal(programEditAudience(leftoverSnapshot), null);
 assert.equal(programEditAudience(unfollowMarker), null);
+assert.equal(programEditScopeKind(liveTeam), 'group');
+assert.equal(programEditScopeKind(justMe), 'personalized_copy');
+assert.equal(programEditScopeKind(leftoverSnapshot), 'personal');
+assert.equal(programEditScopeCopy(justMe).detail, 'Changes affect only me. The group plan stays the same.');
+assert.equal(programEditScopeCopy(liveTeam).title, 'Group program');
 assert.equal(needsJustMeCopy(liveTeam), true);
 assert.equal(needsJustMeCopy(justMe), false);
 assert.equal(isLeftoverGroupSnapshot(justMe), false);

@@ -116,7 +116,15 @@ export async function probePhase2a3Ledger(supabase: SupabaseClient): Promise<{ r
 export function shouldEvaluateExercise(ex: any): boolean {
   if (!ex?.catalog_exercise_id) return false;
   const section = String(ex.section || 'strength').toLowerCase();
-  if (section === 'warmup' || section === 'cooldown' || section === 'cardio' || section === 'mobility') return false;
+  if (
+    section === 'warmup' ||
+    section === 'cooldown' ||
+    section === 'cardio' ||
+    section === 'conditioning' ||
+    section === 'mobility'
+  ) {
+    return false;
+  }
   if (!isWorkingRole(ex.program_role)) return false;
   return true;
 }

@@ -3,8 +3,9 @@
 import {
   WORKOUT_SECTIONS,
   exerciseSection,
+  isKnownWorkoutSection,
   sectionExercises,
-  summarizeExercise,
+  summarizeExerciseParts,
 } from '../../../lib/programDesign/workoutPreview';
 
 type WorkoutPlanSheetProps = {
@@ -26,8 +27,7 @@ export default function WorkoutPlanSheet({
 }: WorkoutPlanSheetProps) {
   const title = workout?.workout_type || workout?.day_label || 'Workout';
   const hasExercises = (workout?.st_exercises || []).length > 0;
-  const known = new Set(WORKOUT_SECTIONS.map((s) => s.id));
-  const other = (workout?.st_exercises || []).filter((e: any) => !known.has(exerciseSection(e)));
+  const other = (workout?.st_exercises || []).filter((e: any) => !isKnownWorkoutSection(exerciseSection(e)));
 
   return (
     <div className="panel-overlay" onClick={onClose}>
@@ -51,27 +51,43 @@ export default function WorkoutPlanSheet({
           return (
             <section key={sec.id} className="te-plan-section">
               <h3>{sec.label}</h3>
-              {list.map((ex: any) => (
-                <div key={ex.id} className="te-plan-ex">
-                  <b>{ex.name}</b>
-                  <span className="muted">
-                    {ex.muscle_group ? `${ex.muscle_group} · ` : ''}
-                    {summarizeExercise(ex)}
-                  </span>
-                </div>
-              ))}
+              {list.map((ex: any) => {
+                const summary = summarizeExerciseParts(ex);
+                return (
+                  <div key={ex.id} className="te-plan-ex">
+                    <b>{ex.name}</b>
+                    <span>
+                      {ex.muscle_group ? `${ex.muscle_group} · ` : ''}
+                      {summary.primary}
+                    </span>
+                    {summary.extras.map((line) => (
+                      <span key={line} className="muted">
+                        {line}
+                      </span>
+                    ))}
+                  </div>
+                );
+              })}
             </section>
           );
         })}
         {other.length > 0 && (
           <section className="te-plan-section">
             <h3>Other</h3>
-            {other.map((ex: any) => (
-              <div key={ex.id} className="te-plan-ex">
-                <b>{ex.name}</b>
-                <span className="muted">{summarizeExercise(ex)}</span>
-              </div>
-            ))}
+            {other.map((ex: any) => {
+              const summary = summarizeExerciseParts(ex);
+              return (
+                <div key={ex.id} className="te-plan-ex">
+                  <b>{ex.name}</b>
+                  <span>{summary.primary}</span>
+                  {summary.extras.map((line) => (
+                    <span key={line} className="muted">
+                      {line}
+                    </span>
+                  ))}
+                </div>
+              );
+            })}
           </section>
         )}
 
