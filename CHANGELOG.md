@@ -11,6 +11,37 @@ Branch:
 Status:
 ```
 
+## BIQ-0274 - Romanian Deadlift Smith Machine equipment
+
+Date: 2026-10-27
+Branch: cursor/romanian-deadlift-smith-e634
+Status: Implemented. No schema migration. Live catalog apply script available.
+
+Summary: Romanian Deadlift (master 73) can use Smith Machine on the existing master card, same pattern as Deadlift (71). No separate Smith RDL card.
+
+Purpose: Users need Smith Machine as an implement option when logging or planning Romanian Deadlift. Master 73 listed Barbell, Dumbbell, Kettlebell, and Cable only.
+
+Files changed:
+- `lib/training/masterCatalog.ts`
+- `lib/training/catalogCleanupCheck.ts`
+- `scripts/apply-romanian-deadlift-smith.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+
+Database changes: No schema migration. Data-only on live `st_exercise_catalog` master 73 via `scripts/apply-romanian-deadlift-smith.ts`: add Smith Machine to `coaching_metadata.compatible_equipment`. History and planned set logs are not rewritten.
+
+Testing steps:
+1. `npx tsx lib/training/catalogCleanupCheck.ts` (or `npm run test:science`)
+2. Training → add or open Romanian Deadlift → confirm Smith Machine appears in the equipment dropdown
+3. Select Smith Machine, save, reload — equipment stays Smith Machine
+4. Confirm completed history rows keep their previously saved equipment
+
+Known issues:
+- Already-planned Romanian Deadlift rows keep their saved equipment until the user changes the dropdown
+- Live Supabase catalogs need `npx tsx scripts/apply-romanian-deadlift-smith.ts` (with service role) until the next master sync
+
+Recommended commit message: BIQ-0274 Add Smith Machine to Romanian Deadlift equipment
+
 ## BIQ-0273 - Retry set logging after Safari Load failed
 
 Date: 2026-10-27

@@ -4,6 +4,32 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 119 - Romanian Deadlift keeps one card with Smith Machine
+
+Date: 2026-10-27
+Status: Accepted
+Category: Exercise Library
+
+### Decision
+
+Romanian Deadlift stays one master card (73) with Smith Machine on `compatible_equipment`, matching Deadlift (71) and Reverse Lunge + Smith. Do not create a Smith Romanian Deadlift card.
+
+### Reason
+
+Smith RDL is an implement variant of the same hinge movement, not a separate exercise. A second master card would split history and progress series.
+
+### Alternatives Considered
+
+- Separate Smith Romanian Deadlift master card — rejected; same architecture as Deadlift (71) and Reverse Lunge (63)
+- Leave RDL on free-weight implements only — rejected; users need Smith as a logged option
+
+### Impact
+
+- Romanian Deadlift equipment dropdown includes Smith Machine
+- Completed history and planned rows are not rewritten; users change equipment when they want Smith
+
+---
+
 ## Decision 118 - Retry set-log writes on Safari Load failed
 
 Date: 2026-10-27
