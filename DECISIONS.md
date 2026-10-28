@@ -74,7 +74,31 @@ Keep the workout list as the default. Build a new month data model. Open the edi
 
 ### Impact
 
-No database schema change. Training remains the logging surface. Phase C is not started. Planned follow-ups: a more compact group edit-scope control, clearer save feedback if the editor keeps immediate saves, a more scannable workout-details view, and Training week-cell summaries that match Program Design. Day / Week / Month and the full-month calendar stay.
+No database schema change. Training remains the logging surface. Phase C later added compact group-scope pills, real persist save status, and a dedicated workout-details screen. Training week-cell summaries that match Program Design remain later. Day / Week / Month and the full-month calendar stay.
+
+---
+
+## Decision 118 - Workout details before a second editor
+
+Date: 2026-10-27
+Status: Accepted
+Category: Program Design
+
+### Decision
+
+Opening a scheduled workout goes Calendar → Workout Details → Edit workout. Details is a dedicated read view: name, focus, duration, working-exercise count, week/day, then only the sections that have work. Equipment comes from stored or catalog structured data, never the exercise name. Working sets stay in the primary line; stored ramp-up sets are secondary and expandable. Existing supersets are grouped in place. Edit still uses `WorkoutTemplateEditor` with immediate save. Save status is Saving… while the write is in flight, Saved after write and reload succeed, Saved, but couldn't refresh when the write succeeded and reload failed, and Save failed only when the write itself failed. Group Everyone / Only me is a compact pill control with the same confirmation and copy-reuse rules.
+
+### Reason
+
+Users needed a scannable plan before editing. A second editor, inferred equipment, or a fake Saved state would hide real data and create a second mutation path.
+
+### Alternatives Considered
+
+Open the editor from the calendar. Infer barbell vs dumbbell from the exercise name. Show Saved as soon as the client mutation starts.
+
+### Impact
+
+No database schema change. No AI generation change. Training remains the logging surface. Phase B Day / Week / Month stays. Training calendar summary alignment is still later.
 
 ---
 

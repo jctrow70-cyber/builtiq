@@ -1205,6 +1205,16 @@ label{color:var(--textSecondary)}
 .pd-scope-choice span{font-size:13px;font-weight:600;line-height:1.4;color:var(--textSecondary)}
 .pd-scope-choice.active{background:var(--accentSoft);border-color:var(--accent)}
 .pd-scope-choice.active span{color:inherit;opacity:.9}
+.pd-scope-compact{margin:4px 0 12px}
+.pd-scope-compact-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.pd-scope-compact-label{margin:0;font-size:12px;font-weight:800}
+.pd-scope-pills{display:flex;flex-wrap:wrap;gap:6px;flex:1;min-width:0}
+@media (max-width:520px){
+  .pd-scope-compact-row{flex-direction:column;align-items:stretch}
+}
+.pd-scope-pill{min-height:44px;padding:8px 12px;border-radius:999px;border:1px solid var(--borderSubtle);background:var(--surfaceElevated);color:inherit;font-weight:800;text-align:left;overflow-wrap:anywhere;max-width:100%}
+.pd-scope-pill.active{background:var(--accentSoft);border-color:var(--accent);color:var(--accentOnSoft)}
+.pd-scope-hint{margin:6px 0 0;line-height:1.4}
 .pd-program-details{margin:16px 0 8px;border:1px solid var(--borderSubtle);border-radius:16px;background:var(--surfaceInset);padding:10px 14px}
 .pd-program-details > summary{cursor:pointer;font-weight:800;min-height:44px;display:flex;align-items:center}
 .pd-program-details .pd-criteria{margin-top:10px}
@@ -1355,6 +1365,40 @@ label{color:var(--textSecondary)}
 .pd-workout-card{padding:14px;border-radius:16px;border:1px solid var(--borderSubtle);background:var(--surfaceElevated)}
 .pd-workout-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px}
 .pd-workout-card-head h3{margin:0}
+.pd-detail{display:grid;gap:18px;margin-top:4px}
+.pd-detail-head{display:grid;gap:6px}
+.pd-detail-nav{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.pd-detail-nav .pd-back{margin:0;min-height:44px}
+.pd-detail-nav .btn{min-height:44px;padding:10px 14px}
+.pd-detail-head h1{margin:0;font-size:28px;line-height:1.15;overflow-wrap:anywhere}
+.pd-detail-head .muted{margin:0;font-size:13px;line-height:1.45}
+.pd-detail-body{display:grid;gap:22px}
+.pd-detail-section{display:grid;gap:10px}
+.pd-detail-section h3{margin:0;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--textSecondary)}
+.pd-ex{display:grid;gap:8px;padding:12px 0;border-bottom:1px solid var(--borderSubtle)}
+.pd-ex:last-child{border-bottom:0}
+.pd-ex-main{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:start}
+.pd-ex-copy{min-width:0}
+.pd-ex h4{margin:0;font-size:16px;line-height:1.3;overflow-wrap:anywhere}
+.pd-ex-mark{display:inline-block;min-width:1.6em;margin-right:6px;color:var(--accentOnSoft)}
+.pd-ex-equipment{margin:2px 0 0;font-size:12px;font-weight:700;color:var(--textSecondary);overflow-wrap:anywhere}
+.pd-ex-rx{margin:6px 0 0;font-size:15px;font-weight:800}
+.pd-ex-secondary{margin:2px 0 0;font-size:13px;font-weight:600;color:var(--textSecondary)}
+.pd-ex-meta{margin:4px 0 0;font-size:13px;font-weight:600;color:var(--textSecondary)}
+.pd-ex-media{display:grid;justify-items:center;gap:4px;min-width:52px;color:var(--accentOnSoft);font-size:11px;font-weight:800;text-decoration:none}
+.pd-ex-media img{width:52px;height:52px;object-fit:cover;border-radius:10px;background:var(--surfaceInset)}
+.pd-ex-more{margin:0}
+.pd-ex-more summary{min-height:40px;display:flex;align-items:center;cursor:pointer;font-size:13px;font-weight:800;color:var(--accentOnSoft)}
+.pd-ex-more ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.pd-ex-more p,.pd-ex-more li{margin:4px 0 0;font-size:13px;line-height:1.45;color:var(--textSecondary)}
+.pd-superset{display:grid;gap:0;padding:10px 12px;border-radius:16px;background:var(--surfaceInset);border-left:3px solid var(--accent)}
+.pd-superset-label{margin:0 0 4px;font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--accentOnSoft)}
+.pd-superset .pd-ex{padding-left:0;padding-right:0}
+.pd-superset-rest{margin:8px 0 0;font-size:13px;font-weight:700;color:var(--textSecondary)}
+.pd-save-status{margin:0;align-self:center;font-size:12px;font-weight:800;color:var(--textSecondary);max-width:min(240px,100%)}
+.pd-save-status--error{color:#fca5a5}
+.pd-save-status--refresh{color:var(--warning)}
+.pd-save-note{font-weight:600}
 .pd-workout-body{display:grid;gap:4px}
 .pd-edit-ex{margin:0 0 14px;padding:12px;border-radius:12px;border:1px solid var(--borderSubtle);background:var(--surfaceInset)}
 .pd-edit-ex-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}

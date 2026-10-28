@@ -79,8 +79,8 @@ assert.equal(workoutFocusLabel(workout), 'Chest + Squat');
 assert.equal(workoutPrimaryFocus(workout), 'Chest');
 assert.equal(workingExerciseCount(workout), 2);
 assert.deepEqual(previewExerciseNames(workout, 3), ['Bench Press', 'Bike']);
-assert.equal(exerciseRestLabel({ rest_seconds: 90, st_planned_sets: [] }), '1.5 min rest');
-assert.equal(exerciseRestLabel({ st_planned_sets: [{ rest_seconds: 45 }] }), '45s rest');
+assert.equal(exerciseRestLabel({ rest_seconds: 90, st_planned_sets: [] }), '90 sec rest');
+assert.equal(exerciseRestLabel({ st_planned_sets: [{ rest_seconds: 45 }] }), '45 sec rest');
 
 const program = {
   id: 'p1',

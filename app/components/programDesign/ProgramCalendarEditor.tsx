@@ -15,6 +15,7 @@ import SegmentedControl from '../ui/SegmentedControl';
 import { cycleLengthOf, dateForProgramDay, formatProgramRange, programDateRange } from '../../../lib/programDesign/cycle';
 import { lifecycleLabel, lifecycleStatusOf } from '../../../lib/programDesign/lifecycle';
 import { programEditAudience, programEditScopeCopy, willCreatePersonalizedCopy } from '../../../lib/programDesign/enrollment';
+import { dayDurationMinutes } from '../../../lib/programDesign/workoutPreview';
 import {
   activitiesForDay,
   activitiesFromLegacyWorkouts,
@@ -406,33 +407,40 @@ export default function ProgramCalendarEditor({
       )}
 
       {!focusingWorkout && audience === 'group' && onEditAudienceChange && (
-        <fieldset className="pd-scope">
-          <legend>Editing for</legend>
-          <div className="pd-scope-stack" role="radiogroup" aria-label="Editing for">
-            <button
-              type="button"
-              role="radio"
-              aria-checked="true"
-              className="pd-scope-choice active"
-              disabled={!canEditGroupTemplate}
-              onClick={() => requestAudienceChange('group')}
-            >
-              <b>{groupName ? `Everyone in ${groupName}` : 'Everyone in the group'}</b>
-              <span>Changes affect assigned members.</span>
-            </button>
-            <button
-              type="button"
-              role="radio"
-              aria-checked="false"
-              className="pd-scope-choice"
-              onClick={() => requestAudienceChange('me')}
-            >
-              <b>Only me</b>
-              <span>{creatingPersonalizedCopy ? 'Creates a private copy. The group plan stays the same.' : 'Open your private copy. The group plan stays the same.'}</span>
-            </button>
+        <div className="pd-scope-compact">
+          <div className="pd-scope-compact-row">
+            <p className="pd-scope-compact-label" id="pd-scope-label">
+              Editing for
+            </p>
+            <div className="pd-scope-pills" role="radiogroup" aria-labelledby="pd-scope-label">
+              <button
+                type="button"
+                role="radio"
+                aria-checked="true"
+                className="pd-scope-pill active"
+                disabled={!canEditGroupTemplate}
+                onClick={() => requestAudienceChange('group')}
+              >
+                {groupName ? `Everyone in ${groupName}` : 'Everyone in the group'}
+              </button>
+              <button
+                type="button"
+                role="radio"
+                aria-checked="false"
+                className="pd-scope-pill"
+                onClick={() => requestAudienceChange('me')}
+              >
+                Only me
+              </button>
+            </div>
           </div>
+          <p className="muted pd-scope-hint">
+            {creatingPersonalizedCopy
+              ? 'Creates a private copy. The group plan stays the same.'
+              : 'Open your private copy. The group plan stays the same.'}
+          </p>
           {audienceBusy && <p className="muted">Switching…</p>}
-        </fieldset>
+        </div>
       )}
 
       {!focusingWorkout && (
@@ -591,6 +599,12 @@ export default function ProgramCalendarEditor({
             onLoaded={(info) => {
               setHasExercises(info.hasExercises);
               setWorkouts(info.workouts || []);
+            }}
+            detailContext={{
+              week,
+              totalWeeks,
+              dayLabel: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][selectedDay],
+              durationMinutes: dayDurationMinutes(dayActivities, selectedWorkout),
             }}
           />
         </>

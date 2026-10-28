@@ -31,6 +31,14 @@ import {
   type AddPanelState,
 } from '../../../lib/training/workoutTemplate';
 import { exerciseSection, plannedSets, sectionExercises } from '../../../lib/programDesign/workoutPreview';
+import {
+  applyWorkoutSaveEvent,
+  INITIAL_WORKOUT_SAVE_STATE,
+  interpretReloadResult,
+  workoutSaveStatusClass,
+  workoutSaveStatusLabel,
+  workoutSaveStatusLive,
+} from '../../../lib/training/workoutSaveStatus';
 
 type WorkoutTemplateEditorProps = {
   supabase: SupabaseClient;
@@ -39,7 +47,7 @@ type WorkoutTemplateEditorProps = {
   canEdit: boolean;
   onBack: () => void;
   backLabel?: string;
-  onReload: () => Promise<void>;
+  onReload: () => Promise<void | { error?: string | null }>;
 };
 
 export default function WorkoutTemplateEditor({
@@ -59,10 +67,12 @@ export default function WorkoutTemplateEditor({
   const [applyRemaining, setApplyRemaining] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [save, setSave] = useState(INITIAL_WORKOUT_SAVE_STATE);
   const [nameSearch, setNameSearch] = useState<{ exerciseId: string; query: string } | null>(null);
   const [guide, setGuide] = useState<ExerciseGuidePayload | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const namePickRef = useRef(false);
+  const persistGen = useRef(0);
 
   const searchCatalogPool = useMemo(() => workoutSearchCatalogItems(catalog, userId), [catalog, userId]);
 
@@ -93,20 +103,43 @@ export default function WorkoutTemplateEditor({
     return catalog.find((c: any) => c.id === ex.catalog_exercise_id) || null;
   }
 
+  function beginPersist() {
+    persistGen.current += 1;
+    setBusy(true);
+    setError('');
+    setSave(applyWorkoutSaveEvent(INITIAL_WORKOUT_SAVE_STATE, { type: 'start' }));
+  }
+
   async function persistError(message: string) {
+    setSave(applyWorkoutSaveEvent({ status: 'saving', detail: '' }, { type: 'write_failed', message }));
     setError(message);
     setBusy(false);
   }
 
   async function reload() {
-    setBusy(false);
-    await onReload();
+    const gen = persistGen.current;
+    try {
+      const result = await onReload();
+      if (persistGen.current !== gen) return;
+      const next = applyWorkoutSaveEvent({ status: 'saving', detail: '' }, interpretReloadResult(result));
+      setSave(next);
+      setBusy(false);
+      if (next.status === 'saved') setError('');
+    } catch (err: any) {
+      if (persistGen.current !== gen) return;
+      setSave(
+        applyWorkoutSaveEvent(
+          { status: 'saving', detail: '' },
+          { type: 'reload_failed', message: err?.message || 'Could not refresh the latest workout.' }
+        )
+      );
+      setBusy(false);
+    }
   }
 
   async function replaceWithCatalog(ex: any, item: any) {
     if (!canEdit) return;
-    setBusy(true);
-    setError('');
+    beginPersist();
     const payload = catalogPayloadFromItem(item, exerciseSection(ex), ex);
     for (const tw of targets) {
       const match = tw.id === workout.id ? ex : matchingExercise(tw, ex);
@@ -190,8 +223,7 @@ export default function WorkoutTemplateEditor({
     if (groupId && existing.length) sortOrder = existing[0].sort_order ?? sortOrder;
     const setCount = Math.max(1, Number(config.setCount) || sectionDefaultSets(section));
     const exType = exerciseTypeOf(picked, picked);
-    setBusy(true);
-    setError('');
+    beginPersist();
     for (const tw of targets) {
       const addPayload: Record<string, unknown> = {
         workout_id: tw.id,
@@ -234,8 +266,7 @@ export default function WorkoutTemplateEditor({
     }
     const newCount = existing.length + 1;
     if (config.mode === 'superset' && groupId && newCount < 3) {
-      setBusy(false);
-      await onReload();
+      await reload();
       setPanel({
         ...openAddPanelState(section, groupId),
         config: { ...emptyAddPanelConfig(), mode: 'superset', supersetGroupId: groupId, setCount: sectionDefaultSets(section) },
@@ -252,8 +283,7 @@ export default function WorkoutTemplateEditor({
     const n = active.length ? Math.max(...active.map((s: any) => s.set_number || 0)) + 1 : 1;
     const sort = active.length ? Math.max(...active.map((s: any) => s.sort_order || 0)) + 1 : 0;
     const sample = active[0];
-    setBusy(true);
-    setError('');
+    beginPersist();
     for (const tw of targets) {
       const match = tw.id === workout.id ? ex : matchingExercise(tw, ex);
       if (!match) continue;
@@ -273,7 +303,7 @@ export default function WorkoutTemplateEditor({
 
   async function updateSet(ex: any, set: any, field: string, value: any) {
     if (!canEdit) return;
-    setError('');
+    beginPersist();
     const { data: existingLogs } = await supabase
       .from('st_set_logs')
       .select('id, completed, actual_weight, actual_reps, actual_duration, actual_distance, log_notes, planned_set_id')
@@ -288,13 +318,12 @@ export default function WorkoutTemplateEditor({
       const { error: updateError } = await supabase.from('st_planned_sets').update({ [field]: value }).eq('id', matchSet.id);
       if (updateError) return persistError(updateError.message);
     }
-    await onReload();
+    await reload();
   }
 
   async function removeSet(ex: any, set: any) {
     if (!canEdit) return;
-    setBusy(true);
-    setError('');
+    beginPersist();
     for (const tw of targets) {
       const matchEx = tw.id === workout.id ? ex : matchingExercise(tw, ex);
       const matchSet = matchEx ? (tw.id === workout.id ? set : matchingSet(matchEx, set)) : null;
@@ -308,8 +337,7 @@ export default function WorkoutTemplateEditor({
   async function removeExercise(ex: any) {
     if (!canEdit) return;
     if (!window.confirm('Remove this exercise from the plan? Past logged sets stay in history.')) return;
-    setBusy(true);
-    setError('');
+    beginPersist();
     for (const tw of targets) {
       const match = tw.id === workout.id ? ex : matchingExercise(tw, ex);
       if (!match) continue;
@@ -321,41 +349,43 @@ export default function WorkoutTemplateEditor({
 
   async function renameExercise(ex: any, name: string) {
     if (!canEdit || !name.trim()) return;
-    setError('');
+    beginPersist();
     for (const tw of targets) {
       const match = tw.id === workout.id ? ex : matchingExercise(tw, ex);
       if (!match) continue;
       const { error: updateError } = await supabase.from('st_exercises').update({ name: name.trim() }).eq('id', match.id);
       if (updateError) return persistError(updateError.message);
     }
-    await onReload();
+    await reload();
   }
 
   async function updateMuscle(ex: any, muscle: string) {
     if (!canEdit) return;
+    beginPersist();
     for (const tw of targets) {
       const match = tw.id === workout.id ? ex : matchingExercise(tw, ex);
       if (!match) continue;
-      await supabase.from('st_exercises').update({ muscle_group: muscle }).eq('id', match.id);
+      const { error: updateError } = await supabase.from('st_exercises').update({ muscle_group: muscle }).eq('id', match.id);
+      if (updateError) return persistError(updateError.message);
     }
-    await onReload();
+    await reload();
   }
 
   async function updateEquipment(ex: any, equipment: string) {
     if (!canEdit) return;
+    beginPersist();
     for (const tw of targets) {
       const match = tw.id === workout.id ? ex : matchingExercise(tw, ex);
       if (!match) continue;
       const { error } = await supabase.from('st_exercises').update({ equipment }).eq('id', match.id);
       if (error) return persistError(error.message);
     }
-    await onReload();
+    await reload();
   }
 
   async function breakSuperset(ex: any) {
     if (!canEdit || !ex.superset_group_id) return;
-    setBusy(true);
-    setError('');
+    beginPersist();
     for (const tw of targets) {
       const members = (tw.st_exercises || []).filter(
         (e: any) => e.superset_group_id === ex.superset_group_id && exerciseSection(e) === exerciseSection(ex)
@@ -373,21 +403,22 @@ export default function WorkoutTemplateEditor({
 
   async function renameSuperset(ex: any, label: string) {
     if (!canEdit || !ex.superset_group_id || !label.trim()) return;
+    beginPersist();
     for (const tw of targets) {
       const members = (tw.st_exercises || []).filter((e: any) => e.superset_group_id === ex.superset_group_id);
       for (const row of members) {
-        await supabase.from('st_exercises').update({ superset_label: label.trim() }).eq('id', row.id);
+        const { error: updateError } = await supabase.from('st_exercises').update({ superset_label: label.trim() }).eq('id', row.id);
+        if (updateError) return persistError(updateError.message);
       }
     }
-    await onReload();
+    await reload();
   }
 
   async function moveExercise(ex: any, dir: number) {
     if (!canEdit) return;
     const plan = planExerciseMove(workout, ex, dir);
     if (plan.kind === 'noop') return;
-    setBusy(true);
-    setError('');
+    beginPersist();
     if (plan.kind === 'superset_order') {
       for (const tw of targets) {
         const match = tw.id === workout.id ? plan.a : matchingExercise(tw, plan.a);
@@ -431,6 +462,12 @@ export default function WorkoutTemplateEditor({
             </h2>
           </div>
           <div className="actions">
+            {workoutSaveStatusLabel(save.status) ? (
+              <p className={workoutSaveStatusClass(save.status)} aria-live={workoutSaveStatusLive(save.status) || undefined}>
+                {workoutSaveStatusLabel(save.status)}
+                {save.status === 'refresh_failed' && save.detail ? <span className="pd-save-note"> {save.detail}</span> : null}
+              </p>
+            ) : null}
             <button
               type="button"
               className="btn small secondary"

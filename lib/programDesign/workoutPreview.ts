@@ -1,3 +1,4 @@
+import { resolveExerciseEquipment } from '../training/exerciseEquipment';
 import { isRampEffortSetType } from '../training/setTypes';
 
 export const WORKOUT_SECTION_IDS = ['warmup', 'strength', 'conditioning', 'cooldown'] as const;
@@ -217,18 +218,74 @@ export function previewExerciseNames(workout: any, limit = 3): string[] {
     .slice(0, Math.max(0, limit));
 }
 
-export function exerciseRestLabel(ex: any): string | null {
+export function formatRestSeconds(seconds: number): string | null {
+  if (!Number.isFinite(seconds) || seconds <= 0) return null;
+  return `${seconds} sec rest`;
+}
+
+export function exerciseRestSeconds(ex: any): number | null {
   const fromExercise = Number(ex?.rest_seconds);
+  if (Number.isFinite(fromExercise) && fromExercise > 0) return fromExercise;
   const fromSets = plannedSets(ex)
     .map((set) => Number(set?.rest_seconds))
     .find((value) => Number.isFinite(value) && value > 0);
-  const rest = Number.isFinite(fromExercise) && fromExercise > 0 ? fromExercise : fromSets;
-  if (!rest) return null;
-  if (rest >= 60) {
-    const minutes = rest / 60;
-    return Number.isInteger(minutes) ? `${minutes} min rest` : `${minutes.toFixed(1)} min rest`;
-  }
-  return `${rest}s rest`;
+  return fromSets || null;
+}
+
+export function exerciseRestLabel(ex: any): string | null {
+  const rest = exerciseRestSeconds(ex);
+  return rest == null ? null : formatRestSeconds(rest);
+}
+
+/** Equipment from stored exercise or catalog data only — never inferred from the name. */
+export function exerciseEquipmentLabel(ex: any, catalogItem?: any): string {
+  const stored = String(ex?.equipment || '').trim();
+  const meta = catalogItem?.coaching_metadata;
+  const hasCatalog =
+    Boolean(String(catalogItem?.equipment || '').trim()) ||
+    Boolean(String(meta?.default_equipment || '').trim()) ||
+    Boolean(meta?.compatible_equipment && (Array.isArray(meta.compatible_equipment) ? meta.compatible_equipment.length : String(meta.compatible_equipment).trim()));
+  if (!stored && !hasCatalog) return '';
+  return resolveExerciseEquipment(ex, catalogItem);
+}
+
+export function exerciseTempoLabel(ex: any): string {
+  const fromExercise = String(ex?.tempo || ex?.target_tempo || '').trim();
+  if (fromExercise) return fromExercise;
+  const fromSet = plannedSets(ex)
+    .map((set) => String(set?.tempo || set?.target_tempo || '').trim())
+    .find(Boolean);
+  return fromSet || '';
+}
+
+export function exerciseNoteText(ex: any): string {
+  return String(ex?.notes || ex?.why || ex?.coaching_notes || '').trim();
+}
+
+export function workingSetCount(ex: any): number {
+  return plannedSets(ex).filter((set) => setKind(set) === 'working').length;
+}
+
+export function rampSetDetails(ex: any): string[] {
+  return plannedSets(ex)
+    .filter((set) => setKind(set) === 'ramp')
+    .map((set, index) => {
+      const bits = prescriptionBits(set);
+      const detail = [bits.reps, bits.weight.trim(), bits.effort].filter(Boolean).join(' · ').replace(' · @', ' @');
+      return detail ? `Ramp ${index + 1}: ${detail}` : `Ramp ${index + 1}`;
+    });
+}
+
+export function blockRestLabel(exercises: any[]): string | null {
+  const rests = (exercises || []).map((ex) => exerciseRestSeconds(ex)).filter((value): value is number => value != null);
+  if (!rests.length) return null;
+  return formatRestSeconds(rests[rests.length - 1]);
+}
+
+export function supersetMarks(label: string, count: number): string[] {
+  const match = String(label || '').match(/superset\s+([A-Z])/i) || String(label || '').match(/\b([A-Z])\b/);
+  const letter = match?.[1]?.toUpperCase() || '';
+  return Array.from({ length: Math.max(0, count) }, (_, index) => (letter ? `${letter}${index + 1}` : String(index + 1)));
 }
 
 export function groupedPreviewSections(workout: any) {

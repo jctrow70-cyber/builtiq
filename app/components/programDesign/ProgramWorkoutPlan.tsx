@@ -4,8 +4,10 @@ import { useEffect, useMemo, useState } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import WorkoutTemplateEditor from '../training/WorkoutTemplateEditor';
 import WorkoutPreview from './WorkoutPreview';
+import { fetchAllExerciseCatalog } from '../../../lib/training/catalogFetch';
+import { formatDuration } from '../../../lib/programDesign/activityTypes';
 import { fetchProgramWorkoutTree } from '../../../lib/programDesign/programDesignApi';
-import { workingExerciseCount, workoutFocusLabel } from '../../../lib/programDesign/workoutPreview';
+import { workingExerciseCount, workoutFocusLabel, workoutPrimaryFocus } from '../../../lib/programDesign/workoutPreview';
 
 export type WorkoutFocusMode = 'details' | 'edit';
 
@@ -21,6 +23,12 @@ type ProgramWorkoutPlanProps = {
   onModeChange?: (mode: WorkoutFocusMode) => void;
   onCloseFocus?: () => void;
   onLoaded?: (info: { hasExercises: boolean; workoutCount: number; workouts: any[] }) => void;
+  detailContext?: {
+    week: number;
+    totalWeeks?: number;
+    dayLabel?: string;
+    durationMinutes?: number | null;
+  };
 };
 
 export default function ProgramWorkoutPlan({
@@ -35,8 +43,10 @@ export default function ProgramWorkoutPlan({
   onModeChange,
   onCloseFocus,
   onLoaded,
+  detailContext,
 }: ProgramWorkoutPlanProps) {
   const [workouts, setWorkouts] = useState<any[]>([]);
+  const [catalog, setCatalog] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [listFocusId, setListFocusId] = useState<string | null>(null);
@@ -51,11 +61,22 @@ export default function ProgramWorkoutPlan({
     const exerciseCount = data.reduce((n, w) => n + (w.st_exercises || []).length, 0);
     onLoaded?.({ hasExercises: exerciseCount > 0, workoutCount: data.length, workouts: data });
     setLoading(false);
+    return { error: loadError || null };
   }
 
   useEffect(() => {
     void reload();
   }, [programId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchAllExerciseCatalog(supabase).then(({ data }) => {
+      if (!cancelled) setCatalog(data || []);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase]);
 
   useEffect(() => {
     if (openWorkoutId) return;
@@ -95,16 +116,22 @@ export default function ProgramWorkoutPlan({
   }
 
   if (focused && focusMode === 'details') {
+    const name = workoutFocusLabel(focused);
+    const focus = workoutPrimaryFocus(focused);
+    const working = workingExerciseCount(focused);
+    const duration = formatDuration(detailContext?.durationMinutes);
+    const day = detailContext?.dayLabel || focused.day_label;
+    const weekLabel = detailContext?.week
+      ? `Week ${detailContext.week}${detailContext.totalWeeks ? ` of ${detailContext.totalWeeks}` : ''}`
+      : focused.day_label;
+    const meta = [focus && focus !== name ? focus : null, duration, working ? `${working} working exercise${working === 1 ? '' : 's'}` : null, weekLabel, day]
+      .filter(Boolean)
+      .join(' · ');
     return (
-      <article className="pd-workout-card">
-        <div className="pd-workout-card-head">
-          <div>
-            <p className="pd-eyebrow">{focused.day_label}</p>
-            <h3>{workoutFocusLabel(focused)}</h3>
-            <p className="muted">{workingExerciseCount(focused)} working exercises</p>
-          </div>
-          <div className="pd-day-summary-actions">
-            <button type="button" className="btn small secondary" onClick={closeFocus}>
+      <article className="pd-detail">
+        <header className="pd-detail-head">
+          <div className="pd-detail-nav">
+            <button type="button" className="pd-back" onClick={closeFocus}>
               Back
             </button>
             {canEdit && (
@@ -120,8 +147,10 @@ export default function ProgramWorkoutPlan({
               </button>
             )}
           </div>
-        </div>
-        <WorkoutPreview workout={focused} />
+          <h1>{name}</h1>
+          <p className="muted">{meta}</p>
+        </header>
+        <WorkoutPreview workout={focused} catalog={catalog} />
       </article>
     );
   }

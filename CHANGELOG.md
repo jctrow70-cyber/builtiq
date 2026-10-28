@@ -11,6 +11,52 @@ Branch:
 Status:
 ```
 
+## BIQ-0271 Phase C - Workout detail experience
+
+Date: 2026-10-27
+Branch: main
+Status: Implemented. Local commit. Not pushed. No database change.
+
+Summary: Program Design now uses Calendar → Workout Details → Edit. The details screen has a focused header, four workout sections with empty sections omitted, structured equipment, working-set prominence, expandable ramp details, grouped supersets, and progressive disclosure. Group Everyone / Only me is a compact pill control. The existing WorkoutTemplateEditor shows Saving… / Saved / Saved, but couldn't refresh / Save failed from the real persist + reload outcome. Phase B Day / Week / Month calendar is unchanged.
+
+Purpose: Make the scheduled-workout read view scannable and mobile-first without a second editor or new data model.
+
+Files changed:
+- lib/programDesign/workoutPreview.ts
+- app/components/programDesign/WorkoutPreview.tsx
+- app/components/programDesign/ProgramWorkoutPlan.tsx
+- app/components/programDesign/ProgramCalendarEditor.tsx
+- app/components/training/WorkoutTemplateEditor.tsx
+- lib/training/workoutSaveStatus.ts
+- app/globals.css
+- scripts/test-workout-preview.ts
+- scripts/test-program-calendar-view.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- `npx tsx scripts/test-program-calendar-view.ts`
+- `npx tsx scripts/test-workout-preview.ts`
+- `npx tsx scripts/test-customize-for-me.ts`
+- `npm run test:science`
+- `npx tsc --noEmit`
+- Programs → open a plan → View details → confirm header, sections, equipment, ramps, supersets
+- Edit workout → change a set → confirm Saving… then Saved; a failed write shows Save failed; a successful write with a failed reload shows Saved, but couldn't refresh
+- Back to workout details, then Back to the same selected day
+- Group plan: compact Everyone / Only me still confirms Just me and reuses an existing copy
+- Check 390px, 768px, and 1440px
+
+Known issues:
+- Save status waits for the existing silent reload after the mutation. A successful write with a failed reload now shows Saved, but couldn't refresh instead of Save failed.
+- Creating a custom catalog exercise in the add-exercise panel is not a workout persist, so it does not show Saved.
+- Equipment is shown only from stored exercise or catalog structured data. Name-only rows stay unlabeled.
+- Training calendar summaries are still a later follow-up.
+
+Recommended commit message: BIQ-0271 Phase C polish the Program Design workout-detail experience
+
 ## BIQ-0275 - Remove committed temporary verification scripts
 
 Date: 2026-10-27
