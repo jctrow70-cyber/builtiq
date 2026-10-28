@@ -53,7 +53,7 @@ export function runCatalogCleanupChecks() {
   const mapped = mappedByName();
   const catalog = mapped.map((row) => row.catalog);
   const masterCount = expectedMasterCatalogCount();
-  assert(masterCount === 264, `active master count should be 264, got ${masterCount}`);
+  assert(masterCount === 265, `active master count should be 265, got ${masterCount}`);
   assert(catalog.length === masterCount, `mapped master count should be ${masterCount}, got ${catalog.length}`);
 
   assert(!textHasToken('Prowler Push', 'row'), 'word-boundary: Prowler does not match row');
@@ -193,6 +193,42 @@ export function runCatalogCleanupChecks() {
   const ghdSearch = searchCatalog(catalog, { query: 'ghd situp', section: 'strength', limit: 5 });
   assert(ghdSearch[0]?.name === 'GHD Sit-Up', 'ghd situp search finds GHD Sit-Up');
 
+  const seatedChest = mapped.find((row) => row.record.id === '265');
+  const machineChest = mapped.find((row) => row.record.id === '140');
+  const benchPress = mapped.find((row) => row.record.id === '1');
+  assert(seatedChest?.record.name === 'Seated Chest Press', 'master 265 is Seated Chest Press');
+  assert(seatedChest?.catalog.exercise_type === 'strength', 'Seated Chest Press is strength');
+  assert(seatedChest?.catalog.movement_pattern === 'push_horizontal', 'Seated Chest Press first-class pattern is push_horizontal');
+  assert(seatedChest?.catalog.equipment === 'Machine', 'Seated Chest Press equipment is Machine');
+  assert(seatedChest?.catalog.media_url === null && seatedChest?.catalog.image_url === null && seatedChest?.catalog.gif_url === null, 'Seated Chest Press media placeholders are null');
+  assert(seatedChest?.catalog.progression_type === 'weight', 'Seated Chest Press progression is weight');
+  assert(seatedChest?.catalog.external_id === '265', 'Seated Chest Press keeps external_id 265');
+  assert(machineChest?.record.name === 'Machine Chest Press', 'Machine Chest Press 140 preserved');
+  assert(benchPress?.record.name === 'Bench Press', 'Bench Press 1 preserved');
+  const seatedChestEq = compatibleEquipmentOptions(seatedChest!.catalog);
+  assert(seatedChestEq.length === 1 && seatedChestEq[0] === 'Machine', `Seated Chest Press compatible equipment should be Machine, got ${seatedChestEq.join(', ')}`);
+  const seatedChestMeta = seatedChest!.catalog.coaching_metadata;
+  assert(seatedChestMeta.exercise_kind === 'compound' && seatedChestMeta.movement_pattern === 'horizontal_push', '265 movement/kind');
+  assert(seatedChestMeta.volume_policy === 'strength_hypertrophy' && seatedChestMeta.measurement_type === 'reps' && seatedChestMeta.laterality === 'bilateral', '265 programming fields');
+  assert(seatedChestMeta.fatigue_cost === 'moderate' && seatedChestMeta.skill_demand === 'low', '265 fatigue and skill');
+  assert(seatedChestMeta.warmup_eligible === false && seatedChestMeta.power_eligible === false && seatedChestMeta.ramp_eligible === true, '265 ramp eligible, not warmup/power');
+  assert(
+    JSON.stringify(seatedChestMeta.hypertrophy_volume_credits) === JSON.stringify(NEW_MASTER_CLASSIFICATIONS['265'].hypertrophy_volume_credits),
+    '265 volume credits'
+  );
+  assert(JSON.stringify(seatedChestMeta.primary_muscles) === JSON.stringify(['chest']), '265 primary muscles');
+  assert(JSON.stringify(seatedChestMeta.secondary_muscles) === JSON.stringify(['triceps', 'front_delts']), '265 secondary muscles');
+  assert(exerciseMatchesEquipment(seatedChest!.catalog, ['machine']), 'Machine equipment filter includes Seated Chest Press');
+  assert(!exerciseMatchesEquipment(seatedChest!.catalog, ['barbell']), 'barbell-only filter excludes Seated Chest Press');
+  assert(!exerciseMatchesEquipment(seatedChest!.catalog, ['dumbbell']), 'dumbbell-only filter excludes Seated Chest Press');
+  assert(!exerciseMatchesEquipment(seatedChest!.catalog, ['kettlebell']), 'kettlebell-only filter excludes Seated Chest Press');
+  const seatedChestSearch = searchCatalog(catalog, { query: 'seated chest press', section: 'strength', limit: 5 });
+  assert(seatedChestSearch[0]?.name === 'Seated Chest Press', 'seated chest press search finds Seated Chest Press');
+  const seatedChestAliasSearch = searchCatalog(catalog, { query: 'selectorized chest press', section: 'strength', limit: 5 });
+  assert(seatedChestAliasSearch.some((row) => row.name === 'Seated Chest Press'), 'alias search finds Seated Chest Press');
+  assert(seatedChest!.catalog.external_id !== benchPress!.catalog.external_id, 'Seated Chest Press PR key is independent from Bench Press');
+  assert(seatedChest!.catalog.external_id !== machineChest!.catalog.external_id, 'Seated Chest Press PR key is independent from Machine Chest Press');
+
   const liveShaped = catalog.map((item) => ({
     ...item,
     is_system: true,
@@ -214,6 +250,7 @@ export function runCatalogCleanupChecks() {
   assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '262')), 'Converging Chest Press is generation-eligible');
   assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '263')), 'Seated Overhead Press is generation-eligible');
   assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '264')), 'GHD Sit-Up is generation-eligible');
+  assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '265')), 'Seated Chest Press is generation-eligible');
   assert(!isAiGenerationEligibleRow(archived), 'archived cards cannot enter generation');
   assert(!isAiGenerationEligibleRow(custom), 'user customs cannot enter generation');
   const adapted = adaptGenerationCatalog([...liveShaped, custom, archived], { allowFallback: false });
@@ -229,6 +266,14 @@ export function runCatalogCleanupChecks() {
   assert(adaptedGhd?.equipment.some((eq) => eq.toLowerCase() === 'ghd'), 'AI reads GHD equipment');
   assert(adaptedGhd?.fatigueCost === 'medium' && adaptedGhd?.defaultRepMin === 8 && adaptedGhd?.defaultRepMax === 15, 'AI reads GHD Sit-Up demand and reps');
   assert(adaptedGhd?.programRoles.includes('accessory') && adaptedGhd?.warmupSuitable === false, 'AI reads GHD Sit-Up as accessory, not warmup');
+  const adaptedSeatedChest = adapted.find((ex) => ex.name === 'Seated Chest Press');
+  assert(adaptedSeatedChest, 'adapted catalog includes Seated Chest Press');
+  assert(adaptedSeatedChest?.movementPattern === 'horizontal_push', 'AI reads Seated Chest Press as horizontal push');
+  assert(adaptedSeatedChest?.exerciseType === 'compound', 'AI reads Seated Chest Press as compound');
+  assert(adaptedSeatedChest?.primaryMuscles.includes('chest') && adaptedSeatedChest?.secondaryMuscles.includes('triceps'), 'AI reads Seated Chest Press muscles');
+  assert(adaptedSeatedChest?.equipment.some((eq) => eq.toLowerCase() === 'machine'), 'AI reads Seated Chest Press Machine equipment');
+  assert(adaptedSeatedChest?.fatigueCost === 'medium' && adaptedSeatedChest?.defaultRepMin === 5 && adaptedSeatedChest?.defaultRepMax === 10, 'AI reads Seated Chest Press demand and reps');
+  assert(adaptedSeatedChest?.programRoles.includes('accessory') && adaptedSeatedChest?.warmupSuitable === false, 'AI reads Seated Chest Press as accessory, not warmup');
   assert(adaptGenerationCatalog([], {}).length === FALLBACK_CATALOG.length, 'fallback still works on empty catalog');
 
   console.log('BIQ-0235 catalog cleanup checks passed.');

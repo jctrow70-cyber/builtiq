@@ -90,7 +90,7 @@ async function main() {
   const masters = live.rows.filter((row) => row.external_source === MASTER_CATALOG_SOURCE && !row.user_id);
   const active = masters.filter((row) => row.is_archived !== true);
   const byExternal = new Map(active.map((row) => [String(row.external_id), row]));
-  const ids = ['13', '15', '142', '14', '216', '242', '261', '262', '263', '264', '63'];
+  const ids = ['13', '15', '142', '14', '216', '242', '261', '262', '263', '264', '265', '63'];
   const requested: Record<string, unknown> = {};
   ids.forEach((id) => {
     requested[id] = summarize(byExternal.get(id));
@@ -117,6 +117,7 @@ async function main() {
   report.has_262 = !!byExternal.get('262');
   report.has_263 = !!byExternal.get('263');
   report.has_264 = !!byExternal.get('264');
+  report.has_265 = !!byExternal.get('265');
   fs.writeFileSync(REPORT, JSON.stringify(report, null, 2));
 
   let cleanup = 'not_run';
@@ -135,6 +136,7 @@ async function main() {
     has_262: report.has_262,
     has_263: report.has_263,
     has_264: report.has_264,
+    has_265: report.has_265,
     cleanup,
     top: report.strength_row_top10,
     reverse_eq: report.reverse_lunge_equipment,

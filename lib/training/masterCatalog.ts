@@ -280,6 +280,23 @@ const ADD_ON_ROWS: MasterLibraryRecord[] = [
     design_notes: 'Anchored long-range sit-up. Distinct from floor Sit-Up (215) and Back Extension (80). Not a glute-ham raise.',
     active: 'Yes',
   },
+  {
+    id: '265',
+    name: 'Seated Chest Press',
+    aliases: 'Seated Machine Chest Press; Seated Chest Press Machine; Selectorized Chest Press',
+    primary_muscle: 'Chest',
+    secondary_muscles: 'Triceps; Front Delts',
+    movement_pattern: 'Horizontal Push',
+    category: 'Compound',
+    default_equipment: 'Machine',
+    compatible_equipment: 'Machine',
+    setup: 'Sit with your back against the pad and adjust the seat so the handles start around mid-chest with shoulders set.',
+    execution: 'Press the handles forward until the arms extend under control, then return to the start without slamming the stack.',
+    form_cues: 'Stay seated tall; Shoulders set; Wrists stacked; Control the return',
+    design_notes:
+      'Seated fixed-path machine press. Distinct from lying Bench Press (1) and Converging Chest Press (262). Machine only. Own catalog id so progression and PRs stay separate from barbell, dumbbell, and Smith bench presses. Do not merge with Machine Chest Press (140) history.',
+    active: 'Yes',
+  },
 ];
 
 function splitList(raw?: string): string[] {

@@ -4,6 +4,34 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 125 - Seated Chest Press Is Its Own Master Card
+
+Date: 2026-10-28
+Status: Accepted
+Category: Exercise Library
+
+### Decision
+
+Add master 265 Seated Chest Press. Equipment is Machine only. Store the programming fields the generator already reads for horizontal presses: horizontal push, chest primary, triceps and front delts secondary, strength-hypertrophy volume credits, compound secondary/accessory, reps. Keep `media_url`, `image_url`, and `gif_url` null as BuildIQ media placeholders. Do not merge it with Bench Press (1), Machine Chest Press (140), or Converging Chest Press (262). Do not import third-party descriptions or media.
+
+### Reason
+
+Users search and log a seated machine chest press by that name. Bench presses use free-weight or Smith setups and must keep separate progression. Machine Chest Press (140) stays for existing program and history rows; renaming or aliasing it would change those surfaces.
+
+### Alternatives Considered
+
+- Alias Seated Chest Press onto Machine Chest Press (140) — rejected; the requested card name and independent catalog id are the point of the change, and existing 140 history must stay untouched
+- Reuse Bench Press with Machine equipment — rejected; progression and PRs would mix with barbell, dumbbell, and Smith bench presses
+- Expand the broader chest-press library in the same change — rejected; scope is this card only
+
+### Impact
+
+- Active BuiltIQ master library is 265 generation-eligible cards
+- Search, manual programs, logging, and AI generation can select Seated Chest Press
+- Existing IDs and history are unchanged
+
+---
+
 ## Decision 124 - Training source labels use enrollment identity
 
 Date: 2026-10-28

@@ -124,6 +124,38 @@ export const NEW_MASTER_CLASSIFICATIONS: Record<string, QualityClassification> =
     anomalies: [],
     primary_assignment: 'assigned',
   },
+  '265': {
+    movement_pattern: 'horizontal_push',
+    primary_muscles: ['chest'],
+    secondary_muscles: ['triceps', 'front_delts'],
+    involved_muscles: ['chest', 'triceps', 'front_delts'],
+    unmapped_muscle_labels: [],
+    hypertrophy_volume_credits: [
+      { muscle: 'chest', credit: 1 },
+      { muscle: 'triceps', credit: 0.5 },
+      { muscle: 'front_delts', credit: 0.5 },
+    ],
+    volume_policy: 'strength_hypertrophy',
+    laterality: 'bilateral',
+    measurement_type: 'reps',
+    exercise_kind: 'compound',
+    fatigue_cost: 'medium',
+    skill_demand: 'low',
+    program_roles: ['secondary', 'accessory'],
+    default_rep_min: 5,
+    default_rep_max: 10,
+    warmup_eligible: false,
+    power_eligible: false,
+    ramp_eligible: true,
+    cooldown_eligible: false,
+    demand_notes:
+      'compound horizontal push; seated machine; medium fatigue; low skill; bilateral; reps measurement; volume policy strength_hypertrophy; hypertrophy credits chest:1, triceps:0.5, front_delts:0.5; distinct from bench press and converging chest press',
+    review_required: false,
+    review_reasons: [],
+    confidence: 'high',
+    anomalies: [],
+    primary_assignment: 'assigned',
+  },
 };
 
 export function coachingFieldsFromClassification(proposed: QualityClassification): Record<string, unknown> {

@@ -11,6 +11,45 @@ Branch:
 Status:
 ```
 
+## BIQ-0277 - Seated Chest Press Master Card
+
+Date: 2026-10-28
+Branch: cursor/seated-chest-press-3094
+Status: Merged to main. No schema migration. Live catalog insert via apply script when credentials are present.
+
+Summary: Added master 265 Seated Chest Press as its own first-party card. Equipment is Machine only. Horizontal push, chest primary, triceps and front delts secondary. Media URL fields stay null as BuildIQ video/image placeholders. Active generation library is 265. Machine Chest Press (140), Bench Press (1), and Converging Chest Press (262) are unchanged.
+
+Purpose: Users need a seated machine chest press card that is searchable by that name, available for logging and AI programs, and tracked separately from barbell, dumbbell, and Smith bench presses.
+
+Files changed:
+- lib/training/masterCatalog.ts
+- lib/training/masterCatalogEnrichment.ts
+- lib/training/catalogCleanupCheck.ts
+- scripts/apply-seated-chest-press.ts
+- scripts/verify-catalog-env.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: No schema migration. Data-only insert of active master 265 into `st_exercise_catalog` (`external_source=builtiq_master`, `external_id=265`) when `scripts/apply-seated-chest-press.ts` or Settings master import runs. Existing catalog IDs, history, and program references are not rewritten. Media columns remain null placeholders.
+
+Testing steps:
+1. `npm run test:science`
+2. Search `seated chest press` / `selectorized chest press` in Strength and confirm Seated Chest Press appears
+3. Confirm equipment is Machine only
+4. Confirm it stays distinct from Bench Press, Machine Chest Press, and Converging Chest Press
+5. Add it to a manual program and log sets; confirm progression/PRs use the new catalog id
+6. With Machine selected and Full gym off, confirm the card matches; with only Dumbbell or Barbell, confirm it does not
+7. Confirm form media shows placeholders (no third-party GIF/image)
+
+Known issues:
+- Live Supabase insert still needs `npx tsx scripts/apply-seated-chest-press.ts` (or Settings Import Master Library) on each environment
+- Machine Chest Press (140) remains for existing history; the two machine press names are intentionally not merged
+
+Recommended commit message: BIQ-0277 Add Seated Chest Press to the master exercise library
+
+---
+
 ## BIQ-0271 Phase D5 - Training source identification
 
 Date: 2026-10-28
@@ -60,6 +99,8 @@ Known issues:
 - Overlay cards still show title only until the other program tree is fetched for preview.
 
 Recommended commit message: BIQ-0271 Phase D5 identify personal and group Training sources
+
+---
 
 ## BIQ-0276 - Hold unlicensed exercise media and record third-party notices
 
