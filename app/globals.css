@@ -103,6 +103,10 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .exercise-name-menu{z-index:40;max-height:240px}
 .exercise-title-row{align-items:flex-start}
 .exercise-link-hint{font-size:10px;margin:2px 0 0;line-height:1.3}
+.te-ex-mark{display:inline-block;min-width:1.5em;margin:0;font-size:12px;font-weight:800;color:var(--accentOnSoft,#c4b5fd);flex-shrink:0}
+.te-ex-rx{margin:2px 0 0;font-size:12px;font-weight:650;line-height:1.35;overflow-wrap:anywhere}
+.te-ex-rx-secondary{margin:1px 0 0;font-size:11px;line-height:1.3;overflow-wrap:anywhere}
+.te-superset-rest{margin:8px 2px 0;font-size:12px;font-weight:650}
 .add-exercise-row{display:grid;grid-template-columns:1.4fr 1fr auto;gap:6px;margin:8px 0 4px}
 .catalog-picker{margin:8px 0 12px;padding:10px;border:1px solid var(--line);border-radius:14px;background:#101827}
 .catalog-results{display:grid;gap:6px;margin-top:8px;max-height:220px;overflow:auto}

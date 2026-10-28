@@ -214,6 +214,22 @@ assert.equal(summarizeExerciseParts(squat).primary, '3 × 6–8 reps');
 assert.deepEqual(summarizeExerciseParts(squat).extras, ['2 ramp-up sets']);
 assert.deepEqual(rampSetDetails(squat), ['Ramp 1', 'Ramp 2']);
 
+const mixedWorking = exercise('Chest-Supported Row', [
+  { set_type: 'working', set_number: 1, target_reps: '8-10', target_rir: 2 },
+  { set_type: 'warmup', set_number: 2, target_reps: '10' },
+  { set_type: 'working', set_number: 3, target_reps: '8-10', target_rir: 2 },
+  { set_type: 'working', set_number: 4 },
+]);
+const mixedWorkingParts = summarizeExerciseParts(mixedWorking);
+assert.equal(mixedWorkingParts.primary, '3 working sets · mixed targets');
+assert.deepEqual(mixedWorkingParts.extras, [
+  'Set 1: 8–10 reps · 2 RIR · Set 3: 8–10 reps · 2 RIR · Set 4: Reps not specified',
+  '1 ramp-up set',
+]);
+assert.doesNotMatch(mixedWorkingParts.primary, /Set 4: reps/);
+assert.doesNotMatch(mixedWorkingParts.extras.join(' · '), /Set 4: reps(?! not specified)/);
+assert.equal(workingSetCount(mixedWorking), 3);
+
 const press = {
   name: 'Incline Dumbbell Press',
   rest_seconds: 90,

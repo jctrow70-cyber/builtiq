@@ -125,23 +125,47 @@ function samePrescription(a: any, b: any): boolean {
   );
 }
 
+function storedSetNumber(set: any, index: number): number {
+  const n = Number(set?.set_number);
+  return Number.isFinite(n) && n > 0 ? n : index + 1;
+}
+
+function prescriptionsMatch(sets: any[]): boolean {
+  if (!sets.length) return true;
+  return sets.every((set) => samePrescription(set, sets[0]));
+}
+
 export function setLine(set: any): string {
   const kind = set?.set_type && set.set_type !== 'working' ? `${set.set_type} ` : '';
   const bits = prescriptionBits(set);
+  const reps = bits.reps || 'Reps not specified';
   const effort = bits.effort ? ` · ${bits.effort}` : '';
-  return `${kind}${bits.reps || 'reps'}${bits.weight}${effort}`.trim();
+  return `${kind}${reps}${bits.weight}${effort}`.trim();
 }
 
-function workingLine(sets: any[]): string {
+function setBreakdown(sets: any[]): string {
+  return sets
+    .map((set, index) => `Set ${storedSetNumber(set, index)}: ${setLine({ ...set, set_type: 'working' })}`)
+    .join(' · ');
+}
+
+function workingLine(sets: any[], noun: 'working' | 'set' = 'working'): string {
   if (!sets.length) return '';
   const first = sets[0];
   const bits = prescriptionBits(first);
-  const uniform = sets.every((s) => samePrescription(s, first));
-  if (uniform) {
+  if (prescriptionsMatch(sets)) {
+    if (!bits.reps && !bits.weight && !bits.effort) {
+      return noun === 'working'
+        ? `${sets.length} working set${sets.length === 1 ? '' : 's'}`
+        : `${sets.length} set${sets.length === 1 ? '' : 's'}`;
+    }
+    const reps = bits.reps || 'Reps not specified';
     const effort = bits.effort ? ` · ${bits.effort}` : '';
-    return `${sets.length} × ${bits.reps || 'reps'}${bits.weight}${effort}`.trim();
+    return `${sets.length} × ${reps}${bits.weight}${effort}`.trim();
   }
-  return sets.map((s, i) => `Set ${s.set_number || i + 1}: ${setLine({ ...s, set_type: 'working' })}`).join(' · ');
+  return noun === 'working'
+    ? `${sets.length} working set${sets.length === 1 ? '' : 's'} · mixed targets`
+    : `${sets.length} sets · mixed targets`;
 }
 
 function extraLabel(kind: 'ramp' | 'backoff' | 'dropset' | 'amrap', count: number): string {
@@ -168,17 +192,27 @@ export function summarizeExerciseParts(ex: any): ExerciseSummaryParts {
   ].filter(Boolean);
 
   if (working.length) {
-    return { primary: workingLine(working), extras };
+    const mixed = !prescriptionsMatch(working);
+    return {
+      primary: workingLine(working, 'working'),
+      extras: [mixed ? setBreakdown(working) : '', ...extras].filter(Boolean),
+    };
   }
 
   if (ramp.length && !backoff.length && !dropset.length && !amrap.length) {
-    return { primary: workingLine(ramp), extras: [] };
+    const mixed = !prescriptionsMatch(ramp);
+    return {
+      primary: workingLine(ramp, 'set'),
+      extras: mixed ? [setBreakdown(ramp)] : [],
+    };
   }
 
   const fallback = [...ramp, ...backoff, ...dropset, ...amrap];
+  if (!fallback.length) return { primary: 'No sets prescribed', extras };
+  const mixed = !prescriptionsMatch(fallback);
   return {
-    primary: fallback.length ? workingLine(fallback) : 'No sets prescribed',
-    extras,
+    primary: workingLine(fallback, 'set'),
+    extras: [mixed ? setBreakdown(fallback) : '', ...extras].filter(Boolean),
   };
 }
 
@@ -252,6 +286,56 @@ export function workoutSectionsForDisplay(workout: any, opts?: { hideEmpty?: boo
     return WORKOUT_SECTIONS.filter((sec) => sectionExercises(workout, sec.id).length > 0);
   }
   return WORKOUT_SECTIONS.map((sec) => ({ ...sec }));
+}
+
+export type TrainingExercisePrescription = {
+  name: string;
+  equipment: string;
+  planned: string;
+  secondary: string;
+  workingCount: number;
+  rampCount: number;
+  mark: string;
+};
+
+/**
+ * Compact Training logger prescription from planned sets and catalog data only.
+ * Never reads logged actuals or infers equipment from the name.
+ */
+export function trainingExercisePrescription(input: {
+  exercise?: any | null;
+  catalogItem?: any | null;
+  mark?: string | null;
+  omitRest?: boolean;
+}): TrainingExercisePrescription | null {
+  const ex = input.exercise;
+  if (!ex) return null;
+  const sets = plannedSets(ex);
+  if (!sets.length) return null;
+
+  const workingCount = workingSetCount(ex);
+  const rampCount = sets.filter((set) => setKind(set) === 'ramp').length;
+  const parts = summarizeExerciseParts(ex);
+  const rest = input.omitRest ? null : exerciseRestLabel(ex);
+  const planned = workingCount ? [parts.primary, rest].filter(Boolean).join(' · ') : '';
+  const secondary = workingCount
+    ? parts.extras.join(' · ')
+    : rampCount
+      ? rampCount === 1
+        ? '1 ramp-up set'
+        : `${rampCount} ramp-up sets`
+      : '';
+  if (!planned && !secondary) return null;
+
+  return {
+    name: String(ex.name || '').trim() || 'Exercise',
+    equipment: exerciseEquipmentLabel(ex, input.catalogItem),
+    planned,
+    secondary,
+    workingCount,
+    rampCount,
+    mark: String(input.mark || '').trim(),
+  };
 }
 
 export function workoutFocusLabel(workout: any): string {

@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 121 - Training logger reuses Program Design exercise prescriptions
+
+Date: 2026-10-27
+Status: Accepted
+Category: Training / Program Design
+
+### Decision
+
+Training logger exercise cards read a compact prescription from the already-loaded `displayWorkout` tree and catalog data through `trainingExercisePrescription`. Working sets, target reps, prescribed RIR/RPE, and prescribed rest are the primary Planned line. Ramp-up count is secondary. When working-set targets differ, the shared helper shows a short mixed-target summary and a secondary set breakdown; missing targets say Reps not specified instead of an incomplete phrase. Existing supersets show A1/A2 and pair rest only when stored rest exists. Missing planned sets omit the prescription. Logged actuals are never substituted for the plan.
+
+### Reason
+
+The logger already had WU/WK rows and inputs, but not the same planned summary Program Design shows. Duplicating that formatting would drift again, and inferring equipment or rest from names would invent prescriptions.
+
+### Alternatives Considered
+
+Build a second prescription formatter in `page.tsx`. Read `workoutsById` from the calendar map. Infer equipment from the exercise name. Count ramp-up sets as working sets. Convert sequential exercises into supersets.
+
+### Impact
+
+No database change. `WorkoutSetLogger`, substitutions, extra sets, skip, session completion, history, snapshots, enrollment, and calendar navigation stay the same. Group and overlay workouts use the existing scheduled-workout fetch when the program tree is not already loaded.
+
+---
+
 ## Decision 120 - Training reuses Program Design workout summaries
 
 Date: 2026-10-27

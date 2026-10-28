@@ -11,6 +11,51 @@ Branch:
 Status:
 ```
 
+## BIQ-0271 Phase D3 - Training exercise prescription alignment
+
+Date: 2026-10-27
+Branch: main
+Status: Implemented. Local commit. Not pushed. No database change.
+
+Summary: Training logger exercise cards now show the same compact planned prescription used in Program Design: working sets and target reps, prescribed RIR/RPE, prescribed rest, ramp-up count, structured equipment, and A1/A2 on existing supersets. Mixed working-set targets use a short Planned summary plus a secondary breakdown, and missing targets say Reps not specified instead of an incomplete phrase. Set logging, substitutions, extra sets, skip, completion, history, snapshots, enrollment, calendar navigation, and Program Design editing are unchanged.
+
+Purpose: Make each exercise in the Training logger display the same workout prescription as Program Design without inventing equipment, rest, or targets.
+
+Files changed:
+- lib/programDesign/workoutPreview.ts
+- app/page.tsx
+- app/globals.css
+- scripts/test-training-prescription.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- `npx tsx scripts/test-training-prescription.ts`
+- `npx tsx scripts/test-training-alignment.ts`
+- `npx tsx scripts/test-workout-preview.ts`
+- `npx tsx scripts/test-program-calendar-view.ts`
+- `npx tsx scripts/test-unified-schedule.ts`
+- `npx tsx scripts/test-customize-for-me.ts`
+- `npm run test:science`
+- `npx tsc --noEmit`
+- Training → Review a completed workout without changing logs
+- Confirm a strength exercise shows Planned: working sets × reps · RIR · rest
+- Confirm ramp-up count is secondary and WU/WK rows stay
+- Confirm an existing superset shows A1/A2 and pair rest only when stored
+- Confirm logging inputs stay immediately under the prescription
+- Confirm a mixed-target exercise such as Chest-Supported Row shows a compact Planned summary and never `Set 4: reps`
+- Check 390px, 768px, and 1440px
+
+Known issues:
+- Overlay workouts from a program that is not currently loaded still show title and source only on the calendar card until that program tree is fetched. Opening Start / Review uses the existing `startScheduledWorkout` / `fetchFullProgram` path, so prescriptions appear once the workout tree is loaded.
+- Warm-up cards keep their existing warmup prescription and are not rewritten by this helper.
+- If planned sets are missing, the logger heading has no Planned line.
+
+Recommended commit message: BIQ-0271 Phase D3 align Training exercise prescriptions with Program Design
+
 ## BIQ-0271 Phase D1+D2 - Training summaries and section labels
 
 Date: 2026-10-27
@@ -54,7 +99,7 @@ Testing steps:
 
 Known issues:
 - Overlay workouts from a program that is not currently loaded show title and source only until that program tree is fetched.
-- Training logger still opens directly from Start / Review. Prescription summaries inside the logger are Phase D3.
+- Training logger now shows compact Planned prescriptions (Phase D3).
 - Edit-workout intent still shows empty sections so exercises can be added.
 
 Recommended commit message: BIQ-0271 Phase D1+D2 align Training summaries and section labels with Program Design
