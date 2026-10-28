@@ -118,8 +118,8 @@ Or **double-click** `buildiq-setup.cmd` in the repo root.
 
 1. `buildiq-install-node.cmd` — downloads portable Node once  
 2. `buildiq-setup.cmd` — runs `npm install`  
-3. `buildiq-import-guided.cmd` — guided library (~1,324 GIF exercises)  
-4. `buildiq-import.cmd` — guided library + alternatives (needs `.env.local`)
+3. `buildiq-import-guided.cmd` — disabled until ExerciseDB commercial rights are verified  
+4. `buildiq-import.cmd` — exercise alternatives only (needs `.env.local`)
 
 If PowerShell shows *Constrained Language Mode*, use the `.cmd` files — not the `.ps1` scripts.
 
@@ -136,7 +136,7 @@ If PowerShell shows *Constrained Language Mode*, use the `.cmd` files — not th
    ```
    On Vercel, add the same variables (including **Preview** if using preview deploys). Only emails in `BUILDIQ_CATALOG_ADMIN_EMAILS` see the Settings import card.
 2. Start the app (`buildiq-npm.cmd run dev` or your hosted deploy with the same env vars).
-3. Sign in → **Settings** → **Guided Exercise Library** → click **Import Guided Library** (~1,324 exercises with GIF demos).
+3. Sign in → **Settings** → **Import Master Library** for the first-party movement catalog. ExerciseDB guided import stays disabled until commercial rights are verified.
 
 No admin rights or npm required for the in-app import — only the service role key on the server.
 
@@ -144,8 +144,8 @@ No admin rights or npm required for the in-app import — only the service role 
 
 1. `buildiq-install-node.cmd` — portable Node (no admin)  
 2. `buildiq-setup.cmd` — `npm install` once  
-3. `buildiq-import-guided.cmd` — guided library import (needs `.env.local`)  
-4. `buildiq-import.cmd` — guided library + alternatives
+3. `buildiq-import-guided.cmd` — exits without importing ExerciseDB  
+4. `buildiq-import.cmd` — exercise alternatives only
 
 **Legacy npm command:**
 

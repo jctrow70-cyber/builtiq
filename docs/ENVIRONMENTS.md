@@ -38,7 +38,7 @@ If you do not already have a separate test Supabase project:
 
 1. [supabase.com/dashboard](https://supabase.com/dashboard) → **New project** (e.g. `buildiq-test`).
 2. Run every file in `supabase/migrations/` in order in **SQL Editor** (oldest date first).
-3. Optional: import the exercise catalog (Settings → Import in the app, or `buildiq-import-guided.cmd` with test keys in `.env.local`).
+3. Optional: import the first-party master library from Settings. Do not run `buildiq-import-guided.cmd`; ExerciseDB import is disabled until commercial rights are verified.
 4. **Authentication → URL configuration** — add redirect URLs for preview deploys:
    - `https://builtiq-duf7-git-develop-*.vercel.app/**` (branch preview pattern)
    - Or the exact URL Vercel shows on a `Develop` deployment (see step 2 below)

@@ -11,6 +11,66 @@ Branch:
 Status:
 ```
 
+## BIQ-0276 - Hold unlicensed exercise media and record third-party notices
+
+Date: 2026-10-27
+Branch: main
+Status: Implemented. Local commit. Not pushed. No database change.
+
+Summary: ExerciseDB imports now stop before any download or catalog write. ExerciseDB GIFs and instruction text are hidden, and ExerciseDB names leave the exercise picker. Free Exercise DB photos are hidden while Unlicense JSON text can still appear. Barcode results keep Open Food Facts attribution, the Open Database License, and the CC BY-SA photo notice after serving-size adjustments. The committed ExerciseDB CSV was removed. Stored catalog rows, user exercises, and the first-party master library were not modified.
+
+Purpose: Keep BuildIQ commercially usable without displaying content whose commercial rights are not verified.
+
+Files changed:
+- .cursor/rules/originality-and-licensing.mdc
+- THIRD_PARTY_NOTICES.md
+- lib/training/contentRights.ts
+- lib/training/exerciseMedia.ts
+- lib/training/catalogSources.ts
+- lib/training/guidedCatalogImport.ts
+- lib/nutrition/barcodeLookup.ts
+- app/api/catalog/import-guided/route.ts
+- app/page.tsx
+- app/components/training/AddExercisePanel.tsx
+- app/components/NutritionBarcodeProduct.tsx
+- scripts/import-exercises/fetchExerciseDb.ts
+- scripts/import-exercises/importExercises.ts
+- scripts/import-exercises/sources/freeExerciseDb.ts
+- scripts/import-exercises/convertFreeExerciseDb.ts
+- scripts/import-exercises/README.md
+- scripts/export-guided-catalog-csv.ts
+- scripts/test-content-rights.ts
+- scripts/inventory-catalog-sources.ts
+- buildiq-import-guided.cmd
+- buildiq-import.cmd
+- docs/catalog-overhaul/exercise-catalog.csv (removed)
+- docs/catalog-overhaul/README.md
+- docs/ENVIRONMENTS.md
+- README.md
+- ROADMAP.md
+- DECISIONS.md
+- CHANGELOG.md
+
+Database changes: None. No rows updated or deleted. `scripts/inventory-catalog-sources.ts` is a read-only count when credentials are present.
+
+Testing steps:
+- `npx tsx scripts/test-content-rights.ts`
+- `npx tsx scripts/inventory-catalog-sources.ts`
+- Confirm Settings shows Import Guided Library unavailable
+- Confirm exercise search does not offer ExerciseDB GIF cards
+- Scan a barcode and confirm the Open Food Facts link and license line
+- Confirm master-library workouts, set logging, and custom exercises still open
+
+Known issues:
+- ExerciseDB and Free Exercise DB rows may still exist in Supabase. They are hidden from search or stripped of blocked media at display time.
+- Form-guide images are unavailable for exercises whose only media was ExerciseDB or Free Exercise DB.
+- Read-only local inventory (no writes): `builtiq_master` 264 active; `exercisedb` 1,324 archived; `free_exercise_db` 859 archived; 65 rows with no external source (22 user-owned). Confirm the same counts on any other Supabase project before a later cleanup.
+- `busboy` and `streamsearch` license fields are absent from `package-lock.json`. Their installed package `LICENSE` files are MIT.
+
+Recommended commit message: BIQ-0276 Hold unlicensed exercise media and record third-party notices
+
+---
+
 ## BIQ-0271 Phase D4 - Workout preview before logging
 
 Date: 2026-10-27

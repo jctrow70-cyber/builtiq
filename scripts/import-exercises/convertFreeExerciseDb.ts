@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * Convert yuhonas/free-exercise-db JSON → BuildIQ import format.
- * License: The Unlicense (public domain) — https://github.com/yuhonas/free-exercise-db
+ * JSON license: The Unlicense — https://github.com/yuhonas/free-exercise-db
+ * Photo files are not copied. Their rights are unverified.
  *
  * Usage:
  *   npm run import:convert:free-exercise-db

@@ -36,6 +36,14 @@ export function isBarcodeLookupResult(data: BarcodeLookupResponse): data is Barc
 }
 
 const OFF_USER_AGENT = 'BuildIQ-Health/1.0 (nutrition@buildiq.health)';
+
+export const OPEN_FOOD_FACTS_ATTRIBUTION =
+  'Data from Open Food Facts (https://openfoodfacts.org). Database: Open Database License (ODbL). Product photos: CC BY-SA.';
+
+export function withOpenFoodFactsAttribution(detail: string): string {
+  const text = String(detail || '').trim();
+  return text ? `${text} ${OPEN_FOOD_FACTS_ATTRIBUTION}` : OPEN_FOOD_FACTS_ATTRIBUTION;
+}
 const MAX_CALORIES = 5000;
 const MAX_MACRO_G = 400;
 const MAX_SODIUM_MG = 10000;
@@ -446,20 +454,21 @@ function parseProduct(barcode: string, product: Record<string, unknown>): Barcod
 
   const brand = String(product.brands || '').trim().slice(0, 80) || undefined;
 
-  let notes = 'Values from Open Food Facts. Verify against your package label when precision matters.';
+  let detail = 'Values from Open Food Facts. Verify against your package label when precision matters.';
   if (missingServingWeight) {
-    notes = 'Values from Open Food Facts (per 100 g). Adjust serving size if your label differs.';
+    detail = 'Values from Open Food Facts (per 100 g). Adjust serving size if your label differs.';
   } else if (chipServingNormalized) {
-    notes = `Adjusted to ${STANDARD_CHIP_SERVING_GRAMS} g (~1 oz / about 11 chips) to match typical package labels. Verify against your label.`;
+    detail = `Adjusted to ${STANDARD_CHIP_SERVING_GRAMS} g (~1 oz / about 11 chips) to match typical package labels. Verify against your label.`;
   } else if (scaledFrom100g) {
-    notes = `Values scaled to ${displayGrams ?? serving_label} g from Open Food Facts per-100 g data. Verify against your label.`;
+    detail = `Values scaled to ${displayGrams ?? serving_label} g from Open Food Facts per-100 g data. Verify against your label.`;
   } else if (
     displayGrams != null &&
     nutrientBasisGrams != null &&
     Math.abs(displayGrams - nutrientBasisGrams) > 0.5
   ) {
-    notes = `Nutrition adjusted to ${displayGrams} g per serving (package label style). Verify against your label.`;
+    detail = `Nutrition adjusted to ${displayGrams} g per serving (package label style). Verify against your label.`;
   }
+  const notes = withOpenFoodFactsAttribution(detail);
 
   return {
     found: true,

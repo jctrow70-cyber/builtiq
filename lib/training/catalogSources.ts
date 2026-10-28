@@ -1,5 +1,7 @@
 /** Exercise catalog source packs — users can enable multiple libraries in search. */
 
+import { hasExerciseGuide } from './exerciseMedia';
+
 export type CatalogSourceId =
   | 'builtiq_master'
   | 'builtiq_essentials'
@@ -26,9 +28,9 @@ export const CATALOG_SOURCES: CatalogSourceMeta[] = [
   {
     id: 'exercisedb',
     label: 'Guided Library',
-    description: '1,500+ exercises with animated GIF demos, thumbnails, and step-by-step instructions',
-    defaultEnabled: true,
-    hasGuides: true,
+    description: 'Withheld until ExerciseDB commercial rights are verified',
+    defaultEnabled: false,
+    hasGuides: false,
   },
   {
     id: 'builtiq_essentials',
@@ -39,13 +41,13 @@ export const CATALOG_SOURCES: CatalogSourceMeta[] = [
   {
     id: 'builtiq_basic',
     label: 'Basic Gym',
-    description: 'Common gym exercises with simple names — text only unless linked to Guided Library',
+    description: 'Common gym exercises with simple names',
     defaultEnabled: false,
   },
   {
     id: 'free_exercise_db',
     label: 'Photo Library (Legacy)',
-    description: '873 imported exercises with still photos — odd names, no GIF demos',
+    description: 'Imported exercise text. Photos stay hidden until image rights are verified.',
     defaultEnabled: false,
     hasGuides: true,
   },
@@ -55,8 +57,10 @@ export const DEFAULT_CATALOG_SOURCES: CatalogSourceId[] = CATALOG_SOURCES.filter
   (s) => s.id
 );
 
-/** All built-in libraries merged for seamless user search (no per-user toggles). */
-export const UNIFIED_CATALOG_SOURCES: CatalogSourceId[] = CATALOG_SOURCES.map((s) => s.id);
+/** Built-in libraries in search. ExerciseDB stays out until commercial rights are verified. */
+export const UNIFIED_CATALOG_SOURCES: CatalogSourceId[] = CATALOG_SOURCES.map((s) => s.id).filter(
+  (id) => id !== 'exercisedb'
+);
 
 /** Lower rank = preferred when the same exercise name exists in multiple libraries. */
 export const CATALOG_SOURCE_PREFERENCE: Record<CatalogSourceId, number> = {
@@ -99,7 +103,7 @@ export function catalogItemPreferenceScore(item: any): number {
 }
 
 export function normalizeCatalogSources(raw?: string[] | null): CatalogSourceId[] {
-  const allowed = new Set(CATALOG_SOURCES.map((s) => s.id));
+  const allowed = new Set(UNIFIED_CATALOG_SOURCES);
   const list = (raw || []).filter((id): id is CatalogSourceId => allowed.has(id as CatalogSourceId));
   return list.length ? list : [...DEFAULT_CATALOG_SOURCES];
 }
@@ -125,10 +129,5 @@ export function catalogSourceLabel(id: CatalogSourceId): string {
 }
 
 export function catalogItemHasGuide(item: any): boolean {
-  return !!(
-    String(item?.image_url || '').trim() ||
-    String(item?.gif_url || '').trim() ||
-    String(item?.media_url || '').trim() ||
-    String(item?.instructions || '').trim()
-  );
+  return hasExerciseGuide(item);
 }

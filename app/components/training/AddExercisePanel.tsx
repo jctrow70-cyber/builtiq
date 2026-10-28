@@ -14,6 +14,7 @@ import {
   searchCatalog,
 } from '../../../lib/training/catalogSearch';
 import { equipmentFilterLabel, hasEquipmentFilter } from '../../../lib/training/equipmentFilter';
+import { instructionsForDisplay } from '../../../lib/training/contentRights';
 import { getExerciseGuidePayload, getExerciseThumb, hasExerciseGuide } from '../../../lib/training/exerciseMedia';
 
 type AddExercisePanelProps = {
@@ -80,7 +81,7 @@ export default function AddExercisePanel({
                 Building superset ({pendingGroupCount}/3) — pick the next exercise
               </p>
             )}
-            <p className="muted catalog-search-meta">Search the full BuildIQ Health exercise library — GIF guides appear when available.</p>
+            <p className="muted catalog-search-meta">Search the full BuildIQ Health exercise library.</p>
             <input
               className="typeahead-input catalog-search-input"
               placeholder={`Search exercises (${catalog.length} available)…`}
@@ -131,7 +132,7 @@ export default function AddExercisePanel({
                   checked={!!filters.guidesOnly}
                   onChange={(e) => onChange({ ...panel, filters: { ...filters, guidesOnly: e.target.checked } })}
                 />{' '}
-                With form guide (GIF / photo / instructions)
+                With form guide
               </label>
             </div>
             {hasEquipmentFilter(equipment) && (
@@ -229,7 +230,9 @@ export default function AddExercisePanel({
                 {guide.hasVideo ? 'Watch form' : 'Preview form guide'}
               </button>
             )}
-            {panel.picked.instructions && <div className="panel-instructions">{panel.picked.instructions}</div>}
+            {instructionsForDisplay(panel.picked) && (
+              <div className="panel-instructions">{instructionsForDisplay(panel.picked)}</div>
+            )}
             <label>Exercise type</label>
             <div className="tabs">
               <button

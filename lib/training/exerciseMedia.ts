@@ -1,5 +1,7 @@
 /** Exercise catalog media helpers for thumbnails and form guides */
 
+import { instructionsForDisplay, isBlockedExerciseMediaUrl } from './contentRights';
+
 export type ExerciseGuidePayload = {
   title: string;
   images: string[];
@@ -8,11 +10,6 @@ export type ExerciseGuidePayload = {
   instructions: string | null;
   hasVideo: boolean;
 };
-
-/** Legacy import host — rewrite to jsDelivr for more reliable browser hotlinking */
-const FEDB_RAW_BASE = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
-const FEDB_CDN_BASE = 'https://cdn.jsdelivr.net/gh/yuhonas/free-exercise-db@main/exercises/';
-const FEDB_PAGES_BASE = 'https://yuhonas.github.io/free-exercise-db/exercises/';
 
 function cleanUrl(raw?: string | null) {
   const url = String(raw || '').trim();
@@ -63,21 +60,11 @@ function deriveAlternateImage(url: string): string | null {
 
 /**
  * Normalize catalog media URLs for display.
- * - Rewrites Free Exercise DB raw.githubusercontent URLs to jsDelivr
- * - Expands relative FEDB paths (e.g. `Bench_Press/0.jpg`) to absolute CDN URLs
+ * ExerciseDB and Free Exercise DB photo hosts are omitted until commercial rights are verified.
  */
 export function resolveExerciseMediaUrl(raw?: string | null): string | null {
   const url = cleanUrl(raw);
-  if (!url) return null;
-
-  if (url.startsWith(FEDB_CDN_BASE) || url.startsWith(FEDB_PAGES_BASE)) return url;
-  if (url.startsWith(FEDB_RAW_BASE)) return FEDB_CDN_BASE + url.slice(FEDB_RAW_BASE.length);
-
-  // Relative path from older/partial imports
-  if (!/^[a-z][a-z0-9+.-]*:/i.test(url) && /\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(url)) {
-    return FEDB_CDN_BASE + url.replace(/^\//, '');
-  }
-
+  if (!url || isBlockedExerciseMediaUrl(url)) return null;
   return url;
 }
 
@@ -110,10 +97,10 @@ export function hasExerciseGuide(item?: {
 } | null): boolean {
   if (!item) return false;
   return !!(
-    cleanUrl(item.image_url) ||
-    cleanUrl(item.gif_url) ||
-    cleanUrl(item.media_url) ||
-    String(item.instructions || '').trim()
+    resolveExerciseMediaUrl(item.image_url) ||
+    resolveExerciseMediaUrl(item.gif_url) ||
+    resolveExerciseMediaUrl(item.media_url) ||
+    instructionsForDisplay(item)
   );
 }
 
@@ -160,7 +147,7 @@ export function getExerciseGuidePayload(
     images,
     videoUrl,
     embedUrl,
-    instructions: String(item.instructions || '').trim() || null,
+    instructions: instructionsForDisplay(item),
     hasVideo: !!(embedUrl || videoUrl || gif),
   };
 }

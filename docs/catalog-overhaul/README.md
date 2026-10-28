@@ -4,8 +4,9 @@ This folder is the working copy of the exercise database.
 
 ## Download (open these)
 
-- `exercise-catalog.csv` — **1,324 Guided Library exercises** (names, body part, equipment, instructions, GIF paths). This is the file to overhaul.
+- `exercise-catalog.csv` was removed in BIQ-0276. It was a committed copy of ExerciseDB instructions and GIF paths. Do not download that dataset again until commercial rights are recorded.
 - `builtiq-basic-catalog.csv` — smaller BuildIQ Basic gym list already in migrations.
+- `BuiltIQ_Exercise_Master_Library_with_Form_Links.xlsx` — first-party master library. This is the catalog to edit.
 
 Live database copy (what is actually in Supabase): Settings → Guided Exercise Library → **Download CSV** (catalog admin).
 
@@ -19,7 +20,7 @@ Used exercises for mapping (household logs, not the full 1,324):
 
 ## What is wrong today (why overhaul)
 
-Source fields are not BuildIQ fields yet. In `exercise-catalog.csv` you will see:
+The old ExerciseDB export is no longer in this folder. Historical notes about that sheet:
 
 - `exercise_type` still looks like `waist` / `upper legs` (body part), not `strength` / `cardio` / `mobility`
 - Odd names (`3/4 sit-up`, `air bike`)
@@ -46,9 +47,4 @@ Source fields are not BuildIQ fields yet. In `exercise-catalog.csv` you will see
 3. Catalog edits change future search and new workouts only — completed set logs stay as they were.
 4. After you mark up the sheet, we can add a re-import path.
 
-Regenerate from the public dataset:
-
-```text
-curl.exe -L https://raw.githubusercontent.com/AbdelrahmanElghoul/exercises-dataset/main/data/exercises.json -o docs/catalog-overhaul/exercises-raw.json
-node scripts/convert-catalog.cjs
-```
+Do not regenerate `exercise-catalog.csv` from the ExerciseDB mirror. That download is disabled until commercial rights are verified.

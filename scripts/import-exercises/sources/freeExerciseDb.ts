@@ -1,10 +1,10 @@
 import type { ExternalExerciseRecord } from '../types';
 
-/** https://github.com/yuhonas/free-exercise-db — The Unlicense (public domain) */
+/**
+ * https://github.com/yuhonas/free-exercise-db
+ * JSON text: The Unlicense. Exercise photos are a separate, unverified grant and are not imported.
+ */
 export const FREE_EXERCISE_DB_SOURCE = 'free_exercise_db';
-/** Prefer jsDelivr over raw.githubusercontent for reliable browser image loads */
-export const FREE_EXERCISE_DB_IMAGE_BASE =
-  'https://cdn.jsdelivr.net/gh/yuhonas/free-exercise-db@main/exercises/';
 
 export type FreeExerciseDbRow = {
   id: string;
@@ -122,6 +122,7 @@ function buildCoachingMetadata(row: FreeExerciseDbRow): Record<string, unknown> 
   return {
     source_dataset: 'yuhonas/free-exercise-db',
     license: 'Unlicense',
+    license_scope: 'JSON text only. Exercise photos are omitted until image rights are verified.',
     level: row.level || null,
     force: row.force || null,
     mechanic: row.mechanic || null,
@@ -150,9 +151,6 @@ export function convertFreeExerciseDbRow(row: FreeExerciseDbRow): ExternalExerci
   const secondaries = (row.secondaryMuscles || []).map(titleMuscle);
   const movement = inferFreeExerciseDbMovementPattern(row);
   const training_goal = inferTrainingGoal(row);
-  const thumbnail = row.images?.[0] ? FREE_EXERCISE_DB_IMAGE_BASE + row.images[0] : undefined;
-  const media = row.images?.[1] ? FREE_EXERCISE_DB_IMAGE_BASE + row.images[1] : undefined;
-
   return {
     external_source: FREE_EXERCISE_DB_SOURCE,
     external_id: row.id,
@@ -165,8 +163,6 @@ export function convertFreeExerciseDbRow(row: FreeExerciseDbRow): ExternalExerci
     ...(movement ? { movement_pattern: movement } : {}),
     ...(training_goal ? { training_goal } : {}),
     instructions: (row.instructions || []).join('\n\n'),
-    thumbnail_url: thumbnail,
-    media_url: media,
     coaching_metadata: buildCoachingMetadata(row),
   };
 }

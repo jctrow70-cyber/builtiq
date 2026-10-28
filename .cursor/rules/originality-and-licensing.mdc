@@ -1,0 +1,21 @@
+---
+description: Originality, commercial licensing, and third-party content rules for BuildIQ
+alwaysApply: true
+---
+
+# Originality and licensing
+
+BuildIQ stays independently developed and commercially usable. Trace source, license, and provenance for anything that is not first-party.
+
+- Do not copy proprietary competitor code, assets, coaching text, or distinctive UI designs. Standard algorithms and ordinary UI conventions are fine.
+- Do not import a third-party dataset or display external media unless the license is recorded and allows commercial use.
+- Record source, version, license, attribution, commercial-use status, and where BuildIQ uses it in `THIRD_PARTY_NOTICES.md`.
+- Keep first-party exercise content (`builtiq_master` and user-owned rows) separate from third-party catalogs. Do not delete user-created or first-party rows to clean up a third-party source.
+- Review licensing before adding a dataset, dependency, or integration. Flag GPL, AGPL, SSPL, proprietary, unknown, and other restrictive licenses for review. Prefer maintained permissive licenses. Keep required copyright notices.
+- Review AI-generated code and content for originality, accuracy, and license risk. Public or AI-generated material is not automatically free of intellectual-property restrictions.
+
+## Current holds
+
+- ExerciseDB / AscendAPI: do not import, and do not show its GIFs or instruction text, until a commercial license is recorded. Do not delete existing `st_exercise_catalog` rows.
+- Free Exercise DB: the JSON text is Unlicense. Do not show its photos until image rights are verified. Do not describe the photos as Unlicense.
+- Open Food Facts: keep visible attribution and the Open Database License / CC BY-SA notice on every barcode result. Do not add a shared nutrition cache until those obligations are reviewed.

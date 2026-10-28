@@ -407,13 +407,13 @@ See `CHANGELOG.md` BIQ-0013 and BIQ-0024 for full scope.
 7. ~~Barcode / label OCR for packaged foods~~ (BIQ-0041)
 8. ~~iPhone PWA live barcode scanner~~ (BIQ-0042)
 9. AI Coach hook-up (consumes `coaching_metadata` + program + nutrition context)
-10. **Trust-first barcode + verified cache** (BIQ-0118 — label confirm, confidence UI, no paid API)
+10. **Trust-first barcode + verified cache** (BIQ-0118 — label confirm, confidence UI, no paid API). Do not add a shared cache until Open Food Facts ODbL and image-license obligations are reviewed (BIQ-0276).
 11. Progress tab nutrition trends — Nutrition tab now pages calendar weeks and isolates one macro (BIQ-0204); Progress still needs a longer multi-month view
 12. Split `page.tsx` into focused components
 
 ### Planned — Platform admin and catalog operations
 
-**Current (BIQ-0201 / BIQ-0202 / BIQ-0207 / BIQ-0235 / BIQ-0237 / BIQ-0246):** Catalog admins import the **BuildIQ Master Library** from Settings (`POST /api/catalog/import-master`). That upserts **264** movement cards (including Olympic add-ons, Diverging Row, Converging Chest Press, Seated Overhead Press, and GHD Sit-Up), remaps household plan/log catalog ids, and archives the old GIF dump. Workout cards can pick a compatible implement (`st_exercises.equipment`) without a second catalog row. Strength/cardio picker search uses section-aware ranking. The legacy Guided Library import remains available but no longer un-archives rows already hidden. Normal users get unified search of active catalog rows.
+**Current (BIQ-0201 / BIQ-0202 / BIQ-0207 / BIQ-0235 / BIQ-0237 / BIQ-0246):** Catalog admins import the **BuildIQ Master Library** from Settings (`POST /api/catalog/import-master`). That upserts **264** movement cards (including Olympic add-ons, Diverging Row, Converging Chest Press, Seated Overhead Press, and GHD Sit-Up), remaps household plan/log catalog ids, and archives the old GIF dump. Workout cards can pick a compatible implement (`st_exercises.equipment`) without a second catalog row. Strength/cardio picker search uses section-aware ranking. ExerciseDB guided import is disabled until commercial rights are verified (BIQ-0276). Stored rows are left in place and their GIFs and instructions are hidden. Normal users get unified search of active catalog rows.
 
 **Roadmap — proper admin model (not started):**
 

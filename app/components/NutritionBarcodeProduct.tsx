@@ -96,6 +96,13 @@ export function NutritionBarcodeProductCard({
 
       {product.notes && <p className="muted nutrition-scan-notes">{product.notes}</p>}
       {extraNote && <p className="muted nutrition-scan-notes">{extraNote}</p>}
+      <p className="muted nutrition-scan-notes">
+        Data from{' '}
+        <a href="https://openfoodfacts.org" target="_blank" rel="noreferrer">
+          Open Food Facts
+        </a>
+        . Database: Open Database License (ODbL). Product photos: CC BY-SA.
+      </p>
 
       <div className="actions" style={{ marginTop: 10 }}>
         <button type="button" className="btn green" onClick={() => onLog(false)} disabled={saving}>

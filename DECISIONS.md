@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 123 - Hold third-party exercise media until commercial rights are recorded
+
+Date: 2026-10-27
+Status: Accepted
+Category: Licensing / Exercise Catalog
+
+### Decision
+
+ExerciseDB imports stop, and ExerciseDB GIFs and instruction text stay out of the product, until a commercial license is recorded. Free Exercise DB photos stay hidden. Its JSON text remains available under The Unlicense and is recorded separately from the photos. Open Food Facts results keep a visible attribution, Open Database License notice, and CC BY-SA photo notice, including after serving-size adjustments. A shared nutrition cache is not added until those obligations are reviewed. Existing catalog rows, user exercises, and first-party master rows are not deleted.
+
+### Reason
+
+The free ExerciseDB terms do not allow a commercial product. Free Exercise DB's maintainer has not granted the photos. Open Food Facts requires attribution. BuildIQ needs a commercial path that does not depend on unverified content.
+
+### Alternatives Considered
+
+Delete the stored ExerciseDB rows now. Keep showing the GIFs with attribution only. Treat Free Exercise DB photos as covered by The Unlicense.
+
+### Impact
+
+No database migration. Guided Library import, GIF demos, and ExerciseDB coaching text are unavailable. Master-library workouts, custom exercises, logging, and history stay.
+
+---
+
 ## Decision 122 - Training calendar preview reuses Program Design details
 
 Date: 2026-10-27

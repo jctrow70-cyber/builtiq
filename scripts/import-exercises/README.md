@@ -33,45 +33,23 @@ JSON **array** or **JSONL** (one object per line).
 | `thumbnail_url` | no | `image_url` |
 | `gif_url` | no | `gif_url` (animated demo) |
 
-## Recommended: Guided Library — ExerciseDB (~1,324 exercises)
+## ExerciseDB — import disabled
 
-**Source:** [ExerciseDB v1 OSS](https://oss.exercisedb.dev/docs) (AscendAPI) — GIF demos, thumbnails, and step-by-step instructions.
+**Source:** [ExerciseDB v1](https://oss.exercisedb.dev/docs) (AscendAPI). The free tier does not allow commercial products. `npm run import:exercises:exercisedb`, `import:fetch:exercisedb`, and Settings → Import Guided Library refuse before any download or database write. Existing rows are not deleted. GIF URLs and ExerciseDB instruction text are hidden in the app.
 
-**Attribution:** Credit ExerciseDB / AscendAPI when using the free OSS dataset.
+Do not re-enable this until `THIRD_PARTY_NOTICES.md` records a commercial license.
 
-### 1. Fetch + convert (bulk mirror — avoids API rate limits)
-
-```bash
-npm run import:fetch:exercisedb
-```
-
-Output: `scripts/import-exercises/data/exercisedb/buildiq-import.json`
-
-Optional: live API paginated fetch (may 429): `npm run import:fetch:exercisedb:api`
-
-### 2. Dry-run, then live import
-
-```bash
-npm run import:exercises:exercisedb:dry
-npm run import:exercises:exercisedb
-```
-
-### 3. Verify in Supabase
+A read-only inventory count, with no update:
 
 ```sql
 select count(*) from st_exercise_catalog where external_source = 'exercisedb';
--- expect ~1324
 ```
-
-### 4. Enable in the app
-
-Settings → Profile → enable **Guided Library**. Add Exercise search defaults to **With form guide** filter.
 
 ---
 
 ## Legacy dataset: Free Exercise DB (873 exercises)
 
-**Source:** [yuhonas/free-exercise-db](https://github.com/yuhonas/free-exercise-db) — **The Unlicense** (public domain).
+**Source:** [yuhonas/free-exercise-db](https://github.com/yuhonas/free-exercise-db). **JSON text:** The Unlicense. **Photos:** rights are unverified and are not imported or displayed. Do not treat the photos as public domain.
 
 ### 1. Download (PowerShell)
 

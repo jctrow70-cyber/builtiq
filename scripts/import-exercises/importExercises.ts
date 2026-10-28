@@ -64,6 +64,21 @@ Env:
   return { file, dryRun, enrichLegacy };
 }
 
+function redactUnlicensedImportRecords(records: ExternalExerciseRecord[]): ExternalExerciseRecord[] {
+  const blocked = records.filter((record) => String(record.external_source || '').trim().toLowerCase() === 'exercisedb');
+  if (blocked.length) {
+    console.error(
+      `Refusing import: ${blocked.length} ExerciseDB row(s). Commercial rights are not verified. No database writes were made.`
+    );
+    process.exit(1);
+  }
+  return records.map((record) => {
+    if (String(record.external_source || '').trim().toLowerCase() !== 'free_exercise_db') return record;
+    const { thumbnail_url: _thumb, media_url: _media, gif_url: _gif, ...rest } = record;
+    return rest;
+  });
+}
+
 function loadRecords(filePath: string): ExternalExerciseRecord[] {
   const abs = path.isAbsolute(filePath) ? filePath : path.join(process.cwd(), filePath);
   const raw = fs.readFileSync(abs, 'utf8').trim();
@@ -308,7 +323,7 @@ async function main() {
     process.exit(1);
   }
 
-  const records = loadRecords(file);
+  const records = redactUnlicensedImportRecords(loadRecords(file));
   const sourceSet = new Set(
     records.map((r) => String(r.external_source || '').trim().toLowerCase()).filter(Boolean)
   );
