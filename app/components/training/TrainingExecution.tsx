@@ -119,15 +119,20 @@ function DayItems({
             <button
               type="button"
               className="te-item-title"
-              disabled={!item.workoutId || (!onView && !onStart)}
+              disabled={!item.workoutId || !onView}
+              aria-label={item.workoutId && onView ? `View details for ${summary.name}` : undefined}
               onClick={() => {
-                if (item.workoutId && onStart) onStart(item);
-                else if (item.workoutId) onView?.(item);
+                if (item.workoutId) onView?.(item);
               }}
             >
               <b>{summary.name}</b>
             </button>
             {summary.meta ? <span className="muted te-item-meta">{summary.meta}</span> : null}
+            {item.workoutId && onView ? (
+              <button type="button" className="te-item-details" onClick={() => onView(item)}>
+                View details
+              </button>
+            ) : null}
             {item.statusLabel && (
               <span className={`te-status te-status--${item.statusLabel.toLowerCase()}`}>{item.statusLabel}</span>
             )}

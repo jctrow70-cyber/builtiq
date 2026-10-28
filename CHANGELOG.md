@@ -11,6 +11,53 @@ Branch:
 Status:
 ```
 
+## BIQ-0271 Phase D4 - Workout preview before logging
+
+Date: 2026-10-27
+Branch: main
+Status: Implemented. Local commit. Not pushed. No database change.
+
+Summary: Training calendar titles and View details now open a read-only preview that reuses Program Design's WorkoutPreview. Start and Review still open the logger. Edit workout appears only when the user is already authorized or the workout is their personal calendar item; a live group program no longer exposes Edit by itself. The preview dialog takes focus, keeps Tab inside the sheet, closes on Escape, and restores the trigger. Missing or unauthorized group/overlay workouts show an error instead of substituting a personal workout. Workout logging, enrollment, calendar navigation, and Program Design editing are unchanged.
+
+Purpose: Let users inspect a scheduled workout before they start or change logs.
+
+Files changed:
+- lib/training/trainingPreview.ts
+- app/components/training/WorkoutPlanSheet.tsx
+- app/components/training/TrainingExecution.tsx
+- app/page.tsx
+- app/globals.css
+- scripts/test-training-preview.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- `npx tsx scripts/test-training-preview.ts`
+- `npx tsx scripts/test-training-prescription.ts`
+- `npx tsx scripts/test-training-alignment.ts`
+- `npx tsx scripts/test-workout-preview.ts`
+- `npx tsx scripts/test-program-calendar-view.ts`
+- `npx tsx scripts/test-unified-schedule.ts`
+- `npx tsx scripts/test-customize-for-me.ts`
+- `npm run test:science`
+- `npx tsc --noEmit`
+- Training → View details on a scheduled workout without starting
+- Confirm Start still opens the logger
+- Confirm Review still opens the completed logger
+- Close the preview with Close, overlay click, and Escape
+- Confirm Tab stays in the preview and Escape restores the View details trigger
+- Confirm Edit workout is hidden when the user cannot edit the selected workout
+- Check 390px, 768px, and 1440px
+
+Known issues:
+- Overlay workouts whose program tree is not loaded still show title and source only on the calendar card until View details fetches the program.
+- If that fetch is denied, the preview shows an access error and does not fall back to a personal workout.
+
+Recommended commit message: BIQ-0271 Phase D4 add a Training workout preview before logging
+
 ## BIQ-0271 Phase D3 - Training exercise prescription alignment
 
 Date: 2026-10-27

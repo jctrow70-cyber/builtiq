@@ -62,6 +62,7 @@ import AssignedWorkoutsPanel from './components/groups/AssignedWorkoutsPanel';
 import ProgramDesignHome from './components/programDesign/ProgramDesignHome';
 import UnifiedTrainingSchedule, { type ScheduleStartItem } from './components/training/UnifiedTrainingSchedule';
 import WorkoutPlanSheet from './components/training/WorkoutPlanSheet';
+import { canShowTrainingPreviewEdit, resolveTrainingPreviewWorkout } from '../lib/training/trainingPreview';
 import MoveWorkoutSheet from './components/training/MoveWorkoutSheet';
 import { cycleLengthOf } from '../lib/programDesign/cycle';
 import { focusMusclesForSingleDayType, inferSessionMinutesFromPrompt, inferSingleDayTypeFromPrompt } from '../lib/programDesign/inferSchedule';
@@ -243,6 +244,7 @@ export default function Page(){
  const [strengthSetupError,setStrengthSetupError]=useState('');
  const [trainingCompleteBusy,setTrainingCompleteBusy]=useState<string|null>(null);
  const [viewingWorkoutId,setViewingWorkoutId]=useState<string|null>(null);
+ const [workoutPreviewMeta,setWorkoutPreviewMeta]=useState<{sourceName?:string|null;error?:string|null;completed?:boolean;workout?:any|null;duration?:string|null}|null>(null);
  const [trainingSessionIntent,setTrainingSessionIntent]=useState<'log'|'edit'>('log');
  const [extraSetLogs,setExtraSetLogs]=useState<ExtraSetLog[]>([]);
  const [sessionOutcome,setSessionOutcome]=useState<SessionStatus>('not_started');
@@ -1473,6 +1475,7 @@ export default function Page(){
    setProfile((p:any)=>p?{...p,followed_program_id:copy.id}:p);
    setMode('personal');
    setViewingWorkoutId(null);
+   setWorkoutPreviewMeta(null);
    setAppNav('Training');
    setTrainingSubNav('personal');
    setApplyScope('current');
@@ -2683,18 +2686,36 @@ function onSelectTrainingDay(date:string){
   const scheduled=scheduleStartFromItem(item,date);
   schedulePreviewRef.current=scheduled;
   let nextProgram=program;
+  let loadError:string|null=null;
   if(scheduled?.programId&&program?.id!==scheduled.programId){
    const{data:full,error}=await fetchFullProgram(supabase,scheduled.programId);
-   if(error||!full){alert(error||'Could not open that workout.');return;}
-   nextProgram=full;
-   setProgram(full);
+   if(error||!full){
+    loadError=error||'Could not open that workout.';
+   }else{
+    nextProgram=full;
+    setProgram(full);
+   }
   }
-  if(nextProgram&&item.workoutId){
+  const resolved=resolveTrainingPreviewWorkout({
+   workoutId:item.workoutId,
+   programId:item.programId||scheduled?.programId||null,
+   loadedProgram:loadError?null:nextProgram,
+   loadError,
+   fallbackWorkouts:calendarWorkouts,
+  });
+  if(!loadError&&resolved.workout&&nextProgram&&item.workoutId){
    const start=resolveProgramStartDate(nextProgram);
    setWeek(weekForDate(start,date,nextProgram.weeks||weeks||6));
    setActiveWorkout(item.workoutId);
   }
   setLogDate(date);
+  setWorkoutPreviewMeta({
+   sourceName:item.sourceName||null,
+   error:resolved.error,
+   completed:!!item.completed,
+   workout:resolved.workout,
+   duration:item.duration||null,
+  });
   if(item.workoutId)setViewingWorkoutId(item.workoutId);
  }
  async function startScheduledWorkout(item:ScheduleStartItem){
@@ -2739,6 +2760,7 @@ function onSelectTrainingDay(date:string){
   setLogDate(dateYmd);
   setTrainingSessionIntent(intent);
   setViewingWorkoutId(null);
+  setWorkoutPreviewMeta(null);
   setTrainingSessionOpen(true);
   if(intent==='log'||intent==='edit')setApplyScope('current');
   if(intent==='edit'&&needsJustMeCopy(program)&&!isPersonalCalendarWorkout(workoutId)){
@@ -3079,6 +3101,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
   setTrainingSubNav('personal');
   setTrainingSessionIntent('log');
   setViewingWorkoutId(null);
+  setWorkoutPreviewMeta(null);
   setTrainingSessionOpen(true);
   setAppNav('Training');
   if(dashProgramForToday&&dashProgramForToday.id!==program?.id)setProgram(dashProgramForToday);
@@ -3090,6 +3113,12 @@ function matchingSet(targetExercise:any, sourceSet:any){
   setLogDate(today());
   setTrainingSubNav('personal');
   setTrainingSessionOpen(false);
+  setWorkoutPreviewMeta({
+   sourceName:null,
+   error:null,
+   completed:todayWorkoutStatus==='completed',
+   workout:todayWorkout,
+  });
   setViewingWorkoutId(todayWorkout.id);
   setAppNav('Training');
   if(dashProgramForToday&&dashProgramForToday.id!==program?.id)setProgram(dashProgramForToday);
@@ -3267,10 +3296,20 @@ function matchingSet(targetExercise:any, sourceSet:any){
     }}/>}
     {!viewingMember&&!trainingSessionOpen&&!session?.user&&<div className="card"><p className="muted">Sign in to see your training schedule.</p></div>}
     {viewingWorkoutId&&<WorkoutPlanSheet
-      workout={findWorkoutAnywhere(viewingWorkoutId)}
+      workout={workoutPreviewMeta&&('workout' in workoutPreviewMeta)?workoutPreviewMeta.workout:findWorkoutAnywhere(viewingWorkoutId)}
       dateLabel={formatDisplayDate(logDate)}
-      canEdit={canEdit()||isPersonalCalendarWorkout(viewingWorkoutId)||(isLiveGroupProgram(program)&&appNav==='Training')}
-      onClose={()=>{setViewingWorkoutId(null);restoreFollowedCalendar();}}
+      sourceName={workoutPreviewMeta?.sourceName||null}
+      duration={workoutPreviewMeta?.duration||null}
+      catalog={catalog}
+      error={workoutPreviewMeta?.error||null}
+      completed={!!workoutPreviewMeta?.completed}
+      canEdit={canShowTrainingPreviewEdit({
+        authorized: canEdit(),
+        personalCalendar: isPersonalCalendarWorkout(viewingWorkoutId),
+        hasWorkout: !!(workoutPreviewMeta && workoutPreviewMeta.workout),
+        loadError: workoutPreviewMeta?.error || null,
+      })}
+      onClose={()=>{setViewingWorkoutId(null);setWorkoutPreviewMeta(null);restoreFollowedCalendar();}}
       onStart={()=>{const pending=schedulePreviewRef.current;if(pending&&pending.workoutId===viewingWorkoutId)void startScheduledWorkout(pending);else startTrainingSession(viewingWorkoutId,logDate,'log');}}
       onEdit={()=>startTrainingSession(viewingWorkoutId,logDate,'edit')}
     />}

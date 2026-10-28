@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 122 - Training calendar preview reuses Program Design details
+
+Date: 2026-10-27
+Status: Accepted
+Category: Training / Program Design
+
+### Decision
+
+The Training calendar title and View details open the existing WorkoutPlanSheet as a read-only preview. Opening or closing that sheet does not start a session or enter edit mode. The sheet reuses Program Design's WorkoutPreview and shared summary helpers. Start and Review keep the existing logger path. Edit workout stays on the existing authorized path and is hidden when the user cannot edit the selected workout. A group or overlay workout is loaded through the existing fetchFullProgram path. If that tree is missing or unauthorized, the preview shows an error and does not substitute a personal workout. The dialog uses standard dialog semantics, a focus trap, Escape to close, and restore-focus.
+
+### Reason
+
+Users needed to see the planned session before logging. The title previously started the workout, and a second details implementation would drift from Program Design.
+
+### Alternatives Considered
+
+Start logging from the title. Build a new Training-only details screen. Fall back to a personal workout when a group tree cannot be loaded.
+
+### Impact
+
+No database change. Logging, completion, enrollment, calendar navigation, and Program Design editing stay the same.
+
+---
+
 ## Decision 121 - Training logger reuses Program Design exercise prescriptions
 
 Date: 2026-10-27

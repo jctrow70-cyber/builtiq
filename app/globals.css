@@ -1347,6 +1347,8 @@ label{color:var(--textSecondary)}
 .te-item-title{background:none;border:0;padding:0;color:inherit;font:inherit;text-align:left;cursor:pointer}
 .te-item-title:disabled{cursor:default}
 .te-item--done .te-item-title{text-decoration:line-through;opacity:.72}
+.te-item-details{margin:2px 0 0;padding:0;border:0;background:none;color:var(--accentOnSoft,#c4b5fd);font-size:12px;font-weight:700;text-align:left;cursor:pointer}
+.te-item-details:focus-visible{outline:2px solid #7c5cff;outline-offset:2px}
 .te-item-actions{align-items:center;flex-wrap:nowrap;gap:6px;margin:0}
 .te-item-more{position:relative}
 .te-item-more-btn{min-width:auto;padding-left:10px;padding-right:10px}
@@ -1359,6 +1361,8 @@ label{color:var(--textSecondary)}
 .exercise-swap-sheet h2{margin:0 0 8px;font-size:18px}
 .exercise-swap-actions{display:grid;gap:8px;margin-top:14px}
 .te-plan-sheet{max-height:86vh;overflow:auto}
+.te-plan-sheet .pd-detail-body{gap:16px;margin-top:12px}
+.te-plan-sheet .pd-ex-rx{font-size:14px}
 .te-plan-section{margin:14px 0 0}
 .te-plan-section h3{margin:0 0 8px;font-size:13px;letter-spacing:.04em;text-transform:uppercase}
 .te-plan-ex{display:grid;gap:2px;padding:10px 12px;margin-bottom:8px;border-radius:12px;border:1px solid var(--borderSubtle);background:var(--surfaceInset)}
