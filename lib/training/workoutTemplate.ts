@@ -3,16 +3,15 @@ import {
   exerciseSection,
   SECTION_SORT_BASE as SHARED_SECTION_SORT_BASE,
   sectionExercises,
+  WORKOUT_SECTIONS,
 } from '../programDesign/workoutPreview';
 import { defaultCatalogEquipment } from './exerciseEquipment';
 import { prescriptionColumnsFromSources } from './prescriptionMeta';
 
-export const WORKOUT_TEMPLATE_SECTIONS = [
-  { id: 'warmup', label: 'Warm Up / Prep' },
-  { id: 'strength', label: 'Strength' },
-  { id: 'conditioning', label: 'Conditioning' },
-  { id: 'cooldown', label: 'Cooldown / Stretch' },
-];
+export const WORKOUT_TEMPLATE_SECTIONS = WORKOUT_SECTIONS.map((sec) => ({
+  id: sec.id,
+  label: sec.label,
+}));
 
 export const SECTION_SORT_BASE: Record<string, number> = { ...SHARED_SECTION_SORT_BASE };
 

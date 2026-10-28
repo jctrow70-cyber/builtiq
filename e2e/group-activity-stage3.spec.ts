@@ -229,7 +229,7 @@ test.describe('Phase 3B group strength workouts', () => {
     await expect(sheet.getByText('Add at least one exercise.')).toBeVisible();
 
     await sheet.getByLabel('Workout name').fill(title);
-    const warmup = await addConfiguredExercise(page, 'Warm Up / Prep', ['lunge', 'bird', 'curl', 'press'], {});
+    const warmup = await addConfiguredExercise(page, 'Warm-up', ['lunge', 'bird', 'curl', 'press'], {});
     const first = await addConfiguredExercise(page, 'Strength', ['squat', 'deadlift', 'press'], { superset: true, reps: '5', weight: '135', avoid: [warmup] });
     const panel = page.locator('.add-exercise-panel');
     await expect(panel).toBeVisible();

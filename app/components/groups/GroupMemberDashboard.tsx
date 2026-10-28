@@ -7,9 +7,9 @@ import type { AssignmentComplianceSummary, MemberWorkoutHistoryDay } from '../..
 import MemberPerformancePanel from './MemberPerformancePanel';
 
 const SECTIONS = [
-  { id: 'warmup', label: 'Warm Up / Prep' },
+  { id: 'warmup', label: 'Warm-up' },
   { id: 'strength', label: 'Strength' },
-  { id: 'cooldown', label: 'Cooldown / Stretch' },
+  { id: 'cooldown', label: 'Cooldown' },
 ];
 
 type GroupMemberDashboardProps = {

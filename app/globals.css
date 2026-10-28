@@ -1339,6 +1339,7 @@ label{color:var(--textSecondary)}
 .te-item-main{display:grid;gap:2px;min-width:0}
 .te-item-type{font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
 .te-item-moved{font-size:12px;line-height:1.3}
+.te-item-meta{font-size:13px;line-height:1.35;overflow-wrap:anywhere}
 .te-item-title{background:none;border:0;padding:0;color:inherit;font:inherit;text-align:left;cursor:pointer}
 .te-item-title:disabled{cursor:default}
 .te-item--done .te-item-title{text-decoration:line-through;opacity:.72}

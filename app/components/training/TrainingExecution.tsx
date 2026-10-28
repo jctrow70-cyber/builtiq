@@ -5,6 +5,7 @@ import SegmentedControl from '../ui/SegmentedControl';
 import SectionHeader from '../ui/SectionHeader';
 import { formatLongWeekday, formatMediumDate } from '../../../lib/programDesign/cycle';
 import { itemAllowsCheckoff } from '../../../lib/programDesign/activityCompletion';
+import { trainingWorkoutSummary } from '../../../lib/programDesign/workoutPreview';
 import type { TrainingDayItem, TrainingDayPlan, TrainingMonthCell } from '../../../lib/programDesign/trainingSchedule';
 
 type CalendarView = 'day' | 'week' | 'month';
@@ -43,6 +44,7 @@ type TrainingExecutionProps = {
   onMoveItem?: (item: TrainingDayItem, date: string) => void;
   completingItemId?: string | null;
   completedDates?: string[];
+  workoutsById?: Record<string, any>;
 };
 
 const MONTH_DOWS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -57,6 +59,7 @@ function DayItems({
   completingItemId,
   onAdd,
   onMove,
+  workoutsById,
 }: {
   plan: TrainingDayPlan;
   onStart: (item: TrainingDayItem) => void;
@@ -67,6 +70,7 @@ function DayItems({
   completingItemId?: string | null;
   onAdd?: () => void;
   onMove?: (item: TrainingDayItem) => void;
+  workoutsById?: Record<string, any>;
 }) {
   const [moreId, setMoreId] = useState<string | null>(null);
   useEffect(() => {
@@ -102,6 +106,12 @@ function DayItems({
         const showEdit = item.source === 'calendar' && !!item.activityId && !!onEdit;
         const hasMore = showComplete || showMove || showEdit;
         const moreOpen = moreId === item.id;
+        const summary = trainingWorkoutSummary({
+          title: item.title,
+          workout: item.workoutId ? workoutsById?.[item.workoutId] : null,
+          duration: item.duration,
+          sourceName: item.sourceName,
+        });
         return (
         <div key={item.id} className={`te-item${item.completed ? ' te-item--done' : ''}`}>
           <div className="te-item-main">
@@ -115,17 +125,15 @@ function DayItems({
                 else if (item.workoutId) onView?.(item);
               }}
             >
-              <b>{item.title}</b>
+              <b>{summary.name}</b>
             </button>
-            {item.sourceName && <span className="muted">{item.sourceName}</span>}
-            {item.duration && <span className="muted">{item.duration}</span>}
+            {summary.meta ? <span className="muted te-item-meta">{summary.meta}</span> : null}
             {item.statusLabel && (
               <span className={`te-status te-status--${item.statusLabel.toLowerCase()}`}>{item.statusLabel}</span>
             )}
             {item.movedFrom && (
               <span className="muted te-item-moved">Moved from {formatLongWeekday(item.movedFrom)}</span>
             )}
-            {item.completed && <span className="ui-badge">Done</span>}
           </div>
           <div className="actions te-item-actions">
             {canStart && (
@@ -237,6 +245,7 @@ export default function TrainingExecution({
   completingItemId = null,
   completedDates = [],
   onMoveItem,
+  workoutsById,
 }: TrainingExecutionProps) {
   const viewingToday = !!today?.isToday;
   const dayItemHandlers = today
@@ -250,6 +259,7 @@ export default function TrainingExecution({
         completingItemId,
         onAdd: onAddActivity ? () => onAddActivity(today.date) : undefined,
         onMove: onMoveItem ? (item: TrainingDayItem) => onMoveItem(item, today.date) : undefined,
+        workoutsById,
       }
     : null;
   return (

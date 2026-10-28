@@ -96,6 +96,7 @@ type CalendarProps = {
   completingItemId?: string | null;
   completedDates?: string[];
   followedSourceProgramId?: string | null;
+  workoutsById?: Record<string, any>;
 };
 
 type Props = {

@@ -93,7 +93,7 @@ import {
 } from '../lib/programDesign/activityCompletion';
 import type { TrainingDayItem } from '../lib/programDesign/trainingSchedule';
 import { isAutoEnrolledMemberRole, isLiveGroupProgram, isPersonalizedGroupFollow, needsJustMeCopy } from '../lib/programDesign/enrollment';
-import { exerciseSection as sharedExerciseSection } from '../lib/programDesign/workoutPreview';
+import { exerciseSection as sharedExerciseSection, WORKOUT_SECTIONS, workingExerciseCount, workingExerciseCountLabel, workoutSectionsForDisplay } from '../lib/programDesign/workoutPreview';
 import { weekdayIndexFromYmd } from '../lib/programDesign/recurrence';
 import { customizeFollowedProgramForMe, matchCopiedWorkout, syncMemberGroupEnrollment } from '../lib/programDesign/followProgram';
 import { orderGroupsForEnrollment } from '../lib/groups/trainingSources';
@@ -119,7 +119,7 @@ import type { AssignProgramTarget } from './components/groups/TeamAssignProgramM
 
 const NAV=['Dashboard','Training','Programs','Groups','Nutrition','Progress','AI Coach','Settings'];
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-const SECTIONS=[{id:'warmup',label:'Warm Up / Prep'},{id:'strength',label:'Strength'},{id:'conditioning',label:'Conditioning'},{id:'cooldown',label:'Cooldown / Stretch'}];
+const SECTIONS=WORKOUT_SECTIONS;
 const SECTION_SORT_BASE:any={warmup:0,strength:100,conditioning:200,cooldown:300};
 const sectionDefaultSets=(section:string)=>section==='warmup'||section==='cooldown'?1:3;
 const workoutExerciseCount=(w:any)=>SECTIONS.reduce((n:number,sec:any)=>n+sectionExercises(w,sec.id).length,0);
@@ -3144,8 +3144,8 @@ function matchingSet(targetExercise:any, sourceSet:any){
         {!isCollapsed&&<WorkoutSetLogger section={exerciseSection(ex)} exType={exType} sets={sortedSets} logs={logs} prevBySetId={prevBySetId} showPreviousSets={showPreviousSets} weightUnit={weightUnit} distanceUnit={logDistanceUnit} onDistanceUnitChange={setLogDistanceUnit} canEdit={canEdit()} canLog={canLog()} onEditSet={editSet} onRemoveSet={removeSet} onSaveField={(sid,field,value,opts)=>saveLog(sid,field,value,opts)} onDuplicateSet={duplicateSetLog} extraSets={extraSetsForExercise(extraSetLogs,ex.id,activeLogDateForLogging()).map((row)=>({id:row.id||`extra-${row.extra_set_number}`,set_type:'working',set_number:row.extra_set_number,target_reps:'',target_weight:''}))} extraLogs={Object.fromEntries(extraSetsForExercise(extraSetLogs,ex.id,activeLogDateForLogging()).map((row)=>[row.id||`extra-${row.extra_set_number}`,row]))} onAddExtraSet={trainingSessionIntent==='log'?()=>void addExtraWorkingSet(ex):undefined} onSaveExtraField={(id,field,value,opts)=>void saveExtraSetField(id,field,value,opts)} onSkipExercise={trainingSessionIntent==='log'?()=>void skipExercise(ex):undefined} exerciseSkipped={!!skippedExerciseIds[ex.id]} registerInputRef={el=>{if(el&&!refs.current.includes(el))refs.current.push(el)}} onInputKeyDown={next} onFocusNextInput={focusNextInput}/>}
       </div>;};
  const workoutExerciseSections=<>
-  {displayWorkout&&<div className="card training-workout-panel"><div className="topline" style={{justifyContent:'space-between'}}><h2>{displayWorkout.day_label} · {displayWorkout.workout_type}</h2><div className="actions"><button type="button" className="btn small secondary" onClick={()=>{const ids=(displayWorkout.st_exercises||[]).map((e:any)=>e.id);setCollapsedExercises((prev:any)=>{const next={...prev};ids.forEach((id:string)=>next[id]=false);return next;});}}>Expand all</button><button type="button" className="btn small secondary" onClick={()=>{const ids=(displayWorkout.st_exercises||[]).map((e:any)=>e.id);setCollapsedExercises((prev:any)=>{const next={...prev};ids.forEach((id:string)=>next[id]=true);return next;});}}>Collapse all</button><span className="muted">{workoutExerciseCount(displayWorkout)} exercises</span></div></div></div>}
-  {displayWorkout&&SECTIONS.map((sec:any)=>{
+  {displayWorkout&&<div className="card training-workout-panel"><div className="topline" style={{justifyContent:'space-between'}}><h2>{displayWorkout.day_label} · {displayWorkout.workout_type}</h2><div className="actions"><button type="button" className="btn small secondary" onClick={()=>{const ids=(displayWorkout.st_exercises||[]).map((e:any)=>e.id);setCollapsedExercises((prev:any)=>{const next={...prev};ids.forEach((id:string)=>next[id]=false);return next;});}}>Expand all</button><button type="button" className="btn small secondary" onClick={()=>{const ids=(displayWorkout.st_exercises||[]).map((e:any)=>e.id);setCollapsedExercises((prev:any)=>{const next={...prev};ids.forEach((id:string)=>next[id]=true);return next;});}}>Collapse all</button><span className="muted">{workingExerciseCountLabel(workingExerciseCount(displayWorkout))||'No working exercises'}</span></div></div></div>}
+  {displayWorkout&&workoutSectionsForDisplay(displayWorkout,{hideEmpty:trainingSessionIntent==='log'}).map((sec:any)=>{
    const exercises=sectionExercises(displayWorkout,sec.id);
    const primerExercises=sec.id==='warmup'?exercises.filter((e:any)=>/power primer/i.test(String(e.notes||''))):[];
    const displayExercises=sec.id==='warmup'?exercises.filter((e:any)=>!/power primer/i.test(String(e.notes||''))):exercises;
@@ -3260,6 +3260,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
       onMoveItem:(item,date)=>setTrainingMoveItem({item,date}),
       completingItemId:trainingCompleteBusy,
       completedDates:trainingCompletedDates,
+      workoutsById:Object.fromEntries((program?.st_workouts||[]).filter((w:any)=>w?.id).map((w:any)=>[w.id,w])),
     }}/>}
     {!viewingMember&&!trainingSessionOpen&&!session?.user&&<div className="card"><p className="muted">Sign in to see your training schedule.</p></div>}
     {viewingWorkoutId&&<WorkoutPlanSheet

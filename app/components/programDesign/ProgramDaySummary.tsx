@@ -6,6 +6,7 @@ import {
   dayDurationMinutes,
   previewExerciseNames,
   workingExerciseCount,
+  workingExerciseCountLabel,
   workoutPrimaryFocus,
 } from '../../../lib/programDesign/workoutPreview';
 import { WEEKDAY_LABELS, type ProgramActivity } from '../../../lib/programDesign/types';
@@ -55,7 +56,7 @@ export default function ProgramDaySummary({
               : [
                   showFocus ? focus : null,
                   durationLabel,
-                  working ? `${working} working exercise${working === 1 ? '' : 's'}` : null,
+                  workingExerciseCountLabel(working) || null,
                 ]
                   .filter(Boolean)
                   .join(' · ') || 'Scheduled'}

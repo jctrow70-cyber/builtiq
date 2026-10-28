@@ -1,5 +1,6 @@
 import { resolveExerciseEquipment } from '../training/exerciseEquipment';
 import { isRampEffortSetType } from '../training/setTypes';
+import { formatDuration } from './activityTypes';
 
 export const WORKOUT_SECTION_IDS = ['warmup', 'strength', 'conditioning', 'cooldown'] as const;
 export type WorkoutSectionId = (typeof WORKOUT_SECTION_IDS)[number];
@@ -196,6 +197,61 @@ export function workingExercises(workout: any) {
 
 export function workingExerciseCount(workout: any): number {
   return workingExercises(workout).length;
+}
+
+export function workingExerciseCountLabel(count: number): string {
+  if (count <= 0) return '';
+  return `${count} working exercise${count === 1 ? '' : 's'}`;
+}
+
+export type TrainingWorkoutSummary = {
+  name: string;
+  focus: string;
+  duration: string;
+  workingCount: number;
+  workingLabel: string;
+  source: string;
+  meta: string;
+};
+
+/** Shared Training / Program Design summary line from structured workout data only. */
+export function trainingWorkoutSummary(input: {
+  title?: string | null;
+  workout?: any | null;
+  duration?: string | null;
+  durationMinutes?: number | null;
+  sourceName?: string | null;
+}): TrainingWorkoutSummary {
+  const workout = input.workout || null;
+  const name =
+    (workout ? workoutFocusLabel(workout) : '') || String(input.title || '').trim() || 'Workout';
+  const focus = workout ? workoutPrimaryFocus(workout) : '';
+  const showFocus = Boolean(focus && focus !== name);
+  const duration =
+    String(input.duration || '').trim() ||
+    formatDuration(input.durationMinutes) ||
+    formatDuration(dayDurationMinutes([], workout));
+  const workingCount = workout ? workingExerciseCount(workout) : 0;
+  const workingLabel = workingExerciseCountLabel(workingCount);
+  const source = String(input.sourceName || '').trim();
+  const meta = [showFocus ? focus : null, duration, workingLabel, source].filter(Boolean).join(' · ');
+  return {
+    name,
+    focus: showFocus ? focus : '',
+    duration,
+    workingCount,
+    workingLabel,
+    source,
+    meta,
+  };
+}
+
+/** Same four section IDs as Program Design. hideEmpty is for Training Start / Review. */
+export function workoutSectionsForDisplay(workout: any, opts?: { hideEmpty?: boolean }) {
+  if (opts?.hideEmpty) {
+    return WORKOUT_SECTIONS.filter((sec) => sectionExercises(workout, sec.id).length > 0);
+  }
+  return WORKOUT_SECTIONS.map((sec) => ({ ...sec }));
 }
 
 export function workoutFocusLabel(workout: any): string {

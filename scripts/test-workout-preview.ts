@@ -37,8 +37,16 @@ assert.deepEqual(
   ['warmup', 'strength', 'conditioning', 'cooldown']
 );
 assert.deepEqual(
+  WORKOUT_SECTIONS.map((s) => s.label),
+  ['Warm-up', 'Strength', 'Conditioning', 'Cooldown']
+);
+assert.deepEqual(
   WORKOUT_TEMPLATE_SECTIONS.map((s) => s.id),
   ['warmup', 'strength', 'conditioning', 'cooldown']
+);
+assert.deepEqual(
+  WORKOUT_TEMPLATE_SECTIONS.map((s) => s.label),
+  WORKOUT_SECTIONS.map((s) => s.label)
 );
 
 assert.equal(normalizeWorkoutSection('warmup'), 'warmup');

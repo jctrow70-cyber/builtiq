@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 120 - Training reuses Program Design workout summaries
+
+Date: 2026-10-27
+Status: Accepted
+Category: Training / Program Design
+
+### Decision
+
+Training selected-day cards use the shared `trainingWorkoutSummary` helpers for name, focus, duration, working-exercise count, and source. Training Start / Review uses the same Warm-up / Strength / Conditioning / Cooldown labels as Program Design and omits empty sections. Section IDs, enrollment, calendar navigation, Start / Review, and set logging stay the same.
+
+### Reason
+
+The same `st_workouts` row looked like two different workouts because Training showed type + title + Done, while Program Design showed focus, duration, and working-exercise count. Duplicating that presentation logic would drift again.
+
+### Alternatives Considered
+
+Rebuild the Training calendar. Infer missing metadata from exercise names. Hide empty sections in the workout editor as well as Review.
+
+### Impact
+
+No database change. Training Edit workout still shows empty sections so users can add exercises. Overlay items without a loaded workout tree show title and source only.
+
+---
+
 ## Decision 119 - Romanian Deadlift keeps one card with Smith Machine
 
 Date: 2026-10-27

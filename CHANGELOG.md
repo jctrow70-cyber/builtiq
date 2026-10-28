@@ -11,6 +11,54 @@ Branch:
 Status:
 ```
 
+## BIQ-0271 Phase D1+D2 - Training summaries and section labels
+
+Date: 2026-10-27
+Branch: main
+Status: Implemented. Local commit. Not pushed. No database change.
+
+Summary: The selected-day Training card now uses the same workout name, focus, duration, working-exercise count, and source line as Program Design. Training Start / Review hides empty Warm-up, Strength, Conditioning, and Cooldown sections and uses those Program Design labels. Day / Week / Calendar, enrollment, Start / Review, set logging, and history are unchanged.
+
+Purpose: Make the same scheduled workout recognizable in Training and Program Design without changing how workouts are performed or logged.
+
+Files changed:
+- lib/programDesign/workoutPreview.ts
+- lib/training/workoutTemplate.ts
+- app/components/training/TrainingExecution.tsx
+- app/components/training/UnifiedTrainingSchedule.tsx
+- app/components/programDesign/ProgramDaySummary.tsx
+- app/components/groups/GroupMemberDashboard.tsx
+- app/page.tsx
+- app/globals.css
+- scripts/test-training-alignment.ts
+- scripts/test-workout-preview.ts
+- e2e/group-activity-stage3.spec.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- `npx tsx scripts/test-training-alignment.ts`
+- `npx tsx scripts/test-workout-preview.ts`
+- `npx tsx scripts/test-program-calendar-view.ts`
+- `npx tsx scripts/test-unified-schedule.ts`
+- `npx tsx scripts/test-customize-for-me.ts`
+- `npm run test:science`
+- `npx tsc --noEmit`
+- Training → select a scheduled day → confirm name, focus, duration, working-exercise count, and source
+- Review a completed workout without changing logs → confirm empty sections are hidden and labels are Warm-up / Strength / Conditioning / Cooldown
+- Confirm Day / Week / Calendar and Start / Review still work
+- Check 390px, 768px, and 1440px
+
+Known issues:
+- Overlay workouts from a program that is not currently loaded show title and source only until that program tree is fetched.
+- Training logger still opens directly from Start / Review. Prescription summaries inside the logger are Phase D3.
+- Edit-workout intent still shows empty sections so exercises can be added.
+
+Recommended commit message: BIQ-0271 Phase D1+D2 align Training summaries and section labels with Program Design
+
 ## BIQ-0271 Phase C - Workout detail experience
 
 Date: 2026-10-27
