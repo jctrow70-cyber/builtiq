@@ -11,6 +11,56 @@ Branch:
 Status:
 ```
 
+## BIQ-0271 Phase D5 - Training source identification
+
+Date: 2026-10-28
+Branch: main
+Status: Implemented. Local commit. Not pushed. No database change.
+
+Summary: Training calendar cards now show a compact source from the current enrollment or expectation, not program origin. Personal enrollments and personal copies stay Personal. Group enrollments use the team name, or Group training when that name is missing. Unknown future source keys use a neutral Training label. The D4 preview uses the same source. Same-day items stay separate, including completion. Workout logging, enrollment, calendar navigation, and Program Design are unchanged.
+
+Purpose: Make it obvious whether a scheduled workout belongs to a personal program or a group.
+
+Files changed:
+- lib/training/trainingSource.ts
+- lib/training/unifiedSchedule.ts
+- lib/programDesign/trainingSchedule.ts
+- lib/programDesign/workoutPreview.ts
+- app/components/training/TrainingExecution.tsx
+- app/components/training/UnifiedTrainingSchedule.tsx
+- app/components/training/WorkoutPlanSheet.tsx
+- app/page.tsx
+- app/globals.css
+- scripts/test-training-source.ts
+- scripts/test-training-alignment.ts
+- scripts/test-unified-schedule.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- `npx tsx scripts/test-training-source.ts`
+- `npx tsx scripts/test-training-preview.ts`
+- `npx tsx scripts/test-training-prescription.ts`
+- `npx tsx scripts/test-training-alignment.ts`
+- `npx tsx scripts/test-workout-preview.ts`
+- `npx tsx scripts/test-unified-schedule.ts`
+- `npx tsx scripts/test-customize-for-me.ts`
+- `npm run test:science`
+- `npx tsc --noEmit`
+- Training Day / Week / Calendar: confirm Personal and group names
+- Open View details and confirm the preview source matches the card
+- Confirm Start and Review still open the logger
+- Check 390px, 768px, and 1440px
+
+Known issues:
+- Month cells hide the source line below 768px to keep the grid readable. The selected-day card still shows it.
+- Overlay cards still show title only until the other program tree is fetched for preview.
+
+Recommended commit message: BIQ-0271 Phase D5 identify personal and group Training sources
+
 ## BIQ-0276 - Hold unlicensed exercise media and record third-party notices
 
 Date: 2026-10-27

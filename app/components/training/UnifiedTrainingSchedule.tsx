@@ -22,6 +22,7 @@ import {
   type ExpectationDisplayState,
   type ExpectationSessionStatus,
 } from '../../../lib/training/unifiedSchedule';
+import { resolveFollowedAssignmentSource } from '../../../lib/training/trainingSource';
 
 export type ScheduleStartItem = {
   expectationId: string;
@@ -96,6 +97,7 @@ type CalendarProps = {
   completingItemId?: string | null;
   completedDates?: string[];
   followedSourceProgramId?: string | null;
+  followedProgramId?: string | null;
   workoutsById?: Record<string, any>;
 };
 
@@ -227,12 +229,22 @@ export default function UnifiedTrainingSchedule({ userId, teams, rangeFrom, rang
   }, [expectations, sessions, teams]);
 
   const sourceProgramId = calendar.followedSourceProgramId || null;
-  const calendarToday = calendar.today ? overlayVisibleExpectations(calendar.today, visibleExpectations, today, sourceProgramId) : null;
-  const calendarTomorrow = calendar.tomorrow ? overlayVisibleExpectations(calendar.tomorrow, visibleExpectations, today, sourceProgramId) : null;
-  const calendarWeek = calendar.weekDays.map((day) => overlayVisibleExpectations(day, visibleExpectations, today, sourceProgramId));
+  const followedSource = resolveFollowedAssignmentSource({
+    followedProgramId: calendar.followedProgramId,
+    enrollments: enrollments.map((row) => ({
+      status: row.status,
+      programId: row.program_id,
+      sourceKey: row.source_key,
+      teamId: row.team_id,
+      teamName: teamName(row.team_id, row.source_key),
+    })),
+  });
+  const calendarToday = calendar.today ? overlayVisibleExpectations(calendar.today, visibleExpectations, today, sourceProgramId, followedSource) : null;
+  const calendarTomorrow = calendar.tomorrow ? overlayVisibleExpectations(calendar.tomorrow, visibleExpectations, today, sourceProgramId, followedSource) : null;
+  const calendarWeek = calendar.weekDays.map((day) => overlayVisibleExpectations(day, visibleExpectations, today, sourceProgramId, followedSource));
   const calendarMonth = calendar.monthCells.map((cell) => ({
     ...cell,
-    plan: cell.plan ? overlayVisibleExpectations(cell.plan, visibleExpectations, today, sourceProgramId) : cell.plan,
+    plan: cell.plan ? overlayVisibleExpectations(cell.plan, visibleExpectations, today, sourceProgramId, followedSource) : cell.plan,
   }));
 
   async function toggleVisible(row: EnrollmentRow) {

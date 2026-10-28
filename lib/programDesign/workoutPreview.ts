@@ -268,7 +268,7 @@ export function trainingWorkoutSummary(input: {
   const workingCount = workout ? workingExerciseCount(workout) : 0;
   const workingLabel = workingExerciseCountLabel(workingCount);
   const source = String(input.sourceName || '').trim();
-  const meta = [showFocus ? focus : null, duration, workingLabel, source].filter(Boolean).join(' · ');
+  const meta = [showFocus ? focus : null, duration, workingLabel].filter(Boolean).join(' · ');
   return {
     name,
     focus: showFocus ? focus : '',

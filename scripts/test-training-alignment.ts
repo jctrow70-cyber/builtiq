@@ -87,7 +87,7 @@ assert.equal(workingExerciseCount(fullBodyA), 5);
 assert.equal(workingExerciseCountLabel(1), '1 working exercise');
 assert.equal(workingExerciseCountLabel(0), '');
 assert.equal(summary.source, 'Personal');
-assert.equal(summary.meta, 'Chest + Quads · 1 hr · 5 working exercises · Personal');
+assert.equal(summary.meta, 'Chest + Quads · 1 hr · 5 working exercises');
 
 const programDesignMeta = [summary.focus, summary.duration, summary.workingLabel].join(' · ');
 assert.equal(programDesignMeta, 'Chest + Quads · 1 hr · 5 working exercises');
@@ -106,7 +106,8 @@ const overlayOnly = trainingWorkoutSummary({
   sourceName: 'TrowHoes',
 });
 assert.equal(overlayOnly.name, 'Full Body B');
-assert.equal(overlayOnly.meta, 'TrowHoes');
+assert.equal(overlayOnly.source, 'TrowHoes');
+assert.equal(overlayOnly.meta, '');
 
 const reviewSections = workoutSectionsForDisplay(fullBodyA, { hideEmpty: true });
 assert.deepEqual(

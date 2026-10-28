@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { trainingWorkoutSummary } from '../../../lib/programDesign/workoutPreview';
 import { previewDialogKeyCloses, previewDialogTabWrap } from '../../../lib/training/trainingPreview';
+import { trainingSourceLabel } from '../../../lib/training/trainingSource';
 import WorkoutPreview from '../programDesign/WorkoutPreview';
 
 const PREVIEW_FOCUSABLE =
@@ -40,8 +41,8 @@ export default function WorkoutPlanSheet({
     workout,
     duration: duration || null,
     durationMinutes: workout?.estimated_duration_minutes,
-    sourceName,
   });
+  const source = trainingSourceLabel({ sourceName });
   const hasExercises = (workout?.st_exercises || []).length > 0;
   const dialogRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
@@ -96,6 +97,7 @@ export default function WorkoutPlanSheet({
           <div>
             <p className="pd-eyebrow">{dateLabel}</p>
             <h2 id="te-plan-title">{summary.name}</h2>
+            {source ? <p className="te-plan-source">{source}</p> : null}
             {summary.meta ? <p className="muted">{summary.meta}</p> : null}
           </div>
           <button type="button" className="btn small secondary" onClick={onClose}>

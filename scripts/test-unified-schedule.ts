@@ -68,6 +68,8 @@ assert.equal(tuesdayPair.filter((row) => row.scheduledDate === '2026-10-06').len
 
 assert.equal(sourceLabel('group:team-1', 'Basketball'), 'Basketball');
 assert.equal(sourceLabel('personal'), 'Personal');
+assert.equal(sourceLabel('group:team-1'), 'Group training');
+assert.equal(sourceLabel('trainer:coach-1'), 'Training');
 
 const joinedLate = buildProgramExpectationDates({
   sourceKind: 'group',
@@ -292,6 +294,7 @@ assert.equal(overlaidMonday.items.filter((item) => item.workoutId === 'p-mon').l
 assert.equal(overlaidMonday.items.find((item) => item.workoutId === 'p-mon')?.statusLabel, 'Missed');
 assert.equal(overlaidMonday.items.find((item) => item.workoutId === 'p-mon')?.expectationId, 'exp-personal');
 assert.equal(overlaidMonday.items.find((item) => item.title === 'Easy run')?.statusLabel, 'Scheduled');
+assert.equal(overlaidMonday.items.find((item) => item.title === 'Easy run')?.sourceName, 'Personal');
 assert.equal(overlaidMonday.items.find((item) => item.workoutId === 'b-tue')?.sourceName, 'Basketball');
 assert.equal(overlaidMonday.items.find((item) => item.workoutId === 'b-tue')?.canMove, false);
 assert.equal(overlaidMonday.items.filter((item) => !item.isRest).length, 3);
@@ -313,10 +316,12 @@ const privateCopy = overlayVisibleExpectations(
     },
   ],
   wednesday,
-  'prog-template'
+  'prog-template',
+  { sourceKey: 'personal', sourceName: 'Personal' }
 );
 assert.equal(privateCopy.items.filter((item) => item.title === 'Full Body').length, 1);
 assert.equal(privateCopy.items.find((item) => item.title === 'Full Body')?.workoutId, 'p-mon');
+assert.equal(privateCopy.items.find((item) => item.title === 'Full Body')?.sourceName, 'Personal');
 assert.equal(privateCopy.items.find((item) => item.title === 'Easy run')?.activityId, 'cal-cardio');
 
 const hiddenMonday = overlayVisibleExpectations(mondayPlan, [], wednesday);

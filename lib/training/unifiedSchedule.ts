@@ -120,8 +120,14 @@ export function buildProgramExpectationDates(input: {
 }
 
 export function sourceLabel(sourceKey: string, teamName?: string | null): string {
-  if (sourceKey === 'personal') return 'Personal';
-  return teamName || 'Group';
+  const key = String(sourceKey || '').trim();
+  const name = String(teamName || '').trim();
+  const usable = name && name !== 'Group' && name !== 'Group training' && name !== 'Personal' ? name : '';
+  if (key === 'personal') return 'Personal';
+  if (key.startsWith('group:') || key.startsWith('group-activity:')) {
+    return usable || 'Group training';
+  }
+  return usable || 'Training';
 }
 
 export function sessionFulfillsExpectation(

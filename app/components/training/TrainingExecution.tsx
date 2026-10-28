@@ -6,6 +6,7 @@ import SectionHeader from '../ui/SectionHeader';
 import { formatLongWeekday, formatMediumDate } from '../../../lib/programDesign/cycle';
 import { itemAllowsCheckoff } from '../../../lib/programDesign/activityCompletion';
 import { trainingWorkoutSummary } from '../../../lib/programDesign/workoutPreview';
+import { trainingSourceLabel } from '../../../lib/training/trainingSource';
 import type { TrainingDayItem, TrainingDayPlan, TrainingMonthCell } from '../../../lib/programDesign/trainingSchedule';
 
 type CalendarView = 'day' | 'week' | 'month';
@@ -110,12 +111,13 @@ function DayItems({
           title: item.title,
           workout: item.workoutId ? workoutsById?.[item.workoutId] : null,
           duration: item.duration,
-          sourceName: item.sourceName,
         });
+        const source = trainingSourceLabel(item);
         return (
         <div key={item.id} className={`te-item${item.completed ? ' te-item--done' : ''}`}>
           <div className="te-item-main">
             <span className="te-item-type">{item.typeLabel}</span>
+            {source ? <span className="te-item-source">{source}</span> : null}
             <button
               type="button"
               className="te-item-title"
@@ -396,14 +398,18 @@ export default function TrainingExecution({
                   <span className="te-week-dow">{day.dayLabel}</span>
                   <span className="muted">{formatMediumDate(day.date)}</span>
                   {actionable.length === 0 && <b>—</b>}
-                  {actionable.slice(0, 3).map((item) => (
+                  {actionable.slice(0, 3).map((item) => {
+                    const source = trainingSourceLabel(item);
+                    return (
                     <span key={item.id} className="te-week-activity">
                       <b>{item.title}</b>
+                      {source ? <span className="te-week-source">{source}</span> : null}
                       {item.statusLabel && (
                         <span className={`te-status te-status--${item.statusLabel.toLowerCase()}`}>{item.statusLabel}</span>
                       )}
                     </span>
-                  ))}
+                    );
+                  })}
                   {actionable.length > 3 && <span className="muted">+{actionable.length - 3} more</span>}
                   {day.isToday && <span className="te-week-meta">Today</span>}
                 </button>
@@ -445,6 +451,7 @@ export default function TrainingExecution({
                 const actionable = items.filter((item) => !item.isRest);
                 const done = actionable.length > 0 ? actionable.every((item) => item.completed) : completedDates.includes(cell.date);
                 const missed = actionable.some((item) => item.statusLabel === 'Missed');
+                const primarySource = cell.plan?.primary ? trainingSourceLabel(cell.plan.primary) : null;
                 return (
                   <button
                     key={cell.date}
@@ -468,6 +475,7 @@ export default function TrainingExecution({
                       ))}
                     </span>
                     {cell.plan?.primary && <span className="te-month-title">{cell.plan.primary.title}</span>}
+                    {primarySource ? <span className="te-month-source">{primarySource}</span> : null}
                   </button>
                 );
               })}

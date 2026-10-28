@@ -64,6 +64,7 @@ import ProgramDesignHome from './components/programDesign/ProgramDesignHome';
 import UnifiedTrainingSchedule, { type ScheduleStartItem } from './components/training/UnifiedTrainingSchedule';
 import WorkoutPlanSheet from './components/training/WorkoutPlanSheet';
 import { canShowTrainingPreviewEdit, resolveTrainingPreviewWorkout } from '../lib/training/trainingPreview';
+import { trainingSourceLabel } from '../lib/training/trainingSource';
 import MoveWorkoutSheet from './components/training/MoveWorkoutSheet';
 import { cycleLengthOf } from '../lib/programDesign/cycle';
 import { focusMusclesForSingleDayType, inferSessionMinutesFromPrompt, inferSingleDayTypeFromPrompt } from '../lib/programDesign/inferSchedule';
@@ -2710,7 +2711,7 @@ function onSelectTrainingDay(date:string){
   }
   setLogDate(date);
   setWorkoutPreviewMeta({
-   sourceName:item.sourceName||null,
+   sourceName:trainingSourceLabel(item),
    error:resolved.error,
    completed:!!item.completed,
    workout:resolved.workout,
@@ -3262,6 +3263,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
       followedFromGroup,
       followingGroupTemplate,
       personalizedCopy,
+      followedProgramId:program?.id||null,
       followedSourceProgramId:personalizedCopy?program?.source_program_id||null:null,
       onCustomizeForMe:canCustomizeForMe?()=>void customizeFollowedProgramForMeHandler():undefined,
       customizeBusy:customizeForMeBusy,

@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 124 - Training source labels use enrollment identity
+
+Date: 2026-10-28
+Status: Accepted
+Category: Training / Groups
+
+### Decision
+
+Training calendar cards and the D4 preview show a compact source from the current enrollment or expectation `source_key`, not program origin. A personal enrollment or a just-me copy on that enrollment is Personal. A group enrollment uses the team display name, or Group training when that name is missing. Unknown future source keys use a neutral Training label. Workout titles are never used to infer ownership. Same-day items keep their own schedule identity and completion.
+
+### Reason
+
+Users needed to see whether a session was personal or group training without changing enrollment, logging, or the calendar layout.
+
+### Alternatives Considered
+
+Large colored badges. Inferring the source from workout names. Merging same-day personal and group sessions.
+
+### Impact
+
+No database change. Logging, enrollment, completion, Program Design, and D4 preview authorization stay the same.
+
+---
+
 ## Decision 123 - Hold third-party exercise media until commercial rights are recorded
 
 Date: 2026-10-27

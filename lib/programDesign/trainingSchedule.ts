@@ -322,7 +322,8 @@ export function overlayVisibleExpectations(
   plan: TrainingDayPlan,
   rows: VisibleScheduleExpectation[],
   localToday: string,
-  followedSourceProgramId?: string | null
+  followedSourceProgramId?: string | null,
+  followedSource?: { sourceKey: string; sourceName: string } | null
 ): TrainingDayPlan {
   const mine = rows.filter((row) => row.scheduledDate === plan.date);
   let items = plan.items.map((item) => ({ ...item }));
@@ -377,6 +378,16 @@ export function overlayVisibleExpectations(
       canMove: false,
     });
   }
-  items = items.map(withStatus);
+  items = items.map((item) => {
+    const next = withStatus(item);
+    if (next.sourceKey || next.isRest) return next;
+    if (next.source === 'calendar') {
+      return { ...next, sourceKey: 'personal', sourceName: next.sourceName || 'Personal' };
+    }
+    if (next.source === 'program' && followedSource) {
+      return { ...next, sourceKey: followedSource.sourceKey, sourceName: followedSource.sourceName };
+    }
+    return next;
+  });
   return withPrimary({ ...plan, isToday: plan.date === localToday }, items);
 }
