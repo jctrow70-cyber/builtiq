@@ -4,6 +4,34 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 127 - Phase D is closed; Phase E is logging UX
+
+Date: 2026-10-28
+Status: Accepted
+Category: Training
+
+### Decision
+
+BIQ-0271 Phase D is accepted and closed. D1–D5 and D6 Slice 1 are complete. The final visual acceptance review confirmed that scheduled workouts, Start / Review, Personal / group source, and collapsed session feedback meet the Phase D bar.
+
+D6.3 (Programs enrollment disclosure) is no longer required for Phase D acceptance. D6.4 (session sticky bar / duplicate workout panel) and D6.7 (log-mode exercise-card chrome) transfer to Phase E. D6.6 mobile Week refinement is deferred and stays open. Fuller 390px month-cell source chips are dropped; the selected-day card remains the mobile source surface. Remaining Training UX issues do not block Phase D closure and must stay tracked as open.
+
+Phase E is Exercise Logging UX Redesign. It starts with a read-only audit of set-entry, previous comparable performance, rest, warm-up versus working sets, supersets, exercise navigation, session header and feedback, mobile usability, and workout completion. Phase E must preserve existing workout logging, historical snapshots, group assignments, and Program Design. Do not start Phase E implementation until that audit is approved.
+
+### Reason
+
+Phase D’s job was to align Training with Program Design and make the scheduled workout easy to start. Slice 1 did that. Another D6 implementation slice would mix calendar leftovers with logger redesign.
+
+### Alternatives Considered
+
+Another D6 cleanup before closing D. Keeping D6.3 as a Phase D gate. Moving D6.6 into Phase E. Keeping fuller 390px month-cell chips on the Phase D list.
+
+### Impact
+
+No application or database change. Logging, snapshots, enrollment, and Program Design stay the same. Open follow-ups remain open.
+
+---
+
 ## Decision 126 - Training screen simplification is presentation-only
 
 Date: 2026-10-28
@@ -24,7 +52,7 @@ Redesigning set-entry in the same slice. Moving Programs Hide / Stop into a new 
 
 ### Impact
 
-No database change. Workout identities, completion, enrollment, and session-saving rules stay the same. D6.3, D6.4, D6.6, and D6.7 remain later.
+No database change. Workout identities, completion, enrollment, and session-saving rules stay the same. Phase D later closed these leftovers under Decision 127: D6.3 is not required for D; D6.4 and D6.7 moved to Phase E; D6.6 mobile Week refinement stayed deferred; fuller 390px month-cell chips were dropped.
 
 ---
 

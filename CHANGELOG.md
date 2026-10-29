@@ -11,6 +11,40 @@ Branch:
 Status:
 ```
 
+## BIQ-0271 Phase D closed - Training calendar alignment accepted
+
+Date: 2026-10-28
+Branch: main
+Status: Documentation only. Not committed. No application or database change.
+
+Summary: Phase D is accepted and closed after the final visual acceptance review. D1–D5 and D6 Slice 1 are complete. D6.3 is not required for Phase D. D6.4 and D6.7 move to Phase E (Exercise Logging UX Redesign). D6.6 mobile Week refinement stays deferred and open. Fuller 390px month-cell source chips are dropped. Remaining Training UX issues are tracked as open and do not block Phase D closure. Phase E starts as a read-only audit; no logging implementation in this change.
+
+Purpose: Close the Program Design → Training alignment phase and keep leftover UX work visible without starting another D6 slice.
+
+Files changed:
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- Confirm Decision 127 records Phase D closed and Phase E as a read-only logging audit
+- Confirm ROADMAP lists the six open Training UX follow-ups as open, not complete
+- Confirm no application files changed
+
+Known issues:
+- Programs enrollment Hide / Stop still compete with Start / Review (open; not a Phase D gate)
+- 390px Week strip remains dense (open; deferred)
+- Recovery activities without a workout ID still have no Start or preview (open)
+- Followed-program display can fall back to `1 week 10/26` (open)
+- Session header still duplicates the workout name (open; Phase E)
+- Logger exercise cards remain dense (open; Phase E)
+
+Recommended commit message: BIQ-0271 Close Phase D and start Phase E as a logging UX audit
+
+---
+
 ## BIQ-0271 Phase D6 slice 1 - Training screen simplification
 
 Date: 2026-10-28
