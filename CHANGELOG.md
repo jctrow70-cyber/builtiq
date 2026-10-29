@@ -11,6 +11,59 @@ Branch:
 Status:
 ```
 
+## BIQ-0271 Phase D6 slice 1 - Training screen simplification
+
+Date: 2026-10-28
+Branch: main
+Status: Implemented. Local commit. Not pushed. No database change.
+
+Summary: Training selected-day cards now lead with the workout title, a compact Personal / group source line, and Start or Review. The extra View details link is gone because the title still opens the D4 preview. Scheduled and Completed chips no longer sit next to Start and Review. Completed titles stay readable with a small green check instead of strikethrough. The sticky header now publishes its height so scroll-into-view leaves titles and How did it go? clickable. The calendar uses one Training heading with the selected date instead of Training / Today / This day. Empty days keep a single Add activity in the toolbar. Session feedback starts collapsed behind How did it go? on new sessions, opens for Review or after Skip / Completed / Partial, and keeps saved values. Logging, scheduling, enrollment, and set-entry are unchanged.
+
+Purpose: Make scheduled workouts and logging immediately accessible without changing Training architecture or persistence.
+
+Files changed:
+- lib/training/trainingDayCard.ts
+- lib/training/sessionFeedback.ts
+- app/components/training/TrainingExecution.tsx
+- app/components/training/SessionOutcomeCard.tsx
+- app/page.tsx
+- app/components/layout/AppHeader.tsx
+- app/globals.css
+- scripts/test-training-simplification.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- `npx tsx scripts/test-training-simplification.ts`
+- `npx tsx scripts/test-training-source.ts`
+- `npx tsx scripts/test-training-preview.ts`
+- `npx tsx scripts/test-training-prescription.ts`
+- `npx tsx scripts/test-training-alignment.ts`
+- `npx tsx scripts/test-workout-preview.ts`
+- `npx tsx scripts/test-unified-schedule.ts`
+- `npx tsx scripts/test-customize-for-me.ts`
+- `npx tsx scripts/test-session-finalization.ts`
+- `npx tsx scripts/test-program-calendar-view.ts`
+- `npm run test:science`
+- `npx tsc --noEmit`
+- Training Day / Week / Calendar at 390px, 768px, and 1440px
+- Confirm title opens preview; Start and Review still open the logger
+- Confirm Personal and group labels remain
+- Confirm empty days have one Add activity
+- Review a completed workout only; confirm How did it go? shows saved feedback
+- Do not create live sessions, save logs, or change group participation
+
+Known issues:
+- D6.3 Programs disclosure, D6.4 session sticky bar, D6.6 week/month densify, and D6.7 log-mode chrome are not in this slice
+- Month cells still hide the source line below 700px; the selected-day card still shows it
+
+Recommended commit message: BIQ-0271 Phase D6 simplify Training cards, heading, and session feedback
+
+---
+
 ## BIQ-0277 - Seated Chest Press Master Card
 
 Date: 2026-10-28

@@ -2,11 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import SegmentedControl from '../ui/SegmentedControl';
-import SectionHeader from '../ui/SectionHeader';
 import { formatLongWeekday, formatMediumDate } from '../../../lib/programDesign/cycle';
 import { itemAllowsCheckoff } from '../../../lib/programDesign/activityCompletion';
 import { trainingWorkoutSummary } from '../../../lib/programDesign/workoutPreview';
 import { trainingSourceLabel } from '../../../lib/training/trainingSource';
+import {
+  showEmptyDayAdd,
+  trainingDayCardAction,
+  trainingDayCardLine,
+  trainingDayCardShowsStatus,
+  trainingDayCardTitleAria,
+} from '../../../lib/training/trainingDayCard';
 import type { TrainingDayItem, TrainingDayPlan, TrainingMonthCell } from '../../../lib/programDesign/trainingSchedule';
 
 type CalendarView = 'day' | 'week' | 'month';
@@ -59,6 +65,7 @@ function DayItems({
   onComplete,
   completingItemId,
   onAdd,
+  headerHasAdd = false,
   onMove,
   workoutsById,
 }: {
@@ -70,6 +77,7 @@ function DayItems({
   onComplete?: (item: TrainingDayItem) => void;
   completingItemId?: string | null;
   onAdd?: () => void;
+  headerHasAdd?: boolean;
   onMove?: (item: TrainingDayItem) => void;
   workoutsById?: Record<string, any>;
 }) {
@@ -87,11 +95,11 @@ function DayItems({
     return (
       <div className="te-empty">
         <p className="muted">No activities on this day. Add one anytime.</p>
-        {onAdd && (
+        {showEmptyDayAdd(headerHasAdd) && onAdd ? (
           <button type="button" className="btn green" onClick={onAdd}>
             Add activity
           </button>
-        )}
+        ) : null}
       </div>
     );
   }
@@ -113,39 +121,47 @@ function DayItems({
           duration: item.duration,
         });
         const source = trainingSourceLabel(item);
+        const canPreview = !!item.workoutId && !!onView;
+        const cardLine = trainingDayCardLine({
+          source,
+          typeLabel: item.typeLabel,
+          duration: summary.duration,
+          focus: summary.focus,
+        });
+        const showStatus = trainingDayCardShowsStatus({ statusLabel: item.statusLabel, canStart });
+        const action = trainingDayCardAction({ canStart, completed: item.completed });
         return (
         <div key={item.id} className={`te-item${item.completed ? ' te-item--done' : ''}`}>
           <div className="te-item-main">
-            <span className="te-item-type">{item.typeLabel}</span>
-            {source ? <span className="te-item-source">{source}</span> : null}
             <button
               type="button"
               className="te-item-title"
-              disabled={!item.workoutId || !onView}
-              aria-label={item.workoutId && onView ? `View details for ${summary.name}` : undefined}
+              disabled={!canPreview}
+              aria-label={trainingDayCardTitleAria({ name: summary.name, canPreview })}
               onClick={() => {
                 if (item.workoutId) onView?.(item);
               }}
             >
               <b>{summary.name}</b>
+              {item.completed ? (
+                <span className="te-item-done-mark" aria-hidden="true">
+                  ✓
+                </span>
+              ) : null}
             </button>
-            {summary.meta ? <span className="muted te-item-meta">{summary.meta}</span> : null}
-            {item.workoutId && onView ? (
-              <button type="button" className="te-item-details" onClick={() => onView(item)}>
-                View details
-              </button>
-            ) : null}
-            {item.statusLabel && (
+            {cardLine ? <span className="muted te-item-meta">{cardLine}</span> : null}
+            {item.completed && !showStatus ? <span className="visually-hidden">Completed</span> : null}
+            {showStatus && item.statusLabel ? (
               <span className={`te-status te-status--${item.statusLabel.toLowerCase()}`}>{item.statusLabel}</span>
-            )}
+            ) : null}
             {item.movedFrom && (
               <span className="muted te-item-moved">Moved from {formatLongWeekday(item.movedFrom)}</span>
             )}
           </div>
           <div className="actions te-item-actions">
-            {canStart && (
+            {action && (
               <button type="button" className={`btn ${idx === 0 ? 'green' : 'secondary'} small`} onClick={() => onStart(item)}>
-                {item.completed ? 'Review' : 'Start'}
+                {action}
               </button>
             )}
             {canSetup && (
@@ -265,28 +281,27 @@ export default function TrainingExecution({
         onComplete: onCompleteItem ? (item: TrainingDayItem) => onCompleteItem(item, today.date) : undefined,
         completingItemId,
         onAdd: onAddActivity ? () => onAddActivity(today.date) : undefined,
+        headerHasAdd: !!onAddActivity,
         onMove: onMoveItem ? (item: TrainingDayItem) => onMoveItem(item, today.date) : undefined,
         workoutsById,
       }
     : null;
   return (
     <div className="te-screen">
-      <SectionHeader
-        title={viewingToday ? 'Today' : today ? 'This day' : 'Training'}
-        subtitle={today ? formatLongWeekday(today.date) : 'Your calendar'}
-        actions={
-          <div className="actions">
-            {onAddActivity && today && (
-              <button type="button" className="btn green" onClick={() => onAddActivity(today.date)}>
-                Add activity
-              </button>
-            )}
-            <button type="button" className="btn small secondary" onClick={onOpenPrograms}>
-              Programs
-            </button>
-          </div>
-        }
-      />
+      <div className="te-toolbar">
+        {onAddActivity && today && (
+          <button
+            type="button"
+            className={`btn small ${today.items.length ? 'secondary' : 'green'}`}
+            onClick={() => onAddActivity(today.date)}
+          >
+            Add activity
+          </button>
+        )}
+        <button type="button" className="btn small secondary" onClick={onOpenPrograms}>
+          Programs
+        </button>
+      </div>
 
       {programName && (
         <div className="te-follow-block">
@@ -344,7 +359,6 @@ export default function TrainingExecution({
       {calendarView === 'day' && today && (
         <>
           <section className="te-block">
-            <h2>{viewingToday ? "Today's plan" : "This day's plan"}</h2>
             {dayItemHandlers && <DayItems {...dayItemHandlers} />}
           </section>
           {tomorrow && (

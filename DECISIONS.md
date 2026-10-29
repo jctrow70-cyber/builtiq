@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 126 - Training screen simplification is presentation-only
+
+Date: 2026-10-28
+Status: Accepted
+Category: Training
+
+### Decision
+
+Phase D6 slice 1 simplifies selected-day cards, the Training heading, and session-feedback placement without changing logging, scheduling, assignments, or persistence. The workout title remains the D4 preview control. Start and Review remain the logger actions. Personal and group source labels stay compact and visible. Completed titles stay readable with a small check instead of strikethrough. The sticky header publishes its height so scroll-into-view does not cover titles or How did it go?. Session feedback stays available through a How did it go? control and still saves the same feel, pain, notes, and outcome values.
+
+### Reason
+
+Beginners needed a clearer path to the scheduled workout and the set logger. Duplicate headings, View details, and a full feedback card above the first exercise were competing with Start and Review.
+
+### Alternatives Considered
+
+Redesigning set-entry in the same slice. Moving Programs Hide / Stop into a new disclosure. Changing Day / Week / Calendar or dropping the full-month grid.
+
+### Impact
+
+No database change. Workout identities, completion, enrollment, and session-saving rules stay the same. D6.3, D6.4, D6.6, and D6.7 remain later.
+
+---
+
 ## Decision 125 - Seated Chest Press Is Its Own Master Card
 
 Date: 2026-10-28

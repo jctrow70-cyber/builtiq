@@ -30,6 +30,22 @@ export default function AppHeader({
 }: AppHeaderProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+    const apply = () => {
+      document.documentElement.style.setProperty('--app-header-offset', `${el.offsetHeight}px`);
+    };
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(el);
+    return () => {
+      observer.disconnect();
+      document.documentElement.style.removeProperty('--app-header-offset');
+    };
+  }, []);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -43,7 +59,7 @@ export default function AppHeader({
   const initial = (displayName || 'U').trim().charAt(0).toUpperCase();
 
   return (
-    <header className="app-header-v2">
+    <header className="app-header-v2" ref={headerRef}>
       <div className="app-header-v2-top">
         <div className="app-header-v2-brand-block">
           <div className="brand app-header-v2-brand">
