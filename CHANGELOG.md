@@ -11,6 +11,49 @@ Branch:
 Status:
 ```
 
+## BIQ-0271 Phase E2.3 - Equipment-aware exercise History
+
+Date: 2026-10-30
+Branch: main
+Status: Implemented. Local commit. Not pushed. No database change.
+
+Summary: Exercise History now shows the snapshotted equipment, set type, and set number for each logged set. Current equipment is the default filter and includes only verified matches. All equipment still shows unknown, unverified, and other implements. Missing current-equipment history explains that instead of substituting another implement. Extra sets, warm-up / ramp / backoff, and working sets stay labeled separately. Copy last, snapshots, and persistence are unchanged. Escape closes the History modal. Long set labels and equipment names wrap instead of overlapping values.
+
+Purpose: Make prior performance readable by equipment without rewriting history.
+
+Files changed:
+- lib/training/exerciseSessionHistory.ts
+- lib/training/exerciseHistoryDisplay.ts
+- app/components/training/ExerciseSessionHistoryModal.tsx
+- app/page.tsx
+- app/globals.css
+- scripts/test-exercise-history-display.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- `npx tsx scripts/test-exercise-history-display.ts`
+- `npx tsx scripts/test-previous-performance.ts`
+- `npx tsx scripts/test-previous-performance-logger.ts`
+- `npx tsx scripts/test-training-set-entry.ts`
+- `npx tsx scripts/test-session-finalization.ts`
+- `npx tsx scripts/test-progress-analytics.ts`
+- `npx tsx lib/scienceEngine/acceptanceCheck.ts`
+- `npx tsc --noEmit`
+- Open History from a completed Review if a local signed-in session is available. Do not Start or write production logs.
+
+Known issues:
+- Authenticated visual QA of the new History markup remains outstanding. The signed-in localhost:3000 session still served the pre-E2.3 History UI.
+- `npx tsc --noEmit` still fails on the pre-existing BIQ-0279 `catalogCleanupCheck.ts` comparison
+- History still groups by week/day/date; it does not split a mixed-equipment day into separate session cards
+
+Recommended commit message: BIQ-0271 Phase E2.3 Show equipment-aware exercise History
+
+---
+
 ## BIQ-0271 Phase E2.2 - Previous-performance logger integration
 
 Date: 2026-10-30

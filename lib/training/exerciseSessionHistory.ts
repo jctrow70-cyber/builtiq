@@ -1,5 +1,8 @@
+import { seriesIdentityFromParts, UNSPECIFIED_EQUIPMENT } from '../progress/identity';
+import { parseProvenance } from '../progress/provenance';
 import type { ExerciseType } from './exerciseTypes';
 import { formatLogSummary } from './logFields';
+import { isExtraSetLog } from './plannedSetGuard';
 import { buildLastPerformance } from './progression';
 
 export type ExerciseSessionSet = {
@@ -7,6 +10,10 @@ export type ExerciseSessionSet = {
   setType: string;
   summary: string;
   completed: boolean;
+  extra?: boolean;
+  equipmentKey?: string;
+  equipmentLabel?: string;
+  equipmentVerified?: boolean;
 };
 
 export type ExerciseSessionEntry = {
@@ -89,12 +96,19 @@ export function buildExerciseSessionHistory(
     const snapDay = String(first.snapshot_day_label || dayLabel || '');
     const workoutType = String(first.snapshot_workout_type || '');
 
-    const sets: ExerciseSessionSet[] = sorted.map((row) => ({
-      setNumber: logSetNumber(row),
-      setType: logSetType(row),
-      summary: formatLogSummary(row, exType),
-      completed: row.completed === true,
-    }));
+    const sets: ExerciseSessionSet[] = sorted.map((row) => {
+      const equipment = historyEquipmentFromSnapshot(row);
+      return {
+        setNumber: logSetNumber(row),
+        setType: logSetType(row),
+        summary: formatLogSummary(row, exType),
+        completed: row.completed === true,
+        extra: isExtraSetLog(row),
+        equipmentKey: equipment.equipmentKey,
+        equipmentLabel: equipment.equipmentLabel,
+        equipmentVerified: equipment.equipmentVerified,
+      };
+    });
 
     const perf = buildLastPerformance(sorted);
     sessions.push({
@@ -109,6 +123,23 @@ export function buildExerciseSessionHistory(
   });
 
   return sessions.sort((a, b) => sessionSortKey(b) - sessionSortKey(a));
+}
+
+/** Snapshot only. Never use the current exercise equipment. */
+export function historyEquipmentFromSnapshot(row: any): {
+  equipmentKey: string;
+  equipmentLabel: string;
+  equipmentVerified: boolean;
+} {
+  const identity = seriesIdentityFromParts({ equipment: row?.snapshot_equipment });
+  const provenance = parseProvenance(row?.snapshot_provenance);
+  const known = identity.equipmentKey !== UNSPECIFIED_EQUIPMENT;
+  const verified = known && provenance.equipment === 'snapshotted';
+  return {
+    equipmentKey: identity.equipmentKey,
+    equipmentLabel: verified ? identity.equipmentLabel : 'Unknown',
+    equipmentVerified: verified,
+  };
 }
 
 export function formatExerciseSessionTitle(entry: ExerciseSessionEntry): string {

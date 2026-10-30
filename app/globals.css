@@ -68,6 +68,7 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .exercise-history-panel{width:100%;max-width:560px;max-height:88vh;overflow:auto;margin:0}
 .exercise-history-subtitle{margin:4px 0 0;font-size:13px}
 .exercise-history-empty{margin:12px 0 0}
+.exercise-history-filters{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .exercise-history-list{display:grid;gap:10px;margin-top:12px}
 .exercise-history-session{padding:12px;border-radius:12px;background:#0f1422;border:1px solid #334155}
 .exercise-history-session-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
@@ -75,9 +76,13 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .exercise-history-workout-type{font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase}
 .exercise-history-session-summary{margin:6px 0 0;font-size:13px;font-weight:700;color:#cbd5e1}
 .exercise-history-set-list{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:6px}
-.exercise-history-set-list li{display:grid;grid-template-columns:72px 1fr auto;gap:8px;align-items:baseline;font-size:13px}
-.exercise-history-set-label{font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase}
-.exercise-history-set-value{color:#e2e8f0;font-weight:600}
+.exercise-history-set-list li{display:flex;flex-wrap:wrap;gap:4px 8px;align-items:baseline;font-size:13px}
+.exercise-history-set-label{flex:0 1 5.6rem;min-width:3.2rem;font-size:10px;font-weight:800;color:#94a3b8;text-transform:uppercase;overflow-wrap:anywhere}
+.exercise-history-set-value{flex:1 1 6rem;min-width:0;color:#e2e8f0;font-weight:600}
+.exercise-history-set-eq{flex:1 1 6rem;min-width:0;font-size:11px;font-weight:700;color:#94a3b8;overflow-wrap:anywhere}
+.exercise-history-set-eq-verified{color:#cbd5e1}
+.exercise-history-set-eq-unknown{color:#f8d48b}
+.exercise-history-set-eq-different{color:#93c5fd}
 .exercise-history-set-done{color:#4ade80;font-weight:800}
 .warmup-exercise-log{margin-top:6px}
 .warmup-target-list{margin:0 0 10px;padding:0;list-style:none;display:grid;gap:6px}
@@ -947,6 +952,8 @@ button.member-training-week-row{width:100%;background:transparent;border-left:0;
   .set-log-chips .log-chip{min-width:0;min-height:40px;padding:6px 8px;flex:1 1 0}
   .set-log-card{padding:8px}
   .set-log-list{gap:10px}
+  .exercise-history-set-label{flex-basis:4.8rem}
+  .exercise-history-filters .log-chip{min-height:36px}
 }
  @media(max-width:600px){.nutrition-totals-grid,.nutrition-date-row{grid-template-columns:1fr}.nutrition-food-chip,.nutrition-entry-row{grid-template-columns:1fr}}
 @media(max-width:900px){

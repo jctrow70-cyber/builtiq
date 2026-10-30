@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 133 - History shows snapshotted equipment and a Current/All filter
+
+Date: 2026-10-30
+Status: Accepted
+Category: Training
+
+### Decision
+
+BIQ-0271 Phase E2.3 labels each History set from `snapshot_equipment` and `snapshot_provenance` only. Verified Barbell, Dumbbell, Smith Machine, and other implements keep their snapshotted names. Missing or unverified equipment is Unknown. History never copies today's selected equipment onto a past set. The default filter is Current equipment and includes only verified matches for that implement. All equipment shows unknown, unverified, and other-implement rows. If current equipment has no verified history, the empty state says so instead of substituting another implement. Set rows use WU, WK, Ramp, Backoff, and Extra labels. Personal and group rows for the same user stay pooled. Copy last stays the E2.2 rule.
+
+### Reason
+
+Users need to see which implement a prior session used. Mixing barbell and dumbbell history under one unlabeled list made week-to-week comparison untrustworthy.
+
+### Alternatives Considered
+
+Inferring missing equipment from the current dropdown. Putting unknown rows in the Current filter. A per-implement picker with many chips. Changing Copy last in the same slice.
+
+### Impact
+
+No database change. Snapshots, Progress, Science comparable-exposure, session completion, and Program Design stay the same.
+
+---
+
 ## Decision 132 - Logger previous performance uses verified equipment matches
 
 Date: 2026-10-30
