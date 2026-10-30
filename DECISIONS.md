@@ -4,6 +4,32 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 128 - Phase E1 is presentation-only set-entry first
+
+Date: 2026-10-29
+Status: Accepted
+Category: Training
+
+### Decision
+
+BIQ-0271 Phase E1 simplifies working-set exercise-card chrome so Weight, Reps, RIR, and Done are the primary focus at 390px. Collapse, Form guide, History, and + Set stay visible. Edit, Change exercise, Move up/down, Remove exercise, and Remove from superset move into a More menu. The existing superset join / pair / new panel remains the equivalent path for New superset. Copy last stays an explicit control. Previous performance stays a placeholder hint and is not auto-filled or auto-saved.
+
+E1 does not change `st_set_logs` persistence, snapshots, session completion, extra sets, skip exercise, previous-performance matching, group / personal / just-me source resolution, Program Design, or superset persistence. Equipment-history matching, rest timers, warm-up set logging, and superset workflow changes are out of this slice.
+
+### Reason
+
+At 390px, exercise-management buttons were competing with the values a user needs to log. The calendar already uses a More menu for secondary actions; the logger can reuse that pattern without a page.tsx rewrite.
+
+### Alternatives Considered
+
+Auto-filling previous performance. Hiding History or + Set. Extracting `renderExerciseCard` into a new component. Logging warm-up sets in the same slice.
+
+### Impact
+
+No database change. Logged values, Done, Copy last, extra sets, and Review permissions keep their existing handlers. Warm-up cards still show Change / + Set / Remove on the face until a later Phase E slice. E1 acceptance requires Escape to close More and restore focus to the trigger; outside click still dismisses; menu items stay keyboard-reachable without a focus trap.
+
+---
+
 ## Decision 127 - Phase D is closed; Phase E is logging UX
 
 Date: 2026-10-28

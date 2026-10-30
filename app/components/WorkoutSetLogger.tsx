@@ -16,6 +16,7 @@ import {
   type LogFieldUI,
 } from '../../lib/training/logFieldUI';
 import { SET_TYPES, isRampEffortSetType, setTypeAcronym, setTypeLabel, type SetTypeValue } from '../../lib/training/setTypes';
+import { copyLastAriaLabel, logFieldAriaLabel, setDoneAriaLabel } from '../../lib/training/exerciseLogChrome';
 
 type SetRow = {
   id: string;
@@ -109,6 +110,7 @@ function SetTypePicker({
         className="badge set-type-badge set-type-picker-btn"
         aria-expanded={open}
         aria-haspopup="listbox"
+        aria-label={`Set type ${setTypeAcronym(value)}`}
         title={setTypeLabel(value)}
         onClick={() => setOpen((v) => !v)}
       >
@@ -149,7 +151,13 @@ function DoneCheck({
 }) {
   return (
     <label className="set-done-check">
-      <input type="checkbox" checked={completed} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
+      <input
+        type="checkbox"
+        checked={completed}
+        disabled={disabled}
+        aria-label={setDoneAriaLabel()}
+        onChange={(e) => onChange(e.target.checked)}
+      />
       <span>Done</span>
     </label>
   );
@@ -215,6 +223,8 @@ function FieldCard({
               type="button"
               className={`log-chip${value === opt ? ' active' : ''}`}
               disabled={disabled}
+              aria-pressed={value === opt}
+              aria-label={`${field.label} ${opt}`}
               onClick={() => onChipPick?.(opt)}
             >
               {opt}
@@ -231,6 +241,7 @@ function FieldCard({
             enterKeyHint={enterKeyHint || (field.inputMode === 'numeric' ? 'next' : 'done')}
             autoComplete="off"
             disabled={disabled}
+            aria-label={logFieldAriaLabel({ label: field.label, unit: unitLabel })}
             value={draft}
             placeholder={placeholder}
             onFocus={() => {
@@ -405,6 +416,7 @@ function SetLogCard({
               type="button"
               className="btn small secondary log-dup-btn"
               title="Copy values from last workout"
+              aria-label={copyLastAriaLabel()}
               onClick={() => onDuplicateSet(set.id, prev)}
             >
               Copy last

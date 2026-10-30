@@ -11,6 +11,49 @@ Branch:
 Status:
 ```
 
+## BIQ-0271 Phase E1 - Set-entry first
+
+Date: 2026-10-30
+Branch: main
+Status: Implemented. Local commit. Not pushed. No database change.
+
+Summary: Working-set exercise cards now lead with set number, WU/WK, Weight, Reps, RIR, and Done. Collapse, Form guide, History, and + Set stay on the card. Edit / Change / Move / Remove / Out move into an accessible More menu. Escape closes More and returns focus to the trigger; outside click still dismisses; arrow keys move between items without a focus trap. Copy last stays explicit and previous performance remains a placeholder hint. Warm-up cards, rest timers, equipment-history matching, and superset persistence are unchanged.
+
+Purpose: Make logging a working set fast and mobile-friendly at 390px without changing logging behavior.
+
+Files changed:
+- lib/training/exerciseLogChrome.ts
+- app/components/training/ExerciseLogMoreMenu.tsx
+- app/components/WorkoutSetLogger.tsx
+- app/page.tsx
+- app/globals.css
+- scripts/test-training-set-entry.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- `npx tsx scripts/test-training-set-entry.ts`
+- `npx tsx scripts/test-training-simplification.ts`
+- `npx tsx scripts/test-session-finalization.ts`
+- `npx tsx scripts/test-progress-analytics.ts`
+- `npx tsx lib/scienceEngine/acceptanceCheck.ts`
+- `npx tsc --noEmit`
+- Review a completed workout at 390 and desktop. Open More, press Escape, confirm focus returns to More. Do not Start, Hide, Stop, Copy last, or write production logs.
+
+Known issues:
+- Warm-up cards still show Change / + Set / Remove on the face (out of E1)
+- Previous performance is still a placeholder until Copy last (out of E1; matching still ignores equipment)
+- No rest timer (out of E1)
+- Session header still duplicates the workout name (open; later Phase E)
+- Programs enrollment Hide / Stop still compete with Start / Review (open; not Phase E)
+
+Recommended commit message: BIQ-0271 Phase E1 Make working-set logging set-entry first
+
+---
+
 ## BIQ-0271 Phase D closed - Training calendar alignment accepted
 
 Date: 2026-10-28

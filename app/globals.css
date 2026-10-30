@@ -692,7 +692,7 @@ button.member-training-week-row{width:100%;background:transparent;border-left:0;
 .set-log-rail{grid-column:2;grid-row:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:8px;min-width:44px;padding:2px 0}
 .set-log-rail-spacer{display:block;min-height:32px;min-width:32px}
 .set-log-num{font-size:12px;font-weight:900;color:#e2e8f0;flex-shrink:0}
-.set-type-badge{font-size:10px;padding:3px 7px;min-width:42px;justify-content:center;text-align:center}
+.set-type-badge{font-size:10px;padding:3px 7px;min-width:42px;min-height:36px;justify-content:center;text-align:center;display:inline-flex;align-items:center}
 .set-type-picker{position:relative;flex-shrink:0}
 .set-type-picker-btn{border:1px solid #334155;background:#101827;cursor:pointer;font:inherit}
 .set-type-menu{position:absolute;top:calc(100% + 4px);left:0;z-index:40;min-width:220px;padding:4px;border-radius:12px;border:1px solid #334155;background:#0e141d;box-shadow:0 8px 24px rgba(0,0,0,.45)}
@@ -700,9 +700,9 @@ button.member-training-week-row{width:100%;background:transparent;border-left:0;
 .set-type-option:hover,.set-type-option.active{background:#1b1634}
 .set-type-option-acronym{font-size:11px;font-weight:900;color:#c4b5fd;min-width:44px;flex-shrink:0}
 .set-type-option-label{font-size:12px;font-weight:700;color:#cbd5e1}
-.set-remove-btn{min-width:32px;min-height:32px;padding:4px 8px;line-height:1;font-size:16px;flex-shrink:0;margin:0}
-.set-done-check{display:flex!important;align-items:center;gap:5px;margin:0!important;font-size:11px;font-weight:800;color:#cbd5e1;min-height:36px;padding:0 4px;flex-shrink:0;white-space:nowrap}
-.set-done-check input{width:18px;height:18px;margin:0;accent-color:var(--green)}
+.set-remove-btn{min-width:40px;min-height:40px;padding:4px 8px;line-height:1;font-size:16px;flex-shrink:0;margin:0}
+.set-done-check{display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:2px;margin:0!important;font-size:11px;font-weight:800;color:#cbd5e1;min-height:44px;min-width:48px;padding:4px 2px;flex-shrink:0;white-space:nowrap}
+.set-done-check input{width:22px;height:22px;margin:0;accent-color:var(--green);flex-shrink:0}
 .log-field-row-compact{display:flex;flex-wrap:wrap;align-items:flex-end;min-width:0}
 .log-field-row-metrics{gap:5ch}
 .log-field-optional-row{margin-top:8px}
@@ -722,12 +722,12 @@ button.member-training-week-row{width:100%;background:transparent;border-left:0;
 .log-input-card::placeholder{color:#64748b;opacity:.72;font-weight:600}
 .log-input-has-prev::placeholder{color:#94a3b8;opacity:.55;font-weight:700}
 .log-input-unit{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;font-weight:800;color:#64748b;pointer-events:none;z-index:1}
-.log-dup-btn{min-height:40px;flex-shrink:0;white-space:nowrap;font-size:11px;padding:6px 10px}
+.log-dup-btn{min-height:36px;flex-shrink:0;white-space:nowrap;font-size:11px;font-weight:700;padding:6px 10px;opacity:.88}
 .log-chip-row{display:flex;flex-wrap:wrap;gap:5px}
 .log-chip{min-height:36px;padding:6px 12px;border-radius:10px;border:1px solid #334155;background:#0b1119;color:#cbd5e1;font-size:12px;font-weight:800}
 .log-chip.active{border-color:#7c5cff;background:#1b1634;color:#fff}
 .log-chip:disabled{opacity:.5}
-.exercise-superset-edit{display:flex;flex-wrap:wrap;gap:6px;align-items:center;width:100%;margin-top:2px}
+.exercise-superset-edit{display:flex;flex-wrap:wrap;gap:6px;align-items:center;width:100%;flex-basis:100%;margin-top:2px}
 .superset-join-select{min-height:32px;max-width:132px;font-size:11px;padding:4px 6px;border-radius:8px;border:1px solid #334155;background:#0b1119;color:#cbd5e1}
 .superset-join-select:disabled{opacity:.45}
 .log-field-row-metrics .log-field-card-compact{flex:1 1 96px;width:auto;max-width:148px}
@@ -926,7 +926,23 @@ button.member-training-week-row{width:100%;background:transparent;border-left:0;
 .install-app-banner p{margin:0;font-size:12px;line-height:1.35}
 .install-app-banner-actions{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
 @media(display-mode:standalone){.install-app-banner{display:none}}
- @media(max-width:900px){.add-exercise-row{grid-template-columns:1fr auto auto}.catalog-edit-grid{grid-template-columns:1fr}.catalog-search-filters{grid-template-columns:1fr}.setgrid,.setgrid-edit{grid-template-columns:1fr 1fr 1fr}.exercise-add-row{grid-template-columns:1fr auto auto}.team-compliance-card .dash-metrics{grid-template-columns:1fr 1fr}.progress-trend-chart{grid-template-columns:repeat(4,minmax(0,1fr))}.progress-summary-metrics{grid-template-columns:1fr 1fr}.panel-overlay{align-items:flex-end;padding:0}.add-exercise-panel,.nutrition-add-panel,.nutrition-my-foods-panel,.exercise-history-panel{border-radius:18px 18px 0 0;max-height:90vh}.log-field-row:not(.log-field-row-compact){grid-template-columns:1fr}.log-dup-btn,.set-done-check{min-height:44px}.nutrition-totals-grid,.nutrition-date-row,.nutrition-weekly-metrics{grid-template-columns:1fr 1fr}.nutrition-date-row{margin:4px 0}.nutrition-date-row input{grid-column:span 2}.nutrition-macro-ring-wrap{max-width:118px}.nutrition-weekly-chart{grid-template-columns:repeat(4,minmax(0,1fr))}}
+ @media(max-width:900px){.add-exercise-row{grid-template-columns:1fr auto auto}.catalog-edit-grid{grid-template-columns:1fr}.catalog-search-filters{grid-template-columns:1fr}.setgrid,.setgrid-edit{grid-template-columns:1fr 1fr 1fr}.exercise-add-row{grid-template-columns:1fr auto auto}.team-compliance-card .dash-metrics{grid-template-columns:1fr 1fr}.progress-trend-chart{grid-template-columns:repeat(4,minmax(0,1fr))}.progress-summary-metrics{grid-template-columns:1fr 1fr}.panel-overlay{align-items:flex-end;padding:0}.add-exercise-panel,.nutrition-add-panel,.nutrition-my-foods-panel,.exercise-history-panel{border-radius:18px 18px 0 0;max-height:90vh}.log-field-row:not(.log-field-row-compact){grid-template-columns:1fr}.log-dup-btn{min-height:40px}.set-done-check{min-height:52px}.nutrition-totals-grid,.nutrition-date-row,.nutrition-weekly-metrics{grid-template-columns:1fr 1fr}.nutrition-date-row{margin:4px 0}.nutrition-date-row input{grid-column:span 2}.nutrition-macro-ring-wrap{max-width:118px}.nutrition-weekly-chart{grid-template-columns:repeat(4,minmax(0,1fr))}.exercise-head-actions{justify-content:flex-start}.exercise-head-actions .btn.small{min-height:40px}}
+@media(max-width:430px){
+  .exercise-name-text,.exercise-name{font-size:16px}
+  .te-ex-rx{font-size:11px}
+  .exercise-head-actions .btn.small{min-height:40px}
+  .log-field-row-metrics{gap:8px}
+  .log-field-row-metrics .log-field-card-compact,
+  .log-field-row-metrics .log-field-card-normal{flex:1 1 0;min-width:0;max-width:none;width:auto}
+  .set-log-rail{min-width:52px}
+  .set-done-check{min-height:56px;min-width:52px;font-size:12px}
+  .set-done-check input{width:26px;height:26px}
+  .log-dup-btn{min-height:36px;padding:4px 8px;font-size:10px}
+  .set-log-chips .log-chip-row{flex-wrap:nowrap;gap:4px}
+  .set-log-chips .log-chip{min-width:0;min-height:40px;padding:6px 8px;flex:1 1 0}
+  .set-log-card{padding:8px}
+  .set-log-list{gap:10px}
+}
  @media(max-width:600px){.nutrition-totals-grid,.nutrition-date-row{grid-template-columns:1fr}.nutrition-food-chip,.nutrition-entry-row{grid-template-columns:1fr}}
 @media(max-width:900px){
   .nutrition-add-panel.nutrition-add-card--search,
@@ -1369,6 +1385,8 @@ label{color:var(--textSecondary)}
 .te-item-menu-btn{width:100%;text-align:left;border:0;background:transparent;color:var(--text);padding:8px 10px;border-radius:8px;font-size:13px;font-weight:700}
 .te-item-menu-btn:hover,.te-item-menu-btn:focus{background:var(--accentSoft)}
 .te-item-menu-btn:disabled{opacity:.5}
+.te-item-menu-btn-danger{color:#fca5a5}
+.exercise-log-more .te-item-menu{z-index:50;min-width:200px}
 .exercise-swap-overlay{z-index:60;align-items:center}
 .exercise-swap-sheet{width:100%;max-width:420px;margin:0 12px;padding:16px}
 .exercise-swap-sheet h2{margin:0 0 8px;font-size:18px}

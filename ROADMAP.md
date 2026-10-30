@@ -210,7 +210,7 @@ Goal: Prepare BuildIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
-**BIQ-0271 Phase D** (Training calendar alignment) is accepted and closed (Decision 127). Next Training UX work is **Phase E**: a read-only Exercise Logging UX Redesign audit. Do not start Phase E implementation until that audit is approved.
+**BIQ-0271 Phase E1** (Set-entry first) is accepted after the More-menu Escape / focus correction (Decision 128). Do not start Phase E2 until that is requested. Remaining Phase E work (equipment-history matching, rest timers, warm-up logging, session header, superset workflow) is still out of scope.
 
 **BIQ-0254 Phase 2B.1** connects workout completion to the existing 2A.2 / 2A.3 engines for personal programs. Next is **Phase 2B.2**: the coaching review surface (show `review_required` / pain holds, retry state, and why a next session changed or did not). Do not start Phase 2B.2 or 2B.3 until that is requested.
 
@@ -424,25 +424,24 @@ These remain **open**. They do not block Phase D closure. Do not treat them as d
 | Recovery activities without a workout ID have no Start or preview | Open. |
 | Followed-program display can fall back to `1 week 10/26` | Open. |
 | Session header duplicates the workout name (`Workout` + `Wed · Full Body B…`) | Open. Moved to Phase E (was D6.4). |
-| Logger exercise-card density (badges, Change / + Set / Remove on warm-ups) | Open. Moved to Phase E (was D6.7). |
+| Logger exercise-card density (badges, Change / + Set / Remove on warm-ups) | Working-set chrome moved to More in E1. Warm-up Change / + Set / Remove still on the card. Open for later Phase E. |
 
 Dropped: fuller 390px month-cell source chips. The selected-day card remains the mobile source surface.
 
-### BIQ-0271 Phase E — Exercise Logging UX Redesign (audit only)
+### BIQ-0271 Phase E — Exercise Logging UX Redesign
 
-Read-only audit first. Preserve workout logging, historical snapshots, group assignments, and Program Design. No implementation until the audit is approved.
+Audit (E0–E9) is complete and approved. **E1 Set-entry first** is accepted after the More-menu Escape / focus correction (Decision 128). Stop before E2.
 
-Audit sequence:
+| Slice | Status |
+|-------|--------|
+| E1 Set-entry first | Accepted. More menu closes on Escape and restores focus. |
+| E2 Previous / equipment matching | Not started. |
+| Rest timer | Not started. Prescribed rest text only. |
+| Warm-up set logging | Not started. Warm-up cards remain display-only. |
+| Superset workflow | Not started. Persistence unchanged. |
+| Session header duplication | Open. |
 
-1. Actual set-entry workflow (`WorkoutSetLogger`, `page.tsx` session)
-2. Previous comparable performance (`prevBySetId`, Copy last, `exerciseSessionHistory`)
-3. Rest presentation and any rest timer (prescribed rest exists; confirm whether a live timer exists)
-4. Warm-up versus working-set presentation
-5. Superset logging (A1/A2, pair rest, extra sets)
-6. Exercise navigation (collapse / expand, section jumps)
-7. Session header and feedback (`trainingPageHeading`, `training-workout-panel`, `SessionOutcomeCard`)
-8. Mobile usability at 390 / 768 / 1440
-9. Workout completion (`session-finalization`, skip / completed / partial)
+Preserve workout logging, historical snapshots, group assignments, and Program Design.
 
 ### Planned — Platform admin and catalog operations
 
