@@ -11,6 +11,47 @@ Branch:
 Status:
 ```
 
+## BIQ-0271 Phase E2.1 - Equipment-aware previous-performance classifier
+
+Date: 2026-10-30
+Branch: main
+Status: Implemented. Local commit. Not pushed. Not wired to the live logger. No database change.
+
+Summary: Added a pure previous-performance classifier that prefers a verified equipment match for the same exercise identity, set type, and set number. Missing or unverified equipment is uncertain. A different known implement is historical context, not an exact match. Extra sets, warm-up / ramp / backoff rows, completed-only rows, and same-day or future logs cannot replace planned working-set history. Hits label identity overlap as `catalog` or `name` so name-only matches stay visible as ambiguous. Copy last eligibility is exact-only for a future E2.2 slice. Live `previousFor()`, Copy last, History, snapshots, Progress, and Science comparable-exposure are unchanged.
+
+Purpose: Give E2.2 a tested matching contract before any logger UI or Copy last change.
+
+Files changed:
+- lib/training/previousPerformance.ts
+- scripts/test-previous-performance.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- `npx tsx scripts/test-previous-performance.ts`
+- `npx tsx scripts/test-training-set-entry.ts`
+- `npx tsx scripts/test-training-simplification.ts`
+- `npx tsx scripts/test-session-finalization.ts`
+- `npx tsx scripts/test-progress-analytics.ts`
+- `npx tsx lib/scienceEngine/acceptanceCheck.ts`
+- `npx tsc --noEmit`
+- Confirm the live logger still uses `previousFor()` and does not import the classifier
+
+Known issues:
+- Live previous-performance lookup still ignores equipment until E2.2
+- Extra-set snapshots can still collide with planned Set 1 in live `previousFor()` (unchanged)
+- Catalog name aliases can merge distinct catalog ids that share a name; alias overlap is not full equivalence
+- Equipment keys are lowercase labels only; there is no synonym map (for example BB vs Barbell)
+- Unverified matching labels stay uncertain even when the stored string matches
+- Name-only identity can still be equipment-exact; E2.2 must not present that as fully verified catalog identity
+
+Recommended commit message: BIQ-0271 Phase E2.1 Add equipment-aware previous-performance classifier
+
+---
+
 ## BIQ-0271 Phase E1 - Set-entry first
 
 Date: 2026-10-30

@@ -4,6 +4,34 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 129 - Previous-performance exact match requires verified equipment
+
+Date: 2026-10-30
+Status: Accepted
+Category: Training
+
+### Decision
+
+BIQ-0271 Phase E2.1 adds a pure classifier for previous set performance. An exact comparable match requires the same exercise identity (catalog aliases plus name), the same set type and set number, actual performance values, a log date strictly before the current session, and a verified equipment match (`snapshot_provenance.equipment === 'snapshotted'` with the same Progress equipment key). Missing equipment and unverified snapshot provenance are `unknown_equipment`. A different known implement is `different_equipment` and may be kept as historical context. Extra sets cannot replace planned-set history. Warm-up, ramp, and backoff rows cannot replace working-set history. Copy last may use an exact match in a later slice; unknown or different equipment must not be copied silently.
+
+Exercise identity overlap is labeled `identityMatch`: `catalog` when catalog ids overlap directly or through remapped aliases; `name` when only the exercise name overlapped. Alias/name overlap is not equipment equivalence. E2.2 must not present `identityMatch === 'name'` as fully verified catalog identity. If E2.2 uses name-only history at all, that path needs an explicit labeled choice. Duplicate catalog names that share a normalized name follow the existing remap alias convention and count as `catalog`.
+
+E2.1 is library-only. It does not change live `previousFor()`, `prevBySetId`, Copy last, the History modal, `st_set_logs` writes, snapshots, Progress calculations, Science 2A/2B `exposuresAreComparable`, session completion, group enrollment, or Program Design. Do not start E2.2 until this classifier is reviewed.
+
+### Reason
+
+The live logger matches previous sets by catalog alias, set type, and set number only. Barbell, dumbbell, and Smith history can collapse into one placeholder. Progress already treats unspecified equipment as its own series. The classifier should reuse that identity before any UI copy behavior changes.
+
+### Alternatives Considered
+
+Wiring the classifier into `previousFor()` in the same slice. Treating catalog name aliases as full equivalence. Folding missing equipment into the current implement. Using `normalizeSetType()`, which maps `ramp` to `working`. Changing Science comparable-exposure to include equipment.
+
+### Impact
+
+No database change and no live logging change. Future E2.2 UI can read `kind`, `identityMatch`, `comparable`, `uncertain`, `otherEquipment`, and `copyLastEligible` without inventing matching rules. Science adaptation remains equipment-blind by design. Name-only identity is still a comparable equipment match when provenance is snapshotted, but it is not fully verified catalog identity.
+
+---
+
 ## Decision 128 - Phase E1 is presentation-only set-entry first
 
 Date: 2026-10-29
