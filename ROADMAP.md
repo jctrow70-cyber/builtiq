@@ -210,7 +210,7 @@ Goal: Prepare BuildIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
-**BIQ-0271 Phase E2.1** (equipment-aware previous-performance classifier) is implemented as a pure library and waiting for review (Decision 129). Do not start E2.2 (logger previous line / Copy last) or E2.3 (History labels) until that review. Live `previousFor()` is unchanged. Remaining Phase E work (rest timers, warm-up logging, session header, superset workflow) is still out of scope.
+**BIQ-0271 Phase E2.1** (equipment-aware previous-performance classifier) is implemented as a pure library and waiting for review (Decision 131). Do not start E2.2 (logger previous line / Copy last) or E2.3 (History labels) until that review. Live `previousFor()` is unchanged. Remaining Phase E work (rest timers, warm-up logging, session header, superset workflow) is still out of scope.
 
 **BIQ-0254 Phase 2B.1** connects workout completion to the existing 2A.2 / 2A.3 engines for personal programs. Next is **Phase 2B.2**: the coaching review surface (show `review_required` / pain holds, retry state, and why a next session changed or did not). Do not start Phase 2B.2 or 2B.3 until that is requested.
 
@@ -430,7 +430,7 @@ Dropped: fuller 390px month-cell source chips. The selected-day card remains the
 
 ### BIQ-0271 Phase E — Exercise Logging UX Redesign
 
-Audit (E0–E9) is complete and approved. **E1 Set-entry first** is accepted after the More-menu Escape / focus correction (Decision 128). **E2.1** classifier is implemented and waiting for review (Decision 129). Stop before E2.2.
+Audit (E0–E9) is complete and approved. **E1 Set-entry first** is accepted after the More-menu Escape / focus correction (Decision 128). **E2.1** classifier is implemented and waiting for review (Decision 131). Stop before E2.2.
 
 | Slice | Status |
 |-------|--------|
@@ -447,7 +447,7 @@ Preserve workout logging, historical snapshots, group assignments, and Program D
 
 ### Planned — Platform admin and catalog operations
 
-**Current (BIQ-0201 / BIQ-0202 / BIQ-0207 / BIQ-0235 / BIQ-0237 / BIQ-0246 / BIQ-0277):** Catalog admins import the **BuildIQ Master Library** from Settings (`POST /api/catalog/import-master`). That upserts **265** movement cards (including Olympic add-ons, Diverging Row, Converging Chest Press, Seated Overhead Press, GHD Sit-Up, and Seated Chest Press), remaps household plan/log catalog ids, and archives the old GIF dump. Workout cards can pick a compatible implement (`st_exercises.equipment`) without a second catalog row. Strength/cardio picker search uses section-aware ranking. ExerciseDB guided import is disabled until commercial rights are verified (BIQ-0276). Stored rows are left in place and their GIFs and instructions are hidden. Normal users get unified search of active catalog rows.
+**Current (BIQ-0201 / BIQ-0202 / BIQ-0207 / BIQ-0235 / BIQ-0237 / BIQ-0246 / BIQ-0277 / BIQ-0279):** Catalog admins import the **BuildIQ Master Library** from Settings (`POST /api/catalog/import-master`). That upserts **266** movement cards (including Olympic add-ons, Diverging Row, Converging Chest Press, Seated Overhead Press, GHD Sit-Up, Seated Chest Press, and Iso-Lateral Decline Press), remaps household plan/log catalog ids, and archives the old GIF dump. Workout cards can pick a compatible implement (`st_exercises.equipment`) without a second catalog row. Strength/cardio picker search uses section-aware ranking. ExerciseDB guided import is disabled until commercial rights are verified (BIQ-0276). Stored rows are left in place and their GIFs and instructions are hidden. Normal users get unified search of active catalog rows.
 
 **Roadmap — proper admin model (not started):**
 

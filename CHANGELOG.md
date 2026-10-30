@@ -52,6 +52,77 @@ Recommended commit message: BIQ-0271 Phase E2.1 Add equipment-aware previous-per
 
 ---
 
+## BIQ-0279 - Iso-Lateral Decline Press Master Card
+
+Date: 2026-10-30
+Branch: cursor/iso-lateral-decline-press-48f2
+Status: Implemented. No schema migration. Live catalog insert via apply script when credentials are present.
+
+Summary: Added master 266 Iso-Lateral Decline Press as its own first-party card for plate-loaded Hammer Strength-style decline presses. Equipment is Machine only. Horizontal push, chest primary, triceps and front delts secondary. Media URL fields stay null as BuildIQ video/image placeholders. Active generation library is 266. Decline Press (3), Converging Chest Press (262), Machine Chest Press (140), and Seated Chest Press (265) are unchanged.
+
+Purpose: Users need a searchable card for the iso-lateral / Hammer Strength decline press machine that stays separate from free-weight Decline Press and flat converging / seated machine chest presses.
+
+Files changed:
+- `lib/training/masterCatalog.ts`
+- `lib/training/masterCatalogEnrichment.ts`
+- `lib/training/catalogCleanupCheck.ts`
+- `scripts/apply-iso-lateral-decline-press.ts`
+- `scripts/verify-catalog-env.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+- `ROADMAP.md`
+
+Database changes: No schema migration. Data-only insert of active master 266 into `st_exercise_catalog` (`external_source=builtiq_master`, `external_id=266`) when `scripts/apply-iso-lateral-decline-press.ts` or Settings master import runs. Existing catalog IDs, history, and program references are not rewritten. Media columns remain null placeholders.
+
+Testing steps:
+1. `npx tsx -e "import { runCatalogCleanupChecks } from './lib/training/catalogCleanupCheck'; runCatalogCleanupChecks();"`
+2. Search `iso-lateral decline press` / `hammer strength decline press` in Strength and confirm Iso-Lateral Decline Press appears
+3. Confirm equipment is Machine only
+4. Confirm it stays distinct from Decline Press, Converging Chest Press, Machine Chest Press, and Seated Chest Press
+5. Add it to a manual program and log sets; confirm progression/PRs use the new catalog id
+6. With Machine selected and Full gym off, confirm the card matches; with only Dumbbell or Barbell, confirm it does not
+7. Confirm form media shows placeholders (no third-party GIF/image)
+
+Known issues:
+- Live Supabase insert still needs `npx tsx scripts/apply-iso-lateral-decline-press.ts` (or Settings Import Master Library) on each environment
+- Decline Press (3) remains for free-weight / general decline history; the cards are intentionally not merged
+
+Recommended commit message: BIQ-0279 Add Iso-Lateral Decline Press to the master exercise library
+
+## BIQ-0278 - Front Squat Smith Machine equipment
+
+Date: 2026-10-30
+Branch: cursor/front-squat-smith-48f2
+Status: Implemented. No schema migration. Live catalog apply script available.
+
+Summary: Front Squat (master 55) can use Smith Machine on the existing master card, same pattern as Back Squat (54), Deadlift (71), and Romanian Deadlift (73). No separate Smith Front Squat card.
+
+Purpose: Users need Smith Machine as an implement option when logging or planning Front Squat. Master 55 listed Barbell, Kettlebell, and Dumbbell only.
+
+Files changed:
+- `lib/training/data/builtiq-master-catalog.json`
+- `lib/training/masterCatalog.ts`
+- `lib/training/catalogCleanupCheck.ts`
+- `scripts/apply-front-squat-smith.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+
+Database changes: No schema migration. Data-only on live `st_exercise_catalog` master 55 via `scripts/apply-front-squat-smith.ts`: add Smith Machine to `coaching_metadata.compatible_equipment`. History and planned set logs are not rewritten.
+
+Testing steps:
+1. `npx tsx lib/training/catalogCleanupCheck.ts`
+2. Training → add or open Front Squat → confirm Smith Machine appears in the equipment dropdown
+3. Select Smith Machine, save, reload — equipment stays Smith Machine
+4. Confirm completed history rows keep their previously saved equipment
+
+Known issues:
+- Already-planned Front Squat rows keep their saved equipment until the user changes the dropdown
+- Live Supabase catalogs need `npx tsx scripts/apply-front-squat-smith.ts` (with service role) until the next master sync
+
+Recommended commit message: BIQ-0278 Add Smith Machine to Front Squat equipment
+
+---
+
 ## BIQ-0271 Phase E1 - Set-entry first
 
 Date: 2026-10-30

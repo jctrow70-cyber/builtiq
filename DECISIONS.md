@@ -4,7 +4,7 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
-## Decision 129 - Previous-performance exact match requires verified equipment
+## Decision 131 - Previous-performance exact match requires verified equipment
 
 Date: 2026-10-30
 Status: Accepted
@@ -29,6 +29,60 @@ Wiring the classifier into `previousFor()` in the same slice. Treating catalog n
 ### Impact
 
 No database change and no live logging change. Future E2.2 UI can read `kind`, `identityMatch`, `comparable`, `uncertain`, `otherEquipment`, and `copyLastEligible` without inventing matching rules. Science adaptation remains equipment-blind by design. Name-only identity is still a comparable equipment match when provenance is snapshotted, but it is not fully verified catalog identity.
+
+---
+
+## Decision 130 - Iso-Lateral Decline Press Is Its Own Master Card
+
+Date: 2026-10-30
+Status: Accepted
+Category: Exercise Library
+
+### Decision
+
+Add master 266 Iso-Lateral Decline Press. Equipment is Machine only. Store the programming fields the generator already reads for horizontal presses: horizontal push, chest primary, triceps and front delts secondary, strength-hypertrophy volume credits, compound secondary/accessory, reps. Keep `media_url`, `image_url`, and `gif_url` null as BuildIQ media placeholders. Do not merge it with Decline Press (3), Converging Chest Press (262), Machine Chest Press (140), or Seated Chest Press (265). Do not import third-party descriptions or media.
+
+### Reason
+
+Users photograph and log plate-loaded Hammer Strength-style iso-lateral decline presses as their own machine. Decline Press (3) is the free-weight / general decline card. Flat converging and seated machine presses must keep separate progression.
+
+### Alternatives Considered
+
+- Alias onto Decline Press (3) with Machine equipment — rejected; independent catalog id and iso-lateral search name are the point of the change
+- Reuse Converging Chest Press (262) — rejected; decline path and lower-chest emphasis are distinct from flat converging press
+- Expand the broader chest-press library in the same change — rejected; scope is this card only
+
+### Impact
+
+- Active BuiltIQ master library is 266 generation-eligible cards
+- Search, manual programs, logging, and AI generation can select Iso-Lateral Decline Press
+- Existing IDs and history are unchanged
+
+---
+
+## Decision 129 - Front Squat keeps one card with Smith Machine
+
+Date: 2026-10-30
+Status: Accepted
+Category: Exercise Library
+
+### Decision
+
+Front Squat stays one master card (55) with Smith Machine on `compatible_equipment`, matching Back Squat (54), Deadlift (71), and Romanian Deadlift (73). Do not create a Smith Front Squat card.
+
+### Reason
+
+Smith front squat is an implement variant of the same squat movement, not a separate exercise. A second master card would split history and progress series.
+
+### Alternatives Considered
+
+- Separate Smith Front Squat master card — rejected; same architecture as Back Squat (54) and Deadlift (71)
+- Leave Front Squat on free-weight implements only — rejected; users need Smith as a logged option
+
+### Impact
+
+- Front Squat equipment dropdown includes Smith Machine
+- Completed history and planned rows are not rewritten; users change equipment when they want Smith
 
 ---
 
