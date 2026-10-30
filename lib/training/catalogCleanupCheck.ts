@@ -53,7 +53,7 @@ export function runCatalogCleanupChecks() {
   const mapped = mappedByName();
   const catalog = mapped.map((row) => row.catalog);
   const masterCount = expectedMasterCatalogCount();
-  assert(masterCount === 265, `active master count should be 265, got ${masterCount}`);
+  assert(masterCount === 266, `active master count should be 266, got ${masterCount}`);
   assert(catalog.length === masterCount, `mapped master count should be ${masterCount}, got ${catalog.length}`);
 
   assert(!textHasToken('Prowler Push', 'row'), 'word-boundary: Prowler does not match row');
@@ -239,6 +239,66 @@ export function runCatalogCleanupChecks() {
   assert(seatedChest!.catalog.external_id !== benchPress!.catalog.external_id, 'Seated Chest Press PR key is independent from Bench Press');
   assert(seatedChest!.catalog.external_id !== machineChest!.catalog.external_id, 'Seated Chest Press PR key is independent from Machine Chest Press');
 
+  const isoDecline = mapped.find((row) => row.record.id === '266');
+  const declinePress = mapped.find((row) => row.record.id === '3');
+  const convergingPress = mapped.find((row) => row.record.id === '262');
+  assert(isoDecline?.record.name === 'Iso-Lateral Decline Press', 'master 266 is Iso-Lateral Decline Press');
+  assert(isoDecline?.catalog.exercise_type === 'strength', 'Iso-Lateral Decline Press is strength');
+  assert(isoDecline?.catalog.movement_pattern === 'push_horizontal', 'Iso-Lateral Decline Press first-class pattern is push_horizontal');
+  assert(isoDecline?.catalog.equipment === 'Machine', 'Iso-Lateral Decline Press equipment is Machine');
+  assert(
+    isoDecline?.catalog.media_url === null && isoDecline?.catalog.image_url === null && isoDecline?.catalog.gif_url === null,
+    'Iso-Lateral Decline Press media placeholders are null'
+  );
+  assert(isoDecline?.catalog.progression_type === 'weight', 'Iso-Lateral Decline Press progression is weight');
+  assert(isoDecline?.catalog.external_id === '266', 'Iso-Lateral Decline Press keeps external_id 266');
+  assert(declinePress?.record.name === 'Decline Press', 'Decline Press 3 preserved');
+  assert(convergingPress?.record.name === 'Converging Chest Press', 'Converging Chest Press 262 preserved');
+  const isoDeclineEq = compatibleEquipmentOptions(isoDecline!.catalog);
+  assert(
+    isoDeclineEq.length === 1 && isoDeclineEq[0] === 'Machine',
+    `Iso-Lateral Decline Press compatible equipment should be Machine, got ${isoDeclineEq.join(', ')}`
+  );
+  const isoDeclineMeta = isoDecline!.catalog.coaching_metadata;
+  assert(isoDeclineMeta.exercise_kind === 'compound' && isoDeclineMeta.movement_pattern === 'horizontal_push', '266 movement/kind');
+  assert(
+    isoDeclineMeta.volume_policy === 'strength_hypertrophy' &&
+      isoDeclineMeta.measurement_type === 'reps' &&
+      isoDeclineMeta.laterality === 'bilateral',
+    '266 programming fields'
+  );
+  assert(isoDeclineMeta.fatigue_cost === 'moderate' && isoDeclineMeta.skill_demand === 'low', '266 fatigue and skill');
+  assert(
+    isoDeclineMeta.warmup_eligible === false && isoDeclineMeta.power_eligible === false && isoDeclineMeta.ramp_eligible === true,
+    '266 ramp eligible, not warmup/power'
+  );
+  assert(
+    JSON.stringify(isoDeclineMeta.hypertrophy_volume_credits) ===
+      JSON.stringify(NEW_MASTER_CLASSIFICATIONS['266'].hypertrophy_volume_credits),
+    '266 volume credits'
+  );
+  assert(JSON.stringify(isoDeclineMeta.primary_muscles) === JSON.stringify(['chest']), '266 primary muscles');
+  assert(JSON.stringify(isoDeclineMeta.secondary_muscles) === JSON.stringify(['triceps', 'front_delts']), '266 secondary muscles');
+  assert(exerciseMatchesEquipment(isoDecline!.catalog, ['machine']), 'Machine equipment filter includes Iso-Lateral Decline Press');
+  assert(!exerciseMatchesEquipment(isoDecline!.catalog, ['barbell']), 'barbell-only filter excludes Iso-Lateral Decline Press');
+  assert(!exerciseMatchesEquipment(isoDecline!.catalog, ['dumbbell']), 'dumbbell-only filter excludes Iso-Lateral Decline Press');
+  const isoDeclineSearch = searchCatalog(catalog, { query: 'iso-lateral decline press', section: 'strength', limit: 5 });
+  assert(isoDeclineSearch[0]?.name === 'Iso-Lateral Decline Press', 'iso-lateral decline press search finds Iso-Lateral Decline Press');
+  const hammerDeclineSearch = searchCatalog(catalog, { query: 'hammer strength decline press', section: 'strength', limit: 5 });
+  assert(
+    hammerDeclineSearch.some((row) => row.name === 'Iso-Lateral Decline Press'),
+    'alias search finds Iso-Lateral Decline Press'
+  );
+  assert(isoDecline!.catalog.external_id !== declinePress!.catalog.external_id, 'Iso-Lateral Decline Press PR key is independent from Decline Press');
+  assert(
+    isoDecline!.catalog.external_id !== convergingPress!.catalog.external_id,
+    'Iso-Lateral Decline Press PR key is independent from Converging Chest Press'
+  );
+  assert(
+    isoDecline!.catalog.external_id !== seatedChest!.catalog.external_id,
+    'Iso-Lateral Decline Press PR key is independent from Seated Chest Press'
+  );
+
   const liveShaped = catalog.map((item) => ({
     ...item,
     is_system: true,
@@ -261,6 +321,7 @@ export function runCatalogCleanupChecks() {
   assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '263')), 'Seated Overhead Press is generation-eligible');
   assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '264')), 'GHD Sit-Up is generation-eligible');
   assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '265')), 'Seated Chest Press is generation-eligible');
+  assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '266')), 'Iso-Lateral Decline Press is generation-eligible');
   assert(!isAiGenerationEligibleRow(archived), 'archived cards cannot enter generation');
   assert(!isAiGenerationEligibleRow(custom), 'user customs cannot enter generation');
   const adapted = adaptGenerationCatalog([...liveShaped, custom, archived], { allowFallback: false });
@@ -284,6 +345,23 @@ export function runCatalogCleanupChecks() {
   assert(adaptedSeatedChest?.equipment.some((eq) => eq.toLowerCase() === 'machine'), 'AI reads Seated Chest Press Machine equipment');
   assert(adaptedSeatedChest?.fatigueCost === 'medium' && adaptedSeatedChest?.defaultRepMin === 5 && adaptedSeatedChest?.defaultRepMax === 10, 'AI reads Seated Chest Press demand and reps');
   assert(adaptedSeatedChest?.programRoles.includes('accessory') && adaptedSeatedChest?.warmupSuitable === false, 'AI reads Seated Chest Press as accessory, not warmup');
+  const adaptedIsoDecline = adapted.find((ex) => ex.name === 'Iso-Lateral Decline Press');
+  assert(adaptedIsoDecline, 'adapted catalog includes Iso-Lateral Decline Press');
+  assert(adaptedIsoDecline?.movementPattern === 'horizontal_push', 'AI reads Iso-Lateral Decline Press as horizontal push');
+  assert(adaptedIsoDecline?.exerciseType === 'compound', 'AI reads Iso-Lateral Decline Press as compound');
+  assert(
+    adaptedIsoDecline?.primaryMuscles.includes('chest') && adaptedIsoDecline?.secondaryMuscles.includes('triceps'),
+    'AI reads Iso-Lateral Decline Press muscles'
+  );
+  assert(adaptedIsoDecline?.equipment.some((eq) => eq.toLowerCase() === 'machine'), 'AI reads Iso-Lateral Decline Press Machine equipment');
+  assert(
+    adaptedIsoDecline?.fatigueCost === 'medium' && adaptedIsoDecline?.defaultRepMin === 5 && adaptedIsoDecline?.defaultRepMax === 10,
+    'AI reads Iso-Lateral Decline Press demand and reps'
+  );
+  assert(
+    adaptedIsoDecline?.programRoles.includes('accessory') && adaptedIsoDecline?.warmupSuitable === false,
+    'AI reads Iso-Lateral Decline Press as accessory, not warmup'
+  );
   assert(adaptGenerationCatalog([], {}).length === FALLBACK_CATALOG.length, 'fallback still works on empty catalog');
 
   console.log('BIQ-0235 catalog cleanup checks passed.');

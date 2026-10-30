@@ -297,6 +297,26 @@ const ADD_ON_ROWS: MasterLibraryRecord[] = [
       'Seated fixed-path machine press. Distinct from lying Bench Press (1) and Converging Chest Press (262). Machine only. Own catalog id so progression and PRs stay separate from barbell, dumbbell, and Smith bench presses. Do not merge with Machine Chest Press (140) history.',
     active: 'Yes',
   },
+  {
+    id: '266',
+    name: 'Iso-Lateral Decline Press',
+    aliases:
+      'Hammer Strength Decline Press; Decline Iso-Lateral Press; Iso-Lateral Decline Chest Press; Plate-Loaded Decline Press',
+    primary_muscle: 'Chest',
+    secondary_muscles: 'Triceps; Front Delts',
+    movement_pattern: 'Horizontal Push',
+    category: 'Compound',
+    default_equipment: 'Machine',
+    compatible_equipment: 'Machine',
+    setup:
+      'Sit on the iso-lateral decline press with the back pad supporting you and adjust the seat so the independent handles start near the lower chest with shoulders set.',
+    execution:
+      'Press each handle forward and slightly down on its own path until the arms extend under control, then return without letting the plates slam.',
+    form_cues: 'Shoulders set; Wrists stacked; Own each arm; Control the return',
+    design_notes:
+      'Plate-loaded iso-lateral decline chest press (Hammer Strength style). Distinct from Decline Press (3), Converging Chest Press (262), Machine Chest Press (140), and Seated Chest Press (265). Machine only. Own catalog id so progression and PRs stay separate from free-weight decline and flat machine presses.',
+    active: 'Yes',
+  },
 ];
 
 function splitList(raw?: string): string[] {

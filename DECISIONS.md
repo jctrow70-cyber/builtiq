@@ -4,6 +4,34 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 130 - Iso-Lateral Decline Press Is Its Own Master Card
+
+Date: 2026-10-30
+Status: Accepted
+Category: Exercise Library
+
+### Decision
+
+Add master 266 Iso-Lateral Decline Press. Equipment is Machine only. Store the programming fields the generator already reads for horizontal presses: horizontal push, chest primary, triceps and front delts secondary, strength-hypertrophy volume credits, compound secondary/accessory, reps. Keep `media_url`, `image_url`, and `gif_url` null as BuildIQ media placeholders. Do not merge it with Decline Press (3), Converging Chest Press (262), Machine Chest Press (140), or Seated Chest Press (265). Do not import third-party descriptions or media.
+
+### Reason
+
+Users photograph and log plate-loaded Hammer Strength-style iso-lateral decline presses as their own machine. Decline Press (3) is the free-weight / general decline card. Flat converging and seated machine presses must keep separate progression.
+
+### Alternatives Considered
+
+- Alias onto Decline Press (3) with Machine equipment — rejected; independent catalog id and iso-lateral search name are the point of the change
+- Reuse Converging Chest Press (262) — rejected; decline path and lower-chest emphasis are distinct from flat converging press
+- Expand the broader chest-press library in the same change — rejected; scope is this card only
+
+### Impact
+
+- Active BuiltIQ master library is 266 generation-eligible cards
+- Search, manual programs, logging, and AI generation can select Iso-Lateral Decline Press
+- Existing IDs and history are unchanged
+
+---
+
 ## Decision 129 - Front Squat keeps one card with Smith Machine
 
 Date: 2026-10-30
