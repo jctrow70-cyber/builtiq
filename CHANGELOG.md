@@ -11,6 +11,51 @@ Branch:
 Status:
 ```
 
+## BIQ-0271 Phase E2.2 - Previous-performance logger integration
+
+Date: 2026-10-30
+Branch: main
+Status: Implemented. Local commit. Not pushed. No database change.
+
+Summary: The live logger now classifies previous set performance with the E2.1 equipment-aware library. Each planned set shows a compact last-performance line (weight, reps, equipment, date) and Copy last is enabled only for a verified catalog + equipment match. Unknown equipment, different implements, and name-only identity stay labeled and cannot copy silently. Switching Barbell / Dumbbell / Smith Machine reclassifies to the selected implement immediately; Copy last stays off until the existing equipment save finishes, and a failed save returns to the persisted implement. Extra sets, warm-up / ramp / backoff, Review, History, snapshots, and logged values are unchanged.
+
+Purpose: Make previous performance visible and trustworthy in the logger without rewriting history.
+
+Files changed:
+- lib/training/previousPerformanceDisplay.ts
+- lib/training/previousPerformance.ts
+- app/components/WorkoutSetLogger.tsx
+- app/page.tsx
+- app/globals.css
+- scripts/test-previous-performance-logger.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- `npx tsx scripts/test-previous-performance-logger.ts`
+- `npx tsx scripts/test-previous-performance.ts`
+- `npx tsx scripts/test-training-set-entry.ts`
+- `npx tsx scripts/test-training-simplification.ts`
+- `npx tsx scripts/test-session-finalization.ts`
+- `npx tsx scripts/test-progress-analytics.ts`
+- `npx tsx lib/scienceEngine/acceptanceCheck.ts`
+- `npx tsc --noEmit`
+- Review a completed workout at 390 / 768 / 1440. Switch equipment if the card already has options. Do not Start, Copy last, or write production logs.
+
+Known issues:
+- Name-only identity can still be equipment-exact in the classifier; the logger does not enable Copy last for it
+- History modal still omits equipment labels until E2.3
+- Live Copy last still copies full previous actual_* fields from the source row; it does not mark Done
+- Copy last stays disabled while an equipment save is in flight, even if the selected implement already has a verified match
+- `npx tsc --noEmit` still fails on a pre-existing BIQ-0279 `catalogCleanupCheck.ts` comparison (`"266"` vs `"265"`). E2.2 does not change that file.
+
+Recommended commit message: BIQ-0271 Phase E2.2 Show equipment-aware previous performance in the logger
+
+---
+
 ## BIQ-0271 Phase E2.1 - Equipment-aware previous-performance classifier
 
 Date: 2026-10-30

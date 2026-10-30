@@ -54,6 +54,8 @@ import { snapshotForLog as buildSetLogSnapshot, stripUnavailableLogColumns } fro
 import { canRewritePlannedSetPrescription } from '../lib/training/plannedSetGuard';
 import { completedSessionDraft, deriveSessionStatus, outstandingRequiredSetIds, sessionStatusAfterPlanChange } from '../lib/training/sessionOutcome';
 import { extraLogsFromSetLogs, extraSetInsertPayload, extraSetsForExercise, nextExtraSetNumber, type ExtraSetLog } from '../lib/training/extraSets';
+import { classifyPreviousPerformance } from '../lib/training/previousPerformance';
+import { loggerCopyLastEligible, loggerSelectedEquipment } from '../lib/training/previousPerformanceDisplay';
 import { normalizePainFlag, upsertExerciseSession, upsertWorkoutFeel, upsertWorkoutSession } from '../lib/training/workoutSessions';
 import { refreshProgramExpectations, withdrawAssignmentExpectation } from '../lib/training/scheduleActions';
 import { patchProgramPlannedWeights } from '../lib/training/adaptationApply';
@@ -212,7 +214,7 @@ export default function Page(){
  const [programs,setPrograms]=useState<any[]>([]),[program,setProgram]=useState<any>(null),[programName,setProgramName]=useState('Strength Program'),[weeks,setWeeks]=useState(6);
  const [programStartDate,setProgramStartDate]=useState(()=>mondayOfWeek(todayYmd()));
  const [week,setWeek]=useState(1),[activeWorkout,setActiveWorkout]=useState('');
- const [logDate,setLogDate]=useState(today()),[logs,setLogs]=useState<any>({}),[history,setHistory]=useState<any>({}),[applyScope,setApplyScope]=useState<'current'|'future'>('future'),[pendingAddScope,setPendingAddScope]=useState<'current'|'future'|null>(null);
+ const [logDate,setLogDate]=useState(today()),[logs,setLogs]=useState<any>({}),[history,setHistory]=useState<any>({}),[liftHistoryRows,setLiftHistoryRows]=useState<any[]>([]),[pendingEquipmentById,setPendingEquipmentById]=useState<Record<string,string>>({}),[applyScope,setApplyScope]=useState<'current'|'future'>('future'),[pendingAddScope,setPendingAddScope]=useState<'current'|'future'|null>(null);
  const [catalog,setCatalog]=useState<any[]>([]);
  const [catalogError,setCatalogError]=useState('');
  const [showCustomForm,setShowCustomForm]=useState<any>({warmup:false,strength:false,cooldown:false});
@@ -1064,6 +1066,7 @@ export default function Page(){
   setMemberWorkoutActiveId('');
   setMemberWorkoutLogDate(today());
   setHistory({});
+  setLiftHistoryRows([]);
   setViewingMember(member);
   const freshAssignments=await loadMemberAssignments();
   await reloadMemberWorkoutProgram(member,freshAssignments);
@@ -1076,6 +1079,7 @@ export default function Page(){
   setMemberWorkoutActiveId('');
   setLogs({});
   setHistory({});
+  setLiftHistoryRows([]);
   logsRef.current={};
  }
  async function closeMemberView(){clearMemberWorkoutView();}
@@ -1767,6 +1771,7 @@ export default function Page(){
   });
 
   setHistory(by);
+  setLiftHistoryRows(data || []);
  }
 
  async function loadProgressLogs(){
@@ -1845,30 +1850,36 @@ export default function Page(){
   }
  }
 
- function previousFor(ex:any, set:any){
-  const aliases=historyAliases(ex.catalog_exercise_id||'',ex.name||'');
-  const setType=set?.set_type||'working';
-  const setNumber=set?.set_number??1;
-  for(const ek of aliases){
-    const hit=history[`${ek}|${setType}|${setNumber}`];
-    if(hit&&logHasPerformance(hit)) return hit;
-  }
-  // Fallback: same exercise + set number with any type (e.g. working↔backoff renames)
-  for(const ek of aliases){
-    const rows=history[ek]||[];
-    const match=rows.find((r:any)=>{
-      const joinPs=r.st_planned_sets;
-      return Number(logSetNumber(r,joinPs))===Number(setNumber)&&logHasPerformance(r);
-    });
-    if(match) return match;
-  }
-  // Last resort: most recent set for this exercise
-  for(const ek of aliases){
-    const rows=history[ek]||[];
-    const match=rows.find((r:any)=>logHasPerformance(r));
-    if(match) return match;
-  }
-  return null;
+ function previousLogById(id?:string|null){
+  const key=String(id||'').trim();
+  if(!key) return null;
+  return (liftHistoryRows||[]).find((row:any)=>String(row.id||'')===key)||null;
+ }
+ function previousPerformanceViewFor(ex:any, set:any, equipment?:string, copyLastDisabled?:boolean){
+  const result=classifyPreviousPerformance({
+    catalog,
+    catalogExerciseId:ex?.catalog_exercise_id,
+    exerciseName:ex?.name,
+    equipment,
+    setType:set?.set_type,
+    setNumber:set?.set_number,
+    sessionDate:activeLogDateForLogging(),
+    userId:logUserId(),
+    rows:liftHistoryRows,
+  });
+  const copySource=!copyLastDisabled&&loggerCopyLastEligible(result)?previousLogById(result.copyLastSource?.sourceId):null;
+  return {result,copySource};
+ }
+ async function changeExerciseEquipment(ex:any,value:string){
+  const next=String(value||'').trim();
+  if(!ex?.id||!next)return;
+  setPendingEquipmentById((prev)=>({...prev,[ex.id]:next}));
+  await updateExerciseField(ex,'equipment',next);
+  setPendingEquipmentById((prev)=>{
+    const copy={...prev};
+    delete copy[ex.id];
+    return copy;
+  });
  }
 
  function priorCompletedLogsForPr(excludeSetId:string,excludeDate:string){
@@ -3160,13 +3171,13 @@ function matchingSet(targetExercise:any, sourceSet:any){
  const canManageTrainingProgram=mode==='personal'?canEdit():!!activeTeam&&canEditGroupProgram(activeTeam.my_role);
  const memberAssignment=memberDashboard?memberAssignments[memberDashboard.user_id]:null;
  const renderWarmupExerciseCard=(ex:any)=>{const catItem=catalog.find((c:any)=>c.id===ex.catalog_exercise_id);const exThumb=getExerciseThumb(catItem);const showGuide=hasExerciseGuide(catItem);const guidePayload=getExerciseGuidePayload(catItem,ex.name);const sortedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));const notes=String(ex.notes||'');const badge=/power primer/i.test(notes)?'Power Primer':/dynamic warm-up/i.test(notes)?'Warm-up':undefined;return <WarmupExerciseCard key={ex.id} name={ex.name||'Exercise'} badge={badge} sets={sortedSets} thumbUrl={exThumb} showGuide={showGuide&&!!guidePayload} guideLabel={guidePayload?.hasVideo?'Watch form':'Form guide'} onOpenGuide={guidePayload?()=>setExerciseGuide(guidePayload):undefined} canEdit={canEdit()} onChange={canEdit()?()=>openReplaceExercisePanel(ex):undefined} onAddSet={canEdit()?()=>addSet(ex):undefined} onRemove={canEdit()?()=>removeExercise(ex):undefined}/>;};
- const renderExerciseCard=(ex:any,inSuperset=false,mark='')=>{const catItem=catalog.find((c:any)=>c.id===ex.catalog_exercise_id);const rx=trainingExercisePrescription({exercise:ex,catalogItem:catItem,mark,omitRest:inSuperset||!!String(mark||'').trim()});const exType=exerciseTypeOf(ex,catItem);const eqOptions=compatibleEquipmentOptions(catItem,ex.equipment);const currentEq=resolveExerciseEquipment(ex,catItem);const plannedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).length;const exThumb=getExerciseThumb(catItem);const showGuide=hasExerciseGuide(catItem);const guidePayload=getExerciseGuidePayload(catItem,ex.name);const cardKey=`${ex.id}:${ex.catalog_exercise_id||'n'}:${ex.name}`;const isEditingName=exerciseNameSearch?.exerciseId===ex.id;const nameQuery=isEditingName?exerciseNameSearch!.query:(ex.name||'');const nameSearchResults=isEditingName&&nameQuery.trim()?searchCatalog(workoutSearchCatalog,{query:nameQuery,filters:{availableEquipment:hasEquipmentFilter(equipmentForSearch)?equipmentForSearch:undefined},limit:8,section:exerciseSection(ex)}):[];const sortedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));const prevBySetId:Record<string,any>={};sortedSets.forEach((s:any)=>{prevBySetId[s.id]=previousFor(ex,s);});const showPreviousSets=!isMobilityStretchExercise(ex,catItem,exType);const weightUnit=profileDraft?.units_preference==='metric'?'kg':'lb';const isCollapsed=!!collapsedExercises[ex.id];const doneSets=sortedSets.filter((s:any)=>logs[s.id]?.completed).length;const allDone=plannedSets>0&&doneSets===plannedSets;const exSection=exerciseSection(ex);const sectionSupersetGroups=workout?getSupersetGroupsForSection(workout,exSection).filter((g:any)=>g.count<3):[];const standalonePeers=workout?sectionExercises(workout,exSection).filter((e:any)=>!e.superset_group_id&&e.id!==ex.id):[];return <div className={`card exercise-card${inSuperset?' in-superset':''}${isCollapsed?' exercise-collapsed':''}${allDone?' exercise-all-done':''}`} data-exercise-id={ex.id} key={cardKey}>
+ const renderExerciseCard=(ex:any,inSuperset=false,mark='')=>{const catItem=catalog.find((c:any)=>c.id===ex.catalog_exercise_id);const rx=trainingExercisePrescription({exercise:ex,catalogItem:catItem,mark,omitRest:inSuperset||!!String(mark||'').trim()});const exType=exerciseTypeOf(ex,catItem);const eqOptions=compatibleEquipmentOptions(catItem,ex.equipment);const persistedEq=resolveExerciseEquipment(ex,catItem);const currentEq=loggerSelectedEquipment(persistedEq,pendingEquipmentById[ex.id]);const equipmentSavePending=!!pendingEquipmentById[ex.id];const plannedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).length;const exThumb=getExerciseThumb(catItem);const showGuide=hasExerciseGuide(catItem);const guidePayload=getExerciseGuidePayload(catItem,ex.name);const cardKey=`${ex.id}:${ex.catalog_exercise_id||'n'}:${ex.name}`;const isEditingName=exerciseNameSearch?.exerciseId===ex.id;const nameQuery=isEditingName?exerciseNameSearch!.query:(ex.name||'');const nameSearchResults=isEditingName&&nameQuery.trim()?searchCatalog(workoutSearchCatalog,{query:nameQuery,filters:{availableEquipment:hasEquipmentFilter(equipmentForSearch)?equipmentForSearch:undefined},limit:8,section:exerciseSection(ex)}):[];const sortedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));const prevBySetId:Record<string,any>={};sortedSets.forEach((s:any)=>{prevBySetId[s.id]=previousPerformanceViewFor(ex,s,currentEq,equipmentSavePending);});const showPreviousSets=!isMobilityStretchExercise(ex,catItem,exType);const weightUnit=profileDraft?.units_preference==='metric'?'kg':'lb';const isCollapsed=!!collapsedExercises[ex.id];const doneSets=sortedSets.filter((s:any)=>logs[s.id]?.completed).length;const allDone=plannedSets>0&&doneSets===plannedSets;const exSection=exerciseSection(ex);const sectionSupersetGroups=workout?getSupersetGroupsForSection(workout,exSection).filter((g:any)=>g.count<3):[];const standalonePeers=workout?sectionExercises(workout,exSection).filter((e:any)=>!e.superset_group_id&&e.id!==ex.id):[];return <div className={`card exercise-card${inSuperset?' in-superset':''}${isCollapsed?' exercise-collapsed':''}${allDone?' exercise-all-done':''}`} data-exercise-id={ex.id} key={cardKey}>
         <div className="exercise-head" data-exercise-head={ex.id}><div className="exercise-head-main">{exThumb&&(showGuide&&guidePayload?<button type="button" className="exercise-card-thumb-btn" title={guidePayload.hasVideo?"Watch form":"Form guide"} onClick={()=>setExerciseGuide(guidePayload)}><img className="exercise-card-thumb" src={exThumb} alt="" loading="lazy" referrerPolicy="no-referrer"/></button>:<img className="exercise-card-thumb" src={exThumb} alt="" loading="lazy" referrerPolicy="no-referrer"/>)}<div className="exercise-meta">{canEdit()?<>
           <div className="exercise-title-row">
             {mark?<span className="te-ex-mark">{mark}</span>:null}
             <div className="typeahead-wrap exercise-name-wrap"><textarea className="exercise-name" rows={1} key={`${cardKey}-name`} value={nameQuery} title="Type to search catalog — pick a match or blur to save custom name" onFocus={()=>setExerciseNameSearch({exerciseId:ex.id,query:ex.name||''})} onChange={e=>setExerciseNameSearch({exerciseId:ex.id,query:e.target.value})} onBlur={e=>{const v=e.target.value.trim();setTimeout(()=>{if(namePickRef.current){namePickRef.current=false;return;}setExerciseNameSearch((cur:any)=>cur?.exerciseId===ex.id?null:cur);if(v&&v!==ex.name)updateExerciseField(ex,'name',v);},180);}} onKeyDown={e=>{if(e.key==='Escape')setExerciseNameSearch(null);}}/>{isEditingName&&nameQuery.trim()&&nameSearchResults.length>0&&<div className="typeahead-menu exercise-name-menu">{nameSearchResults.map((item:any)=><button type="button" key={item.id} className="typeahead-item catalog-search-item" onMouseDown={ev=>ev.preventDefault()} onClick={()=>{namePickRef.current=true;setExerciseNameSearch(null);void requestReplaceExercise(ex,item);}}>{getExerciseThumb(item)&&<img className="catalog-search-thumb" src={getExerciseThumb(item)} alt="" loading="lazy" referrerPolicy="no-referrer"/>}<span className="catalog-search-body"><b>{item.name}</b><span className="muted">{catalogResultMeta(item)}</span></span></button>)}</div>}{isEditingName&&nameQuery.trim()&&!nameSearchResults.length&&<div className="typeahead-menu exercise-name-menu"><p className="muted typeahead-empty">No catalog matches — blur to keep a custom name</p></div>}</div>
             <input className="exercise-muscle" key={`${cardKey}-muscle`} placeholder="Muscle" defaultValue={ex.muscle_group||''} onBlur={e=>{if((e.target.value||'')!==(ex.muscle_group||''))updateExerciseField(ex,'muscle_group',e.target.value);}}/>
-            {eqOptions.length>1?<select className="exercise-equipment" key={`${cardKey}-eq`} value={currentEq} onChange={e=>void updateExerciseField(ex,'equipment',e.target.value)} aria-label="Equipment">{eqOptions.map((eq:string)=><option key={eq} value={eq}>{eq}</option>)}</select>:currentEq?<span className="badge exercise-equipment-badge">{currentEq}</span>:null}
+            {eqOptions.length>1?<select className="exercise-equipment" key={`${cardKey}-eq`} value={currentEq} onChange={e=>void changeExerciseEquipment(ex,e.target.value)} aria-label="Equipment">{eqOptions.map((eq:string)=><option key={eq} value={eq}>{eq}</option>)}</select>:currentEq?<span className="badge exercise-equipment-badge">{currentEq}</span>:null}
             <span className="badge exercise-type-badge">{exType}</span>
           </div>
         </>:<>

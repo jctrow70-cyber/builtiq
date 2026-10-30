@@ -686,6 +686,10 @@ button.member-training-week-row{width:100%;background:transparent;border-left:0;
 .set-log-grid.has-chip-row{grid-template-rows:auto auto auto}
 .set-log-grid:not(.has-chip-row){grid-template-rows:auto auto}
 .set-log-head{grid-column:1;grid-row:1;display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
+.set-log-prev{flex:1 1 100%;margin:0;font-size:11px;font-weight:700;line-height:1.35;color:#94a3b8}
+.set-log-prev-exact{color:#e2e8f0}
+.set-log-prev-unknown,.set-log-prev-name_only{color:#f8d48b}
+.set-log-prev-different{color:#93c5fd}
 .set-log-metrics{grid-column:1;grid-row:2}
 .set-log-grid.has-chip-row .set-log-chips{grid-column:1;grid-row:3;min-width:0}
 .set-log-chips .log-field-card-wide{width:100%;max-width:none}
@@ -938,6 +942,7 @@ button.member-training-week-row{width:100%;background:transparent;border-left:0;
   .set-done-check{min-height:56px;min-width:52px;font-size:12px}
   .set-done-check input{width:26px;height:26px}
   .log-dup-btn{min-height:36px;padding:4px 8px;font-size:10px}
+  .set-log-prev{font-size:10px}
   .set-log-chips .log-chip-row{flex-wrap:nowrap;gap:4px}
   .set-log-chips .log-chip{min-width:0;min-height:40px;padding:6px 8px;flex:1 1 0}
   .set-log-card{padding:8px}

@@ -16,7 +16,14 @@ import {
   type LogFieldUI,
 } from '../../lib/training/logFieldUI';
 import { SET_TYPES, isRampEffortSetType, setTypeAcronym, setTypeLabel, type SetTypeValue } from '../../lib/training/setTypes';
-import { copyLastAriaLabel, logFieldAriaLabel, setDoneAriaLabel } from '../../lib/training/exerciseLogChrome';
+import { logFieldAriaLabel, setDoneAriaLabel } from '../../lib/training/exerciseLogChrome';
+import type { PreviousPerformanceResult } from '../../lib/training/previousPerformance';
+import {
+  loggerCopyLastEligible,
+  previousPerformanceCopyLastAriaLabel,
+  previousPerformanceFieldHint,
+  previousPerformanceLine,
+} from '../../lib/training/previousPerformanceDisplay';
 
 type SetRow = {
   id: string;
@@ -28,12 +35,17 @@ type SetRow = {
 
 type LogRow = Record<string, any>;
 
+export type PreviousSetView = {
+  result: PreviousPerformanceResult;
+  copySource: LogRow | null;
+};
+
 type Props = {
   section?: string;
   exType: ExerciseType;
   sets: SetRow[];
   logs: Record<string, LogRow>;
-  prevBySetId: Record<string, LogRow | null>;
+  prevBySetId: Record<string, PreviousSetView | null>;
   showPreviousSets?: boolean;
   weightUnit: 'lb' | 'kg';
   distanceUnit: 'mi' | 'km';
@@ -288,7 +300,7 @@ function SetLogCard({
   set: SetRow;
   allSets: SetRow[];
   log: LogRow;
-  prev: LogRow | null;
+  prev: PreviousSetView | null;
   layout: ReturnType<typeof logLayoutForType>;
   weightUnit: 'lb' | 'kg';
   distanceUnit: 'mi' | 'km';
@@ -335,13 +347,17 @@ function SetLogCard({
     onSaveField(set.id, key, value);
   };
 
+  const prevLine = showPreviousSets ? previousPerformanceLine(prev?.result) : null;
+  const copySource = showPreviousSets && loggerCopyLastEligible(prev?.result) ? prev?.copySource : null;
   const resolvePrevHint = (key: string) => {
-    if (!showPreviousSets || !prev) return undefined;
+    if (!copySource) return previousPerformanceFieldHint(prev?.result, key);
     if (key === '_assist_weight') {
-      const a = parseAssistFromNotes(String(prev.log_notes || ''));
+      const a = parseAssistFromNotes(String(copySource.log_notes || ''));
       return a || undefined;
     }
-    if (prev[key]) return String(prev[key]);
+    const fromHit = previousPerformanceFieldHint(prev?.result, key);
+    if (fromHit) return fromHit;
+    if (copySource[key]) return String(copySource[key]);
     return undefined;
   };
 
@@ -411,16 +427,21 @@ function SetLogCard({
             canEdit={canEdit}
             onChange={(v) => onEditSet(set, 'set_type', v)}
           />
-          {showPreviousSets && prev && canLog && (
+          {showPreviousSets && copySource && canLog && (
             <button
               type="button"
               className="btn small secondary log-dup-btn"
-              title="Copy values from last workout"
-              aria-label={copyLastAriaLabel()}
-              onClick={() => onDuplicateSet(set.id, prev)}
+              title="Copy verified values from last comparable set"
+              aria-label={previousPerformanceCopyLastAriaLabel()}
+              onClick={() => onDuplicateSet(set.id, copySource)}
             >
               Copy last
             </button>
+          )}
+          {prevLine && (
+            <p className={`set-log-prev set-log-prev-${prevLine.kind}`} data-prev-kind={prevLine.kind}>
+              {prevLine.text}
+            </p>
           )}
         </div>
 
@@ -497,9 +518,11 @@ export default function WorkoutSetLogger({
   const firstSetLog = firstSet ? logs[firstSet.id] || {} : {};
   const exerciseNotesRaw = String(firstSetLog.log_notes || '');
   const exerciseNotesDisplay = stripEmbeddedNotes(exerciseNotesRaw);
-  const exerciseNotesPrev = firstSet && prevBySetId[firstSet.id]?.log_notes
-    ? stripEmbeddedNotes(String(prevBySetId[firstSet.id]!.log_notes))
-    : undefined;
+  const firstPrev = firstSet ? prevBySetId[firstSet.id] : null;
+  const exerciseNotesPrev =
+    firstSet && loggerCopyLastEligible(firstPrev?.result) && firstPrev?.copySource?.log_notes
+      ? stripEmbeddedNotes(String(firstPrev.copySource.log_notes))
+      : undefined;
 
   const runPendingSave = (save: () => void | Promise<void>) => {
     try {

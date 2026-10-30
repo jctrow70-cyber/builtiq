@@ -1,6 +1,6 @@
 /**
  * BIQ-0271 Phase E2.1 — classify previous set performance for a planned set.
- * Pure library. Not wired to the live logger, Copy last, or science comparable-exposure.
+ * Pure library. E2.2 uses this for logger display and Copy last. Science comparable-exposure stays separate.
  *
  * Equipment identity follows Progress (`seriesIdentityFromParts`).
  * Exercise aliases follow `catalogHistoryAliasKeys`.

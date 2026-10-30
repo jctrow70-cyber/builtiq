@@ -4,6 +4,32 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 132 - Logger previous performance uses verified equipment matches
+
+Date: 2026-10-30
+Status: Accepted
+Category: Training
+
+### Decision
+
+BIQ-0271 Phase E2.2 replaces equipment-blind `previousFor()` in the live logger with the E2.1 classifier. The set card shows a compact previous-performance line. Copy last is enabled only when the match is `kind === 'exact'` and `identityMatch === 'catalog'`. Unknown equipment, different known equipment, and name-only identity are labeled and are not copied silently. Input placeholders use verified comparable values only. Changing the selected equipment reclassifies previous performance to that implement immediately. Copy last stays off until the existing equipment save finishes, so the previous implement cannot be copied during reload. A failed save clears the pending selection and shows the persisted implement. Logged weight, reps, RIR, and completion are not overwritten. Extra sets stay without previous/Copy last. Warm-up, ramp, backoff, and working histories stay separated. History remains available; equipment labels in the History modal wait for E2.3. Do not auto-fill values or mark sets Done.
+
+E2.2 does not change `st_set_logs` persistence, snapshots, Progress, Science `exposuresAreComparable`, session completion, group enrollment, or Program Design.
+
+### Reason
+
+Users need to see which implement last performance came from, and they must not copy a barbell set onto a dumbbell set by accident.
+
+### Alternatives Considered
+
+Keeping Copy last enabled for name-only exact matches. Putting uncertain history into input placeholders. Auto-filling previous values when equipment changes. Adding equipment labels to the History modal in this slice.
+
+### Impact
+
+No database change. Personal and group history for the same user stay pooled through the existing lift-history query. Review still shows the previous line and keeps Copy last disabled because logging is disabled.
+
+---
+
 ## Decision 131 - Previous-performance exact match requires verified equipment
 
 Date: 2026-10-30
