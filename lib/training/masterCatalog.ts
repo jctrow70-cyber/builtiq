@@ -448,6 +448,19 @@ export function loadMasterLibraryRecords(): MasterLibraryRecord[] {
     });
   }
 
+  const frontSquat = byId.get('55');
+  if (frontSquat) {
+    const compatible = new Set(splitList(frontSquat.compatible_equipment));
+    compatible.add(frontSquat.default_equipment || 'Barbell');
+    compatible.add('Barbell');
+    compatible.add('Smith Machine');
+    byId.set('55', {
+      ...frontSquat,
+      default_equipment: frontSquat.default_equipment || 'Barbell',
+      compatible_equipment: Array.from(compatible).join('; '),
+    });
+  }
+
   return Array.from(byId.values()).sort((a, b) => Number(a.id) - Number(b.id));
 }
 

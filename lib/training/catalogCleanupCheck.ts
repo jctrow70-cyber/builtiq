@@ -121,6 +121,16 @@ export function runCatalogCleanupChecks() {
     );
   });
 
+  const frontSquat = mapped.find((row) => row.record.id === '55');
+  assert(frontSquat, 'Front Squat exists');
+  const frontSquatEq = compatibleEquipmentOptions(frontSquat.catalog);
+  ['Barbell', 'Kettlebell', 'Dumbbell', 'Smith Machine'].forEach((item) => {
+    assert(
+      frontSquatEq.some((eq) => eq.toLowerCase() === item.toLowerCase()),
+      `Front Squat missing ${item}: ${frontSquatEq.join(', ')}`
+    );
+  });
+
   const inverted = mapped.find((row) => row.record.id === '25');
   const invertedEq = compatibleEquipmentOptions(inverted?.catalog);
   assert(

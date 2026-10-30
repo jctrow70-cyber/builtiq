@@ -4,6 +4,32 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 129 - Front Squat keeps one card with Smith Machine
+
+Date: 2026-10-30
+Status: Accepted
+Category: Exercise Library
+
+### Decision
+
+Front Squat stays one master card (55) with Smith Machine on `compatible_equipment`, matching Back Squat (54), Deadlift (71), and Romanian Deadlift (73). Do not create a Smith Front Squat card.
+
+### Reason
+
+Smith front squat is an implement variant of the same squat movement, not a separate exercise. A second master card would split history and progress series.
+
+### Alternatives Considered
+
+- Separate Smith Front Squat master card — rejected; same architecture as Back Squat (54) and Deadlift (71)
+- Leave Front Squat on free-weight implements only — rejected; users need Smith as a logged option
+
+### Impact
+
+- Front Squat equipment dropdown includes Smith Machine
+- Completed history and planned rows are not rewritten; users change equipment when they want Smith
+
+---
+
 ## Decision 128 - Phase E1 is presentation-only set-entry first
 
 Date: 2026-10-29

@@ -11,6 +11,38 @@ Branch:
 Status:
 ```
 
+## BIQ-0278 - Front Squat Smith Machine equipment
+
+Date: 2026-10-30
+Branch: cursor/front-squat-smith-48f2
+Status: Implemented. No schema migration. Live catalog apply script available.
+
+Summary: Front Squat (master 55) can use Smith Machine on the existing master card, same pattern as Back Squat (54), Deadlift (71), and Romanian Deadlift (73). No separate Smith Front Squat card.
+
+Purpose: Users need Smith Machine as an implement option when logging or planning Front Squat. Master 55 listed Barbell, Kettlebell, and Dumbbell only.
+
+Files changed:
+- `lib/training/data/builtiq-master-catalog.json`
+- `lib/training/masterCatalog.ts`
+- `lib/training/catalogCleanupCheck.ts`
+- `scripts/apply-front-squat-smith.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+
+Database changes: No schema migration. Data-only on live `st_exercise_catalog` master 55 via `scripts/apply-front-squat-smith.ts`: add Smith Machine to `coaching_metadata.compatible_equipment`. History and planned set logs are not rewritten.
+
+Testing steps:
+1. `npx tsx lib/training/catalogCleanupCheck.ts`
+2. Training → add or open Front Squat → confirm Smith Machine appears in the equipment dropdown
+3. Select Smith Machine, save, reload — equipment stays Smith Machine
+4. Confirm completed history rows keep their previously saved equipment
+
+Known issues:
+- Already-planned Front Squat rows keep their saved equipment until the user changes the dropdown
+- Live Supabase catalogs need `npx tsx scripts/apply-front-squat-smith.ts` (with service role) until the next master sync
+
+Recommended commit message: BIQ-0278 Add Smith Machine to Front Squat equipment
+
 ## BIQ-0271 Phase E1 - Set-entry first
 
 Date: 2026-10-30
