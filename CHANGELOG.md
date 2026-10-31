@@ -11,6 +11,52 @@ Branch:
 Status:
 ```
 
+## BIQ-0271 Phase E3.1 - Finish Workout entry point
+
+Date: 2026-10-30
+Branch: main
+Status: Implemented. Local commit. Not pushed. No database change.
+
+Summary: Logging and Review now keep a compact How did it go? control at the top and a bottom action after the last exercise. Unfinished sessions say Finish Workout. Completed, Partial, and Skipped sessions say Review Workout Feedback from existing session status. Both openers show the same SessionOutcomeCard in a sheet that uses the existing parent feel, pain, notes, skip reason, and outcome state. Opening or closing the sheet does not write session status. The sheet traps Tab, closes on Escape or overlay click, and returns focus to the opener. Completed, Partial, Skipped, last-set auto-complete, and adaptation stay on the existing save paths. Edit mode and the member/group logging panel do not show the bottom action.
+
+Purpose: Let users finish a long workout from the bottom of the list without scrolling back to the top.
+
+Files changed:
+- lib/training/sessionFeedback.ts
+- app/components/training/SessionFeedbackSheet.tsx
+- app/components/training/SessionOutcomeCard.tsx
+- app/page.tsx
+- app/globals.css
+- scripts/test-finish-workout.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- `npx tsx scripts/test-finish-workout.ts`
+- `npx tsx scripts/test-training-simplification.ts`
+- `npx tsx scripts/test-session-finalization.ts`
+- `npx tsx scripts/test-training-set-entry.ts`
+- `npx tsx scripts/test-previous-performance.ts`
+- `npx tsx scripts/test-previous-performance-logger.ts`
+- `npx tsx scripts/test-exercise-history-display.ts`
+- `npx tsx scripts/test-progress-analytics.ts`
+- `npx tsx lib/scienceEngine/acceptanceCheck.ts`
+- `npx tsc --noEmit`
+- Do not write production workout logs. Visual QA at 390/768/1440 waits for E3.3.
+
+Known issues:
+- Latest saved feel/pain/notes still do not reload after a fresh Review until E3.2
+- Additional sheet keyboard-inset and viewport polish wait for E3.3
+- Authenticated visual QA of E2.2/E2.3 and this opener remains outstanding
+- `npx tsc --noEmit` still fails on the pre-existing BIQ-0279 `catalogCleanupCheck.ts` comparison
+
+Recommended commit message: BIQ-0271 Phase E3.1 Add Finish Workout entry point
+
+---
+
 ## BIQ-0271 Phase E2.3 - Equipment-aware exercise History
 
 Date: 2026-10-30

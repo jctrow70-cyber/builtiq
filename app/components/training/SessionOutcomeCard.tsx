@@ -19,6 +19,7 @@ type Props = {
   pendingMigration?: boolean;
   notice?: string | null;
   defaultExpanded?: boolean;
+  embedded?: boolean;
   onStatus: (status: SessionStatus) => void;
   onFeel: (feel: WorkoutFeel) => void;
   onPain: (pain: PainFlag) => void;
@@ -45,6 +46,7 @@ export default function SessionOutcomeCard({
   pendingMigration,
   notice,
   defaultExpanded,
+  embedded,
   onStatus,
   onFeel,
   onPain,
@@ -53,16 +55,18 @@ export default function SessionOutcomeCard({
 }: Props) {
   const panelId = useId();
   const [expanded, setExpanded] = useState(
-    () => defaultExpanded ?? sessionFeedbackDefaultExpanded(status)
+    () => embedded || defaultExpanded || sessionFeedbackDefaultExpanded(status)
   );
   const summary = sessionFeedbackSummary({ status, feel, pain, notes, skipReason });
+  const showForm = embedded || expanded;
 
   useEffect(() => {
-    if (sessionFeedbackShouldReveal(status)) setExpanded(true);
-  }, [status]);
+    if (embedded || sessionFeedbackShouldReveal(status)) setExpanded(true);
+  }, [embedded, status]);
 
   return (
-    <div className={`card session-outcome-card${expanded ? '' : ' session-outcome-card--collapsed'}`}>
+    <div className={`session-outcome-card${embedded ? ' session-outcome-card--embedded' : ' card'}${showForm ? '' : ' session-outcome-card--collapsed'}`}>
+      {!embedded && (
       <button
         type="button"
         className="session-outcome-toggle"
@@ -76,7 +80,8 @@ export default function SessionOutcomeCard({
         </span>
         <span className="muted">{expanded ? 'Hide' : 'Show'}</span>
       </button>
-      <div id={panelId} hidden={!expanded}>
+      )}
+      <div id={panelId} hidden={!showForm}>
         <div className="topline" style={{ justifyContent: 'space-between' }}>
           <h3>Session feedback</h3>
           {durationMinutes ? <span className="muted">{durationMinutes} min</span> : null}

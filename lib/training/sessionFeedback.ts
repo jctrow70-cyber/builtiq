@@ -38,3 +38,41 @@ export function sessionFeedbackSummary(input: {
 export function sessionFeedbackValuesAfterToggle<T extends Record<string, unknown>>(values: T): T {
   return { ...values };
 }
+
+export type SessionFeedbackOpener = 'how-did-it-go' | 'finish';
+
+/** Finish Workout is only for the personal Training logger in log/Review, not Edit or member panels. */
+export function showFinishWorkoutAction(input: {
+  sessionOpen?: boolean;
+  sessionIntent?: 'log' | 'edit' | null;
+  memberPanel?: boolean;
+}): boolean {
+  return !!input.sessionOpen && input.sessionIntent === 'log' && !input.memberPanel;
+}
+
+/** Uses existing session status only. Does not derive completion from logs. */
+export function finishWorkoutActionLabel(status?: SessionStatus | null): string {
+  return sessionFeedbackShouldReveal(status) ? 'Review Workout Feedback' : 'Finish Workout';
+}
+
+/** Both openers show the same SessionOutcomeCard. Open/close never writes a session. */
+export function sessionFeedbackSharedInterface(opener?: SessionFeedbackOpener | null): {
+  opener: SessionFeedbackOpener | null;
+  interface: 'session-outcome';
+  usesParentState: true;
+  writesOnOpen: false;
+  writesOnClose: false;
+} {
+  return {
+    opener: opener === 'how-did-it-go' || opener === 'finish' ? opener : null,
+    interface: 'session-outcome',
+    usesParentState: true,
+    writesOnOpen: false,
+    writesOnClose: false,
+  };
+}
+
+/** Closing the sheet keeps the same parent values and status. */
+export function sessionFeedbackValuesAfterSheetClose<T extends Record<string, unknown>>(values: T): T {
+  return sessionFeedbackValuesAfterToggle(values);
+}

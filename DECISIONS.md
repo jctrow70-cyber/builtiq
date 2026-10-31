@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 134 - Finish Workout opens the existing session-feedback sheet
+
+Date: 2026-10-30
+Status: Accepted
+Category: Training
+
+### Decision
+
+BIQ-0271 Phase E3.1 adds a bottom action after the last exercise section. Unfinished sessions label it Finish Workout. Completed, Partial, and Skipped sessions label it Review Workout Feedback from existing `sessionOutcome` only. How did it go? stays a compact control at the top. Both openers show the same `SessionOutcomeCard` in a sheet and use the existing parent session state and `saveSessionOutcome` callbacks. Opening or closing the sheet does not change session status. Last-set automatic completion, explicit Completed / Partial / Skipped, snapshots, and adaptation stay unchanged. The bottom action is hidden in Edit mode and in the member/group logging panel.
+
+### Reason
+
+Users had to scroll back to the top of a long workout to finish and leave feedback. A second status store or a sticky footer would fight the header and existing completion rules.
+
+### Alternatives Considered
+
+Moving the live card to the bottom with no sheet. A sticky Finish bar. Writing Completed when Finish is tapped. Duplicating feel/outcome state in the sheet.
+
+### Impact
+
+No database change. Session-finalization calculations, set-log persistence, History, Copy last, Progress, science adaptation, group enrollment, and Program Design stay the same. Feedback reload after Review (E3.2) and extra mobile polish (E3.3) are later slices.
+
+---
+
 ## Decision 133 - History shows snapshotted equipment and a Current/All filter
 
 Date: 2026-10-30
