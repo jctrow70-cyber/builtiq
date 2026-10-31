@@ -23,6 +23,10 @@ function stringList(value: unknown): string[] {
   return Array.isArray(value) ? value.map((item) => String(item)) : [];
 }
 
+function distinctCatalogIds(left: string, right: string): boolean {
+  return left !== right;
+}
+
 function mappedByName() {
   const rows = loadMasterLibraryRecords().map((record) => ({
     record,
@@ -289,13 +293,16 @@ export function runCatalogCleanupChecks() {
     hammerDeclineSearch.some((row) => row.name === 'Iso-Lateral Decline Press'),
     'alias search finds Iso-Lateral Decline Press'
   );
-  assert(isoDecline!.catalog.external_id !== declinePress!.catalog.external_id, 'Iso-Lateral Decline Press PR key is independent from Decline Press');
   assert(
-    isoDecline!.catalog.external_id !== convergingPress!.catalog.external_id,
+    distinctCatalogIds(isoDecline!.catalog.external_id, declinePress!.catalog.external_id),
+    'Iso-Lateral Decline Press PR key is independent from Decline Press'
+  );
+  assert(
+    distinctCatalogIds(isoDecline!.catalog.external_id, convergingPress!.catalog.external_id),
     'Iso-Lateral Decline Press PR key is independent from Converging Chest Press'
   );
   assert(
-    isoDecline!.catalog.external_id !== seatedChest!.catalog.external_id,
+    distinctCatalogIds(isoDecline!.catalog.external_id, seatedChest!.catalog.external_id),
     'Iso-Lateral Decline Press PR key is independent from Seated Chest Press'
   );
 

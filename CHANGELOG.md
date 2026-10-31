@@ -11,6 +11,33 @@ Branch:
 Status:
 ```
 
+## BIQ-0280 - Unblock production typecheck for catalog 266
+
+Date: 2026-10-31
+Branch: main
+Status: Implemented. Local commit. Not pushed. No database change.
+
+Summary: `next build` failed on Vercel because TypeScript treated the Iso-Lateral Decline Press (`266`) and Seated Chest Press (`265`) independence check as an always-true comparison. The same runtime check now compares those ids as strings, so `tsc` and `next build` can finish.
+
+Purpose: Restore the production deploy of `main` without changing catalog data or BIQ-0279 product behavior.
+
+Files changed:
+- lib/training/catalogCleanupCheck.ts
+- CHANGELOG.md
+
+Database changes: None.
+
+Testing steps:
+- `npx tsc --noEmit`
+- `npx tsx -e "import { runCatalogCleanupChecks } from './lib/training/catalogCleanupCheck'; runCatalogCleanupChecks();"`
+
+Known issues:
+- Live master 266 still needs the existing apply/import path on each environment (BIQ-0279)
+
+Recommended commit message: BIQ-0280 Unblock production typecheck for catalog 266
+
+---
+
 ## BIQ-0271 Phase E3.3 - Inline workout feedback
 
 Date: 2026-10-30
