@@ -101,9 +101,9 @@ assert.equal(editHeading.title, 'Edit workout');
 
 assert.equal(sessionFeedbackDefaultExpanded('not_started'), false);
 assert.equal(sessionFeedbackDefaultExpanded('in_progress'), false);
-assert.equal(sessionFeedbackDefaultExpanded('completed'), true);
-assert.equal(sessionFeedbackDefaultExpanded('partial'), true);
-assert.equal(sessionFeedbackDefaultExpanded('skipped'), true);
+assert.equal(sessionFeedbackDefaultExpanded('completed'), false);
+assert.equal(sessionFeedbackDefaultExpanded('partial'), false);
+assert.equal(sessionFeedbackDefaultExpanded('skipped'), false);
 
 assert.equal(sessionFeedbackShouldReveal('not_started'), false);
 assert.equal(sessionFeedbackShouldReveal('skipped'), true);

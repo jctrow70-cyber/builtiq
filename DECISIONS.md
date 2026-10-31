@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 136 - Finish Workout expands inline session feedback
+
+Date: 2026-10-30
+Status: Accepted
+Category: Training
+
+### Decision
+
+BIQ-0271 Phase E3.3 replaces the session-feedback sheet with one `SessionOutcomeCard` in normal document flow below the exercise list. Finish Workout and Review Workout Feedback expand that card. While it is open the same button reads Hide Workout Feedback. How did it go? stays a compact top shortcut to the same card. Completing the last exercise does not collapse that card or scroll the page. A scheduled cooldown still receives normal auto-advance. Status becoming completed does not auto-expand feedback. History does not collapse the card. Escape collapses it without writing. Parent session state, E3.2 hydration, last-set auto-completion, and adaptation triggers stay unchanged.
+
+### Reason
+
+Users finished the last set at the bottom of a long workout, then the last card collapsed and the viewport jumped to the top sheet control. A dialog also hid the logger they had just completed.
+
+### Alternatives Considered
+
+Keeping the sheet and only fixing last-exercise collapse. A sticky Finish bar. Auto-expanding feedback when the session became completed. Writing Completed when Finish is tapped.
+
+### Impact
+
+No database change. Decision 134's sheet is withdrawn for this flow. Session-finalization calculations, set-log persistence, History, Copy last, Progress, science adaptation, group enrollment, and Program Design stay the same.
+
+---
+
 ## Decision 135 - Review restores session-linked workout feedback
 
 Date: 2026-10-30

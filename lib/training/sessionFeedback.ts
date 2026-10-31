@@ -1,13 +1,49 @@
 import type { PainFlag, SessionStatus, SkipReason, WorkoutFeel } from '../scienceEngine/adaptation/types';
 
-/** Review of a saved session starts open so existing feedback is visible. New sessions stay collapsed. */
-export function sessionFeedbackDefaultExpanded(status?: SessionStatus | null): boolean {
+export const SESSION_FEEDBACK_PANEL_ID = 'session-feedback-panel';
+export const SESSION_FEEDBACK_TITLE_ID = 'session-feedback-title';
+
+/** Inline feedback stays collapsed until Finish, Review, or How did it go? is used. */
+export function sessionFeedbackDefaultExpanded(_status?: SessionStatus | null): boolean {
+  return false;
+}
+
+/** Completed / Partial / Skipped use Review Workout Feedback. Does not auto-expand the card. */
+export function sessionFeedbackShouldReveal(status?: SessionStatus | null): boolean {
   return status === 'completed' || status === 'partial' || status === 'skipped';
 }
 
-/** Skip and finish must reveal the card so skip reasons and remaining fields stay reachable. */
-export function sessionFeedbackShouldReveal(status?: SessionStatus | null): boolean {
-  return status === 'completed' || status === 'partial' || status === 'skipped';
+export function sessionFeedbackAutoExpandsOnStatus(_status?: SessionStatus | null): boolean {
+  return false;
+}
+
+/** Next card in workout order. Null means this is the last exercise — do not collapse or scroll. */
+export function nextWorkoutExerciseId(
+  ordered: Array<{ id?: string | null } | null | undefined>,
+  currentId?: string | null
+): string | null {
+  const current = String(currentId || '').trim();
+  if (!current) return null;
+  const ids = ordered.map((ex) => String(ex?.id || '').trim()).filter(Boolean);
+  const idx = ids.indexOf(current);
+  if (idx < 0 || idx >= ids.length - 1) return null;
+  return ids[idx + 1] || null;
+}
+
+export function shouldCollapseCompletedExercise(nextId?: string | null): boolean {
+  return !!String(nextId || '').trim();
+}
+
+export function sessionFeedbackRevealScroll(): { behavior: 'smooth'; block: 'nearest' } {
+  return { behavior: 'smooth', block: 'nearest' };
+}
+
+export function sessionFeedbackEscapeCollapses(input: {
+  key?: string;
+  expanded?: boolean;
+  overlayOpen?: boolean;
+}): boolean {
+  return input.key === 'Escape' && !!input.expanded && !input.overlayOpen;
 }
 
 export function sessionFeedbackSummary(input: {
@@ -50,15 +86,17 @@ export function showFinishWorkoutAction(input: {
   return !!input.sessionOpen && input.sessionIntent === 'log' && !input.memberPanel;
 }
 
-/** Uses existing session status only. Does not derive completion from logs. */
-export function finishWorkoutActionLabel(status?: SessionStatus | null): string {
+/** Uses existing session status only. Expanded uses Hide. Does not derive completion from logs. */
+export function finishWorkoutActionLabel(status?: SessionStatus | null, expanded?: boolean): string {
+  if (expanded) return 'Hide Workout Feedback';
   return sessionFeedbackShouldReveal(status) ? 'Review Workout Feedback' : 'Finish Workout';
 }
 
-/** Both openers show the same SessionOutcomeCard. Open/close never writes a session. */
+/** Both openers show the same inline SessionOutcomeCard. Open/close never writes a session. */
 export function sessionFeedbackSharedInterface(opener?: SessionFeedbackOpener | null): {
   opener: SessionFeedbackOpener | null;
   interface: 'session-outcome';
+  placement: 'inline';
   usesParentState: true;
   writesOnOpen: false;
   writesOnClose: false;
@@ -66,15 +104,21 @@ export function sessionFeedbackSharedInterface(opener?: SessionFeedbackOpener | 
   return {
     opener: opener === 'how-did-it-go' || opener === 'finish' ? opener : null,
     interface: 'session-outcome',
+    placement: 'inline',
     usesParentState: true,
     writesOnOpen: false,
     writesOnClose: false,
   };
 }
 
-/** Closing the sheet keeps the same parent values and status. */
-export function sessionFeedbackValuesAfterSheetClose<T extends Record<string, unknown>>(values: T): T {
+/** Collapse keeps the same parent values and status. */
+export function sessionFeedbackValuesAfterCollapse<T extends Record<string, unknown>>(values: T): T {
   return sessionFeedbackValuesAfterToggle(values);
+}
+
+/** @deprecated Use sessionFeedbackValuesAfterCollapse. */
+export function sessionFeedbackValuesAfterSheetClose<T extends Record<string, unknown>>(values: T): T {
+  return sessionFeedbackValuesAfterCollapse(values);
 }
 
 export type SessionFeedbackIdentity = {

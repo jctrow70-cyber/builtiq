@@ -210,7 +210,7 @@ Goal: Prepare BuildIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
-**BIQ-0271 Phase E3.2** (restore saved workout feedback) is accepted (Decision 135). E3.3 sheet polish is not started. Remaining Phase E work (rest timers, warm-up logging, session header, superset workflow) is still out of scope.
+**BIQ-0271 Phase E3.3** (inline workout feedback) is implemented and ready for review (Decision 136). Remaining Phase E work (rest timers, warm-up logging, session header, superset workflow) is still out of scope.
 
 **BIQ-0254 Phase 2B.1** connects workout completion to the existing 2A.2 / 2A.3 engines for personal programs. Next is **Phase 2B.2**: the coaching review surface (show `review_required` / pain holds, retry state, and why a next session changed or did not). Do not start Phase 2B.2 or 2B.3 until that is requested.
 
@@ -430,7 +430,7 @@ Dropped: fuller 390px month-cell source chips. The selected-day card remains the
 
 ### BIQ-0271 Phase E — Exercise Logging UX Redesign
 
-Audit (E0–E9) is complete and approved. **E1** and **E2.1** are accepted. **E2.2** is accepted (Decision 132). **E2.3** is accepted (Decision 133). **E3.1** is accepted (Decision 134). **E3.2** is accepted (Decision 135).
+Audit (E0–E9) is complete and approved. **E1** and **E2.1** are accepted. **E2.2** is accepted (Decision 132). **E2.3** is accepted (Decision 133). **E3.1** is accepted (Decision 134). **E3.2** is accepted (Decision 135). **E3.3** is implemented for review (Decision 136).
 
 | Slice | Status |
 |-------|--------|
@@ -440,7 +440,7 @@ Audit (E0–E9) is complete and approved. **E1** and **E2.1** are accepted. **E2
 | E2.3 History equipment labels | Accepted. |
 | E3.1 Finish Workout entry | Accepted. |
 | E3.2 Feedback hydration | Accepted. |
-| E3.3 Finish sheet polish | Not started. |
+| E3.3 Inline workout feedback | Implemented. Ready for review. |
 | Rest timer | Not started. Prescribed rest text only. |
 | Warm-up set logging | Not started. Warm-up cards remain display-only. |
 | Superset workflow | Not started. Persistence unchanged. |

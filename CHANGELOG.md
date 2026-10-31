@@ -11,6 +11,53 @@ Branch:
 Status:
 ```
 
+## BIQ-0271 Phase E3.3 - Inline workout feedback
+
+Date: 2026-10-30
+Branch: main
+Status: Implemented. Ready for review. Not committed. No database change.
+
+Summary: Finish Workout expands the existing session-feedback questions inline below the exercise list. The last exercise stays open when there is no next card, so completing the final set no longer jumps the page to the top. How did it go? is a shortcut to the same bottom card. Hide, reopen, and Escape keep saved answers. Opening History does not collapse feedback. Auto-complete, E3.2 hydration, and adaptation writes stay the same.
+
+Purpose: Let the user finish a workout at the bottom of the logger without a sheet or a scroll jump.
+
+Files changed:
+- lib/training/sessionFeedback.ts
+- app/components/training/SessionOutcomeCard.tsx
+- app/components/training/SessionFeedbackSheet.tsx (removed)
+- app/page.tsx
+- app/globals.css
+- scripts/test-session-feedback-inline.ts
+- scripts/test-finish-workout.ts
+- scripts/test-training-simplification.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- `npx tsx scripts/test-session-feedback-inline.ts`
+- `npx tsx scripts/test-session-feedback-hydrate.ts`
+- `npx tsx scripts/test-finish-workout.ts`
+- `npx tsx scripts/test-session-finalization.ts`
+- `npx tsx scripts/test-training-set-entry.ts`
+- `npx tsx scripts/test-previous-performance.ts`
+- `npx tsx scripts/test-previous-performance-logger.ts`
+- `npx tsx scripts/test-exercise-history-display.ts`
+- `npx tsx scripts/test-progress-analytics.ts`
+- `npx tsx lib/scienceEngine/acceptanceCheck.ts`
+- `npx tsc --noEmit`
+- Authenticated visual QA on a completed session only. Do not write production workout logs.
+
+Known issues:
+- Authenticated visual QA of last-set completion needs a throwaway workout
+- `npx tsc --noEmit` still fails on the pre-existing BIQ-0279 `catalogCleanupCheck.ts` comparison
+
+Recommended commit message: BIQ-0271 Phase E3.3 Expand workout feedback inline
+
+---
+
 ## BIQ-0271 Phase E3.2 - Restore saved workout feedback
 
 Date: 2026-10-30

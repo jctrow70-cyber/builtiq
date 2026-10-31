@@ -25,6 +25,8 @@ assert.equal(finishWorkoutActionLabel(null), 'Finish Workout');
 assert.equal(finishWorkoutActionLabel('completed'), 'Review Workout Feedback');
 assert.equal(finishWorkoutActionLabel('partial'), 'Review Workout Feedback');
 assert.equal(finishWorkoutActionLabel('skipped'), 'Review Workout Feedback');
+assert.equal(finishWorkoutActionLabel('completed', true), 'Hide Workout Feedback');
+assert.equal(finishWorkoutActionLabel('in_progress', true), 'Hide Workout Feedback');
 assert.equal(previewDialogKeyCloses('Escape'), true);
 assert.equal(previewDialogTabWrap('Tab', false, 4, 5), 0);
 assert.equal(previewDialogTabWrap('Tab', true, 0, 5), 4);
