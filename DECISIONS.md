@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 137 - Dashboard today uses the Training schedule
+
+Date: 2026-10-31
+Status: Accepted
+Category: Dashboard
+
+### Decision
+
+BIQ-0281 replaces the dashboard Today’s Workout picker with a Today’s Training hero. The hero calls `planForCalendarDate`, `decorateDayPlanCompletion`, and `overlayVisibleExpectations`, and it loads visible expectations through the same `loadVisibleSchedule` path as the Training calendar. It shows up to three activities, with View all on calendar when more exist. Start, Continue, and Review open that workout in the logger. The title opens the read-only prescription preview. A calendar activity without a workout id does not open the strength logger. Navigation does not set `trainingSubNav`. Status text uses one presentation rule: explicit Completed, Partial, and Skipped stay; a past unfinished session stays Missed; In progress replaces Scheduled only on an open day. A saved Partial workout keeps Partial. Its action uses Training’s completion flag: Review when every required set is logged, Continue when required sets remain. A pending migration or a failed expectation or session load keeps the followed plan and says it is not the full schedule. The weekly adherence card stays out until duplicate expectations and Progress consistency are verified.
+
+### Reason
+
+The old dashboard picked one workout for the date and could hide other scheduled work, including a moved day or a group session. Training already had the schedule and session identity.
+
+### Alternatives Considered
+
+A second dashboard schedule query. Showing every item with no limit. Building the weekly adherence card in the same change. Sending Review into the logger.
+
+### Impact
+
+No database change. Session writes, completion math, adherence, Progress, nutrition totals, science, and group authorization stay as they are. Other dashboard cards stay as they are.
+
+---
+
 ## Decision 136 - Finish Workout expands inline session feedback
 
 Date: 2026-10-30

@@ -47,6 +47,8 @@ import NutritionTracker, { fetchNutritionDaySummary } from './components/Nutriti
 import NutritionGoalsSettings from './components/nutrition/NutritionGoalsSettings';
 import ProgressScreen from './components/progress/ProgressScreen';
 import BodyDashboardCard from './components/BodyDashboardCard';
+import TodaysTrainingHero from './components/dashboard/TodaysTrainingHero';
+import type { TodayTrainingNavigation } from '../lib/training/todayTraining';
 import WorkoutSetLogger from './components/WorkoutSetLogger';
 import SessionOutcomeCard from './components/training/SessionOutcomeCard';
 import AdaptationSummaryCard from './components/training/AdaptationSummaryCard';
@@ -113,7 +115,6 @@ import {
   nativeDateForActivity,
   nativeDateForWorkout,
   saveWorkoutDayMove,
-  workoutAppearsOnDate,
   workoutDayMovesFromActivities,
 } from '../lib/programDesign/workoutDayMoves';
 import type { ProgramActivity, ProgramsLaunchIntent } from '../lib/programDesign/types';
@@ -188,7 +189,6 @@ const workoutForDate=(p:any,dateYmd:string,fallbackWeek?:number,moves?:Record<st
   if(native&&moves&&moves[`w:${native.id}`]&&moves[`w:${native.id}`]!==dateYmd)return null;
   return native||list.filter((x:any)=>x.week===(fallbackWeek??wk)).sort((a:any,b:any)=>a.day_order-b.day_order)[0]||null;
 };
-const plannedSetIdsForWorkout=(w:any)=>{const ids:string[]=[];(w?.st_exercises||[]).forEach((e:any)=>(e.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).forEach((s:any)=>ids.push(s.id)));return ids;};
 const findSetInProgram=(p:any,sid:string,extraWorkouts?:any[])=>{
   const seen=new Set<string>();
   const trees=[...(p?.st_workouts||[]),...(extraWorkouts||[])];
@@ -242,6 +242,9 @@ export default function Page(){
  groupActivityWorkoutRef.current=groupActivityWorkout;
  const [trainingActivities,setTrainingActivities]=useState<ProgramActivity[]>([]);
  const [userCalendarActivities,setUserCalendarActivities]=useState<UserCalendarActivity[]>([]);
+ const [userCalendarError,setUserCalendarError]=useState<string|null>(null);
+ const [userCalendarReady,setUserCalendarReady]=useState(false);
+ const [trainingScheduleReady,setTrainingScheduleReady]=useState(false);
  const [trainingAddActivityOpen,setTrainingAddActivityOpen]=useState(false);
  const [trainingEditActivity,setTrainingEditActivity]=useState<{id:string;date:string}|null>(null);
  const [trainingMoveItem,setTrainingMoveItem]=useState<{item:TrainingDayItem;date:string}|null>(null);
@@ -289,8 +292,6 @@ export default function Page(){
  const [memberDashboard,setMemberDashboard]=useState<any>(null);
  const [memberDashProgram,setMemberDashProgram]=useState<any>(null);
  const [memberDashLogs,setMemberDashLogs]=useState<any>({});
- const [dashboardTodayLogs,setDashboardTodayLogs]=useState<any>({});
- const [dashboardProgram,setDashboardProgram]=useState<any>(null);
  const [nutritionTodaySummary,setNutritionTodaySummary]=useState<any>(null);
  const [memberDashLastDate,setMemberDashLastDate]=useState('');
  const [memberStats,setMemberStats]=useState<any>({});
@@ -391,11 +392,22 @@ export default function Page(){
   if(match&&match.id!==activeWorkout)setActiveWorkout(match.id);
  },[program?.id,program?.start_date,program?.created_at,program?.weeks,logDate,activeAssignedRecipient?.id,viewingMember?.user_id,draftEditProgramId,userCalendarActivities,trainingSessionOpen]);
  useEffect(()=>{
-  if(!session?.user?.id)return;
+  if(!session?.user?.id){setUserCalendarReady(false);setUserCalendarError(null);return;}
   if(appNav!=='Training'&&appNav!=='Dashboard')return;
+  let cancelled=false;
   const month=appNav==='Dashboard'?yearMonthOf(todayYmd()):trainingCalendarMonth;
   const win=monthWindow(month);
-  void fetchUserCalendarActivities(supabase,session.user.id,win.from,win.to).then((r)=>setUserCalendarActivities(r.data||[]));
+  void fetchUserCalendarActivities(supabase,session.user.id,win.from,win.to).then((r)=>{
+   if(cancelled)return;
+   setUserCalendarActivities(r.data||[]);
+   setUserCalendarError(r.error||null);
+   setUserCalendarReady(true);
+  }).catch((error:any)=>{
+   if(cancelled)return;
+   setUserCalendarError(error?.message||'Could not load your calendar.');
+   setUserCalendarReady(true);
+  });
+  return()=>{cancelled=true;};
  },[appNav,trainingCalendarMonth,session?.user?.id]);
  useEffect(()=>{
   if(typeof window==='undefined')return;
@@ -409,8 +421,7 @@ export default function Page(){
  useEffect(()=>{if(members.length&&selectedTeamId)loadMemberStats(); loadMemberClassificationLinks();},[members,selectedTeamId]);
 
  const activeTeam=teams.find((t:any)=>t.id===selectedTeamId)||teams[0]||null;
- useEffect(()=>{if(profile&&appNav==='Dashboard'){loadProgressLogs();void loadDashboardProgram();loadDashboardTodayNutrition();}},[profile,appNav,session?.user?.id,memberAssignments,activeTeam?.id,activeTeam?.default_program_id,members.length,teams.length]);
- useEffect(()=>{if(appNav==='Dashboard'&&(dashboardProgram||program))void loadDashboardTodayLogs();},[appNav,userCalendarActivities,dashboardProgram?.id,program?.id]);
+ useEffect(()=>{if(profile&&appNav==='Dashboard'){loadProgressLogs();loadDashboardTodayNutrition();}},[profile,appNav,session?.user?.id]);
  useEffect(()=>{
   if(!viewingMember||viewingMember.user_id===session?.user?.id)return;
   void reloadMemberWorkoutProgram(viewingMember,memberAssignments);
@@ -795,8 +806,8 @@ export default function Page(){
   if(editTargetId)context='setup';
   if(appNav==='Groups'&&activeTeam)context='setup';
   if(!session?.user)return;
-  if(activeAssignedRecipient)return;
-  if(viewingMember&&viewingMember.user_id!==session.user.id)return;
+  if(activeAssignedRecipient){setTrainingScheduleReady(true);return;}
+  if(viewingMember&&viewingMember.user_id!==session.user.id){setTrainingScheduleReady(true);return;}
   let followedId=profile?.followed_program_id||null;
   if(options&&Object.prototype.hasOwnProperty.call(options,'followedProgramId'))followedId=options.followedProgramId||null;
   // Members: auto-enroll in the date-active group plan (Training calendar follows plan dates).
@@ -832,9 +843,9 @@ export default function Page(){
    ownerUserId:session.user.id,
    publishedOnly:context==='training'&&!followedId,
   });
-  if(indexErr)return alert(indexErr);
-  if(activeAssignedRecipient)return;
-  if(viewingMember&&viewingMember.user_id!==session.user.id)return;
+  if(indexErr){setTrainingScheduleReady(true);return alert(indexErr);}
+  if(activeAssignedRecipient){setTrainingScheduleReady(true);return;}
+  if(viewingMember&&viewingMember.user_id!==session.user.id){setTrainingScheduleReady(true);return;}
   let list=index||[];
   setPrograms(list);
   // Training uses only the followed program — never fall back to "newest published"
@@ -856,7 +867,7 @@ export default function Page(){
   }
   if(pickedMeta?.id){
    const{data:full,error:fullErr}=await fetchFullProgram(supabase,pickedMeta.id);
-   if(fullErr)return alert(fullErr);
+   if(fullErr){setTrainingScheduleReady(true);return alert(fullErr);}
    pickedFull=full;
    setPrograms(mergeFullProgramIntoList(list,pickedFull));
   }
@@ -901,11 +912,14 @@ export default function Page(){
     const win=monthWindow(yearMonthOf(logDate));
     const cal=await fetchUserCalendarActivities(supabase,session.user.id,win.from,win.to);
     setUserCalendarActivities(cal.data||[]);
+    setUserCalendarError(cal.error||null);
+    setUserCalendarReady(true);
     const linkedIds=(cal.data||[]).map((a)=>a.workout_id).filter(Boolean) as string[];
     const extraIds=linkedIds.filter((id)=>!(pickedFull?.st_workouts||[]).some((w:any)=>w.id===id));
     const extras=await fetchWorkoutsByIds(supabase,extraIds);
     setCalendarWorkouts(extras.data||[]);
   }
+  setTrainingScheduleReady(true);
  }
  async function openMemberDashboard(member:any){
   if(!member||!session?.user)return;
@@ -1836,51 +1850,6 @@ export default function Page(){
   setProgressLogs(rows);
  }
 
- async function loadDashboardProgram(){
-  if(!session?.user){setDashboardProgram(null);setDashboardTodayLogs({});return;}
-  const team=activeTeam||teams[0]||null;
-  const selfMember=members.find((m:any)=>m.user_id===session.user.id);
-  const preferTeam=!!team&&(selfMember?(selfMember.training_source||'team')==='team':true);
-  if(preferTeam&&team){
-   const{data:index}=await fetchProgramIndex(supabase,{personal:false,teamId:team.id,ownerUserId:session.user.id,publishedOnly:true});
-   const pickedMeta=pickProgramForMember(index||[],{user_id:session.user.id},team.default_program_id,memberAssignments);
-   if(pickedMeta?.id){
-    const{data:full}=await fetchFullProgram(supabase,pickedMeta.id);
-    if(full){
-     setDashboardProgram(full);
-     await loadDashboardTodayLogs((program&&(program.st_workouts||[]).length)?program:full);
-     return;
-    }
-   }
-  }
-  const{data:pIndex}=await fetchProgramIndex(supabase,{personal:true,ownerUserId:session.user.id,publishedOnly:true});
-  const pickedPersonal=pickProgram(pIndex||[],null);
-  if(pickedPersonal?.id){
-   const{data:full}=await fetchFullProgram(supabase,pickedPersonal.id);
-   if(full){
-    setDashboardProgram(full);
-    await loadDashboardTodayLogs((program&&(program.st_workouts||[]).length)?program:full);
-    return;
-   }
-  }
-  setDashboardProgram(program);
-  await loadDashboardTodayLogs(program);
- }
-
- async function loadDashboardTodayLogs(programOverride?:any){
-  if(!session?.user){setDashboardTodayLogs({});return;}
-  const dashProgram=programOverride??((program&&(program.st_workouts||[]).length)?program:null)??dashboardProgram??program;
-  if(!dashProgram){setDashboardTodayLogs({});return;}
-  const todayW=(dashProgram.st_workouts||[]).find((w:any)=>workoutAppearsOnDate(dashProgram,w,today(),workoutDayMovesFromActivities(userCalendarActivities)))||null;
-  if(!todayW){setDashboardTodayLogs({});return;}
-  const ids=plannedSetIdsForWorkout(todayW);
-  if(!ids.length){setDashboardTodayLogs({});return;}
-  const{data,error}=await supabase.from('st_set_logs').select('*').in('planned_set_id',ids).eq('user_id',session.user.id).eq('log_date',today());
-  if(error){console.warn(error.message);return;}
-  const by:any={};(data||[]).forEach((l:any)=>by[l.planned_set_id]=l);
-  setDashboardTodayLogs(by);
- }
-
  async function loadDashboardTodayNutrition(){
   if(!session?.user){setNutritionTodaySummary(null);return;}
   try{
@@ -2371,7 +2340,6 @@ export default function Page(){
     logsRef.current=next;
     return next;
   });
-  if(String(logDay)===today())setDashboardTodayLogs((prev:any)=>({...prev,[sid]:data}));
   setProgressLogs((prev:any[])=>{
     const rest=prev.filter((row:any)=>row?.id!==data.id);
     return data.completed||logHasPerformance(data)?[data,...rest]:rest;
@@ -2769,6 +2737,39 @@ function onSelectTrainingDay(date:string){
   if(scheduled){void startScheduledWorkout(scheduled);return;}
   void startTrainingSession(item.workoutId,date,'log');
  }
+ function openTodayTraining(nav:TodayTrainingNavigation){
+  if(nav.kind==='none')return;
+  if(nav.kind==='programs'){goNav('Programs');return;}
+  if(nav.kind==='calendar'){
+   const now=todayYmd();
+   setTrainingSessionOpen(false);
+   setViewingWorkoutId(null);
+   setWorkoutPreviewMeta(null);
+   setGroupLogReturn(null);
+   setLogDate(now);
+   setTrainingCalendarView('day');
+   setTrainingCalendarMonth(yearMonthOf(now));
+   if(program)setWeek(weekForDate(resolveProgramStartDate(program),now,program.weeks||weeks||6));
+   setAppNav('Training');
+   return;
+  }
+  if(nav.kind==='checkoff'){void toggleTrainingItemComplete(nav.item,nav.date);return;}
+  if(nav.kind==='setup'){
+   setLogDate(nav.date);
+   setAppNav('Training');
+   void setupExistingStrengthActivity(nav.activityId,nav.date);
+   return;
+  }
+  if(nav.kind==='preview'){
+   if(!nav.item.workoutId)return;
+   setAppNav('Training');
+   void previewTrainingItem(nav.item,nav.date);
+   return;
+  }
+  if(!nav.item.workoutId)return;
+  setAppNav('Training');
+  beginTrainingItem(nav.item,nav.date);
+ }
  async function previewTrainingItem(item:TrainingDayItem,date:string){
   const scheduled=scheduleStartFromItem(item,date);
   schedulePreviewRef.current=scheduled;
@@ -3029,7 +3030,7 @@ function onSelectTrainingDay(date:string){
   }
   setAppNav(n);
   if(n==='Progress') setProgressSection(opts?.progressSub==='body'?'body':opts?.progressSub==='strength'?'strength':'overview');
-  if(n==='Progress'||n==='Dashboard'||n==='Training'){loadProgressLogs();if(n==='Dashboard'){void loadDashboardProgram();loadDashboardTodayNutrition();setBodyDashRefreshKey(k=>k+1);}}
+  if(n==='Progress'||n==='Dashboard'||n==='Training'){loadProgressLogs();if(n==='Dashboard'){loadDashboardTodayNutrition();setBodyDashRefreshKey(k=>k+1);}}
   if(n==='Nutrition')loadDashboardTodayNutrition();
   if(n==='Settings'){loadCatalog(); loadGuidedImportStatus(); loadMasterImportStatus(); if(activeTeam)loadMembers();}
   if(n==='Groups'){if(teams.length){if(!selectedTeamId)setSelectedTeamId(teams[0].id);setMode('team');} loadMembers(); loadMemberStats(); loadMemberAssignments(); loadGroupProgramForAssign(); loadClassifications(); loadPrograms('setup');}
@@ -3173,44 +3174,6 @@ function matchingSet(targetExercise:any, sourceSet:any){
  const todayDayLabel=dayLabelFromYmd(today());
  const greetingHour=new Date().getHours();
  const greeting=greetingHour<12?'Good morning':greetingHour<18?'Good afternoon':'Good evening';
- const dashProgramForToday=(program&&(program.st_workouts||[]).length)?program:(dashboardProgram||program);
- const calendarWeek=dashProgramForToday?weekForDate(resolveProgramStartDate(dashProgramForToday),today(),dashProgramForToday.weeks||weeks||6):week;
- const dashboardMoves=workoutDayMovesFromActivities(userCalendarActivities);
- const todayWorkout=dashProgramForToday?(dashProgramForToday.st_workouts||[]).find((w:any)=>workoutAppearsOnDate(dashProgramForToday,w,today(),dashboardMoves))||null:null;
- const todayWorkoutMovedFrom=todayWorkout&&todayWorkout.day_label&&todayWorkout.day_label!==todayDayLabel?String(todayWorkout.day_label):null;
- const todayWorkoutStatus=workoutStatusFor(todayWorkout,dashboardTodayLogs);
- const todayWorkoutBtnLabel=todayWorkoutStatus==='completed'?'Review logs':todayWorkoutStatus==='in_progress'?'Continue Workout':'Start Training';
- const dashboardUsesTeamProgram=dashboardProgram?.visibility==='team';
- function openDashboardWorkout(){
-  if(!todayWorkout)return;
-  setActiveWorkout(todayWorkout.id);
-  setWeek(calendarWeek);
-  setLogDate(today());
-  setTrainingSubNav('personal');
-  setTrainingSessionIntent('log');
-  setViewingWorkoutId(null);
-  setWorkoutPreviewMeta(null);
-  setTrainingSessionOpen(true);
-  setAppNav('Training');
-  if(dashProgramForToday&&dashProgramForToday.id!==program?.id)setProgram(dashProgramForToday);
- }
- function openDashboardWorkoutPreview(){
-  if(!todayWorkout)return;
-  setActiveWorkout(todayWorkout.id);
-  setWeek(calendarWeek);
-  setLogDate(today());
-  setTrainingSubNav('personal');
-  setTrainingSessionOpen(false);
-  setWorkoutPreviewMeta({
-   sourceName:null,
-   error:null,
-   completed:todayWorkoutStatus==='completed',
-   workout:todayWorkout,
-  });
-  setViewingWorkoutId(todayWorkout.id);
-  setAppNav('Training');
-  if(dashProgramForToday&&dashProgramForToday.id!==program?.id)setProgram(dashProgramForToday);
- }
  const{monday:weekStartStr,sunday:weekEndStr}=currentCalendarWeekBounds();
  const weeklyLogs=progressLogs.filter((r:any)=>{const d=String(r.log_date);return d>=weekStartStr&&d<=weekEndStr;});
  const weeklySetCount=weeklyLogs.length;
@@ -3330,7 +3293,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
  </AppHeader>
  <div className="app-shell" key={session?.user?.id||'signed-out'}>
  <main className="main page-main">
-  {appNav==='Dashboard'&&<section className="dashboard"><div className="dash-hero"><h1>{greeting}, {displayName||'there'}</h1><p className="muted">Your wellness dashboard for {formatDisplayDate(today())}.</p></div><div className="dash-grid"><div className="dash-card dash-featured"><div className="dash-card-head"><h2>Today&apos;s Workout</h2><span className="badge">{todayDayLabel}{todayWorkout&&todayWorkoutStatus!=='none'?` · ${statusLabel(todayWorkoutStatus)}`:''}</span></div>{todayWorkout?<><p className="dash-title">{todayWorkoutMovedFrom?`${todayWorkout.workout_type} · moved from ${todayWorkoutMovedFrom}`:`${todayWorkout.day_label} · ${todayWorkout.workout_type}`}</p><p className="muted">Week {calendarWeek} · {workoutExerciseCount(todayWorkout)} exercises planned{todayWorkoutStatus==='in_progress'?' · workout in progress':todayWorkoutStatus==='completed'?' · completed today':''}</p><div className="actions" style={{marginTop:10}}><button type="button" className="btn secondary" onClick={openDashboardWorkoutPreview}>View plan</button><button className={`btn ${todayWorkoutStatus==='completed'?'secondary':'green'}`} onClick={openDashboardWorkout}>{todayWorkoutBtnLabel}</button></div></>:dashProgramForToday?<><p className="muted">No workout scheduled for {todayDayLabel} this week.</p><button className="btn secondary" onClick={()=>goNav('Training')}>View program</button></>:<><p className="muted">Create a program to see today&apos;s workout.</p><button className="btn green" onClick={()=>goNav('Programs')}>Set up program</button></>}</div>{teams.length>0&&activeTeam&&<div className="dash-card dash-accent"><div className="dash-card-head"><h2>Group activity</h2><span className="badge">{teamActiveCount}/{members.length||0}</span></div><p className="dash-title">{activeTeam.name}</p><div className="dash-metrics"><div><b>{teamActiveCount}/{members.length||0}</b><span className="muted">Active this week</span></div><div><b>{teamTotalSets}</b><span className="muted">Group sets</span></div></div><button className="btn secondary" style={{marginTop:10}} onClick={()=>goNav('Groups')}>View group</button></div>}<div className="dash-card"><div className="dash-card-head"><h2>Weekly Progress</h2><span className="badge">{weeklyWorkoutDays} days</span></div><div className="dash-metrics"><div><b>{weeklySetCount}</b><span className="muted">Sets this week</span></div><div><b>{todaySetCount}</b><span className="muted">Sets today</span></div></div><button className="btn secondary" style={{marginTop:10}} onClick={()=>goNav('Progress')}>View history</button></div><div className="dash-card"><div className="dash-card-head"><h2>Nutrition</h2><span className="badge">{nutritionEntryCount?`${nutritionCalPct}% cal`:'Today'}</span></div>{nutritionEntryCount>0?<><p className="dash-title">{formatMacro(nutritionTotals.calories)} / {formatMacro(nutritionGoals.calories)} cal</p><div className="dash-metrics"><div><b>{formatMacro(nutritionTotals.protein_g)}g</b><span className="muted">Protein</span></div><div><b>{formatMacro(nutritionTotals.carbs_g)}g</b><span className="muted">Carbs</span></div><div><b>{formatMacro(nutritionTotals.fat_g)}g</b><span className="muted">Fat</span></div><div><b>{nutritionEntryCount}</b><span className="muted">Items logged</span></div></div></>:<><p className="muted">Log meals to track daily macros.</p><div className="dash-placeholder"><span>Calories —</span><span>Protein —</span><span>Carbs —</span><span>Fats —</span></div></>}<button className="btn secondary" style={{marginTop:10}} onClick={()=>goNav('Nutrition')}>{nutritionEntryCount?'View log':'Log food'}</button></div>{session?.user&&<BodyDashboardCard userId={session.user.id} unitsPreference={profileDraft?.units_preference} refreshKey={bodyDashRefreshKey} onOpenProgress={()=>goNav('Progress',{progressSub:'body'})}/>}<div className="dash-card dash-accent"><div className="dash-card-head"><h2>AI Coach Insight</h2><span className="badge">Preview</span></div><p className="muted">Personalized coaching based on your training, nutrition, and recovery is coming soon.</p><p className="dash-insight">&ldquo;Stay consistent this week. Log today&apos;s sets to build your progress baseline.&rdquo;</p></div></div></section>}
+  {appNav==='Dashboard'&&<section className="dashboard"><div className="dash-hero"><h1>{greeting}, {displayName||'there'}</h1><p className="muted">Your wellness dashboard for {formatDisplayDate(today())}.</p></div><div className="dash-grid">{session?.user&&<TodaysTrainingHero userId={session.user.id} teams={teams.map((t:any)=>({id:t.id,name:t.name}))} inputsReady={trainingScheduleReady&&userCalendarReady} loadError={userCalendarError} program={program} programName={program?.name||null} followedFromGroup={followedFromGroup} followedSourceProgramId={personalizedCopy?program?.source_program_id||null:null} activities={trainingActivities} calendarActivities={userCalendarActivities} workouts={trainingCompletionWorkouts} progressLogs={progressLogs} sessionLogs={logDate===todayYmd()&&!(viewingMember&&viewingMember.user_id!==session.user.id)?logs:{}} onNavigate={openTodayTraining}/>}{teams.length>0&&activeTeam&&<div className="dash-card dash-accent"><div className="dash-card-head"><h2>Group activity</h2><span className="badge">{teamActiveCount}/{members.length||0}</span></div><p className="dash-title">{activeTeam.name}</p><div className="dash-metrics"><div><b>{teamActiveCount}/{members.length||0}</b><span className="muted">Active this week</span></div><div><b>{teamTotalSets}</b><span className="muted">Group sets</span></div></div><button className="btn secondary" style={{marginTop:10}} onClick={()=>goNav('Groups')}>View group</button></div>}<div className="dash-card"><div className="dash-card-head"><h2>Weekly Progress</h2><span className="badge">{weeklyWorkoutDays} days</span></div><div className="dash-metrics"><div><b>{weeklySetCount}</b><span className="muted">Sets this week</span></div><div><b>{todaySetCount}</b><span className="muted">Sets today</span></div></div><button className="btn secondary" style={{marginTop:10}} onClick={()=>goNav('Progress')}>View history</button></div><div className="dash-card"><div className="dash-card-head"><h2>Nutrition</h2><span className="badge">{nutritionEntryCount?`${nutritionCalPct}% cal`:'Today'}</span></div>{nutritionEntryCount>0?<><p className="dash-title">{formatMacro(nutritionTotals.calories)} / {formatMacro(nutritionGoals.calories)} cal</p><div className="dash-metrics"><div><b>{formatMacro(nutritionTotals.protein_g)}g</b><span className="muted">Protein</span></div><div><b>{formatMacro(nutritionTotals.carbs_g)}g</b><span className="muted">Carbs</span></div><div><b>{formatMacro(nutritionTotals.fat_g)}g</b><span className="muted">Fat</span></div><div><b>{nutritionEntryCount}</b><span className="muted">Items logged</span></div></div></>:<><p className="muted">Log meals to track daily macros.</p><div className="dash-placeholder"><span>Calories —</span><span>Protein —</span><span>Carbs —</span><span>Fats —</span></div></>}<button className="btn secondary" style={{marginTop:10}} onClick={()=>goNav('Nutrition')}>{nutritionEntryCount?'View log':'Log food'}</button></div>{session?.user&&<BodyDashboardCard userId={session.user.id} unitsPreference={profileDraft?.units_preference} refreshKey={bodyDashRefreshKey} onOpenProgress={()=>goNav('Progress',{progressSub:'body'})}/>}<div className="dash-card dash-accent"><div className="dash-card-head"><h2>AI Coach Insight</h2><span className="badge">Preview</span></div><p className="muted">Personalized coaching based on your training, nutrition, and recovery is coming soon.</p><p className="dash-insight">&ldquo;Stay consistent this week. Log today&apos;s sets to build your progress baseline.&rdquo;</p></div></div></section>}
   {appNav==='Nutrition'&&session?.user&&<NutritionTracker userId={session.user.id} onDateChange={()=>loadDashboardTodayNutrition()} onDataChange={()=>loadDashboardTodayNutrition()} onOpenSettings={()=>goNav('Settings')}/>}
   {appNav==='AI Coach'&&<section><div className="card dash-accent"><h2>AI Coach</h2><p className="muted">Your BuildIQ Health wellness coach will analyze workouts, nutrition, and recovery to give safe, practical guidance.</p><p className="dash-insight">Coming soon: readiness check-ins, workout adjustments, and weekly coaching summaries.</p></div></section>}
   {appNav==='Progress'&&<ProgressScreen userId={session?.user?.id||null} unitsPreference={profileDraft?.units_preference} weightUnit={progressWeightUnit} section={progressSection} onSectionChange={setProgressSection} onOpenNutrition={()=>goNav('Nutrition')} onBodyDataChange={()=>setBodyDashRefreshKey(k=>k+1)}/>}

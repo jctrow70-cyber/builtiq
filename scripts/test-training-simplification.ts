@@ -70,6 +70,7 @@ assert.equal(trainingDayCardShowsStatus({ statusLabel: 'Scheduled', canStart: tr
 assert.equal(trainingDayCardShowsStatus({ statusLabel: 'Completed', canStart: true }), false);
 assert.equal(trainingDayCardShowsStatus({ statusLabel: 'Missed', canStart: true }), true);
 assert.equal(trainingDayCardShowsStatus({ statusLabel: 'Partial', canStart: true }), true);
+assert.equal(trainingDayCardShowsStatus({ statusLabel: 'In progress', canStart: true }), true);
 assert.equal(trainingDayCardShowsStatus({ statusLabel: 'Scheduled', canStart: false }), true);
 
 assert.equal(

@@ -210,6 +210,8 @@ Goal: Prepare BuildIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
+**BIQ-0281 DSH-B** (Today’s Training) is implemented and ready for review (Decision 137). The dashboard uses the Training schedule for today. The weekly adherence card stays blocked until duplicate expectations and Progress consistency are verified. Other dashboard cards are unchanged.
+
 **BIQ-0271 Phase E3.3** (inline workout feedback) is implemented and ready for review (Decision 136). Remaining Phase E work (rest timers, warm-up logging, session header, superset workflow) is still out of scope.
 
 **BIQ-0254 Phase 2B.1** connects workout completion to the existing 2A.2 / 2A.3 engines for personal programs. Next is **Phase 2B.2**: the coaching review surface (show `review_required` / pain holds, retry state, and why a next session changed or did not). Do not start Phase 2B.2 or 2B.3 until that is requested.

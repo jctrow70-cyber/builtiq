@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import TrainingExecution from './TrainingExecution';
 import {
@@ -12,17 +12,16 @@ import {
 } from '../../../lib/programDesign/trainingSchedule';
 import { todayYmd } from '../../../lib/training/programCalendar';
 import {
-  repairFollowedTrainingSchedule,
-  scheduleSetupMissing,
   setEnrollmentExpectation,
   setEnrollmentScheduleVisible,
 } from '../../../lib/training/scheduleActions';
-import {
-  sourceLabel,
-  type ExpectationDisplayState,
-  type ExpectationSessionStatus,
-} from '../../../lib/training/unifiedSchedule';
+import { type ExpectationDisplayState } from '../../../lib/training/unifiedSchedule';
 import { resolveFollowedAssignmentSource } from '../../../lib/training/trainingSource';
+import {
+  loadVisibleSchedule,
+  scheduleTeamLabel,
+  type VisibleScheduleEnrollment,
+} from '../../../lib/training/visibleSchedule';
 
 export type ScheduleStartItem = {
   expectationId: string;
@@ -31,35 +30,6 @@ export type ScheduleStartItem = {
   scheduledDate: string;
   sourceKey: string;
   teamId: string | null;
-};
-
-type EnrollmentRow = {
-  id: string;
-  source_key: string;
-  source_kind: string;
-  team_id: string | null;
-  program_id: string | null;
-  status: string;
-  schedule_visible: boolean;
-  expectation_enabled: boolean;
-};
-
-type ExpectationRow = {
-  id: string;
-  source_key: string;
-  team_id: string | null;
-  program_id: string | null;
-  workout_id: string | null;
-  scheduled_date: string;
-  title: string;
-  excused: boolean;
-};
-
-type SessionRow = {
-  expectation_id?: string | null;
-  workout_id?: string | null;
-  log_date?: string | null;
-  status?: string | null;
 };
 
 type CalendarProps = {
@@ -109,24 +79,10 @@ type Props = {
   calendar: CalendarProps;
 };
 
-function sessionFor(expectation: ExpectationRow, sessions: SessionRow[]): ExpectationSessionStatus {
-  const match = sessions.find(
-    (session) =>
-      (session.expectation_id && session.expectation_id === expectation.id) ||
-      (session.workout_id && session.workout_id === expectation.workout_id && session.log_date === expectation.scheduled_date)
-  );
-  const status = match?.status;
-  if (status === 'completed' || status === 'partial' || status === 'skipped' || status === 'in_progress' || status === 'not_started') {
-    return status;
-  }
-  return null;
-}
-
 export default function UnifiedTrainingSchedule({ userId, teams, rangeFrom, rangeTo, calendar }: Props) {
-  const [enrollments, setEnrollments] = useState<EnrollmentRow[]>([]);
+  const [enrollments, setEnrollments] = useState<VisibleScheduleEnrollment[]>([]);
   const [programNames, setProgramNames] = useState<Record<string, string>>({});
-  const [expectations, setExpectations] = useState<ExpectationRow[]>([]);
-  const [sessions, setSessions] = useState<SessionRow[]>([]);
+  const [visibleExpectations, setVisibleExpectations] = useState<VisibleScheduleExpectation[]>([]);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -136,97 +92,20 @@ export default function UnifiedTrainingSchedule({ userId, teams, rangeFrom, rang
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const enrollmentResult = await supabase
-      .from('st_training_enrollments')
-      .select('id, source_key, source_kind, team_id, program_id, status, schedule_visible, expectation_enabled')
-      .eq('user_id', userId)
-      .order('source_kind', { ascending: true });
-    if (enrollmentResult.error) {
-      if (scheduleSetupMissing(enrollmentResult.error.message)) {
-        setPending(true);
-        setEnrollments([]);
-        setExpectations([]);
-        setLoading(false);
-        return;
-      }
-      setError(enrollmentResult.error.message);
-      setLoading(false);
-      return;
-    }
-    const repair = await repairFollowedTrainingSchedule(supabase, today);
-    if (repair.pending) {
-      setPending(true);
-      setLoading(false);
-      return;
-    }
-    const refreshed = repair.error
-      ? enrollmentResult
-      : await supabase
-          .from('st_training_enrollments')
-          .select('id, source_key, source_kind, team_id, program_id, status, schedule_visible, expectation_enabled')
-          .eq('user_id', userId)
-          .order('source_kind', { ascending: true });
-    const rows = ((refreshed.data || []) as EnrollmentRow[]).filter((row) => row.status !== 'ended');
-    setEnrollments(rows);
-    const programIds = rows.reduce<string[]>((ids, row) => {
-      if (row.program_id && ids.indexOf(row.program_id) === -1) ids.push(row.program_id);
-      return ids;
-    }, []);
-    if (programIds.length) {
-      const programs = await supabase.from('st_programs').select('id, name').in('id', programIds);
-      const names: Record<string, string> = {};
-      for (const program of programs.data || []) names[program.id] = program.name || 'Program';
-      setProgramNames(names);
-    } else {
-      setProgramNames({});
-    }
-    const visibleKeys = new Set(rows.filter((row) => row.schedule_visible && row.status === 'active').map((row) => row.source_key));
-    const expectationResult = await supabase
-      .from('st_training_expectations')
-      .select('id, source_key, team_id, program_id, workout_id, scheduled_date, title, excused')
-      .eq('user_id', userId)
-      .gte('scheduled_date', rangeFrom)
-      .lte('scheduled_date', rangeTo)
-      .order('scheduled_date', { ascending: true });
-    if (expectationResult.error && !scheduleSetupMissing(expectationResult.error.message)) {
-      setError(expectationResult.error.message);
-    }
-    const visible = ((expectationResult.data || []) as ExpectationRow[]).filter((row) => visibleKeys.has(row.source_key));
-    setExpectations(visible);
-    const sessionResult = await supabase
-      .from('st_workout_sessions')
-      .select('expectation_id, workout_id, log_date, status')
-      .eq('user_id', userId)
-      .gte('log_date', rangeFrom)
-      .lte('log_date', rangeTo);
-    setSessions((sessionResult.data || []) as SessionRow[]);
-    setPending(false);
+    const snapshot = await loadVisibleSchedule(supabase, { userId, teams, rangeFrom, rangeTo, today });
+    setPending(snapshot.pending);
+    setError(snapshot.error);
+    setEnrollments(snapshot.pending ? [] : snapshot.enrollments);
+    setProgramNames(snapshot.pending ? {} : snapshot.programNames);
+    setVisibleExpectations(snapshot.pending ? [] : snapshot.expectations);
     setLoading(false);
-  }, [userId, today, rangeFrom, rangeTo]);
+  }, [userId, teams, today, rangeFrom, rangeTo]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
-  const teamName = (teamId: string | null, sourceKey: string) => {
-    if (sourceKey === 'personal') return 'Personal';
-    return teams.find((team) => team.id === teamId)?.name || sourceLabel(sourceKey);
-  };
-
-  const visibleExpectations = useMemo<VisibleScheduleExpectation[]>(() => {
-    return expectations.map((row) => ({
-      id: row.id,
-      workoutId: row.workout_id,
-      programId: row.program_id,
-      scheduledDate: row.scheduled_date,
-      title: row.title,
-      sourceKey: row.source_key,
-      teamId: row.team_id,
-      sourceName: teamName(row.team_id, row.source_key),
-      excused: row.excused,
-      sessionStatus: sessionFor(row, sessions),
-    }));
-  }, [expectations, sessions, teams]);
+  const teamName = (teamId: string | null, sourceKey: string) => scheduleTeamLabel(teams, teamId, sourceKey);
 
   const sourceProgramId = calendar.followedSourceProgramId || null;
   const followedSource = resolveFollowedAssignmentSource({
@@ -247,7 +126,7 @@ export default function UnifiedTrainingSchedule({ userId, teams, rangeFrom, rang
     plan: cell.plan ? overlayVisibleExpectations(cell.plan, visibleExpectations, today, sourceProgramId, followedSource) : cell.plan,
   }));
 
-  async function toggleVisible(row: EnrollmentRow) {
+  async function toggleVisible(row: VisibleScheduleEnrollment) {
     setBusyId(row.id);
     const result = await setEnrollmentScheduleVisible(supabase, row.id, !row.schedule_visible);
     setBusyId(null);
@@ -258,7 +137,7 @@ export default function UnifiedTrainingSchedule({ userId, teams, rangeFrom, rang
     await load();
   }
 
-  async function toggleExpectation(row: EnrollmentRow) {
+  async function toggleExpectation(row: VisibleScheduleEnrollment) {
     const next = !row.expectation_enabled;
     if (!next) {
       const label = teamName(row.team_id, row.source_key);

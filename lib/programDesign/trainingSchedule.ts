@@ -1,3 +1,4 @@
+import { presentTrainingStatus } from '../training/trainingDayCard';
 import { expectationDisplayState, type ExpectationSessionStatus } from '../training/unifiedSchedule';
 import { addDaysYmd, dayLabelFromYmd, formatYmd, mondayOfWeek, sundayOfWeek, todayYmd, weekForDate } from '../training/programCalendar';
 import { activityTypeShortLabel, formatDuration } from './activityTypes';
@@ -33,6 +34,8 @@ export type TrainingDayItem = {
   sourceKey?: string | null;
   teamId?: string | null;
   sourceName?: string | null;
+  /** Session status from the matching expectation. Status text on Training still uses statusLabel. */
+  sessionStatus?: ExpectationSessionStatus;
   /** False for a workout that belongs to another visible source and cannot be moved from this calendar. */
   canMove?: boolean;
 };
@@ -297,10 +300,8 @@ export type VisibleScheduleExpectation = {
   sessionStatus: ExpectationSessionStatus;
 };
 
-function calendarStatusLabel(state: string, completed: boolean): string {
-  if (completed || state === 'Completed') return 'Completed';
-  if (state === 'Today' || state === 'Upcoming') return 'Scheduled';
-  return state;
+function calendarStatusLabel(state: string, completed: boolean, sessionStatus: ExpectationSessionStatus = null): string {
+  return presentTrainingStatus({ scheduleState: state, setLogsCompleted: completed, sessionStatus });
 }
 
 function withStatus(item: TrainingDayItem): TrainingDayItem {
@@ -341,12 +342,13 @@ export function overlayVisibleExpectations(
       items[index] = {
         ...prev,
         completed,
-        statusLabel: calendarStatusLabel(state, completed),
+        statusLabel: calendarStatusLabel(state, completed, row.sessionStatus),
         expectationId: row.id,
         programId: row.programId,
         sourceKey: row.sourceKey,
         teamId: row.teamId,
         sourceName: row.sourceName,
+        sessionStatus: row.sessionStatus ?? null,
       };
       continue;
     }
@@ -369,12 +371,13 @@ export function overlayVisibleExpectations(
       isRest: false,
       source: 'program',
       completed,
-      statusLabel: calendarStatusLabel(state, completed),
+      statusLabel: calendarStatusLabel(state, completed, row.sessionStatus),
       expectationId: row.id,
       programId: row.programId,
       sourceKey: row.sourceKey,
       teamId: row.teamId,
       sourceName: row.sourceName,
+      sessionStatus: row.sessionStatus ?? null,
       canMove: false,
     });
   }

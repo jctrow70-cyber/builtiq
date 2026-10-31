@@ -1,3 +1,6 @@
+import type { SessionStatus } from '../scienceEngine/adaptation/types';
+import type { ExpectationSessionStatus } from './unifiedSchedule';
+
 export const TRAINING_CALENDAR_VIEWS = ['day', 'week', 'month'] as const;
 
 export type TrainingCalendarView = (typeof TRAINING_CALENDAR_VIEWS)[number];
@@ -15,6 +18,35 @@ export function trainingDayCardLine(input: {
   const focus = String(input.focus || '').trim();
   const focusUseful = Boolean(focus && focus !== typeLabel);
   return [source, typeLabel, duration, focusUseful ? focus : null].filter(Boolean).join(' · ');
+}
+
+/**
+ * Schedule adherence owns Missed, Excused, and explicit Completed, Partial, and Skipped.
+ * In progress is session progress and only replaces an open Scheduled day.
+ * A past unfinished session stays Missed. Partial and in-progress never become Completed here.
+ */
+export function presentTrainingStatus(input: {
+  scheduleState?: string | null;
+  setLogsCompleted?: boolean;
+  sessionStatus?: ExpectationSessionStatus;
+  progress?: SessionStatus | null;
+}): string {
+  const schedule = String(input.scheduleState || '').trim();
+  const session = input.sessionStatus || null;
+  const progress = input.progress || null;
+  if (session === 'skipped' || schedule === 'Skipped' || progress === 'skipped') return 'Skipped';
+  if (session === 'partial' || schedule === 'Partial' || progress === 'partial') return 'Partial';
+  if (session === 'completed' || schedule === 'Completed' || input.setLogsCompleted || progress === 'completed') return 'Completed';
+  if (schedule === 'Missed') return 'Missed';
+  if (schedule === 'Excused') return 'Excused';
+  const openDay = !schedule || schedule === 'Scheduled' || schedule === 'Today' || schedule === 'Upcoming';
+  if (openDay && (session === 'in_progress' || progress === 'in_progress')) return 'In progress';
+  if (!schedule || schedule === 'Today' || schedule === 'Upcoming') return 'Scheduled';
+  return schedule;
+}
+
+export function trainingStatusClass(label: string): string {
+  return `te-status te-status--${label.toLowerCase().replace(/\s+/g, '-')}`;
 }
 
 /** Hide Scheduled next to Start and Completed next to Review. Keep Missed / Partial. */

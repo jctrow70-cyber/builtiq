@@ -1552,3 +1552,25 @@ label{color:var(--textSecondary)}
   .member-profile-backdrop{justify-content:flex-end;align-items:stretch}
   .member-profile-sheet{width:min(560px,100%);max-width:560px;height:100%;max-height:100%;border-radius:0}
 }
+.today-training{min-height:0;grid-column:1 / -1}
+.today-training-following{margin:0 0 8px}
+.today-training-notice{margin:0 0 10px}
+.today-training-empty{display:grid;gap:10px;align-content:start}
+.today-training-list{display:grid;gap:8px;margin-top:4px}
+.today-training-item{display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:12px;border-radius:14px;background:var(--surfaceInset);border:1px solid var(--borderSubtle)}
+.today-training-item-main{min-width:0}
+.today-training-name{display:inline;margin:0;padding:0;border:0;background:transparent;color:inherit;font-size:16px;font-weight:800;text-align:left}
+.today-training-meta,.today-training-moved{margin:4px 0 0}
+.today-training-actions .btn,.today-training-empty .btn,.today-training-more{min-height:44px}
+.today-training-actions .btn{width:100%}
+.today-training-more{margin-top:10px}
+.te-status--in-progress{color:var(--accentOnSoft)}
+@media(min-width:768px){
+  .today-training-item{flex-direction:row;align-items:center;justify-content:space-between;gap:16px}
+  .today-training-actions{flex:0 0 auto}
+  .today-training-actions .btn{width:auto}
+}
+@media(min-width:1440px){
+  .today-training-name{font-size:18px}
+  .today-training-item{padding:14px 16px}
+}

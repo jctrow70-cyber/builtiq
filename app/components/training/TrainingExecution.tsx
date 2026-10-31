@@ -12,6 +12,7 @@ import {
   trainingDayCardLine,
   trainingDayCardShowsStatus,
   trainingDayCardTitleAria,
+  trainingStatusClass,
 } from '../../../lib/training/trainingDayCard';
 import type { TrainingDayItem, TrainingDayPlan, TrainingMonthCell } from '../../../lib/programDesign/trainingSchedule';
 
@@ -152,7 +153,7 @@ function DayItems({
             {cardLine ? <span className="muted te-item-meta">{cardLine}</span> : null}
             {item.completed && !showStatus ? <span className="visually-hidden">Completed</span> : null}
             {showStatus && item.statusLabel ? (
-              <span className={`te-status te-status--${item.statusLabel.toLowerCase()}`}>{item.statusLabel}</span>
+              <span className={trainingStatusClass(item.statusLabel)}>{item.statusLabel}</span>
             ) : null}
             {item.movedFrom && (
               <span className="muted te-item-moved">Moved from {formatLongWeekday(item.movedFrom)}</span>
@@ -419,7 +420,7 @@ export default function TrainingExecution({
                       <b>{item.title}</b>
                       {source ? <span className="te-week-source">{source}</span> : null}
                       {item.statusLabel && (
-                        <span className={`te-status te-status--${item.statusLabel.toLowerCase()}`}>{item.statusLabel}</span>
+                        <span className={trainingStatusClass(item.statusLabel)}>{item.statusLabel}</span>
                       )}
                     </span>
                     );

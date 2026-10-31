@@ -11,6 +11,55 @@ Branch:
 Status:
 ```
 
+## BIQ-0281 - Dashboard Today's Training
+
+Date: 2026-10-31
+Branch: main
+Status: Implemented. Local commit. Not pushed. No database change.
+
+Summary: The dashboard Today’s Workout picker is replaced by a Today’s Training hero. It uses the same Training calendar schedule and session identity, and it lists up to three activities for today.
+
+Purpose: Stop the dashboard from choosing one workout and hiding the rest, and open the selected workout, date, and source.
+
+Files changed:
+- app/components/dashboard/TodaysTrainingHero.tsx
+- lib/training/todayTraining.ts
+- lib/training/visibleSchedule.ts
+- lib/training/trainingDayCard.ts
+- lib/programDesign/trainingSchedule.ts
+- app/components/training/TrainingExecution.tsx
+- app/components/training/UnifiedTrainingSchedule.tsx
+- app/page.tsx
+- app/globals.css
+- scripts/test-today-training.ts
+- scripts/test-training-simplification.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- `npx tsx scripts/test-today-training.ts`
+- `npx tsx scripts/test-unified-schedule.ts`
+- `npx tsc --noEmit`
+- On the dashboard, compare today’s items with the Training day for today.
+- Start, Continue, and Review the selected item and confirm the workout, date, and source.
+- Open a calendar activity that has no workout and confirm it does not open the strength logger.
+- Check loading, failed load, no program, rest day, and an empty day.
+- At 390px, 768px, and 1440px, confirm the hero stacks, then rows, and stays readable.
+
+Known issues:
+- The weekly adherence card is not part of this change.
+- A failed calendar load hides today’s list. A pending schedule migration or a failed expectation/session load keeps the followed plan and says the list is not the full schedule.
+- Review opens the existing logger for that workout, date, and source. The title still opens the prescription preview, which does not show logged sets or saved feedback.
+- While a coach has another member’s workout open, the dashboard does not use that member’s session logs.
+- Signed-in visual QA is still blocked on the sign-in screen.
+
+Recommended commit message: BIQ-0281 Show today's training from the Training schedule
+
+---
+
 ## BIQ-0280 - Unblock production typecheck for catalog 266
 
 Date: 2026-10-31
