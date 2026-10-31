@@ -56,7 +56,7 @@ import { completedSessionDraft, deriveSessionStatus, outstandingRequiredSetIds, 
 import { extraLogsFromSetLogs, extraSetInsertPayload, extraSetsForExercise, nextExtraSetNumber, type ExtraSetLog } from '../lib/training/extraSets';
 import { classifyPreviousPerformance } from '../lib/training/previousPerformance';
 import { loggerCopyLastEligible, loggerSelectedEquipment } from '../lib/training/previousPerformanceDisplay';
-import { normalizePainFlag, upsertExerciseSession, upsertWorkoutFeel, upsertWorkoutSession } from '../lib/training/workoutSessions';
+import { loadWorkoutFeedback, normalizePainFlag, upsertExerciseSession, upsertWorkoutFeel, upsertWorkoutSession } from '../lib/training/workoutSessions';
 import { refreshProgramExpectations, withdrawAssignmentExpectation } from '../lib/training/scheduleActions';
 import { patchProgramPlannedWeights } from '../lib/training/adaptationApply';
 import { shouldTriggerCompletedWorkoutAdaptation, type AdaptationOrchestrationResult } from '../lib/training/adaptationOrchestration';
@@ -72,7 +72,7 @@ import { trainingSourceLabel } from '../lib/training/trainingSource';
 import MoveWorkoutSheet from './components/training/MoveWorkoutSheet';
 import { cycleLengthOf, formatLongWeekday } from '../lib/programDesign/cycle';
 import { trainingPageHeading } from '../lib/training/trainingDayCard';
-import { finishWorkoutActionLabel, sessionFeedbackSummary, showFinishWorkoutAction, type SessionFeedbackOpener } from '../lib/training/sessionFeedback';
+import { finishWorkoutActionLabel, sessionFeedbackIdentityKey, sessionFeedbackStateFromRow, sessionFeedbackSummary, shouldApplySessionFeedbackHydration, showFinishWorkoutAction, type SessionFeedbackOpener } from '../lib/training/sessionFeedback';
 import { focusMusclesForSingleDayType, inferSessionMinutesFromPrompt, inferSingleDayTypeFromPrompt } from '../lib/programDesign/inferSchedule';
 import AddActivitySheet from './components/programDesign/AddActivitySheet';
 import StrengthWorkoutSetupSheet from './components/programDesign/StrengthWorkoutSetupSheet';
@@ -322,6 +322,9 @@ export default function Page(){
  const logsRef=useRef<any>({});
  const upsertQueueRef=useRef<Record<string,Promise<any>>>({});
  const completedSessionKeyRef=useRef<string|null>(null);
+ const sessionFeedbackIdentityRef=useRef<string|null>(null);
+ const sessionFeedbackDirtyRef=useRef(false);
+ const sessionFeedbackLoadGenRef=useRef(0);
  const planChangePartialRef=useRef<string|null>(null);
  const prCelebrationTimerRef=useRef<ReturnType<typeof setTimeout>|null>(null);
  const [prCelebration,setPrCelebration]=useState<{exerciseName:string;message:string;subtext:string}|null>(null);
@@ -1613,11 +1616,36 @@ export default function Page(){
   await loadTeams();
   await loadMembers();
  }
+ function beginSessionFeedbackLoad(key:string|null){
+  const gen=++sessionFeedbackLoadGenRef.current;
+  if(sessionFeedbackIdentityRef.current!==key){
+    sessionFeedbackIdentityRef.current=key;
+    sessionFeedbackDirtyRef.current=false;
+    setSessionFeel('');
+    setSessionPain('');
+    setSessionNotes('');
+    if(!key)setSessionSkipReason('');
+  }
+  return gen;
+ }
+ function applySessionFeedbackLoad(key:string|null,gen:number,row:any){
+  if(!shouldApplySessionFeedbackHydration({
+    loadKey:key,
+    currentKey:sessionFeedbackIdentityRef.current,
+    loadGeneration:gen,
+    currentGeneration:sessionFeedbackLoadGenRef.current,
+    dirty:sessionFeedbackDirtyRef.current,
+  }))return;
+  const next=sessionFeedbackStateFromRow(row||null);
+  setSessionFeel(next.feel);
+  setSessionPain(next.pain);
+  setSessionNotes(next.notes);
+ }
  async function loadLogs(p:any,userId?:string,dateOverride?:string){
   const uid=userId||session?.user?.id;
   const day=dateOverride||logDate;
   const extras=extraWorkoutsForLogging();
-  if(!uid||(!p&&!extras.length)){setLogs({});logsRef.current={};return;}
+  if(!uid||(!p&&!extras.length)){setLogs({});logsRef.current={};beginSessionFeedbackLoad(null);return;}
   const ids:any[]=[];
   const seen=new Set<string>();
   [...(p?.st_workouts||[]),...extras].forEach((w:any)=>{
@@ -1646,6 +1674,8 @@ export default function Page(){
   if(workoutIds.length){
     setExtraSetLogs(extraLogsFromSetLogs(dateLogs||[]));
     const sessionWorkoutId=groupActivityLogRef.current?.workoutId||workoutOnDay?.id||workoutIds[0];
+    const feedbackKey=sessionFeedbackIdentityKey({userId:uid,workoutId:sessionWorkoutId,logDate:day});
+    const feedbackGen=beginSessionFeedbackLoad(feedbackKey);
     const {data:sessionRow,error:sessionErr}=sessionWorkoutId?await supabase.from('st_workout_sessions').select('*').eq('user_id',uid).eq('log_date',day).eq('workout_id',sessionWorkoutId).maybeSingle():{data:null,error:null};
     if(sessionErr && /st_workout_sessions|does not exist/i.test(sessionErr.message||'')) setPhase2a1Pending(true);
     if(sessionRow){
@@ -1655,6 +1685,12 @@ export default function Page(){
     } else {
       setSessionOutcome(deriveSessionStatus({workout:workoutOnDay,logs:by}));
       completedSessionKeyRef.current=null;
+      if(sessionFeedbackIdentityRef.current===feedbackKey&&!sessionFeedbackDirtyRef.current)setSessionSkipReason('');
+    }
+    if(feedbackKey){
+      const loaded=await loadWorkoutFeedback(supabase,{userId:uid,workoutId:sessionWorkoutId,logDate:day,feedbackId:sessionRow?.feedback_id||null});
+      if(loaded.pendingMigration)setPhase2a1Pending(true);
+      if(!loaded.error)applySessionFeedbackLoad(feedbackKey,feedbackGen,loaded.row);
     }
     setAdaptationSummary(null);
     const {data:exSessions,error:exSessErr}=await supabase.from('st_exercise_sessions').select('exercise_id,status').eq('user_id',uid).eq('log_date',day);
@@ -1662,6 +1698,8 @@ export default function Page(){
     const skipped:Record<string,boolean>={};
     (exSessions||[]).forEach((row:any)=>{ if(row.status==='skipped' && row.exercise_id) skipped[row.exercise_id]=true; });
     setSkippedExerciseIds(skipped);
+  } else {
+    beginSessionFeedbackLoad(null);
   }
  }
 
@@ -3402,7 +3440,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
     {trainingSessionOpen&&trainingSessionIntent==='log'&&adaptationSummary&&<AdaptationSummaryCard result={adaptationSummary}/>}
     {(trainingSessionOpen||!!activeAssignedRecipient)&&workoutExerciseSections}
     {showSessionFinish&&<div className="finish-workout-row"><button type="button" className="btn green finish-workout-btn" aria-haspopup="dialog" aria-expanded={sessionFeedbackSheet==='finish'} onClick={(e)=>{sessionFeedbackOpenerRef.current=e.currentTarget;setSessionFeedbackSheet('finish');}}>{finishWorkoutActionLabel(sessionOutcome)}</button></div>}
-    {showSessionFinish&&sessionFeedbackSheet&&<SessionFeedbackSheet status={sessionOutcome} feel={sessionFeel} pain={sessionPain} notes={sessionNotes} skipReason={sessionSkipReason} canEdit={canLog()} pendingMigration={phase2a1Pending} notice={(sessionOutcome==='completed'||sessionOutcome==='partial')&&outstandingRequiredSetIds(workout, logs).length?'Additional required sets are still open. Logged sets and feedback stay. Choose Completed when that work is done.':null} returnFocusTo={sessionFeedbackOpenerRef.current} onClose={()=>setSessionFeedbackSheet(null)} onStatus={(s)=>void saveSessionOutcome(s)} onFeel={(v)=>void saveSessionOutcome(sessionOutcome,{feel:v})} onPain={(v)=>void saveSessionOutcome(sessionOutcome,{pain:v})} onNotes={(v)=>void saveSessionOutcome(sessionOutcome,{notes:v})} onSkipReason={(v)=>void saveSessionOutcome('skipped',{skipReason:v})}/>}
+    {showSessionFinish&&sessionFeedbackSheet&&<SessionFeedbackSheet status={sessionOutcome} feel={sessionFeel} pain={sessionPain} notes={sessionNotes} skipReason={sessionSkipReason} canEdit={canLog()} pendingMigration={phase2a1Pending} notice={(sessionOutcome==='completed'||sessionOutcome==='partial')&&outstandingRequiredSetIds(workout, logs).length?'Additional required sets are still open. Logged sets and feedback stay. Choose Completed when that work is done.':null} returnFocusTo={sessionFeedbackOpenerRef.current} onClose={()=>setSessionFeedbackSheet(null)} onStatus={(s)=>void saveSessionOutcome(s)} onFeel={(v)=>{sessionFeedbackDirtyRef.current=true;void saveSessionOutcome(sessionOutcome,{feel:v});}} onPain={(v)=>{sessionFeedbackDirtyRef.current=true;void saveSessionOutcome(sessionOutcome,{pain:v});}} onNotes={(v)=>{sessionFeedbackDirtyRef.current=true;void saveSessionOutcome(sessionOutcome,{notes:v});}} onSkipReason={(v)=>{sessionFeedbackDirtyRef.current=true;void saveSessionOutcome('skipped',{skipReason:v});}}/>}
   </section>}
   {addExercisePanel&&<div className="panel-overlay" onClick={()=>{setPendingAddScope(null);setAddExercisePanel(null);}}><div className="add-exercise-panel card" onClick={e=>e.stopPropagation()}><div className="topline" style={{justifyContent:'space-between'}}><h2>{addExercisePanel.replaceTarget?'Replace exercise':'Add Exercise'} · {addPanelSectionLabel(addExercisePanel.section)}</h2><button type="button" className="btn small secondary" onClick={()=>{setPendingAddScope(null);setAddExercisePanel(null);}}>Cancel</button></div>
     {addExercisePanel.step==='search'&&<>{addExercisePanel.replaceTarget&&<p className="muted" style={{marginBottom:8}}>Replacing <b>{addExercisePanel.replaceTarget.name}</b> — pick a catalog exercise. Sets and logs are kept.</p>}{pendingGroupId&&!addExercisePanel.replaceTarget&&<p className="muted" style={{marginBottom:8}}>Building superset ({pendingGroupInfo?.count||1}/3) — pick the next exercise</p>}<p className="muted catalog-search-meta">Search the full BuildIQ Health exercise library.</p><input className="typeahead-input catalog-search-input" placeholder={`Search exercises (${workoutSearchCatalog.length} available)…`} value={addExercisePanel.query||''} onChange={e=>setAddExercisePanel({...addExercisePanel,query:e.target.value})} autoFocus/><div className="catalog-search-filters"><select value={addExercisePanel.filters?.muscle||''} onChange={e=>setAddExercisePanel({...addExercisePanel,filters:{...(addExercisePanel.filters||emptyAddPanelFilters()),muscle:e.target.value}})} aria-label="Filter by muscle"><option value="">All muscles</option>{(panelFilterOptions?.muscles||[]).map((m:string)=><option key={m} value={m}>{m}</option>)}</select><select value={addExercisePanel.filters?.equipment||''} onChange={e=>setAddExercisePanel({...addExercisePanel,filters:{...(addExercisePanel.filters||emptyAddPanelFilters()),equipment:e.target.value}})} aria-label="Filter by equipment"><option value="">All equipment</option>{(panelFilterOptions?.equipment||[]).map((eq:string)=><option key={eq} value={eq}>{eq}</option>)}</select><select value={addExercisePanel.filters?.exerciseType||''} onChange={e=>setAddExercisePanel({...addExercisePanel,filters:{...(addExercisePanel.filters||emptyAddPanelFilters()),exerciseType:e.target.value}})} aria-label="Filter by type"><option value="">All types</option>{(panelFilterOptions?.exerciseTypes||[]).map((t:string)=><option key={t} value={t}>{t}</option>)}</select><label className="remember-row catalog-guides-filter"><input type="checkbox" checked={!!addExercisePanel.filters?.guidesOnly} onChange={e=>setAddExercisePanel({...addExercisePanel,filters:{...(addExercisePanel.filters||emptyAddPanelFilters()),guidesOnly:e.target.checked}})}/> With form guide</label></div>{hasEquipmentFilter(equipmentForSearch)&&<p className="muted catalog-search-meta">Your equipment filter is active: {equipmentFilterLabel(equipmentForSearch)}</p>}{panelHasSearch&&<p className="muted catalog-search-meta">Showing {panelResults.length}{panelMatchCount>panelResults.length?` of ${panelMatchCount}`:''} match{panelMatchCount===1?'':'es'}</p>}<div className="typeahead-menu panel-results catalog-search-results">{panelResults.length?panelResults.map((item:any)=><button type="button" key={item.id} className="typeahead-item catalog-search-item" onClick={()=>pickExerciseForPanel(item)}>{getExerciseThumb(item)&&<img className="catalog-search-thumb" src={getExerciseThumb(item)||''} alt="" loading="lazy" referrerPolicy="no-referrer"/>}<div className="catalog-search-body"><b>{item.name}</b><span className="muted">{catalogResultMeta(item)}</span></div></button>):<div className="typeahead-empty muted">{panelHasSearch?'No matches — try a different search or filter':'Type or filter to search the catalog'}</div>}</div>{panelHasSearch&&<button type="button" className="btn small secondary" style={{marginTop:8}} onClick={()=>setAddExercisePanel({...addExercisePanel,query:'',filters:emptyAddPanelFilters()})}>Clear search</button>}{!addExercisePanel.replaceTarget&&<button type="button" className="btn small secondary" style={{marginTop:8}} onClick={()=>setAddExercisePanel({...addExercisePanel,step:'custom'})}>+ Create custom exercise</button>}</>}

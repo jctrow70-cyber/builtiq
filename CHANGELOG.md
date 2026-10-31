@@ -11,6 +11,49 @@ Branch:
 Status:
 ```
 
+## BIQ-0271 Phase E3.2 - Restore saved workout feedback
+
+Date: 2026-10-30
+Branch: main
+Status: Implemented. Local commit. Not pushed. No database change.
+
+Summary: Review and logger reloads now restore feel, pain, notes, outcome, and skip reason from the existing session and `st_workout_feedback` row. The session-linked `feedback_id` wins when that row belongs to the same user, workout, and date. A missing or mismatched link falls back only to a row with that same identity. Switching sessions clears stale values. A late fetch cannot overwrite newer typed input. The load is read-only: no feedback insert, no status write, and no adaptation trigger. Finish Workout, completion math, and E3.1 sheet behavior stay the same.
+
+Purpose: Show the feedback the user already saved when they reopen a workout.
+
+Files changed:
+- lib/training/sessionFeedback.ts
+- lib/training/workoutSessions.ts
+- app/page.tsx
+- scripts/test-session-feedback-hydrate.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- `npx tsx scripts/test-session-feedback-hydrate.ts`
+- `npx tsx scripts/test-finish-workout.ts`
+- `npx tsx scripts/test-session-finalization.ts`
+- `npx tsx scripts/test-training-set-entry.ts`
+- `npx tsx scripts/test-previous-performance.ts`
+- `npx tsx scripts/test-previous-performance-logger.ts`
+- `npx tsx scripts/test-exercise-history-display.ts`
+- `npx tsx scripts/test-progress-analytics.ts`
+- `npx tsx lib/scienceEngine/acceptanceCheck.ts`
+- `npx tsc --noEmit`
+- Do not write production workout logs.
+
+Known issues:
+- E3.3 sheet keyboard-inset and viewport polish are not started
+- Authenticated visual QA remains outstanding
+- `npx tsc --noEmit` still fails on the pre-existing BIQ-0279 `catalogCleanupCheck.ts` comparison
+
+Recommended commit message: BIQ-0271 Phase E3.2 Restore saved workout feedback
+
+---
+
 ## BIQ-0271 Phase E3.1 - Finish Workout entry point
 
 Date: 2026-10-30

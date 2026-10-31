@@ -1,6 +1,10 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { PainFlag, SessionStatus, SkipReason, WorkoutFeel } from '../scienceEngine/adaptation/types';
 import { friendlyWriteError, retryTransientSupabaseWrite } from '../networkErrors';
+import {
+  pickSessionFeedback,
+  type SessionFeedbackRecord,
+} from './sessionFeedback';
 
 export type WorkoutSessionRow = {
   id?: string;
@@ -106,6 +110,47 @@ export async function upsertWorkoutSession(
   if (missingTable(error)) return { data: null, error: error?.message || 'st_workout_sessions missing', pendingMigration: true };
   if (error) return { data: null, error: friendlyWriteError(error), pendingMigration: false };
   return { data: (data as WorkoutSessionRow) || null, error: null, pendingMigration: false };
+}
+
+const FEEDBACK_READ_COLUMNS = 'id,user_id,workout_id,log_date,workout_feel,pain_flag,notes';
+
+/** Read-only. Prefers session.feedback_id when that row belongs to this user, workout, and date. */
+export async function loadWorkoutFeedback(
+  supabase: SupabaseClient,
+  opts: { userId: string; workoutId: string; logDate: string; feedbackId?: string | null }
+): Promise<{ row: SessionFeedbackRecord | null; error: string | null; pendingMigration: boolean }> {
+  let linked: SessionFeedbackRecord | null = null;
+  const feedbackId = String(opts.feedbackId || '').trim();
+  if (feedbackId) {
+    const { data, error } = await supabase
+      .from('st_workout_feedback')
+      .select(FEEDBACK_READ_COLUMNS)
+      .eq('id', feedbackId)
+      .maybeSingle();
+    if (missingTable(error)) return { row: null, error: error?.message || 'st_workout_feedback missing', pendingMigration: true };
+    if (error) return { row: null, error: error.message, pendingMigration: false };
+    linked = (data as SessionFeedbackRecord) || null;
+  }
+  const session = { userId: opts.userId, workoutId: opts.workoutId, logDate: opts.logDate, feedbackId };
+  const linkedMatch = pickSessionFeedback({ session, linked, latest: null });
+  if (linkedMatch) return { row: linkedMatch, error: null, pendingMigration: false };
+
+  const { data, error } = await supabase
+    .from('st_workout_feedback')
+    .select(FEEDBACK_READ_COLUMNS)
+    .eq('user_id', opts.userId)
+    .eq('workout_id', opts.workoutId)
+    .eq('log_date', opts.logDate)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (missingTable(error)) return { row: null, error: error?.message || 'st_workout_feedback missing', pendingMigration: true };
+  if (error) return { row: null, error: error.message, pendingMigration: false };
+  return {
+    row: pickSessionFeedback({ session, linked: null, latest: (data as SessionFeedbackRecord) || null }),
+    error: null,
+    pendingMigration: false,
+  };
 }
 
 export async function upsertWorkoutFeel(

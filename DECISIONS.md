@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 135 - Review restores session-linked workout feedback
+
+Date: 2026-10-30
+Status: Accepted
+Category: Training
+
+### Decision
+
+BIQ-0271 Phase E3.2 hydrates the existing `sessionFeel`, `sessionPain`, and `sessionNotes` state when `loadLogs` reads a workout session. The session's `feedback_id` is used when that row matches the current user, workout, and log date. Otherwise the latest matching `st_workout_feedback` row for that identity is used. A different date, user, or workout never fills the card. Switching sessions clears stale values. A late or dirty load does not replace newer user input. The read does not insert feedback, change session status, or trigger adaptation.
+
+### Reason
+
+Reopening Review showed empty feel, pain, and notes even when those values were already saved. Guessing the newest feedback row without identity checks would mix sessions.
+
+### Alternatives Considered
+
+Always using the latest feedback row. Writing a new feedback row on load. Storing a second copy of feel/pain/notes on the sheet.
+
+### Impact
+
+No database change. `saveSessionOutcome`, last-set completion, Finish Workout openers, History, Copy last, Progress, science adaptation, group enrollment, and Program Design stay the same.
+
+---
+
 ## Decision 134 - Finish Workout opens the existing session-feedback sheet
 
 Date: 2026-10-30

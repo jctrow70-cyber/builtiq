@@ -76,3 +76,92 @@ export function sessionFeedbackSharedInterface(opener?: SessionFeedbackOpener | 
 export function sessionFeedbackValuesAfterSheetClose<T extends Record<string, unknown>>(values: T): T {
   return sessionFeedbackValuesAfterToggle(values);
 }
+
+export type SessionFeedbackIdentity = {
+  userId?: string | null;
+  workoutId?: string | null;
+  logDate?: string | null;
+};
+
+export type SessionFeedbackRecord = {
+  id?: string | null;
+  user_id?: string | null;
+  workout_id?: string | null;
+  log_date?: string | null;
+  workout_feel?: WorkoutFeel | '' | null;
+  pain_flag?: PainFlag | '' | null;
+  notes?: string | null;
+};
+
+/** user + workout + log date. Missing parts never match another session. */
+export function sessionFeedbackIdentityKey(input: SessionFeedbackIdentity): string | null {
+  const userId = String(input.userId || '').trim();
+  const workoutId = String(input.workoutId || '').trim();
+  const logDate = String(input.logDate || '').trim();
+  if (!userId || !workoutId || !logDate) return null;
+  return `${userId}|${workoutId}|${logDate}`;
+}
+
+export function sessionFeedbackMatchesIdentity(
+  row: SessionFeedbackRecord | null | undefined,
+  session: SessionFeedbackIdentity
+): boolean {
+  const wanted = sessionFeedbackIdentityKey(session);
+  if (!wanted || !row) return false;
+  return sessionFeedbackIdentityKey({
+    userId: row.user_id,
+    workoutId: row.workout_id,
+    logDate: row.log_date,
+  }) === wanted;
+}
+
+/**
+ * Prefer the session-linked feedback id. Fall back only to a row for the same user, workout, and date.
+ * Sessions are unique on user_id + workout_id + log_date. Extra feedback rows for that key are later
+ * inserts for the same session, not another session.
+ */
+export function pickSessionFeedback(input: {
+  session: SessionFeedbackIdentity & { feedbackId?: string | null };
+  linked?: SessionFeedbackRecord | null;
+  latest?: SessionFeedbackRecord | null;
+}): SessionFeedbackRecord | null {
+  const linked = input.linked;
+  const feedbackId = String(input.session.feedbackId || '').trim();
+  if (linked && sessionFeedbackMatchesIdentity(linked, input.session)) {
+    if (!feedbackId || String(linked.id || '') === feedbackId) return linked;
+  }
+  const latest = input.latest;
+  if (latest && sessionFeedbackMatchesIdentity(latest, input.session)) return latest;
+  return null;
+}
+
+export function sessionFeedbackStateFromRow(row: SessionFeedbackRecord | null | undefined): {
+  feel: WorkoutFeel | '';
+  pain: PainFlag | '';
+  notes: string;
+} {
+  if (!row) return { feel: '', pain: '', notes: '' };
+  const feelRaw = String(row.workout_feel || '').trim();
+  const feel = feelRaw === 'easy' || feelRaw === 'good' || feelRaw === 'hard' || feelRaw === 'very_hard'
+    ? (feelRaw as WorkoutFeel)
+    : '';
+  const painRaw = String(row.pain_flag || '').trim();
+  const pain = painRaw === 'none' || painRaw === 'discomfort' || painRaw === 'pain_limiting' || painRaw === 'stopped_due_to_pain'
+    ? (painRaw as PainFlag)
+    : '';
+  return { feel, pain, notes: String(row.notes || '') };
+}
+
+/** Late or dirty loads must not replace the values the user is editing. */
+export function shouldApplySessionFeedbackHydration(input: {
+  loadKey?: string | null;
+  currentKey?: string | null;
+  loadGeneration?: number;
+  currentGeneration?: number;
+  dirty?: boolean;
+}): boolean {
+  if (!input.loadKey || input.loadKey !== input.currentKey) return false;
+  if (Number(input.loadGeneration) !== Number(input.currentGeneration)) return false;
+  if (input.dirty) return false;
+  return true;
+}
