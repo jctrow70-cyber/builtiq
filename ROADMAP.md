@@ -210,7 +210,9 @@ Goal: Prepare BuildIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
-**BIQ-0283 DSH-D** (nutrition dashboard) is implemented and ready for review (Decision 139). The dashboard nutrition card uses today’s logged meals and saved positive goals. It is not committed. The Nutrition screen’s default goal display is unchanged.
+**BIQ-0283 DSH-D** (nutrition dashboard) is committed as cb6d4f5531c29bcee373099f3352741373631423, and origin/main points at that same commit (Decision 139). The dashboard nutrition card uses today’s logged meals and saved positive goals.
+
+**Follow-up:** The Nutrition screen still shows unsaved default targets from `goalsFromRow` when no goal row is saved, and it replaces a stored 0 with those defaults. The dashboard does not. Leave `goalsFromRow` unchanged until that follow-up is requested.
 
 **BIQ-0282 DSH-C** (weekly adherence) is implemented and ready for review (Decision 138). The dashboard week card uses Progress expectation counts for Monday–Sunday. It is not committed. Follow-up, not in this change: personal calendar moves do not update expectation dates, and a private copy plus a leftover template expectation can count twice because Progress counts both rows.
 

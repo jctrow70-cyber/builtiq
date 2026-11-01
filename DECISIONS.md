@@ -24,7 +24,7 @@ Showing the Nutrition screen’s default targets on the dashboard. Building a se
 
 ### Impact
 
-No database change. Meal writes, nutrition totals, Progress, training, adherence, groups, and AI behavior stay as they are.
+No database change. Meal writes, nutrition totals, Progress, training, adherence, groups, and AI behavior stay as they are. Follow-up, not this decision: the Nutrition screen still displays unsaved default targets through `goalsFromRow` when no goal row is saved, and it replaces a stored 0 with those defaults.
 
 ---
 

@@ -15,7 +15,7 @@ Status:
 
 Date: 2026-10-31
 Branch: main
-Status: Implemented. Ready for review. Not committed. No database change.
+Status: Implemented. Local commit cb6d4f5531c29bcee373099f3352741373631423. origin/main points at that same commit. No database change.
 
 Summary: The dashboard nutrition card shows today’s consumed calories and macros. A target, remaining amount, or progress mark appears only when that saved goal is a positive number.
 
@@ -49,8 +49,7 @@ Testing steps:
 
 Known issues:
 - Signed-in visual QA is still unverified when no test session is available.
-- The Nutrition screen still uses `goalsFromRow`, which fills in default targets when a goal row is missing. This card does not.
-- A stored target of 0 is treated as not configured on the dashboard. The Nutrition screen still replaces 0 with its default.
+- Follow-up: The Nutrition screen still shows unsaved default targets through `goalsFromRow` (2,000 calories, 150g protein, 200g carbs, 65g fat) when no goal row is saved, and it replaces a stored 0 with those defaults. The dashboard card does not. This is not fixed in BIQ-0283.
 
 Recommended commit message: BIQ-0283 Show today’s nutrition from logged meals
 
