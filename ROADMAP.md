@@ -218,7 +218,9 @@ Goal: Prepare BuildIQ Health for iOS and Android users.
 
 **BIQ-0289** makes RIR and Done update before the set is saved, keeps the latest edit when taps arrive close together, and stops the logger from rebuilding the catalog index and the calendar on every field change (Decision 145). Accepted locally at `5a94210`. Not pushed.
 
-**BIQ-0290** stops Finish Workout from storing a session while a required set write is still pending or failed, and keeps logger timing samples separated by kind (Decision 146). Committed locally and not pushed. Phase D stays unstarted until that validation is accepted.
+**BIQ-0290** stops Finish Workout from storing a session while a required set write is still pending or failed, and keeps logger timing samples separated by kind (Decision 146). Accepted locally at `5888fc7`. Not pushed.
+
+**BIQ-0291** flushes debounced weight, reps, and notes before Finish checks required sets, and keeps a rapid second tap from writing the session twice (Decision 147). Committed locally and not pushed.
 
 **BIQ-0285** (Phase A navigation) skips the program-tree reload on Nutrition, Progress, Settings, and AI Coach, and keeps a single current program request for Training, Dashboard, Programs, and Groups (Decision 141). Committed locally and not pushed.
 

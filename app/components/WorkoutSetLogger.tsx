@@ -24,6 +24,7 @@ import {
   previousPerformanceFieldHint,
   previousPerformanceLine,
 } from '../../lib/training/previousPerformanceDisplay';
+import { createDebouncedFieldQueue } from '../../lib/training/debouncedFieldEdits';
 import type { SetLogSaveResult } from '../../lib/training/setLogIntent';
 import { beginLoggerInteraction, noteLoggerRender, noteLoggerVisual, type LoggerTimingMark } from '../../lib/performance/loggerTiming';
 
@@ -70,6 +71,7 @@ type Props = {
   onSaveExtraField?: (extraId: string, field: string, value: string, opts?: { completed?: boolean }) => void | Promise<void>;
   onSkipExercise?: () => void;
   exerciseSkipped?: boolean;
+  registerFlush?: (flush: () => Promise<void>) => () => void;
 };
 
 function fieldSizeClass(field: LogFieldUI) {
@@ -638,12 +640,13 @@ function WorkoutSetLogger({
   onSaveExtraField,
   onSkipExercise,
   exerciseSkipped = false,
+  registerFlush,
 }: Props) {
   const layout = useMemo(() => logLayoutForType(exType), [exType]);
   const rampLayout = useMemo(() => ({ ...layout, showRirChips: false as const }), [layout]);
   const showDistToggle = allLogFieldsFlat(exType).some((f) => f.unitGroup === 'distance');
-  const saveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-  const pendingSavesRef = useRef<Record<string, () => void | Promise<unknown>>>({});
+  const fieldEditsRef = useRef<ReturnType<typeof createDebouncedFieldQueue> | null>(null);
+  if (!fieldEditsRef.current) fieldEditsRef.current = createDebouncedFieldQueue();
   const saveRef = useRef(onSaveField);
   const editRef = useRef(onEditSet);
   const removeRef = useRef(onRemoveSet);
@@ -670,38 +673,14 @@ function WorkoutSetLogger({
       ? stripEmbeddedNotes(String(firstPrev.copySource.log_notes))
       : undefined;
 
-  const runPendingSave = (save: () => void | Promise<unknown>) => {
-    try {
-      const result = save();
-      if (result && typeof (result as Promise<void>).then === 'function') {
-        return (result as Promise<void>).catch(() => {});
-      }
-    } catch {
-      /* ignore */
-    }
-    return Promise.resolve();
-  };
-
   const scheduleSave = useCallback((key: string, _value: string, save: () => void | Promise<unknown>) => {
-    pendingSavesRef.current[key] = save;
-    if (saveTimersRef.current[key]) clearTimeout(saveTimersRef.current[key]);
-    saveTimersRef.current[key] = setTimeout(() => {
-      delete saveTimersRef.current[key];
-      const run = pendingSavesRef.current[key];
-      delete pendingSavesRef.current[key];
-      if (run) void runPendingSave(run);
-    }, 700);
+    fieldEditsRef.current?.schedule(key, save);
   }, []);
 
-  const flushSaves = useCallback(async () => {
-    Object.values(saveTimersRef.current).forEach((t) => clearTimeout(t));
-    saveTimersRef.current = {};
-    const pending = { ...pendingSavesRef.current };
-    pendingSavesRef.current = {};
-    await Promise.all(Object.values(pending).map((run) => (run ? runPendingSave(run) : Promise.resolve())));
-  }, []);
+  const flushSaves = useCallback(() => fieldEditsRef.current?.flush() ?? Promise.resolve(), []);
 
   useEffect(() => () => { void flushSaves(); }, [flushSaves]);
+  useEffect(() => registerFlush?.(flushSaves), [registerFlush, flushSaves]);
 
   const saveExerciseNotes = (value: string) => {
     if (!firstSet) return;
@@ -840,7 +819,7 @@ function loggerPropsEqual(prev: Props, next: Props) {
   if (prev.prevBySetId !== next.prevBySetId) return false;
   if (prev.onSaveField !== next.onSaveField || prev.onEditSet !== next.onEditSet || prev.onRemoveSet !== next.onRemoveSet) return false;
   if (prev.onDuplicateSet !== next.onDuplicateSet || prev.onRetrySet !== next.onRetrySet) return false;
-  if (prev.onDistanceUnitChange !== next.onDistanceUnitChange) return false;
+  if (prev.onDistanceUnitChange !== next.onDistanceUnitChange || prev.registerFlush !== next.registerFlush) return false;
   if (!sameSetRows(prev.sets, next.sets)) return false;
   if (!sameSetLogs(prev.logs, next.logs, next.sets)) return false;
   const prevExtra = prev.extraSets || [];

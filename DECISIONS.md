@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 147 - Finish flushes debounced set edits first
+
+Date: 2026-11-01
+Status: Accepted
+Category: Performance
+
+### Decision
+
+BIQ-0291 makes Finish Workout flush every mounted logger's pending weight, reps, and notes before it waits on the set-write queue. The BIQ-0290 check still blocks a completed, partial, or skipped session while a required set edit is unconfirmed. A second Finish tap uses the same in-flight attempt. While that attempt is running, automatic session completion from a set write is skipped so the session row is stored once. Feel, pain, notes, and skip reason entered during the wait stay on screen and are read when that single session write runs.
+
+### Reason
+
+Those fields wait 700 ms before they join the queue. Finish could store the workout while the latest weight or reps were still only in the debounce timer.
+
+### Alternatives Considered
+
+Shorten the debounce for every keystroke. Leave Finish as it was and tell people to tab out of the field. Both either add writes during typing or still lose the last edit.
+
+### Impact
+
+No database change. Retry, optimistic RIR and Done, and the required-set block stay in place. Signed-in browser timings are still unmeasured.
+
+---
+
 ## Decision 146 - Finish waits until required set writes are confirmed
 
 Date: 2026-11-01

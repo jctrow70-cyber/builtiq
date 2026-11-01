@@ -11,6 +11,39 @@ Branch:
 Status:
 ```
 
+## BIQ-0291 - Flush debounced set edits before Finish Workout
+
+Date: 2026-11-01
+Branch: main
+Status: Committed locally. Not pushed. No database change.
+
+Summary: Finish Workout flushes weight, reps, and notes that are still inside the 700 ms debounce, waits for those writes, and then applies the BIQ-0290 required-set check. A failed edit stays on the set with Retry. A second Finish tap joins the attempt already in progress. Session feedback typed during the wait is kept and stored with that one session write.
+
+Purpose: Finish waited only for set writes that had already entered the queue. A weight or rep typed a moment earlier could be left unsaved while the session was marked complete.
+
+Files changed:
+- app/page.tsx
+- app/components/WorkoutSetLogger.tsx
+- lib/training/debouncedFieldEdits.ts
+- lib/training/finishWorkoutPersistence.ts
+- scripts/test-finish-debounced-edits.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- Run `scripts/test-finish-debounced-edits.ts`, `scripts/test-logger-performance.ts`, `scripts/test-finish-workout.ts`, and `npx tsc --noEmit`.
+- Log a set, type a weight, and press Finish before the debounce ends. The saved set has that weight, and the session is stored once.
+- Repeat with a failed write. Finish stays unfinished, the weight remains, and Retry sends it again.
+- Press Finish twice quickly. The session is written once.
+- Type session notes while a set save is still open, then finish. The notes are still there.
+
+Known issues: Signed-in browser p50 and p95 were not collected. The under-100 ms logger target and the under-500 ms navigation target are not verified.
+
+Recommended commit message: BIQ-0291 Flush debounced set edits before Finish Workout.
+
 ## BIQ-0290 - Stop finish while a required set is unsaved
 
 Date: 2026-11-01
