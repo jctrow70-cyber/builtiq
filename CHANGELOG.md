@@ -11,6 +11,50 @@ Branch:
 Status:
 ```
 
+## BIQ-0287 - Split the first screen bundle and keep loaded screens ready
+
+Date: 2026-11-01
+Branch: main
+Status: Committed locally after tests. Not pushed. No database change.
+
+Summary: Nutrition, Training calendar, Progress, Groups, and Program Design load when they are opened. A screen that has already loaded renders on the next visit without a loading placeholder. Nutrition and Training modules preload only after Dashboard is usable, and only when the device is not on a slow or data-saver connection. The barcode camera, the fallback exercise list, and workout adaptation load outside the first client bundle.
+
+Purpose: The first page was carrying every major screen, the camera scanner, the science-engine fallback catalog, and adaptation orchestration. Repeat visits should keep the Phase B cache paint, and a missing adaptation chunk must not lose or duplicate a finished workout.
+
+Files changed:
+- app/page.tsx
+- app/components/nutrition/NutritionAddFoodPanel.tsx
+- app/components/NutritionTracker.tsx
+- app/components/dashboard/NutritionDashboardCard.tsx
+- lib/nutrition/nutritionDaySummary.ts
+- lib/performance/lazyScreen.ts
+- lib/performance/screenTiming.ts
+- lib/training/prescriptionMeta.ts
+- lib/training/patchProgramPlannedWeights.ts
+- lib/training/adaptationApply.ts
+- lib/scienceEngine/catalogExerciseFromRow.ts
+- lib/scienceEngine/catalogAdapter.ts
+- lib/scienceEngine/generation/exerciseShape.ts
+- lib/scienceEngine/generation/library.ts
+- scripts/test-lazy-screens.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- Sign in, open Dashboard, then Nutrition, Training, Progress, Groups, and Programs. The first open may show a short loading line. Leave and return. The screen should appear without that line, and unsaved Nutrition text or an open workout should still be there.
+- Open the barcode camera from Add food. The camera chunk loads only then. A looked-up product stays on the draft if you leave Nutrition and come back.
+- Finish a workout. The session should save even if adaptation cannot load. It should not save a second time because adaptation failed.
+- Open Groups and confirm the group channel still updates while that screen is open, and not before.
+- Switch accounts. The other account should not see the first account's draft or cached meals.
+- Run the screen, navigation, nutrition, training, workout, dashboard, groups, and lazy-screen checks, then `tsc --noEmit`.
+
+Known issues: Signed-in browser time-to-usable is still unmeasured. The local session only reached the sign-in form. Idle preload downloads code only. It does not open those screens or query Supabase. The exercise catalog data fetch on startup is unchanged. Development `app/page.js` went from 18,763,787 bytes to 8,292,720 bytes. The production compile emitted a 1,041,584 byte homepage JavaScript set (286,015 bytes gzipped) and a 433,596 byte page chunk. The production export then failed on `/icon` and `/apple-icon` with Invalid URL in the image renderer. That failure comes from the space in the OneDrive folder path, and the JavaScript chunks were still written.
+
+Recommended commit message: BIQ-0287 Split the first screen bundle and keep loaded screens ready.
+
 ## BIQ-0286 - Keep visited screens in a user-scoped memory cache
 
 Date: 2026-11-01

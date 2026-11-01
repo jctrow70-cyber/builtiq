@@ -89,12 +89,42 @@ export function noteCacheMiss(screen: string) {
   publish();
 }
 
+const usableWaiters = new Map<string, Set<() => void>>();
+const usableNoted = new Set<string>();
+
+function flushUsableWaiters(screen: string) {
+  const waiting = usableWaiters.get(screen);
+  if (!waiting) return;
+  usableWaiters.delete(screen);
+  waiting.forEach((fn) => fn());
+}
+
 /** First time primary content can be used. A later background refresh does not move this. */
 export function noteUsable(screen: string) {
   const span = latestScreenTiming(screen);
-  if (!span || span.usableMs != null) return;
-  span.usableMs = Math.round((now() - span.startedAt) * 10) / 10;
-  publish();
+  if (span && span.usableMs == null) {
+    span.usableMs = Math.round((now() - span.startedAt) * 10) / 10;
+    publish();
+  }
+  usableNoted.add(screen);
+  flushUsableWaiters(screen);
+}
+
+/** Run once after a screen's primary content is usable. Already-usable screens run immediately. */
+export function afterScreenUsable(screen: string, fn: () => void) {
+  if (usableNoted.has(screen) || latestScreenTiming(screen)?.usableMs != null) {
+    fn();
+    return () => {};
+  }
+  let waiting = usableWaiters.get(screen);
+  if (!waiting) {
+    waiting = new Set();
+    usableWaiters.set(screen, waiting);
+  }
+  waiting.add(fn);
+  return () => {
+    waiting?.delete(fn);
+  };
 }
 
 export function beginBackgroundRefresh(screen: string) {
@@ -152,6 +182,8 @@ export function recentScreenTimings(): ScreenTimingSpan[] {
 
 export function resetScreenTiming() {
   spans.length = 0;
+  usableWaiters.clear();
+  usableNoted.clear();
   publish();
 }
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { fetchNutritionDaySummary } from '../NutritionTracker';
+import { fetchNutritionDaySummary } from '../../../lib/nutrition/nutritionDaySummary';
 import {
   dashboardNutritionModel,
   dashboardTargetsFromGoalRow,

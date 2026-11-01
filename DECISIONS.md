@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 143 - Loaded screens stay in a module cache and the first bundle stays smaller
+
+Date: 2026-11-01
+Status: Accepted
+Category: Performance
+
+### Decision
+
+BIQ-0287 loads Nutrition, the Training calendar, Progress, Groups, Program Design, the workout preview, and the move-day sheet with `import()` the first time each one opens. The loaded component is remembered in a module cache, so a later visit renders it on the first paint and does not show a loading placeholder. Dashboard cards and the workout logger stay in the application shell. After Dashboard content is usable, the browser may preload the Nutrition and Training modules during idle time. That preload does not mount those screens and does not call Supabase. It is skipped when the connection is data-saver, 2g, or slow-2g, or when the device reports 2 GB of memory or less. The barcode scanner loads only when the camera opens. Exercise laterality and row adaptation used by the logger live outside the fallback catalog module. Workout adaptation loads only after the completed session row is saved. If that load or the adaptation request fails, the saved session stays saved and is not written again. Groups realtime still starts inside Groups Hub when that screen is open.
+
+### Reason
+
+A dynamic import with a default loading state would hide the Phase B cache behind a placeholder on every return. Putting every screen, the camera library, the fallback catalog, and adaptation orchestration in the first page made the first visit carry work the user had not opened.
+
+### Alternatives Considered
+
+`next/dynamic` with its built-in loading state. Preloading Groups, Program Design, and the barcode scanner. Deferring the workout logger out of the shell. Letting an adaptation import failure roll back or repeat the workout save. Those would either flash a placeholder, start a group subscription early, or risk a completed workout.
+
+### Impact
+
+No database change and no new dependency. Phase A program-load rules and the Phase B user cache, drafts, and open-workout protection stay in place. The module cache holds components, not user data, and is not cleared as account data. Signed-in browser timings are still not measured.
+
+---
+
 ## Decision 142 - Visited screens stay in memory for the signed-in user
 
 Date: 2026-11-01

@@ -1,7 +1,7 @@
-import { lateralityOf, measurementTypeOf } from '../scienceEngine/generation/library';
+import { lateralityOf, measurementTypeOf } from '../scienceEngine/generation/exerciseShape';
 import type { Laterality, MeasurementType } from '../scienceEngine/generation/types';
 import type { ProgramRole } from '../scienceEngine/types';
-import { catalogExerciseFromRow } from '../scienceEngine/catalogAdapter';
+import { catalogExerciseFromRow } from '../scienceEngine/catalogExerciseFromRow';
 
 const ROLES: ProgramRole[] = ['primary', 'secondary', 'accessory', 'isolation', 'warmup', 'power', 'conditioning'];
 const LATERALITY: Laterality[] = ['bilateral', 'unilateral', 'alternating'];

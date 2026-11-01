@@ -108,7 +108,7 @@ assert.equal(card.includes('st_team_members'), false);
 assert.equal(card.includes('st_food_library'), false);
 assert.equal(card.includes('NutritionAddFoodPanel'), false);
 
-const query = readFileSync('app/components/NutritionTracker.tsx', 'utf8');
+const query = readFileSync('lib/nutrition/nutritionDaySummary.ts', 'utf8');
 const summaryFn = query.slice(query.indexOf('export async function fetchNutritionDaySummary'));
 assert.equal(summaryFn.includes(".eq('user_id', userId)"), true);
 assert.equal(summaryFn.includes('sumMacros'), true);

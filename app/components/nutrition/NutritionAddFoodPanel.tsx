@@ -1,6 +1,6 @@
 'use client';
 
-import { RefObject, useEffect, useRef } from 'react';
+import { ComponentType, RefObject, useEffect, useRef, useState } from 'react';
 import {
   formatMacroLine,
   MEAL_TYPE_LABELS,
@@ -16,7 +16,6 @@ import { MEAL_PHOTO_DISCLAIMER } from '../../../lib/nutrition/mealPhotoEstimate'
 import { foodCatalogLabel, foodCatalogMeta, FoodCatalogItem } from '../../../lib/nutrition/foodCatalogSearch';
 import type { FindFoodResult } from '../../../lib/nutrition/findFoodSearch';
 import type { QuickAddFood } from '../../../lib/nutrition/recentFoods';
-import NutritionBarcodeScanner from '../NutritionBarcodeScanner';
 import { NutritionBarcodeNotFoundCard, NutritionBarcodeProductCard } from '../NutritionBarcodeProduct';
 import NutritionAiEstimateResults from './NutritionAiEstimateResults';
 import type { FoodDraft } from './NutritionAddFoodTypes';
@@ -32,6 +31,33 @@ const VIEW_TITLES: Record<AddFoodView, string> = {
   ai_estimate: 'AI estimate',
   manual: 'Manual entry',
 };
+
+type BarcodeScannerProps = {
+  onDetected: (value: string) => void;
+  onClose: () => void;
+  onError: (code: string, message: string) => void;
+};
+
+let cachedBarcodeScanner: ComponentType<BarcodeScannerProps> | null = null;
+
+function BarcodeScannerSlot(props: BarcodeScannerProps) {
+  const [Scanner, setScanner] = useState<ComponentType<BarcodeScannerProps> | null>(() => cachedBarcodeScanner);
+  useEffect(() => {
+    if (Scanner) return;
+    let cancelled = false;
+    import('../NutritionBarcodeScanner').then((mod) => {
+      cachedBarcodeScanner = mod.default;
+      if (!cancelled) setScanner(() => mod.default);
+    }).catch(() => {
+      if (!cancelled) props.onError('load', 'The camera scanner could not be loaded.');
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [Scanner, props.onError]);
+  if (!Scanner) return <p className="muted">Opening camera…</p>;
+  return <Scanner {...props} />;
+}
 
 function quickAddMeta(item: QuickAddFood) {
   return `${item.calories} cal · ${item.protein_g}P · ${item.carbs_g}C · ${item.fat_g}F`;
@@ -321,7 +347,7 @@ export default function NutritionAddFoodPanel(props: NutritionAddFoodPanelProps)
           )}
           {barcodeLoading && <p className="muted">Looking up product…</p>}
           {showBarcodeScanner && (
-            <NutritionBarcodeScanner
+            <BarcodeScannerSlot
               onDetected={onBarcodeDetected}
               onClose={onCloseBarcodeScanner}
               onError={onScannerError}
