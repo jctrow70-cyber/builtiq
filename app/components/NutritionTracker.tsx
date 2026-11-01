@@ -81,6 +81,7 @@ import { completeScreenPhase } from '../../lib/performance/screenTiming';
 import {
   beginScreenPaint,
   bindScreenSessionUser,
+  bumpDashboardCardEpoch,
   clearNutritionDraft,
   finishScreenPaint,
   markScreenStale,
@@ -545,7 +546,8 @@ export default function NutritionTracker({
   }, []);
 
   const notifyParent = useCallback(() => {
-    markScreenStale(userId, ['nutrition', 'dashboard']);
+    bumpDashboardCardEpoch(userId, 'nutrition');
+    markScreenStale(userId, ['nutrition']);
     onDataChange?.();
   }, [onDataChange, userId]);
 

@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 151 - Each dashboard card has its own cache generation
+
+Date: 2026-11-01
+Status: Accepted locally
+Category: Performance
+
+### Decision
+
+BIQ-0295 gives Today's Training, This Week, Nutrition, and Your Progress separate cache generations inside the existing screen cache. A successful meal add, edit, delete, copy, template log, barcode log, or AI log advances Nutrition only. Saving nutrition goals does too. A successful body measurement save or delete advances Your Progress only, including a save that persists weight and waist and then reports that the extra fields need a database update. Failed validation, a failed save, a cancelled delete, and a failed delete leave the generations unchanged. `finishScreenPaint` may still clear the shared dashboard flag when the first card finishes. Cards listen for their own generation, so that clear does not start a second fetch. A card refetches when its generation is newer than the snapshot it is holding, including inside the 30-second window. A response writes only when it is for the active user and the generation it started with. A mark of the whole dashboard still advances every card once.
+
+### Reason
+
+Today's Training cleared the shared dashboard flag during its cache hit, before Nutrition and Your Progress read it. The Nutrition and Progress screens had also cleared their own flags by the time the user came back. The matching card could show the previous snapshot for up to 30 seconds.
+
+### Alternatives Considered
+
+Keep one dashboard flag and delay clearing it until every card had read it. That needs a new waiting protocol across cards that mount in any order. Replace the screen cache. The generation counter fits the current bucket and leaves a fresh card on its cached snapshot.
+
+### Impact
+
+No database change. Training, nutrition, adherence, and Progress calculations stay as they are. A whole-dashboard invalidation now refreshes every card even if Today's Training finishes first.
+
+---
+
 ## Decision 150 - The dashboard leads with today, then one set of actions
 
 Date: 2026-11-01

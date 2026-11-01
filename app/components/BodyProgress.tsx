@@ -119,7 +119,9 @@ export default function BodyProgress({ userId, unitsPreference, onDataChange, sp
       await load();
       onDataChange?.();
     } catch (e: any) {
-      setError(e?.message || 'Could not save measurement.');
+      const message = e?.message || 'Could not save measurement.';
+      setError(message);
+      if (String(message).includes('were saved')) onDataChange?.();
     } finally {
       setSaving(false);
     }

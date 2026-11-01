@@ -3,8 +3,13 @@ import { beginBackgroundRefresh, endBackgroundRefresh, noteCacheHit, noteCacheMi
 /**
  * In-memory screen cache for the signed-in user.
  * Never written to localStorage and never readable by another account.
- * A 30 second age skips a repeat fetch only when the area is not marked stale
- * and, for date-scoped snapshots, the local calendar day is unchanged.
+ * A 30 second age skips a repeat fetch only when the area is not marked stale,
+ * the dashboard card generation still matches, and, for date-scoped snapshots,
+ * the local calendar day is unchanged.
+ *
+ * Dashboard cards each have a generation. finishScreenPaint may clear the shared
+ * dashboard flag as soon as the first card finishes. A later card still refetches
+ * when its own generation is newer than the cached snapshot.
  */
 
 export const SCREEN_CACHE_TTL_MS = 30_000;
@@ -20,6 +25,15 @@ export const SCREEN_CACHE_LIMITS = {
 export type CacheSlot = keyof typeof SCREEN_CACHE_LIMITS;
 
 export type StaleArea = 'program' | 'schedule' | 'nutrition' | 'progress' | 'groups' | 'dashboard';
+
+export const DASHBOARD_CARDS = ['training', 'week', 'nutrition', 'progress'] as const;
+
+export type DashboardCardKey = (typeof DASHBOARD_CARDS)[number];
+
+export type DashboardCardGeneration = {
+  card: DashboardCardKey;
+  epoch: number;
+};
 
 export type NutritionDraftSnapshot = {
   logDate: string;
@@ -55,10 +69,12 @@ type CacheEntry = {
   savedAt: number;
   localDate: string;
   value: unknown;
+  cardEpoch?: number;
 };
 
 type Bucket = {
   stale: Set<StaleArea>;
+  dashboardCardEpoch: Record<DashboardCardKey, number>;
   slots: Record<CacheSlot, Map<string, CacheEntry>>;
 };
 
@@ -68,9 +84,14 @@ const buckets = new Map<string, Bucket>();
 const drafts = new Map<string, NutritionDraftSnapshot>();
 const listeners = new Set<() => void>();
 
+function emptyCardEpochs(): Record<DashboardCardKey, number> {
+  return { training: 0, week: 0, nutrition: 0, progress: 0 };
+}
+
 function emptyBucket(): Bucket {
   return {
     stale: new Set(),
+    dashboardCardEpoch: emptyCardEpochs(),
     slots: {
       nutrition: new Map(),
       schedule: new Map(),
@@ -126,7 +147,30 @@ export function markScreenStale(userId: string, areas: StaleArea[]) {
   const row = bucketFor(userId);
   if (!row || !areas.length) return;
   areas.forEach((area) => row.stale.add(area));
+  if (areas.includes('dashboard')) {
+    DASHBOARD_CARDS.forEach((card) => {
+      row.dashboardCardEpoch[card] += 1;
+    });
+  }
   emit();
+}
+
+/** Advance one Dashboard card. This survives another card clearing the shared dashboard flag. */
+export function bumpDashboardCardEpoch(userId: string, card: DashboardCardKey) {
+  const row = bucketFor(userId);
+  if (!row) return 0;
+  row.dashboardCardEpoch[card] += 1;
+  emit();
+  return row.dashboardCardEpoch[card];
+}
+
+export function dashboardCardEpoch(userId: string, card: DashboardCardKey) {
+  return bucketFor(userId)?.dashboardCardEpoch[card] ?? 0;
+}
+
+/** A response may update the card only when it belongs to the active user and the generation it started with. */
+export function dashboardWriteCurrent(userId: string, card: DashboardCardKey, epoch: number) {
+  return !!userId && userId === activeUserId && dashboardCardEpoch(userId, card) === epoch;
 }
 
 export function clearScreenStale(userId: string, areas: StaleArea[]) {
@@ -143,18 +187,27 @@ export function isScreenStale(userId: string, area: StaleArea) {
   return !!bucketFor(userId)?.stale.has(area);
 }
 
-export function writeScreenCache<T>(userId: string, slot: CacheSlot, key: string, value: T, localDate: string) {
+export function writeScreenCache<T>(
+  userId: string,
+  slot: CacheSlot,
+  key: string,
+  value: T,
+  localDate: string,
+  generation?: DashboardCardGeneration
+): boolean {
   const row = bucketFor(userId);
-  if (!row || !key) return;
+  if (!row || !key) return false;
+  if (generation && row.dashboardCardEpoch[generation.card] !== generation.epoch) return false;
   const map = row.slots[slot];
   map.delete(key);
-  map.set(key, { savedAt: clock(), localDate, value });
+  map.set(key, { savedAt: clock(), localDate, value, cardEpoch: generation?.epoch });
   const limit = SCREEN_CACHE_LIMITS[slot];
   while (map.size > limit) {
     const oldest = map.keys().next().value;
     if (oldest === undefined) break;
     map.delete(oldest);
   }
+  return true;
 }
 
 export function readScreenCache<T>(
@@ -162,7 +215,7 @@ export function readScreenCache<T>(
   slot: CacheSlot,
   key: string,
   localDate: string,
-  options: { dateScoped: boolean; staleAreas: StaleArea[] }
+  options: { dateScoped: boolean; staleAreas: StaleArea[]; dashboardCard?: DashboardCardKey }
 ): ScreenCacheRead<T> | null {
   const row = bucketFor(userId);
   const entry = row?.slots[slot].get(key);
@@ -170,7 +223,8 @@ export function readScreenCache<T>(
   if (options.dateScoped && entry.localDate !== localDate) return null;
   const stale = options.staleAreas.some((area) => row.stale.has(area));
   const expired = clock() - entry.savedAt >= SCREEN_CACHE_TTL_MS;
-  return { value: entry.value as T, refresh: stale || expired };
+  const cardBehind = options.dashboardCard != null && (entry.cardEpoch ?? 0) < row.dashboardCardEpoch[options.dashboardCard];
+  return { value: entry.value as T, refresh: stale || expired || cardBehind };
 }
 
 export function deleteScreenCache(userId: string, slot: CacheSlot, key: string) {
@@ -227,7 +281,7 @@ export function beginScreenPaint<T>(
   slot: CacheSlot,
   key: string,
   localDate: string,
-  options: { dateScoped: boolean; staleAreas: StaleArea[] }
+  options: { dateScoped: boolean; staleAreas: StaleArea[]; dashboardCard?: DashboardCardKey }
 ): { cached: T | null; background: boolean } {
   const hit = readScreenCache<T>(userId, slot, key, localDate, options);
   if (hit) {

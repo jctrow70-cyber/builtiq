@@ -5,13 +5,13 @@ import { supabase } from '../../../lib/supabaseClient';
 import { loadDashboardProgress } from '../../../lib/progress/queries';
 import type { DashboardProgressModel } from '../../../lib/progress/dashboardProgress';
 import type { UnitsPreference } from '../../../lib/body/measurements';
-import { beginScreenPaint, finishScreenPaint, readScreenCache, subscribeScreenSession, writeScreenCache } from '../../../lib/performance/screenSession';
+import { endBackgroundRefresh } from '../../../lib/performance/screenTiming';
+import { beginScreenPaint, dashboardCardEpoch, dashboardWriteCurrent, finishScreenPaint, readScreenCache, subscribeScreenSession, writeScreenCache } from '../../../lib/performance/screenSession';
 import { todayYmd } from '../../../lib/training/programCalendar';
 
 type ProgressDashboardCardProps = {
   userId: string;
   unitsPreference?: string | null;
-  refreshKey?: number;
   onViewProgress: () => void;
   onOpenStrength: () => void;
   onOpenBody: () => void;
@@ -25,7 +25,6 @@ type CardState =
 export default function ProgressDashboardCard({
   userId,
   unitsPreference,
-  refreshKey = 0,
   onViewProgress,
   onOpenStrength,
   onOpenBody,
@@ -33,41 +32,51 @@ export default function ProgressDashboardCard({
   const units: UnitsPreference = unitsPreference === 'metric' ? 'metric' : 'imperial';
   const today = todayYmd();
   const [reloadKey, setReloadKey] = useState(0);
-  const [sessionTick, setSessionTick] = useState(0);
+  const [cardEpoch, setCardEpoch] = useState(() => dashboardCardEpoch(userId, 'progress'));
   const [state, setState] = useState<CardState>(() => {
     const cached = readScreenCache<DashboardProgressModel>(userId, 'dashboard', `progress|${units}`, today, {
       dateScoped: true,
       staleAreas: ['dashboard', 'progress'],
+      dashboardCard: 'progress',
     });
     return cached ? { status: 'ready', model: cached.value } : { status: 'loading' };
   });
-  useEffect(() => subscribeScreenSession(() => setSessionTick((value) => value + 1)), []);
+  useEffect(() => subscribeScreenSession(() => {
+    setCardEpoch(dashboardCardEpoch(userId, 'progress'));
+  }), [userId]);
 
   useEffect(() => {
     let cancelled = false;
+    const epoch = dashboardCardEpoch(userId, 'progress');
     const paint = beginScreenPaint<DashboardProgressModel>('Dashboard', userId, 'dashboard', `progress|${units}`, today, {
       dateScoped: true,
       staleAreas: ['dashboard', 'progress'],
+      dashboardCard: 'progress',
     });
     if (paint.cached) setState({ status: 'ready', model: paint.cached });
     else setState({ status: 'loading' });
     if (paint.cached && !paint.background) return;
     loadDashboardProgress(supabase, userId, today, units)
       .then((model) => {
-        if (cancelled) return;
-        writeScreenCache(userId, 'dashboard', `progress|${units}`, model, today);
+        if (cancelled || !dashboardWriteCurrent(userId, 'progress', epoch)) return;
+        writeScreenCache(userId, 'dashboard', `progress|${units}`, model, today, { card: 'progress', epoch });
         setState({ status: 'ready', model });
       })
       .catch(() => {
-        if (!cancelled) setState({ status: 'error' });
+        if (cancelled || !dashboardWriteCurrent(userId, 'progress', epoch)) return;
+        setState({ status: 'error' });
       })
       .finally(() => {
-        if (!cancelled) finishScreenPaint('Dashboard', userId, ['dashboard'], !!paint.cached && paint.background);
+        if (cancelled || !dashboardWriteCurrent(userId, 'progress', epoch)) {
+          if (paint.background) endBackgroundRefresh('Dashboard');
+          return;
+        }
+        finishScreenPaint('Dashboard', userId, ['dashboard'], !!paint.cached && paint.background);
       });
     return () => {
       cancelled = true;
     };
-  }, [userId, units, today, refreshKey, reloadKey, sessionTick]);
+  }, [userId, units, today, reloadKey, cardEpoch]);
 
   return (
     <section className="dash-card progress-dash" data-progress-state={state.status} aria-labelledby="progress-dash-title">

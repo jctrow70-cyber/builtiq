@@ -10,7 +10,8 @@ import {
   weekAdherenceSummary,
   type WeekAdherenceSummary,
 } from '../../../lib/progress/weekAdherence';
-import { beginScreenPaint, finishScreenPaint, readScreenCache, subscribeScreenSession, writeScreenCache } from '../../../lib/performance/screenSession';
+import { endBackgroundRefresh } from '../../../lib/performance/screenTiming';
+import { beginScreenPaint, dashboardCardEpoch, dashboardWriteCurrent, finishScreenPaint, readScreenCache, subscribeScreenSession, writeScreenCache } from '../../../lib/performance/screenSession';
 import { currentCalendarWeekBounds, formatDisplayDate, todayYmd } from '../../../lib/training/programCalendar';
 
 type WeeklyAdherenceCardProps = {
@@ -32,35 +33,43 @@ export default function WeeklyAdherenceCard({ userId, onSelectDate }: WeeklyAdhe
   const today = todayYmd();
   const bounds = currentCalendarWeekBounds();
   const [reloadKey, setReloadKey] = useState(0);
-  const [sessionTick, setSessionTick] = useState(0);
+  const [cardEpoch, setCardEpoch] = useState(() => dashboardCardEpoch(userId, 'week'));
   const [state, setState] = useState<CardState>(() => {
     const cached = readScreenCache<WeekAdherenceLoad>(userId, 'dashboard', `adherence|${bounds.monday}`, today, {
       dateScoped: true,
-      staleAreas: ['dashboard', 'progress'],
+      staleAreas: ['dashboard'],
+      dashboardCard: 'week',
     });
     return cached?.value || { status: 'loading' };
   });
-  useEffect(() => subscribeScreenSession(() => setSessionTick((value) => value + 1)), []);
+  useEffect(() => subscribeScreenSession(() => {
+    setCardEpoch(dashboardCardEpoch(userId, 'week'));
+  }), [userId]);
 
   useEffect(() => {
     let cancelled = false;
+    const epoch = dashboardCardEpoch(userId, 'week');
     const paint = beginScreenPaint<WeekAdherenceLoad>('Dashboard', userId, 'dashboard', `adherence|${bounds.monday}`, today, {
       dateScoped: true,
-      staleAreas: ['dashboard', 'progress'],
+      staleAreas: ['dashboard'],
+      dashboardCard: 'week',
     });
     if (paint.cached) setState(paint.cached);
     else setState({ status: 'loading' });
     if (paint.cached && !paint.background) return;
     loadWeekAdherence(supabase, userId, bounds.monday, bounds.sunday).then((result) => {
-      if (cancelled) return;
-      writeScreenCache(userId, 'dashboard', `adherence|${bounds.monday}`, result, today);
+      if (cancelled || !dashboardWriteCurrent(userId, 'week', epoch)) {
+        if (paint.background) endBackgroundRefresh('Dashboard');
+        return;
+      }
+      writeScreenCache(userId, 'dashboard', `adherence|${bounds.monday}`, result, today, { card: 'week', epoch });
       setState(result);
       finishScreenPaint('Dashboard', userId, ['dashboard'], !!paint.cached && paint.background);
     });
     return () => {
       cancelled = true;
     };
-  }, [userId, bounds.monday, bounds.sunday, reloadKey, sessionTick, today]);
+  }, [userId, bounds.monday, bounds.sunday, reloadKey, cardEpoch, today]);
 
   const summary = state.status === 'ready' ? weekAdherenceSummary(state.facts, today, bounds) : null;
 

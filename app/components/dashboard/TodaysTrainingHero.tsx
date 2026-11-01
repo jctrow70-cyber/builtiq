@@ -16,7 +16,7 @@ import {
   type TodayTrainingNavigation,
   type TodayTrainingNotice,
 } from '../../../lib/training/todayTraining';
-import { beginScreenPaint, finishScreenPaint, readScreenCache, subscribeScreenSession, writeScreenCache } from '../../../lib/performance/screenSession';
+import { beginScreenPaint, dashboardCardEpoch, dashboardWriteCurrent, finishScreenPaint, readScreenCache, subscribeScreenSession, writeScreenCache } from '../../../lib/performance/screenSession';
 import { beginBackgroundRefresh, endBackgroundRefresh, noteCalendarUsable } from '../../../lib/performance/screenTiming';
 import { enrollmentSyncSettled } from '../../../lib/training/enrollmentSyncGate';
 import { loadVisibleSchedule, refreshVisibleSchedule, scheduleTeamLabel, type VisibleScheduleSnapshot } from '../../../lib/training/visibleSchedule';
@@ -87,46 +87,58 @@ export default function TodaysTrainingHero({
     return readScreenCache<VisibleScheduleSnapshot>(userId, 'dashboard', heroKey, today, {
       dateScoped: true,
       staleAreas: ['dashboard', 'schedule', 'program'],
+      dashboardCard: 'training',
     })?.value || null;
   });
   const [snapshotError, setSnapshotError] = useState<string | null>(null);
   const [snapshotLoading, setSnapshotLoading] = useState(!snapshot);
   const [repairSettled, setRepairSettled] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
-  const [sessionTick, setSessionTick] = useState(0);
-  useEffect(() => subscribeScreenSession(() => setSessionTick((value) => value + 1)), []);
+  const [cardEpoch, setCardEpoch] = useState(() => dashboardCardEpoch(userId, 'training'));
+  useEffect(() => subscribeScreenSession(() => {
+    setCardEpoch(dashboardCardEpoch(userId, 'training'));
+  }), [userId]);
 
   useEffect(() => {
     if (!userId || !inputsReady) return;
     let cancelled = false;
+    const epoch = dashboardCardEpoch(userId, 'training');
     const paint = beginScreenPaint<VisibleScheduleSnapshot>('Dashboard', userId, 'dashboard', heroKey, today, {
       dateScoped: true,
       staleAreas: ['dashboard', 'schedule', 'program'],
+      dashboardCard: 'training',
     });
     const request = { userId, teams, rangeFrom: today, rangeTo: today, today };
     async function paintSchedule() {
       try {
-        if (paint.cached && !paint.cached.keepPrevious) {
+        if (paint.cached && !paint.background && !paint.cached.keepPrevious) {
           setSnapshot(paint.cached);
           setSnapshotError(paint.cached.error);
           setSnapshotLoading(false);
           noteCalendarUsable('Dashboard');
-          finishScreenPaint('Dashboard', userId, ['dashboard'], paint.background);
+          finishScreenPaint('Dashboard', userId, ['dashboard'], false);
           return;
         }
-        setSnapshotLoading(true);
+        if (paint.cached && !paint.cached.keepPrevious) setSnapshot(paint.cached);
+        setSnapshotLoading(!paint.cached);
         const next = await loadVisibleSchedule(supabase, request);
-        if (cancelled) return;
+        if (cancelled || !dashboardWriteCurrent(userId, 'training', epoch)) {
+          if (paint.background) endBackgroundRefresh('Dashboard');
+          return;
+        }
         if (!next.keepPrevious) {
-          writeScreenCache(userId, 'dashboard', heroKey, next, today);
+          writeScreenCache(userId, 'dashboard', heroKey, next, today, { card: 'training', epoch });
           setSnapshot(next);
         }
         setSnapshotError(next.error);
         setSnapshotLoading(false);
         noteCalendarUsable('Dashboard');
-        finishScreenPaint('Dashboard', userId, ['dashboard'], false);
+        finishScreenPaint('Dashboard', userId, ['dashboard'], paint.background);
       } catch (error: unknown) {
-        if (cancelled) return;
+        if (cancelled || !dashboardWriteCurrent(userId, 'training', epoch)) {
+          if (paint.background) endBackgroundRefresh('Dashboard');
+          return;
+        }
         const message = error && typeof error === 'object' && 'message' in error ? String((error as { message?: string }).message || '') : '';
         setSnapshotError(message || 'Could not load today’s training.');
         setSnapshotLoading(false);
@@ -136,27 +148,28 @@ export default function TodaysTrainingHero({
     return () => {
       cancelled = true;
     };
-  }, [userId, inputsReady, today, teamsKey, heroKey, teams]);
+  }, [userId, inputsReady, today, teamsKey, heroKey, teams, cardEpoch]);
 
   useEffect(() => {
     if (!userId || !inputsReady) return;
     if (!scheduleRepairGeneration && !reloadKey) return;
     let cancelled = false;
     const request = { userId, teams, rangeFrom: today, rangeTo: today, today };
+    const epoch = dashboardCardEpoch(userId, 'training');
     async function repairSchedule() {
       await enrollmentSyncSettled();
-      if (cancelled) return;
+      if (cancelled || !dashboardWriteCurrent(userId, 'training', epoch)) return;
       setRepairSettled(false);
       beginBackgroundRefresh('Dashboard');
       try {
         const refreshed = await refreshVisibleSchedule(supabase, request);
-        if (cancelled) return;
+        if (cancelled || !dashboardWriteCurrent(userId, 'training', epoch)) return;
         if (refreshed.keepPrevious) {
           setSnapshot((current) => current);
           if (refreshed.error) setSnapshotError(refreshed.error);
           return;
         }
-        writeScreenCache(userId, 'dashboard', heroKey, refreshed, today);
+        writeScreenCache(userId, 'dashboard', heroKey, refreshed, today, { card: 'training', epoch });
         setSnapshot(refreshed);
         setSnapshotError(refreshed.error);
       } catch (error: unknown) {
@@ -172,7 +185,7 @@ export default function TodaysTrainingHero({
     return () => {
       cancelled = true;
     };
-  }, [userId, inputsReady, today, reloadKey, teamsKey, heroKey, sessionTick, teams, scheduleRepairGeneration]);
+  }, [userId, inputsReady, today, reloadKey, teamsKey, heroKey, cardEpoch, teams, scheduleRepairGeneration]);
 
   const dayMoves = moves || workoutDayMovesFromActivities(calendarActivities);
   const logMap = useMemo(

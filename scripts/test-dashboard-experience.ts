@@ -80,7 +80,7 @@ assert.equal(nav.includes('loadProgressLogs()'), true);
 assert.equal(page.includes(".from('st_set_logs')"), true);
 assert.equal(page.includes('.limit(800)'), true);
 assert.equal(
-  page.includes("onBodyDataChange={()=>{if(session?.user?.id)markScreenStale(session.user.id,['dashboard']);setBodyDashRefreshKey(k=>k+1);}}"),
+  page.includes("onBodyDataChange={()=>{if(session?.user?.id)bumpDashboardCardEpoch(session.user.id,'progress');}}"),
   true
 );
 assert.equal(page.includes('BodyDashboardCard'), false);

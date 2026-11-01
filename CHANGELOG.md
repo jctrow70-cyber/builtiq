@@ -11,6 +11,47 @@ Branch:
 Status:
 ```
 
+## BIQ-0295 - Refresh each dashboard card on its own
+
+Date: 2026-11-01
+Branch: main
+Status: Implemented. Local commit. Not pushed. No database change.
+
+Summary: A meal save, a saved nutrition goal, and each successful meal add, edit, delete, copy, template, barcode, and AI log advances only the Nutrition card's cache generation. A successful body check-in save, a save that persists weight and waist before reporting missing extra fields, and a successful delete advance only the Your Progress generation. Today's Training can still clear the shared dashboard flag as soon as its cache read finishes. The other cards keep their generations, so Nutrition or Your Progress reloads inside the 30-second window, and the unrelated cards do not. A failed or cancelled save does not advance a generation. A response from an older generation or a previous signed-in user cannot replace the newer snapshot. Clearing the shared flag does not start another fetch.
+
+Purpose: One Dashboard card was clearing a shared stale flag before Nutrition and Your Progress could see it. Returning to the Dashboard within 30 seconds could keep the previous meal total or body measurement.
+
+Files changed:
+- lib/performance/screenSession.ts
+- app/page.tsx
+- app/components/NutritionTracker.tsx
+- app/components/BodyProgress.tsx
+- app/components/dashboard/TodaysTrainingHero.tsx
+- app/components/dashboard/WeeklyAdherenceCard.tsx
+- app/components/dashboard/NutritionDashboardCard.tsx
+- app/components/dashboard/ProgressDashboardCard.tsx
+- scripts/test-dashboard-cache.ts
+- scripts/test-dashboard-experience.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- Run `scripts/test-dashboard-cache.ts`, `scripts/test-dashboard-experience.ts`, `scripts/test-screen-session.ts`, `scripts/test-today-training.ts`, `scripts/test-week-adherence.ts`, `scripts/test-nutrition-dashboard.ts`, `scripts/test-dashboard-progress.ts`, `scripts/test-progress-view.ts`, `scripts/test-body-measurements.ts`, `scripts/test-progress-analytics.ts`, and `npx tsc --noEmit`.
+- Log a meal, return to the Dashboard within 30 seconds, and confirm Nutrition shows the new total. Today's Training and Your Progress should not reload for that meal.
+- Save a body check-in and delete one. Return within 30 seconds and confirm Your Progress shows the change. Today's Training and Nutrition should not reload for that check-in.
+- Cancel a delete and leave body fat out of range. The Dashboard cache should stay as it was.
+- Open the Dashboard again with no new meal or check-in and confirm a fresh cache does not refetch.
+
+Known issues:
+- Signed-in visual QA is still unverified.
+- A change that marks the whole dashboard still asks every card to refresh. That is a real invalidation, and it now reaches cards that previously missed it.
+- Personal workout-day moves, duplicate template expectations, Nutrition screen goal defaults, the one-sample body wording, the 800-row training log, and the unused BodyDashboardCard stay as separate follow-ups.
+
+Recommended commit message: BIQ-0295 Refresh each dashboard card on its own
+
 ## BIQ-0294 - Polish the dashboard home
 
 Date: 2026-11-01
