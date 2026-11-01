@@ -52,6 +52,30 @@ No database change and no new dependency. Active-logger protection, history snap
 
 ---
 
+## Decision 144 - App icons are static files
+
+Date: 2026-11-01
+Status: Accepted
+Category: Build
+
+### Decision
+
+BIQ-0288 serves `/icon` and `/apple-icon` from static PNG files in `public/brand`. Metadata and the manifest keep those addresses. Production export no longer renders the icons with `next/og`.
+
+### Reason
+
+The production export crashed inside the Open Graph renderer while reading its font. On Windows, that renderer joins `import.meta.url` as a filesystem path, then parses the result as a URL. The join is not a valid URL, so `/icon` and `/apple-icon` fail before any image is drawn.
+
+### Alternatives Considered
+
+Patching `node_modules`. Moving the repository to a path with no spaces. Both leave the app dependent on a renderer that fails during export on this machine.
+
+### Impact
+
+No database change and no change to workout, nutrition, or navigation behavior. The icons are the same mark, sized so the word fits.
+
+---
+
 ## Decision 143 - Loaded screens stay in a module cache and the first bundle stays smaller
 
 Date: 2026-11-01

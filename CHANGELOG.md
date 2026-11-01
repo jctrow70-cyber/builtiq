@@ -79,6 +79,38 @@ Known issues: Signed-in browser timings were not collected in this pass. Phase D
 
 Recommended commit message: BIQ-0289 Make workout logging respond immediately.
 
+## BIQ-0288 - Serve the app icons as static images
+
+Date: 2026-11-01
+Branch: main
+Status: Committed locally. Not pushed. No database change.
+
+Summary: The home-screen icons are static PNG files. Production builds no longer render them with `next/og` during export.
+
+Purpose: `next build` failed on `/icon` and `/apple-icon` because the Open Graph renderer reads its font with a Windows path join that is not a valid file URL. The icons stay at the same addresses and keep the BuildIQ mark.
+
+Files changed:
+- public/brand/icon-512.png
+- public/brand/apple-icon-180.png
+- app/icon/route.ts
+- app/apple-icon/route.ts
+- app/icon.tsx
+- app/apple-icon.tsx
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- Run `next build` and confirm it finishes without an icon prerender error.
+- Open `/icon` and `/apple-icon` and confirm the BuildIQ mark is shown.
+- Confirm the manifest still points at those addresses.
+
+Known issues: The wordmark is sized so the full word fits. Signed-in browser timings are still unmeasured.
+
+Recommended commit message: BIQ-0288 Serve the app icons as static images.
+
 ## BIQ-0287 - Split the first screen bundle and keep loaded screens ready
 
 Date: 2026-11-01
