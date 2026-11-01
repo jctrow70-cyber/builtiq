@@ -11,6 +11,51 @@ Branch:
 Status:
 ```
 
+## BIQ-0282 - Dashboard weekly adherence
+
+Date: 2026-10-31
+Branch: main
+Status: Implemented. Ready for review. Not committed. No database change.
+
+Summary: The dashboard Weekly Progress card no longer counts logged sets. This week shows assigned training obligations for Monday–Sunday using the existing Progress adherence calculations.
+
+Purpose: Make the home week summary match Progress, including hidden sources, without a second adherence formula.
+
+Files changed:
+- app/components/dashboard/WeeklyAdherenceCard.tsx
+- lib/progress/weekAdherence.ts
+- lib/progress/queries.ts
+- app/page.tsx
+- app/globals.css
+- scripts/test-week-adherence.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- `npx tsx scripts/test-week-adherence.ts`
+- `npx tsx scripts/test-today-training.ts`
+- `npx tsx scripts/test-unified-schedule.ts`
+- `npx tsx scripts/test-progress-view.ts`
+- `npx tsc --noEmit`
+- On the dashboard, confirm This week shows scheduled and completed counts, partial, skipped, missed, due today, and upcoming.
+- Confirm Past-day adherence is hidden when there are no past obligations, and that it is not shown as 0% in that case.
+- Select a day and confirm Training opens on that date with the logger closed.
+- Confirm a failed load does not show zero obligations as a completed week.
+- At 390px, 768px, and 1440px, confirm the seven day buttons stay on one row and can be tapped.
+
+Known issues:
+- A personal calendar move does not change the expectation date, so this card can show the workout on a different day than the Training calendar. Follow-up work. This change does not write schedule moves.
+- A private copy and a leftover template expectation can both count. That matches Progress. Follow-up work. This change does not delete or hide expectation rows.
+- Progress 7D is a rolling seven days through today. This card is the calendar Monday–Sunday. The formula matches when both are given the same dates.
+- Signed-in visual QA is still blocked on the sign-in screen.
+
+Recommended commit message: BIQ-0282 Show weekly adherence from training expectations
+
+---
+
 ## BIQ-0281 - Dashboard Today's Training
 
 Date: 2026-10-31

@@ -210,7 +210,9 @@ Goal: Prepare BuildIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
-**BIQ-0281 DSH-B** (Today’s Training) is implemented and ready for review (Decision 137). The dashboard uses the Training schedule for today. The weekly adherence card stays blocked until duplicate expectations and Progress consistency are verified. Other dashboard cards are unchanged.
+**BIQ-0282 DSH-C** (weekly adherence) is implemented and ready for review (Decision 138). The dashboard week card uses Progress expectation counts for Monday–Sunday. It is not committed. Follow-up, not in this change: personal calendar moves do not update expectation dates, and a private copy plus a leftover template expectation can count twice because Progress counts both rows.
+
+**BIQ-0281 DSH-B** (Today’s Training) is implemented (Decision 137). The dashboard uses the Training schedule for today. Other dashboard cards besides the week summary are unchanged.
 
 **BIQ-0271 Phase E3.3** (inline workout feedback) is implemented and ready for review (Decision 136). Remaining Phase E work (rest timers, warm-up logging, session header, superset workflow) is still out of scope.
 

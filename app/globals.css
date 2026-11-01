@@ -1574,3 +1574,29 @@ label{color:var(--textSecondary)}
   .today-training-name{font-size:18px}
   .today-training-item{padding:14px 16px}
 }
+.week-adherence{min-height:0;grid-column:1 / -1}
+.week-adherence-note{margin:0 0 8px;font-size:13px;line-height:1.4}
+.week-adherence-empty{display:grid;gap:10px;align-content:start}
+.week-adherence-empty .btn{min-height:44px}
+.week-adherence-empty-copy{margin:0 0 8px;font-weight:700}
+.week-adherence-primary{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.week-adherence-primary b{display:block;font-size:28px;font-weight:900;line-height:1.1}
+.week-adherence-secondary{display:flex;flex-wrap:wrap;gap:8px 12px;margin-top:10px;font-size:13px}
+.week-adherence-secondary b{font-size:15px}
+.week-adherence-rate{margin:10px 0 0;font-size:13px}
+.week-adherence-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-top:12px}
+.week-adherence-day{min-height:44px;padding:4px 0;border-radius:10px;border:1px solid var(--borderSubtle);background:var(--surfaceInset);color:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.week-adherence-day-letter{font-size:11px;font-weight:700}
+.week-adherence-day-count{font-size:14px;font-weight:800}
+.week-adherence-day[data-when="today"]{border-color:var(--accent);background:var(--accentSoft)}
+.week-adherence-day[data-when="future"]{opacity:0.85}
+.week-adherence-day[data-tone="missed"]{border-color:var(--danger)}
+.week-adherence-day[data-tone="completed"]{border-color:var(--success)}
+@media(min-width:768px){
+  .week-adherence-layout{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(280px,420px);gap:16px;align-items:center}
+  .week-adherence-days{margin-top:0}
+}
+@media(min-width:1440px){
+  .week-adherence-primary b{font-size:32px}
+  .week-adherence-layout{grid-template-columns:minmax(0,1fr) minmax(360px,480px)}
+}

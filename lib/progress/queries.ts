@@ -1,4 +1,6 @@
 import { expectationFactsFromSchedule, progressAdherence } from './adherence';
+import type { ExpectationFact } from '../training/unifiedSchedule';
+import { scheduleSetupMissing } from '../training/scheduleActions';
 import { buildProgressReport, type ProgressReport } from './report';
 import { comparableWindows, rangeBounds, type ProgressRange } from './ranges';
 import { setFactFromRow, type ProgressSetFact } from './setFacts';
@@ -122,6 +124,34 @@ async function fetchSessions(client: QueryClient, userId: string, from: string, 
     .lte('log_date', to);
   if (result.error) return { error: result.error, rows: [] };
   return { error: null, rows: result.data || [] };
+}
+
+export type WeekAdherenceLoad =
+  | { status: 'ready'; facts: ExpectationFact[] }
+  | { status: 'pending' }
+  | { status: 'error'; message: string };
+
+/**
+ * Monday–Sunday expectations and sessions for one signed-in user.
+ * Uses the same selects as Progress. It does not read set logs or filter hidden sources.
+ */
+export async function loadWeekAdherence(client: QueryClient, userId: string, from: string, to: string): Promise<WeekAdherenceLoad> {
+  try {
+    const [expectations, sessions] = await Promise.all([
+      fetchExpectations(client, userId, from, to),
+      fetchSessions(client, userId, from, to),
+    ]);
+    if (expectations.error || sessions.error) {
+      const message = errorText(expectations.error || sessions.error) || 'Could not load this week.';
+      if (scheduleSetupMissing(message)) return { status: 'pending' };
+      return { status: 'error', message };
+    }
+    return { status: 'ready', facts: expectationFactsFromSchedule(expectations.rows, sessions.rows) };
+  } catch (error) {
+    const message = errorText(error) || 'Could not load this week.';
+    if (scheduleSetupMissing(message)) return { status: 'pending' };
+    return { status: 'error', message };
+  }
 }
 
 /** Drop a select column only when the database error names that column. */

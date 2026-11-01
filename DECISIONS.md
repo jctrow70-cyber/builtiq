@@ -4,6 +4,32 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 138 - Dashboard week uses Progress adherence
+
+Date: 2026-10-31
+Status: Accepted
+Category: Dashboard
+
+### Decision
+
+BIQ-0282 replaces the dashboard set-count Weekly Progress card with a Monday–Sunday adherence card. The card loads that week’s `st_training_expectations` and `st_workout_sessions` for the signed-in user and uses `expectationFactsFromSchedule`, `pickFulfillingSession`, `adherenceCounts`, and `expectationDisplayState`. The percentage is `adherenceCounts().completion_rate`, labeled Past-day adherence, and a null rate is not shown as 0%. Hidden sources stay in the count. Personal and group rows both count. Day buttons show the number of non-excused expectations and open that Training date with the logger closed. The card says these are assigned obligations, not the full visible calendar.
+
+Two follow-ups stay out of this change. A personal workout-day move updates the calendar ledger and does not change `scheduled_date`. A private copy and a leftover template expectation can both remain and both count, which is the current Progress result.
+
+### Reason
+
+The old card counted set logs. Progress already defines whether an assigned workout was completed, partial, skipped, missed, due, upcoming, or excused.
+
+### Alternatives Considered
+
+Counting only workouts visible on the Training calendar. Dropping same-title template rows. Putting today and future days into the percentage. Updating expectation dates when a personal workout moves.
+
+### Impact
+
+No database change. Adherence formulas, expectation rows, session writes, Progress math, Training calendar display, and group authorization stay as they are.
+
+---
+
 ## Decision 137 - Dashboard today uses the Training schedule
 
 Date: 2026-10-31
