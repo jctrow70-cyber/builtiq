@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 140 - Dashboard progress reuses Progress calculations
+
+Date: 2026-10-31
+Status: Accepted
+Category: Dashboard
+
+### Decision
+
+BIQ-0284 replaces the dashboard Body card with `ProgressDashboardCard`. The card loads the signed-in user's set logs and body measurements for the last 4 weeks, including the preceding 28 days required by `buildStrengthIndex`. Strength, best performances, and body change come from `buildSeriesWindows`, `buildStrengthIndex`, `seriesPersonalRecords`, `headlineRecords`, and `bodyTrends`. A body change appears only when that metric has two or more samples in the 4-week span. The weight shown is the latest sample. One sample, or only an older check-in, shows the value and date without a trend. Up to two best performances keep exercise, equipment, and variant separate. The inline Quick add form is removed. Add check-in opens Progress Body and scrolls the existing Log measurement form once. View Progress opens Overview. Strength and achievements open Strength. Body metrics open Body.
+
+### Reason
+
+The old Body card showed the newest of 30 rows with no change, and it wrote measurements from a second form. The dashboard needed a compact progress summary that stays aligned with Progress.
+
+### Alternatives Considered
+
+Keeping Quick add on the dashboard. Calling the full `loadProgressReport`, which also reads meals, goals, expectations, and sessions. Using the capped 800-row training log as the strength source. Showing the weight rolling average. Labeling period bests as new records.
+
+### Impact
+
+No database change. Strength formulas, personal-record formulas, body-trend formulas, measurement writes, nutrition, adherence, training, groups, and AI behavior stay as they are. The Progress Overview one-sample label and the two unchanged thresholds stay as they are until a separate follow-up.
+
+---
+
 ## Decision 139 - Dashboard nutrition uses saved goals only
 
 Date: 2026-10-31

@@ -196,7 +196,7 @@ export default function BodyProgress({ userId, unitsPreference, onDataChange, sp
         </div>
       )}
 
-      <div className="card body-progress-form-card">
+      <div className="card body-progress-form-card" id="body-check-in">
         <div className="topline" style={{ justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
           <h2>Log measurement</h2>
           {(latestWeight || latestWaist) && (

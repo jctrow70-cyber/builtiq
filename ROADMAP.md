@@ -210,6 +210,8 @@ Goal: Prepare BuildIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
+**BIQ-0284 DSH-E** (your progress dashboard) is committed locally and not pushed (Decision 140). The dashboard Your Progress card uses the last 4 weeks of Progress strength and body calculations. The inline body check-in form is gone. Add check-in opens the existing Progress Body measurement form once.
+
 **BIQ-0283 DSH-D** (nutrition dashboard) is committed as cb6d4f5531c29bcee373099f3352741373631423, and origin/main points at that same commit (Decision 139). The dashboard nutrition card uses today’s logged meals and saved positive goals.
 
 **Follow-up:** The Nutrition screen still shows unsaved default targets from `goalsFromRow` when no goal row is saved, and it replaces a stored 0 with those defaults. The dashboard does not. Leave `goalsFromRow` unchanged until that follow-up is requested.

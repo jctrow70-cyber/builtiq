@@ -11,6 +11,57 @@ Branch:
 Status:
 ```
 
+## BIQ-0284 - Dashboard your progress
+
+Date: 2026-10-31
+Branch: main
+Status: Implemented. Local commit. Not pushed. No database change.
+
+Summary: The dashboard Body card is now a Your Progress card for the last 4 weeks. It shows the existing strength index, latest weight and waist, and up to two best performances from the Progress calculations.
+
+Purpose: Summarize strength and body progress on the dashboard without a second formula, a second measurement form, or the full Progress screen.
+
+Files changed:
+- app/components/dashboard/ProgressDashboardCard.tsx
+- lib/progress/dashboardProgress.ts
+- lib/progress/bodyCheckInLaunch.ts
+- lib/progress/queries.ts
+- app/page.tsx
+- app/components/BodyProgress.tsx
+- app/globals.css
+- scripts/test-dashboard-progress.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- `npx tsx scripts/test-dashboard-progress.ts`
+- `npx tsx scripts/test-progress-view.ts`
+- `npx tsx scripts/test-body-measurements.ts`
+- `npx tsx scripts/test-progress-analytics.ts`
+- `npx tsx scripts/test-nutrition-dashboard.ts`
+- `npx tsx scripts/test-week-adherence.ts`
+- `npx tsx scripts/test-today-training.ts`
+- `npx tsc --noEmit`
+- With no workouts or check-ins, confirm the empty copy and that loading or a failed query does not show zeros.
+- With one weight check-in in the last 4 weeks, confirm the value and no change arrow.
+- With two or more, confirm the change matches Progress for that span and the number is the latest weight.
+- With only an older check-in, confirm the date and that there is no trend.
+- Confirm a barbell and dumbbell best performance stay on separate lines.
+- View Progress opens Progress Overview. Strength and a best performance open Progress Strength. A body metric opens Progress Body. Add check-in opens Progress Body at the existing Log measurement form once.
+- Leave Progress and open it again. Confirm the form does not scroll open by itself.
+- At 390px, confirm the card is full width and the buttons are at least 44px. At 1440px, confirm the card stays half of the dashboard grid.
+
+Known issues:
+- Signed-in visual QA is still unverified when no test session is available.
+- Follow-up: Progress Overview can still describe a single body sample as unchanged, and Progress Body uses a different unchanged threshold. This card does not. This is not fixed in BIQ-0284.
+
+Recommended commit message: BIQ-0284 Show strength and body progress on the dashboard
+
+---
+
 ## BIQ-0283 - Dashboard nutrition summary
 
 Date: 2026-10-31

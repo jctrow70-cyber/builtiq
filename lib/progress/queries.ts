@@ -5,6 +5,8 @@ import { buildProgressReport, type ProgressReport } from './report';
 import { comparableWindows, rangeBounds, type ProgressRange } from './ranges';
 import { setFactFromRow, type ProgressSetFact } from './setFacts';
 import { seriesKey } from './identity';
+import { dashboardProgressModel, type DashboardProgressModel } from './dashboardProgress';
+import type { UnitsPreference } from '../body/measurements';
 
 export const PROGRESS_SET_FACT_COLUMNS = [
   'id',
@@ -124,6 +126,33 @@ async function fetchSessions(client: QueryClient, userId: string, from: string, 
     .lte('log_date', to);
   if (result.error) return { error: result.error, rows: [] };
   return { error: null, rows: result.data || [] };
+}
+
+const DASHBOARD_BODY_COLUMNS =
+  'id,user_id,measured_on,weight_lbs,waist_inches,chest_inches,arm_inches,thigh_inches,hip_inches,neck_inches,body_fat_percent,measurement_extras,notes';
+
+/**
+ * Last 4 weeks, plus the preceding 28 days the strength index compares.
+ * Set logs and body measurements for the signed-in user only.
+ */
+export async function loadDashboardProgress(
+  client: QueryClient,
+  userId: string,
+  today: string,
+  units: UnitsPreference
+): Promise<DashboardProgressModel> {
+  const view = rangeBounds('4W', today);
+  const from = comparableWindows(view).baseline.from;
+  const [setRows, measurements] = await Promise.all([
+    fetchPaged(client, 'st_set_logs', PROGRESS_SET_FACT_COLUMNS, userId, 'log_date', from, today),
+    fetchPaged(client, 'st_body_measurements', DASHBOARD_BODY_COLUMNS, userId, 'measured_on', '1970-01-01', today),
+  ]);
+  return dashboardProgressModel({
+    today,
+    units,
+    facts: setRows.map(setFactFromRow),
+    measurements,
+  });
 }
 
 export type WeekAdherenceLoad =

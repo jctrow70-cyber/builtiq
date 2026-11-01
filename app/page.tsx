@@ -46,11 +46,12 @@ import { MOVEMENT_PATTERNS, normalizeMovementPattern } from '../lib/training/exe
 import NutritionTracker from './components/NutritionTracker';
 import NutritionGoalsSettings from './components/nutrition/NutritionGoalsSettings';
 import ProgressScreen from './components/progress/ProgressScreen';
-import BodyDashboardCard from './components/BodyDashboardCard';
 import TodaysTrainingHero from './components/dashboard/TodaysTrainingHero';
+import ProgressDashboardCard from './components/dashboard/ProgressDashboardCard';
 import WeeklyAdherenceCard from './components/dashboard/WeeklyAdherenceCard';
 import NutritionDashboardCard from './components/dashboard/NutritionDashboardCard';
 import type { NutritionAddLaunch } from '../lib/nutrition/nutritionLaunch';
+import { shouldOpenBodyCheckIn, type BodyCheckInLaunch } from '../lib/progress/bodyCheckInLaunch';
 import type { TodayTrainingNavigation } from '../lib/training/todayTraining';
 import WorkoutSetLogger from './components/WorkoutSetLogger';
 import SessionOutcomeCard from './components/training/SessionOutcomeCard';
@@ -297,6 +298,9 @@ export default function Page(){
  const [nutritionLaunch,setNutritionLaunch]=useState<NutritionAddLaunch|null>(null);
  const nutritionLaunchSeq=useRef(0);
  const [scrollNutritionGoals,setScrollNutritionGoals]=useState(false);
+ const [bodyCheckInLaunch,setBodyCheckInLaunch]=useState<BodyCheckInLaunch|null>(null);
+ const bodyCheckInSeq=useRef(0);
+ const bodyCheckInConsumed=useRef<number|null>(null);
  const [memberDashLastDate,setMemberDashLastDate]=useState('');
  const [memberStats,setMemberStats]=useState<any>({});
  const [memberRosterMeta,setMemberRosterMeta]=useState<Record<string, MemberRosterMeta>>({});
@@ -431,6 +435,18 @@ export default function Page(){
   document.getElementById('nutrition-goals')?.scrollIntoView({block:'start'});
   setScrollNutritionGoals(false);
  },[appNav,scrollNutritionGoals]);
+ useEffect(()=>{
+  if(appNav!=='Progress'||progressSection!=='body')return;
+  const launch=bodyCheckInLaunch;
+  if(!shouldOpenBodyCheckIn(launch, bodyCheckInConsumed.current)||!launch)return;
+  const node=document.getElementById('body-check-in');
+  if(!node)return;
+  bodyCheckInConsumed.current=launch.id;
+  node.scrollIntoView({block:'start'});
+  const field=node.querySelector('input');
+  if(field instanceof HTMLElement) field.focus();
+  setBodyCheckInLaunch(null);
+ },[appNav,progressSection,bodyCheckInLaunch]);
  useEffect(()=>{
   if(!viewingMember||viewingMember.user_id===session?.user?.id)return;
   void reloadMemberWorkoutProgram(viewingMember,memberAssignments);
@@ -2743,6 +2759,15 @@ function onSelectTrainingDay(date:string){
  }
  function openNutritionLog(){goNav('Nutrition');}
  function openNutritionGoals(){setScrollNutritionGoals(true);goNav('Settings');}
+ function openProgressOverview(){goNav('Progress');}
+ function openProgressStrength(){goNav('Progress',{progressSub:'strength'});}
+ function openProgressBody(){goNav('Progress',{progressSub:'body'});}
+ function openAddCheckIn(){
+  const id=bodyCheckInSeq.current+1;
+  bodyCheckInSeq.current=id;
+  goNav('Progress',{progressSub:'body'});
+  setBodyCheckInLaunch({id,openForm:true});
+ }
  function openTrainingWeekDay(date:string){
   setTrainingSessionOpen(false);
   setViewingWorkoutId(null);
@@ -3043,6 +3068,7 @@ function onSelectTrainingDay(date:string){
  }
  function goNav(n:string, opts?:{progressSub?:'strength'|'body'}){
   setNutritionLaunch(null);
+  setBodyCheckInLaunch(null);
   if(n!=='Groups'&&viewingMember&&viewingMember.user_id!==session?.user?.id){
    clearMemberWorkoutView();
   }
@@ -3301,7 +3327,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
  </AppHeader>
  <div className="app-shell" key={session?.user?.id||'signed-out'}>
  <main className="main page-main">
-  {appNav==='Dashboard'&&<section className="dashboard"><div className="dash-hero"><h1>{greeting}, {displayName||'there'}</h1><p className="muted">Your wellness dashboard for {formatDisplayDate(today())}.</p></div><div className="dash-grid">{session?.user&&<TodaysTrainingHero userId={session.user.id} teams={teams.map((t:any)=>({id:t.id,name:t.name}))} inputsReady={trainingScheduleReady&&userCalendarReady} loadError={userCalendarError} program={program} programName={program?.name||null} followedFromGroup={followedFromGroup} followedSourceProgramId={personalizedCopy?program?.source_program_id||null:null} activities={trainingActivities} calendarActivities={userCalendarActivities} workouts={trainingCompletionWorkouts} progressLogs={progressLogs} sessionLogs={logDate===todayYmd()&&!(viewingMember&&viewingMember.user_id!==session.user.id)?logs:{}} onNavigate={openTodayTraining}/>}{teams.length>0&&activeTeam&&<div className="dash-card dash-accent"><div className="dash-card-head"><h2>Group activity</h2><span className="badge">{teamActiveCount}/{members.length||0}</span></div><p className="dash-title">{activeTeam.name}</p><div className="dash-metrics"><div><b>{teamActiveCount}/{members.length||0}</b><span className="muted">Active this week</span></div><div><b>{teamTotalSets}</b><span className="muted">Group sets</span></div></div><button className="btn secondary" style={{marginTop:10}} onClick={()=>goNav('Groups')}>View group</button></div>}{session?.user&&<WeeklyAdherenceCard userId={session.user.id} onSelectDate={openTrainingWeekDay}/>}{session?.user&&<NutritionDashboardCard userId={session.user.id} onLogMeal={openLogMeal} onViewLog={openNutritionLog} onSetGoals={openNutritionGoals}/>}{session?.user&&<BodyDashboardCard userId={session.user.id} unitsPreference={profileDraft?.units_preference} refreshKey={bodyDashRefreshKey} onOpenProgress={()=>goNav('Progress',{progressSub:'body'})}/>}<div className="dash-card dash-accent"><div className="dash-card-head"><h2>AI Coach Insight</h2><span className="badge">Preview</span></div><p className="muted">Personalized coaching based on your training, nutrition, and recovery is coming soon.</p><p className="dash-insight">&ldquo;Stay consistent this week. Log today&apos;s sets to build your progress baseline.&rdquo;</p></div></div></section>}
+  {appNav==='Dashboard'&&<section className="dashboard"><div className="dash-hero"><h1>{greeting}, {displayName||'there'}</h1><p className="muted">Your wellness dashboard for {formatDisplayDate(today())}.</p></div><div className="dash-grid">{session?.user&&<TodaysTrainingHero userId={session.user.id} teams={teams.map((t:any)=>({id:t.id,name:t.name}))} inputsReady={trainingScheduleReady&&userCalendarReady} loadError={userCalendarError} program={program} programName={program?.name||null} followedFromGroup={followedFromGroup} followedSourceProgramId={personalizedCopy?program?.source_program_id||null:null} activities={trainingActivities} calendarActivities={userCalendarActivities} workouts={trainingCompletionWorkouts} progressLogs={progressLogs} sessionLogs={logDate===todayYmd()&&!(viewingMember&&viewingMember.user_id!==session.user.id)?logs:{}} onNavigate={openTodayTraining}/>}{teams.length>0&&activeTeam&&<div className="dash-card dash-accent"><div className="dash-card-head"><h2>Group activity</h2><span className="badge">{teamActiveCount}/{members.length||0}</span></div><p className="dash-title">{activeTeam.name}</p><div className="dash-metrics"><div><b>{teamActiveCount}/{members.length||0}</b><span className="muted">Active this week</span></div><div><b>{teamTotalSets}</b><span className="muted">Group sets</span></div></div><button className="btn secondary" style={{marginTop:10}} onClick={()=>goNav('Groups')}>View group</button></div>}{session?.user&&<WeeklyAdherenceCard userId={session.user.id} onSelectDate={openTrainingWeekDay}/>}{session?.user&&<NutritionDashboardCard userId={session.user.id} onLogMeal={openLogMeal} onViewLog={openNutritionLog} onSetGoals={openNutritionGoals}/>}{session?.user&&<ProgressDashboardCard userId={session.user.id} unitsPreference={profileDraft?.units_preference} refreshKey={bodyDashRefreshKey} onViewProgress={openProgressOverview} onOpenStrength={openProgressStrength} onOpenBody={openProgressBody} onAddCheckIn={openAddCheckIn}/>}<div className="dash-card dash-accent"><div className="dash-card-head"><h2>AI Coach Insight</h2><span className="badge">Preview</span></div><p className="muted">Personalized coaching based on your training, nutrition, and recovery is coming soon.</p><p className="dash-insight">&ldquo;Stay consistent this week. Log today&apos;s sets to build your progress baseline.&rdquo;</p></div></div></section>}
   {appNav==='Nutrition'&&session?.user&&<NutritionTracker userId={session.user.id} launch={nutritionLaunch} onLaunchConsumed={()=>setNutritionLaunch(null)} onOpenSettings={()=>goNav('Settings')}/>}
   {appNav==='AI Coach'&&<section><div className="card dash-accent"><h2>AI Coach</h2><p className="muted">Your BuildIQ Health wellness coach will analyze workouts, nutrition, and recovery to give safe, practical guidance.</p><p className="dash-insight">Coming soon: readiness check-ins, workout adjustments, and weekly coaching summaries.</p></div></section>}
   {appNav==='Progress'&&<ProgressScreen userId={session?.user?.id||null} unitsPreference={profileDraft?.units_preference} weightUnit={progressWeightUnit} section={progressSection} onSectionChange={setProgressSection} onOpenNutrition={()=>goNav('Nutrition')} onBodyDataChange={()=>setBodyDashRefreshKey(k=>k+1)}/>}
