@@ -4,6 +4,54 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 149 - Set saves and exercise edits update the card first
+
+Date: 2026-11-01
+Status: Accepted locally
+Category: Performance
+
+### Decision
+
+BIQ-0293 removes the visible Saving… line from a set card. The card still tracks a save and shows a visible error with Retry when it fails. Add and Remove change the in-memory exercise list immediately and write in the background. A temporary exercise is not loggable. Removing an exercise with a set edit still in progress leaves that exercise visible until the write finishes, then removes it. A failed set write blocks removal and keeps Retry on the set. The first edit of a followed group program joins one in-flight personal copy, shows that work on the existing banner, and never writes the shared plan. Historical set logs stay in place. One failed add or remove restores only that change. Schedule repair runs after enrollment sync. A program response that finishes after a workout is open, or after a newer exercise edit, does not replace the tree. Start and View without an expectation id require a known workout on an authorized program. A plan that is already a rest day is shown as rest. A repair or refresh that comes back pending or empty because of an error keeps the calendar already on screen.
+
+### Reason
+
+The Saving… line changed the card height. Add and Remove called a full program reload, and an open logger dropped that reload, so the list did not move. Repair could also finish before a new assignment existed, and a migration error replaced a painted calendar with an empty one.
+
+### Alternatives Considered
+
+Leave the status line and reserve its height. Reload the whole program after every add or remove. Build a separate trainer-assignment path. The reserved line still takes space, the reload is the delay, and assignment rules already exist.
+
+### Impact
+
+No database change. Click-to-visual and mutation timing for add and remove are recorded on `window.__biqExerciseEditTiming`, separate from the set logger. Signed-in browser timings are still unmeasured. The calendar still paints once and reads again after sync and repair.
+
+---
+
+## Decision 148 - The calendar paints before repair and the program tree
+
+Date: 2026-11-01
+Status: Accepted locally
+Category: Performance
+
+### Decision
+
+BIQ-0292 reads the visible schedule before `st_repair_followed_training_schedule` and before the nested program tree. The Training calendar and Dashboard hero paint that read, then repair in the background. "No programs yet" and an empty Today card stay hidden until repair finishes and the program tree has settled. Start and View reread the one expectation by id and user. A missing, excused, or changed workout or date does not open. `calendarUsableMs` is fixed at the first paint. `workoutDetailMs` is the preview open. Group due segments still run, without blocking the first Groups read.
+
+### Reason
+
+The day on screen depends on expectation, enrollment, session, and calendar rows. Repair and the full workout tree were in front of that paint.
+
+### Alternatives Considered
+
+Keep repair in front of the first read. Open a workout from the card without rereading it. Both keep the wait, or can start a workout that was just changed.
+
+### Impact
+
+No database change. An open logger still blocks program writes. A brand-new follower can see a short checking state until repair returns. Due segments can be one Groups refresh behind. Signed-in browser timings are still unmeasured, so the 500 ms navigation target is not verified.
+
+---
+
 ## Decision 147 - Finish flushes debounced set edits first
 
 Date: 2026-11-01

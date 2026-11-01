@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { completeScreenPhase } from '../../../lib/performance/screenTiming';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { completeScreenPhase, noteCalendarUsable, beginBackgroundRefresh, endBackgroundRefresh } from '../../../lib/performance/screenTiming';
 import { beginScreenPaint, finishScreenPaint, readScreenCache, writeScreenCache } from '../../../lib/performance/screenSession';
 import { supabase } from '../../../lib/supabaseClient';
 import TrainingExecution from './TrainingExecution';
@@ -12,6 +12,7 @@ import {
   type TrainingMonthCell,
   type VisibleScheduleExpectation,
 } from '../../../lib/programDesign/trainingSchedule';
+import { enrollmentSyncSettled } from '../../../lib/training/enrollmentSyncGate';
 import { todayYmd } from '../../../lib/training/programCalendar';
 import {
   setEnrollmentExpectation,
@@ -21,6 +22,7 @@ import { type ExpectationDisplayState } from '../../../lib/training/unifiedSched
 import { resolveFollowedAssignmentSource } from '../../../lib/training/trainingSource';
 import {
   loadVisibleSchedule,
+  refreshVisibleSchedule,
   scheduleTeamLabel,
   type VisibleScheduleEnrollment,
   type VisibleScheduleSnapshot,
@@ -79,10 +81,12 @@ type Props = {
   teams: Array<{ id: string; name?: string | null }>;
   rangeFrom: string;
   rangeTo: string;
+  scheduleRefreshKey?: number;
+  scheduleRepairGeneration?: number;
   calendar: CalendarProps;
 };
 
-export default function UnifiedTrainingSchedule({ userId, teams, rangeFrom, rangeTo, calendar }: Props) {
+export default function UnifiedTrainingSchedule({ userId, teams, rangeFrom, rangeTo, scheduleRefreshKey = 0, scheduleRepairGeneration = 0, calendar }: Props) {
   const today = todayYmd();
   const cacheKey = `${today}|${rangeFrom}|${rangeTo}`;
   const opening = readScreenCache<VisibleScheduleSnapshot>(userId, 'schedule', cacheKey, today, {
@@ -95,9 +99,16 @@ export default function UnifiedTrainingSchedule({ userId, teams, rangeFrom, rang
   const [pending, setPending] = useState(!!opening?.value.pending);
   const [error, setError] = useState<string | null>(opening?.value.error || null);
   const [loading, setLoading] = useState(!opening);
+  const [repairSettled, setRepairSettled] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const loadGen = useRef(0);
 
   const applySnapshot = useCallback((snapshot: VisibleScheduleSnapshot) => {
+    if (snapshot.keepPrevious) {
+      setPending(snapshot.pending);
+      if (snapshot.error) setError(snapshot.error);
+      return;
+    }
     setPending(snapshot.pending);
     setError(snapshot.error);
     setEnrollments(snapshot.pending ? [] : snapshot.enrollments);
@@ -105,31 +116,58 @@ export default function UnifiedTrainingSchedule({ userId, teams, rangeFrom, rang
     setVisibleExpectations(snapshot.pending ? [] : snapshot.expectations);
   }, []);
 
-  const load = useCallback(async () => {
-    const paint = beginScreenPaint<VisibleScheduleSnapshot>('Training', userId, 'schedule', cacheKey, today, {
+  const paint = useCallback(async () => {
+    const gen = ++loadGen.current;
+    const painted = beginScreenPaint<VisibleScheduleSnapshot>('Training', userId, 'schedule', cacheKey, today, {
       dateScoped: true,
       staleAreas: ['schedule', 'program'],
     });
-    if (paint.cached) {
-      applySnapshot(paint.cached);
+    if (painted.cached) {
+      if (!painted.cached.keepPrevious) applySnapshot(painted.cached);
       setLoading(false);
+      noteCalendarUsable('Training');
+      finishScreenPaint('Training', userId, ['schedule'], painted.background);
       completeScreenPhase('Training', 'schedule');
-      if (!paint.background) return;
-    } else {
-      setLoading(true);
-      setError(null);
+      return;
     }
+    setLoading(true);
+    setError(null);
     const snapshot = await loadVisibleSchedule(supabase, { userId, teams, rangeFrom, rangeTo, today });
+    if (gen !== loadGen.current) return;
     applySnapshot(snapshot);
-    writeScreenCache(userId, 'schedule', cacheKey, snapshot, today);
+    if (!snapshot.keepPrevious) writeScreenCache(userId, 'schedule', cacheKey, snapshot, today);
     setLoading(false);
-    finishScreenPaint('Training', userId, ['schedule'], !!paint.cached && paint.background);
+    noteCalendarUsable('Training');
+    finishScreenPaint('Training', userId, ['schedule'], false);
     completeScreenPhase('Training', 'schedule');
-  }, [userId, teams, today, rangeFrom, rangeTo, applySnapshot]);
+  }, [userId, teams, today, rangeFrom, rangeTo, applySnapshot, cacheKey]);
+
+  const repair = useCallback(async () => {
+    if (!scheduleRepairGeneration && !scheduleRefreshKey) return;
+    await enrollmentSyncSettled();
+    const gen = ++loadGen.current;
+    setRepairSettled(false);
+    beginBackgroundRefresh('Training');
+    try {
+      const refreshed = await refreshVisibleSchedule(supabase, { userId, teams, rangeFrom, rangeTo, today });
+      if (gen !== loadGen.current) return;
+      applySnapshot(refreshed);
+      if (!refreshed.keepPrevious) writeScreenCache(userId, 'schedule', cacheKey, refreshed, today);
+    } finally {
+      if (gen === loadGen.current) {
+        setRepairSettled(true);
+        endBackgroundRefresh('Training');
+      }
+    }
+  }, [userId, teams, today, rangeFrom, rangeTo, scheduleRefreshKey, scheduleRepairGeneration, applySnapshot, cacheKey]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    void paint();
+  }, [paint]);
+
+  useEffect(() => {
+    void repair();
+  }, [repair]);
 
   const teamName = (teamId: string | null, sourceKey: string) => scheduleTeamLabel(teams, teamId, sourceKey);
 
@@ -160,7 +198,8 @@ export default function UnifiedTrainingSchedule({ userId, teams, rangeFrom, rang
       setError(result.error);
       return;
     }
-    await load();
+    await paint();
+    await repair();
   }
 
   async function toggleExpectation(row: VisibleScheduleEnrollment) {
@@ -179,7 +218,8 @@ export default function UnifiedTrainingSchedule({ userId, teams, rangeFrom, rang
       setError(result.error);
       return;
     }
-    await load();
+    await paint();
+    await repair();
   }
 
   return (
@@ -200,7 +240,8 @@ export default function UnifiedTrainingSchedule({ userId, teams, rangeFrom, rang
       />
       <div className="card">
         <h2>Programs</h2>
-        {enrollments.length === 0 && <p className="muted">No programs yet. Follow a program or join a group to put it on this schedule.</p>}
+        {repairSettled && enrollments.length === 0 && <p className="muted">No programs yet. Follow a program or join a group to put it on this schedule.</p>}
+        {!repairSettled && enrollments.length === 0 && <p className="muted">Checking your schedule…</p>}
         {enrollments.map((row) => {
           const name = (row.program_id && programNames[row.program_id]) || 'Program';
           const label = teamName(row.team_id, row.source_key);

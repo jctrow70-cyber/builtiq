@@ -11,6 +11,10 @@ export type ScreenTimingSpan = {
   backgroundStartedAt: number | null;
   backgroundRefreshMs: number | null;
   backgroundOpen: number;
+  /** First calendar or hero paint. A later repair does not move it. */
+  calendarUsableMs: number | null;
+  /** Click until the workout preview has a workout or a load error. */
+  workoutDetailMs: number | null;
   /** These spans are recorded in the browser. The nav script's round-trip model is separate. */
   measurement: 'browser';
 };
@@ -51,6 +55,8 @@ export function beginScreenTiming(screen: string, phases: string[] = screenTimin
     backgroundStartedAt: null,
     backgroundRefreshMs: null,
     backgroundOpen: 0,
+    calendarUsableMs: null,
+    workoutDetailMs: null,
     measurement: 'browser',
   };
   spans.push(span);
@@ -73,6 +79,24 @@ export function completeScreenPhase(screen: string, phase: string) {
     publish();
     return;
   }
+}
+
+/** Record the first usable calendar or hero paint. A background repair must not call this again. */
+export function noteCalendarUsable(screen: string) {
+  const span = latestScreenTiming(screen);
+  if (span && span.calendarUsableMs == null) {
+    span.calendarUsableMs = Math.round((now() - span.startedAt) * 10) / 10;
+    publish();
+  }
+  noteUsable(screen);
+}
+
+/** Record the open from the click until the preview can show the workout or an error. */
+export function noteWorkoutDetailOpen(screen: string, startedAt: number) {
+  const span = latestScreenTiming(screen);
+  if (!span || span.workoutDetailMs != null) return;
+  span.workoutDetailMs = Math.round((Math.max(0, now() - startedAt)) * 10) / 10;
+  publish();
 }
 
 export function noteCacheHit(screen: string) {

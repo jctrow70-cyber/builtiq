@@ -1,5 +1,5 @@
 'use client';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { BugReportsAdmin } from './components/BugReportsAdmin';
 import AppHeader from './components/layout/AppHeader';
 import NotificationPreferences from './components/notifications/NotificationPreferences';
@@ -16,6 +16,9 @@ import { supabase, friendlyAuthError, friendlyWriteError, getSupabaseConfigError
 import { drainSetLogIntent, SET_LOG_WRITE_COALESCE_MS, SetLogIntentLedger, unsavedSetLogGate, type SetLogSaveResult } from '../lib/training/setLogIntent';
 import { automaticSessionCompletionAllowed, createFinishSingleFlight } from '../lib/training/finishWorkoutPersistence';
 import { noteLoggerSave } from '../lib/performance/loggerTiming';
+import { beginExerciseEdit, noteExerciseEditFailure, noteExerciseEditMutation, noteExerciseEditVisual, type ExerciseEditTimingMark } from '../lib/performance/exerciseEditTiming';
+import { noteWorkoutDetailOpen } from '../lib/performance/screenTiming';
+import { directWorkoutOpenAllowed, expectationStillMatches, readExpectationForStart } from '../lib/training/calendarStartGuard';
 import { buildExerciseSessionHistory } from '../lib/training/exerciseSessionHistory';
 import { EXERCISE_TYPES, exerciseTypeOf, inferExerciseType, assignmentTypeLabel, isCardioType, isMobilityStretchExercise } from '../lib/training/exerciseTypes';
 import { detectSetPersonalRecord } from '../lib/training/progressAnalytics';
@@ -131,6 +134,9 @@ import { afterScreenUsable, beginScreenTiming, completeScreenPhase, noteProgramL
 import { LazyScreen, preloadLazyScreen, scheduleIdlePreload } from '../lib/performance/lazyScreen';
 import { activeWorkoutIsProtected, bindScreenSessionUser, clearScreenSession, clearScreenStale, isScreenStale, markScreenStale, subscribeScreenSession } from '../lib/performance/screenSession';
 import { assignmentLoadKey, createProgramLoadGate, groupAssignLoadForNav, programLoadKey, shellProgramLoadForNav } from '../lib/training/programLoadGate';
+import { programApplyBlocked } from '../lib/training/programLoadGuard';
+import { armEnrollmentSync, releaseEnrollmentSyncIfIdle, subscribeEnrollmentSync, trackTrainingLoad } from '../lib/training/enrollmentSyncGate';
+import { createPendingExerciseId, dropExercisesFromProgram, exerciseIsLoggable, exerciseRemovalAfterSetEdits, insertExercisesIntoProgram, insertExercisesIntoWorkoutList, isPendingExercise, isPendingExerciseId, plannedSetIdsOf, removeExercisesFromProgram, removeExercisesFromWorkoutList, replaceExerciseInProgram, restoreRemovedExercises, restoreRemovedWorkoutList, setIdsInPendingFieldKeys, workoutsInEditScope, type RemovedExercise } from '../lib/training/exerciseListEdit';
 
 const nutritionScreenLoader = () => import('./components/NutritionTracker');
 const progressScreenLoader = () => import('./components/progress/ProgressScreen');
@@ -203,11 +209,9 @@ const workoutForDate=(p:any,dateYmd:string,fallbackWeek?:number,moves?:Record<st
   return native||list.filter((x:any)=>x.week===(fallbackWeek??wk)).sort((a:any,b:any)=>a.day_order-b.day_order)[0]||null;
 };
 const findSetInProgram=(p:any,sid:string,extraWorkouts?:any[])=>{
-  const seen=new Set<string>();
   const trees=[...(p?.st_workouts||[]),...(extraWorkouts||[])];
   for(const w of trees){
-    if(!w?.id||seen.has(w.id))continue;
-    seen.add(w.id);
+    if(!w)continue;
     for(const e of w.st_exercises||[]){
       const ps=(e.st_planned_sets||[]).find((s:any)=>s.id===sid&&!s.is_deleted);
       if(ps)return {workout:w,exercise:e,plannedSet:ps};
@@ -244,6 +248,7 @@ export default function Page(){
  const [trainingSessionOpen,setTrainingSessionOpen]=useState(false);
  const trainingSessionOpenRef=useRef(false);
  trainingSessionOpenRef.current=trainingSessionOpen;
+ const viewingWorkoutRef=useRef<string|null>(null);
  const [screenSessionTick,setScreenSessionTick]=useState(0);
  const [activeExpectationId,setActiveExpectationId]=useState<string|null>(null);
  const [activeExpectationSource,setActiveExpectationSource]=useState<string|null>(null);
@@ -261,6 +266,9 @@ export default function Page(){
  const [userCalendarError,setUserCalendarError]=useState<string|null>(null);
  const [userCalendarReady,setUserCalendarReady]=useState(false);
  const [trainingScheduleReady,setTrainingScheduleReady]=useState(false);
+ const [programTreeReady,setProgramTreeReady]=useState(false);
+ const [scheduleRefreshKey,setScheduleRefreshKey]=useState(0);
+ const [scheduleRepairGeneration,setScheduleRepairGeneration]=useState(0);
  const [trainingAddActivityOpen,setTrainingAddActivityOpen]=useState(false);
  const [trainingEditActivity,setTrainingEditActivity]=useState<{id:string;date:string}|null>(null);
  const [trainingMoveItem,setTrainingMoveItem]=useState<{item:TrainingDayItem;date:string}|null>(null);
@@ -271,6 +279,7 @@ export default function Page(){
  const [strengthSetupError,setStrengthSetupError]=useState('');
  const [trainingCompleteBusy,setTrainingCompleteBusy]=useState<string|null>(null);
  const [viewingWorkoutId,setViewingWorkoutId]=useState<string|null>(null);
+ viewingWorkoutRef.current=viewingWorkoutId;
  const [workoutPreviewMeta,setWorkoutPreviewMeta]=useState<{sourceName?:string|null;error?:string|null;completed?:boolean;workout?:any|null;duration?:string|null}|null>(null);
  const [trainingSessionIntent,setTrainingSessionIntent]=useState<'log'|'edit'>('log');
  const [extraSetLogs,setExtraSetLogs]=useState<ExtraSetLog[]>([]);
@@ -344,6 +353,7 @@ export default function Page(){
  const logsRef=useRef<any>({});
  const upsertQueueRef=useRef<Record<string,Promise<any>>>({});
  const loggerFlushesRef=useRef(new Set<() => Promise<void>>());
+ const loggerPendingKeysRef=useRef(new Set<() => string[]>());
  const finishFlightRef=useRef(createFinishSingleFlight());
  const finishOwnsSessionRef=useRef(false);
  const sessionFeelLiveRef=useRef<WorkoutFeel|''>('');
@@ -353,6 +363,10 @@ export default function Page(){
  const registerLoggerFlush=useCallback((flush:() => Promise<void>)=>{
   loggerFlushesRef.current.add(flush);
   return ()=>{loggerFlushesRef.current.delete(flush);};
+ },[]);
+ const registerLoggerPending=useCallback((read:() => string[])=>{
+  loggerPendingKeysRef.current.add(read);
+  return ()=>{loggerPendingKeysRef.current.delete(read);};
  },[]);
  useEffect(()=>{
   sessionFeelLiveRef.current=sessionFeel;
@@ -379,6 +393,14 @@ export default function Page(){
  const schedulePreviewRef=useRef<ScheduleStartItem|null>(null);
  const planEditRef=useRef<{workout:any,program:any}|null>(null);
  const programLoadGateRef=useRef(createProgramLoadGate());
+ const exerciseEditEpochRef=useRef(0);
+ const exerciseMutationRef=useRef<Set<string>>(new Set());
+ const personalCopyFlightRef=useRef<Promise<{program:any}|null>|null>(null);
+ const addExerciseFlightRef=useRef(false);
+ const cancelledExerciseIdsRef=useRef<Set<string>>(new Set());
+ const exerciseWriteHoldRef=useRef<any[]>([]);
+ const exerciseVisualRef=useRef<{kind:'add'|'remove';mark:ExerciseEditTimingMark;ids:string[];workoutId:string}|null>(null);
+ const enrollmentSyncKeyRef=useRef('');
 
  useEffect(()=>{
   if(typeof window!=='undefined'&&window.location.pathname==='/'){
@@ -423,11 +445,33 @@ export default function Page(){
   boot().finally(()=>setProfileLoading(false));
  },[session?.user?.id]);
  useEffect(()=>{
-  if(!profile||activeAssignedRecipient)return;
+  if(!profile||activeAssignedRecipient){
+   if(appNav==='Training'||appNav==='Dashboard') releaseEnrollmentSyncIfIdle();
+   return;
+  }
   const context=shellProgramLoadForNav(appNav);
   if(!context)return;
   void loadPrograms(context);
  },[mode,selectedTeamId,teams,profile,viewingMember?.user_id,activeAssignedRecipient?.id,draftEditProgramId,appNav]);
+ useLayoutEffect(()=>{
+  const key=session?.user&&profile&&(appNav==='Training'||appNav==='Dashboard')&&!activeAssignedRecipient
+   ?`${session.user.id}|${appNav}|${selectedTeamId||''}|${profile.followed_program_id||''}`
+   :'';
+  if(!key||key===enrollmentSyncKeyRef.current)return;
+  enrollmentSyncKeyRef.current=key;
+  armEnrollmentSync();
+ },[session?.user?.id,profile,profile?.followed_program_id,appNav,selectedTeamId,activeAssignedRecipient?.id]);
+ useEffect(()=>subscribeEnrollmentSync(()=>{setScheduleRepairGeneration((value)=>value+1);}),[]);
+ useLayoutEffect(()=>{
+  const pending=exerciseVisualRef.current;
+  if(!pending)return;
+  const current=findWorkoutInProgram(program,pending.workoutId)||calendarWorkouts.find((workout:any)=>workout.id===pending.workoutId);
+  const ids=new Set((current?.st_exercises||[]).map((exercise:any)=>exercise.id));
+  const ready=pending.ids.every((id)=>pending.kind==='add'?ids.has(id):!ids.has(id));
+  if(!ready)return;
+  noteExerciseEditVisual(pending.mark);
+  exerciseVisualRef.current=null;
+ },[program,calendarWorkouts]);
  useEffect(()=>{if(session?.user?.id) loadAssignedWorkouts()},[session?.user?.id]);
  useEffect(()=>{
   if(viewingMember&&viewingMember.user_id!==session?.user?.id&&memberWorkoutProgram&&session?.user){
@@ -490,7 +534,7 @@ export default function Page(){
   return()=>{window.clearInterval(id);document.removeEventListener('visibilitychange',onVisible);};
  },[session?.user?.id]);
  useEffect(()=>{
-  if(!session?.user?.id||loggerProtected())return;
+  if(!session?.user?.id||loggerProtected()||viewingWorkoutId)return;
   const userId=session.user.id;
   if((appNav==='Training'||appNav==='Dashboard')&&(isScreenStale(userId,'program')||isScreenStale(userId,'schedule'))){
    const context=shellProgramLoadForNav(appNav);
@@ -498,7 +542,7 @@ export default function Page(){
   } else if(appNav==='Groups'&&(isScreenStale(userId,'groups')||isScreenStale(userId,'program'))){
    void loadPrograms('setup');
   }
- },[screenSessionTick,appNav,trainingSessionOpen,session?.user?.id]);
+ },[screenSessionTick,appNav,trainingSessionOpen,viewingWorkoutId,session?.user?.id]);
  useEffect(()=>{
   if(typeof window==='undefined')return;
   const onScroll=()=>setBugFabVisible(window.scrollY>120);
@@ -888,7 +932,7 @@ export default function Page(){
     if(idx<0) extras.push(activityWorkout);
     else extras[idx]=activityWorkout;
   }
-  return extras;
+  return [...exerciseWriteHoldRef.current,...extras];
  }
  function activeProgramForLogging(){
   if(viewingMember&&viewingMember.user_id!==session?.user?.id&&memberWorkoutProgram)return memberWorkoutProgram;
@@ -935,9 +979,10 @@ export default function Page(){
   if(editTargetId)context='setup';
   const nav=options?.nav??appNav;
   if(nav==='Groups'&&activeTeam)context='setup';
+  const run=async()=>{
   if(!session?.user)return;
-  if(activeAssignedRecipient){setTrainingScheduleReady(true);return;}
-  if(viewingMember&&viewingMember.user_id!==session.user.id){setTrainingScheduleReady(true);return;}
+  if(activeAssignedRecipient){setTrainingScheduleReady(true);setProgramTreeReady(true);return;}
+  if(viewingMember&&viewingMember.user_id!==session.user.id){setTrainingScheduleReady(true);setProgramTreeReady(true);return;}
   let followedForKey=profile?.followed_program_id||null;
   if(options&&Object.prototype.hasOwnProperty.call(options,'followedProgramId'))followedForKey=options.followedProgramId||null;
   const key=programLoadKey({
@@ -955,14 +1000,19 @@ export default function Page(){
    noteProgramLoad();
    return loadProgramGeneration(context,nav,editTargetId,options,live);
   });
+  };
+  if(context==='training') return trackTrainingLoad(run);
+  return run();
  }
  async function loadProgramGeneration(context:'training'|'setup',nav:string,editTargetId:string|null,options:{assignmentsOverride?:Record<string,any>;editProgramId?:string|null;preserveWorkoutId?:string|null;followedProgramId?:string|null;nav?:string}|undefined,live:()=>boolean){
+  const epochAtStart=exerciseEditEpochRef.current;
   if(loggerProtected()){
    if(session?.user?.id) markScreenStale(session.user.id,['program','schedule','groups','dashboard','progress']);
-   setTrainingScheduleReady(true);
+   setTrainingScheduleReady(true);setProgramTreeReady(true);
    if(nav==='Training'||nav==='Dashboard') completeScreenPhase(nav,'program');
    return;
   }
+  if(context==='training')setTrainingScheduleReady(true);
   if(options&&Object.prototype.hasOwnProperty.call(options,'followedProgramId')&&session?.user?.id){
    markScreenStale(session.user.id,['groups','dashboard','progress']);
   }
@@ -996,7 +1046,7 @@ export default function Page(){
     if(sync.changed&&sync.programId){
      followedId=sync.programId;
      setProfile((p:any)=>p?{...p,followed_program_id:sync.programId}:p);
-     markScreenStale(session.user.id,['groups','dashboard','progress']);
+     markScreenStale(session.user.id,['groups','dashboard','progress','schedule']);
     }
    }
   }
@@ -1009,9 +1059,9 @@ export default function Page(){
    publishedOnly:context==='training'&&!followedId,
   });
   if(!live())return;
-  if(indexErr){setTrainingScheduleReady(true);return alert(indexErr);}
-  if(activeAssignedRecipient){setTrainingScheduleReady(true);return;}
-  if(viewingMember&&viewingMember.user_id!==session.user.id){setTrainingScheduleReady(true);return;}
+  if(indexErr){setTrainingScheduleReady(true);setProgramTreeReady(true);return alert(indexErr);}
+  if(activeAssignedRecipient){setTrainingScheduleReady(true);setProgramTreeReady(true);return;}
+  if(viewingMember&&viewingMember.user_id!==session.user.id){setTrainingScheduleReady(true);setProgramTreeReady(true);return;}
   let list=index||[];
   setPrograms(list);
   // Training uses only the followed program — never fall back to "newest published"
@@ -1035,11 +1085,17 @@ export default function Page(){
   if(pickedMeta?.id){
    const{data:full,error:fullErr}=await fetchFullProgram(supabase,pickedMeta.id);
    if(!live())return;
-   if(fullErr){setTrainingScheduleReady(true);return alert(fullErr);}
+   if(fullErr){setTrainingScheduleReady(true);setProgramTreeReady(true);return alert(fullErr);}
    pickedFull=full;
    setPrograms(mergeFullProgramIntoList(list,pickedFull));
   }
   if(!live())return;
+  if(programApplyBlocked({loggerProtected:loggerProtected(),workoutOpen:trainingSessionOpenRef.current||!!viewingWorkoutRef.current,epochAtStart,epochNow:exerciseEditEpochRef.current})){
+   if(session?.user?.id) markScreenStale(session.user.id,['program','schedule','dashboard']);
+   setTrainingScheduleReady(true);setProgramTreeReady(true);
+   if(nav==='Training'||nav==='Dashboard') completeScreenPhase(nav,'program');
+   return;
+  }
   setProgram(pickedFull||null);
   if(pickedFull&&context==='setup'&&editTargetId&&pickedFull.id===editTargetId){
    if(draftNameSourceRef.current!==pickedFull.id){
@@ -1093,7 +1149,7 @@ export default function Page(){
   }
   if(!live())return;
   if(session?.user?.id) clearScreenStale(session.user.id,['program','schedule']);
-  setTrainingScheduleReady(true);
+  setTrainingScheduleReady(true);setProgramTreeReady(true);
   if(nav==='Training'||nav==='Dashboard') completeScreenPhase(nav,'program');
  }
  async function openMemberDashboard(member:any){
@@ -1669,29 +1725,41 @@ export default function Page(){
    return ctx;
   }
   if(!program){alert('Follow a program first.');return null;}
-  const keepOpen=trainingSessionOpen;
-  const intent=trainingSessionIntent;
-  const date=logDate;
-  setCustomizeForMeBusy(true);
-  try{
-   const{program:copy,error}=await customizeFollowedProgramForMe(supabase,session.user.id,program);
-   if(error||!copy){alert(error||'Could not make a private copy.');return null;}
-   setProfile((p:any)=>p?{...p,followed_program_id:copy.id}:p);
-   setMode('personal');
-   setViewingWorkoutId(null);
-   setWorkoutPreviewMeta(null);
-   setAppNav('Training');
-   setTrainingSubNav('personal');
-   setApplyScope('current');
-   const mapped=matchCopiedWorkout(source,copy);
-   await loadPrograms('training',{preserveWorkoutId:mapped?.id||null,followedProgramId:copy.id});
-   if(mapped?.id)setActiveWorkout(mapped.id);
-   setLogDate(date);
-   if(keepOpen){setTrainingSessionIntent(intent);setTrainingSessionOpen(true);}
-   const ctx={workout:mapped||findWorkoutInProgram(copy,mapped?.id)||source,program:copy};
-   planEditRef.current=ctx;
-   return ctx;
-  }finally{setCustomizeForMeBusy(false);}
+  if(!personalCopyFlightRef.current){
+   const keepOpen=trainingSessionOpen;
+   const intent=trainingSessionIntent;
+   const date=logDate;
+   const copiedFrom=source;
+   personalCopyFlightRef.current=(async()=>{
+    setCustomizeForMeBusy(true);
+    try{
+     const{program:copy,error}=await customizeFollowedProgramForMe(supabase,session.user.id,program);
+     if(error||!copy){alert(error||'Could not make a private copy.');return null;}
+     setProfile((p:any)=>p?{...p,followed_program_id:copy.id}:p);
+     setMode('personal');
+     setViewingWorkoutId(null);
+     setWorkoutPreviewMeta(null);
+     setAppNav('Training');
+     setTrainingSubNav('personal');
+     setApplyScope('current');
+     const mapped=matchCopiedWorkout(copiedFrom,copy);
+     await loadPrograms('training',{preserveWorkoutId:mapped?.id||null,followedProgramId:copy.id});
+     setLogDate(date);
+     if(keepOpen){setTrainingSessionIntent(intent);setTrainingSessionOpen(true);}
+     return {program:copy};
+    }catch(error){
+     alert(error instanceof Error?error.message:'Could not make a private copy.');
+     return null;
+    }finally{setCustomizeForMeBusy(false);}
+   })().finally(()=>{personalCopyFlightRef.current=null;});
+  }
+  const copied=await personalCopyFlightRef.current;
+  if(!copied?.program)return null;
+  const mapped=matchCopiedWorkout(source,copied.program);
+  if(mapped?.id)setActiveWorkout(mapped.id);
+  const ctx={workout:mapped||findWorkoutInProgram(copied.program,mapped?.id)||source,program:copied.program};
+  planEditRef.current=ctx;
+  return ctx;
  }
  async function deleteProgramHandler(programId:string){
   if(!programId||!canEdit())return;
@@ -2119,7 +2187,134 @@ export default function Page(){
  async function requestReplaceExercise(ex:any,catalogItem:any){if(!catalogItem)return; const ctx=await ensurePersonalCopyForTrainingEdit(); if(!ctx)return; const current=ctx.workout||workout; const remaining=remainingSameDayWorkouts(current).length; if(remaining<=1){await replaceExerciseWithCatalog(ex,catalogItem,'current'); setAddExercisePanel(null); return;} setAddExercisePanel(null); setExerciseSwapPrompt({ex,catalogItem,remaining,fromName:ex?.name||'this exercise',toName:catalogItem.name});}
  async function pickExerciseForPanel(item:any){if(!addExercisePanel)return; if(addExercisePanel.replaceTarget){await requestReplaceExercise(addExercisePanel.replaceTarget,item); return;} const defaultSets=sectionDefaultSets(addExercisePanel.section); setAddExercisePanel({...addExercisePanel,step:'configure',picked:item,config:{...addExercisePanel.config,setCount:defaultSets}});}
  async function createCustomInPanel(){if(!addExercisePanel||!session?.user)return; const d=addExercisePanel.custom; const name=d.name.trim(); if(!name)return alert('Enter exercise name.'); const movement=resolveCatalogMovementPattern(d.movement_pattern); if(movement.error)return alert(movement.error); const{data,error}=await supabase.from('st_exercise_catalog').insert({user_id:session.user.id,name,category:d.category||addExercisePanel.section,muscle_group:d.muscle_group.trim()||null,equipment:d.equipment.trim()||null,movement_pattern:movement.value,is_system:false,is_archived:false}).select().single(); if(error)return alert(error.message); await loadCatalog(); setAddExercisePanel({...addExercisePanel,step:'configure',picked:data,config:{...addExercisePanel.config,setCount:sectionDefaultSets(addExercisePanel.section)}});}
- async function confirmAddExercise(scope?:'current'|'future'){if(!addExercisePanel?.picked)return; if(!(await ensurePersonalCopyForTrainingEdit()))return; const current=planEditRef.current?.workout||workout; if(!current)return; const weekScope=scope||pendingAddScope||'current'; if(scope)setPendingAddScope(scope); try{ const{section,picked,config}=addExercisePanel; const exType=exerciseTypeOf(picked,picked); let groupId:string|null=null; let supersetLabel:string|null=null; let slotOrder:number|null=null; let existing:any[]=[]; if(config.mode==='superset'){if(!config.supersetGroupId||config.supersetGroupId==='__new__')groupId=makeSupersetGroupId(); else groupId=config.supersetGroupId; if(groupId){existing=sectionExercises(current,section).filter((e:any)=>e.superset_group_id===groupId); if(existing.length>=3)return alert('That superset already has 3 exercises.'); if(!existing.length){supersetLabel=nextSupersetLabel(current,section); slotOrder=1;} else {supersetLabel=existing[0].superset_label; slotOrder=existing.length+1;}}} let sortOrder=nextSortOrder(current,section); if(groupId&&existing.length)sortOrder=existing[0].sort_order??sortOrder; const setCount=Math.max(1,Number(config.setCount)||sectionDefaultSets(section)); const existingInGroup=groupId?sectionExercises(current,section).filter((e:any)=>e.superset_group_id===groupId).length:0; for(const tw of targetWorkoutsFrom(current,program,weekScope)){const addMeta=prescriptionColumnsFromSources({catalogItem:picked,section}); const addPayload:any={workout_id:tw.id,section,sort_order:sortOrder,name:picked.name,muscle_group:picked.muscle_group||'',equipment:defaultCatalogEquipment(picked),catalog_exercise_id:picked.id,exercise_type:exType,superset_group_id:groupId,superset_label:supersetLabel,superset_order:slotOrder,program_role:addMeta.program_role,measurement_type:addMeta.measurement_type,laterality:addMeta.laterality}; let{data:e,error}=await supabase.from('st_exercises').insert(addPayload).select().single(); if(error&&/equipment/i.test(error.message||'')){delete addPayload.equipment; ({data:e,error}=await supabase.from('st_exercises').insert(addPayload).select().single());} if(error&&/program_role|measurement_type|laterality/i.test(error.message||'')){delete addPayload.program_role; delete addPayload.measurement_type; delete addPayload.laterality; ({data:e,error}=await supabase.from('st_exercises').insert(addPayload).select().single());} if(error)return alert(friendlyWriteError(error)); const rows:any[]=[]; for(let i=0;i<setCount;i++)rows.push({exercise_id:e.id,sort_order:i,set_number:i+1,set_type:'working',target_weight:config.targetWeight||'',target_reps:config.targetReps||''}); if(rows.length)await supabase.from('st_planned_sets').insert(rows);} await reloadKeepDay(); const newGroupCount=existingInGroup+1; if(config.mode==='superset'&&groupId&&newGroupCount<3){setPendingSupersetGroup({...pendingSupersetGroup,[section]:groupId}); setAddExercisePanel({section,step:'search',query:'',picked:null,config:{...emptyAddPanelConfig(),mode:'superset',supersetGroupId:groupId,setCount:sectionDefaultSets(section),targetReps:'8-12',targetWeight:''},custom:emptyAddPanelCustom()}); return;} setPendingSupersetGroup({...pendingSupersetGroup,[section]:null}); setPendingAddScope(null); setAddExercisePanel(null);} catch(error){alert(friendlyWriteError(error));}}
+ async function confirmAddExercise(scope?:'current'|'future'){
+  if(!addExercisePanel?.picked||addExerciseFlightRef.current)return;
+  addExerciseFlightRef.current=true;
+  const dropPending=(rows:Array<{workoutId:string;exercise:any}>)=>{
+   const spec=rows.map((row)=>({workoutId:row.workoutId,exerciseId:row.exercise.id}));
+   if(!spec.length)return;
+   setProgram((prev:any)=>dropExercisesFromProgram(prev,spec));
+   setCalendarWorkouts((prev:any[])=>removeExercisesFromWorkoutList(prev,spec).workouts);
+  };
+  let stagedRows:Array<{workoutId:string;exercise:any}>=[];
+  const confirmedIds=new Set<string>();
+  try{
+   const ctx=await ensurePersonalCopyForTrainingEdit();
+   if(!ctx?.workout||!ctx.program)return;
+   const current=ctx.workout;
+   const weekScope=scope||pendingAddScope||'current';
+   if(scope)setPendingAddScope(scope);
+   const{section,picked,config}=addExercisePanel;
+   const exType=exerciseTypeOf(picked,picked);
+   let groupId:string|null=null;
+   let supersetLabel:string|null=null;
+   let slotOrder:number|null=null;
+   let existing:any[]=[];
+   if(config.mode==='superset'){
+    if(!config.supersetGroupId||config.supersetGroupId==='__new__')groupId=makeSupersetGroupId();
+    else groupId=config.supersetGroupId;
+    if(groupId){
+     existing=sectionExercises(current,section).filter((item:any)=>item.superset_group_id===groupId);
+     if(existing.length>=3)return alert('That superset already has 3 exercises.');
+     if(!existing.length){supersetLabel=nextSupersetLabel(current,section);slotOrder=1;}
+     else {supersetLabel=existing[0].superset_label;slotOrder=existing.length+1;}
+    }
+   }
+   let sortOrder=nextSortOrder(current,section);
+   if(groupId&&existing.length)sortOrder=existing[0].sort_order??sortOrder;
+   const setCount=Math.max(1,Number(config.setCount)||sectionDefaultSets(section));
+   const existingInGroup=groupId?sectionExercises(current,section).filter((item:any)=>item.superset_group_id===groupId).length:0;
+   const baseProgram=program?.id===ctx.program.id?program:ctx.program;
+   const targets=targetWorkoutsFrom(current,baseProgram,weekScope);
+   if(!targets.length)return alert('Could not find a workout for that exercise.');
+   const addMeta=prescriptionColumnsFromSources({catalogItem:picked,section});
+   const pendingRows=targets.map((tw:any)=>({
+    workoutId:tw.id,
+    exercise:{
+     id:createPendingExerciseId(),
+     client_pending:true,
+     workout_id:tw.id,
+     section,
+     sort_order:sortOrder,
+     name:picked.name,
+     muscle_group:picked.muscle_group||'',
+     equipment:defaultCatalogEquipment(picked),
+     catalog_exercise_id:picked.id,
+     exercise_type:exType,
+     superset_group_id:groupId,
+     superset_label:supersetLabel,
+     superset_order:slotOrder,
+     program_role:addMeta.program_role,
+     measurement_type:addMeta.measurement_type,
+     laterality:addMeta.laterality,
+     st_planned_sets:[],
+    },
+   }));
+   exerciseEditEpochRef.current+=1;
+   const started=beginExerciseEdit('add');
+   const nextProgram=insertExercisesIntoProgram(baseProgram,pendingRows);
+   const nextCalendar=insertExercisesIntoWorkoutList(calendarWorkouts,pendingRows);
+   setProgram(nextProgram);
+   setCalendarWorkouts(nextCalendar);
+   const visible=findWorkoutInProgram(nextProgram,current.id)||nextCalendar.find((item:any)=>item.id===current.id)||current;
+   planEditRef.current={workout:visible,program:nextProgram};
+   exerciseVisualRef.current={kind:'add',mark:started,ids:pendingRows.filter((row)=>row.workoutId===current.id).map((row)=>row.exercise.id),workoutId:current.id};
+   setAddExercisePanel(null);
+   const mutationStarted=typeof performance!=='undefined'?performance.now():Date.now();
+   stagedRows=pendingRows;
+   const confirmed=confirmedIds;
+   for(const row of pendingRows){
+    if(cancelledExerciseIdsRef.current.has(row.exercise.id))continue;
+    const addPayload:any={workout_id:row.workoutId,section,sort_order:sortOrder,name:picked.name,muscle_group:picked.muscle_group||'',equipment:defaultCatalogEquipment(picked),catalog_exercise_id:picked.id,exercise_type:exType,superset_group_id:groupId,superset_label:supersetLabel,superset_order:slotOrder,program_role:addMeta.program_role,measurement_type:addMeta.measurement_type,laterality:addMeta.laterality};
+    let{data:created,error}=await supabase.from('st_exercises').insert(addPayload).select().single();
+    if(error&&/equipment/i.test(error.message||'')){delete addPayload.equipment;({data:created,error}=await supabase.from('st_exercises').insert(addPayload).select().single());}
+    if(error&&/program_role|measurement_type|laterality/i.test(error.message||'')){delete addPayload.program_role;delete addPayload.measurement_type;delete addPayload.laterality;({data:created,error}=await supabase.from('st_exercises').insert(addPayload).select().single());}
+    if(error||!created?.id){
+     dropPending(pendingRows.filter((item)=>!confirmed.has(item.exercise.id)));
+     noteExerciseEditFailure('add',error?.message);
+     return alert(friendlyWriteError(error));
+    }
+    if(cancelledExerciseIdsRef.current.has(row.exercise.id)){
+     await supabase.from('st_exercises').delete().eq('id',created.id);
+     continue;
+    }
+    const setRows:any[]=[];
+    for(let i=0;i<setCount;i++)setRows.push({exercise_id:created.id,sort_order:i,set_number:i+1,set_type:'working',target_weight:config.targetWeight||'',target_reps:config.targetReps||''});
+    const insertedSets=setRows.length?await supabase.from('st_planned_sets').insert(setRows).select():{data:[],error:null};
+    if(insertedSets.error||!(insertedSets.data||[]).length){
+     await supabase.from('st_exercises').delete().eq('id',created.id);
+     dropPending(pendingRows.filter((item)=>!confirmed.has(item.exercise.id)));
+     noteExerciseEditFailure('add',insertedSets.error?.message);
+     return alert(friendlyWriteError(insertedSets.error||'Could not add the planned sets.'));
+    }
+    if(cancelledExerciseIdsRef.current.has(row.exercise.id)){
+     await supabase.from('st_exercises').delete().eq('id',created.id);
+     continue;
+    }
+    const real={...created,client_pending:false,st_planned_sets:insertedSets.data};
+    confirmed.add(row.exercise.id);
+    setProgram((prev:any)=>replaceExerciseInProgram(prev,row.workoutId,row.exercise.id,real));
+    setCalendarWorkouts((prev:any[])=>replaceExerciseInProgram({st_workouts:prev},row.workoutId,row.exercise.id,real)?.st_workouts||prev);
+   }
+   const finished=typeof performance!=='undefined'?performance.now():Date.now();
+   noteExerciseEditMutation('add',finished-mutationStarted);
+   if(session?.user?.id)markScreenStale(session.user.id,['program']);
+   const newGroupCount=existingInGroup+1;
+   if(config.mode==='superset'&&groupId&&newGroupCount<3){
+    setPendingSupersetGroup({...pendingSupersetGroup,[section]:groupId});
+    setAddExercisePanel({section,step:'search',query:'',picked:null,config:{...emptyAddPanelConfig(),mode:'superset',supersetGroupId:groupId,setCount:sectionDefaultSets(section),targetReps:'8-12',targetWeight:''},custom:emptyAddPanelCustom()});
+    return;
+   }
+   setPendingSupersetGroup({...pendingSupersetGroup,[section]:null});
+   setPendingAddScope(null);
+  }catch(error){
+   dropPending(stagedRows.filter((row)=>!confirmedIds.has(row.exercise.id)));
+   noteExerciseEditFailure('add',error instanceof Error?error.message:'');
+   alert(friendlyWriteError(error));
+  }finally{
+   addExerciseFlightRef.current=false;
+  }
+ }
  async function renameSuperset(ex:any,newLabel:string){
   if(!ex.superset_group_id||!newLabel.trim())return;
   if(!(await ensurePersonalCopyForTrainingEdit()))return;
@@ -2299,25 +2494,117 @@ export default function Page(){
  }
  await reloadKeepDay();
 }
- async function removeExercise(e:any){
- if(!(await ensurePersonalCopyForTrainingEdit()))return;
- const current=planEditRef.current?.workout||workout;
- const msg=(!isSharedTemplateEditor()||applyScope!=='future')?'Remove this exercise from this workout only?':'Remove this exercise from this week and all future weeks?';
- if(!confirm(msg))return;
- const groupId=e.superset_group_id, section=exerciseSection(e);
- let removed=0;
- for(const tw of targetWorkoutsFrom(current)){
-  const match=resolveExerciseTarget(tw,e,current);
-  if(!match)continue;
-  const{error}=await supabase.from('st_exercises').delete().eq('id',match.id);
-  if(error)return alert(error.message);
-  removed++;
+ function restoreExerciseEdit(programRemoved:RemovedExercise[],calendarRemoved:RemovedExercise[]){
+  if(programRemoved.length)setProgram((prev:any)=>restoreRemovedExercises(prev,programRemoved));
+  if(calendarRemoved.length)setCalendarWorkouts((prev:any[])=>restoreRemovedWorkoutList(prev,calendarRemoved));
  }
- if(!removed)return alert('Could not find this exercise to remove. Try "This workout only" scope or break the superset first.');
- if(groupId)await cleanupSupersetOrphans(section,groupId);
- if(groupId&&section) setPendingSupersetGroup((prev:any)=>{const next={...prev}; if(next[section]===groupId)next[section]=null; return next;});
- await reloadKeepDay();
-}
+ function keepUnsavedSetValues(setIds:string[]){
+  setLogs((prev:any)=>{
+   const next={...prev};
+   setIds.forEach((id)=>{
+    const ledger=setLogLedgersRef.current.get(id);
+    if(!ledger||!Object.keys(ledger.overlay||{}).length)return;
+    next[id]={...(next[id]||{}),...ledger.overlay,planned_set_id:id};
+   });
+   return next;
+  });
+ }
+ function setEditsForRemoval(setIds:string[]){
+  const gate=unsavedSetLogGate(setLogLedgersRef.current,new Set(setIds));
+  const fieldKeys:string[]=[];
+  loggerPendingKeysRef.current.forEach((read)=>{fieldKeys.push(...read());});
+  const debounced=setIdsInPendingFieldKeys(setIds,fieldKeys);
+  const queued=setIds.filter((id)=>!!upsertQueueRef.current[id]);
+  const pending:string[]=[];
+  [...gate.pending,...debounced,...queued].forEach((id)=>{
+   if(gate.failed.indexOf(id)===-1&&pending.indexOf(id)===-1)pending.push(id);
+  });
+  return exerciseRemovalAfterSetEdits({pendingSetIds:pending,failedSetIds:gate.failed});
+ }
+ async function removeExercise(e:any){
+  if(!e?.id||exerciseMutationRef.current.has(e.id))return;
+  exerciseMutationRef.current.add(e.id);
+  const locked=new Set<string>([e.id]);
+  let programResult:{program:any;removed:RemovedExercise[]}|null=null;
+  let calendarResult:{workouts:any[];removed:RemovedExercise[]}|null=null;
+  const deleted=new Set<string>();
+  try{
+   const ctx=await ensurePersonalCopyForTrainingEdit();
+   if(!ctx?.workout||!ctx.program)return;
+   const current=ctx.workout;
+   const msg=(!isSharedTemplateEditor()||applyScope!=='future')?'Remove this exercise from this workout only?':'Remove this exercise from this week and all future weeks?';
+   if(!confirm(msg))return;
+   const baseProgram=program?.id===ctx.program.id?program:ctx.program;
+   const targets=targetWorkoutsFrom(current,baseProgram);
+   const matches:Array<{workoutId:string;exercise:any}>=[];
+   targets.forEach((tw:any)=>{
+    const match=resolveExerciseTarget(tw,e,current);
+    if(match?.id)matches.push({workoutId:tw.id,exercise:match});
+   });
+   if(!matches.length)return alert('Could not find this exercise to remove. Try "This workout only" scope or break the superset first.');
+   if(matches.some((match)=>!locked.has(match.exercise.id)&&exerciseMutationRef.current.has(match.exercise.id)))return;
+   matches.forEach((match)=>{exerciseMutationRef.current.add(match.exercise.id);locked.add(match.exercise.id);});
+   const spec=matches.map((match)=>({workoutId:match.workoutId,exerciseId:match.exercise.id}));
+   const pendingMatches=matches.filter((match)=>isPendingExercise(match.exercise));
+   pendingMatches.forEach((match)=>cancelledExerciseIdsRef.current.add(match.exercise.id));
+   const realMatches=matches.filter((match)=>!isPendingExercise(match.exercise));
+   const setIds=plannedSetIdsOf(realMatches.map((match)=>match.exercise));
+   const groupId=e.superset_group_id;
+   const section=exerciseSection(e);
+   const started=beginExerciseEdit('remove');
+   let step=setEditsForRemoval(setIds);
+   if(step==='wait'){
+    await flushMountedSetEdits();
+    await awaitQueuedSetWrites();
+    step=setEditsForRemoval(setIds);
+   }
+   if(step==='blocked'){
+    keepUnsavedSetValues(setIds);
+    noteExerciseEditFailure('remove','unsaved-set');
+    alert('This exercise was not removed. A set did not save. Use Retry on that set, then remove the exercise again.');
+    return;
+   }
+   if(step==='wait'){
+    noteExerciseEditFailure('remove','still-saving');
+    alert('This exercise was not removed. A set is still saving. Try again when that save finishes.');
+    return;
+   }
+   exerciseEditEpochRef.current+=1;
+   programResult=removeExercisesFromProgram(baseProgram,spec);
+   calendarResult=removeExercisesFromWorkoutList(calendarWorkouts,spec);
+   exerciseWriteHoldRef.current=realMatches.length?targets.filter((tw:any)=>realMatches.some((match)=>match.workoutId===tw.id)):[];
+   setProgram(programResult.program);
+   setCalendarWorkouts(calendarResult.workouts);
+   const visible=findWorkoutInProgram(programResult.program,current.id)||calendarResult.workouts.find((item:any)=>item.id===current.id)||current;
+   planEditRef.current={workout:visible,program:programResult.program};
+   exerciseVisualRef.current={kind:'remove',mark:started,ids:matches.filter((match)=>match.workoutId===current.id).map((match)=>match.exercise.id),workoutId:current.id};
+   const mutationStarted=typeof performance!=='undefined'?performance.now():Date.now();
+   for(const match of matches){
+    if(isPendingExercise(match.exercise)){deleted.add(match.exercise.id);continue;}
+    const{error}=await supabase.from('st_exercises').delete().eq('id',match.exercise.id);
+    if(error){
+     restoreExerciseEdit(programResult.removed.filter((row)=>!deleted.has(row.exercise.id)),calendarResult.removed.filter((row)=>!deleted.has(row.exercise.id)));
+     noteExerciseEditFailure('remove',error.message);
+     alert(error.message);
+     return;
+    }
+    deleted.add(match.exercise.id);
+   }
+   if(groupId)await cleanupSupersetOrphans(section,groupId);
+   if(groupId&&section)setPendingSupersetGroup((prev:any)=>{const next={...prev};if(next[section]===groupId)next[section]=null;return next;});
+   const finished=typeof performance!=='undefined'?performance.now():Date.now();
+   noteExerciseEditMutation('remove',finished-mutationStarted);
+   if(session?.user?.id)markScreenStale(session.user.id,['program']);
+  }catch(error){
+   if(programResult&&calendarResult)restoreExerciseEdit(programResult.removed.filter((row)=>!deleted.has(row.exercise.id)),calendarResult.removed.filter((row)=>!deleted.has(row.exercise.id)));
+   const message=error instanceof Error?error.message:'Could not remove that exercise.';
+   noteExerciseEditFailure('remove',message);
+   alert(message);
+  }finally{
+   exerciseWriteHoldRef.current=[];
+   locked.forEach((id)=>exerciseMutationRef.current.delete(id));
+  }
+ }
  async function moveExercise(e:any,dir:number){
  if(!(await ensurePersonalCopyForTrainingEdit()))return;
  const current=planEditRef.current?.workout||workout;
@@ -2439,6 +2726,7 @@ export default function Page(){
   return true;
  }
  async function saveLog(sid:string,field:string,value:any,opts?:{completed?:boolean}):Promise<SetLogSaveResult>{
+  if(isPendingExerciseId(sid))return {ok:false,stale:false,error:'This exercise is still being added.'};
   if(!canLog())return {ok:false,stale:false,error:'You cannot log sets for this workout.'};
   return upsertSetLog(sid,{[field]:value},opts);
  }
@@ -2481,6 +2769,7 @@ export default function Page(){
   upsertQueueRef.current[sid]=tracked;
  }
  async function upsertSetLog(sid:string,fieldUpdates:Record<string,any>,opts?:{completed?:boolean}):Promise<SetLogSaveResult>{
+  if(isPendingExerciseId(sid))return {ok:false,stale:false,error:'This exercise is still being added.'};
   if(!canLog())return {ok:false,stale:false,error:'You cannot log sets for this workout.'};
   const ledger=ledgerForSetLog(sid);
   const result=ledger.push(fieldUpdates||{},opts?.completed);
@@ -2500,6 +2789,7 @@ export default function Page(){
   const located=findSetInProgram(activeProgramForLogging(),sid,extraWorkoutsForLogging());
   if(!located) return {ok:false,error:'Could not save log for this set.'};
   const {workout:workoutRef,exercise:ex,plannedSet:ps}=located;
+  if(isPendingExercise(ex))return {ok:false,error:'This exercise is still being added.'};
   const catItem=catalog.find((c:any)=>c.id===ex.catalog_exercise_id);
   const exType=exerciseTypeOf(ex,catItem);
   const fieldKeys=logFieldsForType(exType).map((f:any)=>f.key);
@@ -2998,9 +3288,42 @@ function onSelectTrainingDay(date:string){
   if(!item.expectationId||!item.sourceKey)return null;
   return {expectationId:item.expectationId,workoutId:item.workoutId,programId:item.programId||null,scheduledDate:date,sourceKey:item.sourceKey,teamId:item.teamId??null};
  }
+ function knownWorkoutIds(){
+  const ids:string[]=[];
+  (program?.st_workouts||[]).forEach((item:any)=>{if(item?.id)ids.push(item.id);});
+  calendarWorkouts.forEach((item:any)=>{if(item?.id)ids.push(item.id);});
+  return ids;
+ }
+ function authorizedProgramIds(){
+  const ids:string[]=[];
+  if(program?.id)ids.push(program.id);
+  if(profile?.followed_program_id)ids.push(profile.followed_program_id);
+  (programs||[]).forEach((item:any)=>{if(item?.id)ids.push(item.id);});
+  return ids;
+ }
+ function directOpenDecision(item:{workoutId?:string|null;programId?:string|null}){
+  return directWorkoutOpenAllowed({
+   userId:session?.user?.id||null,
+   workoutId:item.workoutId||null,
+   programId:item.programId||null,
+   knownWorkoutIds:knownWorkoutIds(),
+   authorizedProgramIds:authorizedProgramIds(),
+   treeReady:programTreeReady,
+  });
+ }
+ function refuseDirectOpen(decision:'wait'|'deny'){
+  if(decision==='wait'){alert('That workout is still loading. Try again in a moment.');return;}
+  if(session?.user?.id){
+   markScreenStale(session.user.id,['schedule','dashboard']);
+   setScheduleRefreshKey((value)=>value+1);
+  }
+  alert('That workout is not on your current schedule.');
+ }
  function beginTrainingItem(item:TrainingDayItem,date:string){
   const scheduled=scheduleStartFromItem(item,date);
   if(scheduled){void startScheduledWorkout(scheduled);return;}
+  const decision=directOpenDecision(item);
+  if(decision!=='open'){refuseDirectOpen(decision);return;}
   void startTrainingSession(item.workoutId,date,'log');
  }
  function openLogMeal(){
@@ -3064,8 +3387,31 @@ function onSelectTrainingDay(date:string){
   setAppNav('Training');
   beginTrainingItem(nav.item,nav.date);
  }
+ async function scheduleItemIsCurrent(item:{expectationId:string;workoutId:string|null;scheduledDate:string}){
+  if(!session?.user?.id)return false;
+  const read=await readExpectationForStart(supabase,session.user.id,item.expectationId);
+  if(read.error){alert(read.error);return false;}
+  if(expectationStillMatches(item,read.row)==='open')return true;
+  markScreenStale(session.user.id,['schedule','dashboard']);
+  setScheduleRefreshKey((value)=>value+1);
+  alert('That workout changed. The schedule has been refreshed.');
+  return false;
+ }
  async function previewTrainingItem(item:TrainingDayItem,date:string){
+  const detailStarted=typeof performance!=='undefined'?performance.now():Date.now();
   const scheduled=scheduleStartFromItem(item,date);
+  if(scheduled&&!(await scheduleItemIsCurrent(scheduled))){
+   noteWorkoutDetailOpen(appNav==='Dashboard'?'Dashboard':'Training',detailStarted);
+   return;
+  }
+  if(!scheduled){
+   const decision=directOpenDecision(item);
+   if(decision!=='open'){
+    noteWorkoutDetailOpen(appNav==='Dashboard'?'Dashboard':'Training',detailStarted);
+    refuseDirectOpen(decision);
+    return;
+   }
+  }
   schedulePreviewRef.current=scheduled;
   let nextProgram=program;
   let loadError:string|null=null;
@@ -3099,8 +3445,10 @@ function onSelectTrainingDay(date:string){
    duration:item.duration||null,
   });
   if(item.workoutId)setViewingWorkoutId(item.workoutId);
+  noteWorkoutDetailOpen(appNav==='Dashboard'?'Dashboard':'Training',detailStarted);
  }
  async function startScheduledWorkout(item:ScheduleStartItem){
+  if(!(await scheduleItemIsCurrent(item)))return;
   let nextProgram=program;
   if(item.programId&&program?.id!==item.programId){
    const{data:full,error}=await fetchFullProgram(supabase,item.programId);
@@ -3365,9 +3713,8 @@ function targetWorkoutsFrom(current:any,sourceProgram:any=program,scopeOverride?
   const all=(prog?.st_workouts||[]).filter((w:any)=>w.day_order===active.day_order);
   const scope=scopeOverride||applyScope;
   const onTheFly=trainingSessionOpen&&!isSharedTemplateEditor()&&!scopeOverride;
-  return !onTheFly&&scope==='future'
-    ? all.filter((w:any)=>w.week>=active.week).sort((a:any,b:any)=>a.week-b.week)
-    : [active];
+  const scoped=workoutsInEditScope(all,active,scope,onTheFly);
+  return scoped.length?scoped:[active];
 }
 function matchingExercise(targetWorkout:any, sourceExercise:any){
   if(!targetWorkout||!sourceExercise)return null;
@@ -3554,7 +3901,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
             <span className="badge exercise-type-badge">{exType}</span>
           </div>
         </>}{trainingRxLines(rx)}{canEdit()&&!ex.catalog_exercise_id&&<p className="muted exercise-link-hint">No catalog link — edit name or use Change to get form guide</p>}{isCollapsed&&<p className="muted exercise-collapse-summary">{allDone&&<span className="exercise-done-badge" aria-hidden="true">✓</span>}{plannedSets} set{plannedSets===1?'':'s'} · {doneSets} logged{allDone?' · complete':''}{inSuperset?' · superset':''}</p>}</div></div><div className="exercise-head-actions"><button type="button" className="btn small secondary exercise-collapse-btn" onClick={()=>setCollapsedExercises((prev:any)=>({...prev,[ex.id]:!prev[ex.id]}))} aria-expanded={!isCollapsed}>{isCollapsed?'Expand':'Collapse'}</button>{!isCollapsed&&showGuide&&guidePayload&&<button type="button" className="btn small secondary" onClick={()=>setExerciseGuide(guidePayload)}>{guidePayload.hasVideo?'Watch form':'Form guide'}</button>}{!isCollapsed&&!isMobilityStretchExercise(ex,catItem,exType)&&<button type="button" className="btn small secondary" title="See what you logged for this exercise by week" onClick={()=>openExerciseWeekHistory(ex,exType,displayWorkout)}>History</button>}{!isCollapsed&&canEdit()&&<button type="button" className="btn small secondary" onClick={()=>addSet(ex)}>+ Set</button>}{!isCollapsed&&canEdit()&&<ExerciseLogMoreMenu items={bindExerciseLogMoreItems(exerciseLogMoreItemSpecs({inSuperset,supersetOpen:supersetEditExerciseId===ex.id}),{supersetEdit:()=>setSupersetEditExerciseId(supersetEditExerciseId===ex.id?null:ex.id),change:()=>openReplaceExercisePanel(ex),moveUp:()=>moveExercise(ex,-1),moveDown:()=>moveExercise(ex,1),supersetOut:()=>removeFromSuperset(ex),removeExercise:()=>removeExercise(ex)})}/>}{!isCollapsed&&canEdit()&&!inSuperset&&supersetEditExerciseId===ex.id&&<div className="exercise-superset-edit"><select className="superset-join-select" defaultValue="" aria-label="Join existing superset" onChange={e=>{const v=e.target.value;if(v){void addExerciseToSuperset(ex,v);setSupersetEditExerciseId(null);}e.currentTarget.value='';}} disabled={!sectionSupersetGroups.length}><option value="">{sectionSupersetGroups.length?'Join superset…':'No supersets'}</option>{sectionSupersetGroups.map((g:any)=><option key={g.id} value={g.id}>{g.label} ({g.count}/3)</option>)}</select><select className="superset-join-select" defaultValue="" aria-label="Pair with exercise" onChange={e=>{const v=e.target.value;if(v){const peer=standalonePeers.find((p:any)=>p.id===v);if(peer){void pairIntoNewSuperset(ex,peer);setSupersetEditExerciseId(null);}}e.currentTarget.value='';}} disabled={!standalonePeers.length}><option value="">{standalonePeers.length?'Pair with…':'No other exercises'}</option>{standalonePeers.map((p:any)=><option key={p.id} value={p.id}>{p.name}</option>)}</select><button className="btn small secondary" title="Start a new superset and add another exercise" onClick={()=>{setSupersetEditExerciseId(null);void startSupersetWithCatalog(ex);}}>New superset</button></div>}</div></div>
-        {!isCollapsed&&<WorkoutSetLogger section={exerciseSection(ex)} exType={exType} sets={sortedSets} logs={logs} prevBySetId={previousSetViews} showPreviousSets={showPreviousSets} weightUnit={weightUnit} distanceUnit={logDistanceUnit} onDistanceUnitChange={setLogDistanceUnit} canEdit={canEdit()} canLog={canLog()} onEditSet={editSetStable} onRemoveSet={removeSetStable} onSaveField={saveLogStable} registerFlush={registerLoggerFlush} onRetrySet={retrySetLogStable} onDuplicateSet={duplicateSetLogStable} extraSets={extraSetsForExercise(extraSetLogs,ex.id,activeLogDateForLogging()).map((row)=>({id:row.id||`extra-${row.extra_set_number}`,set_type:'working',set_number:row.extra_set_number,target_reps:'',target_weight:''}))} extraLogs={Object.fromEntries(extraSetsForExercise(extraSetLogs,ex.id,activeLogDateForLogging()).map((row)=>[row.id||`extra-${row.extra_set_number}`,row]))} onAddExtraSet={trainingSessionIntent==='log'?()=>{void loggerActionsRef.current.addExtraWorkingSet?.(ex);}:undefined} onSaveExtraField={(id,field,value,opts)=>loggerActionsRef.current.saveExtraSetField?.(id,field,value,opts)} onSkipExercise={trainingSessionIntent==='log'?()=>{void loggerActionsRef.current.skipExercise?.(ex);}:undefined} exerciseSkipped={!!skippedExerciseIds[ex.id]} registerInputRef={el=>{if(el&&!refs.current.includes(el))refs.current.push(el)}} onInputKeyDown={(e)=>loggerActionsRef.current.next?.(e)} onFocusNextInput={(el)=>loggerActionsRef.current.focusNextInput?.(el)}/>}
+        {!isCollapsed&&<WorkoutSetLogger section={exerciseSection(ex)} exType={exType} sets={sortedSets} logs={logs} prevBySetId={previousSetViews} showPreviousSets={showPreviousSets} weightUnit={weightUnit} distanceUnit={logDistanceUnit} onDistanceUnitChange={setLogDistanceUnit} canEdit={canEdit()} canLog={canLog()&&exerciseIsLoggable(ex)} onEditSet={editSetStable} onRemoveSet={removeSetStable} onSaveField={saveLogStable} registerFlush={registerLoggerFlush} registerPending={registerLoggerPending} onRetrySet={retrySetLogStable} onDuplicateSet={duplicateSetLogStable} extraSets={extraSetsForExercise(extraSetLogs,ex.id,activeLogDateForLogging()).map((row)=>({id:row.id||`extra-${row.extra_set_number}`,set_type:'working',set_number:row.extra_set_number,target_reps:'',target_weight:''}))} extraLogs={Object.fromEntries(extraSetsForExercise(extraSetLogs,ex.id,activeLogDateForLogging()).map((row)=>[row.id||`extra-${row.extra_set_number}`,row]))} onAddExtraSet={trainingSessionIntent==='log'?()=>{void loggerActionsRef.current.addExtraWorkingSet?.(ex);}:undefined} onSaveExtraField={(id,field,value,opts)=>loggerActionsRef.current.saveExtraSetField?.(id,field,value,opts)} onSkipExercise={trainingSessionIntent==='log'?()=>{void loggerActionsRef.current.skipExercise?.(ex);}:undefined} exerciseSkipped={!!skippedExerciseIds[ex.id]} registerInputRef={el=>{if(el&&!refs.current.includes(el))refs.current.push(el)}} onInputKeyDown={(e)=>loggerActionsRef.current.next?.(e)} onFocusNextInput={(el)=>loggerActionsRef.current.focusNextInput?.(el)}/>}
       </div>;};
  const trainingHeading=trainingPageHeading({sessionOpen:trainingSessionOpen,sessionIntent:trainingSessionIntent,selectedDateLabel:formatLongWeekday(logDate)});
  const showSessionFinish=showFinishWorkoutAction({sessionOpen:trainingSessionOpen,sessionIntent:trainingSessionIntent})&&!!workout;
@@ -3623,7 +3970,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
  </AppHeader>
  <div className="app-shell" key={session?.user?.id||'signed-out'}>
  <main className="main page-main">
-  {appNav==='Dashboard'&&<section className="dashboard"><div className="dash-hero"><h1>{greeting}, {displayName||'there'}</h1><p className="muted">Your wellness dashboard for {formatDisplayDate(today())}.</p></div><div className="dash-grid">{session?.user&&<TodaysTrainingHero userId={session.user.id} teams={teams.map((t:any)=>({id:t.id,name:t.name}))} inputsReady={trainingScheduleReady&&userCalendarReady} loadError={userCalendarError} program={program} programName={program?.name||null} followedFromGroup={followedFromGroup} followedSourceProgramId={personalizedCopy?program?.source_program_id||null:null} activities={trainingActivities} calendarActivities={userCalendarActivities} workouts={trainingCompletionWorkouts} progressLogs={progressLogs} sessionLogs={logDate===todayYmd()&&!(viewingMember&&viewingMember.user_id!==session.user.id)?logs:{}} onNavigate={openTodayTraining}/>}{teams.length>0&&activeTeam&&<div className="dash-card dash-accent"><div className="dash-card-head"><h2>Group activity</h2><span className="badge">{teamActiveCount}/{members.length||0}</span></div><p className="dash-title">{activeTeam.name}</p><div className="dash-metrics"><div><b>{teamActiveCount}/{members.length||0}</b><span className="muted">Active this week</span></div><div><b>{teamTotalSets}</b><span className="muted">Group sets</span></div></div><button className="btn secondary" style={{marginTop:10}} onClick={()=>goNav('Groups')}>View group</button></div>}{session?.user&&<WeeklyAdherenceCard userId={session.user.id} onSelectDate={openTrainingWeekDay}/>}{session?.user&&<NutritionDashboardCard userId={session.user.id} onLogMeal={openLogMeal} onViewLog={openNutritionLog} onSetGoals={openNutritionGoals}/>}{session?.user&&<ProgressDashboardCard userId={session.user.id} unitsPreference={profileDraft?.units_preference} refreshKey={bodyDashRefreshKey} onViewProgress={openProgressOverview} onOpenStrength={openProgressStrength} onOpenBody={openProgressBody} onAddCheckIn={openAddCheckIn}/>}<div className="dash-card dash-accent"><div className="dash-card-head"><h2>AI Coach Insight</h2><span className="badge">Preview</span></div><p className="muted">Personalized coaching based on your training, nutrition, and recovery is coming soon.</p><p className="dash-insight">&ldquo;Stay consistent this week. Log today&apos;s sets to build your progress baseline.&rdquo;</p></div></div></section>}
+  {appNav==='Dashboard'&&<section className="dashboard"><div className="dash-hero"><h1>{greeting}, {displayName||'there'}</h1><p className="muted">Your wellness dashboard for {formatDisplayDate(today())}.</p></div><div className="dash-grid">{session?.user&&<TodaysTrainingHero userId={session.user.id} teams={teams.map((t:any)=>({id:t.id,name:t.name}))} inputsReady={trainingScheduleReady&&userCalendarReady} programReady={programTreeReady} scheduleRepairGeneration={scheduleRepairGeneration} loadError={userCalendarError} program={program} programName={program?.name||null} followedFromGroup={followedFromGroup} followedSourceProgramId={personalizedCopy?program?.source_program_id||null:null} activities={trainingActivities} calendarActivities={userCalendarActivities} workouts={trainingCompletionWorkouts} progressLogs={progressLogs} sessionLogs={logDate===todayYmd()&&!(viewingMember&&viewingMember.user_id!==session.user.id)?logs:{}} onNavigate={openTodayTraining}/>}{teams.length>0&&activeTeam&&<div className="dash-card dash-accent"><div className="dash-card-head"><h2>Group activity</h2><span className="badge">{teamActiveCount}/{members.length||0}</span></div><p className="dash-title">{activeTeam.name}</p><div className="dash-metrics"><div><b>{teamActiveCount}/{members.length||0}</b><span className="muted">Active this week</span></div><div><b>{teamTotalSets}</b><span className="muted">Group sets</span></div></div><button className="btn secondary" style={{marginTop:10}} onClick={()=>goNav('Groups')}>View group</button></div>}{session?.user&&<WeeklyAdherenceCard userId={session.user.id} onSelectDate={openTrainingWeekDay}/>}{session?.user&&<NutritionDashboardCard userId={session.user.id} onLogMeal={openLogMeal} onViewLog={openNutritionLog} onSetGoals={openNutritionGoals}/>}{session?.user&&<ProgressDashboardCard userId={session.user.id} unitsPreference={profileDraft?.units_preference} refreshKey={bodyDashRefreshKey} onViewProgress={openProgressOverview} onOpenStrength={openProgressStrength} onOpenBody={openProgressBody} onAddCheckIn={openAddCheckIn}/>}<div className="dash-card dash-accent"><div className="dash-card-head"><h2>AI Coach Insight</h2><span className="badge">Preview</span></div><p className="muted">Personalized coaching based on your training, nutrition, and recovery is coming soon.</p><p className="dash-insight">&ldquo;Stay consistent this week. Log today&apos;s sets to build your progress baseline.&rdquo;</p></div></div></section>}
   {appNav==='Nutrition'&&session?.user&&<LazyScreen loader={nutritionScreenLoader} fallback={<p className="muted">Loading nutrition…</p>}>{(NutritionTracker)=><NutritionTracker userId={session.user.id} launch={nutritionLaunch} onLaunchConsumed={()=>setNutritionLaunch(null)} onOpenSettings={()=>goNav('Settings')}/>}</LazyScreen>}
   {appNav==='AI Coach'&&<section><div className="card dash-accent"><h2>AI Coach</h2><p className="muted">Your BuildIQ Health wellness coach will analyze workouts, nutrition, and recovery to give safe, practical guidance.</p><p className="dash-insight">Coming soon: readiness check-ins, workout adjustments, and weekly coaching summaries.</p></div></section>}
   {appNav==='Progress'&&<LazyScreen loader={progressScreenLoader} fallback={<p className="muted">Loading progress…</p>}>{(ProgressScreen)=><ProgressScreen userId={session?.user?.id||null} unitsPreference={profileDraft?.units_preference} weightUnit={progressWeightUnit} section={progressSection} onSectionChange={setProgressSection} onOpenNutrition={()=>goNav('Nutrition')} onBodyDataChange={()=>setBodyDashRefreshKey(k=>k+1)}/>}</LazyScreen>}
@@ -3642,7 +3989,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
     </div>
     {trainingSessionOpen&&groupLogReturn&&<p className="group-log-date" data-testid="group-log-date">Scheduled {formatDisplayDate(groupLogReturn.scheduledDate)}</p>}
     {!viewingMember&&!trainingSessionOpen&&<AssignedWorkoutsPanel assignments={assignedWorkouts} activeRecipientId={activeAssignedRecipient?.id||null} onOpen={openAssignedWorkout} onCloseActive={activeAssignedRecipient?closeAssignedWorkout:undefined} onCopyToPersonal={copyAssignedWorkoutToPersonal} onDismiss={dismissAssignedWorkout} copyingRecipientId={assignmentCopyBusy} dismissingRecipientId={assignmentDismissBusy} getWorkoutStatus={assignmentPanelStatus} statusLabel={statusLabel}/>}
-    {!viewingMember&&!activeAssignedRecipient&&!trainingSessionOpen&&session?.user&&<LazyScreen loader={trainingScheduleLoader} fallback={<p className="muted">Loading training…</p>}>{(UnifiedTrainingSchedule)=><UnifiedTrainingSchedule userId={session.user.id} teams={teams} rangeFrom={trainingExpectationRange.from} rangeTo={trainingExpectationRange.to} calendar={{
+    {!viewingMember&&!activeAssignedRecipient&&!trainingSessionOpen&&session?.user&&<LazyScreen loader={trainingScheduleLoader} fallback={<p className="muted">Loading training…</p>}>{(UnifiedTrainingSchedule)=><UnifiedTrainingSchedule userId={session.user.id} teams={teams} rangeFrom={trainingExpectationRange.from} rangeTo={trainingExpectationRange.to} scheduleRefreshKey={scheduleRefreshKey} scheduleRepairGeneration={scheduleRepairGeneration} calendar={{
       programName:program?.name||null,
       followedFromGroup,
       followingGroupTemplate,
@@ -3699,8 +4046,9 @@ function matchingSet(targetExercise:any, sourceSet:any){
       onStart={()=>{const pending=schedulePreviewRef.current;if(pending&&pending.workoutId===viewingWorkoutId)void startScheduledWorkout(pending);else startTrainingSession(viewingWorkoutId,logDate,'log');}}
       onEdit={()=>startTrainingSession(viewingWorkoutId,logDate,'edit')}
     />}</LazyScreen>}
-    {trainingSessionOpen&&trainingSessionIntent==='log'&&followingGroupTemplate&&!activeAssignedRecipient&&<div className="card program-draft-banner"><p className="muted">Logging is only yours. If you change exercises or planned sets, BuildIQ makes a private copy so the group plan stays the same.</p></div>}
-    {trainingSessionOpen&&trainingSessionIntent==='edit'&&!activeAssignedRecipient&&<div className="card program-draft-banner"><div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}>{customizeForMeBusy?<p className="muted">Making your private copy so edits stay just for you…</p>:<><p className="muted">{personalizedCopy||!followingGroupTemplate?'This copy is only yours. The group plan is unchanged. ':'Edits during Training stay on your private copy. The group plan is unchanged. '}Change exercises and sets here. Start Workout is only for logging.</p><button type="button" className="btn small green" onClick={()=>setTrainingSessionIntent('log')}>Start Workout</button></>}</div></div>}
+    {trainingSessionOpen&&trainingSessionIntent==='log'&&followingGroupTemplate&&!activeAssignedRecipient&&<div className="card program-draft-banner"><p className="muted" role={customizeForMeBusy?'status':undefined}>{customizeForMeBusy?'Making your private copy so edits stay just for you…':'Logging is only yours. If you change exercises or planned sets, BuildIQ makes a private copy so the group plan stays the same.'}</p></div>}
+    {trainingSessionOpen&&customizeForMeBusy&&trainingSessionIntent==='log'&&!followingGroupTemplate&&!activeAssignedRecipient&&<div className="card program-draft-banner" role="status"><p className="muted">Making your private copy so edits stay just for you…</p></div>}
+    {trainingSessionOpen&&trainingSessionIntent==='edit'&&!activeAssignedRecipient&&<div className="card program-draft-banner"><div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}>{customizeForMeBusy?<p className="muted" role="status">Making your private copy so edits stay just for you…</p>:<><p className="muted">{personalizedCopy||!followingGroupTemplate?'This copy is only yours. The group plan is unchanged. ':'Edits during Training stay on your private copy. The group plan is unchanged. '}Change exercises and sets here. Start Workout is only for logging.</p><button type="button" className="btn small green" onClick={()=>setTrainingSessionIntent('log')}>Start Workout</button></>}</div></div>}
     {trainingAddActivityOpen&&session?.user&&<AddActivitySheet
       dayLabel={formatDisplayDate(logDate)}
       allowRecurrence

@@ -44,5 +44,8 @@ export function createDebouncedFieldQueue(delayMs = SET_FIELD_DEBOUNCE_MS) {
     pendingCount() {
       return Object.keys(pending).length;
     },
+    pendingKeys() {
+      return Object.keys(pending);
+    },
   };
 }

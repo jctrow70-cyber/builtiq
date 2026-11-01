@@ -11,6 +11,86 @@ Branch:
 Status:
 ```
 
+## BIQ-0293 - Keep set saves and exercise edits on the card
+
+Date: 2026-11-01
+Branch: main
+Status: Committed locally. Not pushed. No database change.
+
+Summary: Routine set saves no longer add a Saving… line under the set card. A failed save still shows the error and Retry. Add Exercise and Remove Exercise update the in-memory workout immediately, then write to the database. A temporary exercise cannot be logged until its real id and planned sets exist. An exercise with no pending set edits disappears immediately. An exercise with a set still saving stays on screen until that save finishes, then the removal continues. A failed set save blocks removal and leaves Retry on the set. The first edit of a followed group program makes one private copy, shows that copy in progress, and does not change the shared plan. Schedule repair now waits until enrollment sync finishes. A late program load cannot replace an open workout. A rest day leaves the loading state. A failed schedule refresh keeps the calendar that already painted. Start and View without an expectation id still check that the workout belongs to this user.
+
+Purpose: Saving… was changing the set card height. Add and Remove waited on a full program reload that an open logger dropped. Phase D could miss a new assignment, hold a rest day on Loading, or replace a good calendar after a migration error.
+
+Files changed:
+- app/components/WorkoutSetLogger.tsx
+- app/page.tsx
+- app/components/training/UnifiedTrainingSchedule.tsx
+- app/components/dashboard/TodaysTrainingHero.tsx
+- lib/training/setLogStatus.ts
+- lib/training/exerciseListEdit.ts
+- lib/training/debouncedFieldEdits.ts
+- lib/training/programLoadGuard.ts
+- lib/training/enrollmentSyncGate.ts
+- lib/training/calendarStartGuard.ts
+- lib/training/visibleSchedule.ts
+- lib/training/todayTraining.ts
+- lib/performance/exerciseEditTiming.ts
+- scripts/test-set-log-status.ts
+- scripts/test-exercise-list-edit.ts
+- scripts/test-schedule-hardening.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- Run `scripts/test-set-log-status.ts`, `scripts/test-exercise-list-edit.ts`, `scripts/test-schedule-hardening.ts`, the logger, finish, calendar, and navigation regression scripts, `npx tsc --noEmit`, and a production build.
+- Change RIR and mark Done. The other set cards do not move. A failed save still shows Retry.
+- Remove an exercise with no unsaved set. It leaves the list immediately. Remove one while a set is still saving. It stays until that save finishes, then leaves without a second click. If that save fails, the exercise stays and Retry remains on the set.
+- Edit a followed group program twice in a row. One private copy is created, the group plan is unchanged, and the Add or Remove continues on that copy.
+- On a signed-in visit, read `window.__biqExerciseEditTiming` after add and remove.
+
+Known issues: Signed-in browser p50 and p95 were not collected. The under-100 ms logger target and the under-500 ms navigation target are not verified. The calendar still reads once for the first paint and once after enrollment sync and schedule repair. Group due segments can be one refresh behind.
+
+Recommended commit message: BIQ-0293 Keep set saves and exercise edits on the card.
+
+## BIQ-0292 - Paint the training calendar before repair and the program tree
+
+Date: 2026-11-01
+Branch: main
+Status: Committed locally. Not pushed. No database change.
+
+Summary: The Training calendar and Dashboard hero paint enrollments, expectations, sessions, calendar activities, and program names before schedule repair. Repair, enrollment sync, and the full program tree continue after that paint. An empty schedule stays hidden until repair finishes. Start and View reread the expectation and refuse a missing, excused, or changed workout. Calendar-usable time and workout-detail time are recorded separately.
+
+Purpose: Opening Training or Dashboard was waiting on schedule repair and the nested program tree before the day could appear.
+
+Files changed:
+- lib/training/visibleSchedule.ts
+- lib/training/calendarStartGuard.ts
+- lib/training/todayTraining.ts
+- lib/performance/screenTiming.ts
+- lib/groups/loadGroupTrainingFacts.ts
+- app/components/training/UnifiedTrainingSchedule.tsx
+- app/components/dashboard/TodaysTrainingHero.tsx
+- app/page.tsx
+- scripts/test-calendar-first.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- Run `scripts/test-calendar-first.ts`, `scripts/test-nav-program-load.ts`, `scripts/test-screen-session.ts`, `scripts/test-today-training.ts`, `scripts/test-unified-schedule.ts`, `scripts/test-finish-workout.ts`, and `npx tsc --noEmit`.
+- Open Training. Titles can appear before repair finishes. "No programs yet" waits until that repair finishes.
+- Change an expectation's workout, then press Start on the old card. The old workout does not open, and the calendar refreshes.
+- On a signed-in visit, read `window.__biqScreenTiming` for `calendarUsableMs` and `workoutDetailMs`.
+
+Known issues: Signed-in browser p50 and p95 were not collected. The under-100 ms logger target and the under-500 ms navigation target are not verified. Group due segments can be one refresh behind. The first workout open still loads the program tree. BIQ-0293 hardens this change: repair waits for enrollment sync, an open workout is not replaced by a late program load, a rest day is not held on Loading, and a failed refresh keeps the previous calendar.
+
+Recommended commit message: BIQ-0292 Paint the training calendar before repair and the program tree.
+
 ## BIQ-0291 - Flush debounced set edits before Finish Workout
 
 Date: 2026-11-01

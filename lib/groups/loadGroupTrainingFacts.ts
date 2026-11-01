@@ -103,7 +103,7 @@ export async function loadGroupTrainingFacts(
   const today = input.today || todayYmd();
   const sourceKey = groupSourceKey(input.teamId);
   const subjectUserId = input.subjectUserId || null;
-  await supabase.rpc('st_apply_group_due_segments', { p_team_id: input.teamId, p_today: today });
+  void supabase.rpc('st_apply_group_due_segments', { p_team_id: input.teamId, p_today: today });
   const from = mondayOfWeek(today);
   const to = sundayOfWeek(today);
   const weekFrom = from;

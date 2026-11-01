@@ -218,11 +218,16 @@ export function classifyTodayTraining(input: {
   followedProgramName?: string | null;
   schedulePending?: boolean;
   scheduleError?: string | null;
+  scheduleRepairing?: boolean;
+  programReady?: boolean;
 }): TodayTrainingModel {
   if (input.loading) return { state: 'loading' };
   if (input.failed) return { state: 'error' };
   const notice = scheduleNotice(input);
-  const items = (input.plan?.items || []).filter((item) => !item.isRest);
+  const allItems = input.plan?.items || [];
+  const items = allItems.filter((item) => !item.isRest);
+  const restDay = allItems.some((item) => item.isRest);
+  if (!items.length && !restDay && (input.scheduleRepairing || input.programReady === false)) return { state: 'loading' };
   if (items.length) {
     const shown = items.slice(0, TODAY_TRAINING_LIMIT);
     return {

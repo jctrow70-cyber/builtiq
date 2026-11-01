@@ -17,12 +17,16 @@ import {
   type TodayTrainingNotice,
 } from '../../../lib/training/todayTraining';
 import { beginScreenPaint, finishScreenPaint, readScreenCache, subscribeScreenSession, writeScreenCache } from '../../../lib/performance/screenSession';
-import { loadVisibleSchedule, scheduleTeamLabel, type VisibleScheduleSnapshot } from '../../../lib/training/visibleSchedule';
+import { beginBackgroundRefresh, endBackgroundRefresh, noteCalendarUsable } from '../../../lib/performance/screenTiming';
+import { enrollmentSyncSettled } from '../../../lib/training/enrollmentSyncGate';
+import { loadVisibleSchedule, refreshVisibleSchedule, scheduleTeamLabel, type VisibleScheduleSnapshot } from '../../../lib/training/visibleSchedule';
 
 type TodaysTrainingHeroProps = {
   userId: string;
   teams: Array<{ id: string; name?: string | null }>;
   inputsReady: boolean;
+  programReady?: boolean;
+  scheduleRepairGeneration?: number;
   loadError?: string | null;
   program: ProgramDesignRecord | null;
   programName?: string | null;
@@ -60,6 +64,8 @@ export default function TodaysTrainingHero({
   userId,
   teams,
   inputsReady,
+  programReady = true,
+  scheduleRepairGeneration = 0,
   loadError,
   program,
   programName,
@@ -85,6 +91,7 @@ export default function TodaysTrainingHero({
   });
   const [snapshotError, setSnapshotError] = useState<string | null>(null);
   const [snapshotLoading, setSnapshotLoading] = useState(!snapshot);
+  const [repairSettled, setRepairSettled] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [sessionTick, setSessionTick] = useState(0);
   useEffect(() => subscribeScreenSession(() => setSessionTick((value) => value + 1)), []);
@@ -96,37 +103,76 @@ export default function TodaysTrainingHero({
       dateScoped: true,
       staleAreas: ['dashboard', 'schedule', 'program'],
     });
-    if (paint.cached) {
-      setSnapshot(paint.cached);
-      setSnapshotError(paint.cached.error);
-      setSnapshotLoading(false);
-      if (!paint.background) return;
-    } else setSnapshotLoading(true);
-    void loadVisibleSchedule(supabase, {
-      userId,
-      teams,
-      rangeFrom: today,
-      rangeTo: today,
-      today,
-    })
-      .then((next) => {
+    const request = { userId, teams, rangeFrom: today, rangeTo: today, today };
+    async function paintSchedule() {
+      try {
+        if (paint.cached && !paint.cached.keepPrevious) {
+          setSnapshot(paint.cached);
+          setSnapshotError(paint.cached.error);
+          setSnapshotLoading(false);
+          noteCalendarUsable('Dashboard');
+          finishScreenPaint('Dashboard', userId, ['dashboard'], paint.background);
+          return;
+        }
+        setSnapshotLoading(true);
+        const next = await loadVisibleSchedule(supabase, request);
         if (cancelled) return;
-        writeScreenCache(userId, 'dashboard', heroKey, next, today);
-        setSnapshot(next);
+        if (!next.keepPrevious) {
+          writeScreenCache(userId, 'dashboard', heroKey, next, today);
+          setSnapshot(next);
+        }
         setSnapshotError(next.error);
         setSnapshotLoading(false);
-        finishScreenPaint('Dashboard', userId, ['dashboard'], !!paint.cached && paint.background);
-      })
-      .catch((error: { message?: string }) => {
+        noteCalendarUsable('Dashboard');
+        finishScreenPaint('Dashboard', userId, ['dashboard'], false);
+      } catch (error: unknown) {
         if (cancelled) return;
-        setSnapshot(null);
-        setSnapshotError(error?.message || 'Could not load today’s training.');
+        const message = error && typeof error === 'object' && 'message' in error ? String((error as { message?: string }).message || '') : '';
+        setSnapshotError(message || 'Could not load today’s training.');
         setSnapshotLoading(false);
-      });
+      }
+    }
+    void paintSchedule();
     return () => {
       cancelled = true;
     };
-  }, [userId, inputsReady, today, reloadKey, teamsKey, heroKey, sessionTick]);
+  }, [userId, inputsReady, today, teamsKey, heroKey, teams]);
+
+  useEffect(() => {
+    if (!userId || !inputsReady) return;
+    if (!scheduleRepairGeneration && !reloadKey) return;
+    let cancelled = false;
+    const request = { userId, teams, rangeFrom: today, rangeTo: today, today };
+    async function repairSchedule() {
+      await enrollmentSyncSettled();
+      if (cancelled) return;
+      setRepairSettled(false);
+      beginBackgroundRefresh('Dashboard');
+      try {
+        const refreshed = await refreshVisibleSchedule(supabase, request);
+        if (cancelled) return;
+        if (refreshed.keepPrevious) {
+          setSnapshot((current) => current);
+          if (refreshed.error) setSnapshotError(refreshed.error);
+          return;
+        }
+        writeScreenCache(userId, 'dashboard', heroKey, refreshed, today);
+        setSnapshot(refreshed);
+        setSnapshotError(refreshed.error);
+      } catch (error: unknown) {
+        if (cancelled) return;
+        const message = error && typeof error === 'object' && 'message' in error ? String((error as { message?: string }).message || '') : '';
+        setSnapshotError(message || 'Could not load today’s training.');
+      } finally {
+        endBackgroundRefresh('Dashboard');
+        if (!cancelled) setRepairSettled(true);
+      }
+    }
+    void repairSchedule();
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, inputsReady, today, reloadKey, teamsKey, heroKey, sessionTick, teams, scheduleRepairGeneration]);
 
   const dayMoves = moves || workoutDayMovesFromActivities(calendarActivities);
   const logMap = useMemo(
@@ -200,6 +246,8 @@ export default function TodaysTrainingHero({
     followedProgramName: programName,
     schedulePending: !!snapshot?.pending,
     scheduleError: loadError ? null : snapshotError,
+    scheduleRepairing: inputsReady && !repairSettled,
+    programReady,
   });
 
   const following = programName

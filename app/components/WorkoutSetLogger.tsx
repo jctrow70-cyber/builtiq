@@ -27,6 +27,7 @@ import {
 import { createDebouncedFieldQueue } from '../../lib/training/debouncedFieldEdits';
 import type { SetLogSaveResult } from '../../lib/training/setLogIntent';
 import { beginLoggerInteraction, noteLoggerRender, noteLoggerVisual, type LoggerTimingMark } from '../../lib/performance/loggerTiming';
+import { setLogStatusPresentation } from '../../lib/training/setLogStatus';
 
 type SetRow = {
   id: string;
@@ -72,6 +73,7 @@ type Props = {
   onSkipExercise?: () => void;
   exerciseSkipped?: boolean;
   registerFlush?: (flush: () => Promise<void>) => () => void;
+  registerPending?: (read: () => string[]) => () => void;
 };
 
 function fieldSizeClass(field: LogFieldUI) {
@@ -508,6 +510,7 @@ function SetLogCard({
     setSaveError('');
     trackSave(gen, onRetrySet?.(set.id));
   };
+  const status = setLogStatusPresentation(saveState);
 
   return (
     <div className={`set-log-card${completed ? ' set-log-done' : ''}${saveState === 'error' ? ' set-log-error' : ''}`} data-save-state={saveState}>
@@ -578,9 +581,9 @@ function SetLogCard({
       {layout.optional && layout.optional.length > 0 && (
         <div className="log-field-row log-field-row-compact log-field-optional-row">{layout.optional.map(renderField)}</div>
       )}
-      {saveState === 'saving' && <p className="set-log-status set-log-status-saving">Saving…</p>}
-      {saveState === 'error' && (
-        <p className="set-log-status set-log-status-error">
+      {status.politeText ? <span className="visually-hidden" role="status">{status.politeText}</span> : null}
+      {status.showError && (
+        <p className="set-log-status set-log-status-error" role="alert">
           {saveError || 'Could not save this set.'}{' '}
           <button type="button" className="btn small secondary" onClick={retrySave}>Retry</button>
         </p>
@@ -641,6 +644,7 @@ function WorkoutSetLogger({
   onSkipExercise,
   exerciseSkipped = false,
   registerFlush,
+  registerPending,
 }: Props) {
   const layout = useMemo(() => logLayoutForType(exType), [exType]);
   const rampLayout = useMemo(() => ({ ...layout, showRirChips: false as const }), [layout]);
@@ -681,6 +685,7 @@ function WorkoutSetLogger({
 
   useEffect(() => () => { void flushSaves(); }, [flushSaves]);
   useEffect(() => registerFlush?.(flushSaves), [registerFlush, flushSaves]);
+  useEffect(() => registerPending?.(() => fieldEditsRef.current?.pendingKeys() || []), [registerPending]);
 
   const saveExerciseNotes = (value: string) => {
     if (!firstSet) return;
@@ -819,7 +824,7 @@ function loggerPropsEqual(prev: Props, next: Props) {
   if (prev.prevBySetId !== next.prevBySetId) return false;
   if (prev.onSaveField !== next.onSaveField || prev.onEditSet !== next.onEditSet || prev.onRemoveSet !== next.onRemoveSet) return false;
   if (prev.onDuplicateSet !== next.onDuplicateSet || prev.onRetrySet !== next.onRetrySet) return false;
-  if (prev.onDistanceUnitChange !== next.onDistanceUnitChange || prev.registerFlush !== next.registerFlush) return false;
+  if (prev.onDistanceUnitChange !== next.onDistanceUnitChange || prev.registerFlush !== next.registerFlush || prev.registerPending !== next.registerPending) return false;
   if (!sameSetRows(prev.sets, next.sets)) return false;
   if (!sameSetLogs(prev.logs, next.logs, next.sets)) return false;
   const prevExtra = prev.extraSets || [];

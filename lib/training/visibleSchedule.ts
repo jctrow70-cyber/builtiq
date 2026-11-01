@@ -38,6 +38,8 @@ export type VisibleScheduleSnapshot = {
   enrollments: VisibleScheduleEnrollment[];
   programNames: Record<string, string>;
   expectations: VisibleScheduleExpectation[];
+  /** A failed or pending repair must not replace a calendar that already painted. */
+  keepPrevious?: boolean;
 };
 
 const emptySnapshot = (pending: boolean, error: string | null = null): VisibleScheduleSnapshot => ({
@@ -98,16 +100,7 @@ export async function loadVisibleSchedule(
     if (scheduleSetupMissing(enrollmentResult.error.message)) return emptySnapshot(true);
     return emptySnapshot(false, enrollmentResult.error.message);
   }
-  const repair = await repairFollowedTrainingSchedule(supabase, input.today);
-  if (repair.pending) return emptySnapshot(true);
-  const refreshed = repair.error
-    ? enrollmentResult
-    : await supabase
-        .from('st_training_enrollments')
-        .select(enrollmentSelect)
-        .eq('user_id', input.userId)
-        .order('source_kind', { ascending: true });
-  const enrollments = ((refreshed.data || []) as VisibleScheduleEnrollment[]).filter((row) => row.status !== 'ended');
+  const enrollments = ((enrollmentResult.data || []) as VisibleScheduleEnrollment[]).filter((row) => row.status !== 'ended');
   const programIds = enrollments.reduce<string[]>((ids, row) => {
     if (row.program_id && ids.indexOf(row.program_id) === -1) ids.push(row.program_id);
     return ids;
@@ -154,4 +147,39 @@ export async function loadVisibleSchedule(
     sessionStatus: sessionStatusForExpectation(row, sessions),
   }));
   return { pending: false, error, enrollments, programNames, expectations };
+}
+
+/** Keep the painted calendar when repair cannot return a trustworthy replacement. */
+export function scheduleRefreshResult(input: {
+  repairPending: boolean;
+  repairError: string | null;
+  snapshot: VisibleScheduleSnapshot | null;
+}): VisibleScheduleSnapshot {
+  if (input.repairPending || !input.snapshot) {
+    return { ...emptySnapshot(!!input.repairPending, input.repairError), keepPrevious: true };
+  }
+  const snapshot: VisibleScheduleSnapshot = {
+    ...input.snapshot,
+    error: input.snapshot.error || input.repairError,
+  };
+  const empty = snapshot.enrollments.length === 0 && snapshot.expectations.length === 0;
+  if (snapshot.pending || (empty && !!snapshot.error)) return { ...snapshot, keepPrevious: true };
+  return snapshot;
+}
+
+/** Repair followed expectations, then read the calendar again. This stays off the first paint. */
+export async function refreshVisibleSchedule(
+  supabase: SupabaseClient,
+  input: {
+    userId: string;
+    teams: Array<{ id: string; name?: string | null }>;
+    rangeFrom: string;
+    rangeTo: string;
+    today: string;
+  }
+): Promise<VisibleScheduleSnapshot> {
+  const repair = await repairFollowedTrainingSchedule(supabase, input.today);
+  if (repair.pending) return scheduleRefreshResult({ repairPending: true, repairError: repair.error, snapshot: null });
+  const snapshot = await loadVisibleSchedule(supabase, input);
+  return scheduleRefreshResult({ repairPending: false, repairError: repair.error, snapshot });
 }

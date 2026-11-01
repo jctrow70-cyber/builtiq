@@ -220,7 +220,9 @@ Goal: Prepare BuildIQ Health for iOS and Android users.
 
 **BIQ-0290** stops Finish Workout from storing a session while a required set write is still pending or failed, and keeps logger timing samples separated by kind (Decision 146). Accepted locally at `5888fc7`. Not pushed.
 
-**BIQ-0291** flushes debounced weight, reps, and notes before Finish checks required sets, and keeps a rapid second tap from writing the session twice (Decision 147). Committed locally and not pushed.
+**BIQ-0291** flushes debounced weight, reps, and notes before Finish checks required sets, and keeps a rapid second tap from writing the session twice (Decision 147). Committed locally at `15e1cbd`. Not pushed.
+
+**BIQ-0292** paints the Training calendar and Dashboard hero before schedule repair and the program tree, and refuses Start or View when that expectation changed (Decision 148). **BIQ-0293** removes the Saving… card jump, makes add and remove immediate, and hardens repair ordering, open-workout protection, rest days, and failed refreshes (Decision 149). Both are committed locally. Not pushed. Signed-in browser timings are still outstanding.
 
 **BIQ-0285** (Phase A navigation) skips the program-tree reload on Nutrition, Progress, Settings, and AI Coach, and keeps a single current program request for Training, Dashboard, Programs, and Groups (Decision 141). Committed locally and not pushed.
 
