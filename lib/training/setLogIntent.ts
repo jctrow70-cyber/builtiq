@@ -167,3 +167,25 @@ export async function drainSetLogIntent(
     ledger.draining = false;
   }
 }
+
+export type UnsavedSetLogGate = {
+  blocked: boolean;
+  pending: string[];
+  failed: string[];
+};
+
+/** Required planned sets whose latest edit is not confirmed. Finish checks this after queued writes settle. */
+export function unsavedSetLogGate(
+  ledgers: Map<string, SetLogIntentLedger>,
+  requiredSetIds: ReadonlySet<string>
+): UnsavedSetLogGate {
+  const pending: string[] = [];
+  const failed: string[] = [];
+  ledgers.forEach((ledger, setId) => {
+    if (!requiredSetIds.has(setId)) return;
+    if (!Object.keys(ledger.overlay).length || ledger.version === ledger.confirmedVersion) return;
+    if (ledger.paused) failed.push(setId);
+    else pending.push(setId);
+  });
+  return { blocked: pending.length + failed.length > 0, pending, failed };
+}

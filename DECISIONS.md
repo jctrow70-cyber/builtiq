@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 146 - Finish waits until required set writes are confirmed
+
+Date: 2026-11-01
+Status: Accepted
+Category: Performance
+
+### Decision
+
+BIQ-0290 checks required planned sets after the set-write queue settles. If any of those sets still has an unconfirmed edit, Finish Workout does not write a completed, partial, or skipped session. The entered value stays on the set. Retry sends that same overlay again. Logger timing keeps a separate sample list for RIR, Done, other fields, saves, and renders.
+
+### Reason
+
+The queue promise resolved when a write failed, and Finish treated that as an empty queue. The session could be stored as completed while the set row was not. A single timing list also let render samples replace the click and save samples used for p50 and p95.
+
+### Alternatives Considered
+
+Leave Finish as it was and only document the gap. Block every feedback edit with an alert. Both either lose the set or interrupt notes while a save is still open. Local feedback text is kept; the session row is not written until the required sets are confirmed.
+
+### Impact
+
+No database change. Automatic session completion still runs only after a successful set write, and only when every required set is already stored as done. Phase D stays unstarted.
+
+---
+
 ## Decision 145 - Workout logging paints before the set is saved
 
 Date: 2026-11-01
@@ -4084,5 +4108,3 @@ The +15 minute allowance let a 60-minute request pass at 75 minutes. Vertical pr
 - Phase 2 remains unstarted
 
 ---
-
-

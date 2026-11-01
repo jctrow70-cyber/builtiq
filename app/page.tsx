@@ -13,7 +13,7 @@ import ExerciseSessionHistoryModal from './components/training/ExerciseSessionHi
 import SectionHeader from './components/ui/SectionHeader';
 import { DEFAULT_THEME_ID } from '../lib/theme/themes';
 import { supabase, friendlyAuthError, friendlyWriteError, getSupabaseConfigError, retryTransientSupabaseWrite } from '../lib/supabaseClient';
-import { drainSetLogIntent, SET_LOG_WRITE_COALESCE_MS, SetLogIntentLedger, type SetLogSaveResult } from '../lib/training/setLogIntent';
+import { drainSetLogIntent, SET_LOG_WRITE_COALESCE_MS, SetLogIntentLedger, unsavedSetLogGate, type SetLogSaveResult } from '../lib/training/setLogIntent';
 import { noteLoggerSave } from '../lib/performance/loggerTiming';
 import { buildExerciseSessionHistory } from '../lib/training/exerciseSessionHistory';
 import { EXERCISE_TYPES, exerciseTypeOf, inferExerciseType, assignmentTypeLabel, isCardioType, isMobilityStretchExercise } from '../lib/training/exerciseTypes';
@@ -97,6 +97,7 @@ import {
 import {
   decorateDayPlanCompletion,
   exerciseCountsTowardWorkoutCompletion,
+  plannedSetIdsForWorkout,
   isProgramItemCompletedOnDate,
   itemAllowsCheckoff,
   mergeTrainingCompletedDates,
@@ -2662,6 +2663,19 @@ export default function Page(){
   const skipReason=extras?.skipReason??sessionSkipReason;
   const pendingLogs=Object.values(upsertQueueRef.current);
   if(pendingLogs.length)await Promise.all(pendingLogs.map((p)=>p.catch(()=>{})));
+  const setLogGate=unsavedSetLogGate(setLogLedgersRef.current, new Set(plannedSetIdsForWorkout(workout,{loggableOnly:true})));
+  if(setLogGate.blocked){
+    if(extras?.feel!==undefined)setSessionFeel(extras.feel);
+    if(extras?.pain!==undefined)setSessionPain(extras.pain);
+    if(extras?.notes!==undefined)setSessionNotes(extras.notes);
+    if(extras?.skipReason!==undefined)setSessionSkipReason(extras.skipReason);
+    if(!extras){
+      alert(setLogGate.failed.length
+        ? 'A required set did not save. Retry it before finishing this workout. The entered values stay on the set.'
+        : 'A required set is still saving. Wait until it finishes, then finish the workout.');
+    }
+    return;
+  }
   setSessionOutcome(next);
   if(extras?.feel!==undefined)setSessionFeel(extras.feel);
   if(extras?.pain!==undefined)setSessionPain(extras.pain);

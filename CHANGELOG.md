@@ -11,6 +11,37 @@ Branch:
 Status:
 ```
 
+## BIQ-0290 - Stop finish while a required set is unsaved
+
+Date: 2026-11-01
+Branch: main
+Status: Committed locally. Not pushed. No database change.
+
+Summary: Finish Workout waits for queued set saves, then does not mark the session completed, partial, or skipped while a required set still has an unconfirmed edit. A failed save stays on the set and can be retried. Click-to-visual, save, and render timings are stored separately so one kind cannot drop the others.
+
+Purpose: A failed set write ended the queue without an error, so Finish could store a completed session while that set was still unsaved. Render samples in the same list could also push RIR and save measurements out of the summary.
+
+Files changed:
+- app/page.tsx
+- lib/training/setLogIntent.ts
+- lib/performance/loggerTiming.ts
+- scripts/test-logger-performance.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- Run `scripts/test-logger-performance.ts` and confirm the latest Done value is the one written, a failed required set blocks the finish gate until retry, follow-up runs after the set promise resolves, and 40 history matches share one catalog index.
+- Run `scripts/test-finish-workout.ts`, `scripts/test-set-log-network-retry.ts`, and `npx tsc --noEmit`.
+- On a signed-in workout, fail a set save if you can, choose Completed, and confirm the session stays unfinished and the set still shows Retry.
+- After several RIR and Done taps, read `window.__biqLoggerTiming.summary()` in the browser console.
+
+Known issues: Signed-in browser p50 and p95 were not collected in this pass. Weight and reps still wait about 700 ms before they join the set-write queue. Phase D is not started.
+
+Recommended commit message: BIQ-0290 Stop finish while a required set is unsaved.
+
 ## BIQ-0289 - Make workout logging respond immediately
 
 Date: 2026-11-01
