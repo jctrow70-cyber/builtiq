@@ -9,11 +9,10 @@ import {
 } from '../../../lib/nutrition/dashboardNutrition';
 import { macroRingArc, macroRingStatus } from '../../../lib/nutrition/macroRing';
 import { beginScreenPaint, finishScreenPaint, readScreenCache, subscribeScreenSession, writeScreenCache } from '../../../lib/performance/screenSession';
-import { formatDisplayDate, todayYmd } from '../../../lib/training/programCalendar';
+import { todayYmd } from '../../../lib/training/programCalendar';
 
 type NutritionDashboardCardProps = {
   userId: string;
-  onLogMeal: () => void;
   onViewLog: () => void;
   onSetGoals: () => void;
 };
@@ -26,7 +25,7 @@ type CardState =
 const RING_SIZE = 72;
 const RING_STROKE = 8;
 
-export default function NutritionDashboardCard({ userId, onLogMeal, onViewLog, onSetGoals }: NutritionDashboardCardProps) {
+export default function NutritionDashboardCard({ userId, onViewLog, onSetGoals }: NutritionDashboardCardProps) {
   const today = todayYmd();
   const [reloadKey, setReloadKey] = useState(0);
   const [sessionTick, setSessionTick] = useState(0);
@@ -70,7 +69,6 @@ export default function NutritionDashboardCard({ userId, onLogMeal, onViewLog, o
     <section className="dash-card nutrition-dash" data-nutrition-state={state.status} aria-labelledby="nutrition-dash-title">
       <div className="dash-card-head">
         <h2 id="nutrition-dash-title">Nutrition</h2>
-        <span className="badge">{formatDisplayDate(today)}</span>
       </div>
       {state.status === 'loading' && <p className="muted">Loading today’s nutrition.</p>}
       {state.status === 'error' && (
@@ -82,7 +80,7 @@ export default function NutritionDashboardCard({ userId, onLogMeal, onViewLog, o
         </div>
       )}
       {state.status === 'ready' && (
-        <NutritionDashboardBody model={state.model} onLogMeal={onLogMeal} onViewLog={onViewLog} onSetGoals={onSetGoals} />
+        <NutritionDashboardBody model={state.model} onViewLog={onViewLog} onSetGoals={onSetGoals} />
       )}
     </section>
   );
@@ -90,12 +88,10 @@ export default function NutritionDashboardCard({ userId, onLogMeal, onViewLog, o
 
 function NutritionDashboardBody({
   model,
-  onLogMeal,
   onViewLog,
   onSetGoals,
 }: {
   model: DashboardNutritionModel;
-  onLogMeal: () => void;
   onViewLog: () => void;
   onSetGoals: () => void;
 }) {
@@ -135,9 +131,6 @@ function NutritionDashboardBody({
         ))}
       </div>
       <div className="nutrition-dash-actions">
-        <button type="button" className="btn green" onClick={onLogMeal}>
-          Log meal
-        </button>
         <button type="button" className="btn secondary" onClick={onViewLog}>
           View log
         </button>

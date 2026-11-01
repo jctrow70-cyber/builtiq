@@ -210,6 +210,8 @@ Goal: Prepare BuildIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
+**BIQ-0294** polishes the Dashboard around the existing training, week, nutrition, and progress cards (Decision 150). The greeting is short, quick actions sit under Today's Training, and Nutrition sits beside Your Progress on a wide screen. The static AI card and the Dashboard group-statistics card are removed. A saved body check-in refreshes the progress card. Committed locally and not pushed. Signed-in visual QA is still outstanding.
+
 **BIQ-0286** (Phase B screen cache) keeps Nutrition, Training, Progress, Dashboard, and Groups results in memory for the signed-in user and paints them before a background refresh (Decision 142). Unsaved meals and an open workout are kept. The cache is cleared on sign-out and account switch. Committed locally and not pushed.
 
 **BIQ-0287** (Phase C code splitting) loads Nutrition, Training, Progress, Groups, and Program Design on demand, remembers the loaded component so a return visit does not show a loading placeholder, and preloads only Nutrition and Training after Dashboard is usable (Decision 143). The barcode scanner, fallback exercise catalog, and workout adaptation stay out of the first client bundle. Accepted as a local checkpoint at `ec9881c`. Not pushed. Warm navigation under 500 ms still needs a signed-in browser check.

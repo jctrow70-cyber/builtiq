@@ -15,7 +15,6 @@ type ProgressDashboardCardProps = {
   onViewProgress: () => void;
   onOpenStrength: () => void;
   onOpenBody: () => void;
-  onAddCheckIn: () => void;
 };
 
 type CardState =
@@ -30,7 +29,6 @@ export default function ProgressDashboardCard({
   onViewProgress,
   onOpenStrength,
   onOpenBody,
-  onAddCheckIn,
 }: ProgressDashboardCardProps) {
   const units: UnitsPreference = unitsPreference === 'metric' ? 'metric' : 'imperial';
   const today = todayYmd();
@@ -87,13 +85,7 @@ export default function ProgressDashboardCard({
         </div>
       )}
       {state.status === 'ready' && (
-        <ProgressDashboardBody
-          model={state.model}
-          onViewProgress={onViewProgress}
-          onOpenStrength={onOpenStrength}
-          onOpenBody={onOpenBody}
-          onAddCheckIn={onAddCheckIn}
-        />
+        <ProgressDashboardBody model={state.model} onOpenStrength={onOpenStrength} onOpenBody={onOpenBody} />
       )}
     </section>
   );
@@ -101,23 +93,17 @@ export default function ProgressDashboardCard({
 
 function ProgressDashboardBody({
   model,
-  onViewProgress,
   onOpenStrength,
   onOpenBody,
-  onAddCheckIn,
 }: {
   model: DashboardProgressModel;
-  onViewProgress: () => void;
   onOpenStrength: () => void;
   onOpenBody: () => void;
-  onAddCheckIn: () => void;
 }) {
   if (model.empty) {
     return (
       <div className="progress-dash-empty">
         <p className="muted">{model.emptyCopy}</p>
-        <button type="button" className="btn secondary" onClick={onViewProgress}>View Progress</button>
-        <button type="button" className="btn green" onClick={onAddCheckIn}>Add check-in</button>
       </div>
     );
   }
@@ -156,10 +142,6 @@ function ProgressDashboardBody({
           ))}
         </div>
       )}
-      <div className="progress-dash-actions">
-        <button type="button" className="btn secondary" onClick={onViewProgress}>View Progress</button>
-        <button type="button" className="btn green" onClick={onAddCheckIn}>Add check-in</button>
-      </div>
     </>
   );
 }

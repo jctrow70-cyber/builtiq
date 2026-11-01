@@ -8,10 +8,10 @@ import {
 } from '../training/unifiedSchedule';
 
 export const WEEK_ADHERENCE_SCOPE_NOTE =
-  'Assigned training obligations, including hidden sources and separate personal and group assignments. Not only the workouts visible on the calendar.';
+  'Counts are assigned obligations, including hidden sources and separate personal and group assignments.';
 
 export const WEEK_ADHERENCE_DAY_NOTE =
-  'Day counts follow assigned dates. They are not a complete list of visible calendar activities. Upcoming days are not misses.';
+  'Day counts follow assigned dates and are not a complete list of calendar workouts. Upcoming days are not misses.';
 
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] as const;
 const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const;

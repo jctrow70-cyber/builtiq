@@ -105,8 +105,6 @@ function WeekAdherenceBody({
         : null;
   return (
     <>
-      <p className="muted week-adherence-note">{WEEK_ADHERENCE_SCOPE_NOTE}</p>
-      {emptyCopy && <p className="week-adherence-empty-copy">{emptyCopy}</p>}
       <div className="week-adherence-layout">
         <div>
           <div className="week-adherence-primary">
@@ -119,18 +117,21 @@ function WeekAdherenceBody({
               <span className="muted">Completed</span>
             </div>
           </div>
-          <div className="week-adherence-secondary">
-            {SECONDARY.map(([label, key]) => (
+          {emptyCopy && <p className="week-adherence-empty-copy">{emptyCopy}</p>}
+          <p className="week-adherence-secondary">
+            {SECONDARY.map(([label, key], index) => (
               <span key={key}>
+                {index > 0 ? <span className="week-adherence-dot" aria-hidden="true"> · </span> : null}
                 <b>{summary[key]}</b> {label}
               </span>
             ))}
-          </div>
+          </p>
           {rate && (
             <p className="week-adherence-rate">
               <span className="muted">Past-day adherence</span> {rate}
             </p>
           )}
+          <p className="muted week-adherence-note">{WEEK_ADHERENCE_SCOPE_NOTE}</p>
         </div>
         <div className="week-adherence-days" role="group" aria-label="Assigned obligations by day">
           {summary.days.map((day) => (
@@ -151,7 +152,6 @@ function WeekAdherenceBody({
           ))}
         </div>
       </div>
-      <p className="muted week-adherence-note">{WEEK_ADHERENCE_DAY_NOTE}</p>
     </>
   );
 }

@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 150 - The dashboard leads with today, then one set of actions
+
+Date: 2026-11-01
+Status: Accepted locally
+Category: Product
+
+### Decision
+
+BIQ-0294 keeps the existing Today's Training, weekly adherence, nutrition, and progress cards and puts them in that order under a short greeting. One quick-action row opens Log meal, Add check-in, View Progress, and, when the user has a team, Groups. Those three personal actions are removed from the nutrition and progress cards. View log, Set goals, and the progress title, strength, body, and achievement controls stay. The static AI preview and the Dashboard roster-statistics card are removed. Groups itself is unchanged. This Week still uses `adherenceCounts`. Scheduled and Completed stay primary, the other statuses stay on one line, and one sentence replaces the two longer notes. Today's date is shown once, as a display date on Today's Training. Saving a body measurement marks the signed-in user's dashboard cache stale. Opening the Dashboard no longer loads group members just to fill a home card.
+
+### Reason
+
+The home screen was asking people to read a roster card, a long week explanation, and a coaching quote before the next action was obvious. The same Log meal, Add check-in, and View Progress buttons were also repeated lower on the page. A fresh dashboard cache was keeping a new check-in off Your Progress.
+
+### Alternatives Considered
+
+Leave the AI card as a labeled preview. Keep group roster totals on the Dashboard. Add a second workout button beside Start. Each of those repeats something the screen or Groups already does.
+
+### Impact
+
+No database change. Training, nutrition, adherence, and Progress calculations stay as they are. The 800-row training log read stays for a later follow-up. Signed-in visual QA is still outstanding.
+
+---
+
 ## Decision 149 - Set saves and exercise edits update the card first
 
 Date: 2026-11-01

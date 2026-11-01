@@ -1580,17 +1580,17 @@ label{color:var(--textSecondary)}
   .today-training-item{padding:14px 16px}
 }
 .week-adherence{min-height:0;grid-column:1 / -1}
-.week-adherence-note{margin:0 0 8px;font-size:13px;line-height:1.4}
+.week-adherence-note{margin:8px 0 0;font-size:13px;line-height:1.4}
 .week-adherence-empty{display:grid;gap:10px;align-content:start}
 .week-adherence-empty .btn{min-height:44px}
-.week-adherence-empty-copy{margin:0 0 8px;font-weight:700}
+.week-adherence-empty-copy{margin:8px 0 0;font-weight:700}
 .week-adherence-primary{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .week-adherence-primary b{display:block;font-size:28px;font-weight:900;line-height:1.1}
-.week-adherence-secondary{display:flex;flex-wrap:wrap;gap:8px 12px;margin-top:10px;font-size:13px}
-.week-adherence-secondary b{font-size:15px}
+.week-adherence-secondary{display:flex;flex-wrap:wrap;align-items:baseline;margin:8px 0 0;font-size:13px;line-height:1.45}
+.week-adherence-secondary b{font-size:13px}
 .week-adherence-rate{margin:10px 0 0;font-size:13px}
 .week-adherence-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-top:12px}
-.week-adherence-day{min-height:44px;padding:4px 0;border-radius:10px;border:1px solid var(--borderSubtle);background:var(--surfaceInset);color:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.week-adherence-day{min-height:44px;min-width:0;padding:4px 0;border-radius:10px;border:1px solid var(--borderSubtle);background:var(--surfaceInset);color:inherit;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;overflow:hidden}
 .week-adherence-day-letter{font-size:11px;font-weight:700}
 .week-adherence-day-count{font-size:14px;font-weight:800}
 .week-adherence-day[data-when="today"]{border-color:var(--accent);background:var(--accentSoft)}
@@ -1620,11 +1620,10 @@ label{color:var(--textSecondary)}
 .nutrition-dash-actions,.nutrition-dash-empty{display:grid;gap:8px;margin-top:12px}
 .nutrition-dash-actions .btn,.nutrition-dash-empty .btn{min-height:44px;width:100%}
 @media(min-width:768px){
-  .nutrition-dash-actions{grid-template-columns:1fr 1fr}
-  .nutrition-dash-goals{grid-column:1 / -1}
+  .nutrition-dash-actions{grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
 }
 .progress-dash{min-height:0}
-.progress-dash-title{margin:0;padding:0;border:0;background:none;color:inherit;font:inherit;font-weight:inherit;text-align:left;cursor:pointer}
+.progress-dash-title{margin:0;padding:0;border:0;background:none;color:inherit;font:inherit;font-weight:inherit;text-align:left;cursor:pointer;min-height:44px;display:inline-flex;align-items:center}
 .progress-dash-strength,.progress-dash-achievement{display:grid;gap:2px;width:100%;margin:0;padding:0;border:0;background:none;color:inherit;text-align:left;cursor:pointer;min-height:44px}
 .progress-dash-strength{margin-top:4px}
 .progress-dash-strength b{font-size:32px;font-weight:900;line-height:1}
@@ -1633,8 +1632,15 @@ label{color:var(--textSecondary)}
 .progress-dash-metric b,.progress-dash-achievement b{font-size:18px}
 .progress-dash-change{font-size:13px;font-weight:700}
 .progress-dash-note{margin-top:8px}
-.progress-dash-actions,.progress-dash-empty{display:grid;gap:8px;margin-top:12px}
-.progress-dash-actions .btn,.progress-dash-empty .btn{min-height:44px;width:100%}
+.progress-dash-empty{margin-top:4px}
 @media(min-width:768px){
-  .progress-dash-metrics,.progress-dash-actions{grid-template-columns:1fr 1fr}
+  .progress-dash-metrics{grid-template-columns:1fr 1fr}
+}
+.dash-hero h1{margin:0;font-size:26px;line-height:1.15;letter-spacing:-0.02em}
+.dash-quick{grid-column:1 / -1;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.dash-quick-btn{min-height:44px;display:flex;align-items:center;justify-content:center;gap:8px;padding:8px 10px;border-radius:12px;border:1px solid var(--borderSubtle);background:var(--surfaceInset);color:var(--textSecondary);font-size:13px;font-weight:800;line-height:1.2}
+.dash-quick-btn svg{flex:0 0 auto}
+@media(max-width:600px){.dash-hero h1{font-size:22px}}
+@media(min-width:768px){
+  .dash-quick{grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);grid-template-columns:none}
 }

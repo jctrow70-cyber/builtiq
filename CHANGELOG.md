@@ -11,6 +11,51 @@ Branch:
 Status:
 ```
 
+## BIQ-0294 - Polish the dashboard home
+
+Date: 2026-11-01
+Branch: main
+Status: Implemented. Local commit. Not pushed. No database change.
+
+Summary: The Dashboard now leads with a short greeting, Today's Training, a compact quick-action row, This Week, then Nutrition beside Your Progress. The static AI Coach Insight card and the Dashboard group-statistics card are gone. Log meal, Add check-in, and View Progress live once in the action row. View group appears there only when the user has a team. This Week keeps the same counts and day navigation, with Scheduled and Completed first and one short sentence in place of the two explanatory paragraphs. Today's Training shows a display date. A saved body check-in marks the dashboard cache stale so Your Progress reloads.
+
+Purpose: The home screen should show today's workout and the next action without a fake coaching quote, a roster statistics card, or the same buttons repeated on the cards below.
+
+Files changed:
+- app/page.tsx
+- app/globals.css
+- app/components/dashboard/DashboardQuickActions.tsx
+- app/components/dashboard/TodaysTrainingHero.tsx
+- app/components/dashboard/WeeklyAdherenceCard.tsx
+- app/components/dashboard/NutritionDashboardCard.tsx
+- app/components/dashboard/ProgressDashboardCard.tsx
+- lib/progress/weekAdherence.ts
+- scripts/test-dashboard-experience.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- Run `scripts/test-dashboard-experience.ts`, `scripts/test-today-training.ts`, `scripts/test-week-adherence.ts`, `scripts/test-nutrition-dashboard.ts`, `scripts/test-dashboard-progress.ts`, and `npx tsc --noEmit`.
+- At 390px, confirm two quick actions per row, 44px targets, and no sideways scroll. At 768px and 1440px, confirm the actions sit in one row, Today's Training and This Week span the width, and Nutrition sits beside Your Progress only at desktop width.
+- With a team, View group opens Groups. Without a team, that action is absent. Start and Continue stay on Today's Training.
+- Log meal opens Add Food once. Add check-in opens the existing Progress Body form once. View Progress opens Progress. View log and Set goals stay on the nutrition card.
+- Save a body check-in, return to the Dashboard, and confirm Your Progress shows the new measurement.
+- Confirm Groups still shows roster activity and that loading, empty, and error states on each card stay distinct.
+
+Known issues:
+- Signed-in visual QA is unverified in this change.
+- `loadProgressLogs` still reads up to 800 set-log rows for Training completion.
+- Personal workout-day moves still leave the expectation date unchanged.
+- A template expectation and its private copy can both count.
+- The Nutrition screen still fills missing or zero goals through `goalsFromRow`. The dashboard card does not.
+- Progress Overview can still describe one body sample as unchanged, and Progress Body uses a different unchanged threshold.
+- `BodyDashboardCard.tsx` remains unused.
+
+Recommended commit message: BIQ-0294 Polish the dashboard layout and quick actions
+
 ## BIQ-0293 - Keep set saves and exercise edits on the card
 
 Date: 2026-11-01

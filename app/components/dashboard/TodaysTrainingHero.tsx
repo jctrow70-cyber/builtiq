@@ -6,7 +6,7 @@ import { logMapForDate } from '../../../lib/programDesign/activityCompletion';
 import type { ProgramActivity, ProgramDesignRecord } from '../../../lib/programDesign/types';
 import type { UserCalendarActivity } from '../../../lib/programDesign/userCalendar';
 import { workoutDayMovesFromActivities, type WorkoutDayMoves } from '../../../lib/programDesign/workoutDayMoves';
-import { todayYmd } from '../../../lib/training/programCalendar';
+import { formatDisplayDate, todayYmd } from '../../../lib/training/programCalendar';
 import { resolveFollowedAssignmentSource } from '../../../lib/training/trainingSource';
 import { trainingStatusClass } from '../../../lib/training/trainingDayCard';
 import {
@@ -258,7 +258,7 @@ export default function TodaysTrainingHero({
     <section className="dash-card dash-featured today-training" aria-labelledby="today-training-heading" data-today-state={model.state}>
       <div className="dash-card-head">
         <h2 id="today-training-heading">Today&apos;s training</h2>
-        <span className="badge">{today}</span>
+        <span className="badge">{formatDisplayDate(today)}</span>
       </div>
       {following && model.state !== 'loading' && model.state !== 'error' ? <p className="muted today-training-following">{following}</p> : null}
       {model.state !== 'loading' && model.state !== 'error' ? (
