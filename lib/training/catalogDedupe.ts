@@ -4,23 +4,27 @@ export type CatalogAliasIndex = {
   canonicalByKey: Map<string, any>;
   idsByKey: Map<string, string[]>;
   keyById: Map<string, string>;
+  /** Every catalog id, including archived rows. Distinguishes an id from a name key. */
+  ids: Set<string>;
 };
 
 export function buildCatalogAliasIndex(items: any[]): CatalogAliasIndex {
   const canonicalByKey = new Map<string, any>();
   const idsByKey = new Map<string, string[]>();
   const keyById = new Map<string, string>();
+  const ids = new Set<string>();
 
   for (const item of items || []) {
+    const id = String(item?.id || '');
+    if (id) ids.add(id);
     if (item?.is_archived) continue;
     const key = normalizeCatalogNameKey(item?.name);
     if (!key) continue;
-    const id = String(item.id || '');
     if (id) {
       keyById.set(id, key);
-      const ids = idsByKey.get(key) || [];
-      if (!ids.includes(id)) ids.push(id);
-      idsByKey.set(key, ids);
+      const grouped = idsByKey.get(key) || [];
+      if (!grouped.includes(id)) grouped.push(id);
+      idsByKey.set(key, grouped);
     }
     const existing = canonicalByKey.get(key);
     if (!existing || catalogItemPreferenceScore(item) > catalogItemPreferenceScore(existing)) {
@@ -28,7 +32,30 @@ export function buildCatalogAliasIndex(items: any[]): CatalogAliasIndex {
     }
   }
 
-  return { canonicalByKey, idsByKey, keyById };
+  return { canonicalByKey, idsByKey, keyById, ids };
+}
+
+let aliasIndexCache = new WeakMap<object, CatalogAliasIndex>();
+let aliasIndexBuilds = 0;
+
+/** One index per catalog array. Logging must not rebuild it for every history row. */
+export function sharedCatalogAliasIndex(items: any[] | null | undefined): CatalogAliasIndex {
+  const list = items || [];
+  const cached = aliasIndexCache.get(list);
+  if (cached) return cached;
+  aliasIndexBuilds += 1;
+  const built = buildCatalogAliasIndex(list);
+  aliasIndexCache.set(list, built);
+  return built;
+}
+
+export function sharedCatalogAliasIndexBuilds() {
+  return aliasIndexBuilds;
+}
+
+export function resetSharedCatalogAliasIndexCache() {
+  aliasIndexCache = new WeakMap();
+  aliasIndexBuilds = 0;
 }
 
 /** History lookup keys — merges all catalog ids that share the same exercise name. */
@@ -37,7 +64,7 @@ export function catalogHistoryAliasKeys(
   catalogId?: string | null,
   name?: string | null
 ): string[] {
-  const index = buildCatalogAliasIndex(catalog);
+  const index = sharedCatalogAliasIndex(catalog);
   const aliases = new Set<string>();
   const id = String(catalogId || '').trim();
   const nm = String(name || '').trim();
@@ -59,7 +86,7 @@ export function catalogHistoryAliasKeys(
 export function pickCanonicalCatalogItem(catalog: any[], name: string): any | null {
   const key = normalizeCatalogNameKey(name);
   if (!key) return null;
-  return buildCatalogAliasIndex(catalog).canonicalByKey.get(key) || null;
+  return sharedCatalogAliasIndex(catalog).canonicalByKey.get(key) || null;
 }
 
 export type CatalogDuplicateGroup = {

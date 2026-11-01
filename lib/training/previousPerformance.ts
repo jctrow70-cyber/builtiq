@@ -9,7 +9,7 @@
 
 import { parseProvenance, type SnapshotProvenance } from '../progress/provenance';
 import { seriesIdentityFromParts, UNSPECIFIED_EQUIPMENT } from '../progress/identity';
-import { catalogHistoryAliasKeys } from './catalogDedupe';
+import { catalogHistoryAliasKeys, sharedCatalogAliasIndex } from './catalogDedupe';
 import { isExtraSetLog } from './plannedSetGuard';
 
 export type PreviousPerformanceKind = 'exact' | 'unknown_equipment' | 'different_equipment' | 'none';
@@ -119,6 +119,7 @@ export function classifyPreviousPerformance(input: ClassifyPreviousPerformanceIn
   const currentNumber = Number(input.setNumber ?? 1) || 1;
   const currentEquip = seriesIdentityFromParts({ equipment: input.equipment });
   const currentKeys = identityKeys(catalog, input.catalogExerciseId, input.exerciseName);
+  const currentIds = catalogIdsFor(catalog, input.catalogExerciseId, input.exerciseName);
   const userId = String(input.userId || '').trim();
 
   const exact: PreviousPerformanceHit[] = [];
@@ -132,7 +133,7 @@ export function classifyPreviousPerformance(input: ClassifyPreviousPerformanceIn
     if (!previousPerformanceHasValues(row)) return;
     const date = ymd(row.log_date);
     if (!date || date >= sessionDate) return;
-    const identityMatch = exerciseIdentityMatch(currentKeys, catalog, input.catalogExerciseId, input.exerciseName, row);
+    const identityMatch = exerciseIdentityMatch(currentKeys, currentIds, catalog, row);
     if (!identityMatch) return;
     if (normalizeLoggedSetType(rowSetType(row)) !== currentType) return;
     if ((Number(rowSetNumber(row)) || 1) !== currentNumber) return;
@@ -203,7 +204,7 @@ function catalogIdsFor(catalog: any[], catalogId?: string | null, name?: string 
   const ids = new Set<string>();
   const direct = String(catalogId || '').trim();
   if (direct) ids.add(direct);
-  const known = new Set((catalog || []).map((item) => String(item?.id || '').trim()).filter(Boolean));
+  const known = sharedCatalogAliasIndex(catalog).ids;
   catalogHistoryAliasKeys(catalog, catalogId, name).forEach((key) => {
     if (known.has(key) || key === direct) ids.add(key);
   });
@@ -212,9 +213,8 @@ function catalogIdsFor(catalog: any[], catalogId?: string | null, name?: string 
 
 function exerciseIdentityMatch(
   currentKeys: Set<string>,
+  currentIds: Set<string>,
   catalog: any[],
-  catalogId: string | null | undefined,
-  exerciseName: string | null | undefined,
   row: PreviousPerformanceLog,
 ): PreviousPerformanceIdentityMatch | null {
   if (!currentKeys.size) return null;
@@ -222,7 +222,6 @@ function exerciseIdentityMatch(
   const rowName = rowExerciseName(row);
   const rowKeys = identityKeys(catalog, rowId, rowName);
   if (!Array.from(rowKeys).some((key) => currentKeys.has(key))) return null;
-  const currentIds = catalogIdsFor(catalog, catalogId, exerciseName);
   const rowIds = catalogIdsFor(catalog, rowId, rowName);
   if (Array.from(currentIds).some((id) => rowIds.has(id))) return 'catalog';
   return 'name';

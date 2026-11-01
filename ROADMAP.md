@@ -214,6 +214,8 @@ Goal: Prepare BuildIQ Health for iOS and Android users.
 
 **BIQ-0287** (Phase C code splitting) loads Nutrition, Training, Progress, Groups, and Program Design on demand, remembers the loaded component so a return visit does not show a loading placeholder, and preloads only Nutrition and Training after Dashboard is usable (Decision 143). The barcode scanner, fallback exercise catalog, and workout adaptation stay out of the first client bundle. Do not start Phase D until Phase C is reviewed. Warm navigation under 500 ms still needs a signed-in browser check.
 
+**BIQ-0289** makes RIR and Done update before the set is saved, keeps the latest edit when taps arrive close together, and stops the logger from rebuilding the catalog index and the calendar on every field change (Decision 145). Implemented locally and not pushed. Phase D stays paused until this logger change is reviewed.
+
 **BIQ-0285** (Phase A navigation) skips the program-tree reload on Nutrition, Progress, Settings, and AI Coach, and keeps a single current program request for Training, Dashboard, Programs, and Groups (Decision 141). Committed locally and not pushed.
 
 **BIQ-0284 DSH-E** (your progress dashboard) is committed locally and not pushed (Decision 140). The dashboard Your Progress card uses the last 4 weeks of Progress strength and body calculations. The inline body check-in form is gone. Add check-in opens the existing Progress Body measurement form once.

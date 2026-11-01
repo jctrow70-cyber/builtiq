@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { BugReportsAdmin } from './components/BugReportsAdmin';
 import AppHeader from './components/layout/AppHeader';
 import NotificationPreferences from './components/notifications/NotificationPreferences';
@@ -13,6 +13,8 @@ import ExerciseSessionHistoryModal from './components/training/ExerciseSessionHi
 import SectionHeader from './components/ui/SectionHeader';
 import { DEFAULT_THEME_ID } from '../lib/theme/themes';
 import { supabase, friendlyAuthError, friendlyWriteError, getSupabaseConfigError, retryTransientSupabaseWrite } from '../lib/supabaseClient';
+import { drainSetLogIntent, SET_LOG_WRITE_COALESCE_MS, SetLogIntentLedger, type SetLogSaveResult } from '../lib/training/setLogIntent';
+import { noteLoggerSave } from '../lib/performance/loggerTiming';
 import { buildExerciseSessionHistory } from '../lib/training/exerciseSessionHistory';
 import { EXERCISE_TYPES, exerciseTypeOf, inferExerciseType, assignmentTypeLabel, isCardioType, isMobilityStretchExercise } from '../lib/training/exerciseTypes';
 import { detectSetPersonalRecord } from '../lib/training/progressAnalytics';
@@ -339,6 +341,14 @@ export default function Page(){
  const namePickRef=useRef(false);
  const logsRef=useRef<any>({});
  const upsertQueueRef=useRef<Record<string,Promise<any>>>({});
+ const setLogLedgersRef=useRef<Map<string,SetLogIntentLedger>>(new Map());
+ const setLogFollowRef=useRef<Map<string,any>>(new Map());
+ const loggerActionsRef=useRef<any>({});
+ const saveLogStable=useCallback((sid:string,field:string,value:any,opts?:{completed?:boolean})=>loggerActionsRef.current.saveLog?.(sid,field,value,opts),[]);
+ const retrySetLogStable=useCallback((sid:string)=>loggerActionsRef.current.retrySetLog?.(sid),[]);
+ const editSetStable=useCallback((set:any,field:string,value:any)=>loggerActionsRef.current.editSet?.(set,field,value),[]);
+ const removeSetStable=useCallback((set:any)=>loggerActionsRef.current.removeSet?.(set),[]);
+ const duplicateSetLogStable=useCallback((sid:string,source:any)=>loggerActionsRef.current.duplicateSetLog?.(sid,source),[]);
  const completedSessionKeyRef=useRef<string|null>(null);
  const sessionFeedbackIdentityRef=useRef<string|null>(null);
  const sessionFeedbackDirtyRef=useRef(false);
@@ -2409,34 +2419,79 @@ export default function Page(){
   }
   return true;
  }
- async function saveLog(sid:string,field:string,value:any,opts?:{completed?:boolean}){
-  if(!canLog())return;
+ async function saveLog(sid:string,field:string,value:any,opts?:{completed?:boolean}):Promise<SetLogSaveResult>{
+  if(!canLog())return {ok:false,stale:false,error:'You cannot log sets for this workout.'};
   return upsertSetLog(sid,{[field]:value},opts);
  }
  async function writeSetLogRow(run:()=>PromiseLike<{data:any;error:any}>){
   return retryTransientSupabaseWrite(run,{attempts:3,delayMs:400});
  }
- async function upsertSetLog(sid:string,fieldUpdates:Record<string,any>,opts?:{completed?:boolean}){
-  if(!canLog())return;
-  const run=async()=>{
+ function ledgerForSetLog(sid:string){
+  let ledger=setLogLedgersRef.current.get(sid);
+  if(!ledger){
+   ledger=new SetLogIntentLedger();
+   setLogLedgersRef.current.set(sid,ledger);
+  }
+  return ledger;
+ }
+ function scheduleSetLogDrain(sid:string){
+  const ledger=ledgerForSetLog(sid);
+  if(ledger.draining)return;
+  let tracked:Promise<void>;
+  tracked=drainSetLogIntent(ledger,async(updates)=>{
+   const started=typeof performance!=='undefined'?performance.now():Date.now();
+   const outcome=await loggerActionsRef.current.executeSetLogWrite(sid,updates);
+   const finished=typeof performance!=='undefined'?performance.now():Date.now();
+   noteLoggerSave(finished-started);
+   return outcome||{ok:false,error:'Could not save that set.'};
+  },{
+   coalesceMs:SET_LOG_WRITE_COALESCE_MS,
+   onApplied:async(version,data,updates)=>{
+    const oldCompleted=!!logsRef.current[sid]?.completed;
+    const nextLogs=loggerActionsRef.current.applyConfirmedSetLog(sid,data);
+    setLogFollowRef.current.set(sid,{version,data,updates,oldCompleted,nextLogs});
+   },
+   onFollowUp:async(version)=>{
+    await loggerActionsRef.current.runSetLogFollowUp(sid,version);
+   },
+  }).finally(()=>{
+   if(upsertQueueRef.current[sid]===tracked)delete upsertQueueRef.current[sid];
+   const again=ledgerForSetLog(sid);
+   if(!again.draining&&again.snapshot())scheduleSetLogDrain(sid);
+  });
+  upsertQueueRef.current[sid]=tracked;
+ }
+ async function upsertSetLog(sid:string,fieldUpdates:Record<string,any>,opts?:{completed?:boolean}):Promise<SetLogSaveResult>{
+  if(!canLog())return {ok:false,stale:false,error:'You cannot log sets for this workout.'};
+  const ledger=ledgerForSetLog(sid);
+  const result=ledger.push(fieldUpdates||{},opts?.completed);
+  scheduleSetLogDrain(sid);
+  return result;
+ }
+ async function retrySetLog(sid:string):Promise<SetLogSaveResult>{
+  const ledger=setLogLedgersRef.current.get(sid);
+  if(!ledger)return {ok:false,stale:false,error:'Nothing to retry for that set.'};
+  const result=ledger.retry();
+  scheduleSetLogDrain(sid);
+  return result;
+ }
+ async function executeSetLogWrite(sid:string,fieldUpdates:Record<string,any>){
   try{
   const old=logsRef.current[sid]||{};
   const located=findSetInProgram(activeProgramForLogging(),sid,extraWorkoutsForLogging());
-  if(!located) {alert('Could not save log for this set.');return;}
+  if(!located) return {ok:false,error:'Could not save log for this set.'};
   const {workout:workoutRef,exercise:ex,plannedSet:ps}=located;
   const catItem=catalog.find((c:any)=>c.id===ex.catalog_exercise_id);
   const exType=exerciseTypeOf(ex,catItem);
   const fieldKeys=logFieldsForType(exType).map((f:any)=>f.key);
   const uid=logUserId();
-  if(!session?.user||!uid)return;
+  if(!session?.user||!uid)return {ok:false,error:'You cannot log sets for this workout.'};
   const coachLogging=uid!==session.user.id;
   const activity=groupActivityLogRef.current;
   const expectationTeam=!activity&&activeExpectationSource?.startsWith('group:')&&!activeExpectationSource.startsWith('group-activity:')?activeExpectationSource.slice('group:'.length):null;
   const logTeamId=activity?.teamId||activeAssignedRecipient?.st_workout_assignments?.team_id||expectationTeam||(activeExpectationId?null:(mode==='team'&&activeTeam?activeTeam.id:null));
-  const updatingCompleted=Object.prototype.hasOwnProperty.call(fieldUpdates,'completed')||opts?.completed!==undefined;
-  const markComplete=updatingCompleted
-    ?(opts?.completed!==undefined?!!opts.completed:!!fieldUpdates.completed)
-    :!!old.completed;
+  const updatingCompleted=Object.prototype.hasOwnProperty.call(fieldUpdates,'completed');
+  const markComplete=updatingCompleted?!!fieldUpdates.completed:!!old.completed;
   const logDay=activeLogDateForLogging();
   const snapshots=snapshotForLog(ex,ps,workoutRef,catItem);
   const payload:any={
@@ -2471,23 +2526,39 @@ export default function Page(){
       }
     }
   }
-  if(error){alert(friendlyWriteError(error,'Could not save that set. Please try again.'));return;}
+  if(error)return {ok:false,error:friendlyWriteError(error,'Could not save that set. Please try again.')};
+  return {ok:true,data};
+  }catch(e){
+   return {ok:false,error:friendlyWriteError(e,'Could not save that set. Please try again.')};
+  }
+ }
+ function applyConfirmedSetLog(sid:string,data:any){
   if(session?.user?.id) markScreenStale(session.user.id,['schedule','progress','dashboard']);
-  setLogs((prev:any)=>{
-    const next={...prev,[sid]:data};
-    logsRef.current=next;
-    return next;
-  });
+  const next={...logsRef.current,[sid]:data};
+  logsRef.current=next;
+  setLogs(next);
   setProgressLogs((prev:any[])=>{
-    const rest=prev.filter((row:any)=>row?.id!==data.id);
-    return data.completed||logHasPerformance(data)?[data,...rest]:rest;
+    const rest=(prev||[]).filter((row:any)=>row?.id!==data?.id);
+    return data?.completed||logHasPerformance(data)?[data,...rest]:rest;
   });
-  if(activeAssignedRecipient&&located?.workout){
-    const nextLogs={...logsRef.current,[sid]:data};
+  return next;
+ }
+ async function runSetLogFollowUp(sid:string,version:number){
+  const payload=setLogFollowRef.current.get(sid);
+  if(!payload||payload.version!==version)return;
+  setLogFollowRef.current.delete(sid);
+  const {data,updates,oldCompleted,nextLogs}=payload;
+  const located=findSetInProgram(activeProgramForLogging(),sid,extraWorkoutsForLogging());
+  if(!located)return;
+  const updatingCompleted=Object.prototype.hasOwnProperty.call(updates||{},'completed');
+  const markComplete=updatingCompleted?!!updates.completed:!!data?.completed;
+  const logDay=activeLogDateForLogging();
+  const uid=logUserId();
+  const activity=groupActivityLogRef.current;
+  if(activeAssignedRecipient&&located.workout){
     await maybeCompleteAssignedWorkout(located.workout,nextLogs);
   }
-  const nextLogs={...logsRef.current,[sid]:data};
-  if(updatingCompleted&&markComplete&&located?.workout&&trainingSessionIntent==='log'&&uid===session.user.id){
+  if(updatingCompleted&&markComplete&&located.workout&&trainingSessionIntent==='log'&&uid&&session?.user&&uid===session.user.id){
     const sessionKey=`${uid}|${located.workout.id}|${logDay}`;
     const explicit=completedSessionKeyRef.current===sessionKey?'completed':(sessionOutcome==='partial'||sessionOutcome==='skipped'?sessionOutcome:null);
     const draft=completedSessionDraft({
@@ -2524,22 +2595,13 @@ export default function Page(){
     }
   }
   if(updatingCompleted&&markComplete){
-   maybeAutoAdvanceExercise(ex,nextLogs,located.workout);
-   if(!old.completed){
+   maybeAutoAdvanceExercise(located.exercise,nextLogs,located.workout);
+   if(!oldCompleted){
     const weightUnit=profileDraft?.units_preference==='metric'?'kg':'lb';
     const celebration=detectSetPersonalRecord(data,priorCompletedLogsForPr(sid,logDay),weightUnit);
     if(celebration)showPrCelebration(celebration);
    }
   }
-  return data;
-  }catch(e){
-   alert(friendlyWriteError(e,'Could not save that set. Please try again.'));
-  }
-  };
-  const prev=upsertQueueRef.current[sid];
-  const next=(prev?prev.catch(()=>{}).then(run):run());
-  upsertQueueRef.current[sid]=next.finally(()=>{if(upsertQueueRef.current[sid]===next)delete upsertQueueRef.current[sid];});
-  return next;
  }
  function maybeAutoAdvanceExercise(exercise:any,logMap:any,workoutRef:any){
   if(!exercise||!workoutRef||exerciseSection(exercise)==='warmup')return;
@@ -2736,7 +2798,8 @@ export default function Page(){
     if(source[k]!=null&&String(source[k]).trim()!=='') updates[k]=String(source[k]);
   });
   if(!Object.keys(updates).length)return alert('No previous values found to copy.');
-  await upsertSetLog(sid,updates,{completed:false});
+  const saved=await upsertSetLog(sid,updates,{completed:false});
+  if(saved&&saved.ok===false&&!saved.stale)alert(saved.error||'Could not copy the last set.');
  }
  async function setRole(member:any,role:string){if(!isOwner())return alert('Only the group owner can change roles.'); if(!isAssignableMemberRole(role))return alert('Ownership transfer is a separate action and is not available here.'); const{error}=await supabase.rpc('st_set_member_role',{p_member_id:member.id,p_role:roleForDatabase(role)}); if(error){if(/could not find the function|schema cache/i.test(error.message||'')){const{error:upErr}=await supabase.from('st_team_members').update({role:roleForDatabase(role)}).eq('id',member.id); if(upErr)return alert(upErr.message);} else return alert(error.message);} await loadMembers(); await loadTeams();}
  async function removeMember(member:any){
@@ -3325,13 +3388,21 @@ function matchingSet(targetExercise:any, sourceSet:any){
     setSessionOutcome('partial');
   });
  },[session?.user?.id,workout,logs,sessionOutcome,trainingSessionIntent,program?.id,activeExpectationId,activeExpectationSource,activeExpectationDate]);
- const trainingCompletionWorkouts=(()=>{const byId=new Map<string,any>();[...(program?.st_workouts||[]),...calendarWorkouts,workout].forEach((w:any)=>{if(!w?.id)return;const prev=byId.get(w.id);if(!prev||(w.st_exercises||[]).length>=(prev.st_exercises||[]).length)byId.set(w.id,w);});return Array.from(byId.values());})();
- const workoutDayMoves=workoutDayMovesFromActivities(userCalendarActivities);
- const trainingCompletionOpts={activities:userCalendarActivities,workouts:trainingCompletionWorkouts,progressLogs,sessionLogs:logs,selectedDate:logDate};
- const trainingTodayPlan=decorateDayPlanCompletion(planForCalendarDate(program,trainingActivities,userCalendarActivities,logDate,todayYmd(),workoutDayMoves),trainingCompletionOpts);
- const trainingTomorrowPlan=decorateDayPlanCompletion(planForCalendarDate(program,trainingActivities,userCalendarActivities,tomorrowDate(logDate),todayYmd(),workoutDayMoves),trainingCompletionOpts);
- const trainingWeekPlans=weekPlansForMonday(mondayOfWeek(logDate),program,trainingActivities,userCalendarActivities,todayYmd(),workoutDayMoves).map((plan)=>decorateDayPlanCompletion(plan,trainingCompletionOpts));
- const trainingMonthCells=monthCalendarCells(program,trainingActivities,trainingCalendarMonth,todayYmd(),userCalendarActivities,workoutDayMoves).map((cell)=>({...cell,plan:cell.plan?decorateDayPlanCompletion(cell.plan,trainingCompletionOpts):cell.plan}));
+ const loggedCompletionKey=Object.keys(logs).filter((id)=>!!logs[id]?.completed).sort().join(',');
+ const progressCompletionKey=(progressLogs||[]).filter((row:any)=>row?.completed&&row?.planned_set_id).map((row:any)=>`${row.planned_set_id}|${String(row.log_date||'').slice(0,10)}`).sort().join(',');
+ const trainingCalendarPlans=useMemo(()=>{
+  const trainingCompletionWorkouts=(()=>{const byId=new Map<string,any>();[...(program?.st_workouts||[]),...calendarWorkouts,workout].forEach((w:any)=>{if(!w?.id)return;const prev=byId.get(w.id);if(!prev||(w.st_exercises||[]).length>=(prev.st_exercises||[]).length)byId.set(w.id,w);});return Array.from(byId.values());})();
+  const workoutDayMoves=workoutDayMovesFromActivities(userCalendarActivities);
+  const trainingCompletionOpts={activities:userCalendarActivities,workouts:trainingCompletionWorkouts,progressLogs,sessionLogs:logs,selectedDate:logDate};
+  return {
+   trainingTodayPlan:decorateDayPlanCompletion(planForCalendarDate(program,trainingActivities,userCalendarActivities,logDate,todayYmd(),workoutDayMoves),trainingCompletionOpts),
+   trainingTomorrowPlan:decorateDayPlanCompletion(planForCalendarDate(program,trainingActivities,userCalendarActivities,tomorrowDate(logDate),todayYmd(),workoutDayMoves),trainingCompletionOpts),
+   trainingWeekPlans:weekPlansForMonday(mondayOfWeek(logDate),program,trainingActivities,userCalendarActivities,todayYmd(),workoutDayMoves).map((plan)=>decorateDayPlanCompletion(plan,trainingCompletionOpts)),
+   trainingMonthCells:monthCalendarCells(program,trainingActivities,trainingCalendarMonth,todayYmd(),userCalendarActivities,workoutDayMoves).map((cell)=>({...cell,plan:cell.plan?decorateDayPlanCompletion(cell.plan,trainingCompletionOpts):cell.plan})),
+   trainingCompletionWorkouts,
+  };
+ },[loggedCompletionKey,progressCompletionKey,program,calendarWorkouts,workout,userCalendarActivities,trainingActivities,logDate,trainingCalendarMonth]);
+ const {trainingTodayPlan,trainingTomorrowPlan,trainingWeekPlans,trainingMonthCells,trainingCompletionWorkouts}=trainingCalendarPlans;
  const trainingExpectationRange=(()=>{const weekFrom=mondayOfWeek(logDate);const weekTo=addDaysYmd(weekFrom,6);const month=monthWindow(trainingCalendarMonth);const tomorrow=addDaysYmd(logDate,1);const from=weekFrom<month.from?weekFrom:month.from;const to=[weekTo,month.to,tomorrow].sort().slice(-1)[0]||weekTo;return {from,to};})();
  const trainingCalendarEditing=trainingEditActivity?userCalendarActivities.find((a)=>a.id===trainingEditActivity.id)||null:null;
  const trainingMonthLabel=monthLabel(trainingCalendarMonth);
@@ -3378,7 +3449,33 @@ function matchingSet(targetExercise:any, sourceSet:any){
  const canManageTrainingProgram=mode==='personal'?canEdit():!!activeTeam&&canEditGroupProgram(activeTeam.my_role);
  const memberAssignment=memberDashboard?memberAssignments[memberDashboard.user_id]:null;
  const renderWarmupExerciseCard=(ex:any)=>{const catItem=catalog.find((c:any)=>c.id===ex.catalog_exercise_id);const exThumb=getExerciseThumb(catItem);const showGuide=hasExerciseGuide(catItem);const guidePayload=getExerciseGuidePayload(catItem,ex.name);const sortedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));const notes=String(ex.notes||'');const badge=/power primer/i.test(notes)?'Power Primer':/dynamic warm-up/i.test(notes)?'Warm-up':undefined;return <WarmupExerciseCard key={ex.id} name={ex.name||'Exercise'} badge={badge} sets={sortedSets} thumbUrl={exThumb} showGuide={showGuide&&!!guidePayload} guideLabel={guidePayload?.hasVideo?'Watch form':'Form guide'} onOpenGuide={guidePayload?()=>setExerciseGuide(guidePayload):undefined} canEdit={canEdit()} onChange={canEdit()?()=>openReplaceExercisePanel(ex):undefined} onAddSet={canEdit()?()=>addSet(ex):undefined} onRemove={canEdit()?()=>removeExercise(ex):undefined}/>;};
- const renderExerciseCard=(ex:any,inSuperset=false,mark='')=>{const catItem=catalog.find((c:any)=>c.id===ex.catalog_exercise_id);const rx=trainingExercisePrescription({exercise:ex,catalogItem:catItem,mark,omitRest:inSuperset||!!String(mark||'').trim()});const exType=exerciseTypeOf(ex,catItem);const eqOptions=compatibleEquipmentOptions(catItem,ex.equipment);const persistedEq=resolveExerciseEquipment(ex,catItem);const currentEq=loggerSelectedEquipment(persistedEq,pendingEquipmentById[ex.id]);const equipmentSavePending=!!pendingEquipmentById[ex.id];const plannedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).length;const exThumb=getExerciseThumb(catItem);const showGuide=hasExerciseGuide(catItem);const guidePayload=getExerciseGuidePayload(catItem,ex.name);const cardKey=`${ex.id}:${ex.catalog_exercise_id||'n'}:${ex.name}`;const isEditingName=exerciseNameSearch?.exerciseId===ex.id;const nameQuery=isEditingName?exerciseNameSearch!.query:(ex.name||'');const nameSearchResults=isEditingName&&nameQuery.trim()?searchCatalog(workoutSearchCatalog,{query:nameQuery,filters:{availableEquipment:hasEquipmentFilter(equipmentForSearch)?equipmentForSearch:undefined},limit:8,section:exerciseSection(ex)}):[];const sortedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));const prevBySetId:Record<string,any>={};sortedSets.forEach((s:any)=>{prevBySetId[s.id]=previousPerformanceViewFor(ex,s,currentEq,equipmentSavePending);});const showPreviousSets=!isMobilityStretchExercise(ex,catItem,exType);const weightUnit=profileDraft?.units_preference==='metric'?'kg':'lb';const isCollapsed=!!collapsedExercises[ex.id];const doneSets=sortedSets.filter((s:any)=>logs[s.id]?.completed).length;const allDone=plannedSets>0&&doneSets===plannedSets;const exSection=exerciseSection(ex);const sectionSupersetGroups=workout?getSupersetGroupsForSection(workout,exSection).filter((g:any)=>g.count<3):[];const standalonePeers=workout?sectionExercises(workout,exSection).filter((e:any)=>!e.superset_group_id&&e.id!==ex.id):[];return <div className={`card exercise-card${inSuperset?' in-superset':''}${isCollapsed?' exercise-collapsed':''}${allDone?' exercise-all-done':''}`} data-exercise-id={ex.id} key={cardKey}>
+ loggerActionsRef.current.saveLog=saveLog;
+ loggerActionsRef.current.retrySetLog=retrySetLog;
+ loggerActionsRef.current.editSet=editSet;
+ loggerActionsRef.current.removeSet=removeSet;
+ loggerActionsRef.current.duplicateSetLog=duplicateSetLog;
+ loggerActionsRef.current.addExtraWorkingSet=addExtraWorkingSet;
+ loggerActionsRef.current.saveExtraSetField=saveExtraSetField;
+ loggerActionsRef.current.skipExercise=skipExercise;
+ loggerActionsRef.current.next=next;
+ loggerActionsRef.current.focusNextInput=focusNextInput;
+ loggerActionsRef.current.executeSetLogWrite=executeSetLogWrite;
+ loggerActionsRef.current.applyConfirmedSetLog=applyConfirmedSetLog;
+ loggerActionsRef.current.runSetLogFollowUp=runSetLogFollowUp;
+ const previousPerformanceKey=(workout?.st_exercises||[]).map((ex:any)=>`${ex.id}:${ex.catalog_exercise_id||''}:${ex.name||''}:${ex.equipment||''}:${pendingEquipmentById[ex.id]||''}:${(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).map((s:any)=>`${s.id}:${s.set_type}:${s.set_number}`).join('.')}`).join('|');
+ const previousSetViews=useMemo(()=>{
+  const map:Record<string,any>={};
+  (workout?.st_exercises||[]).forEach((ex:any)=>{
+   const catItem=catalog.find((c:any)=>c.id===ex.catalog_exercise_id);
+   const currentEq=loggerSelectedEquipment(resolveExerciseEquipment(ex,catItem),pendingEquipmentById[ex.id]);
+   const equipmentSavePending=!!pendingEquipmentById[ex.id];
+   (ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).forEach((s:any)=>{
+    map[s.id]=previousPerformanceViewFor(ex,s,currentEq,equipmentSavePending);
+   });
+  });
+  return map;
+ },[previousPerformanceKey,catalog,liftHistoryRows,logDate,memberWorkoutLogDate,viewingMember?.user_id,session?.user?.id]);
+ const renderExerciseCard=(ex:any,inSuperset=false,mark='')=>{const catItem=catalog.find((c:any)=>c.id===ex.catalog_exercise_id);const rx=trainingExercisePrescription({exercise:ex,catalogItem:catItem,mark,omitRest:inSuperset||!!String(mark||'').trim()});const exType=exerciseTypeOf(ex,catItem);const eqOptions=compatibleEquipmentOptions(catItem,ex.equipment);const persistedEq=resolveExerciseEquipment(ex,catItem);const currentEq=loggerSelectedEquipment(persistedEq,pendingEquipmentById[ex.id]);const equipmentSavePending=!!pendingEquipmentById[ex.id];const plannedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).length;const exThumb=getExerciseThumb(catItem);const showGuide=hasExerciseGuide(catItem);const guidePayload=getExerciseGuidePayload(catItem,ex.name);const cardKey=`${ex.id}:${ex.catalog_exercise_id||'n'}:${ex.name}`;const isEditingName=exerciseNameSearch?.exerciseId===ex.id;const nameQuery=isEditingName?exerciseNameSearch!.query:(ex.name||'');const nameSearchResults=isEditingName&&nameQuery.trim()?searchCatalog(workoutSearchCatalog,{query:nameQuery,filters:{availableEquipment:hasEquipmentFilter(equipmentForSearch)?equipmentForSearch:undefined},limit:8,section:exerciseSection(ex)}):[];const sortedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));const showPreviousSets=!isMobilityStretchExercise(ex,catItem,exType);const weightUnit=profileDraft?.units_preference==='metric'?'kg':'lb';const isCollapsed=!!collapsedExercises[ex.id];const doneSets=sortedSets.filter((s:any)=>logs[s.id]?.completed).length;const allDone=plannedSets>0&&doneSets===plannedSets;const exSection=exerciseSection(ex);const sectionSupersetGroups=workout?getSupersetGroupsForSection(workout,exSection).filter((g:any)=>g.count<3):[];const standalonePeers=workout?sectionExercises(workout,exSection).filter((e:any)=>!e.superset_group_id&&e.id!==ex.id):[];return <div className={`card exercise-card${inSuperset?' in-superset':''}${isCollapsed?' exercise-collapsed':''}${allDone?' exercise-all-done':''}`} data-exercise-id={ex.id} key={cardKey}>
         <div className="exercise-head" data-exercise-head={ex.id}><div className="exercise-head-main">{exThumb&&(showGuide&&guidePayload?<button type="button" className="exercise-card-thumb-btn" title={guidePayload.hasVideo?"Watch form":"Form guide"} onClick={()=>setExerciseGuide(guidePayload)}><img className="exercise-card-thumb" src={exThumb} alt="" loading="lazy" referrerPolicy="no-referrer"/></button>:<img className="exercise-card-thumb" src={exThumb} alt="" loading="lazy" referrerPolicy="no-referrer"/>)}<div className="exercise-meta">{canEdit()?<>
           <div className="exercise-title-row">
             {mark?<span className="te-ex-mark">{mark}</span>:null}
@@ -3396,7 +3493,7 @@ function matchingSet(targetExercise:any, sourceSet:any){
             <span className="badge exercise-type-badge">{exType}</span>
           </div>
         </>}{trainingRxLines(rx)}{canEdit()&&!ex.catalog_exercise_id&&<p className="muted exercise-link-hint">No catalog link — edit name or use Change to get form guide</p>}{isCollapsed&&<p className="muted exercise-collapse-summary">{allDone&&<span className="exercise-done-badge" aria-hidden="true">✓</span>}{plannedSets} set{plannedSets===1?'':'s'} · {doneSets} logged{allDone?' · complete':''}{inSuperset?' · superset':''}</p>}</div></div><div className="exercise-head-actions"><button type="button" className="btn small secondary exercise-collapse-btn" onClick={()=>setCollapsedExercises((prev:any)=>({...prev,[ex.id]:!prev[ex.id]}))} aria-expanded={!isCollapsed}>{isCollapsed?'Expand':'Collapse'}</button>{!isCollapsed&&showGuide&&guidePayload&&<button type="button" className="btn small secondary" onClick={()=>setExerciseGuide(guidePayload)}>{guidePayload.hasVideo?'Watch form':'Form guide'}</button>}{!isCollapsed&&!isMobilityStretchExercise(ex,catItem,exType)&&<button type="button" className="btn small secondary" title="See what you logged for this exercise by week" onClick={()=>openExerciseWeekHistory(ex,exType,displayWorkout)}>History</button>}{!isCollapsed&&canEdit()&&<button type="button" className="btn small secondary" onClick={()=>addSet(ex)}>+ Set</button>}{!isCollapsed&&canEdit()&&<ExerciseLogMoreMenu items={bindExerciseLogMoreItems(exerciseLogMoreItemSpecs({inSuperset,supersetOpen:supersetEditExerciseId===ex.id}),{supersetEdit:()=>setSupersetEditExerciseId(supersetEditExerciseId===ex.id?null:ex.id),change:()=>openReplaceExercisePanel(ex),moveUp:()=>moveExercise(ex,-1),moveDown:()=>moveExercise(ex,1),supersetOut:()=>removeFromSuperset(ex),removeExercise:()=>removeExercise(ex)})}/>}{!isCollapsed&&canEdit()&&!inSuperset&&supersetEditExerciseId===ex.id&&<div className="exercise-superset-edit"><select className="superset-join-select" defaultValue="" aria-label="Join existing superset" onChange={e=>{const v=e.target.value;if(v){void addExerciseToSuperset(ex,v);setSupersetEditExerciseId(null);}e.currentTarget.value='';}} disabled={!sectionSupersetGroups.length}><option value="">{sectionSupersetGroups.length?'Join superset…':'No supersets'}</option>{sectionSupersetGroups.map((g:any)=><option key={g.id} value={g.id}>{g.label} ({g.count}/3)</option>)}</select><select className="superset-join-select" defaultValue="" aria-label="Pair with exercise" onChange={e=>{const v=e.target.value;if(v){const peer=standalonePeers.find((p:any)=>p.id===v);if(peer){void pairIntoNewSuperset(ex,peer);setSupersetEditExerciseId(null);}}e.currentTarget.value='';}} disabled={!standalonePeers.length}><option value="">{standalonePeers.length?'Pair with…':'No other exercises'}</option>{standalonePeers.map((p:any)=><option key={p.id} value={p.id}>{p.name}</option>)}</select><button className="btn small secondary" title="Start a new superset and add another exercise" onClick={()=>{setSupersetEditExerciseId(null);void startSupersetWithCatalog(ex);}}>New superset</button></div>}</div></div>
-        {!isCollapsed&&<WorkoutSetLogger section={exerciseSection(ex)} exType={exType} sets={sortedSets} logs={logs} prevBySetId={prevBySetId} showPreviousSets={showPreviousSets} weightUnit={weightUnit} distanceUnit={logDistanceUnit} onDistanceUnitChange={setLogDistanceUnit} canEdit={canEdit()} canLog={canLog()} onEditSet={editSet} onRemoveSet={removeSet} onSaveField={(sid,field,value,opts)=>saveLog(sid,field,value,opts)} onDuplicateSet={duplicateSetLog} extraSets={extraSetsForExercise(extraSetLogs,ex.id,activeLogDateForLogging()).map((row)=>({id:row.id||`extra-${row.extra_set_number}`,set_type:'working',set_number:row.extra_set_number,target_reps:'',target_weight:''}))} extraLogs={Object.fromEntries(extraSetsForExercise(extraSetLogs,ex.id,activeLogDateForLogging()).map((row)=>[row.id||`extra-${row.extra_set_number}`,row]))} onAddExtraSet={trainingSessionIntent==='log'?()=>void addExtraWorkingSet(ex):undefined} onSaveExtraField={(id,field,value,opts)=>void saveExtraSetField(id,field,value,opts)} onSkipExercise={trainingSessionIntent==='log'?()=>void skipExercise(ex):undefined} exerciseSkipped={!!skippedExerciseIds[ex.id]} registerInputRef={el=>{if(el&&!refs.current.includes(el))refs.current.push(el)}} onInputKeyDown={next} onFocusNextInput={focusNextInput}/>}
+        {!isCollapsed&&<WorkoutSetLogger section={exerciseSection(ex)} exType={exType} sets={sortedSets} logs={logs} prevBySetId={previousSetViews} showPreviousSets={showPreviousSets} weightUnit={weightUnit} distanceUnit={logDistanceUnit} onDistanceUnitChange={setLogDistanceUnit} canEdit={canEdit()} canLog={canLog()} onEditSet={editSetStable} onRemoveSet={removeSetStable} onSaveField={saveLogStable} onRetrySet={retrySetLogStable} onDuplicateSet={duplicateSetLogStable} extraSets={extraSetsForExercise(extraSetLogs,ex.id,activeLogDateForLogging()).map((row)=>({id:row.id||`extra-${row.extra_set_number}`,set_type:'working',set_number:row.extra_set_number,target_reps:'',target_weight:''}))} extraLogs={Object.fromEntries(extraSetsForExercise(extraSetLogs,ex.id,activeLogDateForLogging()).map((row)=>[row.id||`extra-${row.extra_set_number}`,row]))} onAddExtraSet={trainingSessionIntent==='log'?()=>{void loggerActionsRef.current.addExtraWorkingSet?.(ex);}:undefined} onSaveExtraField={(id,field,value,opts)=>loggerActionsRef.current.saveExtraSetField?.(id,field,value,opts)} onSkipExercise={trainingSessionIntent==='log'?()=>{void loggerActionsRef.current.skipExercise?.(ex);}:undefined} exerciseSkipped={!!skippedExerciseIds[ex.id]} registerInputRef={el=>{if(el&&!refs.current.includes(el))refs.current.push(el)}} onInputKeyDown={(e)=>loggerActionsRef.current.next?.(e)} onFocusNextInput={(el)=>loggerActionsRef.current.focusNextInput?.(el)}/>}
       </div>;};
  const trainingHeading=trainingPageHeading({sessionOpen:trainingSessionOpen,sessionIntent:trainingSessionIntent,selectedDateLabel:formatLongWeekday(logDate)});
  const showSessionFinish=showFinishWorkoutAction({sessionOpen:trainingSessionOpen,sessionIntent:trainingSessionIntent})&&!!workout;

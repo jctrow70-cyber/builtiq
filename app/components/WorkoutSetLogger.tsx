@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, Profiler, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { ExerciseType } from '../../lib/training/exerciseTypes';
 import {
   INTENSITY_CHIPS,
@@ -24,6 +24,8 @@ import {
   previousPerformanceFieldHint,
   previousPerformanceLine,
 } from '../../lib/training/previousPerformanceDisplay';
+import type { SetLogSaveResult } from '../../lib/training/setLogIntent';
+import { beginLoggerInteraction, noteLoggerRender, noteLoggerVisual, type LoggerTimingMark } from '../../lib/performance/loggerTiming';
 
 type SetRow = {
   id: string;
@@ -34,6 +36,8 @@ type SetRow = {
 };
 
 type LogRow = Record<string, any>;
+
+const EMPTY_LOG: LogRow = {};
 
 export type PreviousSetView = {
   result: PreviousPerformanceResult;
@@ -54,7 +58,8 @@ type Props = {
   canLog: boolean;
   onEditSet: (set: SetRow, field: string, value: any) => void;
   onRemoveSet: (set: SetRow) => void;
-  onSaveField: (setId: string, field: string, value: string, opts?: { completed?: boolean }) => void | Promise<void>;
+  onSaveField: (setId: string, field: string, value: string, opts?: { completed?: boolean }) => void | Promise<SetLogSaveResult | void>;
+  onRetrySet?: (setId: string) => void | Promise<SetLogSaveResult | void>;
   onDuplicateSet: (setId: string, source: LogRow) => void;
   registerInputRef?: (el: HTMLInputElement | null) => void;
   onInputKeyDown?: (e: React.KeyboardEvent) => void;
@@ -205,10 +210,17 @@ function FieldCard({
   const compact = field.size === 'compact';
   const [draft, setDraft] = useState(value);
   const focusedRef = useRef(false);
+  const fieldMark = useRef<LoggerTimingMark | null>(null);
 
   useEffect(() => {
     if (!focusedRef.current) setDraft(value);
   }, [value]);
+
+  useLayoutEffect(() => {
+    if (!fieldMark.current) return;
+    noteLoggerVisual(fieldMark.current);
+    fieldMark.current = null;
+  });
 
   const placeholder = !draft && prevHint ? prevHint : (field.placeholder || '');
 
@@ -260,6 +272,7 @@ function FieldCard({
               focusedRef.current = true;
             }}
             onChange={(e) => {
+              fieldMark.current = beginLoggerInteraction('field');
               setDraft(e.target.value);
               onChangeValue?.(e.target.value);
             }}
@@ -289,6 +302,7 @@ function SetLogCard({
   onEditSet,
   onRemoveSet,
   onSaveField,
+  onRetrySet,
   onDuplicateSet,
   registerInputRef,
   onInputKeyDown,
@@ -309,19 +323,26 @@ function SetLogCard({
   onEditSet: Props['onEditSet'];
   onRemoveSet: Props['onRemoveSet'];
   onSaveField: Props['onSaveField'];
+  onRetrySet?: Props['onRetrySet'];
   onDuplicateSet: Props['onDuplicateSet'];
   registerInputRef?: Props['registerInputRef'];
   onInputKeyDown?: Props['onInputKeyDown'];
   onFocusNextInput?: Props['onFocusNextInput'];
-  scheduleSave: (key: string, value: string, save: () => void | Promise<void>) => void;
+  scheduleSave: (key: string, value: string, save: () => void | Promise<unknown>) => void;
   flushSaves: () => void | Promise<void>;
   showPreviousSets?: boolean;
 }) {
   const notes = String(log.log_notes || '');
   const assist = parseAssistFromNotes(notes);
   const side = parseSideFromNotes(notes);
-  const completed = !!log.completed;
+  const [chipOverride, setChipOverride] = useState<string | null>(null);
+  const [doneOverride, setDoneOverride] = useState<boolean | null>(null);
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'error'>('idle');
+  const [saveError, setSaveError] = useState('');
+  const saveGen = useRef(0);
+  const visualMark = useRef<{ mark: LoggerTimingMark; chip?: string; done?: boolean } | null>(null);
   const fieldInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const completed = doneOverride ?? !!log.completed;
 
   const unitFor = (f: { unitGroup?: string; unit?: string }) => {
     if (f.unitGroup === 'weight') return weightUnit;
@@ -389,8 +410,19 @@ function SetLogCard({
             : 'done'
           : 'done'
       }
-      onBlur={(v) => { flushSaves(); saveVirtual(f.key, v); }}
-      onChangeValue={(v) => scheduleSave(`${set.id}:${f.key}`, v, () => saveVirtual(f.key, v))}
+      onBlur={(v) => {
+        flushSaves();
+        const gen = ++saveGen.current;
+        setSaveState('saving');
+        setSaveError('');
+        trackSave(gen, saveVirtual(f.key, v));
+      }}
+      onChangeValue={(v) => scheduleSave(`${set.id}:${f.key}`, v, () => {
+        const gen = ++saveGen.current;
+        setSaveState('saving');
+        setSaveError('');
+        return trackSave(gen, saveVirtual(f.key, v));
+      })}
       onEnterAdvance={() => advanceFromField(f.key)}
       registerRef={(el) => {
         fieldInputRefs.current[f.key] = el;
@@ -412,13 +444,71 @@ function SetLogCard({
         ? { key: '_side', label: 'Side', chipOptions: SIDE_CHIPS, size: 'wide' as const }
         : null;
 
-  const onDoneChange = async (checked: boolean) => {
-    await flushSaves();
-    await onSaveField(set.id, 'completed', checked ? 'true' : '', { completed: checked });
+  const chipKey = chipField?.key;
+  const serverChip = !chipField ? '' : chipKey === '_side' ? side : String(log[chipKey || ''] || '');
+  const chipValue = chipOverride ?? serverChip;
+
+  useEffect(() => {
+    if (chipOverride == null) return;
+    if (serverChip === chipOverride) setChipOverride(null);
+  }, [serverChip, chipOverride]);
+
+  useEffect(() => {
+    if (doneOverride == null) return;
+    if (!!log.completed === doneOverride) setDoneOverride(null);
+  }, [log, doneOverride]);
+
+  useLayoutEffect(() => {
+    const pending = visualMark.current;
+    if (!pending) return;
+    const chipOk = pending.chip === undefined || chipValue === pending.chip;
+    const doneOk = pending.done === undefined || completed === pending.done;
+    if (!chipOk || !doneOk) return;
+    noteLoggerVisual(pending.mark);
+    visualMark.current = null;
+  });
+
+  const applySaveResult = (gen: number, result: SetLogSaveResult | void) => {
+    if (saveGen.current !== gen) return;
+    if (result && result.stale) return;
+    if (result && result.ok === false) {
+      setSaveState('error');
+      setSaveError(result.error || 'Could not save this set.');
+      return;
+    }
+    setSaveState('idle');
+    setSaveError('');
+  };
+
+  const trackSave = (gen: number, result: void | Promise<SetLogSaveResult | void>) => {
+    return Promise.resolve(result).then((value) => {
+      applySaveResult(gen, value);
+      return value;
+    });
+  };
+
+  const onDoneChange = (checked: boolean) => {
+    const gen = ++saveGen.current;
+    visualMark.current = { mark: beginLoggerInteraction('done'), done: checked };
+    setDoneOverride(checked);
+    setSaveState('saving');
+    setSaveError('');
+    void (async () => {
+      await flushSaves();
+      const result = await onSaveField(set.id, 'completed', checked ? 'true' : '', { completed: checked });
+      applySaveResult(gen, result);
+    })();
+  };
+
+  const retrySave = () => {
+    const gen = ++saveGen.current;
+    setSaveState('saving');
+    setSaveError('');
+    trackSave(gen, onRetrySet?.(set.id));
   };
 
   return (
-    <div className={`set-log-card${completed ? ' set-log-done' : ''}`}>
+    <div className={`set-log-card${completed ? ' set-log-done' : ''}${saveState === 'error' ? ' set-log-error' : ''}`} data-save-state={saveState}>
       <div className={`set-log-grid${hasChipRow ? ' has-chip-row' : ''}`}>
         <div className="set-log-head">
           <span className="set-log-num">{setLabel(set, allSets)}</span>
@@ -453,11 +543,18 @@ function SetLogCard({
           <div className="set-log-chips">
             <FieldCard
               field={chipField}
-              value={chipField.key === '_side' ? side : String(log[chipField.key] || '')}
+              value={chipValue}
               disabled={!canLog}
               onChipPick={(v) => {
-                if (chipField.key === '_side') onSaveField(set.id, 'log_notes', mergeSideIntoNotes(notes, v));
-                else onSaveField(set.id, chipField.key, v);
+                const gen = ++saveGen.current;
+                visualMark.current = { mark: beginLoggerInteraction(chipField.key === 'actual_rir' ? 'rir' : 'field'), chip: v };
+                setChipOverride(v);
+                setSaveState('saving');
+                setSaveError('');
+                const result = chipField.key === '_side'
+                  ? onSaveField(set.id, 'log_notes', mergeSideIntoNotes(notes, v))
+                  : onSaveField(set.id, chipField.key, v);
+                trackSave(gen, result);
               }}
               onBlur={() => {}}
             />
@@ -479,11 +576,43 @@ function SetLogCard({
       {layout.optional && layout.optional.length > 0 && (
         <div className="log-field-row log-field-row-compact log-field-optional-row">{layout.optional.map(renderField)}</div>
       )}
+      {saveState === 'saving' && <p className="set-log-status set-log-status-saving">Saving…</p>}
+      {saveState === 'error' && (
+        <p className="set-log-status set-log-status-error">
+          {saveError || 'Could not save this set.'}{' '}
+          <button type="button" className="btn small secondary" onClick={retrySave}>Retry</button>
+        </p>
+      )}
     </div>
   );
 }
 
-export default function WorkoutSetLogger({
+function sameCardSets(a: SetRow[] = [], b: SetRow[] = []) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i].id !== b[i].id || a[i].set_type !== b[i].set_type || a[i].set_number !== b[i].set_number) return false;
+  }
+  return true;
+}
+
+const MemoSetLogCard = memo(SetLogCard, (prev, next) => {
+  return prev.set === next.set
+    && prev.log === next.log
+    && prev.prev === next.prev
+    && prev.layout === next.layout
+    && prev.canEdit === next.canEdit
+    && prev.canLog === next.canLog
+    && prev.weightUnit === next.weightUnit
+    && prev.distanceUnit === next.distanceUnit
+    && prev.showPreviousSets === next.showPreviousSets
+    && prev.onSaveField === next.onSaveField
+    && prev.onRetrySet === next.onRetrySet
+    && prev.scheduleSave === next.scheduleSave
+    && prev.flushSaves === next.flushSaves
+    && sameCardSets(prev.allSets, next.allSets);
+});
+
+function WorkoutSetLogger({
   section,
   exType,
   sets,
@@ -497,6 +626,7 @@ export default function WorkoutSetLogger({
   onEditSet,
   onRemoveSet,
   onSaveField,
+  onRetrySet,
   onDuplicateSet,
   registerInputRef,
   onInputKeyDown,
@@ -510,9 +640,25 @@ export default function WorkoutSetLogger({
   exerciseSkipped = false,
 }: Props) {
   const layout = useMemo(() => logLayoutForType(exType), [exType]);
+  const rampLayout = useMemo(() => ({ ...layout, showRirChips: false as const }), [layout]);
   const showDistToggle = allLogFieldsFlat(exType).some((f) => f.unitGroup === 'distance');
   const saveTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-  const pendingSavesRef = useRef<Record<string, () => void | Promise<void>>>({});
+  const pendingSavesRef = useRef<Record<string, () => void | Promise<unknown>>>({});
+  const saveRef = useRef(onSaveField);
+  const editRef = useRef(onEditSet);
+  const removeRef = useRef(onRemoveSet);
+  const duplicateRef = useRef(onDuplicateSet);
+  const retryRef = useRef(onRetrySet);
+  saveRef.current = onSaveField;
+  editRef.current = onEditSet;
+  removeRef.current = onRemoveSet;
+  duplicateRef.current = onDuplicateSet;
+  retryRef.current = onRetrySet;
+  const stableSave = useCallback((setId: string, field: string, value: string, opts?: { completed?: boolean }) => saveRef.current(setId, field, value, opts), []);
+  const stableEdit = useCallback((set: SetRow, field: string, value: any) => editRef.current(set, field, value), []);
+  const stableRemove = useCallback((set: SetRow) => removeRef.current(set), []);
+  const stableDuplicate = useCallback((setId: string, source: LogRow) => duplicateRef.current(setId, source), []);
+  const stableRetry = useCallback((setId: string) => retryRef.current?.(setId), []);
 
   const firstSet = sets[0];
   const firstSetLog = firstSet ? logs[firstSet.id] || {} : {};
@@ -524,7 +670,7 @@ export default function WorkoutSetLogger({
       ? stripEmbeddedNotes(String(firstPrev.copySource.log_notes))
       : undefined;
 
-  const runPendingSave = (save: () => void | Promise<void>) => {
+  const runPendingSave = (save: () => void | Promise<unknown>) => {
     try {
       const result = save();
       if (result && typeof (result as Promise<void>).then === 'function') {
@@ -536,7 +682,7 @@ export default function WorkoutSetLogger({
     return Promise.resolve();
   };
 
-  const scheduleSave = (key: string, _value: string, save: () => void | Promise<void>) => {
+  const scheduleSave = useCallback((key: string, _value: string, save: () => void | Promise<unknown>) => {
     pendingSavesRef.current[key] = save;
     if (saveTimersRef.current[key]) clearTimeout(saveTimersRef.current[key]);
     saveTimersRef.current[key] = setTimeout(() => {
@@ -545,17 +691,17 @@ export default function WorkoutSetLogger({
       delete pendingSavesRef.current[key];
       if (run) void runPendingSave(run);
     }, 700);
-  };
+  }, []);
 
-  const flushSaves = async () => {
+  const flushSaves = useCallback(async () => {
     Object.values(saveTimersRef.current).forEach((t) => clearTimeout(t));
     saveTimersRef.current = {};
     const pending = { ...pendingSavesRef.current };
     pendingSavesRef.current = {};
     await Promise.all(Object.values(pending).map((run) => (run ? runPendingSave(run) : Promise.resolve())));
-  };
+  }, []);
 
-  useEffect(() => () => { void flushSaves(); }, []);
+  useEffect(() => () => { void flushSaves(); }, [flushSaves]);
 
   const saveExerciseNotes = (value: string) => {
     if (!firstSet) return;
@@ -568,6 +714,7 @@ export default function WorkoutSetLogger({
   };
 
   return (
+    <Profiler id="workout-set-logger" onRender={(_id, _phase, actualDuration) => noteLoggerRender(actualDuration)}>
     <div className="workout-set-logger">
       {showDistToggle && (
         <div className="log-pref-bar">
@@ -604,21 +751,22 @@ export default function WorkoutSetLogger({
 
       <div className="set-log-list">
         {sets.map((s) => (
-          <SetLogCard
+          <MemoSetLogCard
             key={s.id}
             set={s}
             allSets={sets}
-            log={logs[s.id] || {}}
+            log={logs[s.id] || EMPTY_LOG}
             prev={prevBySetId[s.id] || null}
-            layout={isRampEffortSetType(s.set_type) ? { ...layout, showRirChips: false } : layout}
+            layout={isRampEffortSetType(s.set_type) ? rampLayout : layout}
             weightUnit={weightUnit}
             distanceUnit={distanceUnit}
             canEdit={canEdit}
             canLog={canLog}
-            onEditSet={onEditSet}
-            onRemoveSet={onRemoveSet}
-            onSaveField={onSaveField}
-            onDuplicateSet={onDuplicateSet}
+            onEditSet={stableEdit}
+            onRemoveSet={stableRemove}
+            onSaveField={stableSave}
+            onRetrySet={stableRetry}
+            onDuplicateSet={stableDuplicate}
             registerInputRef={registerInputRef}
             onInputKeyDown={onInputKeyDown}
             onFocusNextInput={onFocusNextInput}
@@ -628,11 +776,11 @@ export default function WorkoutSetLogger({
           />
         ))}
         {extraSets.map((s) => (
-          <SetLogCard
+          <MemoSetLogCard
             key={s.id}
             set={s}
             allSets={[...sets, ...extraSets]}
-            log={extraLogs[s.id] || {}}
+            log={extraLogs[s.id] || EMPTY_LOG}
             prev={null}
             layout={layout}
             weightUnit={weightUnit}
@@ -667,5 +815,44 @@ export default function WorkoutSetLogger({
         </div>
       )}
     </div>
+    </Profiler>
   );
 }
+
+function sameSetRows(a: SetRow[] = [], b: SetRow[] = []) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
+function sameSetLogs(a: Record<string, LogRow>, b: Record<string, LogRow>, rows: SetRow[] = []) {
+  for (const row of rows) {
+    if ((a[row.id] || EMPTY_LOG) !== (b[row.id] || EMPTY_LOG)) return false;
+  }
+  return true;
+}
+
+function loggerPropsEqual(prev: Props, next: Props) {
+  if (prev.exType !== next.exType || prev.section !== next.section) return false;
+  if (prev.canEdit !== next.canEdit || prev.canLog !== next.canLog) return false;
+  if (prev.weightUnit !== next.weightUnit || prev.distanceUnit !== next.distanceUnit) return false;
+  if (prev.showPreviousSets !== next.showPreviousSets || prev.exerciseSkipped !== next.exerciseSkipped) return false;
+  if (prev.prevBySetId !== next.prevBySetId) return false;
+  if (prev.onSaveField !== next.onSaveField || prev.onEditSet !== next.onEditSet || prev.onRemoveSet !== next.onRemoveSet) return false;
+  if (prev.onDuplicateSet !== next.onDuplicateSet || prev.onRetrySet !== next.onRetrySet) return false;
+  if (prev.onDistanceUnitChange !== next.onDistanceUnitChange) return false;
+  if (!sameSetRows(prev.sets, next.sets)) return false;
+  if (!sameSetLogs(prev.logs, next.logs, next.sets)) return false;
+  const prevExtra = prev.extraSets || [];
+  const nextExtra = next.extraSets || [];
+  if (prevExtra.length !== nextExtra.length) return false;
+  for (let i = 0; i < nextExtra.length; i++) {
+    if (prevExtra[i]?.id !== nextExtra[i]?.id || prevExtra[i]?.set_number !== nextExtra[i]?.set_number) return false;
+    const prevLog = (prev.extraLogs || {})[nextExtra[i].id] || EMPTY_LOG;
+    const nextLog = (next.extraLogs || {})[nextExtra[i].id] || EMPTY_LOG;
+    if (prevLog !== nextLog) return false;
+  }
+  return true;
+}
+
+export default memo(WorkoutSetLogger, loggerPropsEqual);

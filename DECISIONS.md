@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 145 - Workout logging paints before the set is saved
+
+Date: 2026-11-01
+Status: Accepted
+Category: Performance
+
+### Decision
+
+BIQ-0289 updates RIR and Done in the set card before the `st_set_logs` write returns. Typed weight, reps, and notes still update as the person types. Saves for one planned set stay in order, and a newer edit replaces an older payload that has not been confirmed. A failed save keeps the entered value, shows Saving failed with Retry, and does not present the set as saved. The catalog alias index is built once for a catalog array. Previous-performance views are not rebuilt when an unrelated set field changes. Today, week, and month completion are recalculated when completion changes, not on every RIR or weight edit. Session completion, assignment completion, group completion, and personal-record detection run after the set row is applied. Click-to-visual, save, and logger render samples are recorded in the browser as `window.__biqLoggerTiming`.
+
+### Reason
+
+The chip and checkbox were bound to server state, so they could not move until the write and the following full-page render finished. That render rebuilt the catalog index once per history row per set.
+
+### Alternatives Considered
+
+Debouncing the chip highlight. Waiting to investigate Phase D first. Both leave the logger feeling stuck during a workout.
+
+### Impact
+
+No database change and no new dependency. Active-logger protection, history snapshots, equipment-specific previous performance, Copy last, session feedback, and Finish Workout stay in place. Phase D stays paused until this change is reviewed.
+
+---
+
 ## Decision 143 - Loaded screens stay in a module cache and the first bundle stays smaller
 
 Date: 2026-11-01
@@ -4060,3 +4084,5 @@ The +15 minute allowance let a 60-minute request pass at 75 minutes. Vertical pr
 - Phase 2 remains unstarted
 
 ---
+
+

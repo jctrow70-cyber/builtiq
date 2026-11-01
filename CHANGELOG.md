@@ -11,6 +11,43 @@ Branch:
 Status:
 ```
 
+## BIQ-0289 - Make workout logging respond immediately
+
+Date: 2026-11-01
+Branch: main
+Status: Implemented locally. Not pushed. No database change.
+
+Summary: RIR chips and the Done checkbox update in the logger before the set is saved. A newer edit replaces an older in-flight value. Previous-performance history reuses one catalog index, and the calendar is not rebuilt for a field that does not change completion.
+
+Purpose: Selecting RIR or Done was waiting on a full set-row write and then rebuilding the catalog alias index for every history row of every visible set. The control should move in the same moment as the tap, and a failed or delayed write must not put an older value back on top of a newer one.
+
+Files changed:
+- app/components/WorkoutSetLogger.tsx
+- app/page.tsx
+- app/globals.css
+- lib/training/setLogIntent.ts
+- lib/training/catalogDedupe.ts
+- lib/training/previousPerformance.ts
+- lib/performance/loggerTiming.ts
+- scripts/test-logger-performance.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- Log a workout. Tap an RIR chip and the Done box. Each control should move immediately, then show Saving… until the row is stored. A failure shows the error and Retry, and keeps the value you chose.
+- Change RIR twice quickly. The highlighted chip stays on the later choice. Refresh and confirm that later value was stored.
+- Type a weight and tap Done before the weight debounce finishes. The box checks immediately. The saved row has both the weight and Done.
+- Leave Training while a save is in flight and come back. The entered value is still there.
+- Finish Workout, partial, completed, skipped, Copy last, and equipment-specific previous lines still behave as before.
+- On a signed-in session, read `window.__biqLoggerTiming.summary()` after several taps. RIR and Done click-to-visual median and 95th percentile should be under 100 ms.
+
+Known issues: Signed-in browser timings were not collected in this pass. Phase D stays paused until this change is reviewed.
+
+Recommended commit message: BIQ-0289 Make workout logging respond immediately.
+
 ## BIQ-0287 - Split the first screen bundle and keep loaded screens ready
 
 Date: 2026-11-01

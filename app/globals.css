@@ -695,6 +695,11 @@ button.member-training-week-row{width:100%;background:transparent;border-left:0;
 .set-log-list{display:flex;flex-direction:column;gap:8px}
 .set-log-card{background:linear-gradient(180deg,#121a28,#0e141f);border:1px solid #334155;border-radius:14px;padding:10px;box-shadow:0 1px 4px rgba(0,0,0,.2);transition:border-color .2s ease,box-shadow .2s ease}
 .set-log-card.set-log-done{border-color:rgba(34,197,94,.45);box-shadow:0 0 0 1px rgba(34,197,94,.12)}
+.set-log-card.set-log-error{border-color:rgba(248,113,113,.75)}
+.set-log-status{margin:8px 2px 0;font-size:12px;font-weight:700;line-height:1.3}
+.set-log-status-saving{color:#94a3b8}
+.set-log-status-error{color:#fecaca}
+.set-log-status .btn{margin-left:6px}
 .set-log-grid{display:grid;grid-template-columns:1fr auto;column-gap:10px;row-gap:8px;align-items:stretch}
 .set-log-grid.has-chip-row{grid-template-rows:auto auto auto}
 .set-log-grid:not(.has-chip-row){grid-template-rows:auto auto}
