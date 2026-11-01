@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { completeScreenPhase } from '../../../lib/performance/screenTiming';
+import { beginScreenPaint, finishScreenPaint, readScreenCache, writeScreenCache } from '../../../lib/performance/screenSession';
 import { supabase } from '../../../lib/supabaseClient';
 import TrainingExecution from './TrainingExecution';
 import {
@@ -22,6 +23,7 @@ import {
   loadVisibleSchedule,
   scheduleTeamLabel,
   type VisibleScheduleEnrollment,
+  type VisibleScheduleSnapshot,
 } from '../../../lib/training/visibleSchedule';
 
 export type ScheduleStartItem = {
@@ -81,27 +83,49 @@ type Props = {
 };
 
 export default function UnifiedTrainingSchedule({ userId, teams, rangeFrom, rangeTo, calendar }: Props) {
-  const [enrollments, setEnrollments] = useState<VisibleScheduleEnrollment[]>([]);
-  const [programNames, setProgramNames] = useState<Record<string, string>>({});
-  const [visibleExpectations, setVisibleExpectations] = useState<VisibleScheduleExpectation[]>([]);
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [busyId, setBusyId] = useState<string | null>(null);
   const today = todayYmd();
+  const cacheKey = `${today}|${rangeFrom}|${rangeTo}`;
+  const opening = readScreenCache<VisibleScheduleSnapshot>(userId, 'schedule', cacheKey, today, {
+    dateScoped: true,
+    staleAreas: ['schedule', 'program'],
+  });
+  const [enrollments, setEnrollments] = useState<VisibleScheduleEnrollment[]>(opening?.value.pending ? [] : opening?.value.enrollments || []);
+  const [programNames, setProgramNames] = useState<Record<string, string>>(opening?.value.pending ? {} : opening?.value.programNames || {});
+  const [visibleExpectations, setVisibleExpectations] = useState<VisibleScheduleExpectation[]>(opening?.value.pending ? [] : opening?.value.expectations || []);
+  const [pending, setPending] = useState(!!opening?.value.pending);
+  const [error, setError] = useState<string | null>(opening?.value.error || null);
+  const [loading, setLoading] = useState(!opening);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    const snapshot = await loadVisibleSchedule(supabase, { userId, teams, rangeFrom, rangeTo, today });
+  const applySnapshot = useCallback((snapshot: VisibleScheduleSnapshot) => {
     setPending(snapshot.pending);
     setError(snapshot.error);
     setEnrollments(snapshot.pending ? [] : snapshot.enrollments);
     setProgramNames(snapshot.pending ? {} : snapshot.programNames);
     setVisibleExpectations(snapshot.pending ? [] : snapshot.expectations);
+  }, []);
+
+  const load = useCallback(async () => {
+    const paint = beginScreenPaint<VisibleScheduleSnapshot>('Training', userId, 'schedule', cacheKey, today, {
+      dateScoped: true,
+      staleAreas: ['schedule', 'program'],
+    });
+    if (paint.cached) {
+      applySnapshot(paint.cached);
+      setLoading(false);
+      completeScreenPhase('Training', 'schedule');
+      if (!paint.background) return;
+    } else {
+      setLoading(true);
+      setError(null);
+    }
+    const snapshot = await loadVisibleSchedule(supabase, { userId, teams, rangeFrom, rangeTo, today });
+    applySnapshot(snapshot);
+    writeScreenCache(userId, 'schedule', cacheKey, snapshot, today);
     setLoading(false);
+    finishScreenPaint('Training', userId, ['schedule'], !!paint.cached && paint.background);
     completeScreenPhase('Training', 'schedule');
-  }, [userId, teams, today, rangeFrom, rangeTo]);
+  }, [userId, teams, today, rangeFrom, rangeTo, applySnapshot]);
 
   useEffect(() => {
     void load();

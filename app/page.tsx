@@ -130,6 +130,7 @@ import { groupActivityLogReturn, groupActivitySourceKey, type GroupActivityLogCo
 import type { AssignTrainingSubmit } from './components/groups/AssignTrainingWizard';
 import type { AssignProgramTarget } from './components/groups/TeamAssignProgramModal';
 import { beginScreenTiming, completeScreenPhase, noteProgramLoad } from '../lib/performance/screenTiming';
+import { activeWorkoutIsProtected, bindScreenSessionUser, clearScreenSession, clearScreenStale, isScreenStale, markScreenStale, subscribeScreenSession } from '../lib/performance/screenSession';
 import { assignmentLoadKey, createProgramLoadGate, groupAssignLoadForNav, programLoadKey, shellProgramLoadForNav } from '../lib/training/programLoadGate';
 
 const NAV=['Dashboard','Training','Programs','Groups','Nutrition','Progress','AI Coach','Settings'];
@@ -219,7 +220,7 @@ export default function Page(){
  const [programs,setPrograms]=useState<any[]>([]),[program,setProgram]=useState<any>(null),[programName,setProgramName]=useState('Strength Program'),[weeks,setWeeks]=useState(6);
  const [programStartDate,setProgramStartDate]=useState(()=>mondayOfWeek(todayYmd()));
  const [week,setWeek]=useState(1),[activeWorkout,setActiveWorkout]=useState('');
- const [logDate,setLogDate]=useState(today()),[logs,setLogs]=useState<any>({}),[history,setHistory]=useState<any>({}),[liftHistoryRows,setLiftHistoryRows]=useState<any[]>([]),[pendingEquipmentById,setPendingEquipmentById]=useState<Record<string,string>>({}),[applyScope,setApplyScope]=useState<'current'|'future'>('future'),[pendingAddScope,setPendingAddScope]=useState<'current'|'future'|null>(null);
+ const [logDate,setLogDate]=useState(today()),[localDate,setLocalDate]=useState(today()),[logs,setLogs]=useState<any>({}),[history,setHistory]=useState<any>({}),[liftHistoryRows,setLiftHistoryRows]=useState<any[]>([]),[pendingEquipmentById,setPendingEquipmentById]=useState<Record<string,string>>({}),[applyScope,setApplyScope]=useState<'current'|'future'>('future'),[pendingAddScope,setPendingAddScope]=useState<'current'|'future'|null>(null);
  const [catalog,setCatalog]=useState<any[]>([]);
  const [catalogError,setCatalogError]=useState('');
  const [showCustomForm,setShowCustomForm]=useState<any>({warmup:false,strength:false,cooldown:false});
@@ -234,6 +235,9 @@ export default function Page(){
  const [trainingCalendarView,setTrainingCalendarView]=useState<'day'|'week'|'month'>('month');
  const [trainingCalendarMonth,setTrainingCalendarMonth]=useState(()=>yearMonthOf(todayYmd()));
  const [trainingSessionOpen,setTrainingSessionOpen]=useState(false);
+ const trainingSessionOpenRef=useRef(false);
+ trainingSessionOpenRef.current=trainingSessionOpen;
+ const [screenSessionTick,setScreenSessionTick]=useState(0);
  const [activeExpectationId,setActiveExpectationId]=useState<string|null>(null);
  const [activeExpectationSource,setActiveExpectationSource]=useState<string|null>(null);
  const [activeExpectationDate,setActiveExpectationDate]=useState<string|null>(null);
@@ -361,11 +365,27 @@ export default function Page(){
   const saved=localStorage.getItem(REMEMBER_EMAIL_KEY);
   if(saved){setEmail(saved);setRememberEmail(true);}
  },[]);
+ useEffect(()=>subscribeScreenSession(()=>setScreenSessionTick((value)=>value+1)),[]);
  useEffect(()=>{
+  clearScreenSession();
+  setTrainingSessionOpen(false);
+  setLogs({});
+  logsRef.current={};
+  setSessionOutcome('not_started');
+  setSessionFeel('');
+  setSessionPain('');
+  setSessionNotes('');
+  setSessionSkipReason('');
+  setSessionFeedbackExpanded(false);
+  sessionFeedbackDirtyRef.current=false;
+  sessionFeedbackIdentityRef.current=null;
+  setLogDate(todayYmd());
+  setAppNav('Dashboard');
   if(!session?.user){
    setProfile(null);setProfileLoading(false);setSelectedTeamId(null);setTeams([]);setMembers([]);setPrograms([]);setProgram(null);setMode('personal');setAssignedWorkouts([]);setActiveAssignedRecipient(null);setGroupProgramForAssign(null);setClassifications([]);setMemberClassificationIds({});setMemberRosterMeta({});setMemberPerformance(null);
    return;
   }
+  bindScreenSessionUser(session.user.id);
   setProfileLoading(true);
   setSelectedTeamId(null);setTeams([]);setMembers([]);setMode('personal');
   boot().finally(()=>setProfileLoading(false));
@@ -395,14 +415,15 @@ export default function Page(){
  useEffect(()=>()=>{if(prCelebrationTimerRef.current)clearTimeout(prCelebrationTimerRef.current);},[]);
  useEffect(()=>{
   if(!program||syncingCalendarRef.current||activeAssignedRecipient||viewingMember||draftEditProgramId)return;
+  if(loggerProtected())return;
   const start=resolveProgramStartDate(program);
   const total=program.weeks||weeks||6;
   const nextWeek=weekForDate(start,logDate,total);
   if(nextWeek!==week)setWeek(nextWeek);
- },[program?.id,program?.start_date,program?.created_at,program?.weeks,logDate,activeAssignedRecipient?.id,viewingMember?.user_id,draftEditProgramId]);
+ },[program?.id,program?.start_date,program?.created_at,program?.weeks,logDate,activeAssignedRecipient?.id,viewingMember?.user_id,draftEditProgramId,trainingSessionOpen]);
  useEffect(()=>{
   if(!program||syncingCalendarRef.current||activeAssignedRecipient||viewingMember||draftEditProgramId)return;
-  if(trainingSessionOpen)return;
+  if(loggerProtected())return;
   if(isPersonalCalendarWorkout(activeWorkout))return;
   const match=workoutForDate(program,logDate,week,workoutDayMovesFromActivities(userCalendarActivities));
   if(match&&match.id!==activeWorkout)setActiveWorkout(match.id);
@@ -424,7 +445,28 @@ export default function Page(){
    setUserCalendarReady(true);
   });
   return()=>{cancelled=true;};
- },[appNav,trainingCalendarMonth,session?.user?.id]);
+ },[appNav,trainingCalendarMonth,session?.user?.id,localDate]);
+ useEffect(()=>{
+  const tick=()=>setLocalDate((prev)=>{const next=todayYmd();return prev===next?prev:next;});
+  const id=window.setInterval(tick,60000);
+  const onVisible=()=>{
+   tick();
+   if(document.visibilityState!=='visible'||!session?.user?.id)return;
+   markScreenStale(session.user.id,['program','schedule','groups','dashboard','progress']);
+  };
+  document.addEventListener('visibilitychange',onVisible);
+  return()=>{window.clearInterval(id);document.removeEventListener('visibilitychange',onVisible);};
+ },[session?.user?.id]);
+ useEffect(()=>{
+  if(!session?.user?.id||loggerProtected())return;
+  const userId=session.user.id;
+  if((appNav==='Training'||appNav==='Dashboard')&&(isScreenStale(userId,'program')||isScreenStale(userId,'schedule'))){
+   const context=shellProgramLoadForNav(appNav);
+   if(context) void loadPrograms(context);
+  } else if(appNav==='Groups'&&(isScreenStale(userId,'groups')||isScreenStale(userId,'program'))){
+   void loadPrograms('setup');
+  }
+ },[screenSessionTick,appNav,trainingSessionOpen,session?.user?.id]);
  useEffect(()=>{
   if(typeof window==='undefined')return;
   const onScroll=()=>setBugFabVisible(window.scrollY>120);
@@ -559,6 +601,7 @@ export default function Page(){
  async function createProfile(){await saveProfile(true);}
  async function signOut(){
   try{
+   clearScreenSession();
    setProfileLoading(false);
    setProfile(null);
    setPrograms([]);
@@ -588,6 +631,7 @@ export default function Page(){
   ]);
   const ts=(memberRows||[]).map((m:any)=>m.st_teams&&!m.st_teams.is_archived?{...m.st_teams,my_role:m.role,training_source:m.training_source||'team',membership_id:m.id,is_active_participant:m.is_active_participant!==false}:null).filter(Boolean).sort((a:any,b:any)=>String(a.name||'').localeCompare(String(b.name||''),undefined,{sensitivity:'base'}));
   setTeams(ts);
+  if(session?.user?.id) markScreenStale(session.user.id,['groups']);
   const defaultId=profileRow?.default_team_id||profile?.default_team_id||null;
   setSelectedTeamId((prev)=>{
     if(prev&&ts.some((t:any)=>t.id===prev))return prev;
@@ -714,6 +758,7 @@ export default function Page(){
    if(!options?.quiet)alert(msg);
    return msg;
   }
+  if(session?.user?.id) markScreenStale(session.user.id,['program','schedule','groups','dashboard','progress']);
   await loadMembers();
   const freshAssignments=await loadMemberAssignments();
   if(memberDashboard?.user_id===member.user_id)await loadMemberDashboardData(member,freshAssignments);
@@ -828,7 +873,11 @@ export default function Page(){
  }
  function findWorkoutInProgram(prog:any,workoutId:string){return (prog?.st_workouts||[]).find((w:any)=>w.id===workoutId)||null;}
  function defaultSetupWorkout(prog:any){return (prog?.st_workouts||[]).slice().sort((a:any,b:any)=>a.week-b.week||a.day_order-b.day_order)[0]||null;}
+ function loggerProtected(){
+  return activeWorkoutIsProtected(trainingSessionOpenRef.current,Object.keys(upsertQueueRef.current).length>0);
+ }
  function alignEditorCalendar(prog:any,workoutId:string){
+  if(loggerProtected())return;
   const w=findWorkoutInProgram(prog,workoutId)||defaultSetupWorkout(prog);
   if(!w||!prog)return;
   syncingCalendarRef.current=true;
@@ -865,6 +914,15 @@ export default function Page(){
   });
  }
  async function loadProgramGeneration(context:'training'|'setup',nav:string,editTargetId:string|null,options:{assignmentsOverride?:Record<string,any>;editProgramId?:string|null;preserveWorkoutId?:string|null;followedProgramId?:string|null;nav?:string}|undefined,live:()=>boolean){
+  if(loggerProtected()){
+   if(session?.user?.id) markScreenStale(session.user.id,['program','schedule','groups','dashboard','progress']);
+   setTrainingScheduleReady(true);
+   if(nav==='Training'||nav==='Dashboard') completeScreenPhase(nav,'program');
+   return;
+  }
+  if(options&&Object.prototype.hasOwnProperty.call(options,'followedProgramId')&&session?.user?.id){
+   markScreenStale(session.user.id,['groups','dashboard','progress']);
+  }
   let followedId=profile?.followed_program_id||null;
   if(options&&Object.prototype.hasOwnProperty.call(options,'followedProgramId'))followedId=options.followedProgramId||null;
   // Members: auto-enroll in the date-active group plan (Training calendar follows plan dates).
@@ -895,6 +953,7 @@ export default function Page(){
     if(sync.changed&&sync.programId){
      followedId=sync.programId;
      setProfile((p:any)=>p?{...p,followed_program_id:sync.programId}:p);
+     markScreenStale(session.user.id,['groups','dashboard','progress']);
     }
    }
   }
@@ -990,6 +1049,7 @@ export default function Page(){
     setCalendarWorkouts(extras.data||[]);
   }
   if(!live())return;
+  if(session?.user?.id) clearScreenStale(session.user.id,['program','schedule']);
   setTrainingScheduleReady(true);
   if(nav==='Training'||nav==='Dashboard') completeScreenPhase(nav,'program');
  }
@@ -1729,6 +1789,8 @@ export default function Page(){
   setSessionNotes(next.notes);
  }
  async function loadLogs(p:any,userId?:string,dateOverride?:string){
+  const ownLog=!userId||userId===session?.user?.id;
+  if(ownLog&&loggerProtected())return;
   const uid=userId||session?.user?.id;
   const day=dateOverride||logDate;
   const extras=extraWorkoutsForLogging();
@@ -2396,6 +2458,7 @@ export default function Page(){
     }
   }
   if(error){alert(friendlyWriteError(error,'Could not save that set. Please try again.'));return;}
+  if(session?.user?.id) markScreenStale(session.user.id,['schedule','progress','dashboard']);
   setLogs((prev:any)=>{
     const next={...prev,[sid]:data};
     logsRef.current=next;
@@ -2550,6 +2613,7 @@ export default function Page(){
     alert(saved.error);
     return;
   }
+  if(session?.user?.id) markScreenStale(session.user.id,['schedule','progress','dashboard','groups']);
   const savedKey=`${session.user.id}|${workout.id}|${activeLogDateForLogging()}`;
   if(next==='completed')completedSessionKeyRef.current=savedKey;
   else if(completedSessionKeyRef.current===savedKey)completedSessionKeyRef.current=null;

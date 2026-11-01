@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import Card from '../ui/Card';
 import SegmentedControl from '../ui/SegmentedControl';
 import ProgressBody from './ProgressBody';
@@ -17,6 +17,7 @@ import type { ProgressSection } from '../../../lib/progress/progressView';
 import type { UnitsPreference } from '../../../lib/body/measurements';
 import { todayYmd } from '../../../lib/training/programCalendar';
 import { completeScreenPhase } from '../../../lib/performance/screenTiming';
+import { beginScreenPaint, finishScreenPaint, markScreenStale, readScreenCache, writeScreenCache } from '../../../lib/performance/screenSession';
 
 type ProgressScreenProps = {
   userId: string | null;
@@ -47,56 +48,62 @@ export default function ProgressScreen({
 }: ProgressScreenProps) {
   const units: UnitsPreference = unitsPreference === 'metric' ? 'metric' : 'imperial';
   const [range, setRange] = useState<ProgressRange>('4W');
-  const [report, setReport] = useState<ProgressReport | null>(null);
+  const [report, setReport] = useState<ProgressReport | null>(() => {
+    if (!userId) return null;
+    return readScreenCache<ProgressReport>(userId, 'progress', `4W|${units}`, todayYmd(), {
+      dateScoped: true,
+      staleAreas: ['progress'],
+    })?.value || null;
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const cache = useRef(new Map<string, ProgressReport>());
-  const cacheUser = useRef(userId);
-
-  if (cacheUser.current !== userId) {
-    cache.current.clear();
-    cacheUser.current = userId;
-  }
 
   useEffect(() => {
     if (!userId) return;
     let cancelled = false;
-    const key = `${userId}|${range}`;
-    const cached = cache.current.get(key);
-    if (cached) {
-      setReport(cached);
+    const today = todayYmd();
+    const key = `${range}|${units}`;
+    const paint = beginScreenPaint<ProgressReport>('Progress', userId, 'progress', key, today, {
+      dateScoped: true,
+      staleAreas: ['progress'],
+    });
+    if (paint.cached) {
+      setReport(paint.cached);
       setError(null);
       setLoading(false);
       completeScreenPhase('Progress', 'data');
-      return;
     }
-    setLoading(true);
-    setError(null);
-    setReport(null);
-    loadProgressReport(supabase, userId, range, todayYmd())
-      .then((next) => {
-        if (cancelled) return;
-        cache.current.set(key, next);
-        setReport(next);
-      })
-      .catch(() => {
-        if (!cancelled) setError('Progress could not be loaded. Check your connection and try again.');
-      })
-      .finally(() => {
-        if (!cancelled) {
+    if (!paint.cached || paint.background) {
+      if (!paint.cached) {
+        setLoading(true);
+        setError(null);
+        setReport(null);
+      }
+      loadProgressReport(supabase, userId, range, today)
+        .then((next) => {
+          if (cancelled) return;
+          writeScreenCache(userId, 'progress', key, next, today);
+          setReport(next);
+        })
+        .catch(() => {
+          if (!cancelled) setError('Progress could not be loaded. Check your connection and try again.');
+        })
+        .finally(() => {
+          if (cancelled) return;
           setLoading(false);
+          finishScreenPaint('Progress', userId, ['progress'], !!paint.cached && paint.background);
           completeScreenPhase('Progress', 'data');
-        }
-      });
+        });
+    }
     return () => {
       cancelled = true;
     };
-  }, [userId, range, refreshKey]);
+  }, [userId, range, refreshKey, units]);
 
   function refresh() {
     clearSeriesFactCache();
-    cache.current.delete(`${userId}|${range}`);
+    if (userId) markScreenStale(userId, ['progress']);
     setRefreshKey((value) => value + 1);
   }
 

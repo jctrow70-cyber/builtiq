@@ -11,11 +11,55 @@ Branch:
 Status:
 ```
 
+## BIQ-0286 - Keep visited screens in a user-scoped memory cache
+
+Date: 2026-11-01
+Branch: main
+Status: Committed locally after tests. Not pushed. No database change.
+
+Summary: Nutrition, Training, Progress, Dashboard, and Groups paint the last in-memory result for the signed-in user, then refresh in the background. Unsaved food entry and an open workout stay in place. Sign-out and account switches drop the cache.
+
+Purpose: Repeat visits were waiting on the network again, and leaving Nutrition or a program refresh could discard an unsaved meal or move an active logger. The warm path should show the last screen immediately without sharing that memory across accounts.
+
+Files changed:
+- app/page.tsx
+- app/components/NutritionTracker.tsx
+- app/components/training/UnifiedTrainingSchedule.tsx
+- app/components/progress/ProgressScreen.tsx
+- app/components/groups/useGroupTrainingBoard.ts
+- app/components/dashboard/NutritionDashboardCard.tsx
+- app/components/dashboard/WeeklyAdherenceCard.tsx
+- app/components/dashboard/ProgressDashboardCard.tsx
+- app/components/dashboard/TodaysTrainingHero.tsx
+- lib/performance/screenSession.ts
+- lib/performance/screenTiming.ts
+- scripts/test-screen-session.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- Save a meal, leave Nutrition with Add Food open, return, and confirm the draft and saved rows are both still there.
+- Start a workout, switch to Dashboard and back, and confirm the selected workout, sets, date, and feedback stay put.
+- Open Training, leave, and return within 30 seconds. The calendar shows immediately. A trainer assignment still refreshes after the paint.
+- Sign out and sign in as someone else. The previous meals, schedule, and logger are gone.
+- Leave the app until the next local day. Today’s schedule and dashboard cards load for the new day.
+- Run `npx tsx scripts/test-screen-session.ts` and the navigation, nutrition, training, and dashboard regression scripts.
+
+Known issues:
+- Warm navigation under 500 ms is measured as time-to-usable in the browser (`window.__biqScreenTiming`, `measurement: 'browser'`). This session did not have a signed-in browser, so that target still needs a live check.
+- Program Design still drops unsaved editor changes when you leave it.
+- A trainer change made on another device is picked up when this tab becomes visible or the cached screen is stale, not by a live subscription on every screen.
+
+Recommended commit message: BIQ-0286 Keep visited screens in a user-scoped memory cache
+
 ## BIQ-0285 - Stop unused program reloads on tab changes
 
 Date: 2026-11-01
 Branch: main
-Status: Implemented. Not committed. No database change.
+Status: Committed locally. Not pushed. No database change.
 
 Summary: Nutrition, Progress, Settings, and AI Coach no longer reload the training program tree. Training and Groups start that load once, and an older response cannot overwrite a newer one.
 

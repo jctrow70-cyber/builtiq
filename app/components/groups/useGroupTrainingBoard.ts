@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { loadGroupTrainingFacts, type GroupTrainingFacts } from '../../../lib/groups/loadGroupTrainingFacts';
 import { buildGroupTrainingBoard, type GroupTrainingBoard, type GroupTrainingProgramRef } from '../../../lib/groups/trainingWorkspace';
+import { completeScreenPhase } from '../../../lib/performance/screenTiming';
+import { beginScreenPaint, finishScreenPaint, markScreenStale, subscribeScreenSession, writeScreenCache } from '../../../lib/performance/screenSession';
 import { todayYmd } from '../../../lib/training/programCalendar';
 import { supabase } from '../../../lib/supabaseClient';
 
@@ -63,6 +65,8 @@ export function useGroupTrainingBoard(input: {
 }) {
   const [facts, setFacts] = useState<GroupTrainingFacts | null>(null);
   const [factsTick, setFactsTick] = useState(0);
+  const [sessionTick, setSessionTick] = useState(0);
+  useEffect(() => subscribeScreenSession(() => setSessionTick((value) => value + 1)), []);
   const assignmentKey = useMemo(
     () =>
       input.members
@@ -86,20 +90,35 @@ export function useGroupTrainingBoard(input: {
       return;
     }
     let cancelled = false;
+    const today = todayYmd();
     const subjectUserId = input.canSeeAllTraining ? null : input.sessionUserId;
+    const cacheKey = `${input.teamId}|${today}|${subjectUserId || 'all'}`;
+    const paint = beginScreenPaint<GroupTrainingFacts>('Groups', input.sessionUserId, 'groups', cacheKey, today, {
+      dateScoped: true,
+      staleAreas: ['groups', 'program'],
+    });
+    if (paint.cached) {
+      setFacts(paint.cached);
+      completeScreenPhase('Groups', 'data');
+      if (!paint.background) return () => { cancelled = true; };
+    }
     void loadGroupTrainingFacts(supabase, {
       teamId: input.teamId,
-      today: todayYmd(),
+      today,
       viewerUserId: input.sessionUserId,
       memberUserIds,
       subjectUserId,
     }).then((next) => {
-      if (!cancelled) setFacts(next);
+      if (cancelled) return;
+      writeScreenCache(input.sessionUserId || '', 'groups', cacheKey, next, today);
+      setFacts(next);
+      finishScreenPaint('Groups', input.sessionUserId || '', ['groups'], !!paint.cached && paint.background);
+      completeScreenPhase('Groups', 'data');
     });
     return () => {
       cancelled = true;
     };
-  }, [input.teamId, input.sessionUserId, input.canSeeAllTraining, memberUserIds, factsTick]);
+  }, [input.teamId, input.sessionUserId, input.canSeeAllTraining, memberUserIds, factsTick, sessionTick]);
 
   const board: GroupTrainingBoard | null = useMemo(() => {
     if (!input.teamId || !facts) return null;
@@ -155,6 +174,9 @@ export function useGroupTrainingBoard(input: {
     notice: facts?.notice || null,
     trainingReady: !!facts,
     reloadKey: factsTick,
-    reload: () => setFactsTick((value) => value + 1),
+    reload: () => {
+      if (input.sessionUserId) markScreenStale(input.sessionUserId, ['groups']);
+      setFactsTick((value) => value + 1);
+    },
   };
 }

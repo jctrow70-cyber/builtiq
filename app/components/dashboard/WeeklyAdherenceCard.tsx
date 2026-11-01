@@ -10,6 +10,7 @@ import {
   weekAdherenceSummary,
   type WeekAdherenceSummary,
 } from '../../../lib/progress/weekAdherence';
+import { beginScreenPaint, finishScreenPaint, readScreenCache, subscribeScreenSession, writeScreenCache } from '../../../lib/performance/screenSession';
 import { currentCalendarWeekBounds, formatDisplayDate, todayYmd } from '../../../lib/training/programCalendar';
 
 type WeeklyAdherenceCardProps = {
@@ -31,18 +32,35 @@ export default function WeeklyAdherenceCard({ userId, onSelectDate }: WeeklyAdhe
   const today = todayYmd();
   const bounds = currentCalendarWeekBounds();
   const [reloadKey, setReloadKey] = useState(0);
-  const [state, setState] = useState<CardState>({ status: 'loading' });
+  const [sessionTick, setSessionTick] = useState(0);
+  const [state, setState] = useState<CardState>(() => {
+    const cached = readScreenCache<WeekAdherenceLoad>(userId, 'dashboard', `adherence|${bounds.monday}`, today, {
+      dateScoped: true,
+      staleAreas: ['dashboard', 'progress'],
+    });
+    return cached?.value || { status: 'loading' };
+  });
+  useEffect(() => subscribeScreenSession(() => setSessionTick((value) => value + 1)), []);
 
   useEffect(() => {
     let cancelled = false;
-    setState({ status: 'loading' });
+    const paint = beginScreenPaint<WeekAdherenceLoad>('Dashboard', userId, 'dashboard', `adherence|${bounds.monday}`, today, {
+      dateScoped: true,
+      staleAreas: ['dashboard', 'progress'],
+    });
+    if (paint.cached) setState(paint.cached);
+    else setState({ status: 'loading' });
+    if (paint.cached && !paint.background) return;
     loadWeekAdherence(supabase, userId, bounds.monday, bounds.sunday).then((result) => {
-      if (!cancelled) setState(result);
+      if (cancelled) return;
+      writeScreenCache(userId, 'dashboard', `adherence|${bounds.monday}`, result, today);
+      setState(result);
+      finishScreenPaint('Dashboard', userId, ['dashboard'], !!paint.cached && paint.background);
     });
     return () => {
       cancelled = true;
     };
-  }, [userId, bounds.monday, bounds.sunday, reloadKey]);
+  }, [userId, bounds.monday, bounds.sunday, reloadKey, sessionTick, today]);
 
   const summary = state.status === 'ready' ? weekAdherenceSummary(state.facts, today, bounds) : null;
 

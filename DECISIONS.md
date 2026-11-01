@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 142 - Visited screens stay in memory for the signed-in user
+
+Date: 2026-11-01
+Status: Accepted
+Category: Performance
+
+### Decision
+
+BIQ-0286 keeps one in-memory cache per signed-in user for Nutrition days, the Training calendar, Progress ranges, Dashboard cards, and one group training board. A screen paints that cache immediately and refreshes after paint when the snapshot is older than 30 seconds, the local date changed, or a meal, set, program, assignment, or group update marked it stale. Stale flags do not wait for the 30 second age. Nutrition drafts and an open workout, including logged sets and feedback, are not replaced by that refresh. Inactive screens stay unmounted. Sign-out, a user change, and `clearScreenSession` drop the cache. Browser timings record time to usable content, cache hits, and background refresh duration separately from the simulated navigation script.
+
+### Reason
+
+Phase A stopped unused program reloads, but every return to a screen still waited on the network and discarded Nutrition form state. Keeping every major screen mounted would preserve drafts, and it would also keep the group channel, program designer, and barcode scanner alive.
+
+### Alternatives Considered
+
+Leaving Nutrition and the Training logger mounted forever. Writing the cache to localStorage. Adding a client cache library. Skipping enrollment sync, schedule repair, and group due-segment updates. Those still run when the owning screen opens, the local date changes, the area is stale, or the 30 second age expires. They do not run before a cached calendar paints, and they do not run on a warm Nutrition click.
+
+### Impact
+
+No database change and no new dependency. RLS, workout completion, and meal writes are unchanged. A background program load does not move the week, workout, date, logs, or feedback while a session or set write is in flight. The 500 ms warm-navigation target is the browser usable time and still needs a signed-in check.
+
+---
+
 ## Decision 141 - Program tree loads only for screens that show it
 
 Date: 2026-11-01

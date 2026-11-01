@@ -5,6 +5,21 @@ export type ScreenTimingSpan = {
   readyAt: number | null;
   durationMs: number | null;
   programLoads: number;
+  /** Set when cached content is painted or the content phase finishes. Not moved by a later refresh. */
+  usableMs: number | null;
+  cacheHit: boolean | null;
+  backgroundStartedAt: number | null;
+  backgroundRefreshMs: number | null;
+  backgroundOpen: number;
+  /** These spans are recorded in the browser. The nav script's round-trip model is separate. */
+  measurement: 'browser';
+};
+
+const USABLE_PHASE: Record<string, string> = {
+  Nutrition: 'data',
+  Progress: 'data',
+  Training: 'schedule',
+  Groups: 'data',
 };
 
 const spans: ScreenTimingSpan[] = [];
@@ -17,7 +32,7 @@ function now() {
 export function screenTimingPhases(screen: string): string[] {
   if (screen === 'Training') return ['program', 'schedule'];
   if (screen === 'Dashboard') return ['program'];
-  if (screen === 'Nutrition' || screen === 'Progress') return ['data'];
+  if (screen === 'Nutrition' || screen === 'Progress' || screen === 'Groups') return ['data'];
   return [];
 }
 
@@ -31,6 +46,12 @@ export function beginScreenTiming(screen: string, phases: string[] = screenTimin
     readyAt: null,
     durationMs: null,
     programLoads: 0,
+    usableMs: null,
+    cacheHit: null,
+    backgroundStartedAt: null,
+    backgroundRefreshMs: null,
+    backgroundOpen: 0,
+    measurement: 'browser',
   };
   spans.push(span);
   if (spans.length > 40) spans.shift();
@@ -44,6 +65,7 @@ export function completeScreenPhase(screen: string, phase: string) {
     if (span.screen !== screen || span.readyAt != null) continue;
     if (!(phase in span.phases) || span.phases[phase] != null) return;
     span.phases[phase] = now();
+    if (USABLE_PHASE[screen] === phase) noteUsable(screen);
     if (Object.values(span.phases).every((value) => value != null)) {
       span.readyAt = now();
       span.durationMs = Math.round((span.readyAt - span.startedAt) * 10) / 10;
@@ -51,6 +73,60 @@ export function completeScreenPhase(screen: string, phase: string) {
     publish();
     return;
   }
+}
+
+export function noteCacheHit(screen: string) {
+  const span = latestScreenTiming(screen);
+  if (!span) return;
+  span.cacheHit = true;
+  publish();
+}
+
+export function noteCacheMiss(screen: string) {
+  const span = latestScreenTiming(screen);
+  if (!span || span.cacheHit != null) return;
+  span.cacheHit = false;
+  publish();
+}
+
+/** First time primary content can be used. A later background refresh does not move this. */
+export function noteUsable(screen: string) {
+  const span = latestScreenTiming(screen);
+  if (!span || span.usableMs != null) return;
+  span.usableMs = Math.round((now() - span.startedAt) * 10) / 10;
+  publish();
+}
+
+export function beginBackgroundRefresh(screen: string) {
+  const span = latestScreenTiming(screen);
+  if (!span) return;
+  if (span.backgroundOpen === 0) span.backgroundStartedAt = now();
+  span.backgroundOpen += 1;
+  publish();
+}
+
+export function endBackgroundRefresh(screen: string) {
+  const span = latestScreenTiming(screen);
+  if (!span || span.backgroundOpen <= 0) return;
+  span.backgroundOpen -= 1;
+  if (span.backgroundOpen === 0 && span.backgroundStartedAt != null) {
+    span.backgroundRefreshMs = Math.round((now() - span.backgroundStartedAt) * 10) / 10;
+  }
+  publish();
+}
+
+export function screenTimingSummary() {
+  const known = spans.filter((span) => span.cacheHit != null);
+  const hits = known.filter((span) => span.cacheHit).length;
+  return {
+    measurement: 'browser' as const,
+    samples: spans.filter((span) => span.usableMs != null).length,
+    cacheHits: hits,
+    cacheHitRate: known.length ? hits / known.length : null,
+    backgroundRefreshMs: spans
+      .map((span) => span.backgroundRefreshMs)
+      .filter((value): value is number => value != null),
+  };
 }
 
 export function noteProgramLoad() {

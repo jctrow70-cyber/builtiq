@@ -78,6 +78,19 @@ import NutritionCopyFoodPanel from './nutrition/NutritionCopyFoodPanel';
 import DateInput from './DateInput';
 import { addDaysYmd, formatDisplayDate, formatYmd, mondayOfWeek, parseYmd, todayYmd } from '../../lib/training/programCalendar';
 import { completeScreenPhase } from '../../lib/performance/screenTiming';
+import {
+  beginScreenPaint,
+  bindScreenSessionUser,
+  clearNutritionDraft,
+  finishScreenPaint,
+  markScreenStale,
+  nutritionDraftIsDirty,
+  readNutritionDraft,
+  readScreenCache,
+  type NutritionDraftSnapshot,
+  writeNutritionDraft,
+  writeScreenCache,
+} from '../../lib/performance/screenSession';
 
 const RECENT_FOOD_HISTORY_DAYS = 30;
 const RECENT_FOOD_FETCH_LIMIT = 60;
@@ -101,6 +114,24 @@ type LibraryEditDraft = {
   carbs_g: string;
   fat_g: string;
 };
+
+type NutritionDaySnapshot = {
+  entries: MealEntry[];
+  goals: NutritionGoals;
+  weekEntries: any[];
+};
+
+function restoredNutrition(userId: string, initialDate?: string) {
+  bindScreenSessionUser(userId);
+  const draft = readNutritionDraft(userId);
+  const dirty = nutritionDraftIsDirty(draft);
+  const logDate = (dirty && draft?.logDate) || initialDate || todayYmd();
+  const cached = readScreenCache<NutritionDaySnapshot>(userId, 'nutrition', logDate, todayYmd(), {
+    dateScoped: false,
+    staleAreas: ['nutrition'],
+  });
+  return { draft: dirty ? draft : null, logDate, cached };
+}
 
 const emptyFoodDraft = (meal: MealType = 'breakfast'): FoodDraft => ({
   meal_type: meal,
@@ -360,49 +391,53 @@ export default function NutritionTracker({
   launch,
   onLaunchConsumed,
 }: NutritionTrackerProps) {
-  const [logDate, setLogDate] = useState(initialDate || todayYmd());
-  const [entries, setEntries] = useState<MealEntry[]>([]);
-  const [weekEntries, setWeekEntries] = useState<any[]>([]);
-  const [goals, setGoals] = useState<NutritionGoals>({ ...DEFAULT_NUTRITION_GOALS });
+  const openingRef = useRef<ReturnType<typeof restoredNutrition> | null>(null);
+  if (!openingRef.current) openingRef.current = restoredNutrition(userId, initialDate);
+  const opening = openingRef.current;
+  const openingDraft = opening.draft;
+  const [logDate, setLogDate] = useState(opening.logDate);
+  const [entries, setEntries] = useState<MealEntry[]>(opening.cached?.value.entries || []);
+  const [weekEntries, setWeekEntries] = useState<any[]>(opening.cached?.value.weekEntries || []);
+  const [goals, setGoals] = useState<NutritionGoals>(opening.cached?.value.goals || { ...DEFAULT_NUTRITION_GOALS });
   const [savedFoods, setSavedFoods] = useState<FoodLibraryItem[]>([]);
   const [recentEntryHistory, setRecentEntryHistory] = useState<MealEntry[]>([]);
   const [mealTemplates, setMealTemplates] = useState<MealTemplate[]>([]);
   const [catalogMatches, setCatalogMatches] = useState<FoodCatalogItem[]>([]);
   const [catalogSearching, setCatalogSearching] = useState(false);
   const [addFoodLibraryLoading, setAddFoodLibraryLoading] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!opening.cached && !openingDraft);
   const [dayRefreshing, setDayRefreshing] = useState(false);
   const [dayAnimDir, setDayAnimDir] = useState<'forward' | 'back' | 'none'>('none');
   const hasLoadedRef = useRef(false);
   const addFoodLibraryLoadedRef = useRef(false);
   const daySwipeStart = useRef<{ x: number; y: number } | null>(null);
-  const [chartWeekMonday, setChartWeekMonday] = useState(() => mondayOfWeek(initialDate || todayYmd()));
+  const [chartWeekMonday, setChartWeekMonday] = useState(() => mondayOfWeek(opening.logDate));
   const chartWeekMondayRef = useRef(chartWeekMonday);
   chartWeekMondayRef.current = chartWeekMonday;
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [showAdd, setShowAdd] = useState(false);
-  const [addFoodView, setAddFoodView] = useState<AddFoodView>('hub');
-  const [estimateSearch, setEstimateSearch] = useState('');
-  const [showMyFoods, setShowMyFoods] = useState(false);
-  const [addDraft, setAddDraft] = useState<FoodDraft>(emptyFoodDraft());
-  const [editEntryId, setEditEntryId] = useState<string | null>(null);
-  const [editDraft, setEditDraft] = useState<FoodDraft | null>(null);
-  const [editFoodId, setEditFoodId] = useState<string | null>(null);
-  const [foodEditDraft, setFoodEditDraft] = useState<LibraryEditDraft | null>(null);
-  const [foodSearch, setFoodSearch] = useState('');
-  const [pickedCatalogId, setPickedCatalogId] = useState<string | null>(null);
-  const [aiDescribe, setAiDescribe] = useState('');
+  const [showAdd, setShowAdd] = useState(!!openingDraft?.showAdd);
+  const [addFoodView, setAddFoodView] = useState<AddFoodView>((openingDraft?.addFoodView as AddFoodView) || 'hub');
+  const [estimateSearch, setEstimateSearch] = useState(openingDraft?.estimateSearch || '');
+  const [showMyFoods, setShowMyFoods] = useState(!!openingDraft?.showMyFoods);
+  const [addDraft, setAddDraft] = useState<FoodDraft>((openingDraft?.addDraft as FoodDraft) || emptyFoodDraft());
+  const [editEntryId, setEditEntryId] = useState<string | null>(openingDraft?.editEntryId || null);
+  const [editDraft, setEditDraft] = useState<FoodDraft | null>((openingDraft?.editDraft as FoodDraft | null) || null);
+  const [editFoodId, setEditFoodId] = useState<string | null>(openingDraft?.editFoodId || null);
+  const [foodEditDraft, setFoodEditDraft] = useState<LibraryEditDraft | null>((openingDraft?.foodEditDraft as LibraryEditDraft | null) || null);
+  const [foodSearch, setFoodSearch] = useState(openingDraft?.foodSearch || '');
+  const [pickedCatalogId, setPickedCatalogId] = useState<string | null>(openingDraft?.pickedCatalogId || null);
+  const [aiDescribe, setAiDescribe] = useState(openingDraft?.aiDescribe || '');
   const [aiEstimating, setAiEstimating] = useState(false);
   const [aiEstimateError, setAiEstimateError] = useState('');
-  const [aiEstimateResult, setAiEstimateResult] = useState<AiFoodEstimateResult | null>(null);
-  const [barcodeValue, setBarcodeValue] = useState('');
+  const [aiEstimateResult, setAiEstimateResult] = useState<AiFoodEstimateResult | null>((openingDraft?.aiEstimateResult as AiFoodEstimateResult | null) || null);
+  const [barcodeValue, setBarcodeValue] = useState(openingDraft?.barcodeValue || '');
   const [barcodeLoading, setBarcodeLoading] = useState(false);
   const [barcodeError, setBarcodeError] = useState('');
-  const [barcodeProduct, setBarcodeProduct] = useState<BarcodeLookupResult | null>(null);
-  const [barcodeNotFound, setBarcodeNotFound] = useState<BarcodeLookupNotFound | null>(null);
-  const [barcodeServingQty, setBarcodeServingQty] = useState('1');
-  const [showBarcodeScanner, setShowBarcodeScanner] = useState(false);
+  const [barcodeProduct, setBarcodeProduct] = useState<BarcodeLookupResult | null>((openingDraft?.barcodeProduct as BarcodeLookupResult | null) || null);
+  const [barcodeNotFound, setBarcodeNotFound] = useState<BarcodeLookupNotFound | null>((openingDraft?.barcodeNotFound as BarcodeLookupNotFound | null) || null);
+  const [barcodeServingQty, setBarcodeServingQty] = useState(openingDraft?.barcodeServingQty || '1');
+  const [showBarcodeScanner, setShowBarcodeScanner] = useState(!!openingDraft?.showBarcodeScanner);
   const fallbackDetailsRef = useRef<HTMLDetailsElement>(null);
   const [scannerError, setScannerError] = useState('');
   const [labelScanning, setLabelScanning] = useState(false);
@@ -410,14 +445,53 @@ export default function NutritionTracker({
   const [mealPhotoScanning, setMealPhotoScanning] = useState(false);
   const [mealPhotoScanError, setMealPhotoScanError] = useState('');
   const [expandedMeals, setExpandedMeals] = useState<Record<MealType, boolean>>(() =>
-    Object.fromEntries(MEAL_TYPES.map((meal) => [meal, true])) as Record<MealType, boolean>
+    (openingDraft?.expandedMeals as Record<MealType, boolean> | null) ||
+    (Object.fromEntries(MEAL_TYPES.map((meal) => [meal, true])) as Record<MealType, boolean>)
   );
   const entriesSyncedForDate = useRef<string | null>(null);
-  const [copySource, setCopySource] = useState<{ entries: MealEntry[]; sourceLabel: string } | null>(null);
-  const [copyDraft, setCopyDraft] = useState<{ log_date: string; meal_type: MealType }>({
-    log_date: todayYmd(),
-    meal_type: 'breakfast',
-  });
+  const [copySource, setCopySource] = useState<{ entries: MealEntry[]; sourceLabel: string } | null>(
+    (openingDraft?.copySource as { entries: MealEntry[]; sourceLabel: string } | null) || null
+  );
+  const [copyDraft, setCopyDraft] = useState<{ log_date: string; meal_type: MealType }>(
+    (openingDraft?.copyDraft as { log_date: string; meal_type: MealType } | null) || {
+      log_date: todayYmd(),
+      meal_type: 'breakfast',
+    }
+  );
+  const draftRef = useRef<NutritionDraftSnapshot | null>(null);
+  const logDateRef = useRef(logDate);
+  logDateRef.current = logDate;
+  draftRef.current = {
+    logDate,
+    showAdd,
+    addFoodView,
+    estimateSearch,
+    showMyFoods,
+    addDraft,
+    editEntryId,
+    editDraft,
+    editFoodId,
+    foodEditDraft,
+    foodSearch,
+    pickedCatalogId,
+    aiDescribe,
+    aiEstimateResult,
+    barcodeValue,
+    barcodeProduct,
+    barcodeNotFound,
+    barcodeServingQty,
+    showBarcodeScanner,
+    copySource,
+    copyDraft,
+    expandedMeals,
+  };
+  useEffect(() => {
+    return () => {
+      const snap = draftRef.current;
+      if (snap && nutritionDraftIsDirty(snap)) writeNutritionDraft(userId, snap);
+      else clearNutritionDraft(userId);
+    };
+  }, [userId]);
 
   const totals = useMemo(() => sumMacros(entries), [entries]);
   const grouped = useMemo(() => groupEntriesByMeal(entries), [entries]);
@@ -471,8 +545,9 @@ export default function NutritionTracker({
   }, []);
 
   const notifyParent = useCallback(() => {
+    markScreenStale(userId, ['nutrition', 'dashboard']);
     onDataChange?.();
-  }, [onDataChange]);
+  }, [onDataChange, userId]);
 
   const setDate = useCallback(
     (next: string) => {
@@ -503,17 +578,39 @@ export default function NutritionTracker({
         .lte('log_date', end);
       if (error) throw error;
       setWeekEntries(data || []);
+      return data || [];
     } catch {
       // Keep the last successful week snapshot so the daily log stays usable.
+      return null;
     }
   }, [userId]);
 
   const loadDayData = useCallback(async () => {
     if (!userId) return;
     const isInitial = !hasLoadedRef.current;
-    if (isInitial) setLoading(true);
+    const paint = beginScreenPaint<NutritionDaySnapshot>('Nutrition', userId, 'nutrition', logDate, todayYmd(), {
+      dateScoped: false,
+      staleAreas: ['nutrition'],
+    });
+    const dirty = nutritionDraftIsDirty(draftRef.current);
+    if (paint.cached) {
+      setEntries(paint.cached.entries);
+      setGoals(paint.cached.goals);
+      setWeekEntries(paint.cached.weekEntries);
+      setLoading(false);
+      completeScreenPhase('Nutrition', 'data');
+    } else if (isInitial && !dirty) setLoading(true);
     else setDayRefreshing(true);
+    if (paint.cached && !paint.background) {
+      hasLoadedRef.current = true;
+      setDayRefreshing(false);
+      return;
+    }
     setError('');
+    let background = paint.background;
+    if (!paint.cached) {
+      background = false;
+    }
     try {
       const [entriesRes, goalsRes] = await Promise.all([
         supabase
@@ -528,9 +625,17 @@ export default function NutritionTracker({
       if (entriesRes.error) throw entriesRes.error;
       if (goalsRes.error) throw goalsRes.error;
 
-      setEntries((entriesRes.data || []) as MealEntry[]);
-      setGoals(goalsFromRow(goalsRes.data));
-      await loadWeekEntries(chartWeekMondayRef.current);
+      const nextEntries = (entriesRes.data || []) as MealEntry[];
+      const nextGoals = goalsFromRow(goalsRes.data);
+      if (logDateRef.current !== logDate) return;
+      setEntries(nextEntries);
+      setGoals(nextGoals);
+      const nextWeek = await loadWeekEntries(chartWeekMondayRef.current);
+      writeScreenCache<NutritionDaySnapshot>(userId, 'nutrition', logDate, {
+        entries: nextEntries,
+        goals: nextGoals,
+        weekEntries: nextWeek || [],
+      }, todayYmd());
     } catch (e: any) {
       setError(e?.message || 'Could not load nutrition data.');
     } finally {
@@ -538,6 +643,7 @@ export default function NutritionTracker({
       hasLoadedRef.current = true;
       setLoading(false);
       setDayRefreshing(false);
+      finishScreenPaint('Nutrition', userId, ['nutrition'], background && !!paint.cached);
       if (initial) completeScreenPhase('Nutrition', 'data');
     }
   }, [userId, logDate, loadWeekEntries]);
@@ -646,8 +752,9 @@ export default function NutritionTracker({
   }, [showAdd, addFoodView, estimateSearch]);
 
   useEffect(() => {
+    if (nutritionDraftIsDirty(draftRef.current)) return;
     if (initialDate && initialDate !== logDate) setLogDate(initialDate);
-  }, [initialDate]);
+  }, [initialDate, logDate]);
 
   useEffect(() => {
     hasLoadedRef.current = false;

@@ -8,6 +8,7 @@ import {
   type DashboardNutritionModel,
 } from '../../../lib/nutrition/dashboardNutrition';
 import { macroRingArc, macroRingStatus } from '../../../lib/nutrition/macroRing';
+import { beginScreenPaint, finishScreenPaint, readScreenCache, subscribeScreenSession, writeScreenCache } from '../../../lib/performance/screenSession';
 import { formatDisplayDate, todayYmd } from '../../../lib/training/programCalendar';
 
 type NutritionDashboardCardProps = {
@@ -28,26 +29,42 @@ const RING_STROKE = 8;
 export default function NutritionDashboardCard({ userId, onLogMeal, onViewLog, onSetGoals }: NutritionDashboardCardProps) {
   const today = todayYmd();
   const [reloadKey, setReloadKey] = useState(0);
-  const [state, setState] = useState<CardState>({ status: 'loading' });
+  const [sessionTick, setSessionTick] = useState(0);
+  const [state, setState] = useState<CardState>(() => {
+    const cached = readScreenCache<DashboardNutritionModel>(userId, 'dashboard', `nutrition|${today}`, today, {
+      dateScoped: true,
+      staleAreas: ['dashboard', 'nutrition'],
+    });
+    return cached ? { status: 'ready', model: cached.value } : { status: 'loading' };
+  });
+  useEffect(() => subscribeScreenSession(() => setSessionTick((value) => value + 1)), []);
 
   useEffect(() => {
     let cancelled = false;
-    setState({ status: 'loading' });
+    const paint = beginScreenPaint<DashboardNutritionModel>('Dashboard', userId, 'dashboard', `nutrition|${today}`, today, {
+      dateScoped: true,
+      staleAreas: ['dashboard', 'nutrition'],
+    });
+    if (paint.cached) setState({ status: 'ready', model: paint.cached });
+    else setState({ status: 'loading' });
+    if (paint.cached && !paint.background) return;
     fetchNutritionDaySummary(userId, today)
       .then((summary) => {
         if (cancelled) return;
-        setState({
-          status: 'ready',
-          model: dashboardNutritionModel(summary.totals, summary.entryCount, dashboardTargetsFromGoalRow(summary.goalRow)),
-        });
+        const model = dashboardNutritionModel(summary.totals, summary.entryCount, dashboardTargetsFromGoalRow(summary.goalRow));
+        writeScreenCache(userId, 'dashboard', `nutrition|${today}`, model, today);
+        setState({ status: 'ready', model });
       })
       .catch(() => {
         if (!cancelled) setState({ status: 'error' });
+      })
+      .finally(() => {
+        if (!cancelled) finishScreenPaint('Dashboard', userId, ['dashboard'], !!paint.cached && paint.background);
       });
     return () => {
       cancelled = true;
     };
-  }, [userId, today, reloadKey]);
+  }, [userId, today, reloadKey, sessionTick]);
 
   return (
     <section className="dash-card nutrition-dash" data-nutrition-state={state.status} aria-labelledby="nutrition-dash-title">

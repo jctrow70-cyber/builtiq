@@ -5,6 +5,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import { loadDashboardProgress } from '../../../lib/progress/queries';
 import type { DashboardProgressModel } from '../../../lib/progress/dashboardProgress';
 import type { UnitsPreference } from '../../../lib/body/measurements';
+import { beginScreenPaint, finishScreenPaint, readScreenCache, subscribeScreenSession, writeScreenCache } from '../../../lib/performance/screenSession';
 import { todayYmd } from '../../../lib/training/programCalendar';
 
 type ProgressDashboardCardProps = {
@@ -32,23 +33,43 @@ export default function ProgressDashboardCard({
   onAddCheckIn,
 }: ProgressDashboardCardProps) {
   const units: UnitsPreference = unitsPreference === 'metric' ? 'metric' : 'imperial';
+  const today = todayYmd();
   const [reloadKey, setReloadKey] = useState(0);
-  const [state, setState] = useState<CardState>({ status: 'loading' });
+  const [sessionTick, setSessionTick] = useState(0);
+  const [state, setState] = useState<CardState>(() => {
+    const cached = readScreenCache<DashboardProgressModel>(userId, 'dashboard', `progress|${units}`, today, {
+      dateScoped: true,
+      staleAreas: ['dashboard', 'progress'],
+    });
+    return cached ? { status: 'ready', model: cached.value } : { status: 'loading' };
+  });
+  useEffect(() => subscribeScreenSession(() => setSessionTick((value) => value + 1)), []);
 
   useEffect(() => {
     let cancelled = false;
-    setState({ status: 'loading' });
-    loadDashboardProgress(supabase, userId, todayYmd(), units)
+    const paint = beginScreenPaint<DashboardProgressModel>('Dashboard', userId, 'dashboard', `progress|${units}`, today, {
+      dateScoped: true,
+      staleAreas: ['dashboard', 'progress'],
+    });
+    if (paint.cached) setState({ status: 'ready', model: paint.cached });
+    else setState({ status: 'loading' });
+    if (paint.cached && !paint.background) return;
+    loadDashboardProgress(supabase, userId, today, units)
       .then((model) => {
-        if (!cancelled) setState({ status: 'ready', model });
+        if (cancelled) return;
+        writeScreenCache(userId, 'dashboard', `progress|${units}`, model, today);
+        setState({ status: 'ready', model });
       })
       .catch(() => {
         if (!cancelled) setState({ status: 'error' });
+      })
+      .finally(() => {
+        if (!cancelled) finishScreenPaint('Dashboard', userId, ['dashboard'], !!paint.cached && paint.background);
       });
     return () => {
       cancelled = true;
     };
-  }, [userId, units, refreshKey, reloadKey]);
+  }, [userId, units, today, refreshKey, reloadKey, sessionTick]);
 
   return (
     <section className="dash-card progress-dash" data-progress-state={state.status} aria-labelledby="progress-dash-title">

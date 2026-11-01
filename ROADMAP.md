@@ -210,7 +210,9 @@ Goal: Prepare BuildIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
-**BIQ-0285** (Phase A navigation) skips the program-tree reload on Nutrition, Progress, Settings, and AI Coach, and keeps a single current program request for Training, Dashboard, Programs, and Groups (Decision 141). Not committed. Next performance step is Phase B: keep a visited screen mounted, including an unsaved meal or open workout log, keyed by the signed-in user and cleared on sign-out.
+**BIQ-0286** (Phase B screen cache) keeps Nutrition, Training, Progress, Dashboard, and Groups results in memory for the signed-in user and paints them before a background refresh (Decision 142). Unsaved meals and an open workout are kept. The cache is cleared on sign-out and account switch. Committed locally and not pushed. Do not start Phase C until this is reviewed. Warm navigation under 500 ms still needs a signed-in browser check.
+
+**BIQ-0285** (Phase A navigation) skips the program-tree reload on Nutrition, Progress, Settings, and AI Coach, and keeps a single current program request for Training, Dashboard, Programs, and Groups (Decision 141). Committed locally and not pushed.
 
 **BIQ-0284 DSH-E** (your progress dashboard) is committed locally and not pushed (Decision 140). The dashboard Your Progress card uses the last 4 weeks of Progress strength and body calculations. The inline body check-in form is gone. Add check-in opens the existing Progress Body measurement form once.
 
