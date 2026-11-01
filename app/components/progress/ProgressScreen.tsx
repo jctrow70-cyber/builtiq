@@ -16,6 +16,7 @@ import type { ProgressReport } from '../../../lib/progress/report';
 import type { ProgressSection } from '../../../lib/progress/progressView';
 import type { UnitsPreference } from '../../../lib/body/measurements';
 import { todayYmd } from '../../../lib/training/programCalendar';
+import { completeScreenPhase } from '../../../lib/performance/screenTiming';
 
 type ProgressScreenProps = {
   userId: string | null;
@@ -67,6 +68,7 @@ export default function ProgressScreen({
       setReport(cached);
       setError(null);
       setLoading(false);
+      completeScreenPhase('Progress', 'data');
       return;
     }
     setLoading(true);
@@ -82,7 +84,10 @@ export default function ProgressScreen({
         if (!cancelled) setError('Progress could not be loaded. Check your connection and try again.');
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          completeScreenPhase('Progress', 'data');
+        }
       });
     return () => {
       cancelled = true;

@@ -129,6 +129,8 @@ import { groupLogReturnFromRequest, trainingLoggerBack, type GroupLogReturn } fr
 import { groupActivityLogReturn, groupActivitySourceKey, type GroupActivityLogContext, type GroupActivityLogRequest } from '../lib/groups/groupActivityLog';
 import type { AssignTrainingSubmit } from './components/groups/AssignTrainingWizard';
 import type { AssignProgramTarget } from './components/groups/TeamAssignProgramModal';
+import { beginScreenTiming, completeScreenPhase, noteProgramLoad } from '../lib/performance/screenTiming';
+import { assignmentLoadKey, createProgramLoadGate, groupAssignLoadForNav, programLoadKey, shellProgramLoadForNav } from '../lib/training/programLoadGate';
 
 const NAV=['Dashboard','Training','Programs','Groups','Nutrition','Progress','AI Coach','Settings'];
 const DAYS=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
@@ -340,6 +342,7 @@ export default function Page(){
  const syncingCalendarRef=useRef(false);
  const schedulePreviewRef=useRef<ScheduleStartItem|null>(null);
  const planEditRef=useRef<{workout:any,program:any}|null>(null);
+ const programLoadGateRef=useRef(createProgramLoadGate());
 
  useEffect(()=>{
   if(typeof window!=='undefined'&&window.location.pathname==='/'){
@@ -367,7 +370,12 @@ export default function Page(){
   setSelectedTeamId(null);setTeams([]);setMembers([]);setMode('personal');
   boot().finally(()=>setProfileLoading(false));
  },[session?.user?.id]);
- useEffect(()=>{if(profile&&!activeAssignedRecipient) loadPrograms(appNav==='Groups'?'setup':'training')},[mode,selectedTeamId,teams,profile,viewingMember?.user_id,activeAssignedRecipient?.id,draftEditProgramId,appNav]);
+ useEffect(()=>{
+  if(!profile||activeAssignedRecipient)return;
+  const context=shellProgramLoadForNav(appNav);
+  if(!context)return;
+  void loadPrograms(context);
+ },[mode,selectedTeamId,teams,profile,viewingMember?.user_id,activeAssignedRecipient?.id,draftEditProgramId,appNav]);
  useEffect(()=>{if(session?.user?.id) loadAssignedWorkouts()},[session?.user?.id]);
  useEffect(()=>{
   if(viewingMember&&viewingMember.user_id!==session?.user?.id&&memberWorkoutProgram&&session?.user){
@@ -451,7 +459,11 @@ export default function Page(){
   if(!viewingMember||viewingMember.user_id===session?.user?.id)return;
   void reloadMemberWorkoutProgram(viewingMember,memberAssignments);
  },[memberAssignments,viewingMember?.user_id,activeTeam?.default_program_id]);
- useEffect(()=>{if(activeTeam&&canManageGroup(activeTeam.my_role)) loadGroupProgramForAssign(); else {setGroupProgramForAssign(null);setAssignWorkoutPrograms([]);}},[activeTeam?.id,activeTeam?.default_program_id,activeTeam?.my_role,appNav]);
+ useEffect(()=>{
+  if(!groupAssignLoadForNav(appNav))return;
+  if(activeTeam&&canManageGroup(activeTeam.my_role)) loadGroupProgramForAssign();
+  else {setGroupProgramForAssign(null);setAssignWorkoutPrograms([]);}
+ },[activeTeam?.id,activeTeam?.default_program_id,activeTeam?.my_role,appNav]);
  // Re-resolve Training after assignments load so individual assigns don't get overwritten by “newest published”
  useEffect(()=>{
   if(!session?.user||mode!=='team'||!activeTeam)return;
@@ -826,23 +838,47 @@ export default function Page(){
   setActiveWorkout(w.id);
   queueMicrotask(()=>{syncingCalendarRef.current=false;});
  }
- async function loadPrograms(context:'training'|'setup'='training',options?:{assignmentsOverride?:Record<string,any>;editProgramId?:string|null;preserveWorkoutId?:string|null;followedProgramId?:string|null}){
+ async function loadPrograms(context:'training'|'setup'='training',options?:{assignmentsOverride?:Record<string,any>;editProgramId?:string|null;preserveWorkoutId?:string|null;followedProgramId?:string|null;nav?:string}){
   const editTargetId=options?.editProgramId??draftEditProgramId;
   if(editTargetId)context='setup';
-  if(appNav==='Groups'&&activeTeam)context='setup';
+  const nav=options?.nav??appNav;
+  if(nav==='Groups'&&activeTeam)context='setup';
   if(!session?.user)return;
   if(activeAssignedRecipient){setTrainingScheduleReady(true);return;}
   if(viewingMember&&viewingMember.user_id!==session.user.id){setTrainingScheduleReady(true);return;}
+  let followedForKey=profile?.followed_program_id||null;
+  if(options&&Object.prototype.hasOwnProperty.call(options,'followedProgramId'))followedForKey=options.followedProgramId||null;
+  const key=programLoadKey({
+   context,
+   userId:session.user.id,
+   teamId:activeTeam?.id||null,
+   mode,
+   followedProgramId:followedForKey,
+   editProgramId:editTargetId||null,
+   preserveWorkoutId:options&&Object.prototype.hasOwnProperty.call(options,'preserveWorkoutId')?(options.preserveWorkoutId||null):null,
+   assignmentKey:assignmentLoadKey(options?.assignmentsOverride||memberAssignments),
+  });
+  return programLoadGateRef.current.begin(key,(gen)=>{
+   const live=()=>programLoadGateRef.current.isCurrent(gen);
+   noteProgramLoad();
+   return loadProgramGeneration(context,nav,editTargetId,options,live);
+  });
+ }
+ async function loadProgramGeneration(context:'training'|'setup',nav:string,editTargetId:string|null,options:{assignmentsOverride?:Record<string,any>;editProgramId?:string|null;preserveWorkoutId?:string|null;followedProgramId?:string|null;nav?:string}|undefined,live:()=>boolean){
   let followedId=profile?.followed_program_id||null;
   if(options&&Object.prototype.hasOwnProperty.call(options,'followedProgramId'))followedId=options.followedProgramId||null;
   // Members: auto-enroll in the date-active group plan (Training calendar follows plan dates).
   if(context==='training'&&teams.length){
    const orderedTeams=orderGroupsForEnrollment(teams, profile?.default_team_id||null);
    for(const team of orderedTeams){
+    if(!live())return;
     if(!isAutoEnrolledMemberRole(team.my_role))continue;
     const{data:groupPrograms}=await fetchDesignPrograms(supabase,{scope:'group',ownerUserId:session.user.id,teamId:team.id});
+    if(!live())return;
     const{data:personalPrograms}=await fetchDesignPrograms(supabase,{scope:'personal',ownerUserId:session.user.id});
+    if(!live())return;
     const{data:assignmentRow,error:assignmentErr}=await supabase.from('st_program_assignments').select('program_id, assignment_type').eq('team_id',team.id).eq('user_id',session.user.id).eq('is_active',true).order('created_at',{ascending:false}).limit(1).maybeSingle();
+    if(!live())return;
     const sync=await syncMemberGroupEnrollment(supabase,{
      userId:session.user.id,
      role:team.my_role,
@@ -855,12 +891,14 @@ export default function Page(){
       assignment:assignmentRow?{programId:assignmentRow.program_id,assignmentType:assignmentRow.assignment_type}:null,
      }),
     });
+    if(!live())return;
     if(sync.changed&&sync.programId){
      followedId=sync.programId;
      setProfile((p:any)=>p?{...p,followed_program_id:sync.programId}:p);
     }
    }
   }
+  if(!live())return;
   const usePersonal=context==='training'?true:mode==='personal';
   const{data:index,error:indexErr}=await fetchProgramIndex(supabase,{
    personal:usePersonal,
@@ -868,6 +906,7 @@ export default function Page(){
    ownerUserId:session.user.id,
    publishedOnly:context==='training'&&!followedId,
   });
+  if(!live())return;
   if(indexErr){setTrainingScheduleReady(true);return alert(indexErr);}
   if(activeAssignedRecipient){setTrainingScheduleReady(true);return;}
   if(viewingMember&&viewingMember.user_id!==session.user.id){setTrainingScheduleReady(true);return;}
@@ -888,14 +927,17 @@ export default function Page(){
   let pickedFull:any=null;
   if(context==='training'&&followedId&&!pickedMeta){
    const followed=await fetchFullProgram(supabase,followedId);
+   if(!live())return;
    if(followed.data)pickedMeta=followed.data;
   }
   if(pickedMeta?.id){
    const{data:full,error:fullErr}=await fetchFullProgram(supabase,pickedMeta.id);
+   if(!live())return;
    if(fullErr){setTrainingScheduleReady(true);return alert(fullErr);}
    pickedFull=full;
    setPrograms(mergeFullProgramIntoList(list,pickedFull));
   }
+  if(!live())return;
   setProgram(pickedFull||null);
   if(pickedFull&&context==='setup'&&editTargetId&&pickedFull.id===editTargetId){
    if(draftNameSourceRef.current!==pickedFull.id){
@@ -925,8 +967,9 @@ export default function Page(){
     const preserveExists=!!preserveId&&(!!findWorkoutInProgram(pickedFull,preserveId)||calendarWorkouts.some((w:any)=>w.id===preserveId));
     if(preserveExists)setActiveWorkout(preserveId);
     else if(match)setActiveWorkout(match.id);
-    checkHistoryRestoreOffer(pickedFull);
+    if(live())checkHistoryRestoreOffer(pickedFull);
     const planned=await fetchProgramActivities(supabase,pickedFull.id);
+    if(!live())return;
     setTrainingActivities(mergeProgramActivities(pickedFull,planned.data||[],pickedFull.st_workouts||[]));
     }
   } else {
@@ -936,15 +979,19 @@ export default function Page(){
   if(context==='training'&&session?.user?.id){
     const win=monthWindow(yearMonthOf(logDate));
     const cal=await fetchUserCalendarActivities(supabase,session.user.id,win.from,win.to);
+    if(!live())return;
     setUserCalendarActivities(cal.data||[]);
     setUserCalendarError(cal.error||null);
     setUserCalendarReady(true);
     const linkedIds=(cal.data||[]).map((a)=>a.workout_id).filter(Boolean) as string[];
     const extraIds=linkedIds.filter((id)=>!(pickedFull?.st_workouts||[]).some((w:any)=>w.id===id));
     const extras=await fetchWorkoutsByIds(supabase,extraIds);
+    if(!live())return;
     setCalendarWorkouts(extras.data||[]);
   }
+  if(!live())return;
   setTrainingScheduleReady(true);
+  if(nav==='Training'||nav==='Dashboard') completeScreenPhase(nav,'program');
  }
  async function openMemberDashboard(member:any){
   if(!member||!session?.user)return;
@@ -3072,13 +3119,23 @@ function onSelectTrainingDay(date:string){
   if(n!=='Groups'&&viewingMember&&viewingMember.user_id!==session?.user?.id){
    clearMemberWorkoutView();
   }
+  beginScreenTiming(n);
+  if(n==='Training'&&appNav==='Training') completeScreenPhase('Training','schedule');
   setAppNav(n);
   if(n==='Progress') setProgressSection(opts?.progressSub==='body'?'body':opts?.progressSub==='strength'?'strength':'overview');
   if(n==='Progress'||n==='Dashboard'||n==='Training'){loadProgressLogs();if(n==='Dashboard'){setBodyDashRefreshKey(k=>k+1);}}
   if(n==='Settings'){loadCatalog(); loadGuidedImportStatus(); loadMasterImportStatus(); if(activeTeam)loadMembers();}
-  if(n==='Groups'){if(teams.length){if(!selectedTeamId)setSelectedTeamId(teams[0].id);setMode('team');} loadMembers(); loadMemberStats(); loadMemberAssignments(); loadGroupProgramForAssign(); loadClassifications(); loadPrograms('setup');}
+  if(n==='Groups'){
+   if(teams.length){if(!selectedTeamId)setSelectedTeamId(teams[0].id);setMode('team');}
+   loadMembers(); loadMemberStats(); loadMemberAssignments(); loadClassifications();
+   if(appNav==='Groups'){loadGroupProgramForAssign(); void loadPrograms('setup');}
+  }
   if(n==='Dashboard'&&teams.length){loadMembers(); loadMemberStats();}
-  if(n==='Training'){setTrainingSubNav('personal'); if(teams.length&&!selectedTeamId)setSelectedTeamId(teams[0].id); if(!draftEditProgramId)loadPrograms('training');}
+  if(n==='Training'){
+   setTrainingSubNav('personal');
+   if(teams.length&&!selectedTeamId)setSelectedTeamId(teams[0].id);
+   if(!draftEditProgramId&&appNav==='Training') void loadPrograms('training');
+  }
   if(n==='Programs'){if(teams.length&&!selectedTeamId)setSelectedTeamId(teams[0].id);}
  }
  function openNotificationTarget(row:{destination_kind?:string|null;destination_id?:string|null;team_id?:string|null}){

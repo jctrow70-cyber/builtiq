@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { completeScreenPhase } from '../../../lib/performance/screenTiming';
 import { supabase } from '../../../lib/supabaseClient';
 import TrainingExecution from './TrainingExecution';
 import {
@@ -99,6 +100,7 @@ export default function UnifiedTrainingSchedule({ userId, teams, rangeFrom, rang
     setProgramNames(snapshot.pending ? {} : snapshot.programNames);
     setVisibleExpectations(snapshot.pending ? [] : snapshot.expectations);
     setLoading(false);
+    completeScreenPhase('Training', 'schedule');
   }, [userId, teams, today, rangeFrom, rangeTo]);
 
   useEffect(() => {

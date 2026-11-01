@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 141 - Program tree loads only for screens that show it
+
+Date: 2026-11-01
+Status: Accepted
+Category: Performance
+
+### Decision
+
+BIQ-0285 stops the shell from calling `loadPrograms` when the open tab is Nutrition, Progress, Settings, or AI Coach. Training, Dashboard, and Programs still load the training program. Groups still loads the setup list. A second call with the same key joins the request already in flight. A newer key makes the older response stop writing screen state. Enrollment sync, history restore, schedule repair, and group due segments stay on the visits that already ran them. The manager assign-program list loads on Groups only.
+
+### Reason
+
+Every tab change was downloading the followed program, then today's logs and 800 history rows. Nutrition and Progress do not render that tree. Training also started the same load twice, and the later response could replace a newer one.
+
+### Alternatives Considered
+
+Caching every screen in this change. That is Phase B, after this load gate is in place. Cancelling enrollment sync entirely. Removing schedule repair. Adding a client cache library or a database index without a measured slow query.
+
+### Impact
+
+No database change. Workout logging, meal writes, Program Design follow and publish, group permissions, and RLS are unchanged. Opening Training or Dashboard still syncs a group member's enrollment and still restores history once per program per browser session. A trainer assignment shows up on the next Training, Dashboard, or Groups load, not on a Nutrition visit.
+
+---
+
 ## Decision 140 - Dashboard progress reuses Progress calculations
 
 Date: 2026-10-31

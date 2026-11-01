@@ -77,6 +77,7 @@ import NutritionAddFoodPanel, { type AddFoodView } from './nutrition/NutritionAd
 import NutritionCopyFoodPanel from './nutrition/NutritionCopyFoodPanel';
 import DateInput from './DateInput';
 import { addDaysYmd, formatDisplayDate, formatYmd, mondayOfWeek, parseYmd, todayYmd } from '../../lib/training/programCalendar';
+import { completeScreenPhase } from '../../lib/performance/screenTiming';
 
 const RECENT_FOOD_HISTORY_DAYS = 30;
 const RECENT_FOOD_FETCH_LIMIT = 60;
@@ -533,9 +534,11 @@ export default function NutritionTracker({
     } catch (e: any) {
       setError(e?.message || 'Could not load nutrition data.');
     } finally {
+      const initial = isInitial;
       hasLoadedRef.current = true;
       setLoading(false);
       setDayRefreshing(false);
+      if (initial) completeScreenPhase('Nutrition', 'data');
     }
   }, [userId, logDate, loadWeekEntries]);
 

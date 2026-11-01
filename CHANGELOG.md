@@ -11,6 +11,59 @@ Branch:
 Status:
 ```
 
+## BIQ-0285 - Stop unused program reloads on tab changes
+
+Date: 2026-11-01
+Branch: main
+Status: Implemented. Not committed. No database change.
+
+Summary: Nutrition, Progress, Settings, and AI Coach no longer reload the training program tree. Training and Groups start that load once, and an older response cannot overwrite a newer one.
+
+Purpose: Tab changes were rebuilding the followed program, set-log history, and the manager program list even when the screen does not show them. That competed with Nutrition and Progress and could apply a stale program after a newer load.
+
+Files changed:
+- app/page.tsx
+- app/components/NutritionTracker.tsx
+- app/components/progress/ProgressScreen.tsx
+- app/components/training/UnifiedTrainingSchedule.tsx
+- lib/performance/screenTiming.ts
+- lib/performance/navLoadPlan.ts
+- lib/training/programLoadGate.ts
+- scripts/test-nav-program-load.ts
+- scripts/measure-nav-performance.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- `npx tsx scripts/test-nav-program-load.ts`
+- `npx tsx scripts/measure-nav-performance.ts`
+- `npx tsx scripts/test-today-training.ts`
+- `npx tsx scripts/test-nutrition-dashboard.ts`
+- `npx tsx scripts/test-dashboard-progress.ts`
+- `npx tsx scripts/test-week-adherence.ts`
+- `npx tsx scripts/test-training-simplification.ts`
+- `npx tsx scripts/test-finish-workout.ts`
+- `npx tsx scripts/test-unified-schedule.ts`
+- `npx tsc --noEmit`
+- Open Nutrition from Dashboard. The food log should appear without a second program-tree request. Leave and return; the log loads again (screen keep-alive is Phase B).
+- Open Training. The calendar and followed program still appear. A group member's enrollment still syncs on this visit.
+- Change an assignment, then open Training. The new assignment is the one that remains on screen.
+- Open Groups as a manager. Assign programs still lists the group plans. Due segments still run.
+- Open Program Design, follow a program, and confirm Training opens on that program.
+- Sign out. The next account must not show the previous program.
+
+Known issues:
+- Training and Dashboard still wait on one full program tree. Repeat visits still remount and refetch. That is Phase B (keep the screen and its unsaved meal or workout draft) and a later Training payload split.
+- This measurement uses round trips, not a signed-in browser trace. `window.__biqScreenTiming` records a signed-in visit when you navigate.
+- Schedule repair and group due-segment writes still run when Training, Dashboard, or Groups opens. They no longer run because Nutrition, Progress, or Settings opened.
+
+Recommended commit message: BIQ-0285 Skip program reloads on Nutrition, Progress, and Settings
+
+---
+
 ## BIQ-0284 - Dashboard your progress
 
 Date: 2026-10-31
