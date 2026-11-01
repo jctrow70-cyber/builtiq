@@ -1,0 +1,163 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { fetchNutritionDaySummary } from '../NutritionTracker';
+import {
+  dashboardNutritionModel,
+  dashboardTargetsFromGoalRow,
+  type DashboardNutritionModel,
+} from '../../../lib/nutrition/dashboardNutrition';
+import { macroRingArc, macroRingStatus } from '../../../lib/nutrition/macroRing';
+import { formatDisplayDate, todayYmd } from '../../../lib/training/programCalendar';
+
+type NutritionDashboardCardProps = {
+  userId: string;
+  onLogMeal: () => void;
+  onViewLog: () => void;
+  onSetGoals: () => void;
+};
+
+type CardState =
+  | { status: 'loading' }
+  | { status: 'error' }
+  | { status: 'ready'; model: DashboardNutritionModel };
+
+const RING_SIZE = 72;
+const RING_STROKE = 8;
+
+export default function NutritionDashboardCard({ userId, onLogMeal, onViewLog, onSetGoals }: NutritionDashboardCardProps) {
+  const today = todayYmd();
+  const [reloadKey, setReloadKey] = useState(0);
+  const [state, setState] = useState<CardState>({ status: 'loading' });
+
+  useEffect(() => {
+    let cancelled = false;
+    setState({ status: 'loading' });
+    fetchNutritionDaySummary(userId, today)
+      .then((summary) => {
+        if (cancelled) return;
+        setState({
+          status: 'ready',
+          model: dashboardNutritionModel(summary.totals, summary.entryCount, dashboardTargetsFromGoalRow(summary.goalRow)),
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setState({ status: 'error' });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, today, reloadKey]);
+
+  return (
+    <section className="dash-card nutrition-dash" data-nutrition-state={state.status} aria-labelledby="nutrition-dash-title">
+      <div className="dash-card-head">
+        <h2 id="nutrition-dash-title">Nutrition</h2>
+        <span className="badge">{formatDisplayDate(today)}</span>
+      </div>
+      {state.status === 'loading' && <p className="muted">Loading today’s nutrition.</p>}
+      {state.status === 'error' && (
+        <div className="nutrition-dash-empty">
+          <p className="muted">Today’s nutrition could not be loaded.</p>
+          <button type="button" className="btn secondary" onClick={() => setReloadKey((key) => key + 1)}>
+            Try again
+          </button>
+        </div>
+      )}
+      {state.status === 'ready' && (
+        <NutritionDashboardBody model={state.model} onLogMeal={onLogMeal} onViewLog={onViewLog} onSetGoals={onSetGoals} />
+      )}
+    </section>
+  );
+}
+
+function NutritionDashboardBody({
+  model,
+  onLogMeal,
+  onViewLog,
+  onSetGoals,
+}: {
+  model: DashboardNutritionModel;
+  onLogMeal: () => void;
+  onViewLog: () => void;
+  onSetGoals: () => void;
+}) {
+  return (
+    <>
+      {model.noMeals && <p className="nutrition-dash-status">No meals logged today.</p>}
+      {model.zeroCalorieLog && <p className="nutrition-dash-status">Logged today.</p>}
+      <div className="nutrition-dash-calorie">
+        {model.calorieTarget != null && model.calorieRatio != null && model.calorieStatus && (
+          <CalorieRing actual={model.calorieActual} target={model.calorieTarget} />
+        )}
+        <div>
+          <b className="nutrition-dash-calories">{model.caloriesText}</b>
+          <span className="muted">Calories</span>
+          {model.calorieTargetText && <p className="nutrition-dash-target">of {model.calorieTargetText}</p>}
+          {model.calorieRemainingText && (
+            <p className={`nutrition-dash-remaining nutrition-dash-remaining--${model.calorieStatus}`}>{model.calorieRemainingText}</p>
+          )}
+        </div>
+      </div>
+      <div className="nutrition-dash-macros">
+        {model.macros.map((macro) => (
+          <div key={macro.key} className="nutrition-dash-macro">
+            <div className="nutrition-dash-macro-head">
+              <span>{macro.label}</span>
+              <span>{macro.detailText}</span>
+            </div>
+            {macro.ratio != null && macro.status && (
+              <div className="nutrition-progress-track" aria-hidden="true">
+                <div
+                  className={`nutrition-progress-fill nutrition-dash-fill nutrition-dash-fill--${macro.status}`}
+                  style={{ width: `${macro.ratio * 100}%` }}
+                />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="nutrition-dash-actions">
+        <button type="button" className="btn green" onClick={onLogMeal}>
+          Log meal
+        </button>
+        <button type="button" className="btn secondary" onClick={onViewLog}>
+          View log
+        </button>
+        {model.needsGoals && (
+          <button type="button" className="btn secondary nutrition-dash-goals" onClick={onSetGoals}>
+            Set goals
+          </button>
+        )}
+      </div>
+    </>
+  );
+}
+
+function CalorieRing({ actual, target }: { actual: number; target: number }) {
+  const radius = (RING_SIZE - RING_STROKE) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference * (1 - macroRingArc(actual, target));
+  const status = macroRingStatus(actual, target);
+  return (
+    <svg
+      className={`nutrition-dash-ring nutrition-ring--${status}`}
+      viewBox={`0 0 ${RING_SIZE} ${RING_SIZE}`}
+      aria-hidden="true"
+    >
+      <circle className="nutrition-ring-track" cx={RING_SIZE / 2} cy={RING_SIZE / 2} r={radius} fill="none" strokeWidth={RING_STROKE} />
+      <circle
+        className="nutrition-ring-progress"
+        cx={RING_SIZE / 2}
+        cy={RING_SIZE / 2}
+        r={radius}
+        fill="none"
+        strokeWidth={RING_STROKE}
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        transform={`rotate(-90 ${RING_SIZE / 2} ${RING_SIZE / 2})`}
+      />
+    </svg>
+  );
+}

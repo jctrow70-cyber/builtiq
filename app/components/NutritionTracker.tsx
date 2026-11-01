@@ -7,6 +7,7 @@ import {
   refreshAccessToken,
   supabase,
 } from '../../lib/supabaseClient';
+import { shouldOpenNutritionAdd, type NutritionAddLaunch } from '../../lib/nutrition/nutritionLaunch';
 import NutritionWeeklyTrendChart from './NutritionWeeklyTrendChart';
 import NutritionMacroDashboard from './NutritionMacroDashboard';
 import {
@@ -87,6 +88,8 @@ type NutritionTrackerProps = {
   onDateChange?: (date: string) => void;
   onDataChange?: () => void;
   onOpenSettings?: () => void;
+  launch?: NutritionAddLaunch | null;
+  onLaunchConsumed?: () => void;
 };
 
 type LibraryEditDraft = {
@@ -353,6 +356,8 @@ export default function NutritionTracker({
   onDateChange,
   onDataChange,
   onOpenSettings,
+  launch,
+  onLaunchConsumed,
 }: NutritionTrackerProps) {
   const [logDate, setLogDate] = useState(initialDate || todayYmd());
   const [entries, setEntries] = useState<MealEntry[]>([]);
@@ -1237,6 +1242,14 @@ export default function NutritionTracker({
     resetAddFoodExtras();
     setShowAdd(true);
   }
+
+  const consumedLaunchId = useRef<number | null>(null);
+  useEffect(() => {
+    if (!shouldOpenNutritionAdd(launch, consumedLaunchId.current)) return;
+    consumedLaunchId.current = launch?.id ?? null;
+    openAddFood();
+    onLaunchConsumed?.();
+  }, [launch, onLaunchConsumed]);
 
   async function getAuthToken(): Promise<string | null> {
     return getFreshAccessToken();
@@ -2128,5 +2141,5 @@ export async function fetchNutritionDaySummary(userId: string, logDate: string) 
   if (goalsRes.error) throw goalsRes.error;
   const totals = sumMacros(entriesRes.data || []);
   const goals = goalsFromRow(goalsRes.data);
-  return { totals, goals, entryCount: (entriesRes.data || []).length };
+  return { totals, goals, entryCount: (entriesRes.data || []).length, goalRow: goalsRes.data || null };
 }

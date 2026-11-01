@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 139 - Dashboard nutrition uses saved goals only
+
+Date: 2026-10-31
+Status: Accepted
+Category: Dashboard
+
+### Decision
+
+BIQ-0283 replaces the inline dashboard nutrition card with `NutritionDashboardCard`. The card loads today’s meals through `fetchNutritionDaySummary` and totals them with `sumMacros`. A calorie or macro target is shown only when `st_nutrition_goals` has a saved row and that target is a positive number. Missing and zero targets do not display 2,000 / 150 / 200 / 65. Progress toward a target uses `macroRingArc`, `macroRingStatus`, and `formatCaloriesRemaining`. An over-target day shows the consumed number, the target, and Over. Log meal opens Nutrition and the existing Add Food panel once. View log opens Nutrition with that panel closed. Set goals opens the existing nutrition goals form in Settings. `goalsFromRow` and the Nutrition screen stay as they are.
+
+### Reason
+
+The old card treated a missing goal row and a failed load like an empty day, and its calorie badge stopped at 100% when the day was already over the target.
+
+### Alternatives Considered
+
+Showing the Nutrition screen’s default targets on the dashboard. Building a second meal form on the dashboard. Using four large macro rings in the half-width card. Changing `goalsFromRow` for every nutrition surface in this phase.
+
+### Impact
+
+No database change. Meal writes, nutrition totals, Progress, training, adherence, groups, and AI behavior stay as they are.
+
+---
+
 ## Decision 138 - Dashboard week uses Progress adherence
 
 Date: 2026-10-31

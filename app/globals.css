@@ -1600,3 +1600,21 @@ label{color:var(--textSecondary)}
   .week-adherence-primary b{font-size:32px}
   .week-adherence-layout{grid-template-columns:minmax(0,1fr) minmax(360px,480px)}
 }
+.nutrition-dash{min-height:0}
+.nutrition-dash-status{margin:0 0 8px;font-weight:700}
+.nutrition-dash-calorie{display:flex;align-items:center;gap:12px}
+.nutrition-dash-ring{width:72px;height:72px;flex:0 0 72px}
+.nutrition-dash-calories{display:block;font-size:32px;font-weight:900;line-height:1}
+.nutrition-dash-target,.nutrition-dash-remaining{margin:2px 0 0;font-size:13px;font-weight:700}
+.nutrition-dash-remaining--over{color:var(--warning)}
+.nutrition-dash-macros{display:grid;gap:8px;margin-top:12px}
+.nutrition-dash-macro-head{display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:700;margin-bottom:4px}
+.nutrition-dash .nutrition-progress-fill.nutrition-dash-fill--primary{background:var(--accent)}
+.nutrition-dash .nutrition-progress-fill.nutrition-dash-fill--near{background:var(--success)}
+.nutrition-dash .nutrition-progress-fill.nutrition-dash-fill--over{background:var(--warning)}
+.nutrition-dash-actions,.nutrition-dash-empty{display:grid;gap:8px;margin-top:12px}
+.nutrition-dash-actions .btn,.nutrition-dash-empty .btn{min-height:44px;width:100%}
+@media(min-width:768px){
+  .nutrition-dash-actions{grid-template-columns:1fr 1fr}
+  .nutrition-dash-goals{grid-column:1 / -1}
+}

@@ -11,6 +11,51 @@ Branch:
 Status:
 ```
 
+## BIQ-0283 - Dashboard nutrition summary
+
+Date: 2026-10-31
+Branch: main
+Status: Implemented. Ready for review. Not committed. No database change.
+
+Summary: The dashboard nutrition card shows today’s consumed calories and macros. A target, remaining amount, or progress mark appears only when that saved goal is a positive number.
+
+Purpose: Replace the set-count style nutrition summary and the default 2,000 calorie fallback with the logged day and the existing meal-entry flow.
+
+Files changed:
+- app/components/dashboard/NutritionDashboardCard.tsx
+- lib/nutrition/dashboardNutrition.ts
+- lib/nutrition/nutritionLaunch.ts
+- app/components/NutritionTracker.tsx
+- app/page.tsx
+- app/globals.css
+- scripts/test-nutrition-dashboard.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- `npx tsx scripts/test-nutrition-dashboard.ts`
+- `npx tsx scripts/test-progress-view.ts`
+- `npx tsc --noEmit`
+- On the dashboard, with no meals, confirm “No meals logged today.” and no error styling.
+- Log a zero-calorie food and confirm the card says “Logged today.” and shows 0.
+- With no saved goals, confirm the card shows consumed amounts and Set goals, and does not show 2,000 calories.
+- With saved goals, confirm remaining or Over, and that an over-target day still shows the full calorie number.
+- Log meal opens Nutrition and the existing Add food panel once. View log opens Nutrition with that panel closed.
+- Set goals opens Settings at the existing nutrition goals form.
+- At 390px, confirm the card is full width and the buttons are at least 44px. At 1440px, confirm the card stays half of the dashboard grid.
+
+Known issues:
+- Signed-in visual QA is still unverified when no test session is available.
+- The Nutrition screen still uses `goalsFromRow`, which fills in default targets when a goal row is missing. This card does not.
+- A stored target of 0 is treated as not configured on the dashboard. The Nutrition screen still replaces 0 with its default.
+
+Recommended commit message: BIQ-0283 Show today’s nutrition from logged meals
+
+---
+
 ## BIQ-0282 - Dashboard weekly adherence
 
 Date: 2026-10-31

@@ -210,6 +210,8 @@ Goal: Prepare BuildIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
+**BIQ-0283 DSH-D** (nutrition dashboard) is implemented and ready for review (Decision 139). The dashboard nutrition card uses today’s logged meals and saved positive goals. It is not committed. The Nutrition screen’s default goal display is unchanged.
+
 **BIQ-0282 DSH-C** (weekly adherence) is implemented and ready for review (Decision 138). The dashboard week card uses Progress expectation counts for Monday–Sunday. It is not committed. Follow-up, not in this change: personal calendar moves do not update expectation dates, and a private copy plus a leftover template expectation can count twice because Progress counts both rows.
 
 **BIQ-0281 DSH-B** (Today’s Training) is implemented (Decision 137). The dashboard uses the Training schedule for today. Other dashboard cards besides the week summary are unchanged.
