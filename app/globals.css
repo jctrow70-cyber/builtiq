@@ -1478,7 +1478,8 @@ label{color:var(--textSecondary)}
 .te-tomorrow{opacity:.95}
 .te-week-nav{display:flex;flex-wrap:wrap;gap:8px}
 .te-week-label{margin:0;font-weight:800}
-.te-week-grid{display:grid;gap:8px}
+.te-week-strip{margin:4px 0 8px}
+.te-week-grid{display:none}
 .te-week-day{display:grid;gap:2px;width:100%;padding:12px;border-radius:14px;border:1px solid var(--borderSubtle);background:var(--surfaceElevated);color:inherit;text-align:left;min-height:72px}
 .te-week-day--today{border-color:var(--accent);background:var(--accentSoft)}
 .te-week-day--done{box-shadow:inset 0 0 0 1px var(--success)}
@@ -1515,8 +1516,9 @@ label{color:var(--textSecondary)}
 .te-dot--sport{background:#f59e0b}
 .te-dot--rest{background:#94a3b8}
 .te-month-title{display:none;font-size:10px;font-weight:700;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-@media(min-width:700px){
-  .te-week-grid{grid-template-columns:repeat(7,minmax(0,1fr))}
+@media(min-width:721px){
+  .te-week-strip.member-week-strip{display:none}
+  .te-week-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px}
   .te-month-cell{min-height:84px;padding:8px}
   .te-month-title{display:block}
   .te-month-source{display:block}

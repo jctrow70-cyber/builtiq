@@ -13,6 +13,7 @@ import {
   trainingDayCardShowsStatus,
   trainingDayCardTitleAria,
   trainingStatusClass,
+  trainingWeekStripMark,
 } from '../../../lib/training/trainingDayCard';
 import type { TrainingDayItem, TrainingDayPlan, TrainingMonthCell } from '../../../lib/programDesign/trainingSchedule';
 
@@ -398,6 +399,28 @@ export default function TrainingExecution({
             {weekDays[6] ? ` – ${formatMediumDate(weekDays[6].date)}` : ''}
             {programName ? ` · Program week ${weekNumber} of ${totalWeeks}` : ''}
           </p>
+          <div className="te-week-strip member-week-strip" role="tablist" aria-label="Days this week">
+            {weekDays.map((day) => {
+              const selected = day.date === selectedDate;
+              const titles = day.items.filter((item) => !item.isRest).map((item) => item.title).filter(Boolean);
+              return (
+                <button
+                  key={`strip-${day.date}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={selected}
+                  aria-controls="te-week-day-detail"
+                  aria-label={`${day.dayLabel} ${Number(day.date.slice(8, 10))}${titles.length ? `, ${titles.join(', ')}` : ''}`}
+                  className={`member-week-cell${selected ? ' is-selected' : ''}${day.isToday ? ' is-today' : ''}`}
+                  onClick={() => onSelectDay(day.date)}
+                >
+                  <span>{day.dayLabel}</span>
+                  <b>{Number(day.date.slice(8, 10))}</b>
+                  <i className={trainingWeekStripMark({ items: day.items })} />
+                </button>
+              );
+            })}
+          </div>
           <div className="te-week-grid">
             {weekDays.map((day) => {
               const actionable = day.items.filter((item) => !item.isRest);
@@ -432,7 +455,7 @@ export default function TrainingExecution({
             })}
           </div>
           {today && (
-            <section className="te-block">
+            <section className="te-block" id="te-week-day-detail">
               <h2>{today.isToday ? "Today's plan" : formatLongWeekday(today.date)}</h2>
               {dayItemHandlers && <DayItems {...dayItemHandlers} />}
             </section>

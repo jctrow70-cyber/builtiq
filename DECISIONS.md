@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 156 - Training Week uses the Groups side-to-side week
+
+Date: 2026-11-02
+Status: Implemented
+Category: Training
+
+### Decision
+
+BIQ-0300 makes Training Week a horizontal Monday–Sunday strip on viewports under 721px, with the selected day's plan below it. That matches the Groups member week and group calendar mobile pattern. From 721px Training keeps the seven-column week board. Day and month views do not change. Workout start, review, hide, and stop stay on the selected-day card.
+
+### Reason
+
+Phase D deferred D6.6 (390px Week density). Training still stacked seven day cards, so the week scrolled down. Groups already went side to side.
+
+### Alternatives Considered
+
+Keep stacking until a later Phase E polish. That leaves Training and Groups inconsistent. Force seven fat day cards across 390px. Titles would not fit. Replace the desktop board with the strip at every width. The wide seven-column board already works.
+
+### Impact
+
+No database change. Schedule data, completion, and enrollment controls are unchanged.
+
+---
+
 ## Decision 155 - An exercise change shows on the open logger
 
 Date: 2026-11-02

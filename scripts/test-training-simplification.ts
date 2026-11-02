@@ -13,6 +13,7 @@ import {
   trainingDayCardShowsStatus,
   trainingDayCardTitleAria,
   trainingPageHeading,
+  trainingWeekStripMark,
 } from '../lib/training/trainingDayCard';
 import {
   sessionFeedbackDefaultExpanded,
@@ -81,6 +82,12 @@ assert.equal(trainingDayCardTitleAria({ name: 'Full Body B', canPreview: false }
 
 assert.equal(showEmptyDayAdd(true), false);
 assert.equal(showEmptyDayAdd(false), true);
+
+assert.equal(trainingWeekStripMark({ items: [] }), '');
+assert.equal(trainingWeekStripMark({ items: [{ isRest: true }] }), '');
+assert.equal(trainingWeekStripMark({ items: [{ isRest: false, completed: false, statusLabel: 'Scheduled' }] }), 'is-scheduled');
+assert.equal(trainingWeekStripMark({ items: [{ isRest: false, completed: true, statusLabel: 'Completed' }] }), 'is-done');
+assert.equal(trainingWeekStripMark({ items: [{ isRest: false, completed: false, statusLabel: 'Missed' }] }), 'is-missed');
 
 assert.deepEqual(TRAINING_CALENDAR_VIEWS, ['day', 'week', 'month']);
 

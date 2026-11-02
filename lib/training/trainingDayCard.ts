@@ -82,6 +82,17 @@ export function showEmptyDayAdd(headerHasAdd: boolean): boolean {
   return !headerHasAdd;
 }
 
+/** Compact Mon–Sun strip mark, matching Groups member week cells. */
+export function trainingWeekStripMark(input: {
+  items: Array<{ isRest?: boolean; completed?: boolean; statusLabel?: string | null }>;
+}): 'is-missed' | 'is-done' | 'is-scheduled' | '' {
+  const actionable = input.items.filter((item) => !item.isRest);
+  if (actionable.some((item) => item.statusLabel === 'Missed')) return 'is-missed';
+  if (actionable.length > 0 && actionable.every((item) => item.completed)) return 'is-done';
+  if (actionable.length > 0) return 'is-scheduled';
+  return '';
+}
+
 export function trainingPageHeading(input: {
   sessionOpen?: boolean;
   sessionIntent?: 'log' | 'edit';

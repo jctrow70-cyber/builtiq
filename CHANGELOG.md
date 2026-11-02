@@ -11,6 +11,42 @@ Branch:
 Status:
 ```
 
+## BIQ-0300 - Training week days go across like Groups
+
+Date: 2026-11-02
+Branch: main
+Status: Implemented. Not committed. Not pushed. No database change.
+
+Summary: Training Week on a phone is a Monday–Sunday strip with the selected day's plan underneath, the same pattern as Groups. The seven stacked day cards no longer push the week down the page. From 721px the existing seven-column week board stays.
+
+Purpose: D6.6 left Week stacking vertically on mobile. Groups already laid the week across. Training should match that.
+
+Files changed:
+- app/components/training/TrainingExecution.tsx
+- app/globals.css
+- lib/training/trainingDayCard.ts
+- scripts/test-training-simplification.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+- `npx tsx scripts/test-training-simplification.ts`
+- Training → Week at 390px: Mon–Sun in one row, selected day details below, no seven stacked cards
+- Tap another weekday: strip selection and the plan below both change
+- Training → Week at 768px and 1440px: seven day columns remain
+- Groups week calendar still uses its own strip / board
+- Day and Calendar (month) views are unchanged
+
+Known issues:
+- Phone week cells show a status dot instead of workout titles; titles stay in the selected-day card
+
+Recommended commit message: BIQ-0300 Lay Training week days across like Groups
+
+---
+
 ## BIQ-0299 - Show an exercise change on the open logger
 
 Date: 2026-11-02
