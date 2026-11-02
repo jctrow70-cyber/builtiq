@@ -309,10 +309,45 @@ function withStatus(item: TrainingDayItem): TrainingDayItem {
   return { ...item, statusLabel: item.completed ? 'Completed' : 'Scheduled' };
 }
 
-function sameTitle(left: string | null | undefined, right: string | null | undefined): boolean {
+/** "Full Body B" and "Full Body B - Posterior Chain" are one workout name. "Full Body" is not "Full Body B". */
+export function sameWorkoutTitle(left: string | null | undefined, right: string | null | undefined): boolean {
   const a = String(left || '').trim().toLowerCase();
   const b = String(right || '').trim().toLowerCase();
-  return !!a && a === b;
+  if (!a || !b) return false;
+  if (a === b) return true;
+  const short = a.length <= b.length ? a : b;
+  const long = a.length <= b.length ? b : a;
+  if (!long.startsWith(short)) return false;
+  const rest = long.slice(short.length);
+  return rest.startsWith(' - ') || rest.startsWith(' — ') || rest.startsWith(': ') || rest.startsWith(' | ');
+}
+
+/**
+ * Program ids that are the plan Training follows, the group plan it was copied from,
+ * or a personal copy of either. A second enrollment of that same plan is not a second session.
+ */
+export function programLineageIds(input: {
+  followedProgramId?: string | null;
+  followedSourceProgramId?: string | null;
+  programSources?: Record<string, string | null> | null;
+}): string[] {
+  const ids = new Set<string>();
+  const followed = String(input.followedProgramId || '').trim();
+  const source = String(input.followedSourceProgramId || '').trim();
+  if (followed) ids.add(followed);
+  if (source) ids.add(source);
+  const sources = input.programSources || {};
+  const followedSource = followed ? String(sources[followed] || '').trim() : '';
+  if (followedSource) ids.add(followedSource);
+  Object.entries(sources).forEach(([id, parent]) => {
+    const sourceId = String(parent || '').trim();
+    if (sourceId && ids.has(sourceId)) ids.add(id);
+  });
+  Object.entries(sources).forEach(([id, parent]) => {
+    const sourceId = String(parent || '').trim();
+    if (sourceId && ids.has(sourceId)) ids.add(id);
+  });
+  return Array.from(ids);
 }
 
 /**
@@ -324,10 +359,22 @@ export function overlayVisibleExpectations(
   rows: VisibleScheduleExpectation[],
   localToday: string,
   followedSourceProgramId?: string | null,
-  followedSource?: { sourceKey: string; sourceName: string } | null
+  followedSource?: { sourceKey: string; sourceName: string } | null,
+  lineageProgramIds?: string[] | null
 ): TrainingDayPlan {
+  const lineage = new Set((lineageProgramIds || []).map((id) => String(id || '').trim()).filter(Boolean));
+  if (followedSourceProgramId) lineage.add(followedSourceProgramId);
   const mine = rows.filter((row) => row.scheduledDate === plan.date);
   let items = plan.items.map((item) => ({ ...item }));
+  const sameFollowedSession = (row: VisibleScheduleExpectation) => {
+    if (!row.programId || !lineage.has(row.programId)) return false;
+    return items.some((item) => {
+      if (item.isRest || item.source === 'calendar') return false;
+      if (!sameWorkoutTitle(item.title, row.title)) return false;
+      if (String(item.id || '').startsWith('expectation-')) return !!item.programId && lineage.has(item.programId);
+      return true;
+    });
+  };
   for (const row of mine) {
     const state = expectationDisplayState({
       scheduledDate: row.scheduledDate,
@@ -352,11 +399,7 @@ export function overlayVisibleExpectations(
       };
       continue;
     }
-    if (
-      followedSourceProgramId &&
-      row.programId === followedSourceProgramId &&
-      items.some((item) => item.source !== 'calendar' && !item.isRest && sameTitle(item.title, row.title))
-    ) {
+    if (sameFollowedSession(row)) {
       continue;
     }
     const completed = state === 'Completed';

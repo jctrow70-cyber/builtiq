@@ -147,19 +147,44 @@ export function buildGroupCalendar(input: {
       extra,
     }));
   cards.push(...extraCards);
-  cards.sort((a, b) => a.memberName.localeCompare(b.memberName) || a.title.localeCompare(b.title));
+  const unique = dedupeMemberProgramCards(cards);
+  unique.sort((a, b) => a.memberName.localeCompare(b.memberName) || a.title.localeCompare(b.title));
 
   const days = calendarWeekDays(weekStart).map((date) => ({
     date,
     weekday: dayLabelFromYmd(date),
-    workouts: cards.filter((card) => card.date === date),
+    workouts: unique.filter((card) => card.date === date),
   }));
 
   return {
     weekStart,
     weekEnd,
     days,
-    workoutCount: cards.length,
-    memberCount: new Set(cards.map((card) => card.userId)).size,
+    workoutCount: unique.length,
+    memberCount: new Set(unique.map((card) => card.userId)).size,
   };
+}
+
+function sameProgramTitle(left: string, right: string): boolean {
+  return left.trim().toLowerCase() === right.trim().toLowerCase();
+}
+
+/** One person, one date, one program workout. A second row of that same session stays off the card list. */
+export function dedupeMemberProgramCards(cards: GroupCalendarCard[]): GroupCalendarCard[] {
+  const kept: GroupCalendarCard[] = [];
+  for (const card of cards) {
+    const duplicate = kept.find((existing) => {
+      if (existing.userId !== card.userId || existing.date !== card.date) return false;
+      if (existing.workoutId && card.workoutId && existing.workoutId === card.workoutId) return true;
+      return existing.origin === 'program' && card.origin === 'program' && sameProgramTitle(existing.title, card.title);
+    });
+    if (duplicate) {
+      if (duplicate.origin === 'program' && card.origin === 'program' && card.hasSession && !duplicate.hasSession) {
+        kept[kept.indexOf(duplicate)] = card;
+      }
+      continue;
+    }
+    kept.push(card);
+  }
+  return kept;
 }

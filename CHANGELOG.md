@@ -11,6 +11,43 @@ Branch:
 Status:
 ```
 
+## BIQ-0298 - Show one copy of a program on the Training calendar
+
+Date: 2026-11-02
+Branch: main
+Status: Implemented locally. Not committed. Not pushed. No database change.
+
+Summary: Training Calendar was listing the same program workout twice for a person who follows a plan and also has that plan, or a copy of it, on another enrollment. Day, Week, and Calendar now keep one session. A different program on that day still appears. The group calendar and a member's week do the same when two program rows share that person, date, and workout.
+
+Purpose: A followed plan and its group or personal copy are one session. Showing both made the calendar look like the program was assigned twice.
+
+Files changed:
+- lib/programDesign/trainingSchedule.ts
+- lib/training/visibleSchedule.ts
+- lib/training/todayTraining.ts
+- lib/groups/groupCalendar.ts
+- lib/groups/trainingWorkspace.ts
+- app/components/training/UnifiedTrainingSchedule.tsx
+- app/components/dashboard/TodaysTrainingHero.tsx
+- scripts/test-unified-schedule.ts
+- scripts/test-group-calendar.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None. The schedule read also selects `source_program_id`, which already exists.
+
+Testing steps:
+1. Run `scripts/test-unified-schedule.ts` and `scripts/test-group-calendar.ts`.
+2. Open Training, Calendar, while signed in as the person who follows the program. Each training day lists that workout once.
+3. A workout from a different program on the same day still appears.
+4. An added activity, such as a run, still appears beside the program workout.
+5. On the group calendar, that person's program workout appears once. A second workout with a different name still appears.
+
+Known issues: Signed-in browser check is still outstanding because this session is on the sign-in screen. The Programs list under the calendar still shows each enrollment, so Hide and Expect stay available for each source. Progress can still count a private copy and a leftover template expectation as two rows.
+
+Recommended commit message: BIQ-0298 Show one copy of a program on the Training calendar.
+
 ## BIQ-0296 - Correct a planned set type without losing the log
 
 Date: 2026-11-02

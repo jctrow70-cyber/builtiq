@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../../lib/supabaseClient';
 import { logMapForDate } from '../../../lib/programDesign/activityCompletion';
+import { programLineageIds } from '../../../lib/programDesign/trainingSchedule';
 import type { ProgramActivity, ProgramDesignRecord } from '../../../lib/programDesign/types';
 import type { UserCalendarActivity } from '../../../lib/programDesign/userCalendar';
 import { workoutDayMovesFromActivities, type WorkoutDayMoves } from '../../../lib/programDesign/workoutDayMoves';
@@ -230,6 +231,11 @@ export default function TodaysTrainingHero({
       today,
       followedSourceProgramId,
       followedSource,
+      lineageProgramIds: programLineageIds({
+        followedProgramId: program?.id,
+        followedSourceProgramId,
+        programSources: snapshot?.programSources,
+      }),
     });
   }, [
     inputsReady,

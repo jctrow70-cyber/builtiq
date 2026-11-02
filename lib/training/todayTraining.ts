@@ -70,6 +70,7 @@ export function composeTodayTrainingPlan(input: {
   today: string;
   followedSourceProgramId?: string | null;
   followedSource?: { sourceKey: string; sourceName: string } | null;
+  lineageProgramIds?: string[] | null;
 }): TrainingDayPlan {
   const today = input.today;
   const base = decorateDayPlanCompletion(
@@ -94,7 +95,8 @@ export function composeTodayTrainingPlan(input: {
     input.expectations || [],
     today,
     input.followedSourceProgramId,
-    input.followedSource
+    input.followedSource,
+    input.lineageProgramIds
   );
 }
 

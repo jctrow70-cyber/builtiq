@@ -37,6 +37,8 @@ export type VisibleScheduleSnapshot = {
   error: string | null;
   enrollments: VisibleScheduleEnrollment[];
   programNames: Record<string, string>;
+  /** source_program_id for each enrolled program. A copy and its source are one plan on the calendar. */
+  programSources?: Record<string, string | null>;
   expectations: VisibleScheduleExpectation[];
   /** A failed or pending repair must not replace a calendar that already painted. */
   keepPrevious?: boolean;
@@ -47,6 +49,7 @@ const emptySnapshot = (pending: boolean, error: string | null = null): VisibleSc
   error,
   enrollments: [],
   programNames: {},
+  programSources: {},
   expectations: [],
 });
 
@@ -106,9 +109,13 @@ export async function loadVisibleSchedule(
     return ids;
   }, []);
   const programNames: Record<string, string> = {};
+  const programSources: Record<string, string | null> = {};
   if (programIds.length) {
-    const programs = await supabase.from('st_programs').select('id, name').in('id', programIds);
-    for (const program of programs.data || []) programNames[program.id] = program.name || 'Program';
+    const programs = await supabase.from('st_programs').select('id, name, source_program_id').in('id', programIds);
+    for (const program of programs.data || []) {
+      programNames[program.id] = program.name || 'Program';
+      programSources[program.id] = program.source_program_id || null;
+    }
   }
   const visibleKeys = new Set(
     enrollments.filter((row) => row.schedule_visible && row.status === 'active').map((row) => row.source_key)
@@ -121,7 +128,7 @@ export async function loadVisibleSchedule(
     .lte('scheduled_date', input.rangeTo)
     .order('scheduled_date', { ascending: true });
   if (expectationResult.error && scheduleSetupMissing(expectationResult.error.message)) {
-    return { pending: true, error: null, enrollments, programNames, expectations: [] };
+    return { pending: true, error: null, enrollments, programNames, programSources, expectations: [] };
   }
   let error: string | null = null;
   if (expectationResult.error) error = expectationResult.error.message;
@@ -146,7 +153,7 @@ export async function loadVisibleSchedule(
     excused: row.excused,
     sessionStatus: sessionStatusForExpectation(row, sessions),
   }));
-  return { pending: false, error, enrollments, programNames, expectations };
+  return { pending: false, error, enrollments, programNames, programSources, expectations };
 }
 
 /** Keep the painted calendar when repair cannot return a trustworthy replacement. */

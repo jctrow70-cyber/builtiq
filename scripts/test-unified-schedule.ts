@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { emptyDayPlan, overlayVisibleExpectations, type TrainingDayItem } from '../lib/programDesign/trainingSchedule';
+import { emptyDayPlan, overlayVisibleExpectations, programLineageIds, type TrainingDayItem } from '../lib/programDesign/trainingSchedule';
 import { weekForDate } from '../lib/training/programCalendar';
 import {
   adherenceCounts,
@@ -323,6 +323,88 @@ assert.equal(privateCopy.items.filter((item) => item.title === 'Full Body').leng
 assert.equal(privateCopy.items.find((item) => item.title === 'Full Body')?.workoutId, 'p-mon');
 assert.equal(privateCopy.items.find((item) => item.title === 'Full Body')?.sourceName, 'Personal');
 assert.equal(privateCopy.items.find((item) => item.title === 'Easy run')?.activityId, 'cal-cardio');
+
+const lineage = programLineageIds({
+  followedProgramId: 'prog-copy',
+  programSources: { 'prog-copy': 'prog-template', 'prog-template': null, 'prog-other': null },
+});
+assert.equal(lineage.includes('prog-copy'), true);
+assert.equal(lineage.includes('prog-template'), true);
+assert.equal(lineage.includes('prog-other'), false);
+
+const detailedCopy = emptyDayPlan(monday, wednesday);
+detailedCopy.items = [{ ...personalItem, title: 'Full Body - Posterior Chain', workoutId: 'p-mon' }];
+const detailed = overlayVisibleExpectations(
+  detailedCopy,
+  [
+    {
+      id: 'exp-template-detail',
+      workoutId: 'template-mon',
+      programId: 'prog-template',
+      scheduledDate: monday,
+      title: 'Full Body',
+      sourceKey: 'group:team',
+      teamId: 'team',
+      sourceName: 'Basketball',
+      excused: false,
+      sessionStatus: null,
+    },
+    {
+      id: 'exp-other-same-name',
+      workoutId: 'other-mon',
+      programId: 'prog-other',
+      scheduledDate: monday,
+      title: 'Full Body',
+      sourceKey: 'group:other',
+      teamId: 'other',
+      sourceName: 'Other group',
+      excused: false,
+      sessionStatus: null,
+    },
+  ],
+  wednesday,
+  null,
+  { sourceKey: 'personal', sourceName: 'Personal' },
+  lineage
+);
+assert.equal(detailed.items.filter((item) => item.title.startsWith('Full Body')).length, 2);
+assert.equal(detailed.items.some((item) => item.workoutId === 'template-mon'), false);
+assert.equal(detailed.items.some((item) => item.workoutId === 'other-mon'), true);
+
+const pairedExpectations = overlayVisibleExpectations(
+  emptyDayPlan(monday, wednesday),
+  [
+    {
+      id: 'exp-copy',
+      workoutId: 'copy-mon',
+      programId: 'prog-copy',
+      scheduledDate: monday,
+      title: 'Full Body',
+      sourceKey: 'personal',
+      teamId: null,
+      sourceName: 'Personal',
+      excused: false,
+      sessionStatus: null,
+    },
+    {
+      id: 'exp-template-pair',
+      workoutId: 'template-mon',
+      programId: 'prog-template',
+      scheduledDate: monday,
+      title: 'Full Body',
+      sourceKey: 'group:team',
+      teamId: 'team',
+      sourceName: 'Basketball',
+      excused: false,
+      sessionStatus: null,
+    },
+  ],
+  wednesday,
+  'prog-template',
+  null,
+  lineage
+);
+assert.equal(pairedExpectations.items.filter((item) => item.title === 'Full Body').length, 1);
 
 const hiddenMonday = overlayVisibleExpectations(mondayPlan, [], wednesday);
 assert.equal(hiddenMonday.items.some((item) => item.workoutId === 'b-tue'), false);

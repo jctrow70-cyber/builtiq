@@ -9,6 +9,7 @@ import {
   buildGroupCalendar,
   calendarMemberIds,
   calendarWeekSummary,
+  dedupeMemberProgramCards,
   visibleCalendarCards,
 } from '../lib/groups/groupCalendar';
 import { buildGroupTrainingBoard, type GroupTrainingExpectationInput } from '../lib/groups/trainingWorkspace';
@@ -116,6 +117,25 @@ const withExtras = buildGroupCalendar({
 });
 assert.deepEqual(calendarWeekSummary(withExtras), { scheduled: 4, completed: 2 });
 assert.equal(mixed.days.some((day) => day.workouts.some((card) => card.title === 'Last Week' || card.title === 'Personal Lift')), false);
+
+const jesseTwice = buildGroupCalendar({
+  weekStart,
+  today,
+  teamId,
+  expectations: [
+    row('jesse', '2026-10-14', 'Full Body', { id: 'exp-1', workoutId: 'w-copy' }),
+    row('jesse', '2026-10-14', 'Full Body', { id: 'exp-2', workoutId: 'w-template' }),
+    row('jesse', '2026-10-14', 'Conditioning', { id: 'exp-3', workoutId: 'w-cardio' }),
+  ],
+  members: [{ userId: 'jesse', name: 'Jesse Trowbridge' }],
+  visibleUserIds: ['jesse'],
+  completionKnown: true,
+});
+const jesseDay = jesseTwice.days.find((day) => day.date === '2026-10-14');
+assert.equal(jesseDay?.workouts.filter((card) => card.title === 'Full Body').length, 1);
+assert.equal(jesseDay?.workouts.filter((card) => card.title === 'Conditioning').length, 1);
+assert.equal(jesseDay?.workouts.length, 2);
+assert.equal(dedupeMemberProgramCards(jesseDay?.workouts || []).length, 2);
 
 const restored = weekFor([row('amy', '2026-10-16', 'Excused Day', { excused: false, workoutId: 'ex' })]);
 assert.equal(restored.days.find((day) => day.date === '2026-10-16')?.workouts[0].state, 'Upcoming');

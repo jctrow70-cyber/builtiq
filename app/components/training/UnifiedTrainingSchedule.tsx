@@ -7,6 +7,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import TrainingExecution from './TrainingExecution';
 import {
   overlayVisibleExpectations,
+  programLineageIds,
   type TrainingDayItem,
   type TrainingDayPlan,
   type TrainingMonthCell,
@@ -95,6 +96,7 @@ export default function UnifiedTrainingSchedule({ userId, teams, rangeFrom, rang
   });
   const [enrollments, setEnrollments] = useState<VisibleScheduleEnrollment[]>(opening?.value.pending ? [] : opening?.value.enrollments || []);
   const [programNames, setProgramNames] = useState<Record<string, string>>(opening?.value.pending ? {} : opening?.value.programNames || {});
+  const [programSources, setProgramSources] = useState<Record<string, string | null>>(opening?.value.pending ? {} : opening?.value.programSources || {});
   const [visibleExpectations, setVisibleExpectations] = useState<VisibleScheduleExpectation[]>(opening?.value.pending ? [] : opening?.value.expectations || []);
   const [pending, setPending] = useState(!!opening?.value.pending);
   const [error, setError] = useState<string | null>(opening?.value.error || null);
@@ -113,6 +115,7 @@ export default function UnifiedTrainingSchedule({ userId, teams, rangeFrom, rang
     setError(snapshot.error);
     setEnrollments(snapshot.pending ? [] : snapshot.enrollments);
     setProgramNames(snapshot.pending ? {} : snapshot.programNames);
+    setProgramSources(snapshot.pending ? {} : snapshot.programSources || {});
     setVisibleExpectations(snapshot.pending ? [] : snapshot.expectations);
   }, []);
 
@@ -172,6 +175,11 @@ export default function UnifiedTrainingSchedule({ userId, teams, rangeFrom, rang
   const teamName = (teamId: string | null, sourceKey: string) => scheduleTeamLabel(teams, teamId, sourceKey);
 
   const sourceProgramId = calendar.followedSourceProgramId || null;
+  const lineage = programLineageIds({
+    followedProgramId: calendar.followedProgramId,
+    followedSourceProgramId: sourceProgramId,
+    programSources,
+  });
   const followedSource = resolveFollowedAssignmentSource({
     followedProgramId: calendar.followedProgramId,
     enrollments: enrollments.map((row) => ({
@@ -182,12 +190,12 @@ export default function UnifiedTrainingSchedule({ userId, teams, rangeFrom, rang
       teamName: teamName(row.team_id, row.source_key),
     })),
   });
-  const calendarToday = calendar.today ? overlayVisibleExpectations(calendar.today, visibleExpectations, today, sourceProgramId, followedSource) : null;
-  const calendarTomorrow = calendar.tomorrow ? overlayVisibleExpectations(calendar.tomorrow, visibleExpectations, today, sourceProgramId, followedSource) : null;
-  const calendarWeek = calendar.weekDays.map((day) => overlayVisibleExpectations(day, visibleExpectations, today, sourceProgramId, followedSource));
+  const calendarToday = calendar.today ? overlayVisibleExpectations(calendar.today, visibleExpectations, today, sourceProgramId, followedSource, lineage) : null;
+  const calendarTomorrow = calendar.tomorrow ? overlayVisibleExpectations(calendar.tomorrow, visibleExpectations, today, sourceProgramId, followedSource, lineage) : null;
+  const calendarWeek = calendar.weekDays.map((day) => overlayVisibleExpectations(day, visibleExpectations, today, sourceProgramId, followedSource, lineage));
   const calendarMonth = calendar.monthCells.map((cell) => ({
     ...cell,
-    plan: cell.plan ? overlayVisibleExpectations(cell.plan, visibleExpectations, today, sourceProgramId, followedSource) : cell.plan,
+    plan: cell.plan ? overlayVisibleExpectations(cell.plan, visibleExpectations, today, sourceProgramId, followedSource, lineage) : cell.plan,
   }));
 
   async function toggleVisible(row: VisibleScheduleEnrollment) {

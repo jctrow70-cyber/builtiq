@@ -508,6 +508,26 @@ export type GroupTrainingWeekItem = {
   extra?: GroupExtraActivity;
 };
 
+/** A second program row for the same person, date, and workout is the same session. */
+export function dedupeMemberWeekItems(items: GroupTrainingWeekItem[]): GroupTrainingWeekItem[] {
+  const kept: GroupTrainingWeekItem[] = [];
+  for (const item of items) {
+    const duplicate = kept.find((existing) => {
+      if (existing.date !== item.date) return false;
+      if (existing.workoutId && item.workoutId && existing.workoutId === item.workoutId) return true;
+      return existing.origin === 'program' && item.origin === 'program' && existing.title.trim().toLowerCase() === item.title.trim().toLowerCase();
+    });
+    if (duplicate) {
+      if (duplicate.origin === 'program' && item.origin === 'program' && item.hasSession && !duplicate.hasSession) {
+        kept[kept.indexOf(duplicate)] = item;
+      }
+      continue;
+    }
+    kept.push(item);
+  }
+  return kept;
+}
+
 export type GroupTrainingNextWorkout = {
   date: string;
   title: string;
@@ -1083,10 +1103,10 @@ export function buildGroupTrainingBoard(input: {
       }
     }
 
-    weekItems = [
+    weekItems = dedupeMemberWeekItems([
       ...weekItems,
       ...groupExtraWeekItems(input.extras || [], member.userId, weekStart, weekEnd),
-    ];
+    ]);
 
     return {
       userId: member.userId,

@@ -210,6 +210,8 @@ Goal: Prepare BuildIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
+**BIQ-0298** shows a followed program once on the Training calendar (Decision 153). A second enrollment of that plan, or of its copy, no longer adds the same workout again. A different program on that day still appears. No database change. Not committed. Not pushed. Signed-in browser check is still outstanding.
+
 **BIQ-0296** corrects Working and Warm-up on a planned set, including after a log, and soft-deletes a set without deleting its performance (Decision 152). The migration is written and not applied to hosted Supabase. Not committed. Not pushed.
 
 **BIQ-0295** gives each Dashboard card its own cache generation (Decision 151). A saved meal or nutrition goal refreshes Nutrition, and a saved or deleted body check-in refreshes Your Progress, even when the user returns inside 30 seconds. The other cards stay on their fresh cache. Committed locally and not pushed. Signed-in visual QA is still outstanding.

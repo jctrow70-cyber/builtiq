@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 153 - One followed plan is one calendar session
+
+Date: 2026-11-02
+Status: Implemented locally
+Category: Training
+
+### Decision
+
+BIQ-0298 shows a followed program once on the Training calendar. A second enrollment of that same program, or of a personal copy and the group plan it came from, does not add another card when the workout name matches. A workout from a different program still appears on that day. The group calendar and a member week use the same rule for one person, one date, and one program workout. Each enrollment stays in the Programs list so its calendar and expectation switches remain.
+
+### Reason
+
+Training was painting the plan from the followed program and again from a visible enrollment of that plan or its copy. The day looked like the program had been assigned twice.
+
+### Alternatives Considered
+
+Hide the second enrollment entirely. That would remove Hide and Expect for that source. Match only identical workout ids. That misses a copy, which has different workout ids and the same session.
+
+### Impact
+
+No database change. Day, Week, Calendar, Today's Training, the group week, and a member's week share this rule. Progress still counts expectation rows separately.
+
+---
+
 ## Decision 152 - A set type correction updates the open session only
 
 Date: 2026-11-02
