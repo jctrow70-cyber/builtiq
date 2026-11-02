@@ -11,7 +11,15 @@ import { compatibleEquipmentOptions, defaultCatalogEquipment, resolveExerciseEqu
 import { getExerciseGuidePayload, getExerciseThumb, hasExerciseGuide, type ExerciseGuidePayload } from '../../../lib/training/exerciseMedia';
 import { exerciseTypeOf } from '../../../lib/training/exerciseTypes';
 import { SET_TYPES, isRampEffortSetType } from '../../../lib/training/setTypes';
-import { canRewritePlannedSetPrescription } from '../../../lib/training/plannedSetGuard';
+import { canRewritePlannedSetPrescription, logHasPerformance } from '../../../lib/training/plannedSetGuard';
+import {
+  correctPlannedSetType,
+  isCorrectableSetType,
+  LOGGED_SET_REMOVAL_CONFIRMATION,
+  plannedSetEditQueue,
+  resolvePlannedSetTargets,
+  softDeletePlannedSets,
+} from '../../../lib/training/setTypeCorrection';
 import {
   catalogPayloadFromItem,
   emptyAddPanelConfig,
@@ -19,7 +27,6 @@ import {
   groupSectionBlocks,
   makeSupersetGroupId,
   matchingExercise,
-  matchingSet,
   nextExerciseSortOrder,
   nextSupersetLabel,
   openAddPanelState,
@@ -301,9 +308,29 @@ export default function WorkoutTemplateEditor({
     await reload();
   }
 
+  function targetsForSet(ex: any, set: any) {
+    return resolvePlannedSetTargets({ sourceExercise: ex, sourceSet: set, targetWorkouts: targets });
+  }
+
   async function updateSet(ex: any, set: any, field: string, value: any) {
     if (!canEdit) return;
+    const resolved = targetsForSet(ex, set);
+    if (resolved.ok === false) return persistError(resolved.reason);
     beginPersist();
+    if (field === 'set_type') {
+      if (!isCorrectableSetType(String(value || ''))) return persistError('Choose a set type.');
+      let outcome;
+      try {
+        outcome = await plannedSetEditQueue(resolved.ids, () =>
+          correctPlannedSetType(supabase, resolved.ids, String(value), null)
+        );
+      } catch (err: any) {
+        return persistError(err?.message || 'Could not change that set.');
+      }
+      if (!outcome.ok) return persistError(outcome.error);
+      await reload();
+      return;
+    }
     const { data: existingLogs } = await supabase
       .from('st_set_logs')
       .select('id, completed, actual_weight, actual_reps, actual_duration, actual_distance, log_notes, planned_set_id')
@@ -311,26 +338,36 @@ export default function WorkoutTemplateEditor({
       .limit(10);
     const rewrite = canRewritePlannedSetPrescription({ plannedSetId: set.id, logs: existingLogs || [] });
     if (!rewrite.ok) return persistError(rewrite.reason);
-    for (const tw of targets) {
-      const matchEx = tw.id === workout.id ? ex : matchingExercise(tw, ex);
-      const matchSet = matchEx ? (tw.id === workout.id ? set : matchingSet(matchEx, set)) : null;
-      if (!matchSet) continue;
-      const { error: updateError } = await supabase.from('st_planned_sets').update({ [field]: value }).eq('id', matchSet.id);
-      if (updateError) return persistError(updateError.message);
-    }
+    const writeError = await plannedSetEditQueue(resolved.ids, async () => {
+      for (const id of resolved.ids) {
+        const { error: updateError } = await supabase.from('st_planned_sets').update({ [field]: value }).eq('id', id);
+        if (updateError) return updateError.message;
+      }
+      return '';
+    });
+    if (writeError) return persistError(writeError);
     await reload();
   }
 
   async function removeSet(ex: any, set: any) {
     if (!canEdit) return;
+    const resolved = targetsForSet(ex, set);
+    if (resolved.ok === false) return persistError(resolved.reason);
+    const { data: existingLogs, error: logError } = await supabase
+      .from('st_set_logs')
+      .select('id, completed, actual_weight, actual_reps, actual_duration, actual_distance, log_notes, planned_set_id')
+      .in('planned_set_id', resolved.ids)
+      .limit(30);
+    if (logError) return persistError(logError.message);
+    if ((existingLogs || []).some((row) => logHasPerformance(row)) && !window.confirm(LOGGED_SET_REMOVAL_CONFIRMATION)) return;
     beginPersist();
-    for (const tw of targets) {
-      const matchEx = tw.id === workout.id ? ex : matchingExercise(tw, ex);
-      const matchSet = matchEx ? (tw.id === workout.id ? set : matchingSet(matchEx, set)) : null;
-      if (!matchSet) continue;
-      const { error: updateError } = await supabase.from('st_planned_sets').update({ is_deleted: true }).eq('id', matchSet.id);
-      if (updateError) return persistError(updateError.message);
+    let outcome;
+    try {
+      outcome = await plannedSetEditQueue(resolved.ids, () => softDeletePlannedSets(supabase, resolved.ids));
+    } catch (err: any) {
+      return persistError(err?.message || 'Could not remove that set.');
     }
+    if (!outcome.ok) return persistError(outcome.error);
     await reload();
   }
 

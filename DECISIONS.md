@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 152 - A set type correction updates the open session only
+
+Date: 2026-11-02
+Status: Implemented locally
+Category: Training
+
+### Decision
+
+BIQ-0296 lets a person change a planned set between Working and Warm-up after performance is logged. The planned row and that person's log snapshot for the open date change in one database call. Weight, reps, completion, and the other snapshot fields stay. Logs on other dates stay. The open workout updates only after that call succeeds. A failed call is shown and does not change the set. Removing a planned set, logged or not, marks the plan row deleted and leaves the log in history and Progress. The client cannot open the snapshot lock by setting a session flag. One set the caller cannot edit fails the whole call.
+
+### Reason
+
+Progress classifies a set from `snapshot_set_type`. The open-workout reload guard hid a successful plan write, and the logged-prescription trigger blocked the type change. A normal log update is not allowed to change the snapshot.
+
+### Alternatives Considered
+
+Change only `st_planned_sets.set_type`. Trust a transaction-local flag set by the client. Delete the log when the plan row is removed. The first leaves Progress on the old type. The second lets a client bypass the snapshot lock. The third removes history the person did not ask to delete.
+
+### Impact
+
+No change to Dashboard, Nutrition, Groups, or the Progress formulas. A corrected open-session snapshot enters or leaves working-set counts, volume, and estimated 1RM. Other sessions do not. The migration is not applied to hosted Supabase by this change.
+
+---
+
 ## Decision 151 - Each dashboard card has its own cache generation
 
 Date: 2026-11-01

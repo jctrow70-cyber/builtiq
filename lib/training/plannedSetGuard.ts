@@ -32,7 +32,6 @@ export const LOGGED_PRESCRIPTION_FIELDS = [
   'rep_min',
   'rep_max',
   'rest_seconds',
-  'set_type',
   'set_number',
 ] as const;
 

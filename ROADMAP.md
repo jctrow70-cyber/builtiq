@@ -210,6 +210,8 @@ Goal: Prepare BuildIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
+**BIQ-0296** corrects Working and Warm-up on a planned set, including after a log, and soft-deletes a set without deleting its performance (Decision 152). The migration is written and not applied to hosted Supabase. Not committed. Not pushed.
+
 **BIQ-0295** gives each Dashboard card its own cache generation (Decision 151). A saved meal or nutrition goal refreshes Nutrition, and a saved or deleted body check-in refreshes Your Progress, even when the user returns inside 30 seconds. The other cards stay on their fresh cache. Committed locally and not pushed. Signed-in visual QA is still outstanding.
 
 **BIQ-0294** polishes the Dashboard around the existing training, week, nutrition, and progress cards (Decision 150). The greeting is short, quick actions sit under Today's Training, and Nutrition sits beside Your Progress on a wide screen. The static AI card and the Dashboard group-statistics card are removed. A saved body check-in refreshes the progress card. Committed locally and not pushed. Signed-in visual QA is still outstanding.

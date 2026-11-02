@@ -63,6 +63,7 @@ import SessionOutcomeCard from './components/training/SessionOutcomeCard';
 import AdaptationSummaryCard from './components/training/AdaptationSummaryCard';
 import { snapshotForLog as buildSetLogSnapshot, stripUnavailableLogColumns } from '../lib/training/setLogSnapshots';
 import { canRewritePlannedSetPrescription } from '../lib/training/plannedSetGuard';
+import { applyLogSnapshotType, applyProgramSetDeleted, applyProgramSetType, applyWorkoutSetDeleted, applyWorkoutSetType, correctPlannedSetType, isCorrectableSetType, LOGGED_SET_REMOVAL_CONFIRMATION, plannedSetEditQueue, resolvePlannedSetTargets, softDeletePlannedSets } from '../lib/training/setTypeCorrection';
 import { completedSessionDraft, deriveSessionStatus, outstandingRequiredSetIds, sessionStatusAfterPlanChange } from '../lib/training/sessionOutcome';
 import { extraLogsFromSetLogs, extraSetInsertPayload, extraSetsForExercise, nextExtraSetNumber, type ExtraSetLog } from '../lib/training/extraSets';
 import { classifyPreviousPerformance } from '../lib/training/previousPerformance';
@@ -2662,39 +2663,92 @@ export default function Page(){
  }
  await reloadKeepDay();
 }
+ function sourceExerciseForSet(setId:string){
+  const before=planEditRef.current?.workout||workout;
+  return (before?.st_exercises||[]).find((exercise:any)=>(exercise.st_planned_sets||[]).some((set:any)=>set.id===setId))
+    ||(workout?.st_exercises||[]).find((exercise:any)=>(exercise.st_planned_sets||[]).some((set:any)=>set.id===setId))
+    ||null;
+ }
+ function plannedSetWasLogged(setId:string){
+  const row=logsRef.current?.[setId];
+  return !!(row&&(row.completed===true||logHasPerformance(row)));
+ }
+ function applyOpenPlannedSetChange(ids:string[],change:{setType?:string;deleted?:boolean}){
+  const mapProgram=(prog:any)=>change.deleted?applyProgramSetDeleted(prog,ids):applyProgramSetType(prog,ids,change.setType||'working');
+  const mapWorkout=(item:any)=>change.deleted?applyWorkoutSetDeleted(item,ids):applyWorkoutSetType(item,ids,change.setType||'working');
+  const baseProgram=planEditRef.current?.program||program;
+  const nextProgram=mapProgram(baseProgram);
+  const nextWorkout=planEditRef.current?.workout?mapWorkout(planEditRef.current.workout):planEditRef.current?.workout;
+  if(planEditRef.current)planEditRef.current={program:nextProgram,workout:nextWorkout};
+  setProgram(nextProgram);
+  setCalendarWorkouts((prev:any[])=>(prev||[]).map(mapWorkout));
+  setGroupActivityWorkout((prev:any)=>prev?mapWorkout(prev):prev);
+  if(change.setType){
+    const next=applyLogSnapshotType(logsRef.current||{},ids,change.setType);
+    logsRef.current=next;
+    setLogs(next);
+  }
+ }
  async function editSet(s:any,field:string,value:any){
- if(!(await ensurePersonalCopyForTrainingEdit()))return;
- const rewrite=canRewritePlannedSetPrescription({plannedSetId:s.id,logs:Object.values(logsRef.current||{})});
- if(!rewrite.ok){alert(rewrite.reason);return;}
- const current=planEditRef.current?.workout||workout;
- const ex=(current?.st_exercises||[]).find((e:any)=>(e.st_planned_sets||[]).some((ps:any)=>ps.id===s.id))
-  ||(workout?.st_exercises||[]).find((e:any)=>(e.st_planned_sets||[]).some((ps:any)=>ps.id===s.id));
- if(!ex)return;
- for(const tw of targetWorkoutsFrom(current)){
-  const targetEx=resolveExerciseTarget(tw,ex,current);
-  const targetSet=targetEx?matchingSet(targetEx,s):null;
-  if(targetSet) await supabase.from('st_planned_sets').update({[field]:value}).eq('id',targetSet.id);
+  const sourceExercise=sourceExerciseForSet(s?.id);
+  const ctx=await ensurePersonalCopyForTrainingEdit();
+  if(!ctx?.workout)return;
+  if(!sourceExercise)return alert('Could not find this set. Nothing was changed.');
+  const resolved=resolvePlannedSetTargets({sourceExercise,sourceSet:s,targetWorkouts:targetWorkoutsFrom(ctx.workout,ctx.program)});
+  if(resolved.ok===false)return alert(resolved.reason);
+  if(field==='set_type'){
+    if(!isCorrectableSetType(String(value||'')))return alert('Choose a set type.');
+    const logDate=activeLogDateForLogging();
+    let outcome;
+    try{
+      outcome=await plannedSetEditQueue(resolved.ids,async()=>{
+        await flushMountedSetEdits();
+        await awaitQueuedSetWrites();
+        return correctPlannedSetType(supabase,resolved.ids,String(value),logDate);
+      });
+    }catch(err:any){
+      return alert(err?.message||'Could not change that set.');
+    }
+    if(!outcome.ok)return alert(outcome.error);
+    applyOpenPlannedSetChange(resolved.ids,{setType:String(value)});
+    await reloadKeepDay();
+    return;
+  }
+  const rewrite=canRewritePlannedSetPrescription({plannedSetId:s.id,logs:Object.values(logsRef.current||{})});
+  if(!rewrite.ok){alert(rewrite.reason);return;}
+  const outcome=await plannedSetEditQueue(resolved.ids,async()=>{
+    for(const id of resolved.ids){
+      const{error}=await supabase.from('st_planned_sets').update({[field]:value}).eq('id',id);
+      if(error)return error.message;
+    }
+    return '';
+  });
+  if(outcome)return alert(outcome);
+  await reloadKeepDay();
  }
- await reloadKeepDay();
-}
  async function removeSet(s:any){
- if(!(await ensurePersonalCopyForTrainingEdit()))return;
- const current=planEditRef.current?.workout||workout;
- const ex=(current?.st_exercises||[]).find((e:any)=>(e.st_planned_sets||[]).some((ps:any)=>ps.id===s.id))
-  ||(workout?.st_exercises||[]).find((e:any)=>(e.st_planned_sets||[]).some((ps:any)=>ps.id===s.id));
- if(!ex)return;
- for(const tw of targetWorkoutsFrom(current)){
-  const targetEx=resolveExerciseTarget(tw,ex,current);
-  if(!targetEx)continue;
-  const targetSet=tw.id===current?.id
-    ?(targetEx.st_planned_sets||[]).find((ps:any)=>ps.id===s.id)
-    :matchingSet(targetEx,s);
-  if(!targetSet)continue;
-  const{error}=await supabase.from('st_planned_sets').update({is_deleted:true}).eq('id',targetSet.id);
-  if(error)return alert(error.message);
+  const sourceExercise=sourceExerciseForSet(s?.id);
+  const ctx=await ensurePersonalCopyForTrainingEdit();
+  if(!ctx?.workout)return;
+  if(!sourceExercise)return alert('Could not find this set. Nothing was changed.');
+  const resolved=resolvePlannedSetTargets({sourceExercise,sourceSet:s,targetWorkouts:targetWorkoutsFrom(ctx.workout,ctx.program)});
+  if(resolved.ok===false)return alert(resolved.reason);
+  const logged=resolved.ids.some((id)=>plannedSetWasLogged(id))||plannedSetWasLogged(s.id);
+  if(logged&&!confirm(LOGGED_SET_REMOVAL_CONFIRMATION))return;
+  let outcome;
+  try{
+    outcome=await plannedSetEditQueue(resolved.ids,async()=>{
+      await flushMountedSetEdits();
+      await awaitQueuedSetWrites();
+      return softDeletePlannedSets(supabase,resolved.ids);
+    });
+  }catch(err:any){
+    return alert(err?.message||'Could not remove that set.');
+  }
+  if(!outcome.ok)return alert(outcome.error);
+  applyOpenPlannedSetChange(resolved.ids,{deleted:true});
+  await reloadKeepDay();
  }
- await reloadKeepDay();
-}
  function loggingSessionLinks(workoutRef?:any){
   const activity=groupActivityLogRef.current;
   if(activity){
@@ -3746,12 +3800,6 @@ function matchingExercise(targetWorkout:any, sourceExercise:any){
 function resolveExerciseTarget(targetWorkout:any,sourceExercise:any,currentWorkout:any){
   if(targetWorkout?.id===currentWorkout?.id)return (targetWorkout.st_exercises||[]).find((x:any)=>x.id===sourceExercise.id)||sourceExercise;
   return matchingExercise(targetWorkout,sourceExercise);
-}
-function matchingSet(targetExercise:any, sourceSet:any){
-  if(!targetExercise||!sourceSet)return null;
-  return (targetExercise.st_planned_sets||[]).find((s:any)=>s.id===sourceSet.id)
-    || (targetExercise.st_planned_sets||[]).find((s:any)=>s.sort_order===sourceSet.sort_order)
-    || (targetExercise.st_planned_sets||[]).find((s:any)=>s.set_type===sourceSet.set_type && s.set_number===sourceSet.set_number);
 }
 
  const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sort((a:any,b:any)=>a.day_order-b.day_order);

@@ -11,6 +11,40 @@ Branch:
 Status:
 ```
 
+## BIQ-0296 - Correct a planned set type without losing the log
+
+Date: 2026-11-02
+Branch: main
+Status: Implemented locally. Not committed. Not pushed. Migration written, not applied to hosted Supabase.
+
+Summary: Working and Warm-up can be corrected after a set is logged. One database call changes the planned set type and that signed-in user's snapshot for the open date, then the open workout updates. A failed call leaves the set unchanged and shows the error. Removing a set marks it deleted and keeps the logged performance. Historical logs on other dates stay as they were.
+
+Purpose: Type changes and deletes in an open workout were written and then hidden by the program reload guard, and a logged set's type change was rejected without a reliable error. Progress reads the log snapshot, so the plan type alone did not correct the classification.
+
+Files changed:
+- supabase/migrations/20261102_076_planned_set_type_correction.sql
+- lib/training/setTypeCorrection.ts
+- lib/training/plannedSetGuard.ts
+- app/page.tsx
+- app/components/training/WorkoutTemplateEditor.tsx
+- scripts/test-set-edit-reliability.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: New migration only. Not applied to hosted Supabase. It adds a nonce table the client cannot write, a type-correction function, and a soft-delete function. The logged-prescription trigger still blocks target, rep, and set-number changes. The snapshot trigger still restores every snapshot field except the set type, and only while the correction function holds a nonce for auth.uid().
+
+Testing steps:
+- Run `scripts/test-set-edit-reliability.ts`, the training, logger, schedule, and Progress regression scripts, and `npx tsc --noEmit`.
+- During a workout, change a logged set from Working to Warm-up and back. The badge changes after the save. Weight, reps, and Done stay. Another date's log stays on its old type.
+- Remove a logged set. Confirm the message that history stays. The set leaves the plan and the log remains.
+- Repeat a click while the first save is running. The second waits.
+- Sign in as someone who cannot edit the plan, or pass another person's set. The call fails and nothing changes.
+
+Known issues: The migration has not been applied, so the buttons fail until it is applied to the database. It also was not executed against disposable PostgreSQL here because psql and Docker are not installed. A coach cannot reclassify a member's log; only auth.uid() snapshots change. The program editor changes future planned rows and does not rewrite older dates. Signed-in browser checks are still outstanding.
+
+Recommended commit message: BIQ-0296 Correct a planned set type without losing the log.
+
 ## BIQ-0295 - Refresh each dashboard card on its own
 
 Date: 2026-11-01
