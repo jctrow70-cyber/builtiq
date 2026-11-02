@@ -48,6 +48,45 @@ Known issues: Signed-in browser check is still outstanding because this session 
 
 Recommended commit message: BIQ-0298 Show one copy of a program on the Training calendar.
 
+## BIQ-0297 - Iso-Lateral Row rename and Standing Lever Row
+
+Date: 2026-11-02
+Branch: cursor/iso-lateral-standing-lever-row-3094
+Status: Ready to merge. No schema migration. Live catalog updates after deploy + Master Library import.
+
+Summary: Renamed master 261 from Diverging Row to Iso-Lateral Row while preserving external_id 261 and searchable aliases (including Diverging Row and Hammer Strength Row). Softened setup/execution so path and chest support are machine-dependent. Added master 267 Standing Lever Row as a Machine-only standing hip-hinged plate-loaded lever row with no chest support. Active generation library is 267. T-Bar Row (17), Landmine Row (16), Chest-Supported Row (15), and Machine Row (142) are unchanged.
+
+Purpose: Match the searchable name users expect for independent-arm machine rows, and add the standing lever machine as its own progress series without duplicating 261.
+
+Files changed:
+- lib/training/masterCatalog.ts
+- lib/training/masterCatalogEnrichment.ts
+- lib/training/catalogCleanupCheck.ts
+- scripts/apply-iso-lateral-row-and-standing-lever-row.ts
+- scripts/verify-catalog-env.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: No schema migration. Data-only upsert of master 261 (rename + instructions/metadata) and insert/upsert of master 267 (`external_source=builtiq_master`, `external_id=267`) via Settings → Import Master Library (or `scripts/apply-iso-lateral-row-and-standing-lever-row.ts`). Historical set logs and planned rows are not rewritten. Media columns on 267 remain null placeholders.
+
+Testing steps:
+1. `npm run test:science`
+2. Search `iso-lateral row` and `diverging row`; both should resolve to Iso-Lateral Row (261)
+3. Search `standing lever row` / `plate-loaded lever row` and confirm Standing Lever Row (267)
+4. Confirm Machine-only equipment on both; no new profile equipment chips
+5. Confirm independence from T-Bar, Landmine, Chest-Supported, and Machine Row
+6. Confirm media placeholders remain empty
+
+Known issues / future enhancements (documented, not implemented):
+- No weight-per-side or independent-arm L/R logging
+- No machine starting-resistance / plate-tare distinction
+- Comprehensive commercial-gym catalog gap audit is deferred to a separate phase
+
+Recommended commit message: BIQ-0297 Rename Iso-Lateral Row and add Standing Lever Row
+
+---
+
 ## BIQ-0296 - Correct a planned set type without losing the log
 
 Date: 2026-11-02
@@ -81,6 +120,8 @@ Testing steps:
 Known issues: The migration has not been applied, so the buttons fail until it is applied to the database. It also was not executed against disposable PostgreSQL here because psql and Docker are not installed. A coach cannot reclassify a member's log; only auth.uid() snapshots change. The program editor changes future planned rows and does not rewrite older dates. Signed-in browser checks are still outstanding.
 
 Recommended commit message: BIQ-0296 Correct a planned set type without losing the log.
+
+---
 
 ## BIQ-0295 - Refresh each dashboard card on its own
 

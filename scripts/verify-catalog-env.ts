@@ -90,7 +90,7 @@ async function main() {
   const masters = live.rows.filter((row) => row.external_source === MASTER_CATALOG_SOURCE && !row.user_id);
   const active = masters.filter((row) => row.is_archived !== true);
   const byExternal = new Map(active.map((row) => [String(row.external_id), row]));
-  const ids = ['13', '15', '142', '14', '216', '242', '261', '262', '263', '264', '265', '266', '63'];
+  const ids = ['13', '15', '142', '14', '216', '242', '261', '262', '263', '264', '265', '266', '267', '63'];
   const requested: Record<string, unknown> = {};
   ids.forEach((id) => {
     requested[id] = summarize(byExternal.get(id));
@@ -119,6 +119,9 @@ async function main() {
   report.has_264 = !!byExternal.get('264');
   report.has_265 = !!byExternal.get('265');
   report.has_266 = !!byExternal.get('266');
+  report.has_267 = !!byExternal.get('267');
+  report.master_261_name = byExternal.get('261')?.name || null;
+  report.master_267_name = byExternal.get('267')?.name || null;
   fs.writeFileSync(REPORT, JSON.stringify(report, null, 2));
 
   let cleanup = 'not_run';
@@ -138,6 +141,10 @@ async function main() {
     has_263: report.has_263,
     has_264: report.has_264,
     has_265: report.has_265,
+    has_266: report.has_266,
+    has_267: report.has_267,
+    master_261_name: report.master_261_name,
+    master_267_name: report.master_267_name,
     cleanup,
     top: report.strength_row_top10,
     reverse_eq: report.reverse_lunge_equipment,

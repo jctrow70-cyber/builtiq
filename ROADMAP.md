@@ -210,7 +210,7 @@ Goal: Prepare BuildIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
-**BIQ-0298** shows a followed program once on the Training calendar (Decision 153). A second enrollment of that plan, or of its copy, no longer adds the same workout again. A different program on that day still appears. No database change. Not committed. Not pushed. Signed-in browser check is still outstanding.
+**BIQ-0298** shows a followed program once on the Training calendar (Decision 154). A second enrollment of that plan, or of its copy, no longer adds the same workout again. A different program on that day still appears. No database change. Not committed. Not pushed. Signed-in browser check is still outstanding.
 
 **BIQ-0296** corrects Working and Warm-up on a planned set, including after a log, and soft-deletes a set without deleting its performance (Decision 152). The migration is written and not applied to hosted Supabase. Not committed. Not pushed.
 
@@ -484,7 +484,7 @@ Preserve workout logging, historical snapshots, group assignments, and Program D
 
 ### Planned — Platform admin and catalog operations
 
-**Current (BIQ-0201 / BIQ-0202 / BIQ-0207 / BIQ-0235 / BIQ-0237 / BIQ-0246 / BIQ-0277 / BIQ-0279):** Catalog admins import the **BuildIQ Master Library** from Settings (`POST /api/catalog/import-master`). That upserts **266** movement cards (including Olympic add-ons, Diverging Row, Converging Chest Press, Seated Overhead Press, GHD Sit-Up, Seated Chest Press, and Iso-Lateral Decline Press), remaps household plan/log catalog ids, and archives the old GIF dump. Workout cards can pick a compatible implement (`st_exercises.equipment`) without a second catalog row. Strength/cardio picker search uses section-aware ranking. ExerciseDB guided import is disabled until commercial rights are verified (BIQ-0276). Stored rows are left in place and their GIFs and instructions are hidden. Normal users get unified search of active catalog rows.
+**Current (BIQ-0201 / BIQ-0202 / BIQ-0207 / BIQ-0235 / BIQ-0237 / BIQ-0246 / BIQ-0277 / BIQ-0279 / BIQ-0297):** Catalog admins import the **BuildIQ Master Library** from Settings (`POST /api/catalog/import-master`). That upserts **267** movement cards (including Olympic add-ons, Iso-Lateral Row, Standing Lever Row, Converging Chest Press, Seated Overhead Press, GHD Sit-Up, Seated Chest Press, and Iso-Lateral Decline Press), remaps household plan/log catalog ids, and archives the old GIF dump. Workout cards can pick a compatible implement (`st_exercises.equipment`) without a second catalog row. Strength/cardio picker search uses section-aware ranking. ExerciseDB guided import is disabled until commercial rights are verified (BIQ-0276). Stored rows are left in place and their GIFs and instructions are hidden. Normal users get unified search of active catalog rows.
 
 **Roadmap — proper admin model (not started):**
 

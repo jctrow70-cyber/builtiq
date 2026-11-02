@@ -4,7 +4,7 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
-## Decision 153 - One followed plan is one calendar session
+## Decision 154 - One followed plan is one calendar session
 
 Date: 2026-11-02
 Status: Implemented locally
@@ -25,6 +25,35 @@ Hide the second enrollment entirely. That would remove Hide and Expect for that 
 ### Impact
 
 No database change. Day, Week, Calendar, Today's Training, the group week, and a member's week share this rule. Progress still counts expectation rows separately.
+
+---
+
+## Decision 153 - Iso-Lateral Row keeps id 261; Standing Lever Row is master 267
+
+Date: 2026-11-02
+Status: Accepted
+Category: Exercise Library
+
+### Decision
+
+Rename master 261 from Diverging Row to Iso-Lateral Row. Keep external_id 261. Keep Diverging Row, Hammer Strength Row, and related names as aliases. Soften coaching text so independent-arm path and chest support are machine-dependent. Add master 267 Standing Lever Row as Machine-only, standing hip-hinged, no chest support, plate-loaded lever. Do not create a second Iso-Lateral Row card. Do not add profile equipment chips. Do not change set-log schema. Media fields on new/updated cards stay null until original BuildIQ media exists.
+
+### Reason
+
+Iso-Lateral Row already existed as 261 under the Diverging Row display name. A duplicate card would split history. Standing lever machines are not T-bar, landmine, chest-supported, or linear machine rows, so they need their own catalog id for independent progression.
+
+### Alternatives Considered
+
+- Create a new Iso-Lateral Row card beside 261 — rejected; duplicate
+- Alias Standing Lever Row onto T-Bar Row (17) — rejected; standing foot-platform lever without chest support is a different setup
+- Add Iso-Lateral Row Machine / Lever Row Machine profile filter chips — rejected; keep generic Machines
+
+### Impact
+
+- Active BuiltIQ master library is 267 generation-eligible cards
+- Historical snapshots keep prior exercise names; live catalog label for 261 is Iso-Lateral Row
+- Future enhancements still needed for weight-per-side, independent-arm tracking, and machine starting resistance
+- A separate commercial-gym catalog gap audit remains out of scope for this change
 
 ---
 
