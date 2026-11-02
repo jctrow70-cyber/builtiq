@@ -218,18 +218,22 @@ const ADD_ON_ROWS: MasterLibraryRecord[] = [
   },
   {
     id: '261',
-    name: 'Diverging Row',
-    aliases: 'Iso-Lateral Row; Hammer Strength Row; Diverging Machine Row; Independent Row',
+    name: 'Iso-Lateral Row',
+    aliases:
+      'Diverging Row; Hammer Strength Row; Diverging Machine Row; Independent Row; Iso-Lateral Machine Row; Plate-Loaded Iso-Lateral Row',
     primary_muscle: 'Upper Back',
     secondary_muscles: 'Lats; Biceps; Rear Delts',
     movement_pattern: 'Horizontal Pull',
     category: 'Compound',
     default_equipment: 'Machine',
     compatible_equipment: 'Machine',
-    setup: 'Sit tall on the diverging / iso-lateral row with chest supported and independent handles at full reach.',
-    execution: 'Pull each handle back on a diverging path, then return to a controlled stretch.',
-    form_cues: 'Chest stays on the pad; Elbows travel back; Own the stretch',
-    design_notes: 'Distinct from linear Machine Row (142). Independent diverging arms are the point of the card.',
+    setup:
+      'Adjust the seat and handles so each independent lever starts at a full-reach position that fits this machine. Use the chest pad if the machine has one; otherwise brace your torso as the machine design requires.',
+    execution:
+      'Pull each handle back on its independent path, then return to a controlled stretch. Work both arms together or one arm at a time as programmed.',
+    form_cues: 'Own each arm; Elbows travel back; Control the stretch; Follow this machine path',
+    design_notes:
+      'Independent-arm machine row (Hammer Strength / iso-lateral style). Movement path and chest support vary by manufacturer. Distinct from linear Machine Row (142) and Standing Lever Row (267). Preserve external_id 261; formerly named Diverging Row.',
     active: 'Yes',
   },
   {
@@ -315,6 +319,25 @@ const ADD_ON_ROWS: MasterLibraryRecord[] = [
     form_cues: 'Shoulders set; Wrists stacked; Own each arm; Control the return',
     design_notes:
       'Plate-loaded iso-lateral decline chest press (Hammer Strength style). Distinct from Decline Press (3), Converging Chest Press (262), Machine Chest Press (140), and Seated Chest Press (265). Machine only. Own catalog id so progression and PRs stay separate from free-weight decline and flat machine presses.',
+    active: 'Yes',
+  },
+  {
+    id: '267',
+    name: 'Standing Lever Row',
+    aliases: 'Lever Row; Plate-Loaded Lever Row; Standing Machine Row',
+    primary_muscle: 'Upper Back',
+    secondary_muscles: 'Lats; Biceps; Rear Delts; Spinal Erectors',
+    movement_pattern: 'Horizontal Pull',
+    category: 'Compound',
+    default_equipment: 'Machine',
+    compatible_equipment: 'Machine',
+    setup:
+      'Stand on the elevated foot platforms, hinge at the hips with a flat back, and grip the lever handles at full reach. There is no chest pad.',
+    execution:
+      'Pull the handles toward the torso while holding the hip hinge, then lower under control to a full stretch without rounding the low back.',
+    form_cues: 'Soft knees; Hips back; Neutral spine; Drive elbows; No yanking',
+    design_notes:
+      'Standing hip-hinged plate-loaded lever row with foot platforms and no chest support. Distinct from T-Bar Row (17), Landmine Row (16), Chest-Supported Row (15), Machine Row (142), and Iso-Lateral Row (261). Machine only. Own catalog id for independent progression.',
     active: 'Yes',
   },
 ];

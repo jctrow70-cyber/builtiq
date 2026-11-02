@@ -57,7 +57,7 @@ export function runCatalogCleanupChecks() {
   const mapped = mappedByName();
   const catalog = mapped.map((row) => row.catalog);
   const masterCount = expectedMasterCatalogCount();
-  assert(masterCount === 266, `active master count should be 266, got ${masterCount}`);
+  assert(masterCount === 267, `active master count should be 267, got ${masterCount}`);
   assert(catalog.length === masterCount, `mapped master count should be ${masterCount}, got ${catalog.length}`);
 
   assert(!textHasToken('Prowler Push', 'row'), 'word-boundary: Prowler does not match row');
@@ -75,7 +75,8 @@ export function runCatalogCleanupChecks() {
     'T-Bar Row',
     'Low Row',
     'High Row',
-    'Diverging Row',
+    'Iso-Lateral Row',
+    'Standing Lever Row',
   ];
   requiredRows.forEach((name) => {
     assert(strengthNames.includes(name), `Strength row search missing ${name}: ${strengthNames.join(', ')}`);
@@ -151,17 +152,30 @@ export function runCatalogCleanupChecks() {
   assert(!aliases.includes('bent row'), 'generic Row no longer aliases Bent Row');
   assert(aliases.includes('seated row'), 'generic Row still has Seated Row');
 
-  const diverging = mapped.find((row) => row.record.id === '261');
+  const isoLateralRow = mapped.find((row) => row.record.id === '261');
   const converging = mapped.find((row) => row.record.id === '262');
   const seatedOhp = mapped.find((row) => row.record.id === '263');
   const standingOhp = mapped.find((row) => row.record.id === '29');
-  assert(diverging?.record.name === 'Diverging Row', 'master 261 is Diverging Row');
+  assert(isoLateralRow?.record.name === 'Iso-Lateral Row', 'master 261 is Iso-Lateral Row');
+  assert(isoLateralRow?.catalog.external_id === '261', 'Iso-Lateral Row preserves external_id 261');
   assert(converging?.record.name === 'Converging Chest Press', 'master 262 is Converging Chest Press');
   assert(seatedOhp?.record.name === 'Seated Overhead Press', 'master 263 is Seated Overhead Press');
-  assert(diverging?.catalog.exercise_type === 'strength', 'Diverging Row is strength');
+  assert(isoLateralRow?.catalog.exercise_type === 'strength', 'Iso-Lateral Row is strength');
+  assert(isoLateralRow?.catalog.equipment === 'Machine', 'Iso-Lateral Row equipment is Machine');
+  assert(isoLateralRow?.catalog.movement_pattern === 'pull_horizontal', 'Iso-Lateral Row first-class pattern is pull_horizontal');
   assert(converging?.catalog.exercise_type === 'strength', 'Converging Chest Press is strength');
   assert(seatedOhp?.catalog.exercise_type === 'strength', 'Seated Overhead Press is strength');
-  const divMeta = diverging!.catalog.coaching_metadata;
+  const isoRowAliases = stringList(isoLateralRow!.catalog.coaching_metadata.aliases).map((a) => a.toLowerCase());
+  ['diverging row', 'hammer strength row', 'diverging machine row', 'independent row', 'iso-lateral machine row', 'plate-loaded iso-lateral row'].forEach(
+    (alias) => {
+      assert(isoRowAliases.includes(alias), `Iso-Lateral Row missing alias ${alias}`);
+    }
+  );
+  const isoRowSearch = searchCatalog(catalog, { query: 'iso-lateral row', section: 'strength', limit: 5 });
+  assert(isoRowSearch[0]?.name === 'Iso-Lateral Row', 'iso-lateral row search finds Iso-Lateral Row');
+  const divergingAliasSearch = searchCatalog(catalog, { query: 'diverging row', section: 'strength', limit: 5 });
+  assert(divergingAliasSearch.some((row) => row.name === 'Iso-Lateral Row'), 'Diverging Row alias still finds Iso-Lateral Row');
+  const divMeta = isoLateralRow!.catalog.coaching_metadata;
   const convMeta = converging!.catalog.coaching_metadata;
   const seatedMeta = seatedOhp!.catalog.coaching_metadata;
   assert(divMeta.exercise_kind === 'compound' && divMeta.movement_pattern === 'horizontal_pull', '261 movement/kind');
@@ -323,17 +337,89 @@ export function runCatalogCleanupChecks() {
   const archived = { ...liveShaped[0], id: 'archived-1', is_archived: true, name: 'Archived Master' };
   assert(liveShaped.every(isAiGenerationEligibleRow), `all ${masterCount} mapped masters are AI-eligible`);
   assert(selectAiGenerationCatalogRows([...liveShaped, custom, archived]).length === masterCount, `AI candidates stay ${masterCount}`);
-  assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '261')), 'Diverging Row is generation-eligible');
+  const standingLever = mapped.find((row) => row.record.id === '267');
+  const tBar = mapped.find((row) => row.record.id === '17');
+  const landmineRow = mapped.find((row) => row.record.id === '16');
+  const chestSupported = mapped.find((row) => row.record.id === '15');
+  const machineRow = mapped.find((row) => row.record.id === '142');
+  assert(standingLever?.record.name === 'Standing Lever Row', 'master 267 is Standing Lever Row');
+  assert(standingLever?.catalog.exercise_type === 'strength', 'Standing Lever Row is strength');
+  assert(standingLever?.catalog.movement_pattern === 'pull_horizontal', 'Standing Lever Row first-class pattern is pull_horizontal');
+  assert(standingLever?.catalog.equipment === 'Machine', 'Standing Lever Row equipment is Machine');
+  assert(
+    standingLever?.catalog.media_url === null && standingLever?.catalog.image_url === null && standingLever?.catalog.gif_url === null,
+    'Standing Lever Row media placeholders are null'
+  );
+  assert(standingLever?.catalog.progression_type === 'weight', 'Standing Lever Row progression is weight');
+  assert(standingLever?.catalog.external_id === '267', 'Standing Lever Row keeps external_id 267');
+  assert(tBar?.record.name === 'T-Bar Row', 'T-Bar Row 17 preserved');
+  assert(landmineRow?.record.name === 'Landmine Row', 'Landmine Row 16 preserved');
+  assert(chestSupported?.record.name === 'Chest-Supported Row', 'Chest-Supported Row 15 preserved');
+  assert(machineRow?.record.name === 'Machine Row', 'Machine Row 142 preserved');
+  const standingLeverEq = compatibleEquipmentOptions(standingLever!.catalog);
+  assert(
+    standingLeverEq.length === 1 && standingLeverEq[0] === 'Machine',
+    `Standing Lever Row compatible equipment should be Machine, got ${standingLeverEq.join(', ')}`
+  );
+  const standingLeverMeta = standingLever!.catalog.coaching_metadata;
+  assert(standingLeverMeta.exercise_kind === 'compound' && standingLeverMeta.movement_pattern === 'horizontal_pull', '267 movement/kind');
+  assert(
+    standingLeverMeta.volume_policy === 'strength_hypertrophy' &&
+      standingLeverMeta.measurement_type === 'reps' &&
+      standingLeverMeta.laterality === 'bilateral',
+    '267 programming fields'
+  );
+  assert(standingLeverMeta.fatigue_cost === 'moderate' && standingLeverMeta.skill_demand === 'moderate', '267 fatigue and skill');
+  assert(
+    standingLeverMeta.warmup_eligible === false && standingLeverMeta.power_eligible === false && standingLeverMeta.ramp_eligible === true,
+    '267 ramp eligible, not warmup/power'
+  );
+  assert(
+    JSON.stringify(standingLeverMeta.hypertrophy_volume_credits) ===
+      JSON.stringify(NEW_MASTER_CLASSIFICATIONS['267'].hypertrophy_volume_credits),
+    '267 volume credits'
+  );
+  assert(JSON.stringify(standingLeverMeta.primary_muscles) === JSON.stringify(['upper_back']), '267 primary muscles');
+  assert(
+    JSON.stringify(standingLeverMeta.secondary_muscles) === JSON.stringify(['lats', 'biceps', 'rear_delts', 'spinal_erectors']),
+    '267 secondary muscles'
+  );
+  assert(exerciseMatchesEquipment(standingLever!.catalog, ['machine']), 'Machine equipment filter includes Standing Lever Row');
+  assert(!exerciseMatchesEquipment(standingLever!.catalog, ['barbell']), 'barbell-only filter excludes Standing Lever Row');
+  assert(!exerciseMatchesEquipment(standingLever!.catalog, ['dumbbell']), 'dumbbell-only filter excludes Standing Lever Row');
+  const standingLeverSearch = searchCatalog(catalog, { query: 'standing lever row', section: 'strength', limit: 5 });
+  assert(standingLeverSearch[0]?.name === 'Standing Lever Row', 'standing lever row search finds Standing Lever Row');
+  const leverAliasSearch = searchCatalog(catalog, { query: 'plate-loaded lever row', section: 'strength', limit: 5 });
+  assert(leverAliasSearch.some((row) => row.name === 'Standing Lever Row'), 'alias search finds Standing Lever Row');
+  assert(
+    distinctCatalogIds(standingLever!.catalog.external_id, isoLateralRow!.catalog.external_id),
+    'Standing Lever Row PR key is independent from Iso-Lateral Row'
+  );
+  assert(
+    distinctCatalogIds(standingLever!.catalog.external_id, tBar!.catalog.external_id),
+    'Standing Lever Row PR key is independent from T-Bar Row'
+  );
+  assert(
+    distinctCatalogIds(standingLever!.catalog.external_id, landmineRow!.catalog.external_id),
+    'Standing Lever Row PR key is independent from Landmine Row'
+  );
+  assert(
+    distinctCatalogIds(standingLever!.catalog.external_id, machineRow!.catalog.external_id),
+    'Standing Lever Row PR key is independent from Machine Row'
+  );
+
+  assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '261')), 'Iso-Lateral Row is generation-eligible');
   assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '262')), 'Converging Chest Press is generation-eligible');
   assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '263')), 'Seated Overhead Press is generation-eligible');
   assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '264')), 'GHD Sit-Up is generation-eligible');
   assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '265')), 'Seated Chest Press is generation-eligible');
   assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '266')), 'Iso-Lateral Decline Press is generation-eligible');
+  assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '267')), 'Standing Lever Row is generation-eligible');
   assert(!isAiGenerationEligibleRow(archived), 'archived cards cannot enter generation');
   assert(!isAiGenerationEligibleRow(custom), 'user customs cannot enter generation');
   const adapted = adaptGenerationCatalog([...liveShaped, custom, archived], { allowFallback: false });
   assert(adapted.length === masterCount, `adapted generation catalog is ${masterCount}, got ${adapted.length}`);
-  assert(adapted.some((ex) => ex.name === 'Diverging Row'), 'adapted catalog includes Diverging Row');
+  assert(adapted.some((ex) => ex.name === 'Iso-Lateral Row'), 'adapted catalog includes Iso-Lateral Row');
   assert(adapted.some((ex) => ex.name === 'Converging Chest Press'), 'adapted catalog includes Converging Chest Press');
   assert(adapted.some((ex) => ex.name === 'Seated Overhead Press'), 'adapted catalog includes Seated Overhead Press');
   const adaptedGhd = adapted.find((ex) => ex.name === 'GHD Sit-Up');
@@ -369,6 +455,27 @@ export function runCatalogCleanupChecks() {
     adaptedIsoDecline?.programRoles.includes('accessory') && adaptedIsoDecline?.warmupSuitable === false,
     'AI reads Iso-Lateral Decline Press as accessory, not warmup'
   );
+  const adaptedStandingLever = adapted.find((ex) => ex.name === 'Standing Lever Row');
+  assert(adaptedStandingLever, 'adapted catalog includes Standing Lever Row');
+  assert(adaptedStandingLever?.movementPattern === 'horizontal_pull', 'AI reads Standing Lever Row as horizontal pull');
+  assert(adaptedStandingLever?.exerciseType === 'compound', 'AI reads Standing Lever Row as compound');
+  assert(
+    adaptedStandingLever?.primaryMuscles.includes('upper_back') && adaptedStandingLever?.secondaryMuscles.includes('spinal_erectors'),
+    'AI reads Standing Lever Row muscles'
+  );
+  assert(adaptedStandingLever?.equipment.some((eq) => eq.toLowerCase() === 'machine'), 'AI reads Standing Lever Row Machine equipment');
+  assert(
+    adaptedStandingLever?.fatigueCost === 'medium' && adaptedStandingLever?.defaultRepMin === 5 && adaptedStandingLever?.defaultRepMax === 10,
+    'AI reads Standing Lever Row demand and reps'
+  );
+  assert(
+    adaptedStandingLever?.programRoles.includes('accessory') && adaptedStandingLever?.warmupSuitable === false,
+    'AI reads Standing Lever Row as accessory, not warmup'
+  );
+  const adaptedIsoRow = adapted.find((ex) => ex.name === 'Iso-Lateral Row');
+  assert(adaptedIsoRow, 'adapted catalog includes Iso-Lateral Row');
+  assert(adaptedIsoRow?.movementPattern === 'horizontal_pull', 'AI reads Iso-Lateral Row as horizontal pull');
+  assert(adaptedIsoRow?.equipment.some((eq) => eq.toLowerCase() === 'machine'), 'AI reads Iso-Lateral Row Machine equipment');
   assert(adaptGenerationCatalog([], {}).length === FALLBACK_CATALOG.length, 'fallback still works on empty catalog');
 
   console.log('BIQ-0235 catalog cleanup checks passed.');
