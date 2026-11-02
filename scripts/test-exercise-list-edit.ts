@@ -20,6 +20,7 @@ import {
   isPendingExercise,
   plannedSetIdsOf,
   removeExercisesFromProgram,
+  patchExerciseCatalogInProgram,
   replaceExerciseInProgram,
   restoreRemovedExercises,
   setIdsInPendingFieldKeys,
@@ -90,6 +91,19 @@ assert.equal(samples.some((sample) => sample.kind === 'remove-visual'), true);
 assert.equal(samples.some((sample) => sample.kind === 'remove-mutation' && sample.ms === 12), true);
 assert.equal(samples.some((sample) => sample.kind === 'add-failure' && sample.error === 'insert failed'), true);
 
+const catalogSwap = patchExerciseCatalogInProgram(source, [
+  { workoutId: 'w1', exerciseId: 'e1', patch: { name: 'Back Squat', catalog_exercise_id: 'cat-back', st_planned_sets: [] } },
+  { workoutId: 'w2', exerciseId: 'e2', patch: { name: 'Back Squat', catalog_exercise_id: 'cat-back' } },
+]);
+assert.equal(catalogSwap?.st_workouts?.[0].st_exercises?.[0].name, 'Back Squat');
+assert.equal(catalogSwap?.st_workouts?.[0].st_exercises?.[0].catalog_exercise_id, 'cat-back');
+assert.equal(catalogSwap?.st_workouts?.[0].st_exercises?.[0].st_planned_sets?.[0].id, 's1');
+assert.equal(catalogSwap?.st_workouts?.[0].st_exercises?.[1].name, 'Row');
+assert.equal(catalogSwap?.st_workouts?.[1].st_exercises?.[0].name, 'Back Squat');
+assert.equal(catalogSwap?.st_workouts?.[1].st_exercises?.[0].st_planned_sets?.[0].id, 's2');
+assert.equal(catalogSwap?.st_workouts?.[2].st_exercises?.[0].name, 'Squat');
+assert.equal(source.st_workouts[0].st_exercises[0].name, 'Squat');
+
 const page = readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
 const removeStart = page.indexOf('async function removeExercise');
 const removeEnd = page.indexOf('async function moveExercise');
@@ -108,6 +122,15 @@ assert.equal(addBody.includes('reloadKeepDay'), false);
 assert.equal(addBody.includes('client_pending:true'), true);
 assert.equal(addBody.includes('createPendingExerciseId'), true);
 assert.equal(addBody.includes('ensurePersonalCopyForTrainingEdit'), true);
+const replaceStart = page.indexOf('async function replaceExerciseWithCatalog');
+const replaceEnd = page.indexOf('function remainingSameDayWorkouts');
+const replaceBody = page.slice(replaceStart, replaceEnd);
+assert.equal(replaceStart >= 0 && replaceEnd > replaceStart, true);
+assert.equal(replaceBody.includes('reloadKeepDay'), false);
+assert.equal(replaceBody.includes('patchExerciseCatalogInProgram'), true);
+assert.equal(replaceBody.includes('setProgram'), true);
+assert.equal(replaceBody.includes('setCalendarWorkouts'), true);
+assert.equal(replaceBody.includes('st_exercises'), true);
 assert.equal(page.includes('programApplyBlocked'), true);
 assert.equal(page.includes('exerciseIsLoggable'), true);
 assert.equal(exerciseRemovalAfterSetEdits({ pendingSetIds: [], failedSetIds: [] }), 'remove');

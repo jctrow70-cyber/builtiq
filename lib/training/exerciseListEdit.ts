@@ -143,6 +143,27 @@ export function replaceExerciseInProgram(
   return next;
 }
 
+/** Swap catalog fields on the live tree and keep each exercise's planned sets. */
+export function patchExerciseCatalogInProgram(
+  program: ProgramLike,
+  updates: Array<{ workoutId: string; exerciseId: string; patch: Record<string, unknown> }>
+) {
+  return updates.reduce((current, row) => {
+    const workout = current?.st_workouts?.find((item) => item.id === row.workoutId);
+    const exercise = workout?.st_exercises?.find((item) => item?.id === row.exerciseId);
+    if (!workout?.id || !exercise?.id) return current;
+    const fields = { ...row.patch };
+    delete fields.st_planned_sets;
+    delete fields.id;
+    return replaceExerciseInProgram(current, workout.id, exercise.id, {
+      ...exercise,
+      ...fields,
+      id: exercise.id,
+      st_planned_sets: exercise.st_planned_sets,
+    });
+  }, program);
+}
+
 export function dropExercisesFromProgram(
   program: ProgramLike,
   removals: Array<{ workoutId: string; exerciseId: string }>

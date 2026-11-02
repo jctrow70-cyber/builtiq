@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 155 - An exercise change shows on the open logger
+
+Date: 2026-11-02
+Status: Implemented locally
+Category: Training
+
+### Decision
+
+BIQ-0299 updates the open logger as soon as an exercise swap is saved. This week only changes that workout. All remaining weeks changes the same day in the current week and later weeks. Planned sets stay on the exercise. Logged history is not rewritten. The screen does not wait for a program reload while the logger is open.
+
+### Reason
+
+The swap was saved, then the logger asked for a reload. That reload does not apply while a workout is open, so the card kept the previous name until the person left the screen.
+
+### Alternatives Considered
+
+Force the reload while logging. That can replace the open workout with a stale copy. Rename only the exercise on screen and leave later weeks until the next load. All remaining weeks would still look unchanged if the person moves to a later week before leaving.
+
+### Impact
+
+No database change. Add and remove already update the open program the same way. A failed later week still shows the weeks that saved, and reports the error.
+
+---
+
 ## Decision 154 - One followed plan is one calendar session
 
 Date: 2026-11-02

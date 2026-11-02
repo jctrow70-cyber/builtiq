@@ -138,7 +138,7 @@ import { activeWorkoutIsProtected, bindScreenSessionUser, bumpDashboardCardEpoch
 import { assignmentLoadKey, createProgramLoadGate, groupAssignLoadForNav, programLoadKey, shellProgramLoadForNav } from '../lib/training/programLoadGate';
 import { programApplyBlocked } from '../lib/training/programLoadGuard';
 import { armEnrollmentSync, releaseEnrollmentSyncIfIdle, subscribeEnrollmentSync, trackTrainingLoad } from '../lib/training/enrollmentSyncGate';
-import { createPendingExerciseId, dropExercisesFromProgram, exerciseIsLoggable, exerciseRemovalAfterSetEdits, insertExercisesIntoProgram, insertExercisesIntoWorkoutList, isPendingExercise, isPendingExerciseId, plannedSetIdsOf, removeExercisesFromProgram, removeExercisesFromWorkoutList, replaceExerciseInProgram, restoreRemovedExercises, restoreRemovedWorkoutList, setIdsInPendingFieldKeys, workoutsInEditScope, type RemovedExercise } from '../lib/training/exerciseListEdit';
+import { createPendingExerciseId, dropExercisesFromProgram, exerciseIsLoggable, exerciseRemovalAfterSetEdits, insertExercisesIntoProgram, insertExercisesIntoWorkoutList, isPendingExercise, isPendingExerciseId, patchExerciseCatalogInProgram, plannedSetIdsOf, removeExercisesFromProgram, removeExercisesFromWorkoutList, replaceExerciseInProgram, restoreRemovedExercises, restoreRemovedWorkoutList, setIdsInPendingFieldKeys, workoutsInEditScope, type RemovedExercise } from '../lib/training/exerciseListEdit';
 
 const nutritionScreenLoader = () => import('./components/NutritionTracker');
 const progressScreenLoader = () => import('./components/progress/ProgressScreen');
@@ -2183,7 +2183,52 @@ export default function Page(){
  function catalogPayloadFromItem(catalogItem:any,section:string,current?:any){const meta=prescriptionColumnsFromSources({catalogItem,section,role:current?.program_role});return{name:catalogItem.name,muscle_group:catalogItem.muscle_group||'',catalog_exercise_id:catalogItem.id,exercise_type:inferExerciseType(catalogItem.name,catalogItem.muscle_group,section,catalogItem.exercise_type),equipment:defaultCatalogEquipment(catalogItem,current),program_role:meta.program_role,measurement_type:meta.measurement_type,laterality:meta.laterality};}
  function openAddExercisePanel(section:string,supersetGroupId?:string|null){if(!canEdit())return; const pending=supersetGroupId||pendingSupersetGroup[section]; const config=pending?{...emptyAddPanelConfig(),mode:'superset' as const,supersetGroupId:pending}:emptyAddPanelConfig(); if(supersetGroupId)setPendingSupersetGroup({...pendingSupersetGroup,[section]:supersetGroupId}); setAddExercisePanel({section,step:'search',query:'',filters:emptyAddPanelFilters(),picked:null,config,custom:emptyAddPanelCustom(),replaceTarget:null});}
  function openReplaceExercisePanel(ex:any){if(!canEdit())return; const section=exerciseSection(ex); setAddExercisePanel({section,step:'search',query:ex.name||'',filters:emptyAddPanelFilters(),picked:null,config:emptyAddPanelConfig(),custom:emptyAddPanelCustom(),replaceTarget:ex});}
- async function replaceExerciseWithCatalog(ex:any,catalogItem:any,scope?:'current'|'future'){if(!(await ensurePersonalCopyForTrainingEdit())||!catalogItem)return; const current=planEditRef.current?.workout||workout; if(!current)return; const section=exerciseSection(ex); const payload=catalogPayloadFromItem(catalogItem,section,ex); let updated=0; for(const tw of targetWorkoutsFrom(current,program,scope)){const match=resolveExerciseTarget(tw,ex,current); if(match){let{error}=await supabase.from('st_exercises').update(payload).eq('id',match.id); if(error&&payload.equipment!==undefined&&/equipment/i.test(error.message||'')){const{equipment:_eq,...rest}=payload; ({error}=await supabase.from('st_exercises').update(rest).eq('id',match.id));} if(error)return alert(friendlyWriteError(error)); updated++;}} if(!updated)return alert('Could not update that exercise. Try this week only.'); await reloadKeepDay();}
+ async function replaceExerciseWithCatalog(ex:any,catalogItem:any,scope?:'current'|'future'){
+  const ctx=await ensurePersonalCopyForTrainingEdit();
+  if(!ctx||!catalogItem)return;
+  const current=ctx.workout||planEditRef.current?.workout||workout;
+  if(!current)return;
+  const section=exerciseSection(ex);
+  const payload=catalogPayloadFromItem(catalogItem,section,ex);
+  const baseProgram=ctx.program||planEditRef.current?.program||program;
+  const targets=targetWorkoutsFrom(current,baseProgram,scope);
+  exerciseEditEpochRef.current+=1;
+  const applied:Array<{workoutId:string;exerciseId:string;patch:Record<string,unknown>}>=[];
+  let writeError='';
+  for(const tw of targets){
+   const match=resolveExerciseTarget(tw,ex,current);
+   if(!match?.id)continue;
+   let written:any=payload;
+   let{error}=await supabase.from('st_exercises').update(written).eq('id',match.id);
+   if(error&&written.equipment!==undefined&&/equipment/i.test(error.message||'')){
+    const{equipment:_eq,...rest}=written;
+    written=rest;
+    ({error}=await supabase.from('st_exercises').update(written).eq('id',match.id));
+   }
+   if(error){writeError=friendlyWriteError(error);break;}
+   applied.push({workoutId:String(tw.id),exerciseId:String(match.id),patch:written});
+  }
+  if(!applied.length)return alert(writeError||'Could not update that exercise. Try this week only.');
+  const openId=current.id;
+  setProgram((prev:any)=>{
+   const preferred=planEditRef.current?.program;
+   const base=preferred?.id&&preferred.id!==prev?.id?preferred:prev;
+   const next=patchExerciseCatalogInProgram(base,applied)||base;
+   const visible=findWorkoutInProgram(next,openId)||planEditRef.current?.workout||current;
+   planEditRef.current={workout:visible,program:next};
+   return next;
+  });
+  setCalendarWorkouts((prev:any[])=>patchExerciseCatalogInProgram({st_workouts:prev||[]},applied)?.st_workouts||prev);
+  setGroupActivityWorkout((prev:any)=>{
+   if(!prev?.id)return prev;
+   const next=patchExerciseCatalogInProgram({st_workouts:[prev]},applied)?.st_workouts?.[0]||prev;
+   if(next?.id===openId&&planEditRef.current)planEditRef.current={...planEditRef.current,workout:next};
+   return next;
+  });
+  setExerciseNameSearch((cur:any)=>applied.some((row)=>row.exerciseId===cur?.exerciseId)?null:cur);
+  if(session?.user?.id)markScreenStale(session.user.id,['program','schedule']);
+  if(writeError)alert(writeError);
+ }
  function remainingSameDayWorkouts(current:any){if(!current||isPersonalCalendarWorkout(current.id))return current?[current]:[]; const prog=planEditRef.current?.program||program; return (prog?.st_workouts||[]).filter((w:any)=>w.day_order===current.day_order&&w.week>=(current.week||1));}
  async function requestReplaceExercise(ex:any,catalogItem:any){if(!catalogItem)return; const ctx=await ensurePersonalCopyForTrainingEdit(); if(!ctx)return; const current=ctx.workout||workout; const remaining=remainingSameDayWorkouts(current).length; if(remaining<=1){await replaceExerciseWithCatalog(ex,catalogItem,'current'); setAddExercisePanel(null); return;} setAddExercisePanel(null); setExerciseSwapPrompt({ex,catalogItem,remaining,fromName:ex?.name||'this exercise',toName:catalogItem.name});}
  async function pickExerciseForPanel(item:any){if(!addExercisePanel)return; if(addExercisePanel.replaceTarget){await requestReplaceExercise(addExercisePanel.replaceTarget,item); return;} const defaultSets=sectionDefaultSets(addExercisePanel.section); setAddExercisePanel({...addExercisePanel,step:'configure',picked:item,config:{...addExercisePanel.config,setCount:defaultSets}});}

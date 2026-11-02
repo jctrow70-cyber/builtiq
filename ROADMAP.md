@@ -210,6 +210,8 @@ Goal: Prepare BuildIQ Health for iOS and Android users.
 
 ## Current Recommended Next Step
 
+**BIQ-0299** shows an exercise change on the open logger (Decision 155). All remaining weeks updates that day in the current week and later weeks before you leave the screen. Planned sets and logged history stay. No database change. Not committed. Not pushed. Signed-in browser check is still outstanding.
+
 **BIQ-0298** shows a followed program once on the Training calendar (Decision 154). A second enrollment of that plan, or of its copy, no longer adds the same workout again. A different program on that day still appears. No database change. Not committed. Not pushed. Signed-in browser check is still outstanding.
 
 **BIQ-0296** corrects Working and Warm-up on a planned set, including after a log, and soft-deletes a set without deleting its performance (Decision 152). The migration is written and not applied to hosted Supabase. Not committed. Not pushed.

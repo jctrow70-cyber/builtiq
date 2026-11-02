@@ -11,6 +11,37 @@ Branch:
 Status:
 ```
 
+## BIQ-0299 - Show an exercise change on the open logger
+
+Date: 2026-11-02
+Branch: main
+Status: Implemented locally. Not committed. Not pushed. No database change.
+
+Summary: Changing an exercise while logging, including All remaining weeks, now renames that exercise on the open screen. Belt Squat becomes Back Squat before you leave the logger. Planned sets and logged history stay.
+
+Purpose: The save reached the program, then the logger waited for a reload that does not run while the workout is open. The card kept the old name until the screen closed.
+
+Files changed:
+- app/page.tsx
+- lib/training/exerciseListEdit.ts
+- scripts/test-exercise-list-edit.ts
+- CHANGELOG.md
+- DECISIONS.md
+- ROADMAP.md
+
+Database changes: None.
+
+Testing steps:
+1. Run `scripts/test-exercise-list-edit.ts`.
+2. Open a workout and start logging. Change Belt Squat to Back Squat and choose All remaining weeks. The open card shows Back Squat immediately, with the same sets.
+3. Move to a later week of that day without leaving Training. That week shows Back Squat.
+4. Choose This week only on another exercise. Later weeks of that day keep the previous exercise.
+5. Leave the logger and open the workout again. The new name is still there. Completed logs stay on the history they were recorded with.
+
+Known issues: Signed-in browser check is still outstanding when this session is on the sign-in screen.
+
+Recommended commit message: BIQ-0299 Show an exercise change on the open logger.
+
 ## BIQ-0298 - Show one copy of a program on the Training calendar
 
 Date: 2026-11-02
