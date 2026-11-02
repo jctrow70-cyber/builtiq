@@ -1,0 +1,8 @@
+SCHEDULE
+test-schedule-hardening: ok
+STATUS_SCHED:0
+BUILD
+  ▲ Next.js 14.2.35
+  - Environments: .env.local
+
+   Creating an optimized production build ...
