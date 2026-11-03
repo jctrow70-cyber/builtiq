@@ -21,6 +21,8 @@ export type ProgressSetFact = {
   muscleGroupLabel: string | null;
   programRole: string | null;
   provenance: SnapshotProvenance;
+  notes: string;
+  setNumber: number | null;
 };
 
 export function setFactFromRow(row: any): ProgressSetFact {
@@ -41,6 +43,8 @@ export function setFactFromRow(row: any): ProgressSetFact {
     muscleGroupLabel: String(row?.snapshot_muscle_group || '').trim() || null,
     programRole: String(row?.snapshot_program_role || '').trim() || null,
     provenance: provenanceFromLog(row),
+    notes: String(row?.log_notes || ''),
+    setNumber: row?.snapshot_set_number == null || row?.snapshot_set_number === '' ? null : Number(row.snapshot_set_number),
   };
 }
 

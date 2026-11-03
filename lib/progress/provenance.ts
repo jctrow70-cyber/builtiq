@@ -25,6 +25,37 @@ export const UNKNOWN_PROVENANCE: SnapshotProvenance = {
   variant: 'unknown',
 };
 
+/** How sure we are about equipment for a whole series. One confirmed set does not verify the rest. */
+export type EquipmentRecord = 'verified' | 'recovered' | 'mixed' | 'unknown';
+
+export function equipmentRecordOf(values: DataProvenance[]): EquipmentRecord {
+  if (!values.length) return 'unknown';
+  const hasSnapshot = values.some((value) => value === 'snapshotted');
+  const hasRecovered = values.some((value) => value === 'backfilled' || value === 'estimated');
+  const hasUnknown = values.some((value) => value === 'unknown');
+  if (hasSnapshot && (hasRecovered || hasUnknown)) return 'mixed';
+  if (hasSnapshot) return 'verified';
+  if (hasRecovered) return 'recovered';
+  return 'unknown';
+}
+
+export function equipmentRecordLabel(record: EquipmentRecord): string | null {
+  if (record === 'mixed') return 'Some sessions confirmed this equipment. Others were recovered or not recorded.';
+  if (record === 'recovered') return 'Equipment was recovered from older workouts. It was not selected when those sets were logged.';
+  if (record === 'unknown') return 'Equipment was not recorded for these sessions.';
+  return null;
+}
+
+/** Series label used by the strength index. Mixed history is never reported as confirmed. */
+export function displayedEquipmentProvenance(values: DataProvenance[]): DataProvenance {
+  const record = equipmentRecordOf(values);
+  if (record === 'verified') return 'snapshotted';
+  if (record === 'unknown') return 'unknown';
+  if (values.some((value) => value === 'backfilled')) return 'backfilled';
+  if (values.some((value) => value === 'estimated')) return 'estimated';
+  return 'unknown';
+}
+
 export function provenanceRank(value: DataProvenance): number {
   if (value === 'snapshotted') return 3;
   if (value === 'backfilled') return 2;

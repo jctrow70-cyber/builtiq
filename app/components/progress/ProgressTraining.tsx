@@ -18,13 +18,18 @@ import {
 } from '../../../lib/progress/progressView';
 import { inclusiveDays } from '../../../lib/progress/ranges';
 import type { ProgressReport } from '../../../lib/progress/report';
+import type { ExerciseProgressRequest } from '../../../lib/progress/exerciseProgress';
+import TrainingHistory from './TrainingHistory';
 
 type ProgressTrainingProps = {
   report: ProgressReport;
+  userId: string;
   weightUnit: string;
+  refreshKey?: number;
+  onViewProgress: (request: ExerciseProgressRequest) => void;
 };
 
-export default function ProgressTraining({ report, weightUnit }: ProgressTrainingProps) {
+export default function ProgressTraining({ report, userId, weightUnit, refreshKey = 0, onViewProgress }: ProgressTrainingProps) {
   const [mode, setMode] = useState<MuscleMode>('effective');
   const groups = report.muscles.groups;
   const hasTraining = groups.some((group) => group.effectiveSets > 0 || group.directSets > 0) || workingSetsInView(report) > 0;
@@ -39,17 +44,21 @@ export default function ProgressTraining({ report, weightUnit }: ProgressTrainin
 
   if (!hasTraining && workouts == null) {
     return (
-      <Card>
-        <div className="progress-empty">
-          <h3>See what you are actually training</h3>
-          <p>Log workouts and BuildIQ will estimate how much work each muscle received.</p>
-        </div>
-      </Card>
+      <div className="progress-stack">
+        <TrainingHistory userId={userId} refreshKey={refreshKey} onViewProgress={onViewProgress} />
+        <Card>
+          <div className="progress-empty">
+            <h3>See what you are actually training</h3>
+            <p>Log workouts and BuildIQ will estimate how much work each muscle received.</p>
+          </div>
+        </Card>
+      </div>
     );
   }
 
   return (
     <div className="progress-stack">
+      <TrainingHistory userId={userId} refreshKey={refreshKey} onViewProgress={onViewProgress} />
       <Card elevated>
         <p className="progress-kicker">{rangePeriodLabel(report.range)}</p>
         <h2 className="progress-headline">Training</h2>

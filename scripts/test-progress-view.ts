@@ -35,6 +35,8 @@ function fact(date: string, weight: number, credits: { muscle: string; contribut
       muscleCredits: 'snapshotted',
       variant: 'unknown',
     },
+    notes: '',
+    setNumber: null,
   };
 }
 

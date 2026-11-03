@@ -1,4 +1,4 @@
-import { displaySeriesName, seriesIdentityFromLog, seriesKey } from '../progress/identity';
+import { displaySeriesName, seriesIdentityFromLog, seriesKey, UNSPECIFIED_EQUIPMENT } from '../progress/identity';
 import { isStrengthLike, type ExerciseType } from './exerciseTypes';
 import { estimateE1rm, isWorkingSet } from './estimated1Rm';
 import { formatDisplayDate, mondayOfWeek } from './programCalendar';
@@ -34,6 +34,15 @@ export type ProgressInsightsSummary = {
   prCount: number;
   recentPrCount: number;
 };
+
+/** "New Barbell Bench Press PR!" without repeating an implement already in the exercise name. */
+export function personalRecordTitle(exerciseName: string, equipmentLabel: string, equipmentKey: string): string {
+  const name = String(exerciseName || 'Exercise').trim() || 'Exercise';
+  const equipment = String(equipmentLabel || '').trim();
+  if (!equipment || equipmentKey === UNSPECIFIED_EQUIPMENT || equipment === 'Unspecified') return name;
+  if (name.toLowerCase().includes(equipment.toLowerCase())) return name;
+  return `${equipment} ${name}`;
+}
 
 export function exerciseKeyFromLog(row: any): string {
   return seriesKey(seriesIdentityFromLog(row));
@@ -97,7 +106,8 @@ export function detectSetPersonalRecord(newRow: any, priorLogs: any[], weightUni
   const reps = parseReps(newRow.actual_reps);
   if (weight == null && reps == null) return null;
 
-  const name = String(newRow.snapshot_exercise_name || 'Exercise').trim();
+  const identity = seriesIdentityFromLog(newRow);
+  const name = personalRecordTitle(identity.exerciseName, identity.equipmentLabel, identity.equipmentKey);
   const key = exerciseKeyFromLog(newRow);
   const prior = computePersonalRecords(priorLogs).find((p) => p.key === key);
   const volume = weight != null && reps != null ? weight * reps : null;
@@ -114,7 +124,7 @@ export function detectSetPersonalRecord(newRow: any, priorLogs: any[], weightUni
   if (!prior) {
     return {
       exerciseName: name,
-      message: 'New personal record!',
+      message: `New ${name} PR!`,
       subtext: formatPerf() || 'First performance logged',
     };
   }
@@ -132,11 +142,11 @@ export function detectSetPersonalRecord(newRow: any, priorLogs: any[], weightUni
 
   if (!beatsWeight && !beatsRepsAtMax && !beatsVolume && !beats1rm) return null;
 
-  let message = 'New personal record!';
-  if (beatsWeight) message = 'New weight PR!';
-  else if (beatsRepsAtMax) message = 'New rep PR!';
-  else if (beats1rm) message = 'New estimated 1RM PR!';
-  else if (beatsVolume) message = 'New set volume PR!';
+  let message = `New ${name} PR!`;
+  if (beatsWeight) message = `New ${name} weight PR!`;
+  else if (beatsRepsAtMax) message = `New ${name} rep PR!`;
+  else if (beats1rm) message = `New ${name} estimated 1RM PR!`;
+  else if (beatsVolume) message = `New ${name} set volume PR!`;
 
   const subtextParts = [formatPerf()];
   if (beats1rm && oneRm != null) subtextParts.push(`est. 1RM ${oneRm} ${weightUnit}`);

@@ -1,6 +1,6 @@
 import { seriesKey, displaySeriesName, type SeriesIdentity } from './identity';
 import { inSpan, type DateSpan } from './ranges';
-import type { DataProvenance } from './provenance';
+import { displayedEquipmentProvenance, equipmentRecordOf, type DataProvenance, type EquipmentRecord } from './provenance';
 import { e1rmOf, isCountedWorkingSet, setVolume, type ProgressSetFact } from './setFacts';
 
 export type SeriesWindows = {
@@ -19,6 +19,7 @@ export type SeriesWindows = {
   programRole: string | null;
   movementPattern: string | null;
   equipmentProvenance: DataProvenance;
+  equipmentRecord: EquipmentRecord;
   patternProvenance: DataProvenance;
   bestSet: { weight: number; reps: number; date: string } | null;
   lastSet: { weight: number; reps: number; date: string } | null;
@@ -86,7 +87,8 @@ function summarizeSeries(
     workingSetsInView: viewRows.length,
     programRole: mostCommon(rows.map((fact) => fact.programRole)),
     movementPattern: mostCommon(rows.map((fact) => fact.movementPattern)),
-    equipmentProvenance: strongestProvenance(rows.map((fact) => fact.provenance.equipment)),
+    equipmentProvenance: displayedEquipmentProvenance(rows.map((fact) => fact.provenance.equipment)),
+    equipmentRecord: equipmentRecordOf(rows.map((fact) => fact.provenance.equipment)),
     patternProvenance: strongestProvenance(rows.map((fact) => fact.provenance.movementPattern)),
     bestSet: best && best.weight != null && best.reps != null ? { weight: best.weight, reps: best.reps, date: best.logDate } : null,
     lastSet: last && last.weight != null && last.reps != null ? { weight: last.weight, reps: last.reps, date: last.logDate } : null,

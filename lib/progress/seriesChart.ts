@@ -5,6 +5,30 @@ export type SeriesChartMetric = 'e1rm' | 'load' | 'reps' | 'volume' | 'sets';
 export type SeriesChartPoint = { date: string; value: number };
 
 /**
+ * Vertical range for a strength chart.
+ * Small changes stay visible. A large rise can still include zero.
+ * The axis never drops below zero.
+ */
+export function chartValueDomain(values: number[]): { min: number; max: number } {
+  const nums = values.filter((value) => Number.isFinite(value));
+  if (!nums.length) return { min: 0, max: 1 };
+  const low = Math.min(...nums);
+  const high = Math.max(...nums);
+  const span = high - low;
+  const pad = Math.max(span * 0.2, high * 0.04, 1);
+  const relative = high > 0 ? span / high : 1;
+  let min = relative < 0.4 ? low - pad : 0;
+  let max = high + pad;
+  if (min < 0) min = 0;
+  if (max <= min) max = min + 1;
+  return { min: roundChart(min), max: roundChart(max) };
+}
+
+function roundChart(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+/**
  * One point per logged day for a single series.
  * Days without that series are omitted. They are not filled with zero.
  */

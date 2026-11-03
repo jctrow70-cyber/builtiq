@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 158 - Exercise progress keeps equipment and period records separate
+
+Date: 2026-11-03
+Status: Committed locally
+Category: Progress
+
+### Decision
+
+BIQ-0302 uses one Exercise Progress view for Lifts, the active workout, and Training History. Barbell, dumbbell, Smith machine, and unspecified histories stay separate. Aliases such as DB and Dumbbell match at read time. The default chart is estimated 1RM from comparable working sets, plotted on workout dates, with a vertical range that stays near the data when the change is small. All-time best load and all-time best estimated 1RM are separate from the best performance in the selected period. A period best is not labeled as an all-time personal record. The record toast names the equipment. Training History lists workouts first and loads the stored sets when a workout is opened. A series is verified only when every included set was confirmed; mixed or missing equipment is described in plain language and is not rewritten.
+
+### Reason
+
+Athletes need to see whether a lift is progressing without combining different implements or treating a recent best as a lifetime record. A long list of every set also hides the workout they are looking for.
+
+### Alternatives Considered
+
+Keep a separate chart on the strength detail and another on the workout history. That would let the two views drift. Start every chart at zero. That hides a small strength change. Mark a series verified when any set was snapshotted. That overstates older records.
+
+### Impact
+
+No completed-set snapshot is rewritten. No migration is applied. Group Progress, program generation, nutrition, and body measurements stay on their existing screens. The old strength-detail chart component is no longer used. The lift list is independent of the Progress date range. Training History lists session rows and set-log workouts that have no matching session. A day label does not create a second workout, and set completion does not mark a historical workout completed. Sets with no surviving workout link stay one entry per date and say completion is unknown. A removed workout link is not folded into a same-day session. The proposed lift aggregate remains an untracked file and is not applied. Signed-in layout checks at 390px, 768px, and 1440px are still outstanding.
+
+---
+
 ## Decision 157 - Unknown equipment stays unknown
 
 Date: 2026-11-03

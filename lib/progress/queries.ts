@@ -4,7 +4,14 @@ import { scheduleSetupMissing } from '../training/scheduleActions';
 import { buildProgressReport, type ProgressReport } from './report';
 import { comparableWindows, rangeBounds, type ProgressRange } from './ranges';
 import { setFactFromRow, type ProgressSetFact } from './setFacts';
-import { seriesKey } from './identity';
+import { seriesIdentityFromParts, seriesKey } from './identity';
+import {
+  assembleTrainingHistory,
+  historyPageBounds,
+  workoutHistoryPage,
+  type HistorySession,
+  type WorkoutHistorySummary,
+} from '../training/workoutHistory';
 import { dashboardProgressModel, type DashboardProgressModel } from './dashboardProgress';
 import type { UnitsPreference } from '../body/measurements';
 
@@ -33,6 +40,7 @@ const PAGE_SIZE = 1000;
 
 type QueryClient = {
   from: (table: string) => any;
+  rpc?: (fn: string, args?: Record<string, unknown>) => Promise<{ data: any; error: { message?: string } | null }>;
 };
 
 /**
@@ -88,6 +96,186 @@ export async function loadProgressReport(
   });
 }
 
+const EXERCISE_PROGRESS_COLUMNS = `${PROGRESS_SET_FACT_COLUMNS},log_notes,snapshot_set_number`;
+const LIFT_INDEX_COLUMNS = 'snapshot_catalog_exercise_id,snapshot_exercise_name,snapshot_equipment,snapshot_variant,log_date';
+const WORKOUT_HISTORY_INDEX_COLUMNS = 'id,log_date,completed,snapshot_set_type,snapshot_exercise_name,snapshot_catalog_exercise_id,snapshot_equipment,snapshot_variant,snapshot_day_label,snapshot_workout_type';
+const WORKOUT_HISTORY_LINK_COLUMNS = `${WORKOUT_HISTORY_INDEX_COLUMNS},planned_set_id,exercise_id`;
+const WORKOUT_HISTORY_LINK_EMBED = `${WORKOUT_HISTORY_LINK_COLUMNS},st_planned_sets(st_exercises(workout_id)),st_exercises!st_set_logs_exercise_id_fkey(workout_id)`;
+const WORKOUT_HISTORY_PLANNED_EMBED = `${WORKOUT_HISTORY_LINK_COLUMNS},st_planned_sets(st_exercises(workout_id))`;
+const WORKOUT_HISTORY_DAY_COLUMNS = `${WORKOUT_HISTORY_INDEX_COLUMNS},snapshot_set_number,actual_weight,actual_reps,log_notes,snapshot_provenance,planned_set_id,exercise_id,st_planned_sets(st_exercises(workout_id)),st_exercises!st_set_logs_exercise_id_fkey(workout_id)`;
+
+let liftIndexUsesRows = false;
+
+/** One row per exercise and equipment. Uses the aggregate function when it is installed, otherwise identity columns only. */
+export async function fetchLiftIndex(client: QueryClient, userId: string): Promise<any[]> {
+  if (!liftIndexUsesRows && client.rpc) {
+    const rpc = await client.rpc('st_lift_index');
+    if (!rpc.error && Array.isArray(rpc.data)) return rpc.data;
+    if (rpc.error && !missingRelation(rpc.error.message || '')) throw rpc.error;
+    liftIndexUsesRows = true;
+  }
+  return fetchPaged(client, 'st_set_logs', LIFT_INDEX_COLUMNS, userId, 'log_date', '1970-01-01', '2999-12-31');
+}
+
+/** Sets for one exercise, including every equipment history. The Progress date range is not applied here. */
+export async function fetchExerciseProgressRows(
+  client: QueryClient,
+  userId: string,
+  identity: { catalogExerciseId?: string | null; exerciseName?: string | null }
+): Promise<ProgressSetFact[]> {
+  const filter = exerciseLogFilter(identity);
+  const rows = await fetchPaged(client, 'st_set_logs', EXERCISE_PROGRESS_COLUMNS, userId, 'log_date', '1970-01-01', '2999-12-31', filter);
+  return rows.map(setFactFromRow);
+}
+
+/** Identity columns for set logs. Weights and notes stay out of this read. */
+export async function fetchWorkoutHistoryIndex(client: QueryClient, userId: string): Promise<any[]> {
+  return fetchPaged(client, 'st_set_logs', WORKOUT_HISTORY_INDEX_COLUMNS, userId, 'log_date', '1970-01-01', '2999-12-31');
+}
+
+export async function fetchWorkoutHistoryDay(client: QueryClient, userId: string, date: string): Promise<any[]> {
+  const embedded = await client
+    .from('st_set_logs')
+    .select(WORKOUT_HISTORY_DAY_COLUMNS)
+    .eq('user_id', userId)
+    .eq('log_date', date);
+  if (!embedded.error) return (embedded.data || []).map(withWorkoutId);
+  const planned = await client
+    .from('st_set_logs')
+    .select(`${WORKOUT_HISTORY_INDEX_COLUMNS},snapshot_set_number,actual_weight,actual_reps,log_notes,snapshot_provenance,planned_set_id,st_planned_sets(st_exercises(workout_id))`)
+    .eq('user_id', userId)
+    .eq('log_date', date);
+  if (!planned.error) return (planned.data || []).map(withWorkoutId);
+  const rows = await fetchPaged(client, 'st_set_logs', WORKOUT_HISTORY_INDEX_COLUMNS + ',snapshot_set_number,actual_weight,actual_reps,log_notes,snapshot_provenance', userId, 'log_date', date, date);
+  return rows.map(withWorkoutId);
+}
+
+const SESSION_PAGE_COLUMNS = 'id,log_date,status,workout_id,st_workouts(name,day_label,workout_type)';
+const trainingHistoryCache = new Map<string, Promise<WorkoutHistorySummary[]>>();
+
+export function clearTrainingHistoryCache() {
+  trainingHistoryCache.clear();
+}
+
+/**
+ * One page of the merged workout list. Session rows stay authoritative.
+ * Set logs add workouts that have no matching session. The list query reads
+ * identity columns, not weights or notes.
+ */
+export async function fetchTrainingHistoryPage(
+  client: QueryClient,
+  userId: string,
+  page: number,
+  pageSize = 10
+): Promise<{ page: number; pageCount: number; items: WorkoutHistorySummary[]; source: 'merged' | 'set_logs' }> {
+  const bounds = historyPageBounds(page, pageSize);
+  const items = await loadTrainingHistory(client, userId);
+  const paged = workoutHistoryPage(items, bounds.page, bounds.pageSize);
+  return { ...paged, source: items.some((item) => item.source === 'session') ? 'merged' : 'set_logs' };
+}
+
+async function loadTrainingHistory(client: QueryClient, userId: string): Promise<WorkoutHistorySummary[]> {
+  const cached = trainingHistoryCache.get(userId);
+  if (cached) return cached;
+  const pending = loadTrainingHistoryUncached(client, userId).catch((error) => {
+    trainingHistoryCache.delete(userId);
+    throw error;
+  });
+  trainingHistoryCache.set(userId, pending);
+  return pending;
+}
+
+async function loadTrainingHistoryUncached(client: QueryClient, userId: string): Promise<WorkoutHistorySummary[]> {
+  const sessions = await fetchAllSessions(client, userId);
+  const rows = await fetchHistoryIdentity(client, userId);
+  if (sessions.missing) return assembleTrainingHistory([], rows);
+  return assembleTrainingHistory(sessions.rows, rows);
+}
+
+async function fetchAllSessions(client: QueryClient, userId: string): Promise<{ missing: boolean; rows: HistorySession[] }> {
+  const columns = [SESSION_PAGE_COLUMNS, 'id,log_date,status,workout_id'];
+  let columnIndex = 0;
+  const rows: HistorySession[] = [];
+  let offset = 0;
+  while (true) {
+    const result = await client
+      .from('st_workout_sessions')
+      .select(columns[columnIndex])
+      .eq('user_id', userId)
+      .order('log_date', { ascending: false })
+      .order('id', { ascending: true })
+      .range(offset, offset + PAGE_SIZE - 1);
+    if (result.error && columnIndex === 0 && relationshipError(result.error)) {
+      columnIndex = 1;
+      offset = 0;
+      rows.length = 0;
+      continue;
+    }
+    if (result.error && missingRelation(errorText(result.error))) return { missing: true, rows: [] };
+    if (result.error) throw result.error;
+    const page = result.data || [];
+    page.forEach((row: any) => {
+      const session = sessionFromRow(row);
+      if (session) rows.push(session);
+    });
+    if (page.length < PAGE_SIZE) break;
+    offset += PAGE_SIZE;
+  }
+  return { missing: false, rows };
+}
+
+async function fetchHistoryIdentity(client: QueryClient, userId: string): Promise<any[]> {
+  const embedded = await selectUserRows(client, 'st_set_logs', WORKOUT_HISTORY_LINK_EMBED, userId);
+  if (!embedded.error) return (embedded.data || []).map(withWorkoutId);
+  const planned = await selectUserRows(client, 'st_set_logs', WORKOUT_HISTORY_PLANNED_EMBED, userId);
+  if (!planned.error) return (planned.data || []).map(withWorkoutId);
+  const rows = await fetchPaged(client, 'st_set_logs', WORKOUT_HISTORY_INDEX_COLUMNS, userId, 'log_date', '1970-01-01', '2999-12-31');
+  return rows.map(withWorkoutId);
+}
+
+async function selectUserRows(client: QueryClient, table: string, columns: string, userId: string): Promise<{ data: any[] | null; error: { message?: string } | null }> {
+  const rows: any[] = [];
+  for (let offset = 0; ; offset += PAGE_SIZE) {
+    const result = await client
+      .from(table)
+      .select(columns)
+      .eq('user_id', userId)
+      .order('log_date', { ascending: true })
+      .range(offset, offset + PAGE_SIZE - 1);
+    if (result.error) return { data: null, error: result.error };
+    const page = result.data || [];
+    rows.push(...page);
+    if (page.length < PAGE_SIZE) break;
+  }
+  return { data: rows, error: null };
+}
+
+function sessionFromRow(row: any): HistorySession | null {
+  const date = String(row?.log_date || '').slice(0, 10);
+  const id = String(row?.id || '');
+  if (!date || !id) return null;
+  const workout = Array.isArray(row?.st_workouts) ? row.st_workouts[0] : row?.st_workouts;
+  const day = String(workout?.day_label || '').trim();
+  const type = String(workout?.workout_type || '').trim();
+  const name = String(workout?.name || '').trim();
+  return {
+    id,
+    date,
+    workoutId: String(row?.workout_id || ''),
+    workoutName: name || (day && type ? `${day} · ${type}` : type || day || 'Workout'),
+    dayLabel: day,
+    workoutType: type,
+    status: String(row?.status || ''),
+  };
+}
+
+function withWorkoutId(row: any): any {
+  const planned = Array.isArray(row?.st_planned_sets) ? row.st_planned_sets[0] : row?.st_planned_sets;
+  const plannedExercise = Array.isArray(planned?.st_exercises) ? planned.st_exercises[0] : planned?.st_exercises;
+  const direct = Array.isArray(row?.st_exercises) ? row.st_exercises[0] : row?.st_exercises;
+  return { ...row, workout_id: plannedExercise?.workout_id || direct?.workout_id || row?.workout_id || null };
+}
+
 export async function fetchSeriesFacts(
   client: QueryClient,
   userId: string,
@@ -96,13 +284,12 @@ export async function fetchSeriesFacts(
   to?: string | null
 ): Promise<ProgressSetFact[]> {
   const rows = await fetchPaged(client, 'st_set_logs', PROGRESS_SET_FACT_COLUMNS, userId, 'log_date', from || '1970-01-01', to || '2999-12-31');
-  const wanted = seriesKey({
-    catalogExerciseId: identity.catalogExerciseId || null,
-    exerciseName: identity.exerciseName || 'Exercise',
-    equipmentKey: String(identity.equipment || '').trim().toLowerCase() || 'unspecified',
-    equipmentLabel: identity.equipment || 'Unspecified',
-    variant: identity.variant || null,
-  });
+  const wanted = seriesKey(seriesIdentityFromParts({
+    catalogExerciseId: identity.catalogExerciseId,
+    exerciseName: identity.exerciseName,
+    equipment: identity.equipment,
+    variant: identity.variant,
+  }));
   return rows.map(setFactFromRow).filter((fact) => seriesKey(fact.identity) === wanted);
 }
 
@@ -193,6 +380,28 @@ export function columnsWithoutMissing(columns: string, message: string): string 
   return next.join(',');
 }
 
+function exerciseLogFilter(identity: { catalogExerciseId?: string | null; exerciseName?: string | null }): string | null {
+  const parts: string[] = [];
+  const catalog = String(identity.catalogExerciseId || '').trim();
+  const name = String(identity.exerciseName || '').trim();
+  if (catalog) parts.push(`snapshot_catalog_exercise_id.eq.${postgrestLiteral(catalog)}`);
+  if (name) parts.push(`snapshot_exercise_name.ilike.${postgrestLiteral(name)}`);
+  return parts.length ? parts.join(',') : null;
+}
+
+function postgrestLiteral(value: string): string {
+  if (/[,\s.()"\\]/.test(value)) return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+  return value;
+}
+
+function missingRelation(message: string): boolean {
+  return /does not exist|could not find the table|schema cache|st_lift_index/i.test(message);
+}
+
+function relationshipError(error: { message?: string } | null | undefined): boolean {
+  return /relationship|schema cache|st_workouts|st_exercises|st_planned_sets/i.test(errorText(error));
+}
+
 async function fetchPaged(
   client: QueryClient,
   table: string,
@@ -200,9 +409,10 @@ async function fetchPaged(
   userId: string,
   dateColumn: string,
   from: string,
-  to: string
+  to: string,
+  orFilter?: string | null
 ): Promise<any[]> {
-  return fetchPagedAttempt(client, table, columns, userId, dateColumn, from, to, 0);
+  return fetchPagedAttempt(client, table, columns, userId, dateColumn, from, to, 0, orFilter);
 }
 
 async function fetchPagedAttempt(
@@ -213,15 +423,16 @@ async function fetchPagedAttempt(
   dateColumn: string,
   from: string,
   to: string,
-  attempt: number
+  attempt: number,
+  orFilter?: string | null
 ): Promise<any[]> {
   try {
-    return await fetchPagedOnce(client, table, columns, userId, dateColumn, from, to);
+    return await fetchPagedOnce(client, table, columns, userId, dateColumn, from, to, orFilter);
   } catch (error) {
     const message = errorText(error);
     const next = attempt < 8 ? columnsWithoutMissing(columns, message) : null;
     if (!next) throw error;
-    return fetchPagedAttempt(client, table, next, userId, dateColumn, from, to, attempt + 1);
+    return fetchPagedAttempt(client, table, next, userId, dateColumn, from, to, attempt + 1, orFilter);
   }
 }
 
@@ -232,18 +443,20 @@ async function fetchPagedOnce(
   userId: string,
   dateColumn: string,
   from: string,
-  to: string
+  to: string,
+  orFilter?: string | null
 ): Promise<any[]> {
   const rows: any[] = [];
   for (let offset = 0; ; offset += PAGE_SIZE) {
-    const { data, error } = await client
+    let query = client
       .from(table)
       .select(columns)
       .eq('user_id', userId)
       .gte(dateColumn, from)
       .lte(dateColumn, to)
-      .order(dateColumn, { ascending: true })
-      .range(offset, offset + PAGE_SIZE - 1);
+      .order(dateColumn, { ascending: true });
+    if (orFilter) query = query.or(orFilter);
+    const { data, error } = await query.range(offset, offset + PAGE_SIZE - 1);
     if (error) throw error;
     const page = data || [];
     rows.push(...page);

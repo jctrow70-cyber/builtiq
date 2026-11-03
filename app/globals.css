@@ -619,6 +619,7 @@ button.member-training-week-row{width:100%;background:transparent;border-left:0;
 .progress-chip{flex:0 0 auto;min-height:44px;border-radius:999px;border:1px solid var(--borderSubtle);background:transparent;color:inherit;padding:8px 14px;font-weight:800}
 .progress-chip--active{background:var(--accent);color:#fff;border-color:transparent}
 .progress-chart{width:100%;height:auto;color:var(--accent);display:block;margin-top:8px}
+.progress-chart-label{fill:var(--textSecondary);font-size:11px}
 .progress-chart-reference{stroke:var(--textSecondary);stroke-dasharray:4 4;opacity:.75}
 .progress-chart-secondary{stroke:var(--textSecondary);opacity:.8}
 .progress-chart-point{fill:currentColor}
@@ -628,6 +629,19 @@ button.member-training-week-row{width:100%;background:transparent;border-left:0;
 .progress-empty p{margin:0 0 12px;color:var(--textSecondary);line-height:1.45}
 .progress-error{color:#fca5a5;margin-top:0}
 .progress-back{justify-self:start}
+.training-history-block{border-top:1px solid var(--borderSubtle)}
+.training-history-row{display:flex;flex-direction:column;align-items:flex-start;gap:4px;width:100%;min-height:52px;padding:12px 0;border:0;background:transparent;color:inherit;text-align:left;font:inherit}
+.training-history-meta,.training-history-row .muted{overflow-wrap:anywhere}
+.training-history-sets{list-style:none;margin:0;padding:0 0 8px;display:grid;gap:8px}
+.training-history-sets li{display:grid;gap:2px;padding-top:8px;border-top:1px solid var(--borderSubtle);overflow-wrap:anywhere}
+.training-history-detail{display:grid;gap:12px;padding-bottom:8px}
+.training-history-pager{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:12px}
+.exercise-history-actions{display:flex;gap:8px;flex-wrap:wrap}
+.exercise-progress{min-width:0}
+.lift-search{width:100%;min-height:44px;margin:8px 0 4px;padding:8px 12px;border-radius:10px;border:1px solid var(--borderSubtle);background:transparent;color:inherit;font:inherit}
+@media(min-width:768px){
+  .training-history-row{flex-direction:row;justify-content:space-between;align-items:center;gap:16px}
+}
 @media(min-width:720px){
   .progress-card-grid{grid-template-columns:1fr 1fr}
   .progress-section-head{grid-template-columns:1fr auto;align-items:center}

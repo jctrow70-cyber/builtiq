@@ -11,6 +11,60 @@ Branch:
 Status:
 ```
 
+## BIQ-0302 - Exercise progress and concise training history
+
+Date: 2026-11-03
+Branch: main
+Status: Committed locally. Not pushed. No migration applied.
+
+Summary: One Exercise Progress view now opens from Lifts, an active workout, and Training History. It keeps each implement separate, charts estimated strength on real workout dates, and separates all-time records from the best set in the selected period. Training History opens as a short workout list and loads the stored sets only when a workout is opened. A personal-record message names the equipment. One confirmed set no longer marks a whole series as verified.
+
+Purpose: Progress and history were either too coarse or too long, and a period best could be read as an all-time record. Equipment that was only partly recorded could look confirmed.
+
+Files changed:
+- app/components/progress/ExerciseProgressDetail.tsx
+- app/components/progress/TrainingHistory.tsx
+- app/components/progress/ProgressScreen.tsx
+- app/components/progress/ProgressStrength.tsx
+- app/components/progress/ProgressTraining.tsx
+- app/components/progress/ProgressTrendChart.tsx
+- app/components/progress/ProgressSeriesDetail.tsx (removed; the shared exercise view replaces it)
+- app/components/training/ExerciseSessionHistoryModal.tsx
+- app/page.tsx
+- app/globals.css
+- lib/progress/exerciseProgress.ts
+- lib/progress/liftIndex.ts
+- lib/progress/provenance.ts
+- lib/progress/strengthSeries.ts
+- lib/progress/seriesChart.ts
+- lib/progress/setFacts.ts
+- lib/progress/queries.ts
+- lib/training/workoutHistory.ts
+- lib/training/progressAnalytics.ts
+- scripts/test-exercise-progress.ts
+- scripts/test-progress-analytics.ts
+- scripts/test-progress-view.ts
+- scripts/test-dashboard-progress.ts
+- DECISIONS.md
+
+Database changes: None applied. No historical rows were updated and no backfill was run. Migration 077 is already in the repository from the phase 1 commit and was not applied or changed here. Migration 078 remains an untracked proposal and is not part of this commit.
+
+Testing steps:
+- Open Progress, Strength, and a lift. Confirm the chart, equipment, all-time records, and period best stay separate.
+- Change the range among 4 weeks, 3 months, 6 months, 1 year, and all time.
+- Open Training, choose an exercise, and use View Progress. Back returns to the workout.
+- Open Progress, Training, expand a workout, and use View Progress. Back returns to the history list.
+- Log a heavier working set and confirm the toast names the equipment, for example "New Barbell Bench Press PR!"
+- On a phone-width screen, confirm the history rows stack and the chart remains readable.
+
+Hardening: Lifts lists every logged exercise and equipment, newest first, with search. That list does not follow the Progress date range. Opening a lift loads that exercise only. Training History pages workout sessions, including skipped workouts, and loads set rows for the open workout. Migration 078 is proposed and not applied.
+
+History compatibility: Training History keeps every session row and adds set-log workouts that do not match a session on the same date and workout. A planned set or extra-set exercise supplies that workout id. Sets with neither link stay one entry per date, including when their day labels disagree. Those entries say completion is unknown. Completed, partial, and skipped still come from the session row. Stored names, equipment, weights, reps, and notes are only read.
+
+Known issues: Signed-in checks at 390px, 768px, and 1440px are still outstanding. Migration 078 is untracked and not applied. Migration history and the snapshot-preservation trigger were not readable without a database connection. A set whose workout link was removed can appear beside a session on the same date. Two unlinked workouts on one date stay in one entry.
+
+Recommended commit message: Show equipment-specific exercise progress and a shorter training history.
+
 ## BIQ-0301 - Keep equipment identity consistent
 
 Date: 2026-11-03
@@ -43,7 +97,7 @@ Files changed:
 - scripts/test-equipment-identity.ts
 - scripts/test-progress-analytics.ts
 - scripts/test-exercise-history-display.ts
-- supabase/migrations/20261103_077_equipment_inference_no_single_implement.sql
+- supabase/migrations/20261103_078_progress_history_summaries.sql
 - DECISIONS.md
 - CHANGELOG.md
 

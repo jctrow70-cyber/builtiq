@@ -20,6 +20,7 @@ type ExerciseSessionHistoryModalProps = {
   currentEquipment?: string | null;
   sessions: ExerciseSessionEntry[];
   onClose: () => void;
+  onViewProgress?: () => void;
 };
 
 export default function ExerciseSessionHistoryModal({
@@ -28,6 +29,7 @@ export default function ExerciseSessionHistoryModal({
   currentEquipment,
   sessions,
   onClose,
+  onViewProgress,
 }: ExerciseSessionHistoryModalProps) {
   const [filter, setFilter] = useState<HistoryEquipmentFilter>('current');
   const visible = useMemo(
@@ -62,9 +64,16 @@ export default function ExerciseSessionHistoryModal({
               {exerciseName} · {subtitle}
             </p>
           </div>
-          <button type="button" className="btn small secondary" onClick={onClose}>
-            Close
-          </button>
+          <div className="exercise-history-actions">
+            {onViewProgress && (
+              <button type="button" className="btn small secondary" onClick={onViewProgress}>
+                View Progress
+              </button>
+            )}
+            <button type="button" className="btn small secondary" onClick={onClose}>
+              Close
+            </button>
+          </div>
         </div>
 
         <div className="exercise-history-filters" role="group" aria-label="History equipment filter">

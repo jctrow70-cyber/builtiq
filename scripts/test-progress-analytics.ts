@@ -79,6 +79,8 @@ function fact(input: {
       muscleCredits: input.creditProvenance || (input.muscleCredits ? 'snapshotted' : 'unknown'),
       variant: input.variant ? 'snapshotted' : 'unknown',
     },
+    notes: '',
+    setNumber: null,
   };
 }
 

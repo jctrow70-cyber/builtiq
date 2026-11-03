@@ -61,6 +61,8 @@ function fact(date: string, weight: number, equipment: string, exerciseName: str
       muscleCredits: 'snapshotted',
       variant: 'snapshotted',
     },
+    notes: '',
+    setNumber: null,
   };
 }
 
