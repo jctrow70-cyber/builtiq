@@ -8,7 +8,7 @@ import type { ExerciseSessionEntry, ExerciseSessionSet } from './exerciseSession
 
 export type HistoryEquipmentFilter = 'current' | 'all';
 
-export type HistoryEquipmentKind = 'verified' | 'unknown' | 'different';
+export type HistoryEquipmentKind = 'verified' | 'unverified' | 'unknown' | 'different';
 
 export function historySetTypeLabel(set: Pick<ExerciseSessionSet, 'setType' | 'setNumber' | 'extra'>): string {
   const raw = String(set.setType || 'working').trim().toLowerCase() || 'working';
@@ -29,15 +29,17 @@ export function historySetEquipmentKind(
   set: Pick<ExerciseSessionSet, 'equipmentKey' | 'equipmentVerified'>,
   currentEquipment?: string | null,
 ): HistoryEquipmentKind {
-  if (!set.equipmentVerified) return 'unknown';
+  if (!set.equipmentKey || set.equipmentKey === UNSPECIFIED_EQUIPMENT) return 'unknown';
   const currentKey = seriesIdentityFromParts({ equipment: currentEquipment }).equipmentKey;
   if (currentKey === UNSPECIFIED_EQUIPMENT) return 'different';
-  if (set.equipmentKey === currentKey) return 'verified';
-  return 'different';
+  if (set.equipmentKey !== currentKey) return 'different';
+  return set.equipmentVerified ? 'verified' : 'unverified';
 }
 
 export function historySetEquipmentText(set: Pick<ExerciseSessionSet, 'equipmentLabel' | 'equipmentVerified'>): string {
-  return set.equipmentVerified ? String(set.equipmentLabel || 'Unknown') : 'Unknown';
+  const label = String(set.equipmentLabel || '').trim();
+  if (!label || label === 'Unknown' || label === 'Unspecified') return 'Unknown';
+  return set.equipmentVerified ? label : `${label} · unverified`;
 }
 
 export function filterExerciseHistorySessions(
@@ -49,7 +51,8 @@ export function filterExerciseHistorySessions(
     .map((session) => {
       const sets = (session.sets || []).filter((set) => {
         if (mode === 'all') return true;
-        return historySetEquipmentKind(set, input.currentEquipment) === 'verified';
+        const kind = historySetEquipmentKind(set, input.currentEquipment);
+        return kind === 'verified' || kind === 'unverified';
       });
       if (!sets.length) return null;
       return {
@@ -73,7 +76,7 @@ export function historyEmptyMessage(input: {
     return 'Select equipment to see verified history, or choose All equipment.';
   }
   if ((input.allCount || 0) > 0) {
-    return `No verified ${current.equipmentLabel} history yet. Choose All equipment to see other or unknown logs.`;
+    return `No ${current.equipmentLabel} history yet. Choose All equipment to see other or unknown logs.`;
   }
-  return `No verified ${current.equipmentLabel} history yet.`;
+  return `No ${current.equipmentLabel} history yet.`;
 }

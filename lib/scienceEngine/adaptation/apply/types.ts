@@ -41,6 +41,7 @@ export type CandidateExposure = {
   program_role?: string | null;
   measurement_type?: string | null;
   laterality?: string | null;
+  equipment?: string | null;
   week: number;
   day_order: number;
   day_label?: string | null;
@@ -61,6 +62,7 @@ export type SourceExposureRef = {
   measurement_type?: string | null;
   program_role?: string | null;
   laterality?: string | null;
+  equipment?: string | null;
   exercise_name?: string | null;
 };
 

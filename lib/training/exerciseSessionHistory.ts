@@ -137,7 +137,7 @@ export function historyEquipmentFromSnapshot(row: any): {
   const verified = known && provenance.equipment === 'snapshotted';
   return {
     equipmentKey: identity.equipmentKey,
-    equipmentLabel: verified ? identity.equipmentLabel : 'Unknown',
+    equipmentLabel: known ? identity.equipmentLabel : 'Unknown',
     equipmentVerified: verified,
   };
 }

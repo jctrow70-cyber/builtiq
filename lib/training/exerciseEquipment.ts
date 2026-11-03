@@ -1,3 +1,5 @@
+import { canonicalEquipment } from './equipmentIdentity';
+
 /** Compatible implements for a master-library movement card. */
 
 function splitValues(raw: unknown): string[] {
@@ -31,8 +33,9 @@ export function compatibleEquipmentOptions(catalogItem?: any, fallback?: string)
 export function resolveExerciseEquipment(ex?: any, catalogItem?: any): string {
   const options = compatibleEquipmentOptions(catalogItem, ex?.equipment);
   const current = String(ex?.equipment || '').trim();
-  if (!current) return options[0] || '';
-  const match = options.find((item) => item.toLowerCase() === current.toLowerCase());
+  if (!current) return options.length === 1 ? options[0] : '';
+  const currentKey = canonicalEquipment(current).key;
+  const match = options.find((item) => canonicalEquipment(item).key === currentKey);
   return match || current;
 }
 

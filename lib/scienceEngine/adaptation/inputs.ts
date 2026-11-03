@@ -20,6 +20,8 @@ export type LoggedSetInput = {
   snapshot_program_role?: string | null;
   snapshot_section?: string | null;
   snapshot_catalog_exercise_id?: string | null;
+  snapshot_equipment?: string | null;
+  snapshot_variant?: string | null;
   snapshot_rep_min?: number | null;
   snapshot_rep_max?: number | null;
   snapshot_target_rir?: number | null;

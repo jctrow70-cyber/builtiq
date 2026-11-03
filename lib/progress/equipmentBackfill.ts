@@ -9,8 +9,10 @@ export type EquipmentInference = {
 /**
  * Conservative equipment recovery.
  * This is the rule the SQL backfill follows. Keep the two in step.
- * An existing snapshot is kept. A name match must be one compatible implement.
- * A single legal implement can be used. Anything else stays unspecified.
+ * An existing snapshot is kept, including its original text.
+ * A name match must be one compatible implement.
+ * A single legal implement is not assigned. Anything else stays unspecified.
+ * This does not rewrite rows that an earlier backfill already filled.
  */
 export function inferSnapshotEquipment(input: {
   existingEquipment?: string | null;
@@ -32,9 +34,6 @@ export function inferSnapshotEquipment(input: {
   }
   if (hits.length === 1) {
     return { equipment: hits[0], provenance: 'backfilled', detail: 'logged_name' };
-  }
-  if (options.length === 1) {
-    return { equipment: options[0], provenance: 'backfilled', detail: 'single_implement' };
   }
   return { equipment: null, provenance: 'unknown', detail: 'unspecified' };
 }

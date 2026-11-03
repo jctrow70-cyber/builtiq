@@ -5,10 +5,31 @@ import { prescriptionFingerprint } from '../scienceEngine/adaptation/apply/finge
 import { selectNextEligibleExposure } from '../scienceEngine/adaptation/apply/nextExposure';
 import type { AdaptationApplicationResult, CandidateExposure, SourceExposureRef } from '../scienceEngine/adaptation/apply/types';
 import type { ExerciseExposureInput } from '../scienceEngine/adaptation/inputs';
+import { canonicalEquipment, comparableVariantKey } from './equipmentIdentity';
 import { logHasPerformance } from './plannedSetGuard';
 
 function lateralityOf(ex: any): string | null {
   return ex?.laterality || ex?.coaching_metadata?.laterality || null;
+}
+
+function presentValue(value: unknown): boolean {
+  return value != null && String(value).trim() !== '';
+}
+
+function performedRows(sets: any[]): any[] {
+  return (sets || []).filter((set) => set?.completed || presentValue(set?.actual_weight) || presentValue(set?.actual_reps));
+}
+
+function oneSnapshotValue(sets: any[], field: string, kind: 'equipment' | 'variant'): string | null | 'mixed' {
+  const labels = performedRows(sets)
+    .map((set) => String(set?.[field] || '').trim())
+    .filter(Boolean);
+  if (!labels.length) return null;
+  const keys = new Set(
+    labels.map((label) => (kind === 'equipment' ? canonicalEquipment(label).key : comparableVariantKey(label)))
+  );
+  if (keys.size > 1) return 'mixed';
+  return labels[0];
 }
 
 export function candidatesFromProgram(opts: {
@@ -39,6 +60,7 @@ export function candidatesFromProgram(opts: {
         program_role: ex.program_role,
         measurement_type: ex.measurement_type,
         laterality: lateralityOf(ex),
+        equipment: ex.equipment || null,
         week: Number(workout.week || 1),
         day_order: Number(workout.day_order || 0),
         day_label: workout.day_label,
@@ -72,6 +94,8 @@ export function exposureFromLoggedExercise(opts: {
   attemptOutcome?: ExerciseExposureInput['attempt_outcome'];
   painFlag?: ExerciseExposureInput['pain_flag'];
   painAssociated?: boolean;
+  /** History ignores the current plan row when the log has no snapshot. */
+  equipmentSource?: 'current' | 'history';
 }): ExerciseExposureInput {
   const planned = (opts.exercise.st_planned_sets || []).filter((s: any) => !s.is_deleted);
   const working = planned.filter((s: any) => {
@@ -93,6 +117,8 @@ export function exposureFromLoggedExercise(opts: {
       snapshot_target_rir: log.snapshot_target_rir ?? s.target_rir,
       snapshot_program_role: log.snapshot_program_role || opts.exercise.program_role,
       snapshot_catalog_exercise_id: log.snapshot_catalog_exercise_id || opts.exercise.catalog_exercise_id,
+      snapshot_equipment: log.snapshot_equipment,
+      snapshot_variant: log.snapshot_variant,
       actual_weight: log.actual_weight,
       actual_reps: log.actual_reps,
       actual_rir: log.actual_rir,
@@ -111,6 +137,8 @@ export function exposureFromLoggedExercise(opts: {
     snapshot_target_rir: log.snapshot_target_rir,
     snapshot_program_role: log.snapshot_program_role || opts.exercise.program_role,
     snapshot_catalog_exercise_id: log.snapshot_catalog_exercise_id || opts.exercise.catalog_exercise_id,
+    snapshot_equipment: log.snapshot_equipment,
+    snapshot_variant: log.snapshot_variant,
     actual_weight: log.actual_weight,
     actual_reps: log.actual_reps,
     actual_rir: log.actual_rir,
@@ -120,14 +148,24 @@ export function exposureFromLoggedExercise(opts: {
     planned.map((s: any) => opts.logsByPlannedSetId[s.id]?.log_date).find(Boolean) ||
     opts.extraLogs?.[0]?.log_date ||
     new Date().toISOString().slice(0, 10);
+  const sets = [...plannedSets, ...extraSets];
+  const source = opts.equipmentSource || 'current';
+  const snapEquipment = oneSnapshotValue(sets, 'snapshot_equipment', 'equipment');
+  const snapVariant = oneSnapshotValue(sets, 'snapshot_variant', 'variant');
+  const equipment =
+    snapEquipment === 'mixed'
+      ? 'mixed'
+      : snapEquipment || (source === 'history' ? '' : String(opts.exercise.equipment || '').trim());
+  const laterality =
+    snapVariant === 'mixed' ? 'mixed' : snapVariant || (source === 'history' ? null : lateralityOf(opts.exercise));
   return {
     log_date: logDate,
     catalog_exercise_id: opts.exercise.catalog_exercise_id,
     exercise_name: opts.exercise.name,
     program_role: opts.exercise.program_role,
     measurement_type: opts.exercise.measurement_type || 'reps',
-    laterality: lateralityOf(opts.exercise),
-    equipment: opts.exercise.equipment || opts.exercise.snapshot_equipment,
+    laterality,
+    equipment,
     prescription: {
       rep_min: rx?.rep_min,
       rep_max: rx?.rep_max,
@@ -234,7 +272,8 @@ export async function applyProgressionForCompletedExercise(opts: {
     log_date: current.log_date,
     measurement_type: opts.exercise.measurement_type || 'reps',
     program_role: opts.exercise.program_role,
-    laterality: lateralityOf(opts.exercise),
+    laterality: current.laterality || null,
+    equipment: current.equipment || null,
     exercise_name: opts.exercise.name,
   };
   const laterIds = candidates

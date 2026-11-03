@@ -1,3 +1,4 @@
+import { comparableVariantKey, equipmentKeysComparable } from '../../../training/equipmentIdentity';
 import { isWorkingRole } from '../countedSets';
 import { BLOCKED_WEEK_STATUSES, ELIGIBLE_WEEK_STATUSES, type CandidateExposure, type SourceExposureRef } from './types';
 
@@ -24,9 +25,8 @@ export function isEligibleComparableTarget(source: SourceExposureRef, row: Candi
   const meas = String(row.measurement_type || source.measurement_type || 'reps').toLowerCase();
   const srcMeas = String(source.measurement_type || 'reps').toLowerCase();
   if (meas !== srcMeas) return { ok: false, reason: 'measurement' };
-  const srcLat = String(source.laterality || '').toLowerCase();
-  const rowLat = String(row.laterality || '').toLowerCase();
-  if (srcLat && rowLat && srcLat !== rowLat) return { ok: false, reason: 'laterality' };
+  if (comparableVariantKey(source.laterality) !== comparableVariantKey(row.laterality)) return { ok: false, reason: 'laterality' };
+  if (!equipmentKeysComparable(source.equipment, row.equipment)) return { ok: false, reason: 'equipment' };
   if (!(row.planned_sets || []).some((s) => !s.is_deleted)) return { ok: false, reason: 'no_sets' };
   return { ok: true };
 }

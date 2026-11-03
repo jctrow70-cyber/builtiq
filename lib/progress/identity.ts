@@ -1,3 +1,4 @@
+import { canonicalEquipment } from '../training/equipmentIdentity';
 import { parseProvenance, type SnapshotProvenance } from './provenance';
 
 /** Missing equipment is its own series. It is never folded into a known implement. */
@@ -23,13 +24,13 @@ export function seriesIdentityFromParts(input: {
   equipment?: string | null;
   variant?: string | null;
 }): SeriesIdentity {
-  const equipmentLabel = String(input.equipment || '').trim();
+  const equipment = canonicalEquipment(input.equipment);
   const variant = String(input.variant || '').trim();
   return {
     catalogExerciseId: String(input.catalogExerciseId || '').trim() || null,
     exerciseName: String(input.exerciseName || 'Exercise').trim() || 'Exercise',
-    equipmentKey: equipmentLabel ? equipmentLabel.toLowerCase() : UNSPECIFIED_EQUIPMENT,
-    equipmentLabel: equipmentLabel || 'Unspecified',
+    equipmentKey: equipment.key || UNSPECIFIED_EQUIPMENT,
+    equipmentLabel: equipment.label || 'Unspecified',
     variant: variant || null,
   };
 }

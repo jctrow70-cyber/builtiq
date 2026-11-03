@@ -50,9 +50,13 @@ export function previousPerformanceLine(result: PreviousPerformanceResult | null
   }
 
   if (result.kind === 'unknown_equipment' && result.uncertain) {
+    const label = result.uncertain.equipment;
+    const named = !!label && result.uncertain.equipmentKey !== 'unspecified' && label !== 'Unspecified';
     return {
       kind: 'unknown_equipment',
-      text: `Last (equipment unknown): ${formatHit(result.uncertain, { includeEquipment: false })}`,
+      text: named
+        ? `Last (unverified ${label}): ${formatHit(result.uncertain, { includeEquipment: false })}`
+        : `Last (equipment unknown): ${formatHit(result.uncertain, { includeEquipment: false })}`,
       copyLast: false,
     };
   }

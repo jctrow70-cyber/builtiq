@@ -11,6 +11,56 @@ Branch:
 Status:
 ```
 
+## BIQ-0301 - Keep equipment identity consistent
+
+Date: 2026-11-03
+Branch: main
+Status: Implemented locally. Not committed. Not pushed. Migration file added and not applied.
+
+Summary: Strength tracking now uses one equipment identity for logging, history, Copy Last, personal records, Progress series, and workout adaptation. A blank multi-implement exercise is no longer saved as Barbell. A set stores the equipment the athlete selected, including a selection that is still saving. Adaptation does not borrow another implement's load. Dumbbell weight stays per dumbbell. Smith machine increments use a plate step.
+
+Purpose: Barbell, dumbbell, and Smith machine versions of the same catalog exercise were being mixed. That made historical performance, Copy Last, personal records, Progress, and the next-workout target unreliable.
+
+Files changed:
+- lib/training/equipmentIdentity.ts
+- lib/training/equipmentSelection.ts
+- lib/progress/identity.ts
+- lib/progress/equipmentBackfill.ts
+- lib/training/exerciseEquipment.ts
+- lib/training/exerciseHistoryDisplay.ts
+- lib/training/exerciseSessionHistory.ts
+- lib/training/previousPerformanceDisplay.ts
+- lib/training/adaptationApply.ts
+- lib/training/adaptationOrchestration.ts
+- lib/scienceEngine/adaptation/comparable.ts
+- lib/scienceEngine/adaptation/increments.ts
+- lib/scienceEngine/adaptation/inputs.ts
+- lib/scienceEngine/adaptation/apply/nextExposure.ts
+- lib/scienceEngine/adaptation/apply/types.ts
+- app/page.tsx
+- app/components/WorkoutSetLogger.tsx
+- app/components/training/WorkoutTemplateEditor.tsx
+- scripts/test-equipment-identity.ts
+- scripts/test-progress-analytics.ts
+- scripts/test-exercise-history-display.ts
+- supabase/migrations/20261103_077_equipment_inference_no_single_implement.sql
+- DECISIONS.md
+- CHANGELOG.md
+
+Database changes: New migration replaces `st_infer_snapshot_equipment` so a single legal implement is not guessed. It does not update existing rows. It has not been applied. Migration 060 was not queried or re-run.
+
+Testing steps:
+- Log Bench Press with no equipment selected and confirm the set is blocked.
+- Select Dumbbell while a previous equipment save is still running, then log a set, and confirm the snapshot is Dumbbell.
+- Copy Last from a dumbbell session while the current exercise is Barbell and confirm copy stays off.
+- Finish a dumbbell bench session and confirm the next barbell or Smith machine bench target is unchanged.
+- Confirm a stored dumbbell weight is not doubled and a Smith machine increment is a plate step.
+- Confirm an older completed set still shows its original snapshot equipment.
+
+Known issues: Rows already backfilled by migration 060 are not reversed. Progress screens are not redesigned in this change. A missing historical variant still matches a bilateral plan. Migration 060 has not been confirmed against the live database in this session.
+
+Recommended commit message: Keep strength equipment identity consistent across logging, history, and adaptation.
+
 ## BIQ-0300 - Training week days go across like Groups
 
 Date: 2026-11-02

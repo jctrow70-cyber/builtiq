@@ -54,6 +54,7 @@ type Props = {
   prevBySetId: Record<string, PreviousSetView | null>;
   showPreviousSets?: boolean;
   weightUnit: 'lb' | 'kg';
+  weightCaption?: string | null;
   distanceUnit: 'mi' | 'km';
   onDistanceUnitChange: (u: 'mi' | 'km') => void;
   canEdit: boolean;
@@ -624,6 +625,7 @@ function WorkoutSetLogger({
   logs,
   prevBySetId,
   weightUnit,
+  weightCaption,
   distanceUnit,
   onDistanceUnitChange,
   canEdit,
@@ -700,6 +702,7 @@ function WorkoutSetLogger({
   return (
     <Profiler id="workout-set-logger" onRender={(_id, _phase, actualDuration) => noteLoggerRender(actualDuration)}>
     <div className="workout-set-logger">
+      {weightCaption ? <p className="muted equipment-load-caption">{weightCaption}</p> : null}
       {showDistToggle && (
         <div className="log-pref-bar">
           <span className="muted">Distance unit</span>
@@ -819,7 +822,7 @@ function sameSetLogs(a: Record<string, LogRow>, b: Record<string, LogRow>, rows:
 function loggerPropsEqual(prev: Props, next: Props) {
   if (prev.exType !== next.exType || prev.section !== next.section) return false;
   if (prev.canEdit !== next.canEdit || prev.canLog !== next.canLog) return false;
-  if (prev.weightUnit !== next.weightUnit || prev.distanceUnit !== next.distanceUnit) return false;
+  if (prev.weightUnit !== next.weightUnit || prev.weightCaption !== next.weightCaption || prev.distanceUnit !== next.distanceUnit) return false;
   if (prev.showPreviousSets !== next.showPreviousSets || prev.exerciseSkipped !== next.exerciseSkipped) return false;
   if (prev.prevBySetId !== next.prevBySetId) return false;
   if (prev.onSaveField !== next.onSaveField || prev.onEditSet !== next.onEditSet || prev.onRemoveSet !== next.onRemoveSet) return false;

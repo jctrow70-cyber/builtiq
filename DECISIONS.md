@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 157 - Unknown equipment stays unknown
+
+Date: 2026-11-03
+Status: Implemented locally
+Category: Progress
+
+### Decision
+
+BIQ-0301 stops guessing a single legal implement for equipment that was never recorded. A blank multi-implement exercise must be selected before a set is logged. An explicit selection is stored with the set even when the exercise-row save is still in flight, and an older save cannot overwrite a newer selection. Adaptation compares catalog exercise, equipment, and meaningful variant. Dumbbell weight stays the typed per-dumbbell load. Smith machine load uses a plate step. Aliases such as DB and Dumbbell match at read time. Stored snapshot text is not rewritten, and backfilled or estimated provenance is not treated as a confirmed selection.
+
+### Reason
+
+The same Bench Press card can be a barbell, a dumbbell, or a Smith machine. Treating a blank as Barbell, or a dumbbell session as the next barbell target, mixes loads that are not the same lift.
+
+### Alternatives Considered
+
+Keep assigning the only legal implement during backfill. That labels unknown history as confirmed. Wait for the exercise-row save before a set can be logged. That blocks logging during a slow save. Double stored dumbbell weights. That changes history the athlete already recorded.
+
+### Impact
+
+No existing completed-set snapshot is rewritten. A new migration replaces the inference function and does not update rows. It is not applied in this change. Progress screens, program generation, Group Progress, nutrition, and body measurements are unchanged.
+
+---
+
 ## Decision 156 - Training Week uses the Groups side-to-side week
 
 Date: 2026-11-02

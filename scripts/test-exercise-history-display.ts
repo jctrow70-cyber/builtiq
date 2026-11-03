@@ -72,7 +72,8 @@ assert.equal(historyEquipmentFromSnapshot(barbell).equipmentVerified, true);
 assert.equal(historyEquipmentFromSnapshot(barbell).equipmentLabel, 'Barbell');
 assert.equal(historyEquipmentFromSnapshot(unknown).equipmentVerified, false);
 assert.equal(historyEquipmentFromSnapshot(unknown).equipmentLabel, 'Unknown');
-assert.equal(historyEquipmentFromSnapshot(unverified).equipmentLabel, 'Unknown');
+assert.equal(historyEquipmentFromSnapshot(unverified).equipmentLabel, 'Barbell');
+assert.equal(historyEquipmentFromSnapshot(unverified).equipmentVerified, false);
 assert.equal(
   historyEquipmentFromSnapshot({
     snapshot_equipment: 'Dumbbell',
@@ -140,9 +141,9 @@ assert.equal(filterExerciseHistorySessions(unknownSessions, { mode: 'current', c
 assert.equal(filterExerciseHistorySessions(unknownSessions, { mode: 'all', currentEquipment: 'Barbell' }).length, 1);
 
 const unverifiedSessions = buildExerciseSessionHistory([unverified], 'strength', { matchDayLabel: false });
-assert.equal(filterExerciseHistorySessions(unverifiedSessions, { mode: 'current', currentEquipment: 'Barbell' }).length, 0);
+assert.equal(filterExerciseHistorySessions(unverifiedSessions, { mode: 'current', currentEquipment: 'Barbell' }).length, 1);
 assert.equal(filterExerciseHistorySessions(unverifiedSessions, { mode: 'all', currentEquipment: 'Barbell' }).length, 1);
-assert.equal(historySetEquipmentText(unverifiedSessions[0].sets[0]), 'Unknown');
+assert.equal(historySetEquipmentText(unverifiedSessions[0].sets[0]), 'Barbell · unverified');
 
 const dates = buildExerciseSessionHistory([barbell, smith], 'strength', { matchDayLabel: false });
 assert.ok(dates[0].date >= dates[dates.length - 1].date);

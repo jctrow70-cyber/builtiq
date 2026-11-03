@@ -1,3 +1,4 @@
+import { comparableVariantKey, equipmentKeysComparable } from '../../training/equipmentIdentity';
 import { countWorkingSets, inferLoadMode, prescriptionRange, currentLoadOf, isWorkingRole } from './countedSets';
 import { classifyRir, COMPARABLE_LOOKBACK_DAYS, COMPARABLE_MAX_EXPOSURES, type EffortClass } from './reasonCodes';
 import type { ExerciseExposureInput } from './inputs';
@@ -62,9 +63,8 @@ export function exposuresAreComparable(current: ExerciseExposureInput, other: Ex
   const otherMeas = String(other.measurement_type || 'reps').toLowerCase();
   if (curMeas !== otherMeas) return false;
 
-  const curLat = String(current.laterality || '').toLowerCase();
-  const otherLat = String(other.laterality || '').toLowerCase();
-  if (curLat && otherLat && curLat !== otherLat) return false;
+  if (comparableVariantKey(current.laterality) !== comparableVariantKey(other.laterality)) return false;
+  if (!equipmentKeysComparable(current.equipment, other.equipment)) return false;
 
   return rangesOverlap(prescriptionRange(current), prescriptionRange(other));
 }

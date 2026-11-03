@@ -428,11 +428,12 @@ const backfillSamples = [
 ];
 const recovered = backfillSamples.filter((item) => item.equipment && item.provenance !== 'unknown');
 const unspecifiedBackfill = backfillSamples.filter((item) => item.detail === 'unspecified');
-assert.equal(recovered.length, 4);
-assert.equal(unspecifiedBackfill.length, 1);
+assert.equal(recovered.length, 3);
+assert.equal(unspecifiedBackfill.length, 2);
 assert.equal(backfillSamples[2].equipment, null);
 assert.equal(backfillSamples[1].equipment, 'Dumbbell');
-assert.equal(backfillSamples[3].equipment, 'Barbell');
+assert.equal(backfillSamples[3].equipment, null);
+assert.equal(backfillSamples[3].provenance, 'unknown');
 assert.equal(backfillSamples[4].equipment, 'Smith Machine');
 console.log(
   `equipment backfill fixtures: recovered ${recovered.length}, unspecified ${unspecifiedBackfill.length} (generic Bench Press was not called Barbell)`

@@ -910,6 +910,7 @@ function TemplateExerciseCard({
                     onChange={(e) => onEquipment(e.target.value)}
                     aria-label="Equipment"
                   >
+                    {!currentEq ? <option value="">Select equipment</option> : null}
                     {eqOptions.map((eq) => (
                       <option key={eq} value={eq}>
                         {eq}

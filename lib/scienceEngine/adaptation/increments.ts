@@ -1,3 +1,4 @@
+import { canonicalEquipment } from '../../training/equipmentIdentity';
 import type { IncrementRounding, IncrementSource } from './types';
 
 export type IncrementContext = {
@@ -38,11 +39,18 @@ function equipmentDefault(
   if (loadMode === 'weighted_bodyweight' || /dip.?belt|weight.?belt|weighted bodyweight/.test(equipment)) {
     return { increment: units === 'kg' ? 1.25 : 2.5, reason: 'Small added-weight step for weighted bodyweight' };
   }
-  if (/kettlebell|kb\b/.test(equipment)) {
+  const key = canonicalEquipment(equipment).key;
+  if (key === 'smith machine') {
+    return {
+      increment: units === 'kg' ? 2.5 : 5,
+      reason: units === 'kg' ? '2.5 kg Smith machine plate step' : '5 lb Smith machine plate step',
+    };
+  }
+  if (key === 'kettlebell' || /kettlebell|kb\b/.test(equipment)) {
     return { increment: units === 'kg' ? 4 : 9, reason: 'Next typical kettlebell jump' };
   }
-  if (/dumbbell|db\b/.test(equipment)) {
-    return { increment: units === 'kg' ? 2 : 5, reason: 'Next typical dumbbell pair' };
+  if (key === 'dumbbell' || /dumbbell|db\b/.test(equipment)) {
+    return { increment: units === 'kg' ? 2 : 5, reason: units === 'kg' ? '2 kg per dumbbell' : '5 lb per dumbbell' };
   }
   if (/plate[- ]?load/.test(equipment)) {
     return { increment: units === 'kg' ? 5 : 10, reason: 'Plate-loaded machine step' };

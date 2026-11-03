@@ -204,6 +204,7 @@ export function historyFromProgramLogs(opts: {
         workout,
         logsByPlannedSetId: opts.logsByPlannedSetId,
         extraLogs: extrasByExercise[ex.id] || [],
+        equipmentSource: 'history',
       });
       const hasPerf = (exposure.sets || []).some((s) => s.completed || s.actual_reps || s.actual_weight);
       if (!hasPerf) continue;
@@ -297,7 +298,8 @@ export function orchestrateCompletedWorkout(input: AdaptationOrchestrationInput)
       log_date: session.log_date,
       measurement_type: ex.measurement_type || 'reps',
       program_role: ex.program_role,
-      laterality: ex.laterality || ex.coaching_metadata?.laterality || null,
+      laterality: current.laterality || null,
+      equipment: current.equipment || null,
       exercise_name: ex.name,
     };
     const selected = selectNextEligibleExposure(sourceRef, candidates);
