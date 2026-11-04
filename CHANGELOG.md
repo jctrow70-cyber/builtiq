@@ -11,6 +11,35 @@ Branch:
 Status:
 ```
 
+## BIQ-0305 - Stop greying out log fields when equipment is missing
+
+Date: 2026-11-04
+Branch: main
+Status: Implemented locally. Not committed. Not pushed.
+
+Summary: Weight and reps stay enabled even when equipment still needs a choice. Logging cards that are not in plan-edit mode still show the equipment picker. A missing choice keeps a clear required style and message, and a set still will not save until equipment is selected. Pending equipment on the card counts for the set snapshot.
+
+Purpose: After BIQ-0301, multi-implement exercises with no equipment locked `canLog` and disabled the inputs. On assigned or other non-edit logging views the equipment dropdown was hidden, so the fields looked broken and the keyboard never opened.
+
+Files changed:
+- app/page.tsx
+- app/globals.css
+- scripts/test-logger-equipment-unlock.ts
+- CHANGELOG.md
+
+Database changes: None.
+
+Testing steps:
+- Run `npx tsx scripts/test-logger-equipment-unlock.ts`.
+- Open a multi-implement exercise with no equipment chosen. Weight/reps should accept a cursor and keyboard.
+- Confirm the equipment select is highlighted and says to choose equipment.
+- Choose Barbell or Dumbbell, then log a set. Confirm it saves.
+- On an assigned workout without plan-edit controls, confirm the equipment select still appears and unlocking works the same way.
+
+Known issues: A set typed before equipment is chosen still shows the equipment error until equipment is selected and Retry is used.
+
+Recommended commit message: BIQ-0305 Keep log fields enabled until equipment is chosen.
+
 ## BIQ-0304 - Keep weight and reps tappable on the set card
 
 Date: 2026-11-04
