@@ -1,4 +1,4 @@
-import { equipmentSeriesKey, seriesIdentityFromParts, type SeriesIdentity } from './identity';
+import { equipmentSeriesKey, seriesIdentityFromParts, seriesKey, type SeriesIdentity } from './identity';
 import { comparableVariantKey } from '../training/equipmentIdentity';
 import { loggerSelectedEquipment } from '../training/previousPerformanceDisplay';
 import { equipmentRecordLabel, equipmentRecordOf, type EquipmentRecord } from './provenance';

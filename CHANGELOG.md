@@ -11,13 +11,36 @@ Branch:
 Status:
 ```
 
-<<<<<<< HEAD
-<<<<<<< HEAD
+## BIQ-0307 - Restore seriesKey import for production build
+
+Date: 2026-11-04
+Branch: cursor/fix-serieskey-build-a8f4
+Status: Implemented locally. Not committed. Not pushed.
+
+Summary: `seriesIdentityKey` imports `seriesKey` again. Unresolved CHANGELOG merge markers from the BIQ-0306 / BIQ-0302.1 merge are removed so both entries remain.
+
+Purpose: The Vercel production build failed type checking because `seriesIdentityKey` called `seriesKey` after the import was narrowed to `equipmentSeriesKey` only. A conflicted CHANGELOG also remained on main from the local merge dialog.
+
+Files changed:
+- lib/progress/exerciseProgress.ts
+- CHANGELOG.md
+
+Database changes: None.
+
+Testing steps:
+- Run `npx tsx scripts/test-exercise-progress.ts`.
+- Run `npm run build` and confirm type checking passes `seriesIdentityKey`.
+- Confirm CHANGELOG has no `<<<<<<<` markers and lists BIQ-0307, BIQ-0302.1, then BIQ-0306.
+
+Known issues: None.
+
+Recommended commit message: BIQ-0307 Restore seriesKey import for the production build.
+
 ## BIQ-0302.1 - Signed-in progress and history corrections
 
 Date: 2026-11-04
 Branch: main
-Status: Implemented locally. Not committed. Not pushed. No migration applied.
+Status: Merged to main. Pushed. No migration applied.
 
 Summary: View Progress from an active workout now uses the logger's selected equipment, and a bilateral exercise matches history that never stored a side. A one-date chart labels the real estimated 1RM instead of the padded axis. Training History uses the scheduled workout title when that title is reliable. Cable Machine matches Cable. A recorded left or right side is shown on the set. The generated icon files that blocked the dev server are removed.
 
@@ -58,8 +81,7 @@ Testing steps:
 Known issues: A GHD Sit-Up set whose stored equipment text is already "Cable machine" will group with Cable. That text is the historical snapshot, not the master card, and it was not rewritten. The chart still draws one point per date, using the best estimated 1RM that day.
 
 Recommended commit message: Fix progress equipment, chart labels, workout names, and icon startup.
-=======
-=======
+
 ## BIQ-0306 - Keep equipment selection after personal-copy id remap
 
 Date: 2026-11-04
@@ -90,7 +112,6 @@ Known issues: Signed-in browser verification of the live group first-copy path s
 
 Recommended commit message: BIQ-0306 Keep equipment selection after personal-copy id remap.
 
->>>>>>> 191c2995ed6cdad4ab485b44fc6ad8a3f89ef021
 ## BIQ-0305 - Stop greying out log fields when equipment is missing
 
 Date: 2026-11-04
@@ -148,7 +169,6 @@ Testing steps:
 Known issues: None.
 
 Recommended commit message: BIQ-0304 Keep weight and reps tappable under the Done rail.
->>>>>>> 405c61c0b6801b9321892116441d90310619b00b
 
 ## BIQ-0303 - Let the production build read an equipment block reason
 
