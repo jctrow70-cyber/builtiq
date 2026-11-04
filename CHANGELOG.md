@@ -12,6 +12,7 @@ Status:
 ```
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 ## BIQ-0302.1 - Signed-in progress and history corrections
 
 Date: 2026-11-04
@@ -58,6 +59,38 @@ Known issues: A GHD Sit-Up set whose stored equipment text is already "Cable mac
 
 Recommended commit message: Fix progress equipment, chart labels, workout names, and icon startup.
 =======
+=======
+## BIQ-0306 - Keep equipment selection after personal-copy id remap
+
+Date: 2026-11-04
+Branch: main
+Status: Merged to main. Pushed.
+
+Summary: Exercise-field writes after a private copy resolve the copied row by stable identity instead of a stale id. Zero-row updates count as failures. Pending equipment remaps to the new exercise id, stays visible until a confirmed write, and ignores older async results. Ambiguous duplicate matches fail safely without writing another exercise. Set saves are blocked while a private copy is still being created so a set cannot write against unresolved exercise identity.
+
+Purpose: Choosing equipment on a live group workout created a private copy with new exercise ids. The save still targeted the old id, reported success for a zero-row update, cleared optimistic pending state, and left the picker on Select equipment until the user left and came back.
+
+Files changed:
+- lib/training/exerciseTargetResolve.ts
+- app/page.tsx
+- scripts/test-exercise-target-resolve.ts
+- CHANGELOG.md
+
+Database changes: None.
+
+Testing steps:
+- Run `npx tsx scripts/test-exercise-target-resolve.ts`.
+- Run `npx tsx scripts/test-equipment-identity.ts`.
+- Run `npx tsx scripts/test-logger-equipment-unlock.ts`.
+- On a live group workout that still needs a private copy, open Chest-Supported Row, choose equipment, and confirm it stays selected without leaving the screen.
+- Change equipment twice quickly and confirm the last choice remains.
+- Log weight, reps, RIR, and Done, then leave and reopen the workout.
+
+Known issues: Signed-in browser verification of the live group first-copy path still requires manual validation. Follow-up: `WorkoutTemplateEditor` / `lib/training/workoutTemplate.ts` `matchingExercise` can still pick the first duplicate name outside the logging path; do not fold that into this change.
+
+Recommended commit message: BIQ-0306 Keep equipment selection after personal-copy id remap.
+
+>>>>>>> 191c2995ed6cdad4ab485b44fc6ad8a3f89ef021
 ## BIQ-0305 - Stop greying out log fields when equipment is missing
 
 Date: 2026-11-04
