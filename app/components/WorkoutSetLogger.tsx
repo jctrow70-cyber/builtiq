@@ -541,7 +541,7 @@ function SetLogCard({
           )}
         </div>
 
-        <div className="log-field-row log-field-row-compact log-field-row-metrics">
+        <div className="set-log-metrics log-field-row log-field-row-compact log-field-row-metrics">
           {layout.primary.map(renderField)}
         </div>
 

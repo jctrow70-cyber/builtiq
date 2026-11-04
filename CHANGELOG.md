@@ -11,6 +11,35 @@ Branch:
 Status:
 ```
 
+## BIQ-0304 - Keep weight and reps tappable on the set card
+
+Date: 2026-11-04
+Branch: main
+Status: Merged to main. Pushed.
+
+Summary: The weight and reps fields on a set card are placed in the left grid column again. The Done rail no longer covers those inputs, so a tap opens the keyboard. Empty rail space ignores taps; Done and Remove still receive them.
+
+Purpose: On mobile, tapping weight or reps did nothing. The metrics row was missing the `set-log-metrics` grid class, so CSS auto-placed it under the full-height Done rail. Touches hit the rail instead of the inputs, and the soft keyboard never opened.
+
+Files changed:
+- app/components/WorkoutSetLogger.tsx
+- app/globals.css
+- scripts/test-logger-input-hit-target.ts
+- CHANGELOG.md
+
+Database changes: None.
+
+Testing steps:
+- Run `npx tsx scripts/test-logger-input-hit-target.ts`.
+- Open a workout on a phone (or DevTools mobile). Tap Weight — the numeric keyboard should open.
+- Tap Reps — the keyboard should stay or reopen on that field.
+- Tap Done and Remove — both still work.
+- Confirm RIR chips still sit under the weight/reps row when the exercise uses them.
+
+Known issues: None.
+
+Recommended commit message: BIQ-0304 Keep weight and reps tappable under the Done rail.
+
 ## BIQ-0303 - Let the production build read an equipment block reason
 
 Date: 2026-11-03
