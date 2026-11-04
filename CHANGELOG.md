@@ -14,8 +14,8 @@ Status:
 ## BIQ-0307 - Restore seriesKey import for production build
 
 Date: 2026-11-04
-Branch: cursor/fix-serieskey-build-a8f4
-Status: Implemented locally. Not committed. Not pushed.
+Branch: main
+Status: Merged to main. Pushed.
 
 Summary: `seriesIdentityKey` imports `seriesKey` again. Unresolved CHANGELOG merge markers from the BIQ-0306 / BIQ-0302.1 merge are removed so both entries remain.
 
