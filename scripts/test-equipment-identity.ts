@@ -15,7 +15,7 @@ import { inferSnapshotEquipment } from '../lib/progress/equipmentBackfill';
 import { seriesIdentityFromParts, seriesKey } from '../lib/progress/identity';
 import { exposureFromLoggedExercise } from '../lib/training/adaptationApply';
 import { loadEntryCaption } from '../lib/training/equipmentIdentity';
-import { createEquipmentWriteQueue, equipmentForSetSnapshot } from '../lib/training/equipmentSelection';
+import { createEquipmentWriteQueue, equipmentChoiceBlockReason, equipmentForSetSnapshot } from '../lib/training/equipmentSelection';
 import { resolveExerciseEquipment } from '../lib/training/exerciseEquipment';
 import { estimateE1rm } from '../lib/training/estimated1Rm';
 import { classifyPreviousPerformance } from '../lib/training/previousPerformance';
@@ -121,8 +121,10 @@ assert.equal(resolveExerciseEquipment({ equipment: '' }, { equipment: 'Cable' })
 
 const needsChoice = equipmentForSetSnapshot({ persisted: '', options });
 assert.equal(needsChoice.ok, false);
+assert.equal(equipmentChoiceBlockReason(needsChoice), 'Choose the equipment for this exercise before logging a set.');
 const pendingDumbbell = equipmentForSetSnapshot({ persisted: 'Barbell', pending: 'Dumbbell', options });
 assert.equal(pendingDumbbell.ok && pendingDumbbell.equipment, 'Dumbbell');
+assert.equal(equipmentChoiceBlockReason(pendingDumbbell), null);
 const aliasPending = equipmentForSetSnapshot({ persisted: 'Barbell', pending: 'DB', options });
 assert.equal(aliasPending.ok && aliasPending.equipment, 'Dumbbell');
 const unspecified = equipmentForSetSnapshot({ persisted: '', options: [] });

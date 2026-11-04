@@ -40,7 +40,7 @@ const PAGE_SIZE = 1000;
 
 type QueryClient = {
   from: (table: string) => any;
-  rpc?: (fn: string, args?: Record<string, unknown>) => Promise<{ data: any; error: { message?: string } | null }>;
+  rpc?: (fn: string, args?: Record<string, unknown>) => PromiseLike<{ data: any; error: { message?: string } | null }>;
 };
 
 /**

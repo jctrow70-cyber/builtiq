@@ -9,6 +9,11 @@ export type EquipmentSnapshotChoice =
   | { ok: true; equipment: string }
   | { ok: false; equipment: ''; reason: string };
 
+/** Why a set cannot be logged yet. Null when the selected equipment can be stored. */
+export function equipmentChoiceBlockReason(choice: EquipmentSnapshotChoice): string | null {
+  return choice.ok === false ? choice.reason : null;
+}
+
 export function beginEquipmentChange(previous: EquipmentIntent | undefined, value: string): EquipmentIntent {
   return {
     generation: (previous?.generation || 0) + 1,

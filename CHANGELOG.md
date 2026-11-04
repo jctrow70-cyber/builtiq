@@ -11,6 +11,35 @@ Branch:
 Status:
 ```
 
+## BIQ-0303 - Let the production build read an equipment block reason
+
+Date: 2026-11-03
+Branch: main
+Status: Implemented locally. Not committed. Not pushed.
+
+Summary: Logging a set and adding an extra set now read a missing-equipment message through a small helper. The exercise card uses that same message. The stored equipment choice is unchanged. Progress queries accept Supabase's thenable `rpc` result.
+
+Purpose: The Vercel production build failed type checking in the workout logger. `reason` exists only when equipment still needs to be chosen, and the logger functions are too large for TypeScript to narrow that union under this project's compiler settings. Current main also rejected the Supabase client where progress expected `rpc` to return a full Promise.
+
+Files changed:
+- lib/training/equipmentSelection.ts
+- app/page.tsx
+- lib/progress/queries.ts
+- scripts/test-equipment-identity.ts
+- CHANGELOG.md
+
+Database changes: None.
+
+Testing steps:
+- Run `npx tsx scripts/test-equipment-identity.ts`.
+- Run `npm run build` and confirm type checking passes the equipment choice and the progress query client.
+- On a multi-implement exercise with no equipment selected, confirm a set does not save and the card explains that equipment must be chosen.
+- Select equipment, log a set, and add an extra set. Confirm the saved equipment matches the selection.
+
+Known issues: Signed-in browser checks are still outstanding for the surrounding progress and history work.
+
+Recommended commit message: Fix the production type error when equipment still needs to be chosen.
+
 ## BIQ-0302 - Exercise progress and concise training history
 
 Date: 2026-11-03
