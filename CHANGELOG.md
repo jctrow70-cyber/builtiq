@@ -14,8 +14,8 @@ Status:
 ## BIQ-0306 - Keep equipment selection after personal-copy id remap
 
 Date: 2026-11-04
-Branch: cursor/fix-equipment-identity-persist-a8f4
-Status: Implemented locally. Not committed. Not pushed.
+Branch: main
+Status: Merged to main. Pushed.
 
 Summary: Exercise-field writes after a private copy resolve the copied row by stable identity instead of a stale id. Zero-row updates count as failures. Pending equipment remaps to the new exercise id, stays visible until a confirmed write, and ignores older async results. Ambiguous duplicate matches fail safely without writing another exercise. Set saves are blocked while a private copy is still being created so a set cannot write against unresolved exercise identity.
 
