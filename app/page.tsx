@@ -32,8 +32,14 @@ import { getExerciseGuidePayload, getExerciseThumb, hasExerciseGuide } from '../
 import { matchExerciseToCatalog } from '../lib/training/aiProgramPlan';
 import { EQUIPMENT_OPTIONS, hasEquipmentFilter, normalizeEquipmentList, equipmentFilterLabel } from '../lib/training/equipmentFilter';
 import { compatibleEquipmentOptions, defaultCatalogEquipment, resolveExerciseEquipment } from '../lib/training/exerciseEquipment';
-import { loadEntryCaption } from '../lib/training/equipmentIdentity';
+import { canonicalEquipment, loadEntryCaption } from '../lib/training/equipmentIdentity';
 import { createEquipmentWriteQueue, equipmentChoiceBlockReason, equipmentForSetSnapshot, type EquipmentWriteQueue } from '../lib/training/equipmentSelection';
+import {
+  clearPendingEquipmentIds,
+  exerciseUpdateTouchedRow,
+  remapPendingByExerciseId,
+  resolveExerciseTarget as resolveExerciseTargetSafe,
+} from '../lib/training/exerciseTargetResolve';
 import {
   currentCalendarWeekBounds,
   dateForWeekAndDay,
@@ -2137,18 +2143,25 @@ export default function Page(){
  function changeExerciseEquipment(ex:any,value:string){
   const next=String(value||'').trim();
   if(!ex?.id||!next)return;
-  const queue=equipmentQueueFor(ex.id);
+  const sourceId=String(ex.id);
+  const queue=equipmentQueueFor(sourceId);
   queue.enqueue(next, async (selected, isCurrent)=>{
-    const saved=await updateExerciseField(ex,'equipment',selected);
-    if(!isCurrent()||!saved)return;
+    const result=await updateExerciseField(ex,'equipment',selected,{
+      onResolved:(matchedId)=>{
+        if(!matchedId||matchedId===sourceId)return;
+        if(equipmentQueuesRef.current[sourceId]) equipmentQueuesRef.current[matchedId]=equipmentQueuesRef.current[sourceId];
+        setPendingEquipmentById((prev)=>remapPendingByExerciseId(prev,sourceId,matchedId));
+      },
+    });
+    if(!isCurrent())return;
+    if(!result.ok)return;
+    const clearIds=[sourceId,result.matchedId];
     setPendingEquipmentById((prev)=>{
       if(!isCurrent())return prev;
-      const copy={...prev};
-      delete copy[ex.id];
-      return copy;
+      return clearPendingEquipmentIds(prev,clearIds,selected,(a,b)=>canonicalEquipment(a).key===canonicalEquipment(b).key);
     });
   });
-  setPendingEquipmentById((prev)=>({...prev,[ex.id]:queue.intent()?.value||next}));
+  setPendingEquipmentById((prev)=>({...prev,[sourceId]:queue.intent()?.value||next}));
  }
 
  function priorCompletedLogsForPr(excludeSetId:string,excludeDate:string){
@@ -2577,25 +2590,45 @@ export default function Page(){
  if(error)return alert(error.message);
  await loadCatalog();
  }
- async function updateExerciseField(ex:any,field:string,value:string){
- if(!(await ensurePersonalCopyForTrainingEdit()))return false;
+ async function updateExerciseField(ex:any,field:string,value:string,opts?:{onResolved?:(matchedId:string)=>void}):Promise<{ok:boolean;matchedId?:string;error?:string}>{
+ const fail=(message:string)=>{alert(message);return {ok:false as const,error:message};};
+ if(!(await ensurePersonalCopyForTrainingEdit()))return fail('Could not open your private copy for this edit.');
  const current=planEditRef.current?.workout||workout;
+ if(!current)return fail('Could not find this workout after making your private copy.');
  const section=exerciseSection(ex);
  let payload:Record<string,any>={[field]:value};
  if(field==='name'){
   const trimmed=value.trim();
-  if(!trimmed)return false;
+  if(!trimmed)return fail('Enter an exercise name.');
   const searchPool=workoutSearchCatalogItems(catalog,session?.user?.id);
   const hit=matchExerciseToCatalog(trimmed,searchPool,catalogByName(searchPool))||pickCanonicalCatalogItem(catalog,trimmed);
   if(hit)payload=catalogPayloadFromItem(hit,section,ex);
   else payload={name:trimmed,catalog_exercise_id:null};
  }
- for(const tw of targetWorkoutsFrom(current)){
+ const currentMatch=resolveExerciseTarget(current,ex,current);
+ if(!currentMatch?.id)return fail('Could not find this exercise after making your private copy.');
+ opts?.onResolved?.(String(currentMatch.id));
+ const targets=targetWorkoutsFrom(current);
+ let wroteCurrent=false;
+ for(const tw of targets){
   const match=resolveExerciseTarget(tw,ex,current);
-  if(match){let{error}=await supabase.from('st_exercises').update(payload).eq('id',match.id); if(error&&payload.equipment!==undefined&&/equipment/i.test(error.message||'')){const{equipment:_eq,...rest}=payload; ({error}=await supabase.from('st_exercises').update(rest).eq('id',match.id));} if(error){alert(error.message);return false;}}
+  if(!match?.id){
+   if(tw?.id===current?.id)return fail('Could not find this exercise after making your private copy.');
+   continue;
+  }
+  let{data,error}=await supabase.from('st_exercises').update(payload).eq('id',match.id).select('id');
+  if(error&&payload.equipment!==undefined&&/equipment/i.test(error.message||'')){
+   const{equipment:_eq,...rest}=payload;
+   if(!Object.keys(rest).length)return fail(error.message);
+   ({data,error}=await supabase.from('st_exercises').update(rest).eq('id',match.id).select('id'));
+  }
+  if(error)return fail(error.message);
+  if(!exerciseUpdateTouchedRow(data))return fail('Could not save this exercise change.');
+  if(tw?.id===current?.id)wroteCurrent=true;
  }
+ if(!wroteCurrent)return fail('Could not save this exercise change.');
  await reloadKeepDay();
- return true;
+ return {ok:true,matchedId:String(currentMatch.id)};
 }
  function restoreExerciseEdit(programRemoved:RemovedExercise[],calendarRemoved:RemovedExercise[]){
   if(programRemoved.length)setProgram((prev:any)=>restoreRemovedExercises(prev,programRemoved));
@@ -2883,6 +2916,7 @@ export default function Page(){
  }
  async function saveLog(sid:string,field:string,value:any,opts?:{completed?:boolean}):Promise<SetLogSaveResult>{
   if(isPendingExerciseId(sid))return {ok:false,stale:false,error:'This exercise is still being added.'};
+  if(customizeForMeBusy||personalCopyFlightRef.current)return {ok:false,stale:false,error:'Making your private copy… try again in a moment.'};
   if(!canLog())return {ok:false,stale:false,error:'You cannot log sets for this workout.'};
   return upsertSetLog(sid,{[field]:value},opts);
  }
@@ -2926,6 +2960,7 @@ export default function Page(){
  }
  async function upsertSetLog(sid:string,fieldUpdates:Record<string,any>,opts?:{completed?:boolean}):Promise<SetLogSaveResult>{
   if(isPendingExerciseId(sid))return {ok:false,stale:false,error:'This exercise is still being added.'};
+  if(customizeForMeBusy||personalCopyFlightRef.current)return {ok:false,stale:false,error:'Making your private copy… try again in a moment.'};
   if(!canLog())return {ok:false,stale:false,error:'You cannot log sets for this workout.'};
   const ledger=ledgerForSetLog(sid);
   const result=ledger.push(fieldUpdates||{},opts?.completed);
@@ -2941,6 +2976,7 @@ export default function Page(){
  }
  async function executeSetLogWrite(sid:string,fieldUpdates:Record<string,any>){
   try{
+  if(customizeForMeBusy||personalCopyFlightRef.current)return {ok:false,error:'Making your private copy… try again in a moment.'};
   const old=logsRef.current[sid]||{};
   const located=findSetInProgram(activeProgramForLogging(),sid,extraWorkoutsForLogging());
   if(!located) return {ok:false,error:'Could not save log for this set.'};
@@ -3878,37 +3914,8 @@ function targetWorkoutsFrom(current:any,sourceProgram:any=program,scopeOverride?
   const scoped=workoutsInEditScope(all,active,scope,onTheFly);
   return scoped.length?scoped:[active];
 }
-function matchingExercise(targetWorkout:any, sourceExercise:any){
-  if(!targetWorkout||!sourceExercise)return null;
-  const section=exerciseSection(sourceExercise);
-  const exs=(targetWorkout.st_exercises||[]).filter((e:any)=>exerciseSection(e)===section);
-  const gid=sourceExercise.superset_group_id||null;
-  if(gid){
-    const slot=sourceExercise.superset_order;
-    if(slot!=null){
-      const byGroupSlot=exs.find((e:any)=>e.superset_group_id===gid&&(e.superset_order||0)===slot);
-      if(byGroupSlot)return byGroupSlot;
-    }
-    if(sourceExercise.catalog_exercise_id){
-      const byGroupCat=exs.find((e:any)=>e.superset_group_id===gid&&e.catalog_exercise_id===sourceExercise.catalog_exercise_id);
-      if(byGroupCat)return byGroupCat;
-    }
-    const byGroupName=exs.find((e:any)=>e.superset_group_id===gid&&e.name===sourceExercise.name);
-    if(byGroupName)return byGroupName;
-  }
-  if(sourceExercise.catalog_exercise_id){
-    const bySortCat=exs.find((e:any)=>e.sort_order===sourceExercise.sort_order&&e.catalog_exercise_id===sourceExercise.catalog_exercise_id);
-    if(bySortCat)return bySortCat;
-  }
-  const bySortName=exs.find((e:any)=>e.sort_order===sourceExercise.sort_order&&e.name===sourceExercise.name);
-  if(bySortName)return bySortName;
-  return (sourceExercise.catalog_exercise_id&&exs.find((e:any)=>e.catalog_exercise_id===sourceExercise.catalog_exercise_id))
-    || exs.find((e:any)=>e.name===sourceExercise.name)
-    || null;
-}
 function resolveExerciseTarget(targetWorkout:any,sourceExercise:any,currentWorkout:any){
-  if(targetWorkout?.id===currentWorkout?.id)return (targetWorkout.st_exercises||[]).find((x:any)=>x.id===sourceExercise.id)||sourceExercise;
-  return matchingExercise(targetWorkout,sourceExercise);
+  return resolveExerciseTargetSafe(targetWorkout,sourceExercise,currentWorkout,exerciseSection);
 }
 
  const weekWorkouts=(program?.st_workouts||[]).filter((w:any)=>w.week===week).sort((a:any,b:any)=>a.day_order-b.day_order);
