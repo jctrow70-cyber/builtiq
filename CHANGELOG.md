@@ -15,7 +15,7 @@ Status:
 
 Date: 2026-11-04
 Branch: main
-Status: Implemented locally. Not committed. Not pushed.
+Status: Merged to main. Pushed.
 
 Summary: Weight and reps stay enabled even when equipment still needs a choice. Logging cards that are not in plan-edit mode still show the equipment picker. A missing choice keeps a clear required style and message, and a set still will not save until equipment is selected. Pending equipment on the card counts for the set snapshot.
 
