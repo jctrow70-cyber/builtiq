@@ -1,3 +1,5 @@
+import { chartReadout } from '../../../lib/progress/seriesChart';
+
 type ChartPoint = { date: string; value: number };
 
 type ProgressTrendChartProps = {
@@ -29,8 +31,11 @@ export default function ProgressTrendChart({ points, label, secondaryPoints, ref
   const left = showDates ? 64 : 8;
   const right = 8;
   const dates = dateDomain([...plotted, ...(secondaryPoints || [])].sort((a, b) => a.date.localeCompare(b.date)));
+  const readout = chartReadout(plotted);
   const locate = (point: ChartPoint, index: number, series: ChartPoint[]) => {
-    const x = gapDays ? dateX(point.date, dates, width, left, right) : indexX(index, series.length, width, left, right);
+    const x = readout.dates.length < 2
+      ? (left + width - right) / 2
+      : gapDays ? dateX(point.date, dates, width, left, right) : indexX(index, series.length, width, left, right);
     const y = max === min ? (plotTop + plotBottom) / 2 : plotBottom - ((point.value - min) / span) * (plotBottom - plotTop);
     return { x, y };
   };
@@ -42,14 +47,30 @@ export default function ProgressTrendChart({ points, label, secondaryPoints, ref
 
   return (
     <svg className="progress-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${label}. Started at ${round(start)} and ended at ${round(end)}. Missing days are omitted.`}>
-      {showDates && (
+      {showDates && readout.showScale && (
         <>
           <text className="progress-chart-label" x="4" y="12">{formatValue ? formatValue(max) : round(max)}</text>
           <text className="progress-chart-label" x="4" y={plotBottom}>{formatValue ? formatValue(min) : round(min)}</text>
+        </>
+      )}
+      {showDates && readout.dates.length < 2 && (
+        <text className="progress-chart-label" x={(left + width - right) / 2} y={height - 8} textAnchor="middle">{shortDate(plotted[0].date)}</text>
+      )}
+      {showDates && readout.dates.length >= 2 && (
+        <>
           <text className="progress-chart-label" x={left} y={height - 8}>{shortDate(plotted[0].date)}</text>
           <text className="progress-chart-label" x={width - right} y={height - 8} textAnchor="end">{shortDate(plotted[plotted.length - 1].date)}</text>
         </>
       )}
+      {showDates && plotted.map((point, index) => {
+        const spot = locate(point, index, plotted);
+        const above = spot.y > plotTop + 18;
+        return (
+          <text key={`v-${point.date}-${index}`} className="progress-chart-value" x={spot.x} y={above ? spot.y - 8 : spot.y + 16} textAnchor="middle">
+            {formatValue ? formatValue(point.value) : round(point.value)}
+          </text>
+        );
+      })}
       {referenceY != null && (
         <line className="progress-chart-reference" x1={left} x2={width - right} y1={referenceY} y2={referenceY} />
       )}

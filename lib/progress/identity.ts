@@ -1,4 +1,4 @@
-import { canonicalEquipment } from '../training/equipmentIdentity';
+import { canonicalEquipment, comparableVariantKey } from '../training/equipmentIdentity';
 import { parseProvenance, type SnapshotProvenance } from './provenance';
 
 /** Missing equipment is its own series. It is never folded into a known implement. */
@@ -14,8 +14,12 @@ export type SeriesIdentity = {
 
 export function seriesKey(identity: SeriesIdentity): string {
   const exercise = identity.catalogExerciseId || `name:${identity.exerciseName.trim().toLowerCase()}`;
-  const variant = (identity.variant || '').trim().toLowerCase();
-  return `${exercise}|${identity.equipmentKey}|${variant}`;
+  return `${exercise}|${identity.equipmentKey}|${comparableVariantKey(identity.variant)}`;
+}
+
+/** Equipment plus a meaningful variant. Bilateral and a missing variant are one series. */
+export function equipmentSeriesKey(equipment?: string | null, variant?: string | null): string {
+  return `${canonicalEquipment(equipment).key}|${comparableVariantKey(variant)}`;
 }
 
 export function seriesIdentityFromParts(input: {
@@ -49,6 +53,7 @@ export function provenanceFromLog(row: any): SnapshotProvenance {
 }
 
 export function displaySeriesName(identity: SeriesIdentity): string {
-  const variant = identity.variant ? ` · ${identity.variant}` : '';
-  return `${identity.exerciseName} · ${identity.equipmentLabel}${variant}`;
+  const raw = String(identity.variant || '').trim();
+  const variant = comparableVariantKey(raw) ? raw : '';
+  return `${identity.exerciseName} · ${identity.equipmentLabel}${variant ? ` · ${variant}` : ''}`;
 }

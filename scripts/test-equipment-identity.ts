@@ -14,7 +14,8 @@ import { resolveLoadIncrement } from '../lib/scienceEngine/adaptation/increments
 import { inferSnapshotEquipment } from '../lib/progress/equipmentBackfill';
 import { seriesIdentityFromParts, seriesKey } from '../lib/progress/identity';
 import { exposureFromLoggedExercise } from '../lib/training/adaptationApply';
-import { loadEntryCaption } from '../lib/training/equipmentIdentity';
+import { canonicalEquipment, equipmentKeysComparable, loadEntryCaption } from '../lib/training/equipmentIdentity';
+import { loadMasterLibraryRecords } from '../lib/training/masterCatalog';
 import { createEquipmentWriteQueue, equipmentChoiceBlockReason, equipmentForSetSnapshot } from '../lib/training/equipmentSelection';
 import { resolveExerciseEquipment } from '../lib/training/exerciseEquipment';
 import { estimateE1rm } from '../lib/training/estimated1Rm';
@@ -359,6 +360,18 @@ assert.match(machineIncrement.reason, /stack/);
 const dbIncrement = resolveLoadIncrement({ equipment: 'DB', units: 'lb' });
 assert.equal(dbIncrement.increment, 5);
 assert.match(dbIncrement.reason, /per dumbbell/i);
+
+assert.equal(canonicalEquipment('Cable').key, 'cable');
+assert.equal(canonicalEquipment('Cable Machine').key, 'cable');
+assert.equal(canonicalEquipment('Cable machine').key, 'cable');
+assert.equal(equipmentKeysComparable('Cable', 'Cable machine'), true);
+assert.equal(canonicalEquipment('GHD').label, 'GHD');
+assert.equal(equipmentKeysComparable('GHD', 'Cable machine'), false);
+const ghdCard = loadMasterLibraryRecords().find((record) => record.name === 'GHD Sit-Up');
+assert.equal(ghdCard?.default_equipment, 'GHD');
+assert.equal(ghdCard?.compatible_equipment, 'GHD');
+assert.equal(canonicalEquipment('Cable machine').key, 'cable');
+assert.notEqual(canonicalEquipment('GHD Sit-Up').key, 'cable');
 
 assert.equal(loadEntryCaption('Dumbbell', 'bilateral'), 'Weight is per dumbbell.');
 assert.match(loadEntryCaption('DB', 'unilateral') || '', /one arm/);

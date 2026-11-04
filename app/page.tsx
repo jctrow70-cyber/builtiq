@@ -22,7 +22,7 @@ import { directWorkoutOpenAllowed, expectationStillMatches, readExpectationForSt
 import { buildExerciseSessionHistory } from '../lib/training/exerciseSessionHistory';
 import { EXERCISE_TYPES, exerciseTypeOf, inferExerciseType, assignmentTypeLabel, isCardioType, isMobilityStretchExercise } from '../lib/training/exerciseTypes';
 import { detectSetPersonalRecord } from '../lib/training/progressAnalytics';
-import { exerciseProgressRequest, type ExerciseProgressRequest } from '../lib/progress/exerciseProgress';
+import { exerciseProgressRequest, exerciseProgressTargetFromLogger, type ExerciseProgressRequest } from '../lib/progress/exerciseProgress';
 import { logFieldsForType, formatLogSummary } from '../lib/training/logFields';
 import { fetchAllExerciseCatalog } from '../lib/training/catalogFetch';
 import { buildCatalogFilterOptions, catalogResultMeta, countCatalogMatches, hasCatalogSearchInput, searchCatalog, workoutSearchCatalogItems } from '../lib/training/catalogSearch';
@@ -2196,30 +2196,37 @@ export default function Page(){
   if(!sessions.length)sessions=buildExerciseSessionHistory(merged,exType,{matchDayLabel:false});
   const catItem=catalog.find((c:any)=>c.id===ex.catalog_exercise_id);
   const currentEquipment=loggerSelectedEquipment(resolveExerciseEquipment(ex,catItem),pendingEquipmentById[ex.id]);
+  const progressTarget=exerciseProgressTargetFromLogger({
+   catalogExerciseId:ex.catalog_exercise_id||null,
+   exerciseName:ex.name||'Exercise',
+   equipment:resolveExerciseEquipment(ex,catItem),
+   pendingEquipment:pendingEquipmentById[ex.id],
+   laterality:ex.laterality,
+  });
   setExerciseHistoryModal({
    exerciseName:ex.name||'Exercise',
    dayLabel:workoutRef?.day_label,
    sessions,
    currentEquipment,
    progress:exerciseProgressRequest({
-    catalogExerciseId:ex.catalog_exercise_id||null,
-    exerciseName:ex.name||'Exercise',
-    equipment:currentEquipment,
-    variant:ex.laterality||null,
+    ...progressTarget,
     returnTo:'training',
     returnSection:'training',
    }),
   });
  }
  function openExerciseProgress(ex:any,catItem:any){
-  const equipment=loggerSelectedEquipment(resolveExerciseEquipment(ex,catItem),pendingEquipmentById[ex.id]);
+  const target=exerciseProgressTargetFromLogger({
+   catalogExerciseId:ex.catalog_exercise_id||null,
+   exerciseName:ex.name||'Exercise',
+   equipment:resolveExerciseEquipment(ex,catItem),
+   pendingEquipment:pendingEquipmentById[ex.id],
+   laterality:ex.laterality,
+  });
   setExerciseHistoryModal(null);
   goNav('Progress',{progressSub:'strength',keepExercise:true});
   setProgressExercise(exerciseProgressRequest({
-   catalogExerciseId:ex.catalog_exercise_id||null,
-   exerciseName:ex.name||'Exercise',
-   equipment,
-   variant:ex.laterality||null,
+   ...target,
    returnTo:'training',
    returnSection:'training',
   }));

@@ -1,16 +1,17 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { buildExerciseProgress, exerciseProgressRequest, historyListLayout } from '../lib/progress/exerciseProgress';
+import { existsSync, readFileSync } from 'node:fs';
+import { buildExerciseProgress, exerciseProgressRequest, exerciseProgressTargetFromLogger, historyListLayout } from '../lib/progress/exerciseProgress';
 import { displayedEquipmentProvenance } from '../lib/progress/provenance';
-import { seriesIdentityFromParts } from '../lib/progress/identity';
+import { seriesIdentityFromParts, seriesKey } from '../lib/progress/identity';
 import { comparableWindows, rangeBounds } from '../lib/progress/ranges';
-import { chartValueDomain } from '../lib/progress/seriesChart';
+import { chartReadout, chartValueDomain, seriesChartPoints } from '../lib/progress/seriesChart';
 import type { ProgressSetFact } from '../lib/progress/setFacts';
 import { buildSeriesWindows } from '../lib/progress/strengthSeries';
 import { mondayOfWeek } from '../lib/training/programCalendar';
 import { detectSetPersonalRecord, personalRecordTitle } from '../lib/training/progressAnalytics';
 import { discoverLifts, filterLifts } from '../lib/progress/liftIndex';
-import { assembleTrainingHistory, historyPageBounds, historyStatusLabel, setsForSession, summarizeSession, workoutHistoryDetail, workoutHistoryPage, type HistorySession, type WorkoutHistoryRow } from '../lib/training/workoutHistory';
+import { estimateE1rm } from '../lib/training/estimated1Rm';
+import { assembleTrainingHistory, historyPageBounds, historySetLabel, historyStatusLabel, setsForSession, summarizeSession, workoutHistoryDetail, workoutHistoryPage, workoutHistoryTitle, type HistorySession, type WorkoutHistoryRow } from '../lib/training/workoutHistory';
 
 let seq = 0;
 
@@ -22,12 +23,16 @@ function fact(input: {
   equipmentProvenance?: 'snapshotted' | 'backfilled' | 'estimated' | 'unknown';
   notes?: string;
   setNumber?: number | null;
+  name?: string;
+  catalog?: string;
+  variant?: string | null;
 }): ProgressSetFact {
   seq += 1;
   const identity = seriesIdentityFromParts({
-    catalogExerciseId: 'bench',
-    exerciseName: 'Bench Press',
+    catalogExerciseId: input.catalog || 'bench',
+    exerciseName: input.name || 'Bench Press',
     equipment: input.equipment,
+    variant: input.variant,
   });
   const equipment = input.equipmentProvenance || (identity.equipmentKey === 'unspecified' ? 'unknown' : 'snapshotted');
   return {
@@ -278,6 +283,126 @@ assert.equal(overlap.find((item) => item.source === 'set_log')?.status, 'unknown
 assert.deepEqual(workoutHistoryDetail(overlapRows, 's', overlap[0].source === 'session' ? overlap[0] : overlap[1])?.exercises.map((exercise) => exercise.name), ['Bench Press']);
 const orphanSummary = overlap.find((item) => item.source === 'set_log')!;
 assert.equal(workoutHistoryDetail(overlapRows, orphanSummary.id, orphanSummary)?.exercises[0].sets[0].notes, 'unlinked');
+
+const frontSquatTarget = exerciseProgressTargetFromLogger({
+  catalogExerciseId: 'front-squat',
+  exerciseName: 'Front Squat',
+  equipment: '',
+  pendingEquipment: '',
+  laterality: 'bilateral',
+});
+assert.equal(frontSquatTarget.equipment, null);
+assert.equal(frontSquatTarget.variant, null);
+const frontSquat = buildExerciseProgress({
+  facts: [
+    fact({ date: '2026-07-04', name: 'Front Squat', catalog: 'front-squat', equipment: '', weight: 155, reps: 6 }),
+    fact({ date: '2026-11-03', name: 'Front Squat', catalog: 'front-squat', equipment: 'Barbell', weight: 135, reps: 6 }),
+    fact({ date: '2026-10-23', name: 'Front Squat', catalog: 'front-squat', equipment: 'Barbell', variant: 'unilateral', weight: 40, reps: 8 }),
+  ],
+  target: frontSquatTarget,
+  range: 'All',
+  today: '2026-11-03',
+});
+assert.equal(frontSquat.identity.equipmentLabel, 'Unspecified');
+assert.equal(frontSquat.identity.variant, null);
+assert.equal(frontSquat.allTimeLoad?.weight, 155);
+assert.equal(frontSquat.equipmentOptions.some((option) => option.equipmentLabel === 'Barbell' && !option.variant), true);
+assert.equal(frontSquat.equipmentOptions.some((option) => option.variant === 'unilateral'), true);
+assert.equal(seriesKey(seriesIdentityFromParts({ catalogExerciseId: 'front-squat', exerciseName: 'Front Squat', equipment: '', variant: 'bilateral' })), seriesKey(seriesIdentityFromParts({ catalogExerciseId: 'front-squat', exerciseName: 'Front Squat', equipment: '', variant: null })));
+assert.notEqual(seriesKey(seriesIdentityFromParts({ catalogExerciseId: 'front-squat', exerciseName: 'Front Squat', equipment: 'Barbell', variant: 'unilateral' })), seriesKey(seriesIdentityFromParts({ catalogExerciseId: 'front-squat', exerciseName: 'Front Squat', equipment: 'Barbell', variant: 'bilateral' })));
+const selectedBarbell = exerciseProgressTargetFromLogger({
+  catalogExerciseId: 'front-squat',
+  exerciseName: 'Front Squat',
+  equipment: '',
+  pendingEquipment: 'Barbell',
+  laterality: 'bilateral',
+});
+const barbellSquat = buildExerciseProgress({
+  facts: frontSquatFacts(),
+  target: selectedBarbell,
+  range: 'All',
+  today: '2026-11-03',
+});
+assert.equal(barbellSquat.identity.equipmentLabel, 'Barbell');
+assert.equal(barbellSquat.allTimeLoad?.weight, 135);
+assert.equal(barbellSquat.identity.variant, null);
+
+function frontSquatFacts(): ProgressSetFact[] {
+  return [
+    fact({ date: '2026-07-04', name: 'Front Squat', catalog: 'front-squat', equipment: '', weight: 155, reps: 6 }),
+    fact({ date: '2026-11-03', name: 'Front Squat', catalog: 'front-squat', equipment: 'Barbell', weight: 135, reps: 6 }),
+    fact({ date: '2026-10-23', name: 'Front Squat', catalog: 'front-squat', equipment: 'Barbell', variant: 'unilateral', weight: 40, reps: 8 }),
+  ];
+}
+
+const inclineDay = [
+  fact({ date: '2026-11-02', name: 'Incline Press', catalog: 'incline', equipment: 'Dumbbell', weight: 60, reps: 6 }),
+  fact({ date: '2026-11-02', name: 'Incline Press', catalog: 'incline', equipment: 'Dumbbell', weight: 55, reps: 8 }),
+];
+const inclinePoints = seriesChartPoints(inclineDay, 'e1rm');
+const inclineReadout = chartReadout(inclinePoints);
+assert.equal(inclinePoints.length, 1);
+assert.equal(inclinePoints[0].value, estimateE1rm({ weight: 60, reps: 6, setType: 'working' }));
+assert.equal(inclineReadout.showScale, false);
+assert.deepEqual(inclineReadout.dates, ['2026-11-02']);
+assert.equal(inclineReadout.pointValues[0], 72);
+const inclineProgress = buildExerciseProgress({
+  facts: inclineDay,
+  target: { catalogExerciseId: 'incline', exerciseName: 'Incline Press', equipment: 'Dumbbell', variant: null },
+  range: '4W',
+  today: '2026-11-03',
+});
+assert.equal(inclineProgress.changePercent, null);
+assert.equal(inclineProgress.allTimeE1rm?.e1rm, 72);
+assert.equal(inclineProgress.chart.length, 1);
+assert.equal(inclineProgress.chart[0].value, 72);
+const twoDays = seriesChartPoints([
+  fact({ date: '2026-10-12', name: 'Incline Press', catalog: 'incline', equipment: 'Dumbbell', weight: 50, reps: 8 }),
+  fact({ date: '2026-10-28', name: 'Incline Press', catalog: 'incline', equipment: 'Dumbbell', weight: 60, reps: 6 }),
+], 'e1rm');
+const twoReadout = chartReadout(twoDays);
+const twoDomain = chartValueDomain(twoReadout.pointValues);
+assert.equal(twoReadout.showScale, true);
+assert.equal(twoReadout.dates.length, 2);
+assert.equal(twoReadout.pointValues[1], 72);
+assert.notEqual(twoDomain.min, twoReadout.pointValues[0]);
+assert.notEqual(twoDomain.max, twoReadout.pointValues[1]);
+
+assert.equal(workoutHistoryTitle({ linkedDay: 'Tue', linkedType: 'Lower A - Front Squat Focus', linkedName: 'Workout' }), 'Lower A - Front Squat Focus');
+assert.equal(workoutHistoryTitle({ linkedDay: 'Tue', linkedType: 'Strength', linkedName: 'Workout' }), 'Tue · Strength');
+assert.equal(workoutHistoryTitle({ persistedType: 'Upper A - Bench and Row', persistedDay: 'Mon' }), 'Upper A - Bench and Row');
+assert.equal(workoutHistoryTitle({}), 'Workout');
+const namedSession = summarizeSession(
+  { id: 'lower-a', date: '2026-11-03', workoutId: 'lower-a', workoutName: 'Workout', dayLabel: 'Tue', workoutType: 'Lower A - Front Squat Focus', status: 'partial' },
+  [{ id: 'sq', log_date: '2026-11-03', completed: true, workout_id: 'lower-a', snapshot_set_type: 'working', snapshot_exercise_name: 'Front Squat', snapshot_equipment: 'Barbell', snapshot_day_label: 'Tue', snapshot_workout_type: 'Lower A - Front Squat Focus', actual_weight: '135', actual_reps: '6', log_notes: 'side: left' }]
+);
+assert.equal(namedSession.workoutName, 'Lower A - Front Squat Focus');
+const sameDay = assembleTrainingHistory(
+  [
+    { id: 'a', date: '2026-11-03', workoutId: 'lower-a', workoutName: 'Workout', dayLabel: 'Tue', workoutType: 'Lower A - Front Squat Focus', status: 'partial' },
+    { id: 'b', date: '2026-11-03', workoutId: 'upper-b', workoutName: 'Workout', dayLabel: 'Tue', workoutType: 'Upper B - Incline Press and Pull-Up', status: 'completed' },
+  ],
+  []
+);
+assert.equal(sameDay.length, 2);
+assert.notEqual(sameDay[0].workoutName, sameDay[1].workoutName);
+const left = historySetLabel({ setType: 'working', setNumber: 1, notes: 'side: left' });
+const right = historySetLabel({ setType: 'working', setNumber: 1, notes: 'belt · side: right' });
+const plain = historySetLabel({ setType: 'working', setNumber: 1, notes: 'paused' });
+assert.equal(left.label, 'Left · Working set 1');
+assert.equal(left.notes, '');
+assert.equal(right.label, 'Right · Working set 1');
+assert.equal(right.notes, 'belt');
+assert.equal(plain.label, 'Working set 1');
+assert.equal(plain.notes, 'paused');
+
+const progressQueries = readFileSync('lib/progress/queries.ts', 'utf8');
+assert.match(progressQueries, /st_workouts\(day_label,workout_type\)/);
+assert.doesNotMatch(progressQueries, /st_workouts\(name/);
+assert.equal(existsSync('app/apple-icon.tsx'), false);
+assert.equal(existsSync('app/icon.tsx'), false);
+assert.equal(existsSync('app/apple-icon/route.ts'), true);
+assert.equal(existsSync('app/icon/route.ts'), true);
 
 const liftIndexSql = readFileSync('supabase/migrations/20261103_078_progress_history_summaries.sql', 'utf8');
 assert.match(liftIndexSql, /security invoker/i);

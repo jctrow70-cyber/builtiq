@@ -1,4 +1,5 @@
 import { isWorkingSet } from './estimated1Rm';
+import { parseSideFromNotes } from './logFieldUI';
 import { seriesIdentityFromLog, seriesKey } from '../progress/identity';
 
 export type WorkoutHistoryRow = {
@@ -128,10 +129,17 @@ export function setsForSummary(rows: WorkoutHistoryRow[], summary: WorkoutHistor
 export function summarizeSession(session: HistorySession, rows: WorkoutHistoryRow[]): WorkoutHistorySummary {
   const matched = setsForSession(rows, session);
   const counts = countLoggedWork(matched);
+  const recorded = agreedWorkoutLabel(matched);
   return {
     id: session.id,
     date: session.date,
-    workoutName: session.workoutName,
+    workoutName: workoutHistoryTitle({
+      persistedDay: recorded.conflict ? '' : recorded.day,
+      persistedType: recorded.conflict ? '' : recorded.type,
+      linkedDay: session.dayLabel,
+      linkedType: session.workoutType,
+      linkedName: session.workoutName,
+    }),
     exerciseCount: counts.exerciseCount,
     workingSets: counts.workingSets,
     status: sessionHistoryStatus(session.status),
@@ -227,11 +235,11 @@ function historicalSetLogs(rows: WorkoutHistoryRow[], sessionKeys: Set<string>):
 
 function historicalSummary(id: string, rows: WorkoutHistoryRow[], workoutId: string): WorkoutHistorySummary {
   const counts = countLoggedWork(rows);
-  const labels = unanimousLabel(rows);
+  const labels = agreedWorkoutLabel(rows);
   return {
     id,
     date: dateOf(rows[0]),
-    workoutName: labels.name,
+    workoutName: labels.conflict ? 'Recorded workout' : workoutHistoryTitle({ persistedDay: labels.day, persistedType: labels.type }),
     exerciseCount: counts.exerciseCount,
     workingSets: counts.workingSets,
     status: 'unknown',
@@ -242,14 +250,61 @@ function historicalSummary(id: string, rows: WorkoutHistoryRow[], workoutId: str
   };
 }
 
-function unanimousLabel(rows: WorkoutHistoryRow[]): { name: string; day: string; type: string } {
+const GENERIC_WORKOUT_TITLE = /^(workout|strength|cardio|mobility|recovery|session)$/i;
+const WEEKDAY_TITLE = /^(mon|tue|wed|thu|fri|sat|sun|monday|tuesday|wednesday|thursday|friday|saturday|sunday)$/i;
+
+function agreedWorkoutLabel(rows: WorkoutHistoryRow[]): { day: string; type: string; conflict: boolean } {
   const days = new Set(rows.map((row) => String(row.snapshot_day_label || '').trim()).filter(Boolean));
   const types = new Set(rows.map((row) => String(row.snapshot_workout_type || '').trim()).filter(Boolean));
-  const day = days.size === 1 ? Array.from(days)[0] : '';
-  const type = types.size === 1 ? Array.from(types)[0] : '';
-  if (days.size > 1 || types.size > 1) return { name: 'Recorded workout', day: '', type: '' };
-  if (day && type) return { name: `${day} · ${type}`, day, type };
-  return { name: day || type || 'Recorded workout', day, type };
+  if (days.size > 1 || types.size > 1) return { day: '', type: '', conflict: true };
+  return {
+    day: days.size === 1 ? Array.from(days)[0] : '',
+    type: types.size === 1 ? Array.from(types)[0] : '',
+    conflict: false,
+  };
+}
+
+/** A stored title wins. A weekday alone is not a workout name. "Workout" is the last fallback. */
+export function workoutHistoryTitle(input: {
+  persistedDay?: string | null;
+  persistedType?: string | null;
+  linkedDay?: string | null;
+  linkedType?: string | null;
+  linkedName?: string | null;
+}): string {
+  const persisted = descriptiveTitle(input.persistedType) || descriptiveTitle(input.persistedDay);
+  if (persisted) return persisted;
+  const linked = descriptiveTitle(input.linkedType) || descriptiveTitle(input.linkedName) || descriptiveTitle(input.linkedDay);
+  if (linked) return linked;
+  const day = String(input.persistedDay || input.linkedDay || '').trim();
+  const type = String(input.persistedType || input.linkedType || '').trim();
+  if (day && type && !/^workout$/i.test(type)) return `${day} · ${type}`;
+  if (type && !/^workout$/i.test(type)) return type;
+  if (day && !/^workout$/i.test(day)) return day;
+  return 'Workout';
+}
+
+function descriptiveTitle(value?: string | null): string {
+  const text = String(value || '').trim();
+  if (!text || GENERIC_WORKOUT_TITLE.test(text) || WEEKDAY_TITLE.test(text)) return '';
+  return text;
+}
+
+export function historySetLabel(input: { setType?: string | null; setNumber?: number | null; notes?: string | null }): { label: string; notes: string } {
+  const notes = String(input.notes || '');
+  const side = parseSideFromNotes(notes);
+  const visibleNotes = notes
+    .replace(/(?:^|\s)side:\s*(left|right|each)/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/\s*·\s*(·\s*)+/g, ' · ')
+    .trim()
+    .replace(/^·\s*|\s*·$/g, '')
+    .trim();
+  const type = String(input.setType || 'working').trim().toLowerCase();
+  const name = type === 'working' ? 'Working set' : type === 'warmup' ? 'Warm-up' : `${type.charAt(0).toUpperCase()}${type.slice(1)}`;
+  const number = input.setNumber == null || !Number.isFinite(Number(input.setNumber)) ? '' : ` ${input.setNumber}`;
+  const base = `${name}${number}`;
+  return { label: side ? `${side} · ${base}` : base, notes: visibleNotes };
 }
 
 function byHistoryOrder(a: WorkoutHistorySummary, b: WorkoutHistorySummary): number {

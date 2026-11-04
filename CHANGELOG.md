@@ -11,6 +11,52 @@ Branch:
 Status:
 ```
 
+## BIQ-0302.1 - Signed-in progress and history corrections
+
+Date: 2026-11-04
+Branch: main
+Status: Implemented locally. Not committed. Not pushed. No migration applied.
+
+Summary: View Progress from an active workout now uses the logger's selected equipment, and a bilateral exercise matches history that never stored a side. A one-date chart labels the real estimated 1RM instead of the padded axis. Training History uses the scheduled workout title when that title is reliable. Cable Machine matches Cable. A recorded left or right side is shown on the set. The generated icon files that blocked the dev server are removed.
+
+Purpose: Signed-in review of BIQ-0302 found a blank Front Squat screen, a chart that looked like two different loads, workout rows titled only "Workout", split cable names, and repeated set numbers with no side.
+
+Files changed:
+- app/apple-icon.tsx (removed)
+- app/icon.tsx (removed)
+- app/components/progress/ExerciseProgressDetail.tsx
+- app/components/progress/ProgressTrendChart.tsx
+- app/components/progress/TrainingHistory.tsx
+- app/globals.css
+- app/page.tsx
+- lib/progress/exerciseProgress.ts
+- lib/progress/identity.ts
+- lib/progress/queries.ts
+- lib/progress/seriesChart.ts
+- lib/training/equipmentIdentity.ts
+- lib/training/workoutHistory.ts
+- scripts/test-exercise-progress.ts
+- scripts/test-equipment-identity.ts
+- CHANGELOG.md
+- DECISIONS.md
+
+Database changes: None. No rows were rewritten. Migration 078 stays untracked and unapplied.
+
+Testing steps:
+- Run the exercise progress, equipment identity, progress analytics, progress view, dashboard progress, previous-performance, exercise history, and adaptation checks.
+- Open Lower A, leave Front Squat on its current equipment, and choose View Progress. Confirm the numbers match that equipment and a bilateral label does not hide the older sets.
+- Select Barbell and open View Progress again. Confirm the barbell history stays separate from unspecified and from unilateral.
+- Open Dumbbell Incline Press. Confirm one November 2 point is labeled 72 lb and the period change stays blank.
+- Open Training History and confirm Lower A - Front Squat Focus is named, and two workouts on the same date stay separate.
+- Confirm Cable and Cable Machine group together, and GHD Sit-Up stays GHD on the master card.
+- Open a unilateral set that stored a side and confirm Left or Right is shown. A set with no side stays unlabeled.
+- Check those screens at 390, 768, and 1440.
+- Restart `next dev` and confirm it stays up without moving icon files aside.
+
+Known issues: A GHD Sit-Up set whose stored equipment text is already "Cable machine" will group with Cable. That text is the historical snapshot, not the master card, and it was not rewritten. The chart still draws one point per date, using the best estimated 1RM that day.
+
+Recommended commit message: Fix progress equipment, chart labels, workout names, and icon startup.
+
 ## BIQ-0303 - Let the production build read an equipment block reason
 
 Date: 2026-11-03

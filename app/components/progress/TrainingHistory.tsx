@@ -6,6 +6,7 @@ import { supabase } from '../../../lib/supabaseClient';
 import { fetchTrainingHistoryPage, fetchWorkoutHistoryDay } from '../../../lib/progress/queries';
 import { formatDisplayDate } from '../../../lib/training/programCalendar';
 import {
+  historySetLabel,
   historyStatusLabel,
   workoutHistoryDetail,
   type WorkoutHistoryDetail,
@@ -110,13 +111,16 @@ export default function TrainingHistory({ userId, refreshKey = 0, onViewProgress
                   </div>
                   <p className="muted">{exercise.variant ? `${exercise.equipment} · ${exercise.variant}` : exercise.equipment}</p>
                   <ul className="training-history-sets">
-                    {exercise.sets.map((set) => (
-                      <li key={set.id || `${exercise.key}-${set.setNumber}`}>
-                        <span>{set.setType}{set.setNumber != null ? ` ${set.setNumber}` : ''}</span>
-                        <span>{set.weight || '—'}{set.reps ? ` × ${set.reps}` : ''}</span>
-                        {set.notes ? <span className="muted">{set.notes}</span> : null}
-                      </li>
-                    ))}
+                    {exercise.sets.map((set) => {
+                      const labeled = historySetLabel(set);
+                      return (
+                        <li key={set.id || `${exercise.key}-${set.setNumber}`}>
+                          <span>{labeled.label}</span>
+                          <span>{set.weight || '—'}{set.reps ? ` × ${set.reps}` : ''}</span>
+                          {labeled.notes ? <span className="muted">{labeled.notes}</span> : null}
+                        </li>
+                      );
+                    })}
                   </ul>
                 </section>
               ))}

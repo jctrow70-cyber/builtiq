@@ -21,6 +21,7 @@ const ALIASES: Record<string, string> = {
   ezbar: 'EZ-Bar',
   cable: 'Cable',
   cables: 'Cable',
+  'cable machine': 'Cable',
   band: 'Bands',
   bands: 'Bands',
   'resistance band': 'Bands',

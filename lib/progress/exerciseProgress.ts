@@ -1,4 +1,6 @@
-import { seriesIdentityFromParts, seriesKey, type SeriesIdentity } from './identity';
+import { equipmentSeriesKey, seriesIdentityFromParts, type SeriesIdentity } from './identity';
+import { comparableVariantKey } from '../training/equipmentIdentity';
+import { loggerSelectedEquipment } from '../training/previousPerformanceDisplay';
 import { equipmentRecordLabel, equipmentRecordOf, type EquipmentRecord } from './provenance';
 import { comparableWindows, inSpan, rangeBounds, type ProgressRange } from './ranges';
 import { seriesChartPoints, type SeriesChartMetric, type SeriesChartPoint } from './seriesChart';
@@ -62,13 +64,35 @@ export type ExerciseProgressModel = {
 };
 
 export function exerciseProgressRequest(input: ExerciseProgressRequest): ExerciseProgressRequest {
+  const variant = comparableVariantKey(input.variant);
   return {
     catalogExerciseId: input.catalogExerciseId || null,
     exerciseName: String(input.exerciseName || 'Exercise').trim() || 'Exercise',
     equipment: input.equipment || null,
-    variant: input.variant || null,
+    variant: variant || null,
     returnTo: input.returnTo,
     returnSection: input.returnSection,
+  };
+}
+
+/**
+ * The progress request uses the equipment the logger is actually using.
+ * Bilateral is not its own history series when older sets never stored a side.
+ */
+export function exerciseProgressTargetFromLogger(input: {
+  catalogExerciseId?: string | null;
+  exerciseName?: string | null;
+  equipment?: string | null;
+  pendingEquipment?: string | null;
+  laterality?: string | null;
+}): ExerciseProgressIdentity {
+  const equipment = loggerSelectedEquipment(input.equipment, input.pendingEquipment);
+  const variant = comparableVariantKey(input.laterality);
+  return {
+    catalogExerciseId: input.catalogExerciseId || null,
+    exerciseName: String(input.exerciseName || 'Exercise').trim() || 'Exercise',
+    equipment: equipment || null,
+    variant: variant || null,
   };
 }
 
@@ -79,15 +103,16 @@ export function sameExercise(fact: ProgressSetFact, target: ExerciseProgressIden
 }
 
 export function factsForEquipment(facts: ProgressSetFact[], equipment?: string | null, variant?: string | null): ProgressSetFact[] {
-  const wanted = seriesIdentityFromParts({ equipment, variant });
-  return facts.filter((fact) => fact.identity.equipmentKey === wanted.equipmentKey && (fact.identity.variant || '') === (wanted.variant || ''));
+  const wanted = equipmentSeriesKey(equipment, variant);
+  return facts.filter((fact) => equipmentSeriesKey(fact.identity.equipmentLabel === 'Unspecified' ? '' : fact.identity.equipmentLabel, fact.identity.variant) === wanted);
 }
 
 export function equipmentChoices(facts: ProgressSetFact[]): SeriesIdentity[] {
   const byKey = new Map<string, SeriesIdentity>();
   facts.forEach((fact) => {
-    const key = `${fact.identity.equipmentKey}|${fact.identity.variant || ''}`;
-    if (!byKey.has(key)) byKey.set(key, fact.identity);
+    const variant = comparableVariantKey(fact.identity.variant) || null;
+    const key = equipmentSeriesKey(fact.identity.equipmentLabel, variant);
+    if (!byKey.has(key)) byKey.set(key, { ...fact.identity, variant });
   });
   return Array.from(byKey.values()).sort((a, b) => a.equipmentLabel.localeCompare(b.equipmentLabel) || String(a.variant || '').localeCompare(String(b.variant || '')));
 }
@@ -154,7 +179,7 @@ export function buildExerciseProgress(input: {
     catalogExerciseId: input.target.catalogExerciseId,
     exerciseName: input.target.exerciseName,
     equipment: input.target.equipment,
-    variant: input.target.variant,
+    variant: comparableVariantKey(input.target.variant) || null,
   });
   const seriesFacts = factsForEquipment(exerciseFacts, selected.equipmentLabel === 'Unspecified' ? '' : selected.equipmentLabel, selected.variant);
   const earliest = seriesFacts.map((fact) => fact.logDate).sort()[0] || input.today;

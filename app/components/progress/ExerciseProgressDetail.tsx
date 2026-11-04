@@ -16,7 +16,8 @@ import { chartValueDomain, type SeriesChartMetric } from '../../../lib/progress/
 import { formatLoad, signedPercent } from '../../../lib/progress/progressView';
 import type { ProgressSetFact } from '../../../lib/progress/setFacts';
 import { formatDisplayDate, todayYmd } from '../../../lib/training/programCalendar';
-import { seriesIdentityFromParts } from '../../../lib/progress/identity';
+import { equipmentSeriesKey, seriesIdentityFromParts } from '../../../lib/progress/identity';
+import { historySetLabel } from '../../../lib/training/workoutHistory';
 
 const RANGE_LABELS: { value: ExerciseChartRange; label: string }[] = [
   { value: '4W', label: '4 weeks' },
@@ -99,11 +100,11 @@ export default function ExerciseProgressDetail({ userId, target, weightUnit, onB
 
   const selected = useMemo(() => {
     const [key, variant] = equipmentKey.split('|');
-    const match = (facts || []).find((fact) => fact.identity.equipmentKey === key && (fact.identity.variant || '') === (variant || ''));
+    const match = (facts || []).find((fact) => equipmentSeriesKey(fact.identity.equipmentLabel, fact.identity.variant) === `${key}|${variant || ''}`);
     return {
       ...target,
       equipment: match?.identity.equipmentLabel === 'Unspecified' ? '' : match?.identity.equipmentLabel || target.equipment,
-      variant: variant || target.variant || null,
+      variant: variant || null,
     };
   }, [equipmentKey, facts, target]);
 
@@ -205,14 +206,17 @@ function SessionRow({ session, open, weightUnit, onToggle }: { session: RecentEx
       </button>
       {open && (
         <ul className="training-history-sets">
-          {session.sets.map((set) => (
-            <li key={set.id || `${set.setType}-${set.setNumber}`}>
-              <span>{set.setType}{set.setNumber != null ? ` ${set.setNumber}` : ''}</span>
-              <span>{set.weight != null ? `${formatLoad(set.weight, weightUnit)}` : '—'}{set.reps != null ? ` × ${set.reps}` : ''}</span>
-              <span className="muted">{set.verified ? set.equipmentLabel : `${set.equipmentLabel} · unverified`}</span>
-              {set.notes ? <span className="muted">{set.notes}</span> : null}
-            </li>
-          ))}
+          {session.sets.map((set) => {
+            const labeled = historySetLabel(set);
+            return (
+              <li key={set.id || `${set.setType}-${set.setNumber}`}>
+                <span>{labeled.label}</span>
+                <span>{set.weight != null ? `${formatLoad(set.weight, weightUnit)}` : '—'}{set.reps != null ? ` × ${set.reps}` : ''}</span>
+                <span className="muted">{set.verified ? set.equipmentLabel : `${set.equipmentLabel} · unverified`}</span>
+                {labeled.notes ? <span className="muted">{labeled.notes}</span> : null}
+              </li>
+            );
+          })}
         </ul>
       )}
     </article>
@@ -259,5 +263,5 @@ function metricLabel(metric: SeriesChartMetric): string {
 
 function equipmentSelectionKey(target: ExerciseProgressIdentity): string {
   const identity = seriesIdentityFromParts(target);
-  return `${identity.equipmentKey}|${identity.variant || ''}`;
+  return equipmentSeriesKey(identity.equipmentLabel, identity.variant);
 }

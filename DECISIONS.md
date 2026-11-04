@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 159 - Progress corrections keep stored history intact
+
+Date: 2026-11-04
+Status: Implemented locally
+Category: Progress
+
+### Decision
+
+BIQ-0302.1 corrects the signed-in review without rewriting snapshots. View Progress uses the equipment selected in the logger. Bilateral and a missing variant are one series. Unilateral stays separate. Unspecified equipment stays unspecified. A chart point is the calculated metric for that date. Axis padding is a scale, and it is hidden when a chart has only one date. Training History prefers a stored workout title, then the linked workout title, and uses "Workout" only when neither is meaningful. Cable Machine is the same implement as Cable. A GHD Sit-Up card stays GHD. A recorded side note is displayed and is not inferred. The generated apple-icon and icon files are removed so the static icon routes can start the app.
+
+### Reason
+
+The review could not answer what was lifted last time from the open workout, could misread a chart scale as the load, and could not tell session workouts apart. The startup crash came from two icon routes on the same path.
+
+### Alternatives Considered
+
+Rewrite historical equipment and workout names in the database. That would change completed records. Treat "Last on Barbell" as the selected equipment. That line means the last set used a different implement. Keep the generated icon files and delete the static routes. BIQ-0288 already chose the static images.
+
+### Impact
+
+No migration is applied. Migration 078 stays unapplied. Copy Last matching is unchanged. Group Progress, program generation, nutrition, and body measurements are unchanged.
+
+---
+
 ## Decision 158 - Exercise progress keeps equipment and period records separate
 
 Date: 2026-11-03

@@ -29,6 +29,21 @@ function roundChart(value: number): number {
 }
 
 /**
+ * What a sparse chart should show.
+ * Point values are the calculated metric. Axis endpoints are only a scale,
+ * and a single date does not get a second label.
+ */
+export function chartReadout(points: SeriesChartPoint[]): { pointValues: number[]; dates: string[]; showScale: boolean } {
+  const plotted = points.filter((point) => Number.isFinite(point.value));
+  const dates = Array.from(new Set(plotted.map((point) => point.date)));
+  return {
+    pointValues: plotted.map((point) => point.value),
+    dates,
+    showScale: plotted.length >= 2 && dates.length >= 2,
+  };
+}
+
+/**
  * One point per logged day for a single series.
  * Days without that series are omitted. They are not filled with zero.
  */

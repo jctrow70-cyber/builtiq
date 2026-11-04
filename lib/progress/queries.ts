@@ -9,6 +9,7 @@ import {
   assembleTrainingHistory,
   historyPageBounds,
   workoutHistoryPage,
+  workoutHistoryTitle,
   type HistorySession,
   type WorkoutHistorySummary,
 } from '../training/workoutHistory';
@@ -150,7 +151,7 @@ export async function fetchWorkoutHistoryDay(client: QueryClient, userId: string
   return rows.map(withWorkoutId);
 }
 
-const SESSION_PAGE_COLUMNS = 'id,log_date,status,workout_id,st_workouts(name,day_label,workout_type)';
+const SESSION_PAGE_COLUMNS = 'id,log_date,status,workout_id,st_workouts(day_label,workout_type)';
 const trainingHistoryCache = new Map<string, Promise<WorkoutHistorySummary[]>>();
 
 export function clearTrainingHistoryCache() {
@@ -262,7 +263,7 @@ function sessionFromRow(row: any): HistorySession | null {
     id,
     date,
     workoutId: String(row?.workout_id || ''),
-    workoutName: name || (day && type ? `${day} · ${type}` : type || day || 'Workout'),
+    workoutName: workoutHistoryTitle({ linkedDay: day, linkedType: type, linkedName: name }),
     dayLabel: day,
     workoutType: type,
     status: String(row?.status || ''),

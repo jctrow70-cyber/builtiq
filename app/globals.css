@@ -620,6 +620,7 @@ button.member-training-week-row{width:100%;background:transparent;border-left:0;
 .progress-chip--active{background:var(--accent);color:#fff;border-color:transparent}
 .progress-chart{width:100%;height:auto;color:var(--accent);display:block;margin-top:8px}
 .progress-chart-label{fill:var(--textSecondary);font-size:11px}
+.progress-chart-value{fill:var(--text);font-size:12px;font-weight:650}
 .progress-chart-reference{stroke:var(--textSecondary);stroke-dasharray:4 4;opacity:.75}
 .progress-chart-secondary{stroke:var(--textSecondary);opacity:.8}
 .progress-chart-point{fill:currentColor}
