@@ -103,6 +103,9 @@ input,select,textarea{width:100%;border:1px solid var(--inputBorder);background:
 .exercise-name-text{margin:0;font-size:15px;font-weight:800;flex:1;min-width:0;line-height:1.35;word-break:break-word;white-space:pre-wrap}
 .exercise-muscle-badge,.exercise-equipment-badge{flex-shrink:0;margin:0}
 .exercise-name,.exercise-muscle,.exercise-equipment{width:auto;font-weight:800;padding:6px 8px}
+.exercise-equipment-required{border-color:#f59e0b!important;box-shadow:0 0 0 2px rgba(245,158,11,.25)!important}
+.exercise-equipment-note{margin:4px 0 0;font-size:12px;line-height:1.35}
+.exercise-equipment-note-required{color:#fbbf24;font-weight:700}
 .exercise-name-wrap{flex:1 1 100%;min-width:0;align-self:stretch}
 .exercise-name{flex:1 1 auto;min-width:0;width:100%;font-size:15px;resize:none;overflow:hidden;line-height:1.35;white-space:pre-wrap;word-break:break-word;field-sizing:content;min-height:2.4em;background:#121a2a;border-color:#3b4a63}
 .exercise-muscle,.exercise-equipment{flex:0 1 120px;min-width:84px;font-size:12px;color:#cbd5e1;background:#121a2a;border-color:#3b4a63}
@@ -723,10 +726,11 @@ button.member-training-week-row{width:100%;background:transparent;border-left:0;
 .set-log-prev-exact{color:#e2e8f0}
 .set-log-prev-unknown,.set-log-prev-name_only{color:#f8d48b}
 .set-log-prev-different{color:#93c5fd}
-.set-log-metrics{grid-column:1;grid-row:2}
+.set-log-metrics,.set-log-grid>.log-field-row-metrics{grid-column:1;grid-row:2;min-width:0}
 .set-log-grid.has-chip-row .set-log-chips{grid-column:1;grid-row:3;min-width:0}
 .set-log-chips .log-field-card-wide{width:100%;max-width:none}
-.set-log-rail{grid-column:2;grid-row:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:8px;min-width:44px;padding:2px 0}
+.set-log-rail{grid-column:2;grid-row:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:8px;min-width:44px;padding:2px 0;pointer-events:none}
+.set-log-rail>*{pointer-events:auto}
 .set-log-rail-spacer{display:block;min-height:32px;min-width:32px}
 .set-log-num{font-size:12px;font-weight:900;color:#e2e8f0;flex-shrink:0}
 .set-type-badge{font-size:10px;padding:3px 7px;min-width:42px;min-height:36px;justify-content:center;text-align:center;display:inline-flex;align-items:center}

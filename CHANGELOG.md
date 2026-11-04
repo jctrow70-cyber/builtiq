@@ -11,6 +11,7 @@ Branch:
 Status:
 ```
 
+<<<<<<< HEAD
 ## BIQ-0302.1 - Signed-in progress and history corrections
 
 Date: 2026-11-04
@@ -56,6 +57,65 @@ Testing steps:
 Known issues: A GHD Sit-Up set whose stored equipment text is already "Cable machine" will group with Cable. That text is the historical snapshot, not the master card, and it was not rewritten. The chart still draws one point per date, using the best estimated 1RM that day.
 
 Recommended commit message: Fix progress equipment, chart labels, workout names, and icon startup.
+=======
+## BIQ-0305 - Stop greying out log fields when equipment is missing
+
+Date: 2026-11-04
+Branch: main
+Status: Merged to main. Pushed.
+
+Summary: Weight and reps stay enabled even when equipment still needs a choice. Logging cards that are not in plan-edit mode still show the equipment picker. A missing choice keeps a clear required style and message, and a set still will not save until equipment is selected. Pending equipment on the card counts for the set snapshot.
+
+Purpose: After BIQ-0301, multi-implement exercises with no equipment locked `canLog` and disabled the inputs. On assigned or other non-edit logging views the equipment dropdown was hidden, so the fields looked broken and the keyboard never opened.
+
+Files changed:
+- app/page.tsx
+- app/globals.css
+- scripts/test-logger-equipment-unlock.ts
+- CHANGELOG.md
+
+Database changes: None.
+
+Testing steps:
+- Run `npx tsx scripts/test-logger-equipment-unlock.ts`.
+- Open a multi-implement exercise with no equipment chosen. Weight/reps should accept a cursor and keyboard.
+- Confirm the equipment select is highlighted and says to choose equipment.
+- Choose Barbell or Dumbbell, then log a set. Confirm it saves.
+- On an assigned workout without plan-edit controls, confirm the equipment select still appears and unlocking works the same way.
+
+Known issues: A set typed before equipment is chosen still shows the equipment error until equipment is selected and Retry is used.
+
+Recommended commit message: BIQ-0305 Keep log fields enabled until equipment is chosen.
+
+## BIQ-0304 - Keep weight and reps tappable on the set card
+
+Date: 2026-11-04
+Branch: main
+Status: Merged to main. Pushed.
+
+Summary: The weight and reps fields on a set card are placed in the left grid column again. The Done rail no longer covers those inputs, so a tap opens the keyboard. Empty rail space ignores taps; Done and Remove still receive them.
+
+Purpose: On mobile, tapping weight or reps did nothing. The metrics row was missing the `set-log-metrics` grid class, so CSS auto-placed it under the full-height Done rail. Touches hit the rail instead of the inputs, and the soft keyboard never opened.
+
+Files changed:
+- app/components/WorkoutSetLogger.tsx
+- app/globals.css
+- scripts/test-logger-input-hit-target.ts
+- CHANGELOG.md
+
+Database changes: None.
+
+Testing steps:
+- Run `npx tsx scripts/test-logger-input-hit-target.ts`.
+- Open a workout on a phone (or DevTools mobile). Tap Weight — the numeric keyboard should open.
+- Tap Reps — the keyboard should stay or reopen on that field.
+- Tap Done and Remove — both still work.
+- Confirm RIR chips still sit under the weight/reps row when the exercise uses them.
+
+Known issues: None.
+
+Recommended commit message: BIQ-0304 Keep weight and reps tappable under the Done rail.
+>>>>>>> 405c61c0b6801b9321892116441d90310619b00b
 
 ## BIQ-0303 - Let the production build read an equipment block reason
 
