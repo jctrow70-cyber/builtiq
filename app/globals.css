@@ -821,6 +821,7 @@ button.member-training-week-row{width:100%;background:transparent;border-left:0;
 .nutrition-progress-track{height:8px;border-radius:999px;background:#0b1119;border:1px solid var(--line);overflow:hidden}
 .nutrition-progress-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#22c55e,#7c5cff)}
 .nutrition-error{margin:8px 0 0;color:#fca5a5;font-size:12px}
+.nutrition-copy-notice{margin:8px 0 0;color:#86efac;font-size:13px;line-height:1.4}
 .nutrition-food-grid{display:grid;gap:8px;margin-top:10px}
 .nutrition-food-chip{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:12px;background:#0b1119}
 .nutrition-food-chip b{display:block;font-size:14px}

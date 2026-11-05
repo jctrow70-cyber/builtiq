@@ -76,6 +76,21 @@ import type { FoodDraft } from './nutrition/NutritionAddFoodTypes';
 import NutritionAddFoodPanel, { type AddFoodView } from './nutrition/NutritionAddFoodPanel';
 import NutritionCopyFoodPanel from './nutrition/NutritionCopyFoodPanel';
 import DateInput from './DateInput';
+import {
+  beginCopySubmit,
+  copyErrorText,
+  copyFailedMessage,
+  copyFailureKind,
+  copyInsertOutcome,
+  copyMealInsertRows,
+  copySavedMessage,
+  copyUncertainMessage,
+  endCopySubmit,
+  invalidateNutritionDayCache,
+  mergeCopiedEntries,
+  shiftLogDate,
+  yesterdayLogDate,
+} from '../../lib/nutrition/copyMeal';
 import { addDaysYmd, formatDisplayDate, formatYmd, mondayOfWeek, parseYmd, todayYmd } from '../../lib/training/programCalendar';
 import { completeScreenPhase } from '../../lib/performance/screenTiming';
 import {
@@ -417,6 +432,9 @@ export default function NutritionTracker({
   chartWeekMondayRef.current = chartWeekMonday;
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [copyNotice, setCopyNotice] = useState('');
+  const copyInFlightRef = useRef(false);
+  const copyRevealDateRef = useRef<string | null>(null);
   const [showAdd, setShowAdd] = useState(!!openingDraft?.showAdd);
   const [addFoodView, setAddFoodView] = useState<AddFoodView>((openingDraft?.addFoodView as AddFoodView) || 'hub');
   const [estimateSearch, setEstimateSearch] = useState(openingDraft?.estimateSearch || '');
@@ -606,6 +624,7 @@ export default function NutritionTracker({
     if (paint.cached && !paint.background) {
       hasLoadedRef.current = true;
       setDayRefreshing(false);
+      releaseCopyReveal(logDate);
       return;
     }
     setError('');
@@ -647,6 +666,7 @@ export default function NutritionTracker({
       setDayRefreshing(false);
       finishScreenPaint('Nutrition', userId, ['nutrition'], background && !!paint.cached);
       if (initial) completeScreenPhase('Nutrition', 'data');
+      releaseCopyReveal(logDate);
     }
   }, [userId, logDate, loadWeekEntries]);
 
@@ -1052,8 +1072,40 @@ export default function NutritionTracker({
 
   function openCopyEntries(entriesToCopy: MealEntry[], sourceLabel: string, defaultMeal: MealType) {
     if (!entriesToCopy.length) return;
+    setCopyNotice('');
     setCopyDraft({ log_date: logDate, meal_type: defaultMeal });
     setCopySource({ entries: entriesToCopy, sourceLabel });
+  }
+
+  function releaseCopyReveal(forDate: string) {
+    if (copyRevealDateRef.current !== forDate) return;
+    copyRevealDateRef.current = null;
+    setSaving(false);
+  }
+
+  function showUncertainCopy(targetDate: string, crossDay: boolean) {
+    invalidateNutritionDayCache(userId, targetDate);
+    notifyParent();
+    setError('');
+    setCopyNotice(copyUncertainMessage(targetDate));
+    closeCopyPanel();
+    copyRevealDateRef.current = targetDate;
+    if (crossDay) setDate(targetDate);
+    else void loadDayData();
+  }
+
+  function showCopyFailure(
+    failure: unknown,
+    targetDate: string,
+    crossDay: boolean,
+    kind: 'meal' | 'yesterday'
+  ) {
+    if (copyFailureKind(failure) === 'uncertain') {
+      showUncertainCopy(targetDate, crossDay);
+      return;
+    }
+    setCopyNotice('');
+    setError(copyErrorText(failure, copyFailedMessage(kind)));
   }
 
   function closeCopyPanel() {
@@ -1068,82 +1120,84 @@ export default function NutritionTracker({
 
   async function confirmCopyEntries() {
     if (!copySource || !userId) return;
+    if (beginCopySubmit(copyInFlightRef) === 'ignored') return;
+    const targetDate = copyDraft.log_date;
+    const crossDay = targetDate !== logDate;
     setSaving(true);
     setError('');
+    setCopyNotice('');
     try {
-      const rows = copySource.entries.map((entry) => ({
-        user_id: userId,
-        log_date: copyDraft.log_date,
-        meal_type: copyDraft.meal_type,
-        food_name: entry.food_name,
-        food_library_id: entry.food_library_id || null,
-        serving_qty: entry.serving_qty,
-        serving_size: entry.serving_size ?? 1,
-        serving_unit: normalizeServingUnit(entry.serving_unit),
-        calories: entry.calories,
-        protein_g: entry.protein_g,
-        carbs_g: entry.carbs_g,
-        fat_g: entry.fat_g,
-        notes: entry.notes || null,
-      }));
+      const rows = copyMealInsertRows(userId, copySource.entries, targetDate, copyDraft.meal_type);
       const inserted = await insertMealRows(rows);
-      if (copyDraft.log_date === logDate) {
-        setEntries((prev) => [...prev, ...inserted]);
-        prependRecentEntries(inserted);
+      if (copyInsertOutcome(rows.length, inserted.length) !== 'saved') {
+        showUncertainCopy(targetDate, crossDay);
+        return;
       }
+      invalidateNutritionDayCache(userId, targetDate);
+      prependRecentEntries(inserted);
       notifyParent();
-      await loadDayData();
-      if (copyDraft.log_date !== logDate) {
-        setDate(copyDraft.log_date);
-      }
+      setCopyNotice(copySavedMessage(inserted.length, targetDate));
       closeCopyPanel();
-    } catch (e: any) {
-      setError(e?.message || 'Could not copy food.');
+      if (crossDay) {
+        copyRevealDateRef.current = targetDate;
+        setDate(targetDate);
+      } else {
+        setEntries((prev) => mergeCopiedEntries(prev, inserted));
+        await loadDayData();
+      }
+    } catch (failure: unknown) {
+      showCopyFailure(failure, targetDate, crossDay, 'meal');
     } finally {
-      setSaving(false);
+      endCopySubmit(copyInFlightRef);
+      if (copyRevealDateRef.current !== targetDate) setSaving(false);
     }
   }
 
   async function copyYesterday() {
     if (!userId) return;
-    const prev = new Date(`${logDate}T12:00:00`);
-    prev.setDate(prev.getDate() - 1);
-    const prevYmd = prev.toISOString().slice(0, 10);
-    const { data, error: fetchError } = await supabase
-      .from('st_meal_entries')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('log_date', prevYmd);
-    if (fetchError) return setError(fetchError.message);
-    if (!data?.length) return alert('No meals logged yesterday to copy.');
-    if (!confirm(`Copy ${data.length} item(s) from ${formatDisplayDate(prevYmd)}?`)) return;
-
-    setSaving(true);
+    if (beginCopySubmit(copyInFlightRef) === 'ignored') return;
+    const targetDate = logDate;
     setError('');
+    setCopyNotice('');
     try {
-      const rows = data.map((row: MealEntry) => ({
-        user_id: userId,
-        log_date: logDate,
-        meal_type: row.meal_type,
-        food_name: row.food_name,
-        food_library_id: row.food_library_id || null,
-        serving_qty: row.serving_qty,
-        serving_size: row.serving_size ?? 1,
-        serving_unit: normalizeServingUnit(row.serving_unit),
-        calories: row.calories,
-        protein_g: row.protein_g,
-        carbs_g: row.carbs_g,
-        fat_g: row.fat_g,
-        notes: row.notes || null,
-      }));
+      const prevYmd = yesterdayLogDate(logDate);
+      const { data, error: fetchError } = await supabase
+        .from('st_meal_entries')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('log_date', prevYmd);
+      if (fetchError) {
+        setError(
+          copyFailureKind(fetchError) === 'uncertain'
+            ? 'Could not load yesterday. Nothing was copied.'
+            : copyErrorText(fetchError, 'Could not load yesterday.')
+        );
+        return;
+      }
+      if (!data?.length) {
+        alert('No meals logged yesterday to copy.');
+        return;
+      }
+      if (!confirm(`Copy ${data.length} item(s) from ${formatDisplayDate(prevYmd)}?`)) return;
+
+      setSaving(true);
+      const rows = copyMealInsertRows(userId, data, targetDate);
       const inserted = await insertMealRows(rows);
-      setEntries((prev) => [...prev, ...inserted]);
+      if (copyInsertOutcome(rows.length, inserted.length) !== 'saved') {
+        showUncertainCopy(targetDate, false);
+        return;
+      }
+      invalidateNutritionDayCache(userId, targetDate);
+      setEntries((prev) => mergeCopiedEntries(prev, inserted));
+      prependRecentEntries(inserted);
       notifyParent();
+      setCopyNotice(copySavedMessage(inserted.length, targetDate));
       await loadDayData();
-    } catch (e: any) {
-      setError(e?.message || 'Could not copy yesterday.');
+    } catch (failure: unknown) {
+      showCopyFailure(failure, targetDate, false, 'yesterday');
     } finally {
-      setSaving(false);
+      endCopySubmit(copyInFlightRef);
+      if (copyRevealDateRef.current !== targetDate) setSaving(false);
     }
   }
 
@@ -1678,9 +1732,7 @@ export default function NutritionTracker({
   }
 
   function shiftDate(days: number) {
-    const d = new Date(`${logDate}T12:00:00`);
-    d.setDate(d.getDate() + days);
-    setDate(d.toISOString().slice(0, 10));
+    setDate(shiftLogDate(logDate, days));
   }
 
   function onDaySwipeStart(e: React.TouchEvent) {
@@ -1799,6 +1851,11 @@ export default function NutritionTracker({
                   My foods
                 </button>
               </div>
+              {copyNotice && (
+                <p className="nutrition-copy-notice" role="status">
+                  {copyNotice}
+                </p>
+              )}
               {error && <p className="nutrition-error">{error}</p>}
             </div>
 

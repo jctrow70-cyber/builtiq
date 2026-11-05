@@ -11,6 +11,42 @@ Branch:
 Status:
 ```
 
+## BIQ-0309 - Stop a copied meal from being saved twice
+
+Date: 2026-11-04
+Branch: main
+Status: Implemented locally. Not committed.
+
+Summary: Copy meal and Copy yesterday ignore an overlapping submit, then allow a later copy. A copy onto another day no longer reloads the source day before navigation, and the destination nutrition cache is dropped so a snapshot younger than 30 seconds cannot hide the new foods. Copied rows keep the catalog link, saved-food link, servings, macros, and notes. Day arrows and Copy yesterday move by calendar date. A saved copy shows the destination date and food count. A dropped connection sends the user to that day and says to look there before copying again.
+
+Purpose: One copy onto the next day could be hidden by a fresh destination cache after the source-day reload cleared the stale flag. A second confirmation then inserted the foods again.
+
+Files changed:
+- lib/nutrition/copyMeal.ts (new)
+- app/components/NutritionTracker.tsx
+- app/globals.css
+- scripts/test-copy-meal.ts (new)
+- CHANGELOG.md
+
+Database changes: None. Existing duplicate meal rows are left in place.
+
+Testing steps:
+- Run `npx tsx scripts/test-copy-meal.ts`
+- Run `npx tsx scripts/test-dashboard-cache.ts`
+- Nutrition: log breakfast, lunch, dinner, and a snack. Copy each meal to the next day, including January 31 to February 1 and December 31 to January 1. Confirm the source day is unchanged, foods already on the destination stay, and the notice names the date and count.
+- Open the destination day, go back within 30 seconds, and copy onto it again. Refresh. The new copy is one set of rows.
+- Double-click Copy while the first request is running. Only one set is added. After it finishes, copy once more and confirm a second set is allowed.
+- Turn the network off during Copy and confirm the notice tells you to look at the destination day. Turn it back on and confirm a permission-style error leaves the copy sheet open.
+- Use the previous and next day arrows across a month boundary. Copy yesterday onto today and confirm each food stays in its original meal.
+
+Known issues:
+- Signed-in browser confirmation of the copy sheet is still outstanding.
+- Rows duplicated before this fix are still in `st_meal_entries`. They were not deleted.
+
+Recommended commit message: BIQ-0309 Show one copied meal on the destination day
+
+---
+
 ## BIQ-0308 - Historical workout recognition and completion projection
 
 Date: 2026-11-04
