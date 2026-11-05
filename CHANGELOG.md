@@ -11,6 +11,44 @@ Branch:
 Status:
 ```
 
+## BIQ-0308 - Historical workout recognition and completion projection
+
+Date: 2026-11-04
+Branch: local (uncommitted pending review)
+Status: Implemented locally. Not committed. Not pushed.
+
+Summary: Training, calendar, and dashboard completion now share one historical set-log projection path. Exact `planned_set_id` still wins. Orphaned IDs (November 2-style personal-copy / template remap) project onto the current day's workout when snapshot match is strong and coverage is high. Unrelated programs do not receive coincidental card paints. No set-log rows are rewritten.
+
+Purpose: Confirmed November 2 completed logs exist in Supabase but Training keyed display and completion only to current planned-set IDs (and calendar used exact IDs with no overlay on non-selected dates). Users saw empty/incomplete workouts despite durable history.
+
+Files changed:
+- lib/training/historicalLogProjection.ts (new)
+- lib/training/logTargetMatch.ts (new)
+- lib/training/reattachLogs.ts
+- lib/programDesign/activityCompletion.ts
+- lib/training/todayTraining.ts
+- app/page.tsx
+- app/components/dashboard/TodaysTrainingHero.tsx
+- scripts/test-historical-log-projection.ts (new)
+- CHANGELOG.md
+
+Database changes: None. No schema changes. No planned_set_id rewrites. No session backfills.
+
+Testing steps:
+- Run `npx tsx scripts/test-historical-log-projection.ts` (orphaned IDs, coverage threshold, completion denominator, double-count, history/progress retention).
+- Run `npx tsx scripts/test-activity-completion.ts`, `npx tsx scripts/test-today-training.ts`, `npx tsx scripts/test-session-finalization.ts`, `node scripts/test-reattach-logs.mjs`.
+- On production (after deploy): open Training for 2026-11-02 and confirm Chest-Supported Row / Bench / related sets appear without re-entry.
+- Confirm calendar/dashboard completion for that Monday when viewing another date.
+- Confirm Tuesday/Wednesday linked workouts still complete normally.
+- Switch to a substantially different program and confirm Nov 2 remains in Progress/History without painting onto unrelated exercise cards.
+- Confirm BIQ-0306 equipment/personal-copy remapping remains deployed alongside this recognition fix.
+
+Known issues:
+- Production planned-set identity mismatch for Nov 2 is still the leading explanation; SQL confirmation of `on_followed_program` was not returned during investigation. Fixture tests reproduce the exact-ID exclusion path.
+- Optional durable rematch / session backfill remains approval-gated and is not part of this change.
+
+Recommended commit message: BIQ-0308 Recognize historical set logs after planned-set identity changes.
+
 ## BIQ-0307 - Restore seriesKey import for production build
 
 Date: 2026-11-04

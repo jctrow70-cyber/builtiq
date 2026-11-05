@@ -88,6 +88,7 @@ export function composeTodayTrainingPlan(input: {
       progressLogs: input.progressLogs || [],
       sessionLogs: input.sessionLogs || {},
       selectedDate: today,
+      program: input.program,
     }
   );
   return overlayVisibleExpectations(
@@ -105,13 +106,25 @@ export function todayTrainingLogMap(input: {
   progressLogs?: SetLogLike[];
   sessionLogs?: LogMap;
   includeSessionLogs: boolean;
+  program?: ProgramDesignRecord | null;
+  workouts?: WorkoutLike[];
 }): LogMap {
-  return logMapForDate(
-    input.today,
-    input.progressLogs || [],
-    input.includeSessionLogs ? input.sessionLogs || {} : {},
-    input.today
-  );
+  const session = input.includeSessionLogs ? input.sessionLogs || {} : {};
+  const progress = input.progressLogs || [];
+  const workouts = input.workouts || [];
+  if (input.program && workouts.length) {
+    const merged: LogMap = {};
+    workouts.forEach((workout) => {
+      if (!workout?.id) return;
+      const part = logMapForDate(input.today, progress, session, input.today, {
+        program: input.program,
+        workout,
+      });
+      Object.assign(merged, part);
+    });
+    return merged;
+  }
+  return logMapForDate(input.today, progress, session, input.today);
 }
 
 export function todayTrainingIdentity(

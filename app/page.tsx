@@ -57,6 +57,7 @@ import {
 import { isDraftProgram, isPublishedProgram, missingProgramColumnFromError, publishProgramRecord, deleteProgramRecord } from '../lib/training/programStatus';
 import { fetchFullProgram, fetchProgramIndex, mergeFullProgramIntoList } from '../lib/training/programFetch';
 import { countUnlinkedLogs, mapDateLogsToProgram, reattachUserLogsToProgram } from '../lib/training/reattachLogs';
+import { projectDateLogsOntoWorkout } from '../lib/training/historicalLogProjection';
 import { MOVEMENT_PATTERNS, normalizeMovementPattern } from '../lib/training/exerciseIntelligence';
 import NutritionGoalsSettings from './components/nutrition/NutritionGoalsSettings';
 import TodaysTrainingHero from './components/dashboard/TodaysTrainingHero';
@@ -1936,9 +1937,12 @@ export default function Page(){
   (linked||[]).forEach((l:any)=>{if(l?.planned_set_id)by[l.planned_set_id]=l;});
   const activityOpen=!!groupActivityLogRef.current;
   const workoutOnDay=p&&!activityOpen?workoutForDate(p,day,undefined,workoutDayMovesFromActivities(userCalendarActivities)):null;
-  const overlaid=p&&!activityOpen?mapDateLogsToProgram(dateLogs||[],p,workoutOnDay):{};
-  Object.keys(overlaid).forEach((sid)=>{if(!by[sid])by[sid]=overlaid[sid];});
-  if(!activityOpen)(dateLogs||[]).forEach((l:any)=>{if(l?.planned_set_id&&!by[l.planned_set_id])by[l.planned_set_id]=l;});
+  // BIQ-0308: shared historical projection — orphan planned_set_ids paint onto the
+  // current day's workout when snapshot match is strong; unrelated programs stay unmatched.
+  if(p&&!activityOpen&&workoutOnDay){
+    const projected=projectDateLogsOntoWorkout(dateLogs||[],p,workoutOnDay,{logDate:day});
+    Object.keys(projected.byPlannedSetId).forEach((sid)=>{if(!by[sid])by[sid]=projected.byPlannedSetId[sid];});
+  }
   logsRef.current=by;
   setLogs(by);
   const workoutIds=[...(p?.st_workouts||[]),...extras].map((w:any)=>w?.id).filter(Boolean);
@@ -3971,7 +3975,7 @@ function resolveExerciseTarget(targetWorkout:any,sourceExercise:any,currentWorko
  const trainingCalendarPlans=useMemo(()=>{
   const trainingCompletionWorkouts=(()=>{const byId=new Map<string,any>();[...(program?.st_workouts||[]),...calendarWorkouts,workout].forEach((w:any)=>{if(!w?.id)return;const prev=byId.get(w.id);if(!prev||(w.st_exercises||[]).length>=(prev.st_exercises||[]).length)byId.set(w.id,w);});return Array.from(byId.values());})();
   const workoutDayMoves=workoutDayMovesFromActivities(userCalendarActivities);
-  const trainingCompletionOpts={activities:userCalendarActivities,workouts:trainingCompletionWorkouts,progressLogs,sessionLogs:logs,selectedDate:logDate};
+  const trainingCompletionOpts={activities:userCalendarActivities,workouts:trainingCompletionWorkouts,progressLogs,sessionLogs:logs,selectedDate:logDate,program};
   return {
    trainingTodayPlan:decorateDayPlanCompletion(planForCalendarDate(program,trainingActivities,userCalendarActivities,logDate,todayYmd(),workoutDayMoves),trainingCompletionOpts),
    trainingTomorrowPlan:decorateDayPlanCompletion(planForCalendarDate(program,trainingActivities,userCalendarActivities,tomorrowDate(logDate),todayYmd(),workoutDayMoves),trainingCompletionOpts),

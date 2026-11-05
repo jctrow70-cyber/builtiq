@@ -189,10 +189,20 @@ export default function TodaysTrainingHero({
   }, [userId, inputsReady, today, reloadKey, teamsKey, heroKey, cardEpoch, teams, scheduleRepairGeneration]);
 
   const dayMoves = moves || workoutDayMovesFromActivities(calendarActivities);
-  const logMap = useMemo(
-    () => logMapForDate(today, progressLogs, sessionLogs, today),
-    [today, progressLogs, sessionLogs]
-  );
+  const logMap = useMemo(() => {
+    if (program && workouts.length) {
+      const merged: Record<string, (typeof progressLogs)[number] | undefined> = {};
+      workouts.forEach((workout) => {
+        if (!workout?.id) return;
+        Object.assign(
+          merged,
+          logMapForDate(today, progressLogs, sessionLogs, today, { program, workout })
+        );
+      });
+      return merged;
+    }
+    return logMapForDate(today, progressLogs, sessionLogs, today);
+  }, [today, progressLogs, sessionLogs, program, workouts]);
   const workoutsById = useMemo(() => {
     const byId: Record<string, { id?: string }> = {};
     workouts.forEach((workout) => {

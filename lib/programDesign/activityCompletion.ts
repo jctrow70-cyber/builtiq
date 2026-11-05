@@ -7,6 +7,8 @@ import {
   type UserCalendarActivity,
 } from './userCalendar';
 import type { TrainingDayItem, TrainingDayPlan } from './trainingSchedule';
+import { projectedLogMapForWorkoutDate } from '../training/historicalLogProjection';
+import type { ProgramLike } from '../training/logTargetMatch';
 
 export type WorkoutLike = {
   id?: string;
@@ -21,6 +23,18 @@ export type SetLogLike = {
   planned_set_id?: string;
   log_date?: string;
   completed?: boolean;
+  snapshot_exercise_name?: string | null;
+  snapshot_catalog_exercise_id?: string | null;
+  snapshot_set_number?: number | null;
+  snapshot_set_type?: string | null;
+  snapshot_week?: number | null;
+  snapshot_day_label?: string | null;
+  snapshot_day_order?: number | null;
+  actual_weight?: unknown;
+  actual_reps?: unknown;
+  actual_duration?: unknown;
+  actual_distance?: unknown;
+  log_notes?: string | null;
 };
 
 function isYmd(value: string): boolean {
@@ -179,8 +193,19 @@ export function logMapForDate(
   dateYmd: string,
   progressLogs: SetLogLike[],
   sessionLogs: Record<string, SetLogLike | undefined>,
-  selectedDate: string
+  selectedDate: string,
+  opts?: { program?: ProgramLike | null; workout?: WorkoutLike | null }
 ): Record<string, SetLogLike | undefined> {
+  if (opts?.program && opts?.workout?.id) {
+    return projectedLogMapForWorkoutDate({
+      dateYmd,
+      dateLogs: progressLogs as any[],
+      program: opts.program,
+      workout: opts.workout,
+      sessionLogs: sessionLogs as any,
+      selectedDate,
+    }) as Record<string, SetLogLike | undefined>;
+  }
   const map: Record<string, SetLogLike | undefined> = {};
   progressLogs.forEach((row) => {
     if (normalizeYmd(row.log_date) !== dateYmd || !row.planned_set_id) return;
@@ -214,13 +239,18 @@ export function decorateDayPlanCompletion(
     progressLogs: SetLogLike[];
     sessionLogs: Record<string, SetLogLike | undefined>;
     selectedDate: string;
+    /** When set, historical logs project onto each workout via shared BIQ-0308 rules. */
+    program?: ProgramLike | null;
   }
 ): TrainingDayPlan {
-  const logMap = logMapForDate(plan.date, opts.progressLogs, opts.sessionLogs, opts.selectedDate);
   const workoutsById = new Map(opts.workouts.map((w) => [String(w.id || ''), w]));
   const mark = (item: TrainingDayItem): TrainingDayItem => {
     if (item.workoutId) {
       const workout = workoutsById.get(item.workoutId);
+      const logMap = logMapForDate(plan.date, opts.progressLogs, opts.sessionLogs, opts.selectedDate, {
+        program: opts.program || null,
+        workout: workout || null,
+      });
       return { ...item, completed: isStrengthWorkoutCompleted(workout, logMap) };
     }
     if (item.source === 'calendar') {
