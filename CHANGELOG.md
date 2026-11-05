@@ -14,8 +14,8 @@ Status:
 ## BIQ-0308 - Historical workout recognition and completion projection
 
 Date: 2026-11-04
-Branch: local (uncommitted pending review)
-Status: Implemented locally. Not committed. Not pushed.
+Branch: main
+Status: Merged to main. Pushed.
 
 Summary: Training, calendar, and dashboard completion now share one historical set-log projection path. Exact `planned_set_id` still wins. Orphaned IDs (November 2-style personal-copy / template remap) project onto the current day's workout when snapshot match is strong and coverage is high. Unrelated programs do not receive coincidental card paints. No set-log rows are rewritten.
 
