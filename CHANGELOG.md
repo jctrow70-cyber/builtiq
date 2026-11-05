@@ -78,15 +78,15 @@ Recommended commit message: BIQ-0307 Restore seriesKey import for the production
 
 Date: 2026-11-04
 Branch: main
-Status: Merged to main. Pushed. No migration applied.
+Status: Committed and published on main (bd923c0). No migration applied.
 
 Summary: View Progress from an active workout now uses the logger's selected equipment, and a bilateral exercise matches history that never stored a side. A one-date chart labels the real estimated 1RM instead of the padded axis. Training History uses the scheduled workout title when that title is reliable. Cable Machine matches Cable. A recorded left or right side is shown on the set. The generated icon files that blocked the dev server are removed.
 
 Purpose: Signed-in review of BIQ-0302 found a blank Front Squat screen, a chart that looked like two different loads, workout rows titled only "Workout", split cable names, and repeated set numbers with no side.
 
 Files changed:
-- app/apple-icon.tsx (removed)
-- app/icon.tsx (removed)
+- app/apple-icon.tsx (removed on main in 46e30b3, not in bd923c0)
+- app/icon.tsx (removed on main in 46e30b3, not in bd923c0)
 - app/components/progress/ExerciseProgressDetail.tsx
 - app/components/progress/ProgressTrendChart.tsx
 - app/components/progress/TrainingHistory.tsx
@@ -103,7 +103,7 @@ Files changed:
 - CHANGELOG.md
 - DECISIONS.md
 
-Database changes: None. No rows were rewritten. Migration 078 stays untracked and unapplied.
+Database changes: None. No rows were rewritten. Migration 078 is in the repository from commit 46e30b3 and was not applied.
 
 Testing steps:
 - Run the exercise progress, equipment identity, progress analytics, progress view, dashboard progress, previous-performance, exercise history, and adaptation checks.
@@ -212,7 +212,7 @@ Recommended commit message: BIQ-0304 Keep weight and reps tappable under the Don
 
 Date: 2026-11-03
 Branch: main
-Status: Implemented locally. Not committed. Not pushed.
+Status: On main and pushed in 46e30b3. Signed-in browser checks are still outstanding.
 
 Summary: Logging a set and adding an extra set now read a missing-equipment message through a small helper. The exercise card uses that same message. The stored equipment choice is unchanged. Progress queries accept Supabase's thenable `rpc` result.
 
