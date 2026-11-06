@@ -10,6 +10,7 @@ import {
   clearPendingEquipmentIds,
   exerciseUpdateTouchedRow,
   remapPendingByExerciseId,
+  remapPendingEquipmentForCopiedWorkout,
   resolveExerciseInWorkout,
   resolveExerciseTarget,
 } from '../lib/training/exerciseTargetResolve';
@@ -108,6 +109,18 @@ pending = clearPendingEquipmentIds(pending, ['old-row', 'new-a'], 'Chest-Support
   canonicalEquipment(a).key === canonicalEquipment(b).key
 ));
 assert.deepEqual(pending, {});
+
+pending = remapPendingEquipmentForCopiedWorkout(
+  { 'old-row': 'Chest-Supported Machine', keep: 'Dumbbell' },
+  [source],
+  copiedWorkout,
+  sectionOf
+);
+assert.deepEqual(pending, {
+  'old-row': 'Chest-Supported Machine',
+  'new-a': 'Chest-Supported Machine',
+  keep: 'Dumbbell',
+});
 
 async function quickSuccession() {
   const written: string[] = [];

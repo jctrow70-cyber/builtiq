@@ -52,6 +52,30 @@ No completed-set snapshot is rewritten. No migration is applied. Group Progress,
 
 ---
 
+## Decision 158 - Program equipment defaults are intentional selections
+
+Date: 2026-11-06
+Status: Implemented locally
+Category: Training
+
+### Decision
+
+BIQ-0310 stamps catalog/program equipment onto new AI program exercise rows the same way a manual add does. When a logging session opens a blank multi-implement card, the logger seeds the catalog default (preferring the athlete's available equipment when that narrows the choice) as the selected implement for the set snapshot. Decision 157 still applies to historical sets with unknown equipment: past snapshots are not rewritten and unverified history is not treated as confirmed Barbell.
+
+### Reason
+
+Leaving program exercises blank forced athletes to pick equipment on every card, then a private-copy id remap could drop the optimistic choice until leave/reopen. That blocked set logging. A catalog/program default is an intentional prescription for the planned workout, not a guess about unknown history.
+
+### Alternatives Considered
+
+Keep blank multi-implement cards until the athlete picks. That matches Decision 157 for history but breaks logging on generated programs. Auto-write every blank row to the database on open. That is noisier on group templates that still need a private copy. Seed only for new AI programs and leave existing blanks blocked. That leaves current assigned/generated plans broken.
+
+### Impact
+
+New AI program inserts write `st_exercises.equipment`. Existing blank rows stay blank in the database until the athlete changes equipment; the logger seeds them for the open session. Personal-copy remapping moves pending equipment onto new exercise ids before Training re-renders. Progress history rules from Decision 157 are unchanged.
+
+---
+
 ## Decision 157 - Unknown equipment stays unknown
 
 Date: 2026-11-03

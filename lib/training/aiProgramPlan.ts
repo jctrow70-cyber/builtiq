@@ -7,6 +7,7 @@ import { prescriptionColumnsFromSources } from './prescriptionMeta';
 import { inferExerciseType } from './exerciseTypes';
 import { hasExerciseGuide } from './exerciseMedia';
 import { filterCatalogByEquipment, hasEquipmentFilter, normalizeEquipmentList } from './equipmentFilter';
+import { defaultCatalogEquipment } from './exerciseEquipment';
 import { mondayOfWeek, programEndDate, todayYmd } from './programCalendar';
 import { insertProgramRecord } from './programStatus';
 import { PUSH_FULL_BODY_EMPHASIS, PULL_FULL_BODY_EMPHASIS } from './scheduleSuggestion';
@@ -1029,7 +1030,8 @@ function collectSectionItems(
   list: AiWorkoutItem[],
   startSort: number,
   catalog: any[],
-  catMap: Record<string, any>
+  catMap: Record<string, any>,
+  availableEquipment?: string[] | null
 ): { exercises: PendingExerciseInsert[]; error: string | null } {
   const exercises: PendingExerciseInsert[] = [];
   let sort = startSort;
@@ -1047,6 +1049,7 @@ function collectSectionItems(
         const hit = resolveCatalogExercise(exItem, catalog, catMap);
         const exType = inferExerciseType(exItem.name, hit?.muscle_group || exItem.muscle_group, section, hit?.exercise_type);
         const meta = prescriptionColumnsFromSources({ item: exItem, catalogItem: hit, section, role: exItem.program_role });
+        const equipment = defaultCatalogEquipment(hit, undefined, availableEquipment) || null;
         exercises.push({
           payload: {
             workout_id: workoutId,
@@ -1057,6 +1060,7 @@ function collectSectionItems(
             catalog_exercise_id: hit?.id || null,
             exercise_type: exType,
             notes: exItem.notes || null,
+            equipment,
             superset_group_id: groupId,
             superset_label: label,
             superset_order: slot,
@@ -1080,6 +1084,7 @@ function collectSectionItems(
       const hit = resolveCatalogExercise(item, catalog, catMap);
       const exType = inferExerciseType(item.name, hit?.muscle_group || item.muscle_group, section, hit?.exercise_type);
       const meta = prescriptionColumnsFromSources({ item, catalogItem: hit, section, role: item.program_role });
+      const equipment = defaultCatalogEquipment(hit, undefined, availableEquipment) || null;
       exercises.push({
         payload: {
           workout_id: workoutId,
@@ -1090,6 +1095,7 @@ function collectSectionItems(
           catalog_exercise_id: hit?.id || null,
           exercise_type: exType,
           notes: item.notes || null,
+          equipment,
           superset_group_id: null,
           program_role: meta.program_role,
           measurement_type: meta.measurement_type,
@@ -1206,20 +1212,58 @@ async function workoutHasNoSetLogs(supabase: any, workoutId: string): Promise<bo
   return !(await fetchWorkoutHasPerformance(supabase, workoutId));
 }
 
-function collectPersistedSections(workoutId: string, tpl: AiWorkout, catalog: any[], catMap: Record<string, any>) {
+function collectPersistedSections(
+  workoutId: string,
+  tpl: AiWorkout,
+  catalog: any[],
+  catMap: Record<string, any>,
+  availableEquipment?: string[] | null
+) {
   const pending: PendingExerciseInsert[] = [];
-  const warmup = collectSectionItems(workoutId, 'warmup', tpl.warmup || [], SECTION_SORT_BASE.warmup, catalog, catMap);
+  const warmup = collectSectionItems(
+    workoutId,
+    'warmup',
+    tpl.warmup || [],
+    SECTION_SORT_BASE.warmup,
+    catalog,
+    catMap,
+    availableEquipment
+  );
   pending.push(...warmup.exercises);
   const primerStart = SECTION_SORT_BASE.warmup + Math.max(pending.length, 1);
-  const primer = collectSectionItems(workoutId, 'warmup', tpl.primer || [], primerStart, catalog, catMap);
+  const primer = collectSectionItems(
+    workoutId,
+    'warmup',
+    tpl.primer || [],
+    primerStart,
+    catalog,
+    catMap,
+    availableEquipment
+  );
   primer.exercises.forEach((entry) => {
     entry.payload.notes = entry.payload.notes || 'POWER PRIMER';
     entry.payload.program_role = 'power';
   });
   pending.push(...primer.exercises);
-  const strength = collectSectionItems(workoutId, 'strength', tpl.strength || [], SECTION_SORT_BASE.strength, catalog, catMap);
+  const strength = collectSectionItems(
+    workoutId,
+    'strength',
+    tpl.strength || [],
+    SECTION_SORT_BASE.strength,
+    catalog,
+    catMap,
+    availableEquipment
+  );
   pending.push(...strength.exercises);
-  const cooldown = collectSectionItems(workoutId, 'cooldown', tpl.cooldown || [], SECTION_SORT_BASE.cooldown, catalog, catMap);
+  const cooldown = collectSectionItems(
+    workoutId,
+    'cooldown',
+    tpl.cooldown || [],
+    SECTION_SORT_BASE.cooldown,
+    catalog,
+    catMap,
+    availableEquipment
+  );
   pending.push(...cooldown.exercises);
   return pending;
 }
@@ -1309,12 +1353,13 @@ async function persistWorkoutsForProgram(
 
   const planByKey = new Map(plan.workouts.map((w) => [`${w.week}|${w.day_label}`, w]));
   const pendingExercises: PendingExerciseInsert[] = [];
+  const availableEquipment = normalizeEquipmentList(config.availableEquipment);
 
   for (const w of insertedWorkouts) {
     const tpl = planByKey.get(`${w.week}|${w.day_label}`);
     if (!tpl) continue;
 
-    pendingExercises.push(...collectPersistedSections(w.id, tpl, catalog, catMap));
+    pendingExercises.push(...collectPersistedSections(w.id, tpl, catalog, catMap, availableEquipment));
   }
 
   if (!pendingExercises.length) return { programId, error: null };
