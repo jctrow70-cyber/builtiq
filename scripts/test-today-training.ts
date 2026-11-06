@@ -178,6 +178,53 @@ const cleared = composeTodayTrainingPlan({
 });
 assert.equal(cleared.items.some((item) => item.workoutId === 'w-wed'), false);
 
+const clearedWithExpectation = composeTodayTrainingPlan({
+  program,
+  activities: [upper],
+  calendarActivities: [],
+  moves,
+  today: wednesday,
+  expectations: [
+    {
+      id: 'exp-wed',
+      workoutId: 'w-wed',
+      programId: 'prog-1',
+      scheduledDate: wednesday,
+      title: 'Upper Body',
+      sourceKey: 'personal',
+      teamId: null,
+      sourceName: 'Personal',
+      excused: false,
+      sessionStatus: null,
+    },
+  ],
+});
+assert.equal(clearedWithExpectation.items.some((item) => item.workoutId === 'w-wed'), false);
+assert.equal(clearedWithExpectation.items.some((item) => String(item.id).startsWith('expectation-')), false);
+const movedWithExpectation = composeTodayTrainingPlan({
+  program,
+  activities: [upper],
+  calendarActivities: [],
+  moves,
+  today: thursday,
+  expectations: [
+    {
+      id: 'exp-wed',
+      workoutId: 'w-wed',
+      programId: 'prog-1',
+      scheduledDate: wednesday,
+      title: 'Upper Body',
+      sourceKey: 'personal',
+      teamId: null,
+      sourceName: 'Personal',
+      excused: false,
+      sessionStatus: null,
+    },
+  ],
+});
+assert.equal(movedWithExpectation.items.filter((item) => item.workoutId === 'w-wed').length, 1);
+assert.equal(movedWithExpectation.items.find((item) => item.workoutId === 'w-wed')?.expectationId, 'exp-wed');
+
 const duplicate = composeTodayTrainingPlan({
   program,
   activities: [upper],
