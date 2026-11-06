@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 160 - Patch equipment into the open logger tree
+
+Date: 2026-11-06
+Status: Accepted
+Category: Training / Reliability
+
+### Decision
+
+When an exercise field write (especially equipment) succeeds while a Training logger session is open, BuildIQ patches the live program / calendar / group-activity workout tree immediately. A private just-me copy created during that open session is also forced into `program` state. Full `loadPrograms` replace remains blocked while the logger is open so in-progress set drafts are not wiped.
+
+### Reason
+
+`programApplyBlocked` correctly prevents a late program reload from replacing an open workout. Equipment saves still wrote to the database, then cleared optimistic pending equipment, so the picker reverted to Select equipment until the user left and came back.
+
+### Alternatives Considered
+
+Allow full program replace while the logger is open. Keep pending equipment forever until navigation. Ask the user to leave and reopen after every equipment choice.
+
+### Impact
+
+No database change. History snapshots still store the equipment present at set-log time. Blank multi-implement exercises still require an explicit choice (BIQ-0301).
+
+---
+
 ## Decision 159 - Progress corrections keep stored history intact
 
 Date: 2026-11-04
@@ -1016,6 +1040,30 @@ Smith RDL is an implement variant of the same hinge movement, not a separate exe
 
 - Romanian Deadlift equipment dropdown includes Smith Machine
 - Completed history and planned rows are not rewritten; users change equipment when they want Smith
+
+---
+
+## Decision 119 - Patch equipment into the open logger tree
+
+Date: 2026-11-06
+Status: Accepted
+Category: Training / Reliability
+
+### Decision
+
+When an exercise field write (especially equipment) succeeds while a Training logger session is open, BuildIQ patches the live program / calendar / group-activity workout tree immediately. A private just-me copy created during that open session is also forced into `program` state. Full `loadPrograms` replace remains blocked while the logger is open so in-progress set drafts are not wiped.
+
+### Reason
+
+`programApplyBlocked` correctly prevents a late program reload from replacing an open workout. Equipment saves still wrote to the database, then cleared optimistic pending equipment, so the picker reverted to Select equipment until the user left and came back.
+
+### Alternatives Considered
+
+Allow full program replace while the logger is open. Keep pending equipment forever until navigation. Ask the user to leave and reopen after every equipment choice.
+
+### Impact
+
+No database change. History snapshots still store the equipment present at set-log time. Blank multi-implement exercises still require an explicit choice (Decision / BIQ-0301).
 
 ---
 

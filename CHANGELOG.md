@@ -11,6 +11,38 @@ Branch:
 Status:
 ```
 
+## BIQ-0310 - Keep equipment selection while the logger is open
+
+Date: 2026-11-06
+Branch: cursor/fix-equipment-logger-persist-4f0d
+Status: Implemented. Not committed.
+
+Summary: Choosing equipment during an open Training workout now patches the live exercise tree immediately after a confirmed write. A private “just me” copy made while the logger is open is forced into the live program tree. The yellow Select equipment note no longer returns after a successful Machine / Barbell / Dumbbell choice until you leave and come back.
+
+Purpose: With the logger open, `reloadKeepDay` correctly refuses to replace the program tree. Equipment writes still saved to the database, then cleared the optimistic pending value, so the picker snapped back to Select equipment. Leaving and reopening loaded the saved value. Multi-implement exercises with no stored equipment still ask for a choice once (BIQ-0301).
+
+Files changed:
+- `app/page.tsx`
+- `scripts/test-equipment-logger-persist.ts`
+- `CHANGELOG.md`
+- `DECISIONS.md`
+
+Database changes: None. Existing exercise rows and set-log history are unchanged.
+
+Testing steps:
+1. `npx tsx scripts/test-equipment-logger-persist.ts`
+2. `npx tsx scripts/test-exercise-target-resolve.ts`
+3. Training → open Saturday (or any day) → first multi-equipment strength exercise
+4. Choose Machine (or another implement). Confirm it stays selected and the yellow note clears without leaving the screen
+5. Log weight / reps / Done, leave the workout, reopen — equipment still shows
+6. On a live group plan that still needs a just-me copy, choose equipment once and confirm it sticks on that first save
+
+Known issues:
+- Designed multi-implement exercises with blank `st_exercises.equipment` still start on Select equipment by design (BIQ-0301). This change keeps a chosen value visible; it does not invent a default implement.
+- Signed-in phone verification of the live Saturday workout still needs a manual check after deploy.
+
+Recommended commit message: BIQ-0310 Keep equipment selection while the logger is open.
+
 ## BIQ-0309 - Stop a copied meal from being saved twice
 
 Date: 2026-11-04

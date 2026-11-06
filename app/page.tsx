@@ -1771,6 +1771,10 @@ export default function Page(){
   if(mapped?.id)setActiveWorkout(mapped.id);
   const ctx={workout:mapped||findWorkoutInProgram(copied.program,mapped?.id)||source,program:copied.program};
   planEditRef.current=ctx;
+  // loadPrograms above may skip setProgram while the logger is open. Force the
+  // private copy into the live tree so equipment edits stick on this screen.
+  setProgram(copied.program);
+  setPrograms((prev:any[])=>mergeFullProgramIntoList(prev||[],copied.program));
   return ctx;
  }
  async function deleteProgramHandler(programId:string){
@@ -2601,6 +2605,26 @@ export default function Page(){
  if(error)return alert(error.message);
  await loadCatalog();
  }
+ function applyExercisePatchesWhileLogging(applied:Array<{workoutId:string;exerciseId:string;patch:Record<string,unknown>}>,openWorkoutId?:string|null){
+  if(!applied.length)return;
+  const openId=openWorkoutId||planEditRef.current?.workout?.id||activeWorkout||null;
+  setProgram((prev:any)=>{
+   const preferred=planEditRef.current?.program;
+   const base=preferred?.id&&preferred.id!==prev?.id?preferred:prev;
+   const next=patchExerciseCatalogInProgram(base,applied)||base;
+   const visible=(openId&&findWorkoutInProgram(next,openId))||planEditRef.current?.workout||null;
+   planEditRef.current=visible||next?{workout:visible||planEditRef.current?.workout||null,program:next}:planEditRef.current;
+   return next;
+  });
+  setCalendarWorkouts((prev:any[])=>patchExerciseCatalogInProgram({st_workouts:prev||[]},applied)?.st_workouts||prev);
+  setGroupActivityWorkout((prev:any)=>{
+   if(!prev?.id)return prev;
+   const next=patchExerciseCatalogInProgram({st_workouts:[prev]},applied)?.st_workouts?.[0]||prev;
+   if(openId&&next?.id===openId&&planEditRef.current)planEditRef.current={...planEditRef.current,workout:next};
+   return next;
+  });
+  if(session?.user?.id)markScreenStale(session.user.id,['program','schedule']);
+ }
  async function updateExerciseField(ex:any,field:string,value:string,opts?:{onResolved?:(matchedId:string)=>void}):Promise<{ok:boolean;matchedId?:string;error?:string}>{
  const fail=(message:string)=>{alert(message);return {ok:false as const,error:message};};
  if(!(await ensurePersonalCopyForTrainingEdit()))return fail('Could not open your private copy for this edit.');
@@ -2620,6 +2644,7 @@ export default function Page(){
  if(!currentMatch?.id)return fail('Could not find this exercise after making your private copy.');
  opts?.onResolved?.(String(currentMatch.id));
  const targets=targetWorkoutsFrom(current);
+ const applied:Array<{workoutId:string;exerciseId:string;patch:Record<string,unknown>}>=[];
  let wroteCurrent=false;
  for(const tw of targets){
   const match=resolveExerciseTarget(tw,ex,current);
@@ -2627,17 +2652,24 @@ export default function Page(){
    if(tw?.id===current?.id)return fail('Could not find this exercise after making your private copy.');
    continue;
   }
-  let{data,error}=await supabase.from('st_exercises').update(payload).eq('id',match.id).select('id');
-  if(error&&payload.equipment!==undefined&&/equipment/i.test(error.message||'')){
-   const{equipment:_eq,...rest}=payload;
+  let written:Record<string,any>=payload;
+  let{data,error}=await supabase.from('st_exercises').update(written).eq('id',match.id).select('id');
+  if(error&&written.equipment!==undefined&&/equipment/i.test(error.message||'')){
+   const{equipment:_eq,...rest}=written;
    if(!Object.keys(rest).length)return fail(error.message);
-   ({data,error}=await supabase.from('st_exercises').update(rest).eq('id',match.id).select('id'));
+   written=rest;
+   ({data,error}=await supabase.from('st_exercises').update(written).eq('id',match.id).select('id'));
   }
-  if(error)return fail(error.message);
+  if(error)return fail(friendlyWriteError(error));
   if(!exerciseUpdateTouchedRow(data))return fail('Could not save this exercise change.');
+  applied.push({workoutId:String(tw.id),exerciseId:String(match.id),patch:written});
   if(tw?.id===current?.id)wroteCurrent=true;
  }
  if(!wroteCurrent)return fail('Could not save this exercise change.');
+ // Logger-open reloads are blocked from replacing the program tree, so patch the
+ // live workout immediately. Otherwise equipment pending clears and the picker
+ // snaps back to "Select equipment" until the user leaves and returns.
+ applyExercisePatchesWhileLogging(applied,current.id);
  await reloadKeepDay();
  return {ok:true,matchedId:String(currentMatch.id)};
 }
