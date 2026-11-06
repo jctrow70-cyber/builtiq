@@ -11,7 +11,13 @@ import {
   workoutAppearsOnDate,
   workoutDayMovesFromDetails,
 } from '../lib/programDesign/workoutDayMoves';
-import { applyWorkoutDayMoves, mergeProgramActivities, planForCalendarDate, planForDate } from '../lib/programDesign/trainingSchedule';
+import {
+  applyWorkoutDayMoves,
+  mergeProgramActivities,
+  overlayVisibleExpectations,
+  planForCalendarDate,
+  planForDate,
+} from '../lib/programDesign/trainingSchedule';
 import type { ProgramActivity, ProgramDesignRecord } from '../lib/programDesign/types';
 
 const program: ProgramDesignRecord = {
@@ -124,5 +130,55 @@ const novemberRun = planForCalendarDate(sixWeek, [weekSixMonday], [{
 }], '2026-11-04');
 assert.equal(novemberRun.items.length, 1);
 assert.equal(novemberRun.items[0]?.title, 'Easy run');
+
+// BIQ-0311: Sunday → Saturday must not leave an expectation ghost on Sunday.
+const sundayProgram: ProgramDesignRecord = {
+  id: 'prog-sun',
+  name: 'Week Plan',
+  visibility: 'personal',
+  weeks: 1,
+  start_date: '2026-11-02',
+  end_date: '2026-11-08',
+  status: 'active',
+};
+const sundayLift: ProgramActivity = {
+  id: 'legacy-w-sun',
+  program_id: 'prog-sun',
+  week_number: 1,
+  day_of_week: 6,
+  sort_order: 0,
+  activity_type: 'strength',
+  title: 'Sunday Lift',
+  duration_minutes: 45,
+  notes: '',
+  details: {},
+  workout_id: 'w-sun',
+};
+assert.equal(nativeDateForActivity(sundayProgram, sundayLift), '2026-11-08');
+const sunToSat = { 'w:w-sun': '2026-11-07' };
+const sundayActivities = mergeProgramActivities(sundayProgram, [sundayLift], []);
+const sundayAfterMove = planForCalendarDate(sundayProgram, sundayActivities, [], '2026-11-08', '2026-11-06', sunToSat);
+const saturdayAfterMove = planForCalendarDate(sundayProgram, sundayActivities, [], '2026-11-07', '2026-11-06', sunToSat);
+assert.equal(sundayAfterMove.items.some((item) => item.workoutId === 'w-sun'), false);
+assert.equal(saturdayAfterMove.items.some((item) => item.workoutId === 'w-sun'), true);
+const sundayExpectation = {
+  id: 'exp-sun',
+  workoutId: 'w-sun',
+  programId: 'prog-sun',
+  scheduledDate: '2026-11-08',
+  title: 'Sunday Lift',
+  sourceKey: 'personal',
+  teamId: null,
+  sourceName: 'Personal',
+  excused: false,
+  sessionStatus: null as null,
+};
+const sundayOverlaid = overlayVisibleExpectations(sundayAfterMove, [sundayExpectation], '2026-11-06', null, null, null, sunToSat);
+const saturdayOverlaid = overlayVisibleExpectations(saturdayAfterMove, [sundayExpectation], '2026-11-06', null, null, null, sunToSat);
+assert.equal(sundayOverlaid.items.some((item) => item.workoutId === 'w-sun'), false);
+assert.equal(sundayOverlaid.items.some((item) => String(item.id).startsWith('expectation-')), false);
+assert.equal(saturdayOverlaid.items.filter((item) => item.workoutId === 'w-sun').length, 1);
+assert.equal(saturdayOverlaid.items.find((item) => item.workoutId === 'w-sun')?.expectationId, 'exp-sun');
+assert.equal(saturdayOverlaid.items.find((item) => item.workoutId === 'w-sun')?.movedFrom, '2026-11-08');
 
 console.log('OK: workout-day-moves checks passed');

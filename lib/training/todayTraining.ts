@@ -97,7 +97,8 @@ export function composeTodayTrainingPlan(input: {
     today,
     input.followedSourceProgramId,
     input.followedSource,
-    input.lineageProgramIds
+    input.lineageProgramIds,
+    input.moves || {}
   );
 }
 

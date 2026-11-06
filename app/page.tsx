@@ -4233,6 +4233,7 @@ function resolveExerciseTarget(targetWorkout:any,sourceExercise:any,currentWorko
       completingItemId:trainingCompleteBusy,
       completedDates:trainingCompletedDates,
       workoutsById:Object.fromEntries((program?.st_workouts||[]).filter((w:any)=>w?.id).map((w:any)=>[w.id,w])),
+      workoutDayMoves,
     }}/>}</LazyScreen>}
     {!viewingMember&&!trainingSessionOpen&&!session?.user&&<div className="card"><p className="muted">Sign in to see your training schedule.</p></div>}
     {viewingWorkoutId&&<LazyScreen loader={workoutPlanSheetLoader} fallback={null}>{(WorkoutPlanSheet)=><WorkoutPlanSheet

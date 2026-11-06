@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 161 - Calendar overlay follows personal day moves
+
+Date: 2026-11-06
+Status: Implemented locally
+Category: Training
+
+### Decision
+
+BIQ-0311 teaches `overlayVisibleExpectations` to honor `workout_day_moves`. A personal this-time move still leaves `st_training_expectations.scheduled_date` on the native day. The Training calendar and today list place that expectation on the move date so the workout is not painted twice. Calendar status text uses the move date. Progress adherence continues to count the stored expectation date.
+
+### Reason
+
+`applyWorkoutDayMoves` already cleared the native day and placed the program item on the destination. The expectation overlay then re-inserted an `expectation-*` ghost on Sunday after a Sunday-to-Saturday move because it keyed only on `scheduled_date`.
+
+### Alternatives Considered
+
+Updating `scheduled_date` on every personal move the way group reschedule does. That would change Progress adherence and requires a separate ledger decision. Skipping expectation overlay entirely after a move. That would drop status and start links on the destination day.
+
+### Impact
+
+No database change. Group Move Workout, program template weekday edits, and adherence counts stay as they are. Decision 049 and Decision 138 remain: personal moves are calendar overlays, not expectation rewrites.
+
+---
+
 ## Decision 160 - Patch equipment into the open logger tree
 
 Date: 2026-11-06

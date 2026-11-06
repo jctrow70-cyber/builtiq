@@ -351,8 +351,22 @@ export function programLineageIds(input: {
 }
 
 /**
+ * Personal day moves keep expectation.scheduled_date on the native day.
+ * Calendar display follows the move map so a relocated workout is not painted twice.
+ */
+export function expectationDisplayDate(
+  row: Pick<VisibleScheduleExpectation, 'workoutId' | 'scheduledDate'>,
+  moves: WorkoutDayMoves = {}
+): string {
+  const workoutId = String(row.workoutId || '').trim();
+  if (!workoutId) return row.scheduledDate;
+  return currentDateForMove(moves, `w:${workoutId}`, row.scheduledDate);
+}
+
+/**
  * Place visible enrollment workouts on the calendar without duplicating a workout already on that date.
  * A private copy of a group plan already occupies its dates. The source plan's expectation is the same session.
+ * When workout_day_moves relocates a workout, the expectation paints on the move date, not the native scheduled_date.
  */
 export function overlayVisibleExpectations(
   plan: TrainingDayPlan,
@@ -360,11 +374,12 @@ export function overlayVisibleExpectations(
   localToday: string,
   followedSourceProgramId?: string | null,
   followedSource?: { sourceKey: string; sourceName: string } | null,
-  lineageProgramIds?: string[] | null
+  lineageProgramIds?: string[] | null,
+  moves: WorkoutDayMoves = {}
 ): TrainingDayPlan {
   const lineage = new Set((lineageProgramIds || []).map((id) => String(id || '').trim()).filter(Boolean));
   if (followedSourceProgramId) lineage.add(followedSourceProgramId);
-  const mine = rows.filter((row) => row.scheduledDate === plan.date);
+  const mine = rows.filter((row) => expectationDisplayDate(row, moves) === plan.date);
   let items = plan.items.map((item) => ({ ...item }));
   const sameFollowedSession = (row: VisibleScheduleExpectation) => {
     if (!row.programId || !lineage.has(row.programId)) return false;
@@ -376,8 +391,9 @@ export function overlayVisibleExpectations(
     });
   };
   for (const row of mine) {
+    const displayDate = expectationDisplayDate(row, moves);
     const state = expectationDisplayState({
-      scheduledDate: row.scheduledDate,
+      scheduledDate: displayDate,
       localToday,
       excused: row.excused,
       sessionStatus: row.sessionStatus,
@@ -422,6 +438,7 @@ export function overlayVisibleExpectations(
       sourceName: row.sourceName,
       sessionStatus: row.sessionStatus ?? null,
       canMove: false,
+      movedFrom: displayDate !== row.scheduledDate ? row.scheduledDate : undefined,
     });
   }
   items = items.map((item) => {

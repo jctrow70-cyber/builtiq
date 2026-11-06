@@ -11,6 +11,41 @@ Branch:
 Status:
 ```
 
+## BIQ-0311 - Hide moved workouts from their native calendar day
+
+Date: 2026-11-06
+Branch: cursor/fix-moved-workout-sunday-ghost-feab
+Status: Implemented locally. Not committed.
+
+Summary: Moving a personal Training calendar workout (for example Sunday to Saturday) now shows the workout only on the destination day. The visible-expectation overlay follows `workout_day_moves`, so the still-native expectation date no longer paints a second copy on the original day. Status text on the calendar uses the move date. Progress adherence still reads the unchanged `scheduled_date`.
+
+Purpose: `applyWorkoutDayMoves` correctly relocated the program item, then `overlayVisibleExpectations` re-added an `expectation-*` ghost on the native day because personal moves do not rewrite expectation rows.
+
+Files changed:
+- lib/programDesign/trainingSchedule.ts
+- lib/training/todayTraining.ts
+- app/components/training/UnifiedTrainingSchedule.tsx
+- app/page.tsx
+- scripts/test-workout-day-moves.ts
+- scripts/test-today-training.ts
+- CHANGELOG.md
+- DECISIONS.md
+
+Database changes: None. `st_training_expectations.scheduled_date` stays on the native day for personal moves (Decision 049 / 138).
+
+Testing steps:
+1. `npx tsx scripts/test-workout-day-moves.ts`
+2. `npx tsx scripts/test-today-training.ts`
+3. `npx tsx scripts/test-unified-schedule.ts`
+4. Training → Move day a Sunday strength workout to Saturday. Confirm it appears only on Saturday (week and month views) and Sunday no longer lists it.
+5. Reset day on that workout and confirm it returns to Sunday only.
+
+Known issues:
+- Progress adherence and Past-day counts still use the native expectation date until a separate change updates `scheduled_date` on personal moves.
+- Group Move Workout already updates expectation dates and is unchanged.
+
+Recommended commit message: BIQ-0311 Hide moved workouts from their native calendar day.
+
 ## BIQ-0310 - Keep equipment selection while the logger is open
 
 Date: 2026-11-06
