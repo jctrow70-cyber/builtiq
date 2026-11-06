@@ -503,22 +503,6 @@ export default function Page(){
  useEffect(()=>{logsRef.current=logs;},[logs]);
  useEffect(()=>()=>{if(prCelebrationTimerRef.current)clearTimeout(prCelebrationTimerRef.current);},[]);
  useEffect(()=>{
-  if(!trainingSessionOpen||!workout?.st_exercises?.length)return;
-  const available=normalizeEquipmentList(
-   (program as any)?.available_equipment||profileDraft?.available_equipment||(profile as any)?.available_equipment
-  );
-  const catalogById=(id:string)=>catalog.find((c:any)=>String(c.id||'')===id);
-  setPendingEquipmentById((prev)=>{
-   const seeded=seedPendingEquipmentDefaults({
-    exercises:workout.st_exercises,
-    catalogById,
-    pending:prev,
-    availableEquipment:available,
-   });
-   return seeded||prev;
-  });
- },[trainingSessionOpen,workout?.id,workout?.st_exercises,catalog,program,profileDraft?.available_equipment,profile]);
- useEffect(()=>{
   if(!program||syncingCalendarRef.current||activeAssignedRecipient||viewingMember||draftEditProgramId)return;
   if(loggerProtected())return;
   const start=resolveProgramStartDate(program);
@@ -3972,6 +3956,22 @@ function resolveExerciseTarget(targetWorkout:any,sourceExercise:any,currentWorko
   ||(sessionKeep&&(sessionKeep.id===activeWorkout||trainingSessionOpen)?sessionKeep:null)
   ||(trainingSessionOpen?(program?.st_workouts||[]).find((w:any)=>w.week===week&&w.day_label===dayLabelFromYmd(logDate)):null)
   ||(!trainingSessionOpen?weekWorkouts[0]:null);
+ useEffect(()=>{
+  if(!trainingSessionOpen||!workout?.st_exercises?.length)return;
+  const available=normalizeEquipmentList(
+   (program as any)?.available_equipment||profileDraft?.available_equipment||(profile as any)?.available_equipment
+  );
+  const catalogById=(id:string)=>catalog.find((c:any)=>String(c.id||'')===id);
+  setPendingEquipmentById((prev)=>{
+   const seeded=seedPendingEquipmentDefaults({
+    exercises:workout.st_exercises,
+    catalogById,
+    pending:prev,
+    availableEquipment:available,
+   });
+   return seeded||prev;
+  });
+ },[trainingSessionOpen,workout?.id,workout?.st_exercises,catalog,program,profileDraft?.available_equipment,profile]);
  useEffect(()=>{
   if(!session?.user||!workout?.id||trainingSessionIntent!=='log'||sessionOutcome!=='completed')return;
   const openIds=outstandingRequiredSetIds(workout, logs);
