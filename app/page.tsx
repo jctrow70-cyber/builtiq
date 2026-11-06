@@ -4014,9 +4014,10 @@ function resolveExerciseTarget(targetWorkout:any,sourceExercise:any,currentWorko
    trainingWeekPlans:weekPlansForMonday(mondayOfWeek(logDate),program,trainingActivities,userCalendarActivities,todayYmd(),workoutDayMoves).map((plan)=>decorateDayPlanCompletion(plan,trainingCompletionOpts)),
    trainingMonthCells:monthCalendarCells(program,trainingActivities,trainingCalendarMonth,todayYmd(),userCalendarActivities,workoutDayMoves).map((cell)=>({...cell,plan:cell.plan?decorateDayPlanCompletion(cell.plan,trainingCompletionOpts):cell.plan})),
    trainingCompletionWorkouts,
+   workoutDayMoves,
   };
  },[loggedCompletionKey,progressCompletionKey,program,calendarWorkouts,workout,userCalendarActivities,trainingActivities,logDate,trainingCalendarMonth]);
- const {trainingTodayPlan,trainingTomorrowPlan,trainingWeekPlans,trainingMonthCells,trainingCompletionWorkouts}=trainingCalendarPlans;
+ const {trainingTodayPlan,trainingTomorrowPlan,trainingWeekPlans,trainingMonthCells,trainingCompletionWorkouts,workoutDayMoves}=trainingCalendarPlans;
  const trainingExpectationRange=(()=>{const weekFrom=mondayOfWeek(logDate);const weekTo=addDaysYmd(weekFrom,6);const month=monthWindow(trainingCalendarMonth);const tomorrow=addDaysYmd(logDate,1);const from=weekFrom<month.from?weekFrom:month.from;const to=[weekTo,month.to,tomorrow].sort().slice(-1)[0]||weekTo;return {from,to};})();
  const trainingCalendarEditing=trainingEditActivity?userCalendarActivities.find((a)=>a.id===trainingEditActivity.id)||null:null;
  const trainingMonthLabel=monthLabel(trainingCalendarMonth);

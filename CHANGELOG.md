@@ -11,11 +11,36 @@ Branch:
 Status:
 ```
 
+## BIQ-0311.1 - Fix workoutDayMoves scope for production build
+
+Date: 2026-11-06
+Branch: cursor/fix-workout-day-moves-scope-feab
+Status: Implemented locally. Not committed.
+
+Summary: `workoutDayMoves` is computed in the Training page body so the calendar props and the plan memo can both use it. The BIQ-0311 preview build failed because the name lived only inside the `useMemo` callback.
+
+Purpose: Next.js production typecheck rejected `workoutDayMoves` on the UnifiedTrainingSchedule calendar props.
+
+Files changed:
+- app/page.tsx
+- CHANGELOG.md
+
+Database changes: None.
+
+Testing steps:
+1. `npx next build` (or confirm Vercel build for this branch)
+2. `npx tsx scripts/test-workout-day-moves.ts`
+3. Training calendar still shows a moved workout only on the destination day
+
+Known issues: None for this scope fix.
+
+Recommended commit message: BIQ-0311.1 Fix workoutDayMoves scope for the production build.
+
 ## BIQ-0311 - Hide moved workouts from their native calendar day
 
 Date: 2026-11-06
 Branch: cursor/fix-moved-workout-sunday-ghost-feab
-Status: Implemented locally. Not committed.
+Status: Merged to main.
 
 Summary: Moving a personal Training calendar workout (for example Sunday to Saturday) now shows the workout only on the destination day. The visible-expectation overlay follows `workout_day_moves`, so the still-native expectation date no longer paints a second copy on the original day. Status text on the calendar uses the move date. Progress adherence still reads the unchanged `scheduled_date`.
 
