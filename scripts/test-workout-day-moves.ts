@@ -11,7 +11,13 @@ import {
   workoutAppearsOnDate,
   workoutDayMovesFromDetails,
 } from '../lib/programDesign/workoutDayMoves';
-import { applyWorkoutDayMoves, mergeProgramActivities, planForCalendarDate, planForDate } from '../lib/programDesign/trainingSchedule';
+import {
+  applyWorkoutDayMoves,
+  mergeProgramActivities,
+  overlayVisibleExpectations,
+  planForCalendarDate,
+  planForDate,
+} from '../lib/programDesign/trainingSchedule';
 import type { ProgramActivity, ProgramDesignRecord } from '../lib/programDesign/types';
 
 const program: ProgramDesignRecord = {
@@ -124,5 +130,77 @@ const novemberRun = planForCalendarDate(sixWeek, [weekSixMonday], [{
 }], '2026-11-04');
 assert.equal(novemberRun.items.length, 1);
 assert.equal(novemberRun.items[0]?.title, 'Easy run');
+
+// Sunday → Saturday: the program item moves, and the expectation overlay must not resurrect Sunday.
+const sundayAct: ProgramActivity = {
+  id: 'legacy-w-sun',
+  program_id: 'prog-1',
+  week_number: 1,
+  day_of_week: 6,
+  sort_order: 0,
+  activity_type: 'strength',
+  title: 'Full Body',
+  duration_minutes: 60,
+  notes: '',
+  details: {},
+  workout_id: 'w-sun',
+};
+assert.equal(nativeDateForActivity(program, sundayAct), '2026-09-20');
+const sunToSat = workoutDayMovesFromDetails(detailsWithWorkoutDayMove({}, 'w:w-sun', '2026-09-19'));
+const sundayActs = mergeProgramActivities(program, [sundayAct], []);
+const sundayPlan = applyWorkoutDayMoves(planForDate(program, sundayActs, '2026-09-20'), program, sundayActs, sunToSat);
+const saturdayPlan = applyWorkoutDayMoves(planForDate(program, sundayActs, '2026-09-19'), program, sundayActs, sunToSat);
+assert.equal(sundayPlan.items.some((i) => i.workoutId === 'w-sun'), false);
+assert.equal(sundayPlan.movedAway?.some((i) => i.workoutId === 'w-sun'), true);
+assert.equal(saturdayPlan.items.some((i) => i.workoutId === 'w-sun'), true);
+assert.equal(saturdayPlan.items.find((i) => i.workoutId === 'w-sun')?.movedFrom, '2026-09-20');
+
+const sundayExpectation = {
+  id: 'exp-sun',
+  workoutId: 'w-sun',
+  programId: 'prog-1',
+  scheduledDate: '2026-09-20',
+  title: 'Full Body',
+  sourceKey: 'personal',
+  teamId: null,
+  sourceName: 'Personal',
+  excused: false,
+  sessionStatus: null as null,
+};
+const overlaidSunday = overlayVisibleExpectations(sundayPlan, [sundayExpectation], '2026-09-19', null, null, null, sunToSat);
+const overlaidSaturday = overlayVisibleExpectations(saturdayPlan, [sundayExpectation], '2026-09-19', null, null, null, sunToSat);
+assert.equal(overlaidSunday.items.some((i) => i.workoutId === 'w-sun' || i.title === 'Full Body'), false);
+assert.equal(overlaidSaturday.items.filter((i) => i.workoutId === 'w-sun').length, 1);
+assert.equal(overlaidSaturday.items.find((i) => i.workoutId === 'w-sun')?.expectationId, 'exp-sun');
+assert.equal(overlaidSaturday.items.find((i) => i.workoutId === 'w-sun')?.movedFrom, '2026-09-20');
+
+// Private-copy lineage: template expectation on Sunday must not ghost after the copy item moves.
+const copySun: ProgramActivity = { ...sundayAct, id: 'legacy-copy-sun', workout_id: 'copy-sun', title: 'Full Body' };
+const copyMoves = workoutDayMovesFromDetails(detailsWithWorkoutDayMove({}, 'w:copy-sun', '2026-09-19'));
+const copyActs = mergeProgramActivities(program, [copySun], []);
+const copySunday = applyWorkoutDayMoves(planForDate(program, copyActs, '2026-09-20'), program, copyActs, copyMoves);
+const templateGhost = overlayVisibleExpectations(
+  copySunday,
+  [
+    {
+      id: 'exp-template-sun',
+      workoutId: 'template-sun',
+      programId: 'prog-template',
+      scheduledDate: '2026-09-20',
+      title: 'Full Body',
+      sourceKey: 'group:team',
+      teamId: 'team',
+      sourceName: 'Basketball',
+      excused: false,
+      sessionStatus: null,
+    },
+  ],
+  '2026-09-19',
+  'prog-template',
+  { sourceKey: 'personal', sourceName: 'Personal' },
+  ['prog-1', 'prog-template'],
+  copyMoves
+);
+assert.equal(templateGhost.items.some((i) => i.title === 'Full Body'), false);
 
 console.log('OK: workout-day-moves checks passed');

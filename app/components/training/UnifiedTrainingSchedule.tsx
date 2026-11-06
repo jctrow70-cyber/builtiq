@@ -13,6 +13,7 @@ import {
   type TrainingMonthCell,
   type VisibleScheduleExpectation,
 } from '../../../lib/programDesign/trainingSchedule';
+import type { WorkoutDayMoves } from '../../../lib/programDesign/workoutDayMoves';
 import { enrollmentSyncSettled } from '../../../lib/training/enrollmentSyncGate';
 import { todayYmd } from '../../../lib/training/programCalendar';
 import {
@@ -75,6 +76,8 @@ type CalendarProps = {
   followedSourceProgramId?: string | null;
   followedProgramId?: string | null;
   workoutsById?: Record<string, any>;
+  /** Personal this-time moves. Expectations keep stored dates; the overlay honors these. */
+  workoutDayMoves?: WorkoutDayMoves;
 };
 
 type Props = {
@@ -190,12 +193,13 @@ export default function UnifiedTrainingSchedule({ userId, teams, rangeFrom, rang
       teamName: teamName(row.team_id, row.source_key),
     })),
   });
-  const calendarToday = calendar.today ? overlayVisibleExpectations(calendar.today, visibleExpectations, today, sourceProgramId, followedSource, lineage) : null;
-  const calendarTomorrow = calendar.tomorrow ? overlayVisibleExpectations(calendar.tomorrow, visibleExpectations, today, sourceProgramId, followedSource, lineage) : null;
-  const calendarWeek = calendar.weekDays.map((day) => overlayVisibleExpectations(day, visibleExpectations, today, sourceProgramId, followedSource, lineage));
+  const dayMoves = calendar.workoutDayMoves || {};
+  const calendarToday = calendar.today ? overlayVisibleExpectations(calendar.today, visibleExpectations, today, sourceProgramId, followedSource, lineage, dayMoves) : null;
+  const calendarTomorrow = calendar.tomorrow ? overlayVisibleExpectations(calendar.tomorrow, visibleExpectations, today, sourceProgramId, followedSource, lineage, dayMoves) : null;
+  const calendarWeek = calendar.weekDays.map((day) => overlayVisibleExpectations(day, visibleExpectations, today, sourceProgramId, followedSource, lineage, dayMoves));
   const calendarMonth = calendar.monthCells.map((cell) => ({
     ...cell,
-    plan: cell.plan ? overlayVisibleExpectations(cell.plan, visibleExpectations, today, sourceProgramId, followedSource, lineage) : cell.plan,
+    plan: cell.plan ? overlayVisibleExpectations(cell.plan, visibleExpectations, today, sourceProgramId, followedSource, lineage, dayMoves) : cell.plan,
   }));
 
   async function toggleVisible(row: VisibleScheduleEnrollment) {

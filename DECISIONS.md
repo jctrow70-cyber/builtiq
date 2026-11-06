@@ -3570,6 +3570,7 @@ The live group template (Decision 041) must stay stable. A one-week life conflic
 - Training **Move** on day items
 - `saveWorkoutDayMove` / `applyWorkoutDayMoves`
 - Dashboard **Today’s Workout** uses the same overlay (BIQ-0200), not the template weekday
+- BIQ-0310: `overlayVisibleExpectations` remaps visible expectation dates from `workout_day_moves` and records vacated program items as `movedAway`, so the original day does not keep a ghost. Stored `scheduled_date` is unchanged.
 - No database migration
 
 ---

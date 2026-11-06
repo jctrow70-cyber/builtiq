@@ -40,6 +40,12 @@ export type TrainingDayItem = {
   canMove?: boolean;
 };
 
+/** Program item removed from this date by a personal workout-day move. */
+export type MovedAwayItem = {
+  title: string;
+  workoutId: string | null;
+};
+
 export type TrainingDayPlan = {
   date: string;
   dayLabel: string;
@@ -49,6 +55,8 @@ export type TrainingDayPlan = {
   primary: TrainingDayItem | null;
   later: TrainingDayItem[];
   isToday: boolean;
+  /** Items relocated away from this date. Stops expectation overlay from resurrecting them. */
+  movedAway?: MovedAwayItem[];
 };
 
 export type TrainingMonthCell = {
@@ -150,6 +158,7 @@ export function applyWorkoutDayMoves(
   moves: WorkoutDayMoves
 ): TrainingDayPlan {
   if (!program || !Object.keys(moves).length) return plan;
+  const movedAway: MovedAwayItem[] = [];
   const kept = plan.items.filter((item) => {
     if (item.source === 'calendar') return true;
     const key = moveKeyForActivity({
@@ -159,7 +168,9 @@ export function applyWorkoutDayMoves(
     if (!key) return true;
     const dest = moves[key];
     if (!dest) return true;
-    return dest === plan.date;
+    if (dest === plan.date) return true;
+    movedAway.push({ title: item.title, workoutId: item.workoutId });
+    return false;
   });
   const incomingIds = new Set(kept.map((item) => item.id));
   const incoming: TrainingDayItem[] = [];
@@ -175,7 +186,17 @@ export function applyWorkoutDayMoves(
     incomingIds.add(item.id);
     incoming.push(item);
   }
-  return withPrimary(plan, [...kept, ...incoming]);
+  return withPrimary({ ...plan, movedAway: movedAway.length ? movedAway : undefined }, [...kept, ...incoming]);
+}
+
+/** Personal moves change the calendar overlay date; expectation rows keep their stored scheduled_date. */
+export function expectationDateForMoves(
+  row: { workoutId?: string | null; scheduledDate: string },
+  moves: WorkoutDayMoves
+): string {
+  const id = String(row.workoutId || '').trim();
+  if (!id) return row.scheduledDate;
+  return currentDateForMove(moves, `w:${id}`, row.scheduledDate);
 }
 
 export function attachCalendarItems(plan: TrainingDayPlan, calendarActivities: UserCalendarActivity[]): TrainingDayPlan {
@@ -360,14 +381,25 @@ export function overlayVisibleExpectations(
   localToday: string,
   followedSourceProgramId?: string | null,
   followedSource?: { sourceKey: string; sourceName: string } | null,
-  lineageProgramIds?: string[] | null
+  lineageProgramIds?: string[] | null,
+  moves: WorkoutDayMoves = {}
 ): TrainingDayPlan {
   const lineage = new Set((lineageProgramIds || []).map((id) => String(id || '').trim()).filter(Boolean));
   if (followedSourceProgramId) lineage.add(followedSourceProgramId);
-  const mine = rows.filter((row) => row.scheduledDate === plan.date);
+  const displayed = rows.map((row) => {
+    const displayDate = expectationDateForMoves(row, moves);
+    if (displayDate === row.scheduledDate) return row;
+    return { ...row, scheduledDate: displayDate };
+  });
+  const mine = displayed.filter((row) => row.scheduledDate === plan.date);
   let items = plan.items.map((item) => ({ ...item }));
   const sameFollowedSession = (row: VisibleScheduleExpectation) => {
     if (!row.programId || !lineage.has(row.programId)) return false;
+    if (
+      (plan.movedAway || []).some((left) => sameWorkoutTitle(left.title, row.title))
+    ) {
+      return true;
+    }
     return items.some((item) => {
       if (item.isRest || item.source === 'calendar') return false;
       if (!sameWorkoutTitle(item.title, row.title)) return false;
@@ -376,6 +408,8 @@ export function overlayVisibleExpectations(
     });
   };
   for (const row of mine) {
+    const original = rows.find((entry) => entry.id === row.id);
+    const nativeDate = original?.scheduledDate || row.scheduledDate;
     const state = expectationDisplayState({
       scheduledDate: row.scheduledDate,
       localToday,
@@ -396,6 +430,7 @@ export function overlayVisibleExpectations(
         teamId: row.teamId,
         sourceName: row.sourceName,
         sessionStatus: row.sessionStatus ?? null,
+        movedFrom: prev.movedFrom || (nativeDate !== plan.date ? nativeDate : null),
       };
       continue;
     }
@@ -422,6 +457,7 @@ export function overlayVisibleExpectations(
       sourceName: row.sourceName,
       sessionStatus: row.sessionStatus ?? null,
       canMove: false,
+      movedFrom: nativeDate !== plan.date ? nativeDate : null,
     });
   }
   items = items.map((item) => {

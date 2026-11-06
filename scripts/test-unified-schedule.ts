@@ -430,4 +430,43 @@ const completedMonday = overlayVisibleExpectations(
 assert.equal(completedMonday.items.find((item) => item.workoutId === 'p-mon')?.statusLabel, 'Completed');
 assert.equal(completedMonday.items.find((item) => item.workoutId === 'p-mon')?.completed, true);
 
+const sunday = '2026-09-20';
+const saturday = '2026-09-19';
+const vacatedSunday = emptyDayPlan(sunday, wednesday);
+vacatedSunday.movedAway = [{ title: 'Full Body', workoutId: 'p-sun' }];
+const movedSaturday = emptyDayPlan(saturday, wednesday);
+movedSaturday.items = [
+  {
+    id: 'p-sun',
+    title: 'Full Body',
+    typeLabel: 'Strength',
+    activityType: 'strength',
+    duration: '45 min',
+    workoutId: 'p-sun',
+    activityId: null,
+    isRest: false,
+    source: 'program',
+    movedFrom: sunday,
+  },
+];
+movedSaturday.primary = movedSaturday.items[0];
+const sunExpectation = {
+  id: 'exp-sun',
+  workoutId: 'p-sun',
+  programId: 'prog-p',
+  scheduledDate: sunday,
+  title: 'Full Body',
+  sourceKey: 'personal',
+  teamId: null,
+  sourceName: 'Personal',
+  excused: false,
+  sessionStatus: null as null,
+};
+const moveMap = { 'w:p-sun': saturday };
+const ghostSunday = overlayVisibleExpectations(vacatedSunday, [sunExpectation], wednesday, null, null, null, moveMap);
+const landedSaturday = overlayVisibleExpectations(movedSaturday, [sunExpectation], wednesday, null, null, null, moveMap);
+assert.equal(ghostSunday.items.some((item) => item.title === 'Full Body'), false);
+assert.equal(landedSaturday.items.find((item) => item.workoutId === 'p-sun')?.expectationId, 'exp-sun');
+assert.equal(landedSaturday.items.find((item) => item.workoutId === 'p-sun')?.movedFrom, sunday);
+
 console.log('unified schedule tests passed');

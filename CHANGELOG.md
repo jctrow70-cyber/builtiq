@@ -11,6 +11,44 @@ Branch:
 Status:
 ```
 
+## BIQ-0310 - Stop moved Training workouts from staying on the old day
+
+Date: 2026-11-06
+Branch: cursor/fix-moved-workout-ghost-5f23
+Status: Implemented locally. Not pushed.
+
+Summary: Moving a Training calendar workout (for example Sunday → Saturday) still stores the personal day move on the calendar ledger and leaves expectation `scheduled_date` unchanged. The Training and Dashboard overlays now honor that move: the workout leaves the original day, appears only on the chosen day, and a same-plan template expectation does not resurrect the vacated day.
+
+Purpose: After a personal move, the program item relocated correctly, but the visible-expectation overlay still painted the workout on the original date. The calendar showed both days.
+
+Files changed:
+- lib/programDesign/trainingSchedule.ts
+- lib/training/todayTraining.ts
+- app/components/training/UnifiedTrainingSchedule.tsx
+- app/page.tsx
+- scripts/test-workout-day-moves.ts
+- scripts/test-unified-schedule.ts
+- CHANGELOG.md
+- DECISIONS.md
+
+Database changes: None.
+
+Testing steps:
+- Run `npx tsx scripts/test-workout-day-moves.ts`
+- Run `npx tsx scripts/test-unified-schedule.ts`
+- Run `npx tsx scripts/test-today-training.ts`
+- Training: open a week with a Sunday workout, Move → Saturday. Sunday is empty; Saturday shows the workout with “Moved from …”. Reload Training and confirm it stays that way.
+- With a private just-me copy of a group plan, move a Sunday session to Saturday and confirm the group template expectation does not reappear on Sunday.
+- Dashboard Today’s Training on the destination day still lists the moved workout.
+
+Known issues:
+- Expectation `scheduled_date` in the database is still the program day. Progress adherence still counts the stored date until a later change updates it.
+- Signed-in browser confirmation is still outstanding.
+
+Recommended commit message: BIQ-0310 Keep moved Training workouts off the original calendar day
+
+---
+
 ## BIQ-0309 - Stop a copied meal from being saved twice
 
 Date: 2026-11-04
