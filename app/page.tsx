@@ -31,13 +31,14 @@ import { instructionsForDisplay } from '../lib/training/contentRights';
 import { getExerciseGuidePayload, getExerciseThumb, hasExerciseGuide } from '../lib/training/exerciseMedia';
 import { matchExerciseToCatalog } from '../lib/training/aiProgramPlan';
 import { EQUIPMENT_OPTIONS, hasEquipmentFilter, normalizeEquipmentList, equipmentFilterLabel } from '../lib/training/equipmentFilter';
-import { compatibleEquipmentOptions, defaultCatalogEquipment, resolveExerciseEquipment } from '../lib/training/exerciseEquipment';
+import { compatibleEquipmentOptions, defaultCatalogEquipment, resolveExerciseEquipment, seedPendingEquipmentDefaults } from '../lib/training/exerciseEquipment';
 import { canonicalEquipment, loadEntryCaption } from '../lib/training/equipmentIdentity';
 import { createEquipmentWriteQueue, equipmentChoiceBlockReason, equipmentForSetSnapshot, type EquipmentWriteQueue } from '../lib/training/equipmentSelection';
 import {
   clearPendingEquipmentIds,
   exerciseUpdateTouchedRow,
   remapPendingByExerciseId,
+  remapPendingEquipmentForCopiedWorkout,
   resolveExerciseTarget as resolveExerciseTargetSafe,
 } from '../lib/training/exerciseTargetResolve';
 import {
@@ -501,6 +502,22 @@ export default function Page(){
  },[program,logDate,memberWorkoutProgram,memberWorkoutLogDate,viewingMember?.user_id,session?.user?.id]);
  useEffect(()=>{logsRef.current=logs;},[logs]);
  useEffect(()=>()=>{if(prCelebrationTimerRef.current)clearTimeout(prCelebrationTimerRef.current);},[]);
+ useEffect(()=>{
+  if(!trainingSessionOpen||!workout?.st_exercises?.length)return;
+  const available=normalizeEquipmentList(
+   (program as any)?.available_equipment||profileDraft?.available_equipment||(profile as any)?.available_equipment
+  );
+  const catalogById=(id:string)=>catalog.find((c:any)=>String(c.id||'')===id);
+  setPendingEquipmentById((prev)=>{
+   const seeded=seedPendingEquipmentDefaults({
+    exercises:workout.st_exercises,
+    catalogById,
+    pending:prev,
+    availableEquipment:available,
+   });
+   return seeded||prev;
+  });
+ },[trainingSessionOpen,workout?.id,workout?.st_exercises,catalog,program,profileDraft?.available_equipment,profile]);
  useEffect(()=>{
   if(!program||syncingCalendarRef.current||activeAssignedRecipient||viewingMember||draftEditProgramId)return;
   if(loggerProtected())return;
@@ -1755,7 +1772,22 @@ export default function Page(){
      setTrainingSubNav('personal');
      setApplyScope('current');
      const mapped=matchCopiedWorkout(copiedFrom,copy);
+     // Alias optimistic equipment onto copied exercise ids before and after reload
+     // so either id resolves while Training swaps workouts.
+     const aliasEquipmentPending=()=>{
+      if(!mapped)return;
+      setPendingEquipmentById((prev)=>remapPendingEquipmentForCopiedWorkout(prev,copiedFrom?.st_exercises,mapped,exerciseSection));
+      (copiedFrom?.st_exercises||[]).forEach((src:any)=>{
+       const fromId=String(src?.id||'');
+       if(!fromId||!equipmentQueuesRef.current[fromId])return;
+       const hit=resolveExerciseTargetSafe(mapped,src,mapped,exerciseSection);
+       const toId=String(hit?.id||'');
+       if(toId&&toId!==fromId)equipmentQueuesRef.current[toId]=equipmentQueuesRef.current[fromId];
+      });
+     };
+     aliasEquipmentPending();
      await loadPrograms('training',{preserveWorkoutId:mapped?.id||null,followedProgramId:copy.id});
+     aliasEquipmentPending();
      setLogDate(date);
      if(keepOpen){setTrainingSessionIntent(intent);setTrainingSessionOpen(true);}
      return {program:copy};

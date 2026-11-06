@@ -11,6 +11,40 @@ Branch:
 Status:
 ```
 
+## BIQ-0310 - Default workout equipment from the program and keep it after copy
+
+Date: 2026-11-06
+Branch: cursor/set-logging-equipment-default-dc26
+Status: Implemented locally. Not pushed.
+
+Summary: AI program exercises now store the catalog/program equipment default when created, the same way a manual add does. Opening a logging session seeds blank multi-implement cards from that default (preferring the athlete's available equipment when it narrows the choice). Private-copy remapping moves optimistic equipment onto the new exercise ids before Training re-renders, so the picker no longer flashes back to Select equipment and block set logging.
+
+Purpose: Set logging showed blank equipment with yellow required text even when the program already implied a default. Choosing equipment looked selected, then asked again until leave/reopen, which interrupted completing sets.
+
+Files changed:
+- lib/training/exerciseEquipment.ts
+- lib/training/exerciseTargetResolve.ts
+- lib/training/aiProgramPlan.ts
+- app/page.tsx
+- scripts/test-equipment-program-default.ts
+- scripts/test-exercise-target-resolve.ts
+- CHANGELOG.md
+- DECISIONS.md
+
+Database changes: None. New AI programs write `st_exercises.equipment` on insert. Existing blank rows are seeded in the logger only until the athlete changes or saves equipment.
+
+Testing steps:
+- Run `npx tsx scripts/test-equipment-program-default.ts`.
+- Run `npx tsx scripts/test-exercise-target-resolve.ts`.
+- Run `npx tsx scripts/test-equipment-identity.ts`.
+- Open a program workout with Bench Press (or another multi-implement card). Equipment should already show the catalog/program default, not a yellow Select equipment prompt.
+- On a live group workout that still needs a private copy, change equipment and confirm it stays selected without leaving the screen.
+- Log weight, reps, and Done. Leave and reopen the workout; equipment and completed sets remain.
+
+Known issues: Existing blank exercise rows are not backfilled in the database until the athlete changes equipment or a future write persists the seed. Template editor duplicate-name matching outside the logging path is unchanged from BIQ-0306.
+
+Recommended commit message: BIQ-0310 Default program equipment in the logger and keep it after personal copy.
+
 ## BIQ-0309 - Stop a copied meal from being saved twice
 
 Date: 2026-11-04

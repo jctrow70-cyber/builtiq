@@ -140,3 +140,29 @@ export function clearPendingEquipmentIds(
   });
   return next;
 }
+
+/**
+ * After a private copy, optimistic equipment is still keyed by the source
+ * exercise ids. Copy each pending value onto the matching copied row and keep
+ * the source key during the transition so either id still resolves while
+ * Training swaps from the live group workout to the private copy.
+ */
+export function remapPendingEquipmentForCopiedWorkout(
+  pending: Record<string, string>,
+  sourceExercises: ExerciseTargetLike[] | null | undefined,
+  targetWorkout: WorkoutTargetLike | null | undefined,
+  sectionOf: (exercise: ExerciseTargetLike) => string
+): Record<string, string> {
+  let changed = false;
+  const next = { ...pending };
+  for (const source of sourceExercises || []) {
+    const fromId = String(source?.id || '');
+    if (!fromId || !Object.prototype.hasOwnProperty.call(pending, fromId)) continue;
+    const match = resolveExerciseInWorkout(targetWorkout, source, sectionOf);
+    const toId = String(match?.id || '');
+    if (!toId || toId === fromId) continue;
+    next[toId] = pending[fromId];
+    changed = true;
+  }
+  return changed ? next : pending;
+}
