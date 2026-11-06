@@ -49,6 +49,8 @@ export type TrainingDayPlan = {
   primary: TrainingDayItem | null;
   later: TrainingDayItem[];
   isToday: boolean;
+  /** Program rows removed from this date because a personal move sent them elsewhere. */
+  movedAway?: TrainingDayItem[];
 };
 
 export type TrainingMonthCell = {
@@ -150,16 +152,22 @@ export function applyWorkoutDayMoves(
   moves: WorkoutDayMoves
 ): TrainingDayPlan {
   if (!program || !Object.keys(moves).length) return plan;
+  const moveKey = (item: TrainingDayItem) => moveKeyForActivity({
+    id: item.activityId || item.id,
+    workout_id: item.workoutId,
+  });
+  const movedAway = plan.items.filter((item) => {
+    if (item.source === 'calendar' || item.isRest) return false;
+    const dest = moves[moveKey(item) || ''];
+    return !!dest && dest !== plan.date;
+  });
+  const movedTitles = new Set(movedAway.map((item) => String(item.title || '').trim().toLowerCase()).filter(Boolean));
   const kept = plan.items.filter((item) => {
     if (item.source === 'calendar') return true;
-    const key = moveKeyForActivity({
-      id: item.activityId || item.id,
-      workout_id: item.workoutId,
-    });
-    if (!key) return true;
-    const dest = moves[key];
-    if (!dest) return true;
-    return dest === plan.date;
+    const dest = moves[moveKey(item) || ''];
+    if (dest) return dest === plan.date;
+    if (movedTitles.has(String(item.title || '').trim().toLowerCase())) return false;
+    return true;
   });
   const incomingIds = new Set(kept.map((item) => item.id));
   const incoming: TrainingDayItem[] = [];
@@ -175,7 +183,8 @@ export function applyWorkoutDayMoves(
     incomingIds.add(item.id);
     incoming.push(item);
   }
-  return withPrimary(plan, [...kept, ...incoming]);
+  const next = withPrimary(plan, [...kept, ...incoming]);
+  return movedAway.length ? { ...next, movedAway } : next;
 }
 
 export function attachCalendarItems(plan: TrainingDayPlan, calendarActivities: UserCalendarActivity[]): TrainingDayPlan {
@@ -363,10 +372,51 @@ export function expectationDisplayDate(
   return currentDateForMove(moves, `w:${workoutId}`, row.scheduledDate);
 }
 
+function expectationDatesForWorkout(
+  rows: VisibleScheduleExpectation[],
+  workoutId: string,
+  moves: WorkoutDayMoves
+): string[] {
+  return rows
+    .filter((row) => String(row.workoutId || '') === workoutId)
+    .map((row) => expectationDisplayDate(row, moves));
+}
+
+/**
+ * The program template still occupies its weekday after a group reschedule.
+ * Once that workout's expectation displays on another date, the template day is a ghost.
+ */
+function dropTemplateDayGhosts(
+  items: TrainingDayItem[],
+  rows: VisibleScheduleExpectation[],
+  planDate: string,
+  moves: WorkoutDayMoves
+): TrainingDayItem[] {
+  return items.filter((item) => {
+    if (item.isRest || item.source === 'calendar' || !item.workoutId) return true;
+    const dates = expectationDatesForWorkout(rows, item.workoutId, moves);
+    if (!dates.length) return true;
+    return dates.includes(planDate);
+  });
+}
+
+function movedAwayCoversExpectation(
+  plan: TrainingDayPlan,
+  row: VisibleScheduleExpectation,
+  lineage: Set<string>
+): boolean {
+  return (plan.movedAway || []).some((item) => {
+    if (item.workoutId && row.workoutId && item.workoutId === row.workoutId) return true;
+    if (!sameWorkoutTitle(item.title, row.title)) return false;
+    if (!row.programId) return true;
+    return lineage.has(row.programId);
+  });
+}
+
 /**
  * Place visible enrollment workouts on the calendar without duplicating a workout already on that date.
  * A private copy of a group plan already occupies its dates. The source plan's expectation is the same session.
- * When workout_day_moves relocates a workout, the expectation paints on the move date, not the native scheduled_date.
+ * A moved workout stays on the destination day: the template weekday and a source-plan expectation are not painted again.
  */
 export function overlayVisibleExpectations(
   plan: TrainingDayPlan,
@@ -379,8 +429,8 @@ export function overlayVisibleExpectations(
 ): TrainingDayPlan {
   const lineage = new Set((lineageProgramIds || []).map((id) => String(id || '').trim()).filter(Boolean));
   if (followedSourceProgramId) lineage.add(followedSourceProgramId);
-  const mine = rows.filter((row) => expectationDisplayDate(row, moves) === plan.date);
-  let items = plan.items.map((item) => ({ ...item }));
+  const mine = rows.filter((row) => expectationDisplayDate(row, moves) === plan.date && !movedAwayCoversExpectation(plan, row, lineage));
+  let items = dropTemplateDayGhosts(plan.items, rows, plan.date, moves).map((item) => ({ ...item }));
   const sameFollowedSession = (row: VisibleScheduleExpectation) => {
     if (!row.programId || !lineage.has(row.programId)) return false;
     return items.some((item) => {

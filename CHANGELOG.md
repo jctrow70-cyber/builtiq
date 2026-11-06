@@ -11,6 +11,36 @@ Branch:
 Status:
 ```
 
+## BIQ-0312 - Keep a moved workout off its original Sunday
+
+Date: 2026-11-06
+Branch: main
+Status: Implemented locally. Not committed.
+
+Summary: Moving a Sunday workout to Saturday left the original day filled in when the program weekday and the visible expectation disagreed. The calendar now keeps the workout on the destination date only. A group reschedule that already changed the expectation date no longer also paints the template weekday. A personal move of a private copy no longer leaves the source plan's expectation on Sunday.
+
+Purpose: BIQ-0311 hid the ghost only when the expectation used the same workout id as `workout_day_moves`. The live calendar still showed Sunday for the other move paths.
+
+Files changed:
+- lib/programDesign/trainingSchedule.ts
+- scripts/test-workout-day-moves.ts
+- CHANGELOG.md
+- DECISIONS.md
+
+Database changes: None. Personal moves still do not rewrite `st_training_expectations.scheduled_date`.
+
+Testing steps:
+1. `npx tsx scripts/test-workout-day-moves.ts`
+2. `npx tsx scripts/test-today-training.ts`
+3. `npx tsx scripts/test-unified-schedule.ts`
+4. Training week view: move a Sunday workout to Saturday. Sunday no longer lists it. Saturday lists it once.
+5. Reset day and confirm it returns to Sunday only.
+
+Known issues:
+- Progress adherence still counts the stored expectation date for a personal move.
+
+Recommended commit message: BIQ-0312 Keep a moved workout off its original day.
+
 ## BIQ-0311.1 - Fix workoutDayMoves scope for production build
 
 Date: 2026-11-06

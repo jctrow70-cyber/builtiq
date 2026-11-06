@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 162 - A moved workout has one calendar day
+
+Date: 2026-11-06
+Status: Implemented locally
+Category: Training
+
+### Decision
+
+BIQ-0312 keeps a moved workout on the destination day only. If that workout's visible expectation displays on another date, the program template weekday is left blank. If a personal move vacates a day, a source-plan expectation with the same name is not painted back onto that day.
+
+### Reason
+
+BIQ-0311 followed `workout_day_moves` only when the expectation row used the same workout id. A group reschedule already stores the new date on the expectation and leaves the template weekday alone, so Sunday and Saturday both showed the workout. A private copy uses a different workout id from the source plan, so the source expectation stayed on Sunday after the copy moved.
+
+### Alternatives Considered
+
+Rewriting `scheduled_date` for every personal move. That still changes Progress adherence and was declined in Decision 161. Hiding every same-titled workout on the original day, including a second distinct session. Exact move keys and lineage matching avoid that.
+
+### Impact
+
+No database change. Progress adherence for a personal move still uses the stored expectation date. Group Move Workout still updates the expectation date.
+
+---
+
 ## Decision 161 - Calendar overlay follows personal day moves
 
 Date: 2026-11-06

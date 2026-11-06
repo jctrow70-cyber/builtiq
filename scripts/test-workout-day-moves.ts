@@ -181,4 +181,48 @@ assert.equal(saturdayOverlaid.items.filter((item) => item.workoutId === 'w-sun')
 assert.equal(saturdayOverlaid.items.find((item) => item.workoutId === 'w-sun')?.expectationId, 'exp-sun');
 assert.equal(saturdayOverlaid.items.find((item) => item.workoutId === 'w-sun')?.movedFrom, '2026-11-08');
 
+// A group reschedule rewrites scheduled_date and leaves the program weekday in place.
+const groupMovedExpectation = { ...sundayExpectation, id: 'exp-group-move', scheduledDate: '2026-11-07' };
+const sundayTemplate = planForCalendarDate(sundayProgram, sundayActivities, [], '2026-11-08', '2026-11-06', {});
+const saturdayOpen = planForCalendarDate(sundayProgram, sundayActivities, [], '2026-11-07', '2026-11-06', {});
+const sundayAfterGroupMove = overlayVisibleExpectations(sundayTemplate, [groupMovedExpectation], '2026-11-06');
+const saturdayAfterGroupMove = overlayVisibleExpectations(saturdayOpen, [groupMovedExpectation], '2026-11-06');
+assert.equal(sundayAfterGroupMove.items.some((item) => item.title === 'Sunday Lift'), false);
+assert.equal(saturdayAfterGroupMove.items.filter((item) => item.workoutId === 'w-sun').length, 1);
+
+// A personal copy moves by its own workout id. The source expectation must not stay on Sunday.
+const copyProgram: ProgramDesignRecord = { ...sundayProgram, id: 'prog-copy', name: 'Week Plan copy' };
+const copyLift: ProgramActivity = {
+  ...sundayLift,
+  id: 'legacy-w-sun-copy',
+  program_id: 'prog-copy',
+  workout_id: 'w-sun-copy',
+};
+const copyMoves = { 'w:w-sun-copy': '2026-11-07' };
+const copyActivities = mergeProgramActivities(copyProgram, [copyLift], []);
+const copySunday = planForCalendarDate(copyProgram, copyActivities, [], '2026-11-08', '2026-11-06', copyMoves);
+const copySaturday = planForCalendarDate(copyProgram, copyActivities, [], '2026-11-07', '2026-11-06', copyMoves);
+const sourceExpectation = { ...sundayExpectation, id: 'exp-source', programId: 'prog-sun' };
+const copySundayView = overlayVisibleExpectations(
+  copySunday,
+  [sourceExpectation],
+  '2026-11-06',
+  'prog-sun',
+  null,
+  ['prog-copy', 'prog-sun'],
+  copyMoves
+);
+const copySaturdayView = overlayVisibleExpectations(
+  copySaturday,
+  [sourceExpectation],
+  '2026-11-06',
+  'prog-sun',
+  null,
+  ['prog-copy', 'prog-sun'],
+  copyMoves
+);
+assert.equal(copySunday.items.some((item) => item.workoutId === 'w-sun-copy'), false);
+assert.equal(copySundayView.items.some((item) => item.title === 'Sunday Lift'), false);
+assert.equal(copySaturdayView.items.filter((item) => item.title === 'Sunday Lift').length, 1);
+
 console.log('OK: workout-day-moves checks passed');
