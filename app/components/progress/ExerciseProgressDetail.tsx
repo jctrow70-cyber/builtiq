@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Card from '../ui/Card';
 import SegmentedControl from '../ui/SegmentedControl';
-import ProgressTrendChart from './ProgressTrendChart';
+import StrengthLineChart from './StrengthLineChart';
 import { supabase } from '../../../lib/supabaseClient';
 import {
   buildExerciseProgress,
@@ -14,6 +14,7 @@ import {
 import { fetchExerciseProgressRows } from '../../../lib/progress/queries';
 import { chartValueDomain, type SeriesChartMetric } from '../../../lib/progress/seriesChart';
 import { formatLoad, signedPercent } from '../../../lib/progress/progressView';
+import type { ExerciseTrainingSummary, ExerciseWeekBucket } from '../../../lib/progress/exerciseTraining';
 import type { ProgressSetFact } from '../../../lib/progress/setFacts';
 import { formatDisplayDate, todayYmd } from '../../../lib/training/programCalendar';
 import { equipmentSeriesKey, seriesIdentityFromParts } from '../../../lib/progress/identity';
@@ -152,19 +153,33 @@ export default function ExerciseProgressDetail({ userId, target, weightUnit, onB
         <SegmentedControl<ExerciseChartRange> ariaLabel="Exercise date range" size="sm" value={range} onChange={setRange} options={RANGE_LABELS} />
       </div>
 
+      {model && (
+        <Card>
+          <h3 className="progress-section-title">Working sets</h3>
+          <div className="progress-stat-grid">
+            <Stat label="Working sets" value={String(model.training.workingSets)} />
+            <Stat label="Training days" value={String(model.training.trainingDays)} />
+            <Stat label="Sets per week" value={averageText(model.training)} />
+            <Stat label="Latest training day" value={model.training.latestTrainingDay ? formatDisplayDate(model.training.latestTrainingDay) : null} />
+          </div>
+          {averageNote(model.training) && <p className="progress-lead">{averageNote(model.training)}</p>}
+        </Card>
+      )}
+
       <Card>
         <h3 className="progress-section-title">{metric === 'e1rm' ? 'Estimated strength' : metricLabel(metric)}</h3>
-        {metric === 'e1rm' && <p className="muted">Each point is the best estimated 1RM on that workout date.</p>}
         {loading && <p className="muted">Loading this exercise…</p>}
         {error && <p className="progress-error">{error}</p>}
         {!loading && !error && model && model.chart.length > 0 && domain && (
-          <ProgressTrendChart
+          <StrengthLineChart
             points={model.chart}
             label={`${model.identity.exerciseName} ${model.identity.equipmentLabel} ${metricLabel(metric)}`}
             domain={domain}
-            showDates
-            gapDays
             formatValue={(value) => metric === 'reps' ? String(Math.round(value)) : formatLoad(value, weightUnit) || String(Math.round(value))}
+            summaryLabels={metric === 'e1rm' ? { start: 'Starting estimated 1RM', latest: 'Latest estimated 1RM', change: 'Change' } : null}
+            caption={metric === 'e1rm'
+              ? 'Each point is the best estimated 1RM on a recorded workout date. The line connects those dates only.'
+              : 'Each point is a recorded workout date. The line connects those dates only.'}
           />
         )}
         {!loading && !error && (!model || model.chart.length === 0) && (
@@ -176,21 +191,59 @@ export default function ExerciseProgressDetail({ userId, target, weightUnit, onB
         </details>
       </Card>
 
+      {model?.observation && (
+        <Card>
+          <h3 className="progress-section-title">Training note</h3>
+          <p className="progress-lead">{model.observation.text}</p>
+        </Card>
+      )}
+
       <Card>
         <div className="progress-section-head">
-          <h3 className="progress-section-title">Recent sessions</h3>
+          <h3 className="progress-section-title">Recent performances</h3>
           {model && model.allSessions.length > model.recent.length && (
             <button type="button" className="btn small secondary" onClick={() => setShowAll((value) => !value)}>
               {showAll ? 'Show recent' : 'View all history'}
             </button>
           )}
         </div>
-        {!loading && sessions.length === 0 && <p className="progress-lead">No sessions for this equipment yet.</p>}
+        {!loading && sessions.length === 0 && <p className="progress-lead">No performances for this equipment yet.</p>}
         {sessions.map((session) => (
           <SessionRow key={session.date} session={session} open={openDate === session.date} weightUnit={weightUnit} onToggle={() => setOpenDate(openDate === session.date ? null : session.date)} />
         ))}
       </Card>
+
+      {model && model.training.weeks.length > 0 && (
+        <Card>
+          <details className="progress-note exercise-week-breakdown">
+            <summary>Weekly breakdown</summary>
+            <ul className="exercise-week-list">
+              {model.training.weeks.map((week) => (
+                <WeekRow key={week.weekStart} week={week} weightUnit={weightUnit} />
+              ))}
+            </ul>
+          </details>
+        </Card>
+      )}
     </div>
+  );
+}
+
+function WeekRow({ week, weightUnit }: { week: ExerciseWeekBucket; weightUnit: string }) {
+  const partial = weekPartialLabel(week.partial);
+  return (
+    <li className="exercise-week-row">
+      <b>Week of {formatDisplayDate(week.weekStart)}</b>
+      {week.workingSets === 0 ? (
+        <span className="muted">None recorded{partial ? ` · ${partial}` : ''}</span>
+      ) : (
+        <>
+          <span>{week.workingSets} working set{week.workingSets === 1 ? '' : 's'} · {week.trainingDays} training day{week.trainingDays === 1 ? '' : 's'}</span>
+          {week.bestE1rm != null && <span>Best estimated 1RM {formatLoad(week.bestE1rm, weightUnit)}</span>}
+          {partial && <span className="muted">{partial}</span>}
+        </>
+      )}
+    </li>
   );
 }
 
@@ -259,6 +312,24 @@ function changeText(percent: number | null, delta: number | null, unit: string):
 
 function metricLabel(metric: SeriesChartMetric): string {
   return ADVANCED.find((item) => item.value === metric)?.label || metric;
+}
+
+function averageText(training: ExerciseTrainingSummary): string | null {
+  if (training.averageSetsPerWeek == null) return null;
+  return Number.isInteger(training.averageSetsPerWeek) ? String(training.averageSetsPerWeek) : training.averageSetsPerWeek.toFixed(1);
+}
+
+function averageNote(training: ExerciseTrainingSummary): string | null {
+  if (training.averageNote === 'too_short') return 'A weekly average starts after 7 days from the first completed working set in this period.';
+  if (training.averageNote === 'includes_open_week') return 'The current week is still in progress. The average counts days since the first completed working set, not an unfinished week as a full week.';
+  return null;
+}
+
+function weekPartialLabel(partial: ExerciseWeekBucket['partial']): string | null {
+  if (partial === 'first') return 'Partial first week';
+  if (partial === 'current') return 'Week still in progress';
+  if (partial === 'first_and_current') return 'Partial week, still in progress';
+  return null;
 }
 
 function equipmentSelectionKey(target: ExerciseProgressIdentity): string {

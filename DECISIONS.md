@@ -4,6 +4,36 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 163 - Exercise Progress counts training weeks beside estimated strength
+
+Date: 2026-11-06
+Status: Implemented locally
+Category: Progress
+
+### Decision
+
+BIQ-0313 keeps Phase 3A on the existing Exercise Progress screen. Completed working sets use `isWorkingSet`, so warm-up and ramp sets are excluded and backoff, drop, and AMRAP sets are included. Incomplete sets are excluded. Equipment aliases and meaningful variants stay on the existing series rules. Missing equipment stays unspecified.
+
+Weeks are Monday–Sunday. The breakdown starts at the first completed working set in the selected period. Earlier weeks are absent. Later weeks with no completed working set say none recorded. A training day is one log date with at least one completed working set.
+
+The weekly average is completed working sets divided by observed days / 7. Observed days run from that first set through the end of the selected period. An unfinished current week contributes only the days that have occurred. Fewer than 7 observed days does not show a weekly average.
+
+Estimated strength still comes from `estimateE1rm` and the existing comparison windows. At most one note is shown: strength and working sets both higher, strength about the same while training days were lower, working sets in fewer than half of the countable weeks, or not enough comparable strength history. A note is omitted when none of those is supported. Notes do not claim a cause. An unfinished current week with no sets is left out of the inconsistency check.
+
+### Reason
+
+The strength chart already answers estimated 1RM. Weekly sets and training days answer how often the series was trained. Reusing the working-set classifier and the comparison windows keeps the two answers from drifting apart.
+
+### Alternatives Considered
+
+Calling the frequency metric sessions before workout identifiers are on the exercise query. Treating every calendar week in the range, including weeks before the first set, as a zero. Counting an unfinished week as seven days. Adding a second chart or applying migration 078. Each of those was declined for this slice.
+
+### Impact
+
+No database change. Logging, Copy Last, adaptation, Training History, Group Progress, nutrition, body measurements, and program generation are unchanged. Personal-record and chart calculations are unchanged.
+
+---
+
 ## Decision 162 - A moved workout has one calendar day
 
 Date: 2026-11-06

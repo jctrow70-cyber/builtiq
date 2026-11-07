@@ -11,6 +11,50 @@ Branch:
 Status:
 ```
 
+## BIQ-0313 - Show weekly working sets on Exercise Progress
+
+Date: 2026-11-06
+Branch: main
+Status: Implemented locally. Not committed. Not pushed.
+
+Summary: Exercise Progress now shows completed working sets, training days, a weekly average, the latest training day, one training note, and an expandable Monday–Sunday breakdown for the selected exercise, equipment, and variant. The estimated strength chart draws one line through recorded workout dates, with starting and latest estimated 1RM, the change between those dates, and a tooltip for each date. Days without a workout are not plotted.
+
+Purpose: Phase 3A adds training-volume context beside estimated strength without a second analytics screen or a second strength formula.
+
+Files changed:
+- lib/progress/exerciseTraining.ts
+- lib/progress/exerciseProgress.ts
+- lib/progress/seriesChart.ts
+- app/components/progress/ExerciseProgressDetail.tsx
+- app/components/progress/StrengthLineChart.tsx
+- app/globals.css
+- scripts/test-exercise-training.ts
+- scripts/test-exercise-progress.ts
+- CHANGELOG.md
+- DECISIONS.md
+
+Database changes: None. Migration 078 was not applied.
+
+Testing steps:
+1. `npx tsx scripts/test-exercise-training.ts`
+2. `npx tsx scripts/test-exercise-progress.ts`
+3. `npx tsx scripts/test-equipment-identity.ts`
+4. `npx tsx scripts/test-previous-performance.ts`
+5. `npx tsx scripts/test-previous-performance-logger.ts`
+6. `npx tsx scripts/test-exercise-history-display.ts`
+7. `npx tsx scripts/test-dashboard-progress.ts`
+8. `npx tsx scripts/test-progress-analytics.ts`
+9. `npx tsx scripts/test-progress-view.ts`
+10. `npx tsx lib/scienceEngine/acceptanceCheck.ts`
+11. Open Exercise Progress for a logged lift at about 390px. Confirm the strength summary, working-set summary, chart, at most one note, recent performances, and the weekly breakdown.
+
+Known issues:
+- Training days are distinct log dates. They are not workout sessions.
+- A weekly average is hidden until 7 days have passed since the first completed working set in the selected period.
+- The training note describes what happened in the comparison windows. It does not explain why.
+
+Recommended commit message: BIQ-0313 Show weekly working sets and training days on Exercise Progress.
+
 ## BIQ-0312 - Keep a moved workout off its original Sunday
 
 Date: 2026-11-06

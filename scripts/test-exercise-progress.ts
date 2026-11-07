@@ -4,9 +4,9 @@ import { buildExerciseProgress, exerciseProgressRequest, exerciseProgressTargetF
 import { displayedEquipmentProvenance } from '../lib/progress/provenance';
 import { seriesIdentityFromParts, seriesKey } from '../lib/progress/identity';
 import { comparableWindows, rangeBounds } from '../lib/progress/ranges';
-import { chartReadout, chartValueDomain, seriesChartPoints } from '../lib/progress/seriesChart';
+import { chartReadout, chartValueDomain, seriesChartPoints, strengthAxisDates, strengthChartModel, strengthGridValues } from '../lib/progress/seriesChart';
 import type { ProgressSetFact } from '../lib/progress/setFacts';
-import { buildSeriesWindows } from '../lib/progress/strengthSeries';
+import { buildSeriesWindows, percentChange } from '../lib/progress/strengthSeries';
 import { mondayOfWeek } from '../lib/training/programCalendar';
 import { detectSetPersonalRecord, personalRecordTitle } from '../lib/training/progressAnalytics';
 import { discoverLifts, filterLifts } from '../lib/progress/liftIndex';
@@ -367,6 +367,31 @@ assert.equal(twoReadout.dates.length, 2);
 assert.equal(twoReadout.pointValues[1], 72);
 assert.notEqual(twoDomain.min, twoReadout.pointValues[0]);
 assert.notEqual(twoDomain.max, twoReadout.pointValues[1]);
+
+const gapped = strengthChartModel([
+  { date: '2026-11-02', value: 209 },
+  { date: '2026-10-12', value: 171 },
+  { date: '2026-10-20', value: 200 },
+]);
+assert.deepEqual(gapped.points.map((point) => point.date), ['2026-10-12', '2026-10-20', '2026-11-02']);
+assert.equal(gapped.connect, true);
+assert.equal(gapped.start?.value, 171);
+assert.equal(gapped.latest?.value, 209);
+assert.equal(gapped.changePercent, percentChange(171, 209));
+assert.equal(gapped.points.some((point) => point.date === '2026-10-13'), false);
+const oneDate = strengthChartModel([{ date: '2026-11-02', value: 72 }, { date: '2026-11-02', value: 60 }]);
+assert.equal(oneDate.points.length, 1);
+assert.equal(oneDate.points[0].value, 72);
+assert.equal(oneDate.connect, false);
+assert.equal(oneDate.changePercent, null);
+assert.equal(oneDate.start?.value, oneDate.latest?.value);
+const axis = strengthAxisDates(['2026-10-07', '2026-10-12', '2026-10-20', '2026-10-28', '2026-11-02'], 4);
+assert.equal(axis[0], '2026-10-07');
+assert.equal(axis[axis.length - 1], '2026-11-02');
+assert.ok(axis.length <= 4);
+assert.equal(axis.includes('2026-10-08'), false);
+assert.deepEqual(strengthGridValues(100, 160).length, 3);
+assert.equal(strengthGridValues(100, 100).length, 1);
 
 assert.equal(workoutHistoryTitle({ linkedDay: 'Tue', linkedType: 'Lower A - Front Squat Focus', linkedName: 'Workout' }), 'Lower A - Front Squat Focus');
 assert.equal(workoutHistoryTitle({ linkedDay: 'Tue', linkedType: 'Strength', linkedName: 'Workout' }), 'Tue · Strength');

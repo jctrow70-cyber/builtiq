@@ -5,6 +5,7 @@ import { equipmentRecordLabel, equipmentRecordOf, type EquipmentRecord } from '.
 import { comparableWindows, inSpan, rangeBounds, type ProgressRange } from './ranges';
 import { seriesChartPoints, type SeriesChartMetric, type SeriesChartPoint } from './seriesChart';
 import { e1rmOf, isCountedWorkingSet, type ProgressSetFact } from './setFacts';
+import { exerciseTrainingObservation, exerciseTrainingSummary, type ExerciseObservation, type ExerciseTrainingSummary } from './exerciseTraining';
 import { buildSeriesWindows, percentChange } from './strengthSeries';
 import { mondayOfWeek } from '../training/programCalendar';
 
@@ -61,6 +62,8 @@ export type ExerciseProgressModel = {
   chart: SeriesChartPoint[];
   recent: RecentExerciseSession[];
   allSessions: RecentExerciseSession[];
+  training: ExerciseTrainingSummary;
+  observation: ExerciseObservation | null;
 };
 
 export function exerciseProgressRequest(input: ExerciseProgressRequest): ExerciseProgressRequest {
@@ -190,19 +193,34 @@ export function buildExerciseProgress(input: {
   const periodFacts = seriesFacts.filter((fact) => inSpan(fact.logDate, view));
   const record = equipmentRecordOf(seriesFacts.map((fact) => fact.provenance.equipment));
   const sessions = exerciseSessions(seriesFacts);
+  const changePercent = summary?.percentChange ?? null;
+  const changeLoad = summary?.baselineE1rm != null && summary.currentE1rm != null ? summary.currentE1rm - summary.baselineE1rm : null;
+  const training = exerciseTrainingSummary({ facts: seriesFacts, view });
+  const observation = exerciseTrainingObservation({
+    facts: seriesFacts,
+    baseline: windows.baseline,
+    current: windows.current,
+    weeks: training.weeks,
+    today: input.today,
+    changePercent,
+    changeLoad,
+    periodWorkingSets: training.workingSets,
+  });
   return {
     identity: seriesFacts[0]?.identity || selected,
     equipmentOptions: options.length ? options : [selected],
     record,
     recordLabel: equipmentRecordLabel(record),
-    changePercent: summary?.percentChange ?? null,
-    changeLoad: summary?.baselineE1rm != null && summary.currentE1rm != null ? summary.currentE1rm - summary.baselineE1rm : null,
+    changePercent,
+    changeLoad,
     allTimeLoad: bestLoad(seriesFacts),
     allTimeE1rm: bestEstimated1Rm(seriesFacts),
     periodBest: bestEstimated1Rm(periodFacts) || bestLoad(periodFacts),
     chart: seriesChartPoints(periodFacts, input.metric || 'e1rm'),
     recent: sessions.slice(0, 4),
     allSessions: sessions,
+    training,
+    observation,
   };
 }
 

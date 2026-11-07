@@ -1,4 +1,5 @@
 import { e1rmOf, isCountedWorkingSet, setVolume, type ProgressSetFact } from './setFacts';
+import { percentChange } from './strengthSeries';
 
 export type SeriesChartMetric = 'e1rm' | 'load' | 'reps' | 'volume' | 'sets';
 
@@ -73,6 +74,61 @@ function metricValue(rows: ProgressSetFact[], metric: SeriesChartMetric): number
   if (metric === 'reps') return maxOf(rows.map((row) => row.reps));
   const volumes = rows.map((row) => setVolume(row)).filter((value): value is number => value != null);
   return volumes.length ? volumes.reduce((sum, value) => sum + value, 0) : null;
+}
+
+export type StrengthChartModel = {
+  points: SeriesChartPoint[];
+  start: SeriesChartPoint | null;
+  latest: SeriesChartPoint | null;
+  changePercent: number | null;
+  /** A line is drawn only between two or more recorded dates. */
+  connect: boolean;
+};
+
+/**
+ * Recorded workout dates only, oldest first.
+ * Missing dates are not inserted, and one date does not become a trend line.
+ * Change uses the same percent formula as the rest of progress.
+ */
+export function strengthChartModel(points: SeriesChartPoint[]): StrengthChartModel {
+  const byDate = new Map<string, number>();
+  points.forEach((point) => {
+    const date = String(point.date || '').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(point.value)) return;
+    const previous = byDate.get(date);
+    if (previous == null || point.value > previous) byDate.set(date, point.value);
+  });
+  const plotted = Array.from(byDate.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([date, value]) => ({ date, value }));
+  const start = plotted[0] || null;
+  const latest = plotted[plotted.length - 1] || null;
+  return {
+    points: plotted,
+    start,
+    latest,
+    changePercent: plotted.length >= 2 && start && latest ? percentChange(start.value, latest.value) : null,
+    connect: plotted.length >= 2,
+  };
+}
+
+/** First, last, and evenly spaced recorded dates. Never invents a date. */
+export function strengthAxisDates(dates: string[], maxLabels = 4): string[] {
+  const unique = Array.from(new Set(dates.map((date) => String(date || '').slice(0, 10)).filter(Boolean))).sort();
+  const limit = Math.max(1, maxLabels);
+  if (unique.length <= limit) return unique;
+  const picked: string[] = [];
+  const last = limit - 1;
+  for (let index = 0; index < limit; index += 1) {
+    const date = unique[Math.round((index * (unique.length - 1)) / last)];
+    if (picked[picked.length - 1] !== date) picked.push(date);
+  }
+  return picked;
+}
+
+export function strengthGridValues(min: number, max: number): number[] {
+  if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) return [min];
+  return [max, min + (max - min) / 2, min];
 }
 
 function maxOf(values: Array<number | null>): number | null {
