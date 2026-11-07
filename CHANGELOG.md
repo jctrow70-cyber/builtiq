@@ -17,7 +17,7 @@ Date: 2026-11-06
 Branch: main
 Status: Implemented locally. Not committed. Not pushed.
 
-Summary: Exercise Progress now shows completed working sets, training days, a weekly average, the latest training day, one training note, and an expandable Monday–Sunday breakdown for the selected exercise, equipment, and variant. The estimated strength chart draws one line through recorded workout dates, with starting and latest estimated 1RM, the change between those dates, and a tooltip for each date. Days without a workout are not plotted.
+Summary: Exercise Progress now shows completed working sets, training days, a weekly average, the latest training day, one training note, and an expandable Monday–Sunday breakdown for the selected exercise, equipment, and variant. The estimated strength chart draws one line through recorded workout dates, with starting and latest estimated 1RM, the change between those dates, and a tooltip for each date. Days without a workout are not plotted. The production typecheck combines strength dates with forEach so the es5 target does not have to spread a Set.
 
 Purpose: Phase 3A adds training-volume context beside estimated strength without a second analytics screen or a second strength formula.
 

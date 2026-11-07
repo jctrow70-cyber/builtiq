@@ -129,8 +129,10 @@ export function exerciseTrainingObservation(input: {
 
   const baseline = countedIn(input.facts, input.baseline);
   const current = countedIn(input.facts, input.current);
-  const e1rmDates = new Set([...baseline.e1rmDates, ...current.e1rmDates]).size;
-  const comparableStrength = input.changePercent != null && e1rmDates >= 2;
+  const e1rmDates = new Set<string>();
+  baseline.e1rmDates.forEach((date) => e1rmDates.add(date));
+  current.e1rmDates.forEach((date) => e1rmDates.add(date));
+  const comparableStrength = input.changePercent != null && e1rmDates.size >= 2;
 
   if (comparableStrength && (input.changePercent || 0) > 0 && current.sets > baseline.sets) {
     return observation('strength_and_sets_up');
