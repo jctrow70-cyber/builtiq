@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 164 - Planned equipment is not inferred from the previous set
+
+Date: 2026-11-08
+Status: Implemented locally
+Category: Training
+
+### Decision
+
+BIQ-0314 keeps the implement on the planned exercise. A blank later occurrence of the same exercise on the same day inherits the nearest earlier planned assignment. An explicit different implement on a later week stays there. Choosing equipment in the logger uses the program scope: later blank weeks inherit, and later weeks still on the previous choice move with the new choice. A visible Just today choice stays on the open workout. Generation stores an implement only when the plan names one, or when the catalog card has one legal implement. Chest-Supported Row stays unassigned until a person or an earlier planned row assigns Machine, Dumbbell, or Barbell. Program and assignment copies keep the stored implement. Set-log snapshots are not a source and are not rewritten. "Last on Machine" remains the label for a previous set whose implement is not the current selection.
+
+### Reason
+
+Week 2 could require an equipment choice while showing Last on Machine for 50 × 10 on Nov 6. The classifier uses that wording when the open exercise has no implement and an earlier set was logged on Machine. The snapshot was correct. The planned Week 2 row was empty because generation does not pick among several implements, a choice made while logging was saved only on that week, and copying a program dropped the equipment column.
+
+### Alternatives Considered
+
+Filling the dropdown from the latest set snapshot. That would show Machine even when a later week was explicitly Dumbbell. Hiding the equipment warning. The set still needs an implement before it is logged. Guessing the catalog default. Chest-Supported Row's default is Dumbbell, which is not an assignment of Machine.
+
+### Impact
+
+No change to completed set history, Copy Last matching, or the previous-performance classifier. Adaptation still compares the implement stored on each planned row. Migration 079 has to be applied before a new program copy keeps equipment.
+
+---
+
 ## Decision 163 - Exercise Progress counts training weeks beside estimated strength
 
 Date: 2026-11-06

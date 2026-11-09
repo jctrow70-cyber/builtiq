@@ -11,6 +11,40 @@ Branch:
 Status:
 ```
 
+## BIQ-0314 - Keep a chosen implement on later weeks
+
+Date: 2026-11-08
+Branch: cursor/equipment-week-persistence-af34
+Status: Implemented locally
+
+Summary: Week 2 of a multi-implement exercise such as Chest-Supported Row now keeps the implement stored on the program. A blank later week inherits the earlier planned assignment for that same day. Choosing equipment while logging applies that choice to later blank weeks, and to later weeks that were still on the previous choice. A later week that already names a different implement is left as assigned. Copying a program or an assigned workout copies the stored implement. Generation stores an implement only when the plan names one, or when the catalog card has a single legal implement. Set-log history is not read and is not rewritten.
+
+Purpose: The Week 2 logger could show Select equipment and block logging while the previous line said Last on Machine. That line is the Nov 6 set snapshot, not the current selection. The Week 2 planned row had no implement because generation does not assign one for Dumbbell, Machine, and Barbell cards, a logging choice updated only the open week, and program copy omitted the equipment column.
+
+Files changed:
+- lib/training/equipmentPersistence.ts
+- lib/training/aiProgramPlan.ts
+- app/page.tsx
+- supabase/migrations/20261108_079_preserve_program_equipment.sql
+- scripts/test-equipment-persistence.ts
+- CHANGELOG.md
+- DECISIONS.md
+
+Database changes: Migration 079 replaces `st_duplicate_program` and `st_copy_assignment_to_personal` so copied planned exercises keep `equipment`. It does not update set logs. Apply it before relying on copy to preserve an implement. Existing blank Week 2 rows are filled from an earlier planned assignment when that program is opened by someone who can edit it.
+
+Testing steps:
+1. `npx tsx scripts/test-equipment-persistence.ts`
+2. `npx tsx scripts/test-previous-performance-logger.ts`
+3. `npx tsx scripts/test-equipment-logger-persist.ts`
+4. `npx tsx scripts/test-logger-equipment-unlock.ts`
+5. Open Week 2 Chest-Supported Row after Week 1 was assigned Machine. The dropdown shows Machine and the previous line is the Machine set, not a prompt to select equipment.
+6. Assign a later week to Dumbbell in the program, then open it after a Machine log. It stays Dumbbell, and the previous line says Last on Machine.
+7. Leave a multi-implement exercise unassigned in every week. It still asks for equipment. History alone does not fill the dropdown.
+
+Known issues: Migration 079 is not applied from this change. A program copy made before that migration can still have blank equipment until an earlier week of the copy has an explicit implement to inherit. A visible Just today scope still changes only the open workout.
+
+Recommended commit message: BIQ-0314 Keep planned equipment on later weeks
+
 ## BIQ-0313 - Show weekly working sets on Exercise Progress
 
 Date: 2026-11-06
