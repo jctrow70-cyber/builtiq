@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 165 - A blank planned series can keep the last confirmed implement
+
+Date: 2026-11-08
+Status: Implemented locally
+Category: Training
+
+### Decision
+
+BIQ-0314.2 fills a planned exercise from the newest confirmed set snapshot only when that exercise’s series has no implement on any week. The snapshot has to name a legal option for the card, match the catalog exercise, and belong to an earlier session. Backfilled and estimated provenance are ignored. If any week already names an implement, that assignment wins and a different snapshot does not replace it or fill the other blank weeks. The set log itself is not rewritten. Once the blank row shows Machine, the previous line uses the normal same-equipment wording.
+
+### Reason
+
+Week 2 Chest-Supported Row still showed Select equipment and the yellow prompt next to “Last on Machine: 50 × 10 · Nov 6”. No planned week had an implement to inherit. The Nov 6 set is the athlete’s recorded Machine choice, and the dropdown has to agree with it.
+
+### Alternatives Considered
+
+Leaving the prompt up until someone picks Machine again. Hiding the prompt without storing an implement. Using the catalog default, which is Dumbbell. Letting a Machine snapshot override a week the program assigned to Dumbbell.
+
+### Impact
+
+Decision 164 still holds when the program names an implement. Completed history, Copy Last, and adaptation keep the equipment stored on each set. A shared template is not assigned from the coach’s personal logs.
+
+---
+
 ## Decision 164 - Planned equipment is not inferred from the previous set
 
 Date: 2026-11-08

@@ -11,6 +11,35 @@ Branch:
 Status:
 ```
 
+## BIQ-0314.2 - Restore a confirmed implement when the plan is blank
+
+Date: 2026-11-08
+Branch: cursor/restore-blank-equipment-af34
+Status: Implemented locally
+
+Summary: Chest-Supported Row no longer asks for equipment when every planned week is blank and a previous set was logged on Machine. The dropdown shows Machine, the yellow prompt is gone, and the previous line is the Machine set. A week the program already assigned, including a different implement, stays as assigned. Backfilled and estimated snapshots are not used. Completed set logs are not rewritten.
+
+Purpose: Week 2 still showed Select equipment and “Choose the equipment for this exercise before logging a set” beside “Last on Machine: 50 × 10 · Nov 6”. The planned row had no implement, so inheriting from an earlier planned week had nothing to copy. The Nov 6 set is the recorded Machine choice.
+
+Files changed:
+- lib/training/equipmentPersistence.ts
+- app/page.tsx
+- scripts/test-equipment-persistence.ts
+- CHANGELOG.md
+- DECISIONS.md
+
+Database changes: None. The blank planned row is updated in place when the open program can be edited. The set log is left as it was.
+
+Testing steps:
+1. `npx tsx scripts/test-equipment-persistence.ts`
+2. `npx tsx scripts/test-previous-performance-logger.ts`
+3. Open Week 2 Chest-Supported Row when the plan is blank and Nov 6 was logged on Machine. The dropdown shows Machine and the yellow equipment prompt is gone.
+4. Assign a later week to Dumbbell, then open a blank earlier week after a Machine log. It stays unassigned, and the Dumbbell week stays Dumbbell.
+
+Known issues: A shared template editor does not copy the coach’s personal set history onto the template. Migration 079 is still required before a new program copy keeps an implement that was already stored.
+
+Recommended commit message: BIQ-0314.2 Restore a confirmed implement when the plan is blank
+
 ## BIQ-0314.1 - Let the production build read planned equipment
 
 Date: 2026-11-08
