@@ -75,7 +75,7 @@ import AdaptationSummaryCard from './components/training/AdaptationSummaryCard';
 import { snapshotForLog as buildSetLogSnapshot, stripUnavailableLogColumns } from '../lib/training/setLogSnapshots';
 import { canRewritePlannedSetPrescription } from '../lib/training/plannedSetGuard';
 import { applyLogSnapshotType, applyProgramSetDeleted, applyProgramSetType, applyWorkoutSetDeleted, applyWorkoutSetType, correctPlannedSetType, isCorrectableSetType, LOGGED_SET_REMOVAL_CONFIRMATION, plannedSetEditQueue, resolvePlannedSetTargets, softDeletePlannedSets } from '../lib/training/setTypeCorrection';
-import { completedSessionDraft, deriveSessionStatus, outstandingRequiredSetIds, sessionStatusAfterPlanChange } from '../lib/training/sessionOutcome';
+import { completedSessionDraft, deriveSessionStatus, outstandingRequiredSetIds, sessionStatusAfterPlanChange, shouldHealPartialSession } from '../lib/training/sessionOutcome';
 import { extraLogsFromSetLogs, extraSetInsertPayload, extraSetsForExercise, nextExtraSetNumber, type ExtraSetLog } from '../lib/training/extraSets';
 import { classifyPreviousPerformance } from '../lib/training/previousPerformance';
 import { loggerCopyLastEligible, loggerSelectedEquipment } from '../lib/training/previousPerformanceDisplay';
@@ -1959,17 +1959,43 @@ export default function Page(){
     const feedbackGen=beginSessionFeedbackLoad(feedbackKey);
     const {data:sessionRow,error:sessionErr}=sessionWorkoutId?await supabase.from('st_workout_sessions').select('*').eq('user_id',uid).eq('log_date',day).eq('workout_id',sessionWorkoutId).maybeSingle():{data:null,error:null};
     if(sessionErr && /st_workout_sessions|does not exist/i.test(sessionErr.message||'')) setPhase2a1Pending(true);
-    if(sessionRow){
-      setSessionOutcome(sessionRow.status||'not_started');
-      setSessionSkipReason(sessionRow.skip_reason||'');
-      completedSessionKeyRef.current=sessionRow.status==='completed'&&sessionWorkoutId?`${uid}|${sessionWorkoutId}|${day}`:null;
+    let resolvedSession=sessionRow;
+    // BIQ-0315: orphaned Nov-2-style logs can leave status Partial after every set is recognised.
+    if(
+      resolvedSession &&
+      sessionWorkoutId &&
+      workoutOnDay &&
+      shouldHealPartialSession({existingStatus:resolvedSession.status,workout:workoutOnDay,logs:by}) &&
+      uid===session?.user?.id
+    ){
+      const links=loggingSessionLinks(workoutOnDay);
+      const healed=await upsertWorkoutSession(supabase,{
+        user_id:uid,
+        workout_id:sessionWorkoutId,
+        program_id:links.program_id||p?.id||null,
+        log_date:day,
+        status:'completed',
+        expectation_id:links.expectation_id||resolvedSession.expectation_id||null,
+        source_key:links.source_key||resolvedSession.source_key||null,
+        scheduled_date:links.scheduled_date||resolvedSession.scheduled_date||day,
+      });
+      if(healed.pendingMigration)setPhase2a1Pending(true);
+      if(!healed.error&&!healed.pendingMigration){
+        resolvedSession={...resolvedSession,status:'completed'};
+        if(session?.user?.id) markScreenStale(session.user.id,['schedule','progress','dashboard','groups']);
+      }
+    }
+    if(resolvedSession){
+      setSessionOutcome(resolvedSession.status||'not_started');
+      setSessionSkipReason(resolvedSession.skip_reason||'');
+      completedSessionKeyRef.current=resolvedSession.status==='completed'&&sessionWorkoutId?`${uid}|${sessionWorkoutId}|${day}`:null;
     } else {
       setSessionOutcome(deriveSessionStatus({workout:workoutOnDay,logs:by}));
       completedSessionKeyRef.current=null;
       if(sessionFeedbackIdentityRef.current===feedbackKey&&!sessionFeedbackDirtyRef.current)setSessionSkipReason('');
     }
     if(feedbackKey){
-      const loaded=await loadWorkoutFeedback(supabase,{userId:uid,workoutId:sessionWorkoutId,logDate:day,feedbackId:sessionRow?.feedback_id||null});
+      const loaded=await loadWorkoutFeedback(supabase,{userId:uid,workoutId:sessionWorkoutId,logDate:day,feedbackId:resolvedSession?.feedback_id||null});
       if(loaded.pendingMigration)setPhase2a1Pending(true);
       if(!loaded.error)applySessionFeedbackLoad(feedbackKey,feedbackGen,loaded.row);
     }

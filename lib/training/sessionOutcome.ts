@@ -76,9 +76,10 @@ export type CompletedSessionDraft = {
 
 /**
  * Writes a completed session only when every required working set on this workout is completed.
- * Partial, skipped, and empty logs stay on the explicit Session card. A log counts only when it
- * is stored on that planned set, so another workout's sets on the same date do not finish this one.
- * An existing completed, partial, or skipped status is left unchanged.
+ * Skipped stays explicit. Empty or unfinished logs stay on the Session card. A log counts only when
+ * it is stored on that planned set, so another workout's sets on the same date do not finish this one.
+ * An existing completed session is left unchanged. A stuck Partial upgrades when every required set
+ * is now logged (orphaned planned_set_id rematch / historical projection).
  */
 export function completedSessionDraft(input: {
   intent?: 'log' | 'edit' | null;
@@ -91,7 +92,7 @@ export function completedSessionDraft(input: {
   existingStatus?: string | null;
 }): CompletedSessionDraft | null {
   if (input.intent === 'edit') return null;
-  if (input.existingStatus === 'completed' || input.existingStatus === 'partial' || input.existingStatus === 'skipped') return null;
+  if (input.existingStatus === 'completed' || input.existingStatus === 'skipped') return null;
   const workoutId = input.workout?.id;
   if (!workoutId || !input.logDate) return null;
   const ids = plannedSetIdsForWorkout(input.workout, { loggableOnly: true });
@@ -110,6 +111,22 @@ export function completedSessionDraft(input: {
     sourceKey: input.sourceKey || null,
     scheduledDate: input.scheduledDate || null,
   };
+}
+
+/**
+ * A Partial or in-progress session whose required sets are all completed should become completed.
+ * Used when historical projection rematches orphaned set logs after a personal-copy remap.
+ */
+export function shouldHealPartialSession(input: {
+  existingStatus?: string | null;
+  workout?: WorkoutLike | null;
+  logs?: Record<string, SetLogLike | undefined>;
+}): boolean {
+  const status = input.existingStatus || null;
+  if (status !== 'partial' && status !== 'in_progress') return false;
+  const ids = plannedSetIdsForWorkout(input.workout, { loggableOnly: true });
+  if (!ids.length) return false;
+  return outstandingRequiredSetIds(input.workout, input.logs).length === 0;
 }
 
 export function outstandingRequiredSetIds(

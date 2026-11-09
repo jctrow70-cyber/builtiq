@@ -3,7 +3,12 @@
  */
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { completedSessionDraft, outstandingRequiredSetIds, sessionStatusAfterPlanChange } from '../lib/training/sessionOutcome';
+import {
+  completedSessionDraft,
+  outstandingRequiredSetIds,
+  sessionStatusAfterPlanChange,
+  shouldHealPartialSession,
+} from '../lib/training/sessionOutcome';
 import { preservedSessionLink } from '../lib/training/workoutSessions';
 import { pickFulfillingSession } from '../lib/training/unifiedSchedule';
 
@@ -142,7 +147,27 @@ const explicitPartial = completedSessionDraft({
     'work-2': { completed: true, planned_set_id: 'work-2' },
   },
 });
-assert.equal(explicitPartial, null);
+assert.equal(explicitPartial?.status, 'completed');
+assert.equal(explicitPartial?.workoutId, 'group-wo');
+assert.equal(
+  shouldHealPartialSession({
+    existingStatus: 'partial',
+    workout,
+    logs: {
+      'work-1': { completed: true, planned_set_id: 'work-1' },
+      'work-2': { completed: true, planned_set_id: 'work-2' },
+    },
+  }),
+  true
+);
+assert.equal(
+  shouldHealPartialSession({
+    existingStatus: 'partial',
+    workout,
+    logs: { 'work-1': { completed: true, planned_set_id: 'work-1' } },
+  }),
+  false
+);
 
 const stored = {
   expectation_id: 'exp-moved',
@@ -212,6 +237,7 @@ assert.equal(pickFulfillingSession(unlinked, pair[0], [pair[0]])?.workoutId, 'gr
 
 const page = readFileSync(new URL('../app/page.tsx', import.meta.url), 'utf8');
 assert.match(page, /completedSessionDraft\(/);
+assert.match(page, /shouldHealPartialSession\(/);
 assert.match(page, /expectation_id:activeExpectationId/);
 assert.match(page, /source_key:groupActivitySourceKey\(activity\.seriesId\)/);
 assert.match(page, /expectation_id:links\.expectation_id/);

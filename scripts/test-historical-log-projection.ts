@@ -297,6 +297,26 @@ const dupProjected = projectDateLogsOntoWorkout(dupLogs, dupProgram, dupWorkout,
 assert.equal(dupProjected.byPlannedSetId['ps-fly-b-1']?.id, 'fly-b');
 assert.equal(dupProjected.byPlannedSetId['ps-fly-a-1'], undefined);
 
+// --- Remapped catalog ids (personal copy / re-link): same name still projects ---
+const remappedLogs = nov2OrphanLogs.map((log) => ({
+  ...log,
+  snapshot_catalog_exercise_id:
+    log.snapshot_catalog_exercise_id === 'cat-row'
+      ? 'cat-row-old'
+      : log.snapshot_catalog_exercise_id === 'cat-bench'
+        ? 'cat-bench-old'
+        : log.snapshot_catalog_exercise_id,
+}));
+const remapped = projectDateLogsOntoWorkout(remappedLogs, program, currentMon, {
+  logDate: '2026-11-02',
+});
+assert.ok(remapped.appliedSoftProjection, 'name fallback must project after catalog remap');
+assert.equal(
+  isStrengthWorkoutCompleted(currentMon, remapped.byPlannedSetId),
+  true,
+  'remapped-catalog Nov 2 logs must complete Full Body style Monday'
+);
+
 // --- Multiple workouts same date: project only onto the requested workout ---
 const secondWorkout = workoutTemplate({
   workoutId: 'w-current-mon-b',

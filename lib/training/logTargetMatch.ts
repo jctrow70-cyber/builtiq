@@ -67,10 +67,10 @@ function exerciseMatches(log: any, target: PlannedSetTarget): boolean {
   const logCatalog = log.snapshot_catalog_exercise_id || null;
   const logName = normName(log.snapshot_exercise_name);
   const targetName = normName(target.exerciseName);
-  // When the log recorded a catalog id, only match that catalog — never a same-named sibling.
-  if (logCatalog) {
-    return !!(target.catalogId && logCatalog === target.catalogId);
-  }
+  const catalogMatch = !!(logCatalog && target.catalogId && logCatalog === target.catalogId);
+  if (catalogMatch) return true;
+  // Personal-copy / catalog re-links change catalog ids while the exercise name stays the same.
+  // Prefer catalog when scoring (below); name fallback keeps November-2-style orphans recognisable.
   if (logName && targetName && logName === targetName) return true;
   return false;
 }
@@ -89,6 +89,10 @@ export function scoreLogTargetMatch(
   if (!exerciseMatches(log, target)) return -1;
 
   let score = 10; // base for exercise + set number
+  const logCatalog = log.snapshot_catalog_exercise_id || null;
+  if (logCatalog && target.catalogId && logCatalog === target.catalogId) {
+    score += 20; // prefer the same catalog when two cards share a name
+  }
 
   const logDate = String(log.log_date || '').slice(0, 10);
   if (logDate) {

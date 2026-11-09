@@ -430,4 +430,33 @@ const completedMonday = overlayVisibleExpectations(
 assert.equal(completedMonday.items.find((item) => item.workoutId === 'p-mon')?.statusLabel, 'Completed');
 assert.equal(completedMonday.items.find((item) => item.workoutId === 'p-mon')?.completed, true);
 
+const stuckPartialPlan = {
+  ...mondayPlan,
+  items: mondayPlan.items.map((item) =>
+    item.workoutId === 'p-mon' ? { ...item, completed: true, statusLabel: undefined } : item
+  ),
+};
+const healedPartial = overlayVisibleExpectations(
+  stuckPartialPlan,
+  [
+    {
+      id: 'exp-personal-partial',
+      workoutId: 'p-mon',
+      programId: 'prog-p',
+      scheduledDate: monday,
+      title: 'Full Body',
+      sourceKey: 'personal',
+      teamId: null,
+      sourceName: 'Personal',
+      excused: false,
+      sessionStatus: 'partial',
+    },
+  ],
+  wednesday
+);
+const healedItem = healedPartial.items.find((item) => item.workoutId === 'p-mon');
+assert.equal(healedItem?.completed, true);
+assert.equal(healedItem?.statusLabel, 'Completed');
+assert.equal(healedItem?.sessionStatus, 'completed');
+
 console.log('unified schedule tests passed');

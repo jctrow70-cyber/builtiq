@@ -11,6 +11,43 @@ Branch:
 Status:
 ```
 
+## BIQ-0315 - Recognize completed first-Monday workouts after catalog remap
+
+Date: 2026-11-09
+Branch: cursor/fix-nov2-partial-start-aaab
+Status: Implemented locally
+
+Summary: Historical set-log projection now matches remapped catalog exercise ids by normalized exercise name (catalog still wins when two cards share a name). A stuck Partial session whose required sets are all logged upgrades to Completed when the day is opened. The Training calendar treats set-log completion as authoritative over a stuck Partial label so the day shows Review instead of Start.
+
+Purpose: Mary’s Team November 2 Full Body A stayed Partial with a green Start after personal-copy / catalog re-links left `st_set_logs.snapshot_catalog_exercise_id` on the old catalog while the current plan used new ids. Soft projection and durable rematch both hard-rejected those rows, so calendar completion stayed false even though the sets were logged. Later weekdays logged on current ids looked fine.
+
+Files changed:
+- lib/training/logTargetMatch.ts
+- lib/training/sessionOutcome.ts
+- lib/programDesign/trainingSchedule.ts
+- app/page.tsx
+- scripts/test-historical-log-projection.ts
+- scripts/test-session-finalization.ts
+- scripts/test-unified-schedule.ts
+- CHANGELOG.md
+- DECISIONS.md
+
+Database changes: None. Opening a stuck Partial day may update that `st_workout_sessions.status` to `completed` when every required set is already logged.
+
+Testing steps:
+- Run `npx tsx scripts/test-historical-log-projection.ts` (includes remapped-catalog Nov 2 completion).
+- Run `npx tsx scripts/test-session-finalization.ts`, `npx tsx scripts/test-unified-schedule.ts`, `npx tsx scripts/test-today-training.ts`.
+- On production: open Training → Calendar → Monday Nov 2 Full Body A and confirm Review (not Start) when the sets were logged.
+- Open that workout once and confirm the session status heals to Completed and the calendar checkmark appears.
+- Confirm a true Partial (required sets still open) still shows Partial + Start.
+- Confirm two same-named exercises with different catalogs still project to the matching catalog card.
+
+Known issues:
+- Calendar display heals immediately from set logs; the durable session row updates when that day is loaded in the logger.
+- Durable planned_set_id rematch still runs through the existing history-restore path and is unchanged beyond the shared scoring fix.
+
+Recommended commit message: BIQ-0315 Recognize completed first-Monday workouts after catalog remap.
+
 ## BIQ-0314.2 - Restore a confirmed implement when the plan is blank
 
 Date: 2026-11-08
