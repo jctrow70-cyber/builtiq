@@ -7,6 +7,7 @@ import { prescriptionColumnsFromSources } from './prescriptionMeta';
 import { inferExerciseType } from './exerciseTypes';
 import { hasExerciseGuide } from './exerciseMedia';
 import { filterCatalogByEquipment, hasEquipmentFilter, normalizeEquipmentList } from './equipmentFilter';
+import { assignedEquipmentForInsert } from './equipmentPersistence';
 import { mondayOfWeek, programEndDate, todayYmd } from './programCalendar';
 import { insertProgramRecord } from './programStatus';
 import { PUSH_FULL_BODY_EMPHASIS, PULL_FULL_BODY_EMPHASIS } from './scheduleSuggestion';
@@ -26,6 +27,8 @@ export type AiExercise = {
   program_role?: string;
   measurement_type?: string;
   laterality?: string;
+  /** Named implement for this planned exercise. Blank leaves a multi-implement card unassigned. */
+  equipment?: string;
   set_details?: { set_type?: string; weight?: string; reps?: string; rir?: number; rest_seconds?: number }[];
 };
 
@@ -1023,6 +1026,16 @@ type PendingExerciseInsert = {
 
 const PLANNED_SET_INSERT_CHUNK = 500;
 
+function payloadWithAssignedEquipment(
+  payload: Record<string, unknown>,
+  item: { equipment?: string | null },
+  catalogItem: any
+) {
+  const equipment = assignedEquipmentForInsert({ assigned: item.equipment, catalogItem });
+  if (equipment) payload.equipment = equipment;
+  return payload;
+}
+
 function collectSectionItems(
   workoutId: string,
   section: string,
@@ -1048,7 +1061,7 @@ function collectSectionItems(
         const exType = inferExerciseType(exItem.name, hit?.muscle_group || exItem.muscle_group, section, hit?.exercise_type);
         const meta = prescriptionColumnsFromSources({ item: exItem, catalogItem: hit, section, role: exItem.program_role });
         exercises.push({
-          payload: {
+          payload: payloadWithAssignedEquipment({
             workout_id: workoutId,
             section,
             sort_order: sort,
@@ -1063,7 +1076,7 @@ function collectSectionItems(
             program_role: meta.program_role,
             measurement_type: meta.measurement_type,
             laterality: meta.laterality,
-          },
+          }, exItem, hit),
           planned: {
             sets: exItem.sets || 3,
             reps: exItem.reps || '',
@@ -1081,7 +1094,7 @@ function collectSectionItems(
       const exType = inferExerciseType(item.name, hit?.muscle_group || item.muscle_group, section, hit?.exercise_type);
       const meta = prescriptionColumnsFromSources({ item, catalogItem: hit, section, role: item.program_role });
       exercises.push({
-        payload: {
+        payload: payloadWithAssignedEquipment({
           workout_id: workoutId,
           section,
           sort_order: sort,
@@ -1094,7 +1107,7 @@ function collectSectionItems(
           program_role: meta.program_role,
           measurement_type: meta.measurement_type,
           laterality: meta.laterality,
-        },
+        }, item, hit),
         planned: {
           sets: item.sets || 3,
           reps: item.reps || '',

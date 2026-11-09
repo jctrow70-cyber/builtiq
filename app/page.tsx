@@ -34,6 +34,7 @@ import { EQUIPMENT_OPTIONS, hasEquipmentFilter, normalizeEquipmentList, equipmen
 import { compatibleEquipmentOptions, defaultCatalogEquipment, resolveExerciseEquipment } from '../lib/training/exerciseEquipment';
 import { canonicalEquipment, loadEntryCaption } from '../lib/training/equipmentIdentity';
 import { createEquipmentWriteQueue, equipmentChoiceBlockReason, equipmentForSetSnapshot, type EquipmentWriteQueue } from '../lib/training/equipmentSelection';
+import { blankExercisesInheritingProgramEquipment, equipmentEditScope, equipmentRowsFromProgram, equipmentWriteForTarget } from '../lib/training/equipmentPersistence';
 import {
   clearPendingEquipmentIds,
   exerciseUpdateTouchedRow,
@@ -387,6 +388,7 @@ export default function Page(){
  },[sessionFeel,sessionPain,sessionNotes,sessionSkipReason]);
  const setLogLedgersRef=useRef<Map<string,SetLogIntentLedger>>(new Map());
  const equipmentQueuesRef=useRef<Record<string,EquipmentWriteQueue>>({});
+ const equipmentInheritFlightRef=useRef('');
  const setLogFollowRef=useRef<Map<string,any>>(new Map());
  const loggerActionsRef=useRef<any>({});
  const saveLogStable=useCallback((sid:string,field:string,value:any,opts?:{completed?:boolean})=>loggerActionsRef.current.saveLog?.(sid,field,value,opts),[]);
@@ -2643,7 +2645,13 @@ export default function Page(){
  const currentMatch=resolveExerciseTarget(current,ex,current);
  if(!currentMatch?.id)return fail('Could not find this exercise after making your private copy.');
  opts?.onResolved?.(String(currentMatch.id));
- const targets=targetWorkoutsFrom(current);
+ const equipmentScope=field==='equipment'
+  ?equipmentEditScope({applyScope,scopeControlVisible:showEditScope})
+  :undefined;
+ const targets=equipmentScope
+  ?targetWorkoutsFrom(current,planEditRef.current?.program||program,equipmentScope)
+  :targetWorkoutsFrom(current);
+ const previousEquipment=field==='equipment'?String(currentMatch.equipment||'').trim():'';
  const applied:Array<{workoutId:string;exerciseId:string;patch:Record<string,unknown>}>=[];
  let wroteCurrent=false;
  for(const tw of targets){
@@ -2653,6 +2661,19 @@ export default function Page(){
    continue;
   }
   let written:Record<string,any>=payload;
+  if(field==='equipment'){
+   const decision=equipmentWriteForTarget({
+    selected:value,
+    previousEquipment,
+    targetEquipment:match.equipment,
+    isCurrent:tw?.id===current?.id,
+   });
+   if(!decision.write){
+    if(tw?.id===current?.id)return fail('Could not save this equipment choice.');
+    continue;
+   }
+   written={equipment:decision.equipment};
+  }
   let{data,error}=await supabase.from('st_exercises').update(written).eq('id',match.id).select('id');
   if(error&&written.equipment!==undefined&&/equipment/i.test(error.message||'')){
    const{equipment:_eq,...rest}=written;
@@ -3972,6 +3993,33 @@ function resolveExerciseTarget(targetWorkout:any,sourceExercise:any,currentWorko
   ||(sessionKeep&&(sessionKeep.id===activeWorkout||trainingSessionOpen)?sessionKeep:null)
   ||(trainingSessionOpen?(program?.st_workouts||[]).find((w:any)=>w.week===week&&w.day_label===dayLabelFromYmd(logDate)):null)
   ||(!trainingSessionOpen?weekWorkouts[0]:null);
+ useEffect(()=>{
+  if(!session?.user?.id||!program?.id)return;
+  if(viewingMember&&viewingMember.user_id!==session.user.id)return;
+  if(needsJustMeCopy(program)&&!isSharedTemplateEditor())return;
+  if(!canEdit())return;
+  const pendingIds=new Set(Object.keys(pendingEquipmentById));
+  const fills=blankExercisesInheritingProgramEquipment(equipmentRowsFromProgram(program,exerciseSection)).filter((fill)=>{
+   if(pendingIds.has(fill.exerciseId))return false;
+   return !equipmentQueuesRef.current[fill.exerciseId]?.intent()?.value;
+  });
+  if(!fills.length)return;
+  const signature=`${program.id}|${fills.map((fill)=>`${fill.exerciseId}:${fill.equipment}`).join('|')}`;
+  if(equipmentInheritFlightRef.current===signature)return;
+  equipmentInheritFlightRef.current=signature;
+  const openId=planEditRef.current?.workout?.id||activeWorkout||null;
+  void (async()=>{
+   const applied:Array<{workoutId:string;exerciseId:string;patch:Record<string,unknown>}>=[];
+   for(const fill of fills){
+    const {data,error}=await supabase.from('st_exercises').update({equipment:fill.equipment}).eq('id',fill.exerciseId).or('equipment.is.null,equipment.eq.').select('id');
+    if(error||!exerciseUpdateTouchedRow(data))continue;
+    applied.push({workoutId:fill.workoutId,exerciseId:fill.exerciseId,patch:{equipment:fill.equipment}});
+   }
+   if(equipmentInheritFlightRef.current===signature)equipmentInheritFlightRef.current='';
+   if(!applied.length)return;
+   applyExercisePatchesWhileLogging(applied,openId);
+  })();
+ },[program,pendingEquipmentById,session?.user?.id,viewingMember?.user_id,appNav,draftEditProgramId,activeWorkout]);
  useEffect(()=>{
   if(!session?.user||!workout?.id||trainingSessionIntent!=='log'||sessionOutcome!=='completed')return;
   const openIds=outstandingRequiredSetIds(workout, logs);
