@@ -11,6 +11,30 @@ Branch:
 Status:
 ```
 
+## BIQ-0314.1 - Let the production build read planned equipment
+
+Date: 2026-11-08
+Branch: cursor/fix-equipment-target-type-af34
+Status: Implemented locally
+
+Summary: `ExerciseTargetLike` includes the planned implement. The production typecheck can read the current and later-week equipment when a logger choice is saved.
+
+Purpose: The BIQ-0314 production build failed because the resolved exercise row had no `equipment` field in its type. The value is already on the planned row. This only makes that field visible to the typechecker.
+
+Files changed:
+- lib/training/exerciseTargetResolve.ts
+- CHANGELOG.md
+
+Database changes: None.
+
+Testing steps:
+1. `npm run build` and confirm type checking passes `currentMatch.equipment` and `match.equipment`.
+2. `npx tsx scripts/test-equipment-persistence.ts`
+
+Known issues: None.
+
+Recommended commit message: BIQ-0314.1 Let the production build read planned equipment
+
 ## BIQ-0314 - Keep a chosen implement on later weeks
 
 Date: 2026-11-08
