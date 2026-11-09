@@ -1,5 +1,6 @@
 /**
- * BIQ-0314 — program equipment persists onto later weeks without reading set logs.
+ * BIQ-0314 — program equipment persists onto later weeks.
+ * BIQ-0314.2 — a blank series can take a confirmed set snapshot.
  * Run: npx tsx scripts/test-equipment-persistence.ts
  */
 import assert from 'node:assert/strict';
@@ -7,12 +8,16 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { classifyPreviousPerformance } from '../lib/training/previousPerformance';
 import { previousPerformanceLine } from '../lib/training/previousPerformanceDisplay';
+import { equipmentChoiceBlockReason, equipmentForSetSnapshot } from '../lib/training/equipmentSelection';
 import {
   assignedEquipmentForInsert,
   blankExercisesInheritingProgramEquipment,
+  blankExercisesInheritingVerifiedEquipment,
   equipmentEditScope,
   equipmentRowsFromProgram,
   equipmentWriteForTarget,
+  restoredEquipmentForExercise,
+  verifiedSnapshottedEquipment,
   type EquipmentProgramExercise,
 } from '../lib/training/equipmentPersistence';
 
@@ -210,11 +215,155 @@ const selected = classifyPreviousPerformance({
 assert.equal(selected.kind, 'exact');
 assert.equal(previousPerformanceLine(selected)?.text, 'Last: 50 × 10 · Machine · Nov 6');
 
+const options = ['Dumbbell', 'Machine', 'Barbell'];
+const blankWeeks = [
+  row({ workoutId: 'w1', exerciseId: 'e1', week: 1, equipment: '' }),
+  row({ workoutId: 'w2', exerciseId: 'e2', week: 2, equipment: '' }),
+];
+assert.deepEqual(
+  blankExercisesInheritingVerifiedEquipment(blankWeeks, () =>
+    verifiedSnapshottedEquipment({
+      catalogExerciseId: 'cat-csr',
+      exerciseName: 'Chest-Supported Row',
+      options,
+      sessionDate: '2026-11-08',
+      userId: 'user-1',
+      rows: [machineLog],
+    })
+  ).map((fill) => fill.equipment),
+  ['Machine', 'Machine']
+);
+assert.equal(
+  restoredEquipmentForExercise({ exerciseId: 'e2', rows: blankWeeks, verifiedEquipment: 'Machine' }),
+  'Machine'
+);
+
+const rampLog = { ...machineLog, id: 'log-ramp', snapshot_set_type: 'ramp', snapshot_set_number: 1 };
+assert.equal(
+  verifiedSnapshottedEquipment({
+    catalogExerciseId: 'cat-csr',
+    exerciseName: 'Chest-Supported Row',
+    options,
+    sessionDate: '2026-11-08',
+    userId: 'user-1',
+    rows: [rampLog],
+  }),
+  'Machine'
+);
+
+const programNamesDumbbell = [
+  row({ workoutId: 'w1', exerciseId: 'e1', week: 1, equipment: '' }),
+  row({ workoutId: 'w2', exerciseId: 'e2', week: 2, equipment: 'Dumbbell' }),
+];
+assert.equal(blankExercisesInheritingVerifiedEquipment(programNamesDumbbell, () => 'Machine').length, 0);
+assert.equal(
+  restoredEquipmentForExercise({ exerciseId: 'e2', rows: programNamesDumbbell, verifiedEquipment: 'Machine' }),
+  'Dumbbell'
+);
+assert.equal(
+  restoredEquipmentForExercise({ exerciseId: 'e1', rows: programNamesDumbbell, verifiedEquipment: 'Machine' }),
+  ''
+);
+
+assert.equal(
+  verifiedSnapshottedEquipment({
+    catalogExerciseId: 'cat-csr',
+    exerciseName: 'Chest-Supported Row',
+    options,
+    sessionDate: '2026-11-08',
+    userId: 'user-1',
+    rows: [{ ...machineLog, snapshot_provenance: { equipment: 'backfilled', equipmentDetail: 'logged_name' } }],
+  }),
+  ''
+);
+assert.equal(
+  verifiedSnapshottedEquipment({
+    catalogExerciseId: 'cat-csr',
+    exerciseName: 'Chest-Supported Row',
+    options,
+    sessionDate: '2026-11-08',
+    userId: 'user-1',
+    rows: [{ ...machineLog, snapshot_provenance: { equipment: 'estimated' } }],
+  }),
+  ''
+);
+assert.equal(
+  verifiedSnapshottedEquipment({
+    catalogExerciseId: 'cat-csr',
+    exerciseName: 'Chest-Supported Row',
+    options,
+    sessionDate: '2026-11-08',
+    userId: 'user-1',
+    rows: [{ ...machineLog, snapshot_provenance: null }],
+  }),
+  'Machine'
+);
+assert.equal(
+  verifiedSnapshottedEquipment({
+    catalogExerciseId: 'cat-csr',
+    exerciseName: 'Chest-Supported Row',
+    options,
+    sessionDate: '2026-11-08',
+    userId: 'user-1',
+    rows: [{ ...machineLog, snapshot_catalog_exercise_id: 'other-exercise', snapshot_exercise_name: 'Lat Pulldown' }],
+  }),
+  ''
+);
+assert.equal(
+  verifiedSnapshottedEquipment({
+    catalogExerciseId: 'cat-csr',
+    exerciseName: 'Chest-Supported Row',
+    options,
+    sessionDate: '2026-11-08',
+    userId: 'user-1',
+    rows: [{ ...machineLog, snapshot_equipment: 'Cable' }],
+  }),
+  ''
+);
+assert.equal(
+  verifiedSnapshottedEquipment({
+    catalogExerciseId: 'cat-csr',
+    exerciseName: 'Chest-Supported Row',
+    options,
+    sessionDate: '2026-11-06',
+    userId: 'user-1',
+    rows: [machineLog],
+  }),
+  ''
+);
+
+const restored = classifyPreviousPerformance({
+  catalogExerciseId: 'cat-csr',
+  exerciseName: 'Chest-Supported Row',
+  equipment: 'Machine',
+  setType: 'ramp',
+  setNumber: 1,
+  sessionDate: '2026-11-08',
+  userId: 'user-1',
+  rows: [rampLog],
+});
+assert.equal(previousPerformanceLine(restored)?.text, 'Last: 50 × 10 · Machine · Nov 6');
+assert.notEqual(previousPerformanceLine(restored)?.text, 'Last on Machine: 50 × 10 · Nov 6');
+const restoredChoice = equipmentForSetSnapshot({
+  persisted: restoredEquipmentForExercise({ exerciseId: 'e2', rows: blankWeeks, verifiedEquipment: 'Machine' }),
+  options,
+});
+assert.equal(equipmentChoiceBlockReason(restoredChoice), null);
+assert.equal(restoredChoice.ok && restoredChoice.equipment, 'Machine');
+
 const page = readFileSync(join(process.cwd(), 'app/page.tsx'), 'utf8');
 assert.match(page, /equipmentEditScope\(/);
 assert.match(page, /blankExercisesInheritingProgramEquipment\(/);
+assert.match(page, /blankExercisesInheritingVerifiedEquipment\(/);
+assert.match(page, /verifiedSnapshottedEquipment\(/);
+assert.match(page, /restoredEquipment\(/);
 assert.match(page, /equipment\.is\.null,equipment\.eq\./);
-assert.doesNotMatch(page, /snapshot_equipment[\s\S]{0,180}blankExercisesInheritingProgramEquipment/);
+const persistence = readFileSync(join(process.cwd(), 'lib/training/equipmentPersistence.ts'), 'utf8');
+const programFn = persistence.slice(
+  persistence.indexOf('export function blankExercisesInheritingProgramEquipment'),
+  persistence.indexOf('export type EquipmentHistoryRow')
+);
+assert.doesNotMatch(programFn, /snapshot_equipment/);
 
 const plan = readFileSync(join(process.cwd(), 'lib/training/aiProgramPlan.ts'), 'utf8');
 assert.match(plan, /assignedEquipmentForInsert\(/);

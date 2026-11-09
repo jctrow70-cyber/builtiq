@@ -34,7 +34,7 @@ import { EQUIPMENT_OPTIONS, hasEquipmentFilter, normalizeEquipmentList, equipmen
 import { compatibleEquipmentOptions, defaultCatalogEquipment, resolveExerciseEquipment } from '../lib/training/exerciseEquipment';
 import { canonicalEquipment, loadEntryCaption } from '../lib/training/equipmentIdentity';
 import { createEquipmentWriteQueue, equipmentChoiceBlockReason, equipmentForSetSnapshot, type EquipmentWriteQueue } from '../lib/training/equipmentSelection';
-import { blankExercisesInheritingProgramEquipment, equipmentEditScope, equipmentRowsFromProgram, equipmentWriteForTarget } from '../lib/training/equipmentPersistence';
+import { blankExercisesInheritingProgramEquipment, blankExercisesInheritingVerifiedEquipment, equipmentEditScope, equipmentRowsFromProgram, equipmentWriteForTarget, restoredEquipmentForExercise, verifiedSnapshottedEquipment } from '../lib/training/equipmentPersistence';
 import {
   clearPendingEquipmentIds,
   exerciseUpdateTouchedRow,
@@ -2140,14 +2140,48 @@ export default function Page(){
   if(!equipmentQueuesRef.current[exerciseId]) equipmentQueuesRef.current[exerciseId]=createEquipmentWriteQueue();
   return equipmentQueuesRef.current[exerciseId];
  }
+ function equipmentRowsForRestore(){
+  const workouts=[...((program?.st_workouts)||[])];
+  if(workout?.id&&!workouts.some((item:any)=>item.id===workout.id))workouts.push(workout);
+  return equipmentRowsFromProgram({...(program||{}),st_workouts:workouts},exerciseSection);
+ }
+ function restoredEquipment(ex:any,catItem:any){
+  const stored=resolveExerciseEquipment(ex,catItem);
+  if(stored||!ex?.id)return stored;
+  const rows=equipmentRowsForRestore();
+  const present=rows.some((row)=>row.exerciseId===ex.id);
+  const withSelf=present?rows:[...rows,{
+   workoutId:String(workout?.id||''),
+   week:Number(workout?.week)||0,
+   dayOrder:Number(workout?.day_order)||0,
+   dayLabel:String(workout?.day_label||''),
+   exerciseId:String(ex.id),
+   catalogExerciseId:String(ex.catalog_exercise_id||''),
+   name:String(ex.name||''),
+   sortOrder:ex.sort_order==null||String(ex.sort_order).trim()===''?null:Number(ex.sort_order),
+   section:exerciseSection(ex),
+   equipment:'',
+  }].filter((row)=>row.workoutId);
+  const verified=isSharedTemplateEditor()?'':verifiedSnapshottedEquipment({
+   catalog,
+   catalogExerciseId:ex.catalog_exercise_id,
+   exerciseName:ex.name,
+   options:compatibleEquipmentOptions(catItem,ex.equipment),
+   sessionDate:activeLogDateForLogging(),
+   userId:logUserId(),
+   rows:liftHistoryRows,
+  });
+  return restoredEquipmentForExercise({exerciseId:String(ex.id),rows:withSelf,verifiedEquipment:verified});
+ }
  function equipmentChoiceFor(ex:any,catItem:any){
   const pending=ex?.id
     ?(pendingEquipmentById[ex.id]||equipmentQueuesRef.current[ex.id]?.intent()?.value)
     :undefined;
+  const resolved=restoredEquipment(ex,catItem);
   return equipmentForSetSnapshot({
-    persisted:ex?.equipment,
+    persisted:resolved,
     pending,
-    options:compatibleEquipmentOptions(catItem,ex?.equipment),
+    options:compatibleEquipmentOptions(catItem,resolved||ex?.equipment),
   });
  }
  function changeExerciseEquipment(ex:any,value:string){
@@ -3994,12 +4028,28 @@ function resolveExerciseTarget(targetWorkout:any,sourceExercise:any,currentWorko
   ||(trainingSessionOpen?(program?.st_workouts||[]).find((w:any)=>w.week===week&&w.day_label===dayLabelFromYmd(logDate)):null)
   ||(!trainingSessionOpen?weekWorkouts[0]:null);
  useEffect(()=>{
-  if(!session?.user?.id||!program?.id)return;
-  if(viewingMember&&viewingMember.user_id!==session.user.id)return;
+  const userId=session?.user?.id;
+  if(!userId||!program?.id)return;
+  if(viewingMember&&viewingMember.user_id!==userId)return;
   if(needsJustMeCopy(program)&&!isSharedTemplateEditor())return;
   if(!canEdit())return;
+  const rows=equipmentRowsForRestore();
+  const programFills=blankExercisesInheritingProgramEquipment(rows);
+  const verifiedFills=isSharedTemplateEditor()?[]:blankExercisesInheritingVerifiedEquipment(rows,(row)=>{
+   const catItem=catalog.find((item:any)=>item.id===row.catalogExerciseId);
+   return verifiedSnapshottedEquipment({
+    catalog,
+    catalogExerciseId:row.catalogExerciseId,
+    exerciseName:row.name,
+    options:compatibleEquipmentOptions(catItem,row.equipment),
+    sessionDate:activeLogDateForLogging(),
+    userId,
+    rows:liftHistoryRows,
+   });
+  });
+  const filled=new Set(programFills.map((fill)=>fill.exerciseId));
   const pendingIds=new Set(Object.keys(pendingEquipmentById));
-  const fills=blankExercisesInheritingProgramEquipment(equipmentRowsFromProgram(program,exerciseSection)).filter((fill)=>{
+  const fills=[...programFills,...verifiedFills.filter((fill)=>!filled.has(fill.exerciseId))].filter((fill)=>{
    if(pendingIds.has(fill.exerciseId))return false;
    return !equipmentQueuesRef.current[fill.exerciseId]?.intent()?.value;
   });
@@ -4019,7 +4069,7 @@ function resolveExerciseTarget(targetWorkout:any,sourceExercise:any,currentWorko
    if(!applied.length)return;
    applyExercisePatchesWhileLogging(applied,openId);
   })();
- },[program,pendingEquipmentById,session?.user?.id,viewingMember?.user_id,appNav,draftEditProgramId,activeWorkout]);
+ },[program,workout?.id,pendingEquipmentById,session?.user?.id,viewingMember?.user_id,appNav,draftEditProgramId,activeWorkout,liftHistoryRows,catalog,logDate,memberWorkoutLogDate]);
  useEffect(()=>{
   if(!session?.user||!workout?.id||trainingSessionIntent!=='log'||sessionOutcome!=='completed')return;
   const openIds=outstandingRequiredSetIds(workout, logs);
@@ -4130,7 +4180,7 @@ function resolveExerciseTarget(targetWorkout:any,sourceExercise:any,currentWorko
   const map:Record<string,any>={};
   (workout?.st_exercises||[]).forEach((ex:any)=>{
    const catItem=catalog.find((c:any)=>c.id===ex.catalog_exercise_id);
-   const currentEq=loggerSelectedEquipment(resolveExerciseEquipment(ex,catItem),pendingEquipmentById[ex.id]);
+   const currentEq=loggerSelectedEquipment(restoredEquipment(ex,catItem),pendingEquipmentById[ex.id]);
    const equipmentSavePending=!!pendingEquipmentById[ex.id];
    (ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).forEach((s:any)=>{
     map[s.id]=previousPerformanceViewFor(ex,s,currentEq,equipmentSavePending);
@@ -4138,7 +4188,7 @@ function resolveExerciseTarget(targetWorkout:any,sourceExercise:any,currentWorko
   });
   return map;
  },[previousPerformanceKey,catalog,liftHistoryRows,logDate,memberWorkoutLogDate,viewingMember?.user_id,session?.user?.id]);
- const renderExerciseCard=(ex:any,inSuperset=false,mark='')=>{const catItem=catalog.find((c:any)=>c.id===ex.catalog_exercise_id);const rx=trainingExercisePrescription({exercise:ex,catalogItem:catItem,mark,omitRest:inSuperset||!!String(mark||'').trim()});const exType=exerciseTypeOf(ex,catItem);const eqOptions=compatibleEquipmentOptions(catItem,ex.equipment);const persistedEq=resolveExerciseEquipment(ex,catItem);const currentEq=loggerSelectedEquipment(persistedEq,pendingEquipmentById[ex.id]);const equipmentChoice=equipmentChoiceFor(ex,catItem);const equipmentBlockReason=equipmentChoiceBlockReason(equipmentChoice)||'';const equipmentBlocked=!!equipmentBlockReason;const weightCaption=loadEntryCaption(equipmentChoice.ok?equipmentChoice.equipment:currentEq,ex.laterality);const equipmentSavePending=!!pendingEquipmentById[ex.id];const plannedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).length;const exThumb=getExerciseThumb(catItem);const showGuide=hasExerciseGuide(catItem);const guidePayload=getExerciseGuidePayload(catItem,ex.name);const cardKey=`${ex.id}:${ex.catalog_exercise_id||'n'}:${ex.name}`;const isEditingName=exerciseNameSearch?.exerciseId===ex.id;const nameQuery=isEditingName?exerciseNameSearch!.query:(ex.name||'');const nameSearchResults=isEditingName&&nameQuery.trim()?searchCatalog(workoutSearchCatalog,{query:nameQuery,filters:{availableEquipment:hasEquipmentFilter(equipmentForSearch)?equipmentForSearch:undefined},limit:8,section:exerciseSection(ex)}):[];const sortedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));const showPreviousSets=!isMobilityStretchExercise(ex,catItem,exType);const weightUnit=profileDraft?.units_preference==='metric'?'kg':'lb';const isCollapsed=!!collapsedExercises[ex.id];const doneSets=sortedSets.filter((s:any)=>logs[s.id]?.completed).length;const allDone=plannedSets>0&&doneSets===plannedSets;const exSection=exerciseSection(ex);const sectionSupersetGroups=workout?getSupersetGroupsForSection(workout,exSection).filter((g:any)=>g.count<3):[];const standalonePeers=workout?sectionExercises(workout,exSection).filter((e:any)=>!e.superset_group_id&&e.id!==ex.id):[];return <div className={`card exercise-card${inSuperset?' in-superset':''}${isCollapsed?' exercise-collapsed':''}${allDone?' exercise-all-done':''}`} data-exercise-id={ex.id} key={cardKey}>
+ const renderExerciseCard=(ex:any,inSuperset=false,mark='')=>{const catItem=catalog.find((c:any)=>c.id===ex.catalog_exercise_id);const rx=trainingExercisePrescription({exercise:ex,catalogItem:catItem,mark,omitRest:inSuperset||!!String(mark||'').trim()});const exType=exerciseTypeOf(ex,catItem);const eqOptions=compatibleEquipmentOptions(catItem,ex.equipment);const currentEq=loggerSelectedEquipment(restoredEquipment(ex,catItem),pendingEquipmentById[ex.id]);const equipmentChoice=equipmentChoiceFor(ex,catItem);const equipmentBlockReason=equipmentChoiceBlockReason(equipmentChoice)||'';const equipmentBlocked=!!equipmentBlockReason;const weightCaption=loadEntryCaption(equipmentChoice.ok?equipmentChoice.equipment:currentEq,ex.laterality);const equipmentSavePending=!!pendingEquipmentById[ex.id];const plannedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).length;const exThumb=getExerciseThumb(catItem);const showGuide=hasExerciseGuide(catItem);const guidePayload=getExerciseGuidePayload(catItem,ex.name);const cardKey=`${ex.id}:${ex.catalog_exercise_id||'n'}:${ex.name}`;const isEditingName=exerciseNameSearch?.exerciseId===ex.id;const nameQuery=isEditingName?exerciseNameSearch!.query:(ex.name||'');const nameSearchResults=isEditingName&&nameQuery.trim()?searchCatalog(workoutSearchCatalog,{query:nameQuery,filters:{availableEquipment:hasEquipmentFilter(equipmentForSearch)?equipmentForSearch:undefined},limit:8,section:exerciseSection(ex)}):[];const sortedSets=(ex.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));const showPreviousSets=!isMobilityStretchExercise(ex,catItem,exType);const weightUnit=profileDraft?.units_preference==='metric'?'kg':'lb';const isCollapsed=!!collapsedExercises[ex.id];const doneSets=sortedSets.filter((s:any)=>logs[s.id]?.completed).length;const allDone=plannedSets>0&&doneSets===plannedSets;const exSection=exerciseSection(ex);const sectionSupersetGroups=workout?getSupersetGroupsForSection(workout,exSection).filter((g:any)=>g.count<3):[];const standalonePeers=workout?sectionExercises(workout,exSection).filter((e:any)=>!e.superset_group_id&&e.id!==ex.id):[];return <div className={`card exercise-card${inSuperset?' in-superset':''}${isCollapsed?' exercise-collapsed':''}${allDone?' exercise-all-done':''}`} data-exercise-id={ex.id} key={cardKey}>
         <div className="exercise-head" data-exercise-head={ex.id}><div className="exercise-head-main">{exThumb&&(showGuide&&guidePayload?<button type="button" className="exercise-card-thumb-btn" title={guidePayload.hasVideo?"Watch form":"Form guide"} onClick={()=>setExerciseGuide(guidePayload)}><img className="exercise-card-thumb" src={exThumb} alt="" loading="lazy" referrerPolicy="no-referrer"/></button>:<img className="exercise-card-thumb" src={exThumb} alt="" loading="lazy" referrerPolicy="no-referrer"/>)}<div className="exercise-meta">{canEdit()?<>
           <div className="exercise-title-row">
             {mark?<span className="te-ex-mark">{mark}</span>:null}
