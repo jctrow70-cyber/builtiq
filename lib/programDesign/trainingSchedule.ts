@@ -452,16 +452,21 @@ export function overlayVisibleExpectations(
     if (index >= 0) {
       const prev = items[index];
       const completed = !!prev.completed || state === 'Completed';
+      // Set-log completion wins over a stuck Partial session so calendar shows Review, not Start.
+      const sessionForLabel =
+        completed && row.sessionStatus === 'partial' ? 'completed' : row.sessionStatus;
+      const stateForLabel =
+        completed && state === 'Partial' ? 'Completed' : state;
       items[index] = {
         ...prev,
         completed,
-        statusLabel: calendarStatusLabel(state, completed, row.sessionStatus),
+        statusLabel: calendarStatusLabel(stateForLabel, completed, sessionForLabel),
         expectationId: row.id,
         programId: row.programId,
         sourceKey: row.sourceKey,
         teamId: row.teamId,
         sourceName: row.sourceName,
-        sessionStatus: row.sessionStatus ?? null,
+        sessionStatus: sessionForLabel ?? null,
       };
       continue;
     }

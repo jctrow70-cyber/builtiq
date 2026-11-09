@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 166 - Remapped catalog ids still recognize historical set logs
+
+Date: 2026-11-09
+Status: Implemented locally
+Category: Training
+
+### Decision
+
+BIQ-0315 lets historical set-log projection and rematch score a log onto a planned set when the normalized exercise name matches, even if `snapshot_catalog_exercise_id` no longer equals the current `catalog_exercise_id`. An exact catalog match still scores higher so two same-named cards stay distinct. When every required set is logged, a stuck Partial session upgrades to Completed on day load, and the Training calendar presents that day as Completed/Review instead of Partial/Start.
+
+### Reason
+
+Personal-copy and catalog re-links change planned-set and catalog ids after the first Monday is logged. Hard-requiring the old catalog id left November 2 Full Body A looking unfinished for both people on the shared plan, while later days logged on current ids looked complete.
+
+### Alternatives Considered
+
+Keeping the catalog-only hard reject from BIQ-0308. Rewriting every orphaned `planned_set_id` in SQL before display. Leaving Partial on the calendar when set logs already complete the workout.
+
+### Impact
+
+- Soft projection and durable rematch share the same name-fallback scoring
+- Opening a healed day may write `st_workout_sessions.status = completed`
+- Explicit Skipped stays skipped; unfinished Partial stays Partial + Start
+
 ## Decision 165 - A blank planned series can keep the last confirmed implement
 
 Date: 2026-11-08
