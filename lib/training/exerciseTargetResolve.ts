@@ -12,6 +12,7 @@ export type ExerciseTargetLike = {
   workout_section?: string | null;
   superset_group_id?: string | null;
   superset_order?: number | null;
+  equipment?: string | null;
 };
 
 export type WorkoutTargetLike = {
