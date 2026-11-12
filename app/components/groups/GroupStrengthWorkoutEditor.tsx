@@ -22,6 +22,7 @@ import {
   type DraftWorkout,
 } from '../../../lib/training/draftWorkout';
 import { SET_TYPES, isRampEffortSetType } from '../../../lib/training/setTypes';
+import { setDisplayLabel } from '../../../lib/training/setLabels';
 import {
   emptyAddPanelConfig,
   groupSectionBlocks,
@@ -184,7 +185,7 @@ export default function GroupStrengthWorkoutEditor({ supabase, title, onTitle, w
             <div key={set.id} className="set-log-card">
               <div className="set-log-grid">
                 <div className="set-log-head">
-                  <span className="set-log-num">Set {set.set_number}</span>
+                  <span className="set-log-num">{setDisplayLabel(set, sets)}</span>
                   <select
                     aria-label={`Set type for ${exercise.name} set ${set.set_number}`}
                     value={set.set_type}

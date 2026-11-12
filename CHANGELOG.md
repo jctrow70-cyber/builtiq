@@ -11,6 +11,44 @@ Branch:
 Status:
 ```
 
+## BIQ-0316 - Fix set numbering when adding a set
+
+Date: 2026-11-12
+Branch: cursor/fix-set-numbering-9efd
+Status: Implemented locally
+
+Summary: Logger and template set cards now label Ramp/Set by position in the list, so duplicate or gapped stored `set_number` values no longer skip or repeat (e.g. Set 2 then Set 6, Set 6). Adding a planned set computes the next `set_number` from each target exercise’s live rows, ignores soft-deleted rows, blocks overlapping double-adds, and draft add-set uses max+1 when gaps exist. Ramp/`warmup` rows stay on Ramp N; working and extra sets stay consecutive.
+
+Purpose: Mary’s Training logger showed Set 2 jumping to two Set 6 cards after + Set. The old label counted rows with `set_number <= current`, so a duplicated stored number skipped a label. Multi-week / stale click state could also insert the same `set_number` twice.
+
+Files changed:
+- lib/training/setLabels.ts
+- app/components/WorkoutSetLogger.tsx
+- app/page.tsx
+- app/components/training/WorkoutTemplateEditor.tsx
+- app/components/groups/GroupStrengthWorkoutEditor.tsx
+- lib/training/draftWorkout.ts
+- scripts/test-set-labels.ts
+- CHANGELOG.md
+- DECISIONS.md
+
+Database changes: None. Existing duplicate `set_number` rows are left as stored; labels no longer depend on uniqueness. New inserts avoid reusing the current max.
+
+Testing steps:
+1. `npx tsx scripts/test-set-labels.ts`
+2. `npx tsx scripts/test-training-set-entry.ts`
+3. Open Training → expand an exercise → + Set. Labels stay Set 1…N with no skips or repeats.
+4. Add again quickly; only one new set appears.
+5. On an exercise with ramp/warmup rows, confirm Ramp N and working Set N stay separate.
+6. Add Extra set while logging; it continues after the last working Set number.
+7. Program Design / group strength editor + Set shows the same consecutive labels.
+
+Known issues:
+- Historical duplicate `set_number` values in `st_planned_sets` are not rewritten (logged-set guards block renumbering). Display is fixed; new adds avoid new collisions.
+- Previous-performance matching still keys off stored set number/type; display labels are independent.
+
+Recommended commit message: BIQ-0316 Fix set numbering when adding a set
+
 ## BIQ-0315 - Recognize completed first-Monday workouts after catalog remap
 
 Date: 2026-11-09
