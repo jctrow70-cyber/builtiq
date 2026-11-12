@@ -1,5 +1,6 @@
 import { cycleLengthOf } from '../programDesign/cycle';
 import { addDaysYmd, dayLabelFromYmd, mondayOfWeek, programEndDate } from './programCalendar';
+import { personalExpectationFloor, personalWeekAnchorClock } from './personalScheduleStart';
 
 export type ScheduleSourceKind = 'personal' | 'group';
 
@@ -75,7 +76,7 @@ export function scheduleAnchorMonday(input: {
 }): string {
   const clock =
     input.sourceKind === 'personal'
-      ? input.startsOn || input.programStart || input.effectiveOn
+      ? personalWeekAnchorClock(input)
       : input.programStart || input.startsOn || input.effectiveOn;
   return mondayOfWeek(clock);
 }
@@ -95,7 +96,12 @@ export function buildProgramExpectationDates(input: {
   const weeks = Math.max(1, Math.min(52, Math.floor(input.cycleWeeks || 1)));
   const anchor = scheduleAnchorMonday(input);
   const end = programEndDate(anchor, weeks);
-  const from = input.effectiveOn > (input.startsOn || input.effectiveOn) ? input.effectiveOn : input.startsOn || input.effectiveOn;
+  const from =
+    input.sourceKind === 'personal'
+      ? personalExpectationFloor(input)
+      : input.effectiveOn > (input.startsOn || input.effectiveOn)
+        ? input.effectiveOn
+        : input.startsOn || input.effectiveOn;
   if (from > end) return [];
   const rows: ProgramExpectationDate[] = [];
   let date = from;

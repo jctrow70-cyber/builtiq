@@ -11,6 +11,46 @@ Branch:
 Status:
 ```
 
+## BIQ-0317 - Personal program week anchor ignores early starts_on
+
+Date: 2026-11-12
+Branch: cursor/biq-0309-personal-week-anchor-6c0e
+Status: Implemented (PR open; LIVE migration not applied)
+
+Summary: Personal schedule week numbering now prefers `program.start_date` over an earlier enrollment `starts_on`, matching Training calendar week math. New personal activations default `starts_on` to the program start. A read-only identify script lists enrollments where `starts_on` precedes `start_date`; no automatic historical repair runs in this change.
+
+Purpose: BIQ-0309 Phase 2. For `Chest 4 week 11/2`, `start_date` was 2026-11-02 but `starts_on` was 2026-10-25, so expectations treated Nov 2–8 as Week 3 while the athlete logged Week 1 workouts. Dashboard adherence showed Missed / 0% despite completed and partial sessions on the correct day names. Renumbered from BIQ-0316 after main claimed that id for set labeling (#62).
+
+Files changed:
+- lib/training/personalScheduleStart.ts
+- lib/training/unifiedSchedule.ts
+- supabase/migrations/20261112_080_personal_schedule_start_clamp.sql
+- scripts/test-personal-schedule-start.ts
+- scripts/test-unified-schedule.ts
+- scripts/sql/biq-0317-identify-early-personal-starts-on.sql
+- CHANGELOG.md
+- DECISIONS.md
+
+Database changes:
+- Migration `20261112_080_personal_schedule_start_clamp.sql` adds `st_personal_schedule_clock`, `st_personal_expectation_floor`, `st_normalize_personal_enrollment_starts_on`, and updates `st_refresh_enrollment_expectations` / `st_activate_followed_program`.
+- Not applied to LIVE in this change. No `st_set_logs` / session rewrites.
+
+Testing steps:
+1. `npx tsx scripts/test-personal-schedule-start.ts`
+2. `npx tsx scripts/test-unified-schedule.ts`
+3. `npx tsx scripts/test-week-adherence.ts`
+4. `npx tsx scripts/test-member-schedule.ts`
+5. Confirm Nov 2–8 maps to Week 1 when `starts_on` is earlier than `start_date`.
+6. Confirm mid-program join (`starts_on` after `start_date`) still lands on the correct later week.
+7. Confirm group schedule tests still pass.
+8. After LIVE migration approval only: run identify SQL, review rows, then separately approve any `starts_on` clamp + expectation refresh.
+
+Known issues:
+- Existing LIVE enrollments with early `starts_on` keep stored dates until an approved repair. Client week math is fixed; DB expectation rows refresh only after the migration is applied and a refresh runs.
+- LIVE migration / enrollment repair still need separate approval.
+
+Recommended commit message: BIQ-0317 Align personal week numbering with program start_date
+
 ## BIQ-0316 - Fix set numbering when adding a set
 
 Date: 2026-11-12

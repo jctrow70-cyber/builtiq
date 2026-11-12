@@ -100,6 +100,21 @@ assert.equal(oneWeek.some((row) => row.scheduledDate > '2026-10-11'), false);
 assert.equal(weekForDate(monday, '2026-10-19', 1), 1);
 assert.equal(scheduleWeekNumber(monday, '2026-10-19', 1), null);
 
+/** BIQ-0317: personal starts_on before program.start_date must not shift Week 1 earlier. */
+const chestWeek = buildProgramExpectationDates({
+  sourceKind: 'personal',
+  programStart: '2026-11-02',
+  startsOn: '2026-10-25',
+  cycleWeeks: 4,
+  effectiveOn: '2026-11-02',
+  workouts: [
+    { id: 'w1-mon', week: 1, dayLabel: 'Mon', title: 'Upper A' },
+    { id: 'w3-mon', week: 3, dayLabel: 'Mon', title: 'Upper A' },
+  ],
+});
+assert.equal(chestWeek.find((row) => row.scheduledDate === '2026-11-02')?.workoutId, 'w1-mon');
+assert.equal(chestWeek.some((row) => row.workoutId === 'w3-mon' && row.scheduledDate === '2026-11-02'), false);
+
 const history = [
   { scheduledDate: '2026-10-05', programId: 'old' },
   { scheduledDate: '2026-10-06', programId: 'old' },
