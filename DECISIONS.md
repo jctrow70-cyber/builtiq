@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 167 - Personal week numbering follows program.start_date
+
+Date: 2026-11-12
+Status: Implemented locally
+Category: Training / Adherence
+
+### Decision
+
+BIQ-0316 (BIQ-0309 Phase 2). Personal program Week 1 is the Monday–Sunday block containing `st_programs.start_date`. Enrollment `starts_on` earlier than `start_date` does not pull that clock earlier. A later `starts_on` still joins mid-program: week numbers stay anchored on `start_date`, and expectation generation floors at `starts_on`. New personal activations default `starts_on` to `start_date`. Matching remains by `workout_id` / `expectation_id`, not workout title. Existing early `starts_on` rows are identified for opt-in repair only; set logs and sessions are not rewritten.
+
+### Reason
+
+Training calendar already used `program.start_date` via `weekForDate`, while expectation refresh preferred `starts_on`. That split made Nov 2–8 look like Week 1 in Training and Week 3 on the dashboard, so completed Week 1 sessions never cleared Week 3 obligations.
+
+### Alternatives Considered
+
+Fuzzy-matching obligations by workout title across weeks. Auto-clamping every historical `starts_on` on activate. Leaving the dual clocks and documenting them.
+
+### Impact
+
+- Client `scheduleAnchorMonday` / `buildProgramExpectationDates` and SQL refresh share the personal clock helpers
+- Group schedule anchoring is unchanged
+- LIVE migration and historical enrollment repair need separate approval
+
 ## Decision 166 - Remapped catalog ids still recognize historical set logs
 
 Date: 2026-11-09
