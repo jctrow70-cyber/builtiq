@@ -100,7 +100,7 @@ assert.equal(oneWeek.some((row) => row.scheduledDate > '2026-10-11'), false);
 assert.equal(weekForDate(monday, '2026-10-19', 1), 1);
 assert.equal(scheduleWeekNumber(monday, '2026-10-19', 1), null);
 
-/** BIQ-0316: personal starts_on before program.start_date must not shift Week 1 earlier. */
+/** BIQ-0317: personal starts_on before program.start_date must not shift Week 1 earlier. */
 const chestWeek = buildProgramExpectationDates({
   sourceKind: 'personal',
   programStart: '2026-11-02',

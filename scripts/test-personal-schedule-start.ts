@@ -202,7 +202,7 @@ assert.match(migration, /st_personal_schedule_clock/);
 assert.match(migration, /st_personal_expectation_floor/);
 assert.match(migration, /st_normalize_personal_enrollment_starts_on/);
 assert.match(migration, /st_refresh_enrollment_expectations/);
-assert.match(migration, /BIQ-0316/);
+assert.match(migration, /BIQ-0317/);
 assert.doesNotMatch(
   migration,
   /when v_enroll\.source_kind = 'personal' then coalesce\(v_enroll\.starts_on, v_program\.start_date/

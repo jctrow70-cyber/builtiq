@@ -53,8 +53,8 @@ from (
     ('Chest Supported Row', 'strength', 'Mid Back', 'machine', 'pull_horizontal', 'basic_chest_supported_row', 'strength'),
     ('Straight Arm Pulldown', 'strength', 'Lats', 'cable', 'isolation', 'basic_straight_arm_pulldown', 'strength'),
     ('Single Arm Row', 'strength', 'Mid Back', 'dumbbell', 'pull_horizontal', 'basic_single_arm_row', 'strength'),
-    ('Step-Up', 'strength', 'Quads', 'dumbbell', 'lunge', 'basic_step_up', 'strength'),
-    ('Reverse Lunge', 'strength', 'Quads', 'dumbbell', 'lunge', 'basic_reverse_lunge', 'strength'),
+    ('Step-Up', 'strength', 'Quads', 'dumbbell', 'squat', 'basic_step_up', 'strength'),
+    ('Reverse Lunge', 'strength', 'Quads', 'dumbbell', 'squat', 'basic_reverse_lunge', 'strength'),
     ('Sumo Deadlift', 'strength', 'Glutes', 'barbell', 'hinge', 'basic_sumo_deadlift', 'strength'),
     ('Good Morning', 'strength', 'Hamstrings', 'barbell', 'hinge', 'basic_good_morning', 'strength'),
     ('Glute Ham Raise', 'strength', 'Hamstrings', 'machine', 'hinge', 'basic_ghr', 'strength'),
@@ -66,11 +66,11 @@ from (
     ('Treadmill Walk', 'warmup', 'Cardio', 'machine', 'cardio', 'basic_treadmill_walk', 'cardio'),
     ('Elliptical', 'warmup', 'Cardio', 'machine', 'cardio', 'basic_elliptical', 'cardio'),
     ('Stair Climber', 'warmup', 'Cardio', 'machine', 'cardio', 'basic_stair_climber', 'cardio'),
-    ('Cat Cow', 'warmup', 'Full Body', 'bodyweight', 'mobility', 'basic_cat_cow', 'mobility'),
-    ('Hip Flexor Stretch', 'cooldown', 'Hip Flexors', 'bodyweight', 'mobility', 'basic_hip_flexor_stretch', 'mobility'),
-    ('Figure Four Stretch', 'cooldown', 'Glutes', 'bodyweight', 'mobility', 'basic_figure_four', 'mobility'),
-    ('Doorway Stretch', 'cooldown', 'Chest', 'bodyweight', 'mobility', 'basic_doorway_stretch', 'mobility'),
-    ('Cross-Body Shoulder Stretch', 'cooldown', 'Shoulders', 'bodyweight', 'mobility', 'basic_cross_body_shoulder', 'mobility')
+    ('Cat Cow', 'warmup', 'Full Body', 'bodyweight', 'rotation', 'basic_cat_cow', 'mobility'),
+    ('Hip Flexor Stretch', 'cooldown', 'Hip Flexors', 'bodyweight', 'rotation', 'basic_hip_flexor_stretch', 'mobility'),
+    ('Figure Four Stretch', 'cooldown', 'Glutes', 'bodyweight', 'rotation', 'basic_figure_four', 'mobility'),
+    ('Doorway Stretch', 'cooldown', 'Chest', 'bodyweight', 'rotation', 'basic_doorway_stretch', 'mobility'),
+    ('Cross-Body Shoulder Stretch', 'cooldown', 'Shoulders', 'bodyweight', 'rotation', 'basic_cross_body_shoulder', 'mobility')
 ) as v(name, category, muscle_group, equipment, movement_pattern, external_id, exercise_type)
 where not exists (
   select 1 from public.st_exercise_catalog c

@@ -13,6 +13,13 @@ export type ExerciseTargetLike = {
   superset_group_id?: string | null;
   superset_order?: number | null;
   equipment?: string | null;
+  st_planned_sets?: Array<{
+    id?: string | null;
+    set_number?: number | null;
+    sort_order?: number | null;
+    set_type?: string | null;
+    is_deleted?: boolean | null;
+  }> | null;
 };
 
 export type WorkoutTargetLike = {

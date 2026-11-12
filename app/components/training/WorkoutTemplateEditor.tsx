@@ -11,6 +11,7 @@ import { compatibleEquipmentOptions, defaultCatalogEquipment, resolveExerciseEqu
 import { getExerciseGuidePayload, getExerciseThumb, hasExerciseGuide, type ExerciseGuidePayload } from '../../../lib/training/exerciseMedia';
 import { exerciseTypeOf } from '../../../lib/training/exerciseTypes';
 import { SET_TYPES, isRampEffortSetType } from '../../../lib/training/setTypes';
+import { nextPlannedSetNumber, nextPlannedSortOrder, setDisplayLabel } from '../../../lib/training/setLabels';
 import { canRewritePlannedSetPrescription, logHasPerformance } from '../../../lib/training/plannedSetGuard';
 import {
   correctPlannedSetType,
@@ -286,14 +287,13 @@ export default function WorkoutTemplateEditor({
 
   async function addSet(ex: any) {
     if (!canEdit) return;
-    const active = plannedSets(ex);
-    const n = active.length ? Math.max(...active.map((s: any) => s.set_number || 0)) + 1 : 1;
-    const sort = active.length ? Math.max(...active.map((s: any) => s.sort_order || 0)) + 1 : 0;
-    const sample = active[0];
+    const sample = plannedSets(ex)[0];
     beginPersist();
     for (const tw of targets) {
       const match = tw.id === workout.id ? ex : matchingExercise(tw, ex);
       if (!match) continue;
+      const n = nextPlannedSetNumber(match.st_planned_sets);
+      const sort = nextPlannedSortOrder(match.st_planned_sets);
       const { error: insertError } = await supabase.from('st_planned_sets').insert({
         exercise_id: match.id,
         sort_order: sort,
@@ -304,6 +304,10 @@ export default function WorkoutTemplateEditor({
         target_weight: sample?.target_weight || '',
       });
       if (insertError) return persistError(insertError.message);
+      match.st_planned_sets = [
+        ...(match.st_planned_sets || []),
+        { id: `pending-${n}`, set_number: n, sort_order: sort, set_type: 'working' },
+      ];
     }
     await reload();
   }
@@ -977,7 +981,7 @@ function TemplateExerciseCard({
             <div key={set.id} className="set-log-card">
               <div className="set-log-grid">
                 <div className="set-log-head">
-                  <span className="set-log-num">Set {set.set_number}</span>
+                  <span className="set-log-num">{setDisplayLabel(set, sets)}</span>
                   <select
                     className="set-type-select"
                     value={set.set_type || 'working'}

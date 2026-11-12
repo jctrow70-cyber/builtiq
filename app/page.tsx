@@ -77,6 +77,7 @@ import { canRewritePlannedSetPrescription } from '../lib/training/plannedSetGuar
 import { applyLogSnapshotType, applyProgramSetDeleted, applyProgramSetType, applyWorkoutSetDeleted, applyWorkoutSetType, correctPlannedSetType, isCorrectableSetType, LOGGED_SET_REMOVAL_CONFIRMATION, plannedSetEditQueue, resolvePlannedSetTargets, softDeletePlannedSets } from '../lib/training/setTypeCorrection';
 import { completedSessionDraft, deriveSessionStatus, outstandingRequiredSetIds, sessionStatusAfterPlanChange, shouldHealPartialSession } from '../lib/training/sessionOutcome';
 import { extraLogsFromSetLogs, extraSetInsertPayload, extraSetsForExercise, nextExtraSetNumber, type ExtraSetLog } from '../lib/training/extraSets';
+import { nextPlannedSetNumber, nextPlannedSortOrder } from '../lib/training/setLabels';
 import { classifyPreviousPerformance } from '../lib/training/previousPerformance';
 import { loggerCopyLastEligible, loggerSelectedEquipment } from '../lib/training/previousPerformanceDisplay';
 import { loadWorkoutFeedback, normalizePainFlag, upsertExerciseSession, upsertWorkoutFeel, upsertWorkoutSession } from '../lib/training/workoutSessions';
@@ -411,6 +412,7 @@ export default function Page(){
  const exerciseMutationRef=useRef<Set<string>>(new Set());
  const personalCopyFlightRef=useRef<Promise<{program:any}|null>|null>(null);
  const addExerciseFlightRef=useRef(false);
+ const addSetFlightRef=useRef(false);
  const cancelledExerciseIdsRef=useRef<Set<string>>(new Set());
  const exerciseWriteHoldRef=useRef<any[]>([]);
  const exerciseVisualRef=useRef<{kind:'add'|'remove';mark:ExerciseEditTimingMark;ids:string[];workoutId:string}|null>(null);
@@ -2911,16 +2913,25 @@ export default function Page(){
  await reloadKeepDay();
 }
  async function addSet(e:any){
- if(!(await ensurePersonalCopyForTrainingEdit()))return;
- const current=planEditRef.current?.workout||workout;
- const active=(e.st_planned_sets||[]).filter((s:any)=>!s.is_deleted);
- const n=active.length?Math.max(...active.map((s:any)=>s.set_number||0))+1:1;
- const sort_order=active.length?Math.max(...active.map((s:any)=>s.sort_order||0))+1:0;
- for(const tw of targetWorkoutsFrom(current)){
-  const targetEx=resolveExerciseTarget(tw,e,current);
-  if(targetEx) await supabase.from('st_planned_sets').insert({exercise_id:targetEx.id,sort_order,set_number:n,set_type:'working'});
+ if(addSetFlightRef.current)return;
+ addSetFlightRef.current=true;
+ try{
+  if(!(await ensurePersonalCopyForTrainingEdit()))return;
+  const current=planEditRef.current?.workout||workout;
+  for(const tw of targetWorkoutsFrom(current)){
+   const targetEx=resolveExerciseTarget(tw,e,current);
+   if(!targetEx)continue;
+   // Number from each target's live sets so multi-week / stale click state cannot reuse a set_number.
+   const n=nextPlannedSetNumber(targetEx.st_planned_sets);
+   const sort_order=nextPlannedSortOrder(targetEx.st_planned_sets);
+   await supabase.from('st_planned_sets').insert({exercise_id:targetEx.id,sort_order,set_number:n,set_type:'working'});
+   // Keep later targets in this pass honest if the same in-memory tree is reused.
+   targetEx.st_planned_sets=[...(targetEx.st_planned_sets||[]),{id:`pending-${n}`,set_number:n,sort_order,set_type:'working'}];
+  }
+  await reloadKeepDay();
+ }finally{
+  addSetFlightRef.current=false;
  }
- await reloadKeepDay();
 }
  function sourceExerciseForSet(setId:string){
   const before=planEditRef.current?.workout||workout;

@@ -28,6 +28,7 @@ import { createDebouncedFieldQueue } from '../../lib/training/debouncedFieldEdit
 import type { SetLogSaveResult } from '../../lib/training/setLogIntent';
 import { beginLoggerInteraction, noteLoggerRender, noteLoggerVisual, type LoggerTimingMark } from '../../lib/performance/loggerTiming';
 import { setLogStatusPresentation } from '../../lib/training/setLogStatus';
+import { setDisplayLabel } from '../../lib/training/setLabels';
 
 type SetRow = {
   id: string;
@@ -81,15 +82,6 @@ function fieldSizeClass(field: LogFieldUI) {
   if (field.wide || field.size === 'wide') return 'log-field-card-wide';
   if (field.size === 'compact') return 'log-field-card-compact';
   return 'log-field-card-normal';
-}
-
-function setLabel(set: SetRow, all: SetRow[]) {
-  if (String(set.set_type || 'working') === 'warmup') {
-    const n = all.filter((s) => String(s.set_type || 'working') === 'warmup' && s.set_number <= set.set_number).length;
-    return `Ramp ${n}`;
-  }
-  const n = all.filter((s) => String(s.set_type || 'working') !== 'warmup' && s.set_number <= set.set_number).length;
-  return `Set ${n || set.set_number}`;
 }
 
 function stripEmbeddedNotes(notes: string) {
@@ -517,7 +509,7 @@ function SetLogCard({
     <div className={`set-log-card${completed ? ' set-log-done' : ''}${saveState === 'error' ? ' set-log-error' : ''}`} data-save-state={saveState}>
       <div className={`set-log-grid${hasChipRow ? ' has-chip-row' : ''}`}>
         <div className="set-log-head">
-          <span className="set-log-num">{setLabel(set, allSets)}</span>
+          <span className="set-log-num">{setDisplayLabel(set, allSets)}</span>
           <SetTypePicker
             value={set.set_type}
             canEdit={canEdit}

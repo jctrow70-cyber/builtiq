@@ -1,5 +1,5 @@
 /**
- * BIQ-0316 / BIQ-0309 Phase 2 — personal program week anchoring.
+ * BIQ-0317 / BIQ-0309 Phase 2 — personal program week anchoring.
  *
  * Training UI already numbers weeks from program.start_date.
  * Expectations must use the same clock. An enrollment starts_on earlier than

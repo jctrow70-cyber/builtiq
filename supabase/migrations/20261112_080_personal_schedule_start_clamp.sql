@@ -1,7 +1,7 @@
--- BIQ-0316 / BIQ-0309 Phase 2 personal schedule start clamp.
+-- BIQ-0317 / BIQ-0309 Phase 2 personal schedule start clamp.
 -- Apply to LIVE only after explicit approval. Does not rewrite set logs or sessions.
 
--- BIQ-0316 / BIQ-0309 Phase 2 — personal schedule clock
+-- BIQ-0317 / BIQ-0309 Phase 2 — personal schedule clock
 -- Align expectation week numbering with program.start_date (Training UI).
 -- Do not apply to LIVE until separately approved. No historical row rewrites here.
 
@@ -18,7 +18,7 @@ as $$
 $$;
 
 comment on function public.st_personal_schedule_clock(date, date, date) is
-  'BIQ-0316. Personal Week 1 clock. Prefer program.start_date; never let an earlier starts_on win.';
+  'BIQ-0317. Personal Week 1 clock. Prefer program.start_date; never let an earlier starts_on win.';
 
 create or replace function public.st_personal_expectation_floor(
   p_starts_on date,
@@ -40,7 +40,7 @@ as $$
 $$;
 
 comment on function public.st_personal_expectation_floor(date, date, date) is
-  'BIQ-0316. First date personal expectations may generate. Clamps starts_on up to program.start_date.';
+  'BIQ-0317. First date personal expectations may generate. Clamps starts_on up to program.start_date.';
 
 create or replace function public.st_normalize_personal_enrollment_starts_on(
   p_starts_on date,
@@ -61,7 +61,7 @@ as $$
 $$;
 
 comment on function public.st_normalize_personal_enrollment_starts_on(date, date, date) is
-  'BIQ-0316. Default/clamp personal enrollment starts_on to program.start_date when earlier.';
+  'BIQ-0317. Default/clamp personal enrollment starts_on to program.start_date when earlier.';
 
 revoke all on function public.st_personal_schedule_clock(date, date, date) from public, anon;
 revoke all on function public.st_personal_expectation_floor(date, date, date) from public, anon;

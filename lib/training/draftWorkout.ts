@@ -211,7 +211,13 @@ export function addDraftSet(workout: DraftWorkout, exerciseId: string): DraftWor
   if (!exercise) return workout;
   const active = plannedSets(exercise) as DraftSet[];
   const sample = active[active.length - 1];
-  const next = blankSet(exercise.section, active.length, sample);
+  const setNumber = active.length ? Math.max(...active.map((s) => Number(s.set_number) || 0)) + 1 : 1;
+  const sortOrder = active.length ? Math.max(...active.map((s) => Number(s.sort_order) || 0)) + 1 : 0;
+  const next = {
+    ...blankSet(exercise.section, Math.max(0, setNumber - 1), sample),
+    sort_order: sortOrder,
+    set_number: setNumber,
+  };
   return replaceExercise(workout, exerciseId, { ...exercise, st_planned_sets: [...exercise.st_planned_sets, next] });
 }
 
