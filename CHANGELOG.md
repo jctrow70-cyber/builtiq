@@ -23,6 +23,7 @@ Purpose: Mary’s Training logger showed Set 2 jumping to two Set 6 cards after 
 
 Files changed:
 - lib/training/setLabels.ts
+- lib/training/exerciseTargetResolve.ts
 - app/components/WorkoutSetLogger.tsx
 - app/page.tsx
 - app/components/training/WorkoutTemplateEditor.tsx
