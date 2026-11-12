@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 167 - Set cards label by list position, not raw set_number
+
+Date: 2026-11-12
+Status: Implemented locally
+Category: Training
+
+### Decision
+
+BIQ-0316 shows Ramp/Set labels from the ordered list position within ramp-effort vs working groups. Stored `set_number` stays the persistence key for history and previous-performance matching. New planned-set inserts take `max(set_number)+1` per target exercise (soft-deleted excluded), with a single-flight guard on Training + Set. Draft add-set uses the same max+1 rule when gaps exist. Duplicate historical numbers are not rewritten.
+
+### Reason
+
+Counting labels with `set_number <= current` skipped and repeated labels whenever two rows shared a number. Logged-set rewrite guards block renumbering rows that already have logs, so display must not require unique stored numbers. Computing the next number from a stale source exercise across multi-week targets could insert another collision.
+
+### Alternatives Considered
+
+Renumbering every planned set after add/remove. Showing raw `set_number` again. Blocking + Set until reload finished without fixing the label math.
+
+### Impact
+
+- Logger, template editor, and group strength editor share `setDisplayLabel`
+- Extra sets continue the working Set sequence when rendered with planned rows
+- Existing `st_planned_sets.set_number` values and snapshots stay unchanged
+
 ## Decision 166 - Remapped catalog ids still recognize historical set logs
 
 Date: 2026-11-09
