@@ -373,6 +373,12 @@ assert.equal(ghdCard?.compatible_equipment, 'GHD');
 assert.equal(canonicalEquipment('Cable machine').key, 'cable');
 assert.notEqual(canonicalEquipment('GHD Sit-Up').key, 'cable');
 
+const closeGripPress = loadMasterLibraryRecords().find((record) => record.name === 'Close-Grip Press');
+assert.equal(closeGripPress?.default_equipment, 'Barbell');
+assert.match(String(closeGripPress?.compatible_equipment || ''), /Dumbbell/i);
+assert.match(String(closeGripPress?.compatible_equipment || ''), /Barbell/i);
+assert.match(String(closeGripPress?.compatible_equipment || ''), /Smith Machine/i);
+
 assert.equal(loadEntryCaption('Dumbbell', 'bilateral'), 'Weight is per dumbbell.');
 assert.match(loadEntryCaption('DB', 'unilateral') || '', /one arm/);
 assert.match(loadEntryCaption('Smith Machine') || '', /No bar weight/);

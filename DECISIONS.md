@@ -4,6 +4,30 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 169 - Close-Grip Press keeps one card with Dumbbell
+
+Date: 2026-11-12
+Status: Implemented locally
+Category: Catalog / Equipment
+
+### Decision
+
+Close-Grip Press stays one master card (51) with Dumbbell on `compatible_equipment`, matching the Barbell / Smith Machine multi-implement pattern used for Front Squat and Deadlift. Do not create a separate Dumbbell Close-Grip Press card.
+
+### Reason
+
+Dumbbell close-grip press is an implement variant of the same horizontal push / triceps press, not a separate exercise. A second master card would split history and progress series.
+
+### Alternatives Considered
+
+- Separate Dumbbell Close-Grip Press master card — rejected; same architecture as Front Squat (55) and Deadlift (71)
+- Leave Close-Grip Press on Barbell / Smith only — rejected; users need Dumbbell as a logged option
+
+### Impact
+
+- Close-Grip Press equipment dropdown includes Dumbbell
+- Completed history and planned rows are not rewritten; users change equipment when they want Dumbbell
+
 ## Decision 168 - Personal week numbering follows program.start_date
 
 Date: 2026-11-12

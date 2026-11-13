@@ -11,6 +11,37 @@ Branch:
 Status:
 ```
 
+## BIQ-0318 - Close-Grip Press Dumbbell equipment
+
+Date: 2026-11-12
+Branch: cursor/close-grip-press-dumbbell-1f0a
+Status: Implemented locally
+
+Summary: Close-Grip Press (master 51) can use Dumbbell on the existing master card, same pattern as Front Squat / Deadlift implement adds. No separate Dumbbell Close-Grip Press card.
+
+Purpose: Users need Dumbbell as an implement option when logging or planning Close-Grip Press. Master 51 listed Barbell and Smith Machine only.
+
+Files changed:
+- lib/training/data/builtiq-master-catalog.json
+- lib/training/masterCatalog.ts
+- scripts/apply-close-grip-press-dumbbell.ts
+- scripts/test-equipment-identity.ts
+- CHANGELOG.md
+- DECISIONS.md
+
+Database changes: No schema migration. Data-only on live `st_exercise_catalog` master 51 via `scripts/apply-close-grip-press-dumbbell.ts`: add Dumbbell to `coaching_metadata.compatible_equipment`. History and planned set logs are not rewritten.
+
+Testing steps:
+1. `npx tsx scripts/test-equipment-identity.ts`
+2. Training → add or open Close-Grip Press → confirm Dumbbell appears in the equipment dropdown
+3. Select Dumbbell, save, reload — equipment stays Dumbbell
+4. Confirm Barbell and Smith Machine remain available
+5. After LIVE apply only: `npx tsx scripts/apply-close-grip-press-dumbbell.ts`
+
+Known issues: LIVE catalog row still needs the apply script with service-role credentials. Code and master library include Dumbbell before that apply.
+
+Recommended commit message: BIQ-0318 Add Dumbbell to Close-Grip Press equipment
+
 ## BIQ-0317 - Personal program week anchor ignores early starts_on
 
 Date: 2026-11-12

@@ -504,6 +504,20 @@ export function loadMasterLibraryRecords(): MasterLibraryRecord[] {
     });
   }
 
+  const closeGripPress = byId.get('51');
+  if (closeGripPress) {
+    const compatible = new Set(splitList(closeGripPress.compatible_equipment));
+    compatible.add(closeGripPress.default_equipment || 'Barbell');
+    compatible.add('Barbell');
+    compatible.add('Dumbbell');
+    compatible.add('Smith Machine');
+    byId.set('51', {
+      ...closeGripPress,
+      default_equipment: closeGripPress.default_equipment || 'Barbell',
+      compatible_equipment: Array.from(compatible).join('; '),
+    });
+  }
+
   return Array.from(byId.values()).sort((a, b) => Number(a.id) - Number(b.id));
 }
 
