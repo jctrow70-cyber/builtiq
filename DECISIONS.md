@@ -7,7 +7,7 @@ Each decision should explain what was decided, why it was decided, and what alte
 ## Decision 169 - Close-Grip Press keeps one card with Dumbbell
 
 Date: 2026-11-12
-Status: Implemented locally
+Status: Accepted
 Category: Catalog / Equipment
 
 ### Decision

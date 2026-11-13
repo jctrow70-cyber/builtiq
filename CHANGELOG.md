@@ -15,7 +15,7 @@ Status:
 
 Date: 2026-11-12
 Branch: cursor/close-grip-press-dumbbell-1f0a
-Status: Implemented locally
+Status: Merged to main
 
 Summary: Close-Grip Press (master 51) can use Dumbbell on the existing master card, same pattern as Front Squat / Deadlift implement adds. No separate Dumbbell Close-Grip Press card.
 
