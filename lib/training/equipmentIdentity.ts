@@ -65,10 +65,38 @@ export function comparableVariantKey(value?: string | null): string {
   return key;
 }
 
+/**
+ * Plate-loaded iso-lateral presses added in BIQ-0319.
+ * The typed number is the combined load for both arms, or the working arm when the set is single-arm.
+ * Dumbbell series stay per dumbbell: historical logs and PRs already use that scale.
+ */
+const COMBINED_PLATE_LOAD_IDS = new Set(['268', '269']);
+const COMBINED_PLATE_LOAD_NAMES = new Set(['iso-lateral bench press', 'seated iso-lateral chest press']);
+
+export const COMBINED_PLATE_LOAD_CAPTION =
+  'Record the combined plate weight across both arms. 45 lb per side is 90 lb total. One arm at a time: record only the working arm.';
+
+export const WORKING_ARM_LOAD_CAPTION = 'Record only the weight loaded on the working arm.';
+
+export function usesCombinedPlateLoad(exercise?: { externalId?: string | null; name?: string | null } | null): boolean {
+  const id = String(exercise?.externalId || '').trim();
+  if (COMBINED_PLATE_LOAD_IDS.has(id)) return true;
+  const name = String(exercise?.name || '').trim().toLowerCase();
+  return COMBINED_PLATE_LOAD_NAMES.has(name);
+}
+
 /** Caption for the weight the athlete types. Does not change the stored number. */
-export function loadEntryCaption(equipment?: string | null, laterality?: string | null): string | null {
-  const key = canonicalEquipment(equipment).key;
+export function loadEntryCaption(
+  equipment?: string | null,
+  laterality?: string | null,
+  exercise?: { externalId?: string | null; name?: string | null } | null
+): string | null {
   const variant = comparableVariantKey(laterality);
+  if (usesCombinedPlateLoad(exercise)) {
+    if (variant === 'unilateral' || variant === 'alternating') return WORKING_ARM_LOAD_CAPTION;
+    return COMBINED_PLATE_LOAD_CAPTION;
+  }
+  const key = canonicalEquipment(equipment).key;
   if (key === 'dumbbell') {
     if (variant === 'unilateral' || variant === 'alternating') return 'Weight per dumbbell, one arm at a time.';
     return 'Weight is per dumbbell.';

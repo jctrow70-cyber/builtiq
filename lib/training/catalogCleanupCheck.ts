@@ -57,7 +57,7 @@ export function runCatalogCleanupChecks() {
   const mapped = mappedByName();
   const catalog = mapped.map((row) => row.catalog);
   const masterCount = expectedMasterCatalogCount();
-  assert(masterCount === 267, `active master count should be 267, got ${masterCount}`);
+  assert(masterCount === 269, `active master count should be 269, got ${masterCount}`);
   assert(catalog.length === masterCount, `mapped master count should be ${masterCount}, got ${catalog.length}`);
 
   assert(!textHasToken('Prowler Push', 'row'), 'word-boundary: Prowler does not match row');
@@ -415,6 +415,58 @@ export function runCatalogCleanupChecks() {
   assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '265')), 'Seated Chest Press is generation-eligible');
   assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '266')), 'Iso-Lateral Decline Press is generation-eligible');
   assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '267')), 'Standing Lever Row is generation-eligible');
+
+  const isoBench = mapped.find((row) => row.record.id === '268');
+  const seatedIso = mapped.find((row) => row.record.id === '269');
+  assert(isoBench?.record.name === 'Iso-Lateral Bench Press', 'master 268 is Iso-Lateral Bench Press');
+  assert(seatedIso?.record.name === 'Seated Iso-Lateral Chest Press', 'master 269 is Seated Iso-Lateral Chest Press');
+  assert(isoBench?.catalog.equipment === 'Machine' && seatedIso?.catalog.equipment === 'Machine', 'iso-lateral presses are Machine');
+  assert(isoBench?.catalog.movement_pattern === 'push_horizontal' && seatedIso?.catalog.movement_pattern === 'push_horizontal', 'iso-lateral presses are horizontal push');
+  assert(isoBench?.catalog.media_url === null && isoBench?.catalog.image_url === null && isoBench?.catalog.gif_url === null, '268 media placeholders are null');
+  assert(seatedIso?.catalog.media_url === null && seatedIso?.catalog.image_url === null && seatedIso?.catalog.gif_url === null, '269 media placeholders are null');
+  assert(isoBench?.catalog.external_id === '268' && seatedIso?.catalog.external_id === '269', '268 and 269 keep stable external ids');
+  assert(/45 lb per side is 90 lb total/i.test(String(isoBench?.catalog.instructions || '')), '268 instructions state combined load');
+  assert(/45 lb per side is 90 lb total/i.test(String(seatedIso?.catalog.instructions || '')), '269 instructions state combined load');
+  assert(/working arm/i.test(String(isoBench?.catalog.instructions || '')), '268 instructions state single-arm load');
+  assert(/working arm/i.test(String(seatedIso?.catalog.instructions || '')), '269 instructions state single-arm load');
+  const isoBenchMeta = isoBench!.catalog.coaching_metadata;
+  const seatedIsoMeta = seatedIso!.catalog.coaching_metadata;
+  assert(isoBenchMeta.exercise_kind === 'compound' && isoBenchMeta.movement_pattern === 'horizontal_push' && isoBenchMeta.laterality === 'bilateral', '268 programming fields');
+  assert(seatedIsoMeta.exercise_kind === 'compound' && seatedIsoMeta.movement_pattern === 'horizontal_push' && seatedIsoMeta.laterality === 'bilateral', '269 programming fields');
+  assert(
+    JSON.stringify(isoBenchMeta.hypertrophy_volume_credits) === JSON.stringify(NEW_MASTER_CLASSIFICATIONS['268'].hypertrophy_volume_credits),
+    '268 volume credits'
+  );
+  assert(
+    JSON.stringify(seatedIsoMeta.hypertrophy_volume_credits) === JSON.stringify(NEW_MASTER_CLASSIFICATIONS['269'].hypertrophy_volume_credits),
+    '269 volume credits'
+  );
+  assert(
+    distinctCatalogIds(isoBench!.catalog.external_id, benchPress!.catalog.external_id),
+    'Iso-Lateral Bench Press stays independent from Bench Press'
+  );
+  assert(
+    distinctCatalogIds(isoBench!.catalog.external_id, machineChest!.catalog.external_id),
+    'Iso-Lateral Bench Press stays independent from Machine Chest Press'
+  );
+  assert(
+    distinctCatalogIds(isoBench!.catalog.external_id, convergingPress!.catalog.external_id),
+    'Iso-Lateral Bench Press stays independent from Converging Chest Press'
+  );
+  assert(
+    distinctCatalogIds(seatedIso!.catalog.external_id, seatedChest!.catalog.external_id),
+    'Seated Iso-Lateral Chest Press stays independent from Seated Chest Press'
+  );
+  assert(
+    distinctCatalogIds(seatedIso!.catalog.external_id, isoBench!.catalog.external_id),
+    'Seated Iso-Lateral Chest Press stays independent from Iso-Lateral Bench Press'
+  );
+  const isoBenchSearch = searchCatalog(catalog, { query: 'iso-lateral bench press', section: 'strength', limit: 5 });
+  assert(isoBenchSearch[0]?.name === 'Iso-Lateral Bench Press', 'iso-lateral bench press search finds 268');
+  const seatedIsoSearch = searchCatalog(catalog, { query: 'seated iso-lateral chest press', section: 'strength', limit: 5 });
+  assert(seatedIsoSearch[0]?.name === 'Seated Iso-Lateral Chest Press', 'seated iso-lateral chest press search finds 269');
+  assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '268')), 'Iso-Lateral Bench Press is generation-eligible');
+  assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '269')), 'Seated Iso-Lateral Chest Press is generation-eligible');
   assert(!isAiGenerationEligibleRow(archived), 'archived cards cannot enter generation');
   assert(!isAiGenerationEligibleRow(custom), 'user customs cannot enter generation');
   const adapted = adaptGenerationCatalog([...liveShaped, custom, archived], { allowFallback: false });

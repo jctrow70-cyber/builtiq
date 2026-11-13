@@ -4,6 +4,38 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 170 - Iso-lateral chest presses store combined plate load
+
+Date: 2026-11-13
+Status: Accepted
+Category: Catalog / Logging
+
+### Decision
+
+Add master 268 Iso-Lateral Bench Press and master 269 Seated Iso-Lateral Chest Press as separate Machine cards. Bilateral sets store the combined plate weight across both arms (45 lb per side is 90 lb total). A single-arm set stores only the weight on the working arm. Do not add a per-arm weight column. Do not convert or rewrite existing set logs.
+
+Keep the existing dumbbell rule: bilateral dumbbell load stays the typed weight of one dumbbell, and the adaptation step stays 5 lb per dumbbell. Do not change that caption to a combined total.
+
+### Reason
+
+These two machines are not Bench Press (1), Machine Chest Press (140), Converging Chest Press (262), Seated Chest Press (265), or Iso-Lateral Decline Press (266). They need their own catalog ids so search, Program Design, AI generation, logging, and personal records stay separate.
+
+Personal records, estimated 1RM, history, and Progress read the stored `actual_weight` with no multiplier. New iso-lateral cards have no history, so a combined-load caption cannot disagree with old numbers. Dumbbell history was entered under "Weight is per dumbbell" (Decision 157 / BIQ-0301). Changing that cue without rewriting stored weights would put a new combined total in the same series as an old per-dumbbell number and would make the next 5 lb increment mean a different load.
+
+### Alternatives Considered
+
+- Alias either name onto Converging Chest Press (262) or Machine Chest Press (140) — rejected; independent progression is the point
+- Store weight per arm in a new column — rejected for this change
+- Change every bilateral dumbbell caption to combined load — rejected; it would mix scales inside existing PR series
+- Double historical dumbbell weights — rejected; completed logs stay as entered
+
+### Impact
+
+- Logger, exercise history, and Exercise Progress show the same combined-load sentence for 268 and 269
+- The number typed is the number stored and the number used for records
+- Dumbbell captions, dumbbell increments, and existing machine captions stay as they are
+- Household remap list is unchanged, so old "Machine bench press" logs stay on Machine Chest Press (140)
+
 ## Decision 169 - Close-Grip Press keeps one card with Dumbbell
 
 Date: 2026-11-12

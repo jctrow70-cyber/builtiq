@@ -18,6 +18,7 @@ import type { ExerciseTrainingSummary, ExerciseWeekBucket } from '../../../lib/p
 import type { ProgressSetFact } from '../../../lib/progress/setFacts';
 import { formatDisplayDate, todayYmd } from '../../../lib/training/programCalendar';
 import { equipmentSeriesKey, seriesIdentityFromParts } from '../../../lib/progress/identity';
+import { loadEntryCaption, usesCombinedPlateLoad } from '../../../lib/training/equipmentIdentity';
 import { historySetLabel } from '../../../lib/training/workoutHistory';
 
 const RANGE_LABELS: { value: ExerciseChartRange; label: string }[] = [
@@ -124,6 +125,13 @@ export default function ExerciseProgressDetail({ userId, target, weightUnit, onB
         <p className="progress-kicker">Exercise progress</p>
         <h2 className="progress-headline">{model?.identity.exerciseName || target.exerciseName}</h2>
         <p className="progress-lead">{model?.identity.equipmentLabel || 'Unspecified'}{model?.identity.variant ? ` · ${model.identity.variant}` : ''}</p>
+        {usesCombinedPlateLoad({ name: model?.identity.exerciseName || target.exerciseName }) ? (
+          <p className="muted equipment-load-caption">
+            {loadEntryCaption('Machine', model?.identity.variant || target.variant, {
+              name: model?.identity.exerciseName || target.exerciseName,
+            })}
+          </p>
+        ) : null}
         {model?.recordLabel && <p className="muted">{model.recordLabel}</p>}
         <div className="progress-stat-grid">
           <Stat label="Estimated 1RM" value={formatLoad(model?.allTimeE1rm?.e1rm ?? null, weightUnit)} />

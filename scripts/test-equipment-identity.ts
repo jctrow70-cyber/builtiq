@@ -14,7 +14,13 @@ import { resolveLoadIncrement } from '../lib/scienceEngine/adaptation/increments
 import { inferSnapshotEquipment } from '../lib/progress/equipmentBackfill';
 import { seriesIdentityFromParts, seriesKey } from '../lib/progress/identity';
 import { exposureFromLoggedExercise } from '../lib/training/adaptationApply';
-import { canonicalEquipment, equipmentKeysComparable, loadEntryCaption } from '../lib/training/equipmentIdentity';
+import {
+  canonicalEquipment,
+  COMBINED_PLATE_LOAD_CAPTION,
+  equipmentKeysComparable,
+  loadEntryCaption,
+  WORKING_ARM_LOAD_CAPTION,
+} from '../lib/training/equipmentIdentity';
 import { loadMasterLibraryRecords } from '../lib/training/masterCatalog';
 import { createEquipmentWriteQueue, equipmentChoiceBlockReason, equipmentForSetSnapshot } from '../lib/training/equipmentSelection';
 import { resolveExerciseEquipment } from '../lib/training/exerciseEquipment';
@@ -380,12 +386,30 @@ assert.match(String(closeGripPress?.compatible_equipment || ''), /Barbell/i);
 assert.match(String(closeGripPress?.compatible_equipment || ''), /Smith Machine/i);
 
 assert.equal(loadEntryCaption('Dumbbell', 'bilateral'), 'Weight is per dumbbell.');
+assert.equal(loadEntryCaption('Dumbbell', 'bilateral', { name: 'Dumbbell Bench Press' }), 'Weight is per dumbbell.');
 assert.match(loadEntryCaption('DB', 'unilateral') || '', /one arm/);
 assert.match(loadEntryCaption('Smith Machine') || '', /No bar weight/);
 assert.match(loadEntryCaption('Machine') || '', /No bar weight or counterbalance/);
+assert.equal(
+  loadEntryCaption('Machine', 'bilateral', { externalId: '268', name: 'Iso-Lateral Bench Press' }),
+  COMBINED_PLATE_LOAD_CAPTION
+);
+assert.equal(
+  loadEntryCaption('Machine', null, { name: 'Seated Iso-Lateral Chest Press' }),
+  COMBINED_PLATE_LOAD_CAPTION
+);
+assert.match(COMBINED_PLATE_LOAD_CAPTION, /45 lb per side is 90 lb total/);
+assert.equal(
+  loadEntryCaption('Machine', 'unilateral', { externalId: '269' }),
+  WORKING_ARM_LOAD_CAPTION
+);
+assert.match(loadEntryCaption('Machine', 'bilateral', { externalId: '140', name: 'Machine Chest Press' }) || '', /No bar weight or counterbalance/);
 const e1rm = estimateE1rm({ weight: 70, reps: 8, setType: 'working' });
 assert.equal(e1rm, 70 * (1 + 8 / 30));
 assert.notEqual(e1rm, 140 * (1 + 8 / 30));
+const combined = estimateE1rm({ weight: 90, reps: 8, setType: 'working' });
+assert.equal(combined, 90 * (1 + 8 / 30));
+assert.notEqual(combined, 45 * (1 + 8 / 30));
 
 const original = snapshotForLog(
   { name: 'Bench Press', catalog_exercise_id: 'bench' },
