@@ -340,6 +340,46 @@ const ADD_ON_ROWS: MasterLibraryRecord[] = [
       'Standing hip-hinged plate-loaded lever row with foot platforms and no chest support. Distinct from T-Bar Row (17), Landmine Row (16), Chest-Supported Row (15), Machine Row (142), and Iso-Lateral Row (261). Machine only. Own catalog id for independent progression.',
     active: 'Yes',
   },
+  {
+    id: '268',
+    name: 'Iso-Lateral Bench Press',
+    aliases:
+      'Lying Iso-Lateral Bench; Plate-Loaded Iso-Lateral Bench; Iso-Lateral Flat Bench Press; Hammer Strength Bench Press',
+    primary_muscle: 'Chest',
+    secondary_muscles: 'Triceps; Front Delts',
+    movement_pattern: 'Horizontal Push',
+    category: 'Compound',
+    default_equipment: 'Machine',
+    compatible_equipment: 'Machine',
+    setup:
+      'Lie on the plate-loaded iso-lateral bench with feet planted and shoulders set. Adjust the independent handles so they start near mid-chest. Record the combined plate weight across both arms: 45 lb per side is 90 lb total. If you press one arm at a time, record only the weight on the working arm.',
+    execution:
+      'Press each handle forward on its own path until the arms extend under control, then return without letting the plates slam. Work both arms together or one arm at a time as programmed.',
+    form_cues: 'Shoulders set; Wrists stacked; Own each arm; Log the combined load',
+    design_notes:
+      'Lying plate-loaded iso-lateral bench with independently moving arms. Distinct from Bench Press (1), Machine Chest Press (140), Converging Chest Press (262), Seated Chest Press (265), Iso-Lateral Decline Press (266), and Seated Iso-Lateral Chest Press (269). Machine only. Own catalog id so progression and PRs stay separate. Bilateral sets store combined plate weight. Single-arm sets store the working arm only. No per-arm weight column. Media placeholders stay null.',
+    active: 'Yes',
+  },
+  {
+    id: '269',
+    name: 'Seated Iso-Lateral Chest Press',
+    aliases:
+      'Upright Iso-Lateral Chest Press; Plate-Loaded Seated Chest Press; Seated Plate-Loaded Chest Press; Hammer Strength Seated Chest Press',
+    primary_muscle: 'Chest',
+    secondary_muscles: 'Triceps; Front Delts',
+    movement_pattern: 'Horizontal Push',
+    category: 'Compound',
+    default_equipment: 'Machine',
+    compatible_equipment: 'Machine',
+    setup:
+      'Sit upright on the plate-loaded iso-lateral chest press with your back against the pad. Adjust the seat so the independent handles start around mid-chest. Record the combined plate weight across both arms: 45 lb per side is 90 lb total. If you press one arm at a time, record only the weight on the working arm.',
+    execution:
+      'Press each handle forward on its own path until the arms extend under control, then return without letting the plates slam. Work both arms together or one arm at a time as programmed. Follow this machine path.',
+    form_cues: 'Stay seated tall; Shoulders set; Own each arm; Log the combined load',
+    design_notes:
+      'Upright plate-loaded iso-lateral chest press with independently moving arms. Distinct from Seated Chest Press (265), Converging Chest Press (262), Machine Chest Press (140), Bench Press (1), Iso-Lateral Decline Press (266), and Iso-Lateral Bench Press (268). Machine only. Own catalog id so progression and PRs stay separate. Bilateral sets store combined plate weight. Single-arm sets store the working arm only. No per-arm weight column. Media placeholders stay null.',
+    active: 'Yes',
+  },
 ];
 
 function splitList(raw?: string): string[] {

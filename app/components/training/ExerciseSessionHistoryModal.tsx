@@ -13,6 +13,7 @@ import {
   historySetTypeLabel,
   type HistoryEquipmentFilter,
 } from '../../../lib/training/exerciseHistoryDisplay';
+import { loadEntryCaption, usesCombinedPlateLoad } from '../../../lib/training/equipmentIdentity';
 
 type ExerciseSessionHistoryModalProps = {
   exerciseName: string;
@@ -47,6 +48,9 @@ export default function ExerciseSessionHistoryModal({
   const subtitle = dayLabel
     ? `${dayLabel} · prior weeks in this plan`
     : 'Prior weeks in this plan';
+  const loadNote = usesCombinedPlateLoad({ name: exerciseName })
+    ? loadEntryCaption('Machine', null, { name: exerciseName })
+    : null;
 
   return (
     <div className="panel-overlay" onClick={onClose}>
@@ -63,6 +67,7 @@ export default function ExerciseSessionHistoryModal({
             <p className="muted exercise-history-subtitle">
               {exerciseName} · {subtitle}
             </p>
+            {loadNote ? <p className="muted equipment-load-caption">{loadNote}</p> : null}
           </div>
           <div className="exercise-history-actions">
             {onViewProgress && (

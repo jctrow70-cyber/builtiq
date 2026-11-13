@@ -11,6 +11,42 @@ Branch:
 Status:
 ```
 
+## BIQ-0319 - Iso-Lateral Bench Press and Seated Iso-Lateral Chest Press
+
+Date: 2026-11-13
+Branch: cursor/iso-lateral-chest-press-6f7a
+Status: Ready for review. Not deployed. Live import still uses the previous 267-card library until this branch is deployed, then Import Master Library is run again.
+
+Summary: Added master 268 Iso-Lateral Bench Press and master 269 Seated Iso-Lateral Chest Press. Both are Machine, chest, compound, horizontal push, with null media placeholders. Bilateral logs record combined plate weight (45 lb per side is 90 lb total). Single-arm logs record the working arm only. Dumbbell load stays per dumbbell. No historical weights were converted.
+
+Purpose: Lying plate-loaded iso-lateral bench and upright plate-loaded iso-lateral chest press need their own catalog ids, search hits, and progression, separate from Bench Press, Machine Chest Press, Converging Chest Press, and Seated Chest Press.
+
+Files changed:
+- lib/training/masterCatalog.ts
+- lib/training/masterCatalogEnrichment.ts
+- lib/training/equipmentIdentity.ts
+- lib/training/catalogCleanupCheck.ts
+- app/page.tsx
+- app/components/training/ExerciseSessionHistoryModal.tsx
+- app/components/progress/ExerciseProgressDetail.tsx
+- scripts/test-equipment-identity.ts
+- ROADMAP.md
+- DECISIONS.md
+- CHANGELOG.md
+
+Database changes: None applied. No schema migration. No set logs, planned rows, or existing catalog cards were rewritten. Live insert of 268 and 269 waits for approval and a master import.
+
+Testing steps:
+1. `npx tsx scripts/test-equipment-identity.ts`
+2. `npx tsx -e "import { runCatalogCleanupChecks } from './lib/training/catalogCleanupCheck.ts'; runCatalogCleanupChecks()"`
+3. Search `iso-lateral bench press` and `seated iso-lateral chest press` after a master import
+4. Log a bilateral set as 90 when each arm has 45 lb, and confirm history and Progress show 90
+5. Confirm a dumbbell exercise still says "Weight is per dumbbell."
+
+Known issues: The live catalog does not contain 268 or 269 until Settings → Import Master Library (or an apply script) runs. That import was not run. Converging Chest Press (262) still answers the alias `Iso-Lateral Chest Press`.
+
+Recommended commit message: BIQ-0319 Add iso-lateral bench and seated chest press cards
+
 ## BIQ-0318 - Close-Grip Press Dumbbell equipment
 
 Date: 2026-11-12
