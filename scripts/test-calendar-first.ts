@@ -72,6 +72,22 @@ assert.equal(expectationStillMatches(shown, {
   excused: true,
 }), 'refresh');
 
+// Personal day move: stored Sunday, shown Saturday via workout_day_moves.
+const movedShown = { expectationId: 'exp-sun', workoutId: 'w-sun', scheduledDate: '2026-11-14' };
+const movedRow = {
+  id: 'exp-sun',
+  workout_id: 'w-sun',
+  scheduled_date: '2026-11-15',
+  excused: false,
+};
+assert.equal(expectationStillMatches(movedShown, movedRow), 'refresh');
+assert.equal(expectationStillMatches(movedShown, movedRow, { 'w:w-sun': '2026-11-14' }), 'open');
+assert.equal(expectationStillMatches(
+  { ...movedShown, scheduledDate: '2026-11-15' },
+  movedRow,
+  { 'w:w-sun': '2026-11-14' }
+), 'refresh');
+
 const empty = classifyTodayTraining({
   loading: false,
   failed: false,

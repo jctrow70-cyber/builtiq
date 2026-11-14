@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { currentDateForMove, type WorkoutDayMoves } from '../programDesign/workoutDayMoves';
 
 export type ShownScheduleWorkout = {
   expectationId: string;
@@ -17,15 +18,29 @@ export type ScheduleStartDecision = 'open' | 'refresh';
 
 export type DirectWorkoutOpenDecision = 'open' | 'wait' | 'deny';
 
+/**
+ * Personal day moves keep scheduled_date on the native day (Decision 161).
+ * Compare the calendar display date after workout_day_moves, not the stored date alone.
+ */
+export function expectationDisplayDateForStart(
+  row: Pick<StoredExpectationRow, 'workout_id' | 'scheduled_date'>,
+  moves: WorkoutDayMoves = {}
+): string {
+  const workoutId = String(row.workout_id || '').trim();
+  if (!workoutId) return row.scheduled_date;
+  return currentDateForMove(moves, `w:${workoutId}`, row.scheduled_date);
+}
+
 /** Open the workout on screen only when that expectation row is unchanged. */
 export function expectationStillMatches(
   shown: ShownScheduleWorkout,
-  row: StoredExpectationRow | null
+  row: StoredExpectationRow | null,
+  moves: WorkoutDayMoves = {}
 ): ScheduleStartDecision {
   if (!row || row.id !== shown.expectationId) return 'refresh';
   if (row.excused) return 'refresh';
   if ((row.workout_id || null) !== (shown.workoutId || null)) return 'refresh';
-  if (row.scheduled_date !== shown.scheduledDate) return 'refresh';
+  if (expectationDisplayDateForStart(row, moves) !== shown.scheduledDate) return 'refresh';
   return 'open';
 }
 

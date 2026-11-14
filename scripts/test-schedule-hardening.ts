@@ -109,6 +109,11 @@ assert.equal(expectationStillMatches(
   { expectationId: 'exp-1', workoutId: 'w1', scheduledDate: '2026-11-01' },
   { id: 'exp-9', workout_id: 'w1', scheduled_date: '2026-11-01', excused: false }
 ), 'refresh');
+assert.equal(expectationStillMatches(
+  { expectationId: 'exp-1', workoutId: 'w1', scheduledDate: '2026-11-14' },
+  { id: 'exp-1', workout_id: 'w1', scheduled_date: '2026-11-15', excused: false },
+  { 'w:w1': '2026-11-14' }
+), 'open');
 
 async function assertEnrollmentGate() {
   resetEnrollmentSyncGate();
@@ -148,6 +153,8 @@ assert.equal(page.includes('armEnrollmentSync'), true);
 assert.equal(page.includes('trackTrainingLoad'), true);
 assert.equal(page.includes('directWorkoutOpenAllowed'), true);
 assert.equal(page.includes('scheduleRepairGeneration'), true);
+assert.equal(page.includes('expectationStillMatches(item,read.row,moves)'), true);
+assert.equal(page.includes('workoutDayMovesFromActivities(userCalendarActivities)'), true);
 assert.equal(calendar.includes('enrollmentSyncSettled'), true);
 assert.equal(calendar.includes('scheduleRepairGeneration'), true);
 assert.equal(calendar.includes('keepPrevious'), true);

@@ -3724,7 +3724,8 @@ function onSelectTrainingDay(date:string){
   if(!session?.user?.id)return false;
   const read=await readExpectationForStart(supabase,session.user.id,item.expectationId);
   if(read.error){alert(read.error);return false;}
-  if(expectationStillMatches(item,read.row)==='open')return true;
+  const moves=workoutDayMovesFromActivities(userCalendarActivities);
+  if(expectationStillMatches(item,read.row,moves)==='open')return true;
   markScreenStale(session.user.id,['schedule','dashboard']);
   setScheduleRefreshKey((value)=>value+1);
   alert('That workout changed. The schedule has been refreshed.');

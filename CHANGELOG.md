@@ -11,6 +11,38 @@ Branch:
 Status:
 ```
 
+## BIQ-0320 - Open and log workouts after a personal day move
+
+Date: 2026-11-14
+Branch: cursor/moved-workout-open-guard-ea81
+Status: Ready for review. Not deployed.
+
+Summary: Start, Review, and View no longer treat a personal this-time day move as a stale expectation. The start guard compares the calendar display date after `workout_day_moves` to the day the user tapped. A Sunday-to-Saturday move keeps the stored expectation date on Sunday, shows the workout on Saturday, and opens the logger on Saturday.
+
+Purpose: After moving Lower C from Sunday to Saturday, Review and Start showed "That workout changed. The schedule has been refreshed" and blocked open/log forever, because the guard compared the move day to the unchanged native `scheduled_date`.
+
+Files changed:
+- lib/training/calendarStartGuard.ts
+- app/page.tsx
+- scripts/test-calendar-first.ts
+- scripts/test-schedule-hardening.ts
+- DECISIONS.md
+- CHANGELOG.md
+
+Database changes: None. Personal moves still use the completion-ledger `workout_day_moves` overlay. Expectation rows are not rewritten.
+
+Testing steps:
+1. `npx tsx scripts/test-calendar-first.ts`
+2. `npx tsx scripts/test-schedule-hardening.ts`
+3. Training → move a future workout from Sunday to Saturday
+4. On Saturday, tap Review (completed) or Start / open the title — workout opens; no refresh alert
+5. Log a set and confirm it saves on Saturday
+6. Confirm Progress adherence still counts the stored expectation date for that personal move
+
+Known issues: If local calendar activities have not loaded the move ledger yet, the guard can still refresh once until activities catch up. Group Move Workout already rewrites `scheduled_date` and is unchanged.
+
+Recommended commit message: BIQ-0320 Open and log workouts after a personal day move
+
 ## BIQ-0319 - Iso-Lateral Bench Press and Seated Iso-Lateral Chest Press
 
 Date: 2026-11-13
