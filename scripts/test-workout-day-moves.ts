@@ -181,6 +181,27 @@ assert.equal(saturdayOverlaid.items.filter((item) => item.workoutId === 'w-sun')
 assert.equal(saturdayOverlaid.items.find((item) => item.workoutId === 'w-sun')?.expectationId, 'exp-sun');
 assert.equal(saturdayOverlaid.items.find((item) => item.workoutId === 'w-sun')?.movedFrom, '2026-11-08');
 
+// A completed session on the native Sunday must not make Saturday Review after a personal move.
+const sundayDoneExpectation = {
+  ...sundayExpectation,
+  sessionStatus: 'completed' as const,
+  linkedSessions: [{ logDate: '2026-11-08', status: 'completed' as const }],
+};
+const saturdayNotDone = overlayVisibleExpectations(saturdayAfterMove, [sundayDoneExpectation], '2026-11-06', null, null, null, sunToSat);
+const saturdayItem = saturdayNotDone.items.find((item) => item.workoutId === 'w-sun');
+assert.equal(saturdayItem?.completed, false);
+assert.equal(saturdayItem?.sessionStatus, null);
+assert.notEqual(saturdayItem?.statusLabel, 'Completed');
+// Completing on the destination day still shows Review.
+const saturdayDoneExpectation = {
+  ...sundayExpectation,
+  sessionStatus: null as null,
+  linkedSessions: [{ logDate: '2026-11-07', status: 'completed' as const }],
+};
+const saturdayDone = overlayVisibleExpectations(saturdayAfterMove, [saturdayDoneExpectation], '2026-11-06', null, null, null, sunToSat);
+assert.equal(saturdayDone.items.find((item) => item.workoutId === 'w-sun')?.completed, true);
+assert.equal(saturdayDone.items.find((item) => item.workoutId === 'w-sun')?.sessionStatus, 'completed');
+
 // A group reschedule rewrites scheduled_date and leaves the program weekday in place.
 const groupMovedExpectation = { ...sundayExpectation, id: 'exp-group-move', scheduledDate: '2026-11-07' };
 const sundayTemplate = planForCalendarDate(sundayProgram, sundayActivities, [], '2026-11-08', '2026-11-06', {});

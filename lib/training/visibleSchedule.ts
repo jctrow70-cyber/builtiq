@@ -53,21 +53,50 @@ const emptySnapshot = (pending: boolean, error: string | null = null): VisibleSc
   expectations: [],
 });
 
-/** Same expectation/session match the Training calendar uses. First linked row wins. */
-export function sessionStatusForExpectation(
-  expectation: { id: string; workout_id?: string | null; scheduled_date: string },
-  sessions: SessionRow[]
-): ExpectationSessionStatus {
-  const match = sessions.find(
-    (session) =>
-      (session.expectation_id && session.expectation_id === expectation.id) ||
-      (!!session.workout_id && session.workout_id === expectation.workout_id && session.log_date === expectation.scheduled_date)
-  );
-  const status = match?.status;
+function normalizeSessionStatus(status: string | null | undefined): ExpectationSessionStatus {
   if (status === 'completed' || status === 'partial' || status === 'skipped' || status === 'in_progress' || status === 'not_started') {
     return status;
   }
   return null;
+}
+
+function sessionLinksExpectation(
+  expectation: { id: string; workout_id?: string | null; scheduled_date: string },
+  session: SessionRow
+): boolean {
+  if (session.expectation_id && session.expectation_id === expectation.id) return true;
+  return !!session.workout_id && session.workout_id === expectation.workout_id && session.log_date === expectation.scheduled_date;
+}
+
+/** Linked sessions for calendar display after personal day moves (destination log date only). */
+export function linkedSessionsForExpectation(
+  expectation: { id: string; workout_id?: string | null; scheduled_date: string },
+  sessions: SessionRow[]
+): Array<{ logDate: string; status: ExpectationSessionStatus }> {
+  const out: Array<{ logDate: string; status: ExpectationSessionStatus }> = [];
+  const seen = new Set<string>();
+  for (const session of sessions) {
+    if (!sessionLinksExpectation(expectation, session)) continue;
+    const logDate = String(session.log_date || '').slice(0, 10);
+    const status = normalizeSessionStatus(session.status);
+    if (!logDate || !status || seen.has(logDate)) continue;
+    seen.add(logDate);
+    out.push({ logDate, status });
+  }
+  return out;
+}
+
+/** Same expectation/session match Progress adherence uses (native scheduled_date). */
+export function sessionStatusForExpectation(
+  expectation: { id: string; workout_id?: string | null; scheduled_date: string },
+  sessions: SessionRow[]
+): ExpectationSessionStatus {
+  const linked = linkedSessionsForExpectation(expectation, sessions);
+  const onNative = linked.find((row) => row.logDate === expectation.scheduled_date);
+  if (onNative) return onNative.status;
+  // Legacy rows may omit log_date; keep first linked status only for the native day consumers.
+  const match = sessions.find((session) => sessionLinksExpectation(expectation, session) && !session.log_date);
+  return normalizeSessionStatus(match?.status);
 }
 
 export function scheduleTeamLabel(
@@ -141,18 +170,22 @@ export async function loadVisibleSchedule(
     .lte('log_date', input.rangeTo);
   if (sessionResult.error) error = error || sessionResult.error.message;
   const sessions = sessionResult.error ? [] : ((sessionResult.data || []) as SessionRow[]);
-  const expectations: VisibleScheduleExpectation[] = visible.map((row) => ({
-    id: row.id,
-    workoutId: row.workout_id,
-    programId: row.program_id,
-    scheduledDate: row.scheduled_date,
-    title: row.title,
-    sourceKey: row.source_key,
-    teamId: row.team_id,
-    sourceName: scheduleTeamLabel(input.teams, row.team_id, row.source_key),
-    excused: row.excused,
-    sessionStatus: sessionStatusForExpectation(row, sessions),
-  }));
+  const expectations: VisibleScheduleExpectation[] = visible.map((row) => {
+    const linkedSessions = linkedSessionsForExpectation(row, sessions);
+    return {
+      id: row.id,
+      workoutId: row.workout_id,
+      programId: row.program_id,
+      scheduledDate: row.scheduled_date,
+      title: row.title,
+      sourceKey: row.source_key,
+      teamId: row.team_id,
+      sourceName: scheduleTeamLabel(input.teams, row.team_id, row.source_key),
+      excused: row.excused,
+      sessionStatus: sessionStatusForExpectation(row, sessions),
+      linkedSessions,
+    };
+  });
   return { pending: false, error, enrollments, programNames, programSources, expectations };
 }
 

@@ -4,6 +4,31 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 172 - Moved-day Review uses the destination log date
+
+Date: 2026-11-14
+Status: Accepted
+Category: Training / Schedule
+
+### Decision
+
+BIQ-0322. After a personal this-time move, Training calendar Completed / Review follows a session whose `log_date` matches the day being shown. A completed session on the native expectation day does not mark the destination day complete. Progress adherence still uses the stored `scheduled_date` and its native-day session (Decision 161).
+
+### Reason
+
+Expectation-id session matching painted Sunday’s completed session onto Saturday after a Sunday→Saturday move, so the card showed Review before any Saturday logging.
+
+### Alternatives Considered
+
+- Rewrite `scheduled_date` on personal move — rejected; adherence decision unchanged
+- Clear all session status whenever `movedFrom` is set — rejected; a real Saturday completion must still show Review
+
+### Impact
+
+- Moved incomplete workouts show Start on the destination day
+- Completing on the destination day still shows Review
+- Native-day sessions still count for Progress adherence
+
 ## Decision 171 - Start guard honors personal day-move overlay
 
 Date: 2026-11-14
