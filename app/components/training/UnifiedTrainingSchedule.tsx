@@ -37,6 +37,8 @@ export type ScheduleStartItem = {
   scheduledDate: string;
   sourceKey: string;
   teamId: string | null;
+  /** Native day when this card was relocated by a personal this-time move. */
+  movedFrom?: string | null;
 };
 
 type CalendarProps = {

@@ -87,6 +87,15 @@ assert.equal(expectationStillMatches(
   movedRow,
   { 'w:w-sun': '2026-11-14' }
 ), 'refresh');
+// Card already shows "Moved from Sunday" even if the move ledger is not in React state yet.
+assert.equal(expectationStillMatches(
+  { ...movedShown, movedFrom: '2026-11-15' },
+  movedRow
+), 'open');
+assert.equal(expectationStillMatches(
+  { ...movedShown, movedFrom: '2026-11-10' },
+  movedRow
+), 'refresh');
 
 const empty = classifyTodayTraining({
   loading: false,
