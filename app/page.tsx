@@ -18,7 +18,7 @@ import { automaticSessionCompletionAllowed, createFinishSingleFlight } from '../
 import { noteLoggerSave } from '../lib/performance/loggerTiming';
 import { beginExerciseEdit, noteExerciseEditFailure, noteExerciseEditMutation, noteExerciseEditVisual, type ExerciseEditTimingMark } from '../lib/performance/exerciseEditTiming';
 import { noteWorkoutDetailOpen } from '../lib/performance/screenTiming';
-import { directWorkoutOpenAllowed, expectationStillMatches, readExpectationForStart } from '../lib/training/calendarStartGuard';
+import { directWorkoutOpenAllowed, expectationStillMatches, readExpectationForStart, readWorkoutDayMovesForStart } from '../lib/training/calendarStartGuard';
 import { buildExerciseSessionHistory } from '../lib/training/exerciseSessionHistory';
 import { EXERCISE_TYPES, exerciseTypeOf, inferExerciseType, assignmentTypeLabel, isCardioType, isMobilityStretchExercise } from '../lib/training/exerciseTypes';
 import { detectSetPersonalRecord } from '../lib/training/progressAnalytics';
@@ -3619,7 +3619,7 @@ function onSelectTrainingDay(date:string){
  }
  function scheduleStartFromItem(item:TrainingDayItem,date:string):ScheduleStartItem|null{
   if(!item.expectationId||!item.sourceKey)return null;
-  return {expectationId:item.expectationId,workoutId:item.workoutId,programId:item.programId||null,scheduledDate:date,sourceKey:item.sourceKey,teamId:item.teamId??null};
+  return {expectationId:item.expectationId,workoutId:item.workoutId,programId:item.programId||null,scheduledDate:date,sourceKey:item.sourceKey,teamId:item.teamId??null,movedFrom:item.movedFrom||null};
  }
  function knownWorkoutIds(){
   const ids:string[]=[];
@@ -3720,12 +3720,15 @@ function onSelectTrainingDay(date:string){
   setAppNav('Training');
   beginTrainingItem(nav.item,nav.date);
  }
- async function scheduleItemIsCurrent(item:{expectationId:string;workoutId:string|null;scheduledDate:string}){
+ async function scheduleItemIsCurrent(item:{expectationId:string;workoutId:string|null;scheduledDate:string;movedFrom?:string|null}){
   if(!session?.user?.id)return false;
   const read=await readExpectationForStart(supabase,session.user.id,item.expectationId);
   if(read.error){alert(read.error);return false;}
-  const moves=workoutDayMovesFromActivities(userCalendarActivities);
-  if(expectationStillMatches(item,read.row,moves)==='open')return true;
+  const localMoves=workoutDayMovesFromActivities(userCalendarActivities);
+  if(expectationStillMatches(item,read.row,localMoves)==='open')return true;
+  // Calendar state can lag the ledger after a move; re-read moves before refusing.
+  const freshMoves=await readWorkoutDayMovesForStart(supabase,session.user.id);
+  if(expectationStillMatches(item,read.row,freshMoves)==='open')return true;
   markScreenStale(session.user.id,['schedule','dashboard']);
   setScheduleRefreshKey((value)=>value+1);
   alert('That workout changed. The schedule has been refreshed.');

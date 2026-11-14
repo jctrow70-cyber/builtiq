@@ -1,10 +1,16 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { currentDateForMove, type WorkoutDayMoves } from '../programDesign/workoutDayMoves';
+import {
+  currentDateForMove,
+  workoutDayMovesFromDetails,
+  type WorkoutDayMoves,
+} from '../programDesign/workoutDayMoves';
 
 export type ShownScheduleWorkout = {
   expectationId: string;
   workoutId: string | null;
   scheduledDate: string;
+  /** Native expectation day when the calendar already applied a personal move. */
+  movedFrom?: string | null;
 };
 
 export type StoredExpectationRow = {
@@ -31,6 +37,16 @@ export function expectationDisplayDateForStart(
   return currentDateForMove(moves, `w:${workoutId}`, row.scheduled_date);
 }
 
+/** True when the card already shows this expectation relocated from its stored day. */
+export function personalMoveMatchesShown(
+  shown: Pick<ShownScheduleWorkout, 'scheduledDate' | 'movedFrom'>,
+  row: Pick<StoredExpectationRow, 'scheduled_date'>
+): boolean {
+  const from = String(shown.movedFrom || '').slice(0, 10);
+  if (!from || from !== row.scheduled_date) return false;
+  return shown.scheduledDate !== row.scheduled_date;
+}
+
 /** Open the workout on screen only when that expectation row is unchanged. */
 export function expectationStillMatches(
   shown: ShownScheduleWorkout,
@@ -40,8 +56,10 @@ export function expectationStillMatches(
   if (!row || row.id !== shown.expectationId) return 'refresh';
   if (row.excused) return 'refresh';
   if ((row.workout_id || null) !== (shown.workoutId || null)) return 'refresh';
-  if (expectationDisplayDateForStart(row, moves) !== shown.scheduledDate) return 'refresh';
-  return 'open';
+  if (expectationDisplayDateForStart(row, moves) === shown.scheduledDate) return 'open';
+  // Calendar already painted "Moved from …" from the stored expectation day.
+  if (personalMoveMatchesShown(shown, row)) return 'open';
+  return 'refresh';
 }
 
 /**
@@ -76,4 +94,23 @@ export async function readExpectationForStart(
     .maybeSingle();
   if (result.error) return { row: null, error: result.error.message };
   return { row: (result.data as StoredExpectationRow | null) || null, error: null };
+}
+
+/** Fresh personal move map from the completion ledger (not React state). */
+export async function readWorkoutDayMovesForStart(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<WorkoutDayMoves> {
+  const result = await supabase
+    .from('st_user_calendar_activities')
+    .select('details')
+    .eq('user_id', userId)
+    .eq('activity_date', '1970-01-01')
+    .limit(5);
+  if (result.error) return {};
+  const moves: WorkoutDayMoves = {};
+  for (const row of result.data || []) {
+    Object.assign(moves, workoutDayMovesFromDetails((row as { details?: Record<string, unknown> }).details));
+  }
+  return moves;
 }

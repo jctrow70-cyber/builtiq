@@ -11,11 +11,41 @@ Branch:
 Status:
 ```
 
+## BIQ-0321 - Harden moved-workout open when move ledger lags
+
+Date: 2026-11-14
+Branch: cursor/moved-workout-open-hardening-ea81
+Status: Ready for review. Not deployed.
+
+Summary: Start/Review also trusts a card that already shows "Moved from …" matching the stored expectation day, and re-reads `workout_day_moves` from the completion ledger before refusing. This covers a lag where the calendar painted the move but React calendar state had not caught up.
+
+Purpose: After BIQ-0320 shipped to production, opening a Sunday→Saturday personal move could still refresh if local calendar activities were empty of the move ledger at click time.
+
+Files changed:
+- lib/training/calendarStartGuard.ts
+- app/page.tsx
+- app/components/training/UnifiedTrainingSchedule.tsx
+- scripts/test-calendar-first.ts
+- scripts/test-schedule-hardening.ts
+- CHANGELOG.md
+
+Database changes: None.
+
+Testing steps:
+1. `npx tsx scripts/test-calendar-first.ts`
+2. `npx tsx scripts/test-schedule-hardening.ts`
+3. Hard-refresh https://builtiq-duf7.vercel.app (or close and reopen the home-screen app)
+4. Move a workout Sunday → Saturday, then Review/Start on Saturday
+
+Known issues: Group reschedules that rewrite `scheduled_date` are unchanged.
+
+Recommended commit message: BIQ-0321 Harden moved-workout open when move ledger lags
+
 ## BIQ-0320 - Open and log workouts after a personal day move
 
 Date: 2026-11-14
 Branch: cursor/moved-workout-open-guard-ea81
-Status: Ready for review. Not deployed.
+Status: Merged to main. Live on builtiq-duf7 production.
 
 Summary: Start, Review, and View no longer treat a personal this-time day move as a stale expectation. The start guard compares the calendar display date after `workout_day_moves` to the day the user tapped. A Sunday-to-Saturday move keeps the stored expectation date on Sunday, shows the workout on Saturday, and opens the logger on Saturday.
 
