@@ -11,6 +11,38 @@ Branch:
 Status:
 ```
 
+## BIQ-0322 - Moved workout stays Start until logged on the new day
+
+Date: 2026-11-14
+Branch: cursor/moved-workout-review-status-ea81
+Status: Ready for review. Not deployed.
+
+Summary: After a personal this-time move, a completed session on the native day no longer paints the destination day as Review. Calendar session status follows the log date being shown. Completing the workout on Saturday still shows Review. Progress adherence still uses the stored expectation date.
+
+Purpose: Moving Lower C from Sunday to Saturday opened correctly after BIQ-0320/0321, but the card kept a green check and Review because the Sunday session was still attached by expectation id.
+
+Files changed:
+- lib/training/visibleSchedule.ts
+- lib/programDesign/trainingSchedule.ts
+- scripts/test-workout-day-moves.ts
+- scripts/test-today-training.ts
+- DECISIONS.md
+- CHANGELOG.md
+
+Database changes: None.
+
+Testing steps:
+1. `npx tsx scripts/test-workout-day-moves.ts`
+2. `npx tsx scripts/test-today-training.ts`
+3. Hard-refresh production
+4. Move an incomplete workout Sunday → Saturday — card shows Start, not Review
+5. Complete sets on Saturday — card shows Review
+6. Confirm Progress adherence still counts the stored expectation date
+
+Known issues: Set logs already saved on the destination date still mark that day complete (correct). A session completed only on the native day before the move no longer marks the destination day complete.
+
+Recommended commit message: BIQ-0322 Moved workout stays Start until logged on the new day
+
 ## BIQ-0321 - Harden moved-workout open when move ledger lags
 
 Date: 2026-11-14

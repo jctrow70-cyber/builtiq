@@ -460,6 +460,20 @@ if (incompleteDay.state === 'activities') {
 
 assert.equal(sessionStatusForExpectation({ id: 'exp-1', workout_id: 'w-wed', scheduled_date: wednesday }, [{ expectation_id: 'exp-1', status: 'partial' }]), 'partial');
 assert.equal(sessionStatusForExpectation({ id: 'exp-2', workout_id: 'w-other', scheduled_date: wednesday }, [{ workout_id: 'w-wed', log_date: wednesday, status: 'in_progress' }]), null);
+assert.equal(
+  sessionStatusForExpectation(
+    { id: 'exp-1', workout_id: 'w-wed', scheduled_date: wednesday },
+    [{ expectation_id: 'exp-1', log_date: thursday, status: 'completed' }]
+  ),
+  null
+);
+assert.equal(
+  sessionStatusForExpectation(
+    { id: 'exp-1', workout_id: 'w-wed', scheduled_date: wednesday },
+    [{ expectation_id: 'exp-1', log_date: wednesday, status: 'completed' }]
+  ),
+  'completed'
+);
 
 const page = readFileSync('app/page.tsx', 'utf8');
 const opener = page.slice(page.indexOf('function openTodayTraining'), page.indexOf('async function previewTrainingItem'));

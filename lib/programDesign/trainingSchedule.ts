@@ -306,8 +306,28 @@ export type VisibleScheduleExpectation = {
   teamId: string | null;
   sourceName: string;
   excused: boolean;
+  /** Session on the stored expectation day (Progress adherence). */
   sessionStatus: ExpectationSessionStatus;
+  /**
+   * Sessions linked to this expectation by id (or workout+native date).
+   * Calendar display after a personal move uses the destination log date only.
+   */
+  linkedSessions?: Array<{ logDate: string; status: ExpectationSessionStatus }>;
 };
+
+/** A session on the native day must not mark a personally moved destination day complete. */
+export function sessionStatusForDisplayDate(
+  row: Pick<VisibleScheduleExpectation, 'scheduledDate' | 'sessionStatus' | 'linkedSessions'>,
+  displayDate: string
+): ExpectationSessionStatus {
+  const day = String(displayDate || '').slice(0, 10);
+  if (!day) return null;
+  const linked = row.linkedSessions || [];
+  const hit = linked.find((session) => session.logDate === day);
+  if (hit) return hit.status;
+  if (day === row.scheduledDate) return row.sessionStatus;
+  return null;
+}
 
 function calendarStatusLabel(state: string, completed: boolean, sessionStatus: ExpectationSessionStatus = null): string {
   return presentTrainingStatus({ scheduleState: state, setLogsCompleted: completed, sessionStatus });
@@ -442,11 +462,12 @@ export function overlayVisibleExpectations(
   };
   for (const row of mine) {
     const displayDate = expectationDisplayDate(row, moves);
+    const sessionOnDay = sessionStatusForDisplayDate(row, displayDate);
     const state = expectationDisplayState({
       scheduledDate: displayDate,
       localToday,
       excused: row.excused,
-      sessionStatus: row.sessionStatus,
+      sessionStatus: sessionOnDay,
     });
     const index = row.workoutId ? items.findIndex((item) => item.workoutId === row.workoutId) : -1;
     if (index >= 0) {
@@ -454,7 +475,7 @@ export function overlayVisibleExpectations(
       const completed = !!prev.completed || state === 'Completed';
       // Set-log completion wins over a stuck Partial session so calendar shows Review, not Start.
       const sessionForLabel =
-        completed && row.sessionStatus === 'partial' ? 'completed' : row.sessionStatus;
+        completed && sessionOnDay === 'partial' ? 'completed' : sessionOnDay;
       const stateForLabel =
         completed && state === 'Partial' ? 'Completed' : state;
       items[index] = {
@@ -485,13 +506,13 @@ export function overlayVisibleExpectations(
       isRest: false,
       source: 'program',
       completed,
-      statusLabel: calendarStatusLabel(state, completed, row.sessionStatus),
+      statusLabel: calendarStatusLabel(state, completed, sessionOnDay),
       expectationId: row.id,
       programId: row.programId,
       sourceKey: row.sourceKey,
       teamId: row.teamId,
       sourceName: row.sourceName,
-      sessionStatus: row.sessionStatus ?? null,
+      sessionStatus: sessionOnDay ?? null,
       canMove: false,
       movedFrom: displayDate !== row.scheduledDate ? row.scheduledDate : undefined,
     });
