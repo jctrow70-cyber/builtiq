@@ -4,6 +4,32 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 171 - Start guard honors personal day-move overlay
+
+Date: 2026-11-14
+Status: Accepted
+Category: Training / Schedule
+
+### Decision
+
+BIQ-0320. When Start, Review, or View re-checks `st_training_expectations`, compare the calendar display date after `workout_day_moves`, not the stored `scheduled_date` alone. Personal this-time moves still leave `scheduled_date` on the native day (Decision 161). Do not rewrite expectation dates to open a moved workout.
+
+### Reason
+
+After a Sunday-to-Saturday personal move, the calendar correctly showed the workout on Saturday with "Moved from Sunday", but Start and Review compared Saturday to the stored Sunday date and always showed "That workout changed. The schedule has been refreshed." Refresh could not help: the dates stay different by design.
+
+### Alternatives Considered
+
+- Rewrite `scheduled_date` on personal move — rejected; Progress adherence still uses the stored expectation date (Decision 161 / 162)
+- Drop the date check from the start guard — rejected; real expectation date changes (group reschedule, repair) still need a stale-UI refuse
+- Compare only expectation id and workout id — rejected; would miss a date rewrite without a matching move overlay
+
+### Impact
+
+- Moved personal workouts open and log on the destination day
+- Group reschedules that rewrite `scheduled_date` still match without a move overlay
+- Progress adherence for personal moves is unchanged
+
 ## Decision 170 - Iso-lateral chest presses store combined plate load
 
 Date: 2026-11-13
