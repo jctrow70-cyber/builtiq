@@ -11,6 +11,40 @@ Branch:
 Status:
 ```
 
+## BIQ-0323 - Dashboard This week follows personal day moves
+
+Date: 2026-11-15
+Branch: cursor/dashboard-week-day-moves-5cdd
+Status: Ready for review. Not deployed.
+
+Summary: After a personal this-time move (for example Sunday → Saturday), the Dashboard "This week" day strip and status labels place the obligation on the Training calendar display date. Past-day adherence still counts the stored expectation date. Moving or resetting a workout refreshes the Dashboard week cache.
+
+Purpose: The Training calendar already honored `workout_day_moves`, but the Dashboard week card loaded expectations by `scheduled_date` only, so Saturday stayed 0 and Sunday stayed 1 after a Sunday→Saturday move.
+
+Files changed:
+- lib/progress/weekAdherence.ts
+- lib/progress/queries.ts
+- app/components/dashboard/WeeklyAdherenceCard.tsx
+- app/page.tsx
+- scripts/test-week-adherence.ts
+- scripts/test-dashboard-experience.ts
+- DECISIONS.md
+- CHANGELOG.md
+
+Database changes: None.
+
+Testing steps:
+1. `npx tsx scripts/test-week-adherence.ts`
+2. `npx tsx scripts/test-dashboard-experience.ts`
+3. Hard-refresh the app, open Training, move an incomplete Sunday workout to Saturday
+4. Open Dashboard → This week shows 1 on Saturday and 0 on Sunday
+5. Tap Saturday → Training opens that day with the moved workout
+6. Confirm Past-day adherence still matches Progress (stored expectation date)
+
+Known issues: A personal move from another week into this week is still outside the expectation date window used by the loader. Group reschedules that rewrite `scheduled_date` were already correct.
+
+Recommended commit message: BIQ-0323 Dashboard This week follows personal day moves
+
 ## BIQ-0322 - Moved workout stays Start until logged on the new day
 
 Date: 2026-11-14

@@ -3880,6 +3880,8 @@ function onSelectTrainingDay(date:string){
     if(error)throw new Error(error);
    }
    await refreshCalendarForDate(toDate);
+   // Dashboard This week caches by day; refresh so the strip matches Training after a move.
+   markScreenStale(session.user.id,['schedule','dashboard']);
    setLogDate(toDate);
    setTrainingCalendarMonth(yearMonthOf(toDate));
    if(program)setWeek(weekForDate(resolveProgramStartDate(program),toDate,program.weeks||weeks||6));
@@ -3901,6 +3903,7 @@ function onSelectTrainingDay(date:string){
    const{error}=await saveWorkoutDayMove(supabase,session.user.id,userCalendarActivities,key,null);
    if(error)throw new Error(error);
    await refreshCalendarForDate(native);
+   markScreenStale(session.user.id,['schedule','dashboard']);
    setLogDate(native);
    setTrainingCalendarMonth(yearMonthOf(native));
    if(program)setWeek(weekForDate(resolveProgramStartDate(program),native,program.weeks||weeks||6));

@@ -1,5 +1,9 @@
 import { addDaysYmd } from '../training/programCalendar';
 import {
+  currentDateForMove,
+  type WorkoutDayMoves,
+} from '../programDesign/workoutDayMoves';
+import {
   adherenceCounts,
   expectationDisplayState,
   type AdherenceCounts,
@@ -11,7 +15,7 @@ export const WEEK_ADHERENCE_SCOPE_NOTE =
   'Counts are assigned obligations, including hidden sources and separate personal and group assignments.';
 
 export const WEEK_ADHERENCE_DAY_NOTE =
-  'Day counts follow assigned dates and are not a complete list of calendar workouts. Upcoming days are not misses.';
+  'Day counts follow the Training calendar, including personal day moves. Upcoming days are not misses.';
 
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] as const;
 const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const;
@@ -43,14 +47,22 @@ export type WeekAdherenceSummary = {
   days: WeekAdherenceDay[];
 };
 
+/** Calendar display date after personal workout_day_moves. Progress adherence still uses scheduledDate. */
+export function weekAdherenceDisplayDate(fact: Pick<ExpectationFact, 'workoutId' | 'scheduledDate'>, moves: WorkoutDayMoves = {}): string {
+  const workoutId = String(fact.workoutId || '').trim();
+  if (!workoutId) return fact.scheduledDate;
+  return currentDateForMove(moves, `w:${workoutId}`, fact.scheduledDate);
+}
+
 /**
- * Labels come from expectationDisplayState. The percentage is adherenceCounts().completion_rate.
- * This does not define another rate.
+ * Labels and day chips follow the Training calendar display date after personal moves.
+ * Past-day adherence stays adherenceCounts() on the stored expectation date (Decision 161).
  */
 export function weekAdherenceSummary(
   facts: ExpectationFact[],
   today: string,
-  bounds: { monday: string; sunday: string }
+  bounds: { monday: string; sunday: string },
+  moves: WorkoutDayMoves = {}
 ): WeekAdherenceSummary {
   const inWeek = facts.filter((fact) => fact.scheduledDate >= bounds.monday && fact.scheduledDate <= bounds.sunday);
   const counts = adherenceCounts(inWeek, today);
@@ -58,7 +70,7 @@ export function weekAdherenceSummary(
   const active = inWeek.filter((fact) => !fact.excused);
   const states = active.map((fact) =>
     expectationDisplayState({
-      scheduledDate: fact.scheduledDate,
+      scheduledDate: weekAdherenceDisplayDate(fact, moves),
       localToday: today,
       excused: fact.excused,
       sessionStatus: fact.sessionStatus,
@@ -68,10 +80,10 @@ export function weekAdherenceSummary(
   const days = DAY_LETTERS.map((letter, index) => {
     const date = addDaysYmd(bounds.monday, index);
     const dayStates = active
-      .filter((fact) => fact.scheduledDate === date)
+      .filter((fact) => weekAdherenceDisplayDate(fact, moves) === date)
       .map((fact) =>
         expectationDisplayState({
-          scheduledDate: fact.scheduledDate,
+          scheduledDate: weekAdherenceDisplayDate(fact, moves),
           localToday: today,
           excused: fact.excused,
           sessionStatus: fact.sessionStatus,

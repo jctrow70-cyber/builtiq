@@ -15,6 +15,7 @@ import {
 } from '../training/workoutHistory';
 import { dashboardProgressModel, type DashboardProgressModel } from './dashboardProgress';
 import type { UnitsPreference } from '../body/measurements';
+import { workoutDayMovesFromDetails, type WorkoutDayMoves } from '../programDesign/workoutDayMoves';
 
 export const PROGRESS_SET_FACT_COLUMNS = [
   'id',
@@ -344,30 +345,56 @@ export async function loadDashboardProgress(
 }
 
 export type WeekAdherenceLoad =
-  | { status: 'ready'; facts: ExpectationFact[] }
+  | { status: 'ready'; facts: ExpectationFact[]; moves: WorkoutDayMoves }
   | { status: 'pending' }
   | { status: 'error'; message: string };
 
 /**
  * Monday–Sunday expectations and sessions for one signed-in user.
- * Uses the same selects as Progress. It does not read set logs or filter hidden sources.
+ * Also reads personal workout_day_moves so the Dashboard day strip matches Training.
+ * Past-day adherence still uses stored expectation dates. It does not read set logs or filter hidden sources.
  */
 export async function loadWeekAdherence(client: QueryClient, userId: string, from: string, to: string): Promise<WeekAdherenceLoad> {
   try {
-    const [expectations, sessions] = await Promise.all([
+    const [expectations, sessions, moves] = await Promise.all([
       fetchExpectations(client, userId, from, to),
       fetchSessions(client, userId, from, to),
+      fetchWorkoutDayMoves(client, userId),
     ]);
     if (expectations.error || sessions.error) {
       const message = errorText(expectations.error || sessions.error) || 'Could not load this week.';
       if (scheduleSetupMissing(message)) return { status: 'pending' };
       return { status: 'error', message };
     }
-    return { status: 'ready', facts: expectationFactsFromSchedule(expectations.rows, sessions.rows) };
+    return {
+      status: 'ready',
+      facts: expectationFactsFromSchedule(expectations.rows, sessions.rows),
+      moves,
+    };
   } catch (error) {
     const message = errorText(error) || 'Could not load this week.';
     if (scheduleSetupMissing(message)) return { status: 'pending' };
     return { status: 'error', message };
+  }
+}
+
+/** Personal move ledger on the completion-ledger calendar row. Failures return {}. */
+async function fetchWorkoutDayMoves(client: QueryClient, userId: string): Promise<WorkoutDayMoves> {
+  try {
+    const result = await client
+      .from('st_user_calendar_activities')
+      .select('details')
+      .eq('user_id', userId)
+      .eq('activity_date', '1970-01-01')
+      .limit(5);
+    if (result.error) return {};
+    const moves: WorkoutDayMoves = {};
+    for (const row of (result.data || []) as Array<{ details?: Record<string, unknown> }>) {
+      Object.assign(moves, workoutDayMovesFromDetails(row.details));
+    }
+    return moves;
+  } catch {
+    return {};
   }
 }
 

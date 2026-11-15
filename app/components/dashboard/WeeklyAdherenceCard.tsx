@@ -71,7 +71,7 @@ export default function WeeklyAdherenceCard({ userId, onSelectDate }: WeeklyAdhe
     };
   }, [userId, bounds.monday, bounds.sunday, reloadKey, cardEpoch, today]);
 
-  const summary = state.status === 'ready' ? weekAdherenceSummary(state.facts, today, bounds) : null;
+  const summary = state.status === 'ready' ? weekAdherenceSummary(state.facts, today, bounds, state.moves || {}) : null;
 
   return (
     <section className="dash-card week-adherence" data-week-state={state.status} aria-labelledby="week-adherence-title">

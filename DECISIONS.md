@@ -4,6 +4,31 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 173 - Dashboard This week day strip follows personal moves
+
+Date: 2026-11-15
+Status: Accepted
+Category: Dashboard / Schedule
+
+### Decision
+
+BIQ-0323. The Dashboard "This week" day chips and status labels (Completed, Partial, Missed, Due today, Upcoming) follow the Training calendar display date after `workout_day_moves`. Past-day adherence still uses `adherenceCounts` on the stored expectation `scheduled_date` (Decision 161). Saving or resetting a personal day move marks the Dashboard cache stale so the strip reloads.
+
+### Reason
+
+After a Sunday→Saturday personal move, Training showed the workout on Saturday, but the Dashboard week strip still counted the obligation on Sunday because `loadWeekAdherence` never read the move ledger. Tapping Sunday opened an empty Training day.
+
+### Alternatives Considered
+
+- Change Progress adherence to the move date — rejected; Decision 161 keeps the stored expectation date for the percentage
+- Leave the Dashboard on assigned dates and only update the helper text — rejected; the day strip is navigation into Training and must match the calendar
+
+### Impact
+
+- Same-week personal moves paint the destination day on Dashboard
+- Past-day adherence rate is unchanged by personal moves
+- Group reschedules that already rewrite `scheduled_date` are unchanged
+
 ## Decision 172 - Moved-day Review uses the destination log date
 
 Date: 2026-11-14

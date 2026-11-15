@@ -166,6 +166,21 @@ const personalMove = weekAdherenceSummary(
 assert.equal(personalMove.days[0].obligations, 1);
 assert.equal(personalMove.days[2].obligations, 0);
 
+// Sunday→Saturday personal overlay: day chips follow display date; adherence stays on stored Sunday.
+const personalDayMove = weekAdherenceSummary(
+  [fact({ id: 'move-sat', workoutId: 'w-lower-c', scheduledDate: '2026-11-01', sessionStatus: null, sourceKey: 'personal' })],
+  '2026-11-01',
+  bounds,
+  { 'w:w-lower-c': '2026-10-31' }
+);
+assert.equal(personalDayMove.days[5].obligations, 1);
+assert.equal(personalDayMove.days[6].obligations, 0);
+assert.equal(personalDayMove.missed, 1);
+assert.equal(personalDayMove.dueToday, 0);
+assert.equal(personalDayMove.pastDayAdherence, null);
+assert.equal(personalDayMove.counts.due_today, 1);
+assert.equal(personalDayMove.counts.missed, 0);
+
 const groupMove = weekAdherenceSummary(
   [fact({ id: 'group-move', workoutId: 'w-move', scheduledDate: '2026-10-28', sessionStatus: null, sourceKey: 'group:team-1' })],
   today,
@@ -223,11 +238,11 @@ assert.equal(weekDayTone(['Completed']), 'completed');
 
 type QueryResult = { data: unknown[] | null; error: { message: string } | null };
 function fakeClient(handlers: Record<string, () => QueryResult>) {
-  const calls: Array<{ table: string; select: string; eq: Array<[string, string]>; gte: Array<[string, string]>; lte: Array<[string, string]> }> = [];
+  const calls: Array<{ table: string; select: string; eq: Array<[string, string]>; gte: Array<[string, string]>; lte: Array<[string, string]>; limit?: number }> = [];
   return {
     calls,
     from(table: string) {
-      const call = { table, select: '', eq: [] as Array<[string, string]>, gte: [] as Array<[string, string]>, lte: [] as Array<[string, string]> };
+      const call = { table, select: '', eq: [] as Array<[string, string]>, gte: [] as Array<[string, string]>, lte: [] as Array<[string, string]>, limit: undefined as number | undefined };
       const chain: any = {
         select(columns: string) {
           call.select = columns;
@@ -243,6 +258,10 @@ function fakeClient(handlers: Record<string, () => QueryResult>) {
         },
         lte(column: string, value: string) {
           call.lte.push([column, value]);
+          return chain;
+        },
+        limit(value: number) {
+          call.limit = value;
           return chain;
         },
         then(resolve: (value: QueryResult) => unknown, reject?: (reason: unknown) => unknown) {
@@ -270,31 +289,47 @@ const loadedClient = fakeClient({
     data: [{ workout_id: 'shared-wo', log_date: '2026-10-26', status: 'completed', expectation_id: null }],
     error: null,
   }),
+  st_user_calendar_activities: () => ({
+    data: [{ details: { completion_ledger: true, workout_day_moves: { 'w:shared-wo': '2026-10-27' } } }],
+    error: null,
+  }),
 });
 const loaded = await loadWeekAdherence(loadedClient, 'user-1', monday, sunday);
 assert.equal(loaded.status, 'ready');
 if (loaded.status === 'ready') {
   assert.equal(loaded.facts[0].sessionStatus, null);
   assert.equal(loaded.facts[1].sessionStatus, null);
+  assert.deepEqual(loaded.moves, { 'w:shared-wo': '2026-10-27' });
   assert.deepEqual(
-    weekAdherenceSummary(loaded.facts, today, bounds).counts,
+    weekAdherenceSummary(loaded.facts, today, bounds, loaded.moves).counts,
     progressAdherence(loaded.facts, today)?.counts
   );
+  assert.equal(weekAdherenceSummary(loaded.facts, today, bounds, loaded.moves).days[0].obligations, 0);
+  assert.equal(weekAdherenceSummary(loaded.facts, today, bounds, loaded.moves).days[1].obligations, 2);
 }
-assert.deepEqual(loadedClient.calls.map((call) => call.table).sort(), ['st_training_expectations', 'st_workout_sessions']);
+assert.deepEqual(
+  loadedClient.calls.map((call) => call.table).sort(),
+  ['st_training_expectations', 'st_user_calendar_activities', 'st_workout_sessions']
+);
 for (const call of loadedClient.calls) {
-  assert.deepEqual(call.eq, [['user_id', 'user-1']]);
+  assert.equal(call.eq[0]?.[0], 'user_id');
+  assert.equal(call.eq[0]?.[1], 'user-1');
   assert.equal(call.select.includes('schedule_visible'), false);
 }
 assert.deepEqual(loadedClient.calls.find((call) => call.table === 'st_training_expectations')?.gte, [['scheduled_date', monday]]);
 assert.deepEqual(loadedClient.calls.find((call) => call.table === 'st_training_expectations')?.lte, [['scheduled_date', sunday]]);
 assert.deepEqual(loadedClient.calls.find((call) => call.table === 'st_workout_sessions')?.gte, [['log_date', monday]]);
 assert.deepEqual(loadedClient.calls.find((call) => call.table === 'st_workout_sessions')?.lte, [['log_date', sunday]]);
+assert.deepEqual(loadedClient.calls.find((call) => call.table === 'st_user_calendar_activities')?.eq, [
+  ['user_id', 'user-1'],
+  ['activity_date', '1970-01-01'],
+]);
 
 const failed = await loadWeekAdherence(
   fakeClient({
     st_training_expectations: () => ({ data: [], error: { message: 'permission denied' } }),
     st_workout_sessions: () => ({ data: [{ status: 'completed' }], error: null }),
+    st_user_calendar_activities: () => ({ data: [], error: null }),
   }),
   'user-1',
   monday,
@@ -306,16 +341,34 @@ const pending = await loadWeekAdherence(
   fakeClient({
     st_training_expectations: () => ({ data: null, error: { message: 'relation st_training_expectations does not exist' } }),
     st_workout_sessions: () => ({ data: [], error: null }),
+    st_user_calendar_activities: () => ({ data: [], error: null }),
   }),
   'user-1',
   monday,
   sunday
 );
 assert.equal(pending.status, 'pending');
+
+const movesMissing = await loadWeekAdherence(
+  fakeClient({
+    st_training_expectations: () => ({
+      data: [{ id: 'exp-a', workout_id: 'wo', scheduled_date: '2026-10-26', source_key: 'personal', excused: false }],
+      error: null,
+    }),
+    st_workout_sessions: () => ({ data: [], error: null }),
+    st_user_calendar_activities: () => ({ data: null, error: { message: 'permission denied' } }),
+  }),
+  'user-1',
+  monday,
+  sunday
+);
+assert.equal(movesMissing.status, 'ready');
+if (movesMissing.status === 'ready') assert.deepEqual(movesMissing.moves, {});
 }
 
 const presenterSource = readFileSync('lib/progress/weekAdherence.ts', 'utf8');
-assert.equal(presenterSource.includes('workoutDayMoves'), false);
+assert.equal(presenterSource.includes('weekAdherenceDisplayDate'), true);
+assert.equal(presenterSource.includes('WorkoutDayMoves'), true);
 assert.equal(presenterSource.includes('schedule_visible'), false);
 assert.equal(presenterSource.includes('overlayVisibleExpectations'), false);
 assert.equal(presenterSource.includes('pastDayAdherence: counts.completion_rate'), true);
@@ -325,6 +378,7 @@ const querySource = readFileSync('lib/progress/queries.ts', 'utf8');
 const loaderSource = querySource.slice(querySource.indexOf('export async function loadWeekAdherence'));
 assert.equal(loaderSource.includes('fetchExpectations'), true);
 assert.equal(loaderSource.includes('fetchSessions'), true);
+assert.equal(loaderSource.includes('fetchWorkoutDayMoves'), true);
 assert.equal(loaderSource.includes('expectationFactsFromSchedule'), true);
 assert.equal(loaderSource.includes('st_set_logs'), false);
 assert.equal(loaderSource.includes('st_team_members'), false);
@@ -354,7 +408,9 @@ assert.equal(card.includes('beginTrainingItem'), false);
 assert.equal(card.includes('st_set_logs'), false);
 assert.equal(card.includes('onSelectDate(day.date)'), true);
 assert.equal(WEEK_ADHERENCE_SCOPE_NOTE.includes('hidden sources'), true);
-assert.equal(WEEK_ADHERENCE_DAY_NOTE.includes('not a complete list'), true);
+assert.equal(WEEK_ADHERENCE_DAY_NOTE.includes('personal day moves'), true);
+assert.equal(card.includes('state.moves'), true);
+assert.equal(page.includes("markScreenStale(session.user.id,['schedule','dashboard'])"), true);
 
 const moves = readFileSync('lib/programDesign/workoutDayMoves.ts', 'utf8');
 assert.equal(moves.includes('st_training_expectations'), false);
