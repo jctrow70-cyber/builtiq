@@ -39,7 +39,7 @@ export function weekAdherenceSetLogCompletionKeys(input: {
     const id = String(workout?.id || '').trim();
     if (id) workoutsById.set(id, workout as WorkoutLike);
   }
-  const workouts = [...workoutsById.values()];
+  const workouts = Array.from(workoutsById.values());
   const keys: string[] = [];
   const seen = new Set<string>();
   for (let index = 0; index < 7; index += 1) {
