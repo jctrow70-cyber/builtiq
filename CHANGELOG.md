@@ -11,11 +11,48 @@ Branch:
 Status:
 ```
 
+## BIQ-0324 - Dashboard week chip greens completed moved workouts
+
+Date: 2026-11-16
+Branch: cursor/dashboard-week-completed-tone-5cdd
+Status: Ready for review. Not deployed.
+
+Summary: Dashboard This week day chips use the destination-day session after a personal move, and apply Training's set-log completion upgrade for stuck Partial sessions so a completed Saturday workout gets the green border. Past-day adherence still uses the stored expectation date.
+
+Purpose: After BIQ-0323 placed a Sunday→Saturday move on Saturday, the chip stayed without a green completed border when the session was logged on Saturday or when set logs had finished a stuck Partial (Training already showed Review / green).
+
+Files changed:
+- lib/progress/weekAdherence.ts
+- lib/progress/weekAdherenceCompletions.ts
+- lib/progress/adherence.ts
+- lib/training/unifiedSchedule.ts
+- app/components/dashboard/WeeklyAdherenceCard.tsx
+- app/page.tsx
+- app/globals.css
+- scripts/test-week-adherence.ts
+- scripts/test-dashboard-experience.ts
+- DECISIONS.md
+- CHANGELOG.md
+
+Database changes: None.
+
+Testing steps:
+1. `npx tsx scripts/test-week-adherence.ts`
+2. `npx tsx scripts/test-dashboard-experience.ts`
+3. Move a workout Sunday → Saturday and complete it on Saturday
+4. Dashboard This week shows 1 on Saturday with a green border
+5. Confirm a true Partial (open required sets) keeps a non-green chip
+6. Confirm Past-day adherence still matches Progress
+
+Known issues: Set-log completion keys need the active program tree on the client; until that loads, chips fall back to session status only.
+
+Recommended commit message: BIQ-0324 Dashboard week chip greens completed moved workouts
+
 ## BIQ-0323 - Dashboard This week follows personal day moves
 
 Date: 2026-11-15
 Branch: cursor/dashboard-week-day-moves-5cdd
-Status: Ready for review. Not deployed.
+Status: Merged to main.
 
 Summary: After a personal this-time move (for example Sunday → Saturday), the Dashboard "This week" day strip and status labels place the obligation on the Training calendar display date. Past-day adherence still counts the stored expectation date. Moving or resetting a workout refreshes the Dashboard week cache.
 

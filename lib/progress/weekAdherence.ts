@@ -3,12 +3,14 @@ import {
   currentDateForMove,
   type WorkoutDayMoves,
 } from '../programDesign/workoutDayMoves';
+import { sessionStatusForDisplayDate } from '../programDesign/trainingSchedule';
 import {
   adherenceCounts,
   expectationDisplayState,
   type AdherenceCounts,
   type ExpectationDisplayState,
   type ExpectationFact,
+  type ExpectationSessionStatus,
 } from '../training/unifiedSchedule';
 
 export const WEEK_ADHERENCE_SCOPE_NOTE =
@@ -54,6 +56,40 @@ export function weekAdherenceDisplayDate(fact: Pick<ExpectationFact, 'workoutId'
   return currentDateForMove(moves, `w:${workoutId}`, fact.scheduledDate);
 }
 
+export function weekAdherenceCompletionKey(workoutId: string | null | undefined, displayDate: string): string {
+  return `${String(workoutId || '').trim()}|${String(displayDate || '').slice(0, 10)}`;
+}
+
+/**
+ * Session status on the calendar display date (Decision 172), with Training's set-log upgrade for stuck Partial.
+ * On the native expectation day, keep Progress matching (ambiguous shared workout+date stays unmatched).
+ * Progress adherence still uses fact.sessionStatus on the stored expectation date.
+ */
+export function weekAdherenceDisplaySessionStatus(
+  fact: ExpectationFact,
+  displayDate: string,
+  setLogCompletedKeys?: Iterable<string> | null
+): ExpectationSessionStatus {
+  const day = String(displayDate || '').slice(0, 10);
+  // Native day: do not let an unlinked shared workout session paint every same-day expectation complete.
+  const onDay =
+    day === fact.scheduledDate
+      ? fact.sessionStatus ?? null
+      : sessionStatusForDisplayDate(
+          {
+            scheduledDate: fact.scheduledDate,
+            sessionStatus: fact.sessionStatus ?? null,
+            linkedSessions: fact.linkedSessions,
+          },
+          day
+        );
+  const keys = setLogCompletedKeys ? new Set(setLogCompletedKeys) : null;
+  const setLogsDone = !!keys?.has(weekAdherenceCompletionKey(fact.workoutId, day));
+  // Same upgrade as the Training calendar: set-log completion wins over stuck Partial.
+  if (setLogsDone && (onDay === 'partial' || onDay === 'in_progress' || onDay == null)) return 'completed';
+  return onDay;
+}
+
 /**
  * Labels and day chips follow the Training calendar display date after personal moves.
  * Past-day adherence stays adherenceCounts() on the stored expectation date (Decision 161).
@@ -62,33 +98,27 @@ export function weekAdherenceSummary(
   facts: ExpectationFact[],
   today: string,
   bounds: { monday: string; sunday: string },
-  moves: WorkoutDayMoves = {}
+  moves: WorkoutDayMoves = {},
+  setLogCompletedKeys?: Iterable<string> | null
 ): WeekAdherenceSummary {
   const inWeek = facts.filter((fact) => fact.scheduledDate >= bounds.monday && fact.scheduledDate <= bounds.sunday);
   const counts = adherenceCounts(inWeek, today);
   const excused = inWeek.filter((fact) => fact.excused).length;
   const active = inWeek.filter((fact) => !fact.excused);
-  const states = active.map((fact) =>
-    expectationDisplayState({
-      scheduledDate: weekAdherenceDisplayDate(fact, moves),
+  const stateFor = (fact: ExpectationFact) => {
+    const displayDate = weekAdherenceDisplayDate(fact, moves);
+    return expectationDisplayState({
+      scheduledDate: displayDate,
       localToday: today,
       excused: fact.excused,
-      sessionStatus: fact.sessionStatus,
-    })
-  );
+      sessionStatus: weekAdherenceDisplaySessionStatus(fact, displayDate, setLogCompletedKeys),
+    });
+  };
+  const states = active.map(stateFor);
   const tally = (state: ExpectationDisplayState) => states.filter((item) => item === state).length;
   const days = DAY_LETTERS.map((letter, index) => {
     const date = addDaysYmd(bounds.monday, index);
-    const dayStates = active
-      .filter((fact) => weekAdherenceDisplayDate(fact, moves) === date)
-      .map((fact) =>
-        expectationDisplayState({
-          scheduledDate: weekAdherenceDisplayDate(fact, moves),
-          localToday: today,
-          excused: fact.excused,
-          sessionStatus: fact.sessionStatus,
-        })
-      );
+    const dayStates = active.filter((fact) => weekAdherenceDisplayDate(fact, moves) === date).map(stateFor);
     return {
       date,
       letter,

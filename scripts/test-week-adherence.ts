@@ -181,6 +181,69 @@ assert.equal(personalDayMove.pastDayAdherence, null);
 assert.equal(personalDayMove.counts.due_today, 1);
 assert.equal(personalDayMove.counts.missed, 0);
 
+// Completing on Saturday after the move greens Saturday; Progress still counts the stored Sunday.
+const completedOnSaturday = weekAdherenceSummary(
+  [
+    fact({
+      id: 'move-done',
+      workoutId: 'w-lower-c',
+      scheduledDate: '2026-11-01',
+      sessionStatus: null,
+      linkedSessions: [{ logDate: '2026-10-31', status: 'completed' }],
+      sourceKey: 'personal',
+    }),
+  ],
+  '2026-11-01',
+  bounds,
+  { 'w:w-lower-c': '2026-10-31' }
+);
+assert.equal(completedOnSaturday.days[5].tone, 'completed');
+assert.equal(completedOnSaturday.completed, 1);
+assert.equal(completedOnSaturday.missed, 0);
+assert.equal(completedOnSaturday.counts.due_today, 1);
+assert.equal(completedOnSaturday.counts.completed_today, 0);
+
+// Native Sunday completion must not green Saturday after a personal move (Decision 172).
+const nativeOnlyDone = weekAdherenceSummary(
+  [
+    fact({
+      id: 'native-done',
+      workoutId: 'w-lower-c',
+      scheduledDate: '2026-11-01',
+      sessionStatus: 'completed',
+      linkedSessions: [{ logDate: '2026-11-01', status: 'completed' }],
+      sourceKey: 'personal',
+    }),
+  ],
+  '2026-11-01',
+  bounds,
+  { 'w:w-lower-c': '2026-10-31' }
+);
+assert.equal(nativeOnlyDone.days[5].tone, 'missed');
+assert.equal(nativeOnlyDone.completed, 0);
+assert.equal(nativeOnlyDone.counts.completed_today, 1);
+
+// Stuck Partial with set-log completion matches Training Review / green strip.
+const stuckPartialDone = weekAdherenceSummary(
+  [
+    fact({
+      id: 'partial-done',
+      workoutId: 'w-lower-c',
+      scheduledDate: '2026-11-01',
+      sessionStatus: 'partial',
+      linkedSessions: [{ logDate: '2026-10-31', status: 'partial' }],
+      sourceKey: 'personal',
+    }),
+  ],
+  '2026-11-01',
+  bounds,
+  { 'w:w-lower-c': '2026-10-31' },
+  ['w-lower-c|2026-10-31']
+);
+assert.equal(stuckPartialDone.days[5].tone, 'completed');
+assert.equal(stuckPartialDone.completed, 1);
+assert.equal(stuckPartialDone.partial, 0);
+
 const groupMove = weekAdherenceSummary(
   [fact({ id: 'group-move', workoutId: 'w-move', scheduledDate: '2026-10-28', sessionStatus: null, sourceKey: 'group:team-1' })],
   today,
@@ -410,7 +473,13 @@ assert.equal(card.includes('onSelectDate(day.date)'), true);
 assert.equal(WEEK_ADHERENCE_SCOPE_NOTE.includes('hidden sources'), true);
 assert.equal(WEEK_ADHERENCE_DAY_NOTE.includes('personal day moves'), true);
 assert.equal(card.includes('state.moves'), true);
+assert.equal(card.includes('setLogCompletedKeys'), true);
 assert.equal(page.includes("markScreenStale(session.user.id,['schedule','dashboard'])"), true);
+assert.equal(page.includes('weekAdherenceSetLogCompletionKeys'), true);
+assert.equal(page.includes('setLogCompletedKeys={weekAdherenceSetLogKeys}'), true);
+const css = readFileSync('app/globals.css', 'utf8');
+assert.equal(css.includes('.week-adherence-day[data-tone="completed"]{border-color:var(--success)}'), true);
+assert.equal(css.includes('.week-adherence-day[data-when="today"][data-tone="completed"]{border-color:var(--success)}'), true);
 
 const moves = readFileSync('lib/programDesign/workoutDayMoves.ts', 'utf8');
 assert.equal(moves.includes('st_training_expectations'), false);

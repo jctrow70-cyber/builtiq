@@ -1638,7 +1638,9 @@ label{color:var(--textSecondary)}
 .week-adherence-day[data-when="today"]{border-color:var(--accent);background:var(--accentSoft)}
 .week-adherence-day[data-when="future"]{opacity:0.85}
 .week-adherence-day[data-tone="missed"]{border-color:var(--danger)}
+.week-adherence-day[data-tone="partial"]{border-color:var(--warning)}
 .week-adherence-day[data-tone="completed"]{border-color:var(--success)}
+.week-adherence-day[data-when="today"][data-tone="completed"]{border-color:var(--success)}
 @media(min-width:768px){
   .week-adherence-layout{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(280px,420px);gap:16px;align-items:center}
   .week-adherence-days{margin-top:0}

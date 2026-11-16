@@ -17,6 +17,8 @@ import { currentCalendarWeekBounds, formatDisplayDate, todayYmd } from '../../..
 type WeeklyAdherenceCardProps = {
   userId: string;
   onSelectDate: (date: string) => void;
+  /** `workoutId|YYYY-MM-DD` keys Training would mark completed via set logs (stuck Partial → green). */
+  setLogCompletedKeys?: string[];
 };
 
 type CardState = { status: 'loading' } | WeekAdherenceLoad;
@@ -29,7 +31,7 @@ const SECONDARY = [
   ['Upcoming', 'upcoming'],
 ] as const;
 
-export default function WeeklyAdherenceCard({ userId, onSelectDate }: WeeklyAdherenceCardProps) {
+export default function WeeklyAdherenceCard({ userId, onSelectDate, setLogCompletedKeys }: WeeklyAdherenceCardProps) {
   const today = todayYmd();
   const bounds = currentCalendarWeekBounds();
   const [reloadKey, setReloadKey] = useState(0);
@@ -71,7 +73,10 @@ export default function WeeklyAdherenceCard({ userId, onSelectDate }: WeeklyAdhe
     };
   }, [userId, bounds.monday, bounds.sunday, reloadKey, cardEpoch, today]);
 
-  const summary = state.status === 'ready' ? weekAdherenceSummary(state.facts, today, bounds, state.moves || {}) : null;
+  const summary =
+    state.status === 'ready'
+      ? weekAdherenceSummary(state.facts, today, bounds, state.moves || {}, setLogCompletedKeys)
+      : null;
 
   return (
     <section className="dash-card week-adherence" data-week-state={state.status} aria-labelledby="week-adherence-title">

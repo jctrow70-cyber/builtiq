@@ -68,6 +68,7 @@ assert.equal(week.includes('<p className="muted week-adherence-note">{WEEK_ADHER
 assert.equal(WEEK_ADHERENCE_SCOPE_NOTE.includes('hidden sources'), true);
 assert.equal(WEEK_ADHERENCE_SCOPE_NOTE.includes('personal and group'), true);
 assert.equal(WEEK_ADHERENCE_DAY_NOTE.includes('personal day moves'), true);
+assert.equal(week.includes('setLogCompletedKeys'), true);
 
 const formula = readFileSync('lib/progress/weekAdherence.ts', 'utf8');
 assert.equal(formula.includes('adherenceCounts'), true);

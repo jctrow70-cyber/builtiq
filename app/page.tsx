@@ -64,6 +64,8 @@ import NutritionGoalsSettings from './components/nutrition/NutritionGoalsSetting
 import TodaysTrainingHero from './components/dashboard/TodaysTrainingHero';
 import ProgressDashboardCard from './components/dashboard/ProgressDashboardCard';
 import WeeklyAdherenceCard from './components/dashboard/WeeklyAdherenceCard';
+import { weekAdherenceSetLogCompletionKeys } from '../lib/progress/weekAdherenceCompletions';
+
 import NutritionDashboardCard from './components/dashboard/NutritionDashboardCard';
 import DashboardQuickActions from './components/dashboard/DashboardQuickActions';
 import type { NutritionAddLaunch } from '../lib/nutrition/nutritionLaunch';
@@ -4164,6 +4166,17 @@ function resolveExerciseTarget(targetWorkout:any,sourceExercise:any,currentWorko
  const trainingCalendarEditing=trainingEditActivity?userCalendarActivities.find((a)=>a.id===trainingEditActivity.id)||null:null;
  const trainingMonthLabel=monthLabel(trainingCalendarMonth);
  const trainingCompletedDates=mergeTrainingCompletedDates(progressLogs.filter((row:any)=>row.completed).map((row:any)=>String(row.log_date||'').slice(0,10)),userCalendarActivities);
+ const weekAdherenceSetLogKeys=weekAdherenceSetLogCompletionKeys({
+  monday:currentCalendarWeekBounds().monday,
+  program,
+  activities:trainingActivities,
+  calendarActivities:userCalendarActivities,
+  workouts:trainingCompletionWorkouts,
+  progressLogs,
+  sessionLogs:logDate===todayYmd()&&!(viewingMember&&viewingMember.user_id!==session?.user?.id)?logs:{},
+  today:todayYmd(),
+  moves:workoutDayMoves,
+ });
  const followingGroupTemplate=isLiveGroupProgram(program);
  const personalizedCopy=isPersonalizedGroupFollow(program);
  const canCustomizeForMe=needsJustMeCopy(program);
@@ -4320,7 +4333,7 @@ function resolveExerciseTarget(targetWorkout:any,sourceExercise:any,currentWorko
  </AppHeader>
  <div className="app-shell" key={session?.user?.id||'signed-out'}>
  <main className="main page-main">
-  {appNav==='Dashboard'&&<section className="dashboard"><div className="dash-hero"><h1>{greeting}, {displayName||'there'}</h1></div><div className="dash-grid">{session?.user&&<TodaysTrainingHero userId={session.user.id} teams={teams.map((t:any)=>({id:t.id,name:t.name}))} inputsReady={trainingScheduleReady&&userCalendarReady} programReady={programTreeReady} scheduleRepairGeneration={scheduleRepairGeneration} loadError={userCalendarError} program={program} programName={program?.name||null} followedFromGroup={followedFromGroup} followedSourceProgramId={personalizedCopy?program?.source_program_id||null:null} activities={trainingActivities} calendarActivities={userCalendarActivities} workouts={trainingCompletionWorkouts} progressLogs={progressLogs} sessionLogs={logDate===todayYmd()&&!(viewingMember&&viewingMember.user_id!==session.user.id)?logs:{}} onNavigate={openTodayTraining}/>}{session?.user&&<DashboardQuickActions showGroup={teams.length>0} onLogMeal={openLogMeal} onAddCheckIn={openAddCheckIn} onViewProgress={openProgressOverview} onViewGroup={()=>goNav('Groups')}/>}{session?.user&&<WeeklyAdherenceCard userId={session.user.id} onSelectDate={openTrainingWeekDay}/>}{session?.user&&<NutritionDashboardCard userId={session.user.id} onViewLog={openNutritionLog} onSetGoals={openNutritionGoals}/>}{session?.user&&<ProgressDashboardCard userId={session.user.id} unitsPreference={profileDraft?.units_preference} onViewProgress={openProgressOverview} onOpenStrength={openProgressStrength} onOpenBody={openProgressBody}/>}</div></section>}
+  {appNav==='Dashboard'&&<section className="dashboard"><div className="dash-hero"><h1>{greeting}, {displayName||'there'}</h1></div><div className="dash-grid">{session?.user&&<TodaysTrainingHero userId={session.user.id} teams={teams.map((t:any)=>({id:t.id,name:t.name}))} inputsReady={trainingScheduleReady&&userCalendarReady} programReady={programTreeReady} scheduleRepairGeneration={scheduleRepairGeneration} loadError={userCalendarError} program={program} programName={program?.name||null} followedFromGroup={followedFromGroup} followedSourceProgramId={personalizedCopy?program?.source_program_id||null:null} activities={trainingActivities} calendarActivities={userCalendarActivities} workouts={trainingCompletionWorkouts} progressLogs={progressLogs} sessionLogs={logDate===todayYmd()&&!(viewingMember&&viewingMember.user_id!==session.user.id)?logs:{}} onNavigate={openTodayTraining}/>}{session?.user&&<DashboardQuickActions showGroup={teams.length>0} onLogMeal={openLogMeal} onAddCheckIn={openAddCheckIn} onViewProgress={openProgressOverview} onViewGroup={()=>goNav('Groups')}/>}{session?.user&&<WeeklyAdherenceCard userId={session.user.id} onSelectDate={openTrainingWeekDay} setLogCompletedKeys={weekAdherenceSetLogKeys}/>}{session?.user&&<NutritionDashboardCard userId={session.user.id} onViewLog={openNutritionLog} onSetGoals={openNutritionGoals}/>}{session?.user&&<ProgressDashboardCard userId={session.user.id} unitsPreference={profileDraft?.units_preference} onViewProgress={openProgressOverview} onOpenStrength={openProgressStrength} onOpenBody={openProgressBody}/>}</div></section>}
   {appNav==='Nutrition'&&session?.user&&<LazyScreen loader={nutritionScreenLoader} fallback={<p className="muted">Loading nutrition…</p>}>{(NutritionTracker)=><NutritionTracker userId={session.user.id} launch={nutritionLaunch} onLaunchConsumed={()=>setNutritionLaunch(null)} onOpenSettings={()=>goNav('Settings')}/>}</LazyScreen>}
   {appNav==='AI Coach'&&<section><div className="card dash-accent"><h2>AI Coach</h2><p className="muted">Your BuildIQ Health wellness coach will analyze workouts, nutrition, and recovery to give safe, practical guidance.</p><p className="dash-insight">Coming soon: readiness check-ins, workout adjustments, and weekly coaching summaries.</p></div></section>}
   {appNav==='Progress'&&<LazyScreen loader={progressScreenLoader} fallback={<p className="muted">Loading progress…</p>}>{(ProgressScreen)=><ProgressScreen userId={session?.user?.id||null} unitsPreference={profileDraft?.units_preference} weightUnit={progressWeightUnit} section={progressSection} onSectionChange={setProgressSection} exerciseRequest={progressExercise} onOpenExercise={setProgressExercise} onCloseExercise={()=>closeExerciseProgress('back')} onDismissExercise={()=>closeExerciseProgress('dismiss')} onOpenNutrition={()=>goNav('Nutrition')} onBodyDataChange={()=>{if(session?.user?.id)bumpDashboardCardEpoch(session.user.id,'progress');}}/>}</LazyScreen>}

@@ -4,6 +4,31 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 174 - Dashboard week completed tone follows destination logs
+
+Date: 2026-11-16
+Status: Accepted
+Category: Dashboard / Schedule
+
+### Decision
+
+BIQ-0324. Dashboard This week day-chip tones and status labels use the session on the calendar display date after a personal move (Decision 172), and apply Training's set-log completion upgrade when required sets are logged but the session row is still Partial. Past-day adherence remains on the stored expectation date (Decision 161). A completion logged only on the native day does not green the destination day.
+
+### Reason
+
+BIQ-0323 placed moved obligations on the correct day, but Saturday stayed without a green border when the workout was completed on Saturday or when set logs had already finished a stuck Partial that Training showed as Review.
+
+### Alternatives Considered
+
+- Green every Partial day — rejected; true open Partials must stay distinct
+- Change Progress adherence to the move date — rejected; Decision 161 unchanged
+
+### Impact
+
+- Completed destination-day sessions get the green Dashboard chip
+- Stuck Partial + full set logs match Training's green week strip
+- Native-day-only completions stay off the destination chip
+
 ## Decision 173 - Dashboard This week day strip follows personal moves
 
 Date: 2026-11-15

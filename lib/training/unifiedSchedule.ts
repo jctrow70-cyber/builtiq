@@ -30,6 +30,11 @@ export type ExpectationFact = {
   sourceKey?: string;
   teamId?: string | null;
   origin?: 'program' | 'assignment';
+  /**
+   * Sessions linked to this expectation (by id, or workout+date).
+   * Dashboard day chips after a personal move use the destination log date only.
+   */
+  linkedSessions?: Array<{ logDate: string; status: ExpectationSessionStatus }>;
 };
 
 export type AdherenceCounts = {
