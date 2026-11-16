@@ -1,0 +1,4 @@
+{
+  "serverUrl": "https://YOUR-VERCEL-PREVIEW-URL.vercel.app",
+  "notes": "MOB-01 development bridge only. Use a Preview deployment whose Vercel Preview env vars point at the development Supabase project. Do not use https://builtiq-duf7.vercel.app (production). Copy this file to mobile/dev-target.json (gitignored) or set BUILDIQ_MOBILE_SERVER_URL."
+}

@@ -14,6 +14,11 @@ Commercial-use status means the recorded license allows commercial use when its 
 | @supabase/supabase-js | npm 2.110.1 | MIT. Commercial use allowed. | Copyright notices in the package. | Database client | Lockfile `license` field |
 | openai | npm `openai` 4.104.0 | Apache-2.0. Commercial use allowed. | Retain Apache notices if the SDK source is redistributed. The API itself is a separate service agreement. | Nutrition label vision | Lockfile `license` field |
 | @zxing/browser | npm 0.1.5 | MIT. Commercial use allowed. | Copyright notices in the package. | Barcode scanning | Lockfile `license` field |
+| @capacitor/core | npm 8.6.2 | MIT. Commercial use allowed. | Copyright notices in the package. | Native mobile shell (MOB-01) | Lockfile `license` field |
+| @capacitor/app | npm 8.1.2 | MIT. Commercial use allowed. | Copyright notices in the package. | App/deep-link plugin (MOB-01) | Lockfile `license` field |
+| @capacitor/cli | npm 8.6.2 | MIT. Commercial use allowed. Dev dependency. | Copyright notices in the package. | Capacitor tooling | Lockfile `license` field |
+| @capacitor/android | npm 8.6.2 | MIT. Commercial use allowed. Dev dependency. | Copyright notices in the package. | Android platform package | Lockfile `license` field |
+| @capacitor/ios | npm 8.6.2 | MIT. Commercial use allowed. Dev dependency. | Copyright notices in the package. | iOS platform package | Lockfile `license` field |
 | @playwright/test | npm 1.64.1 | Apache-2.0. Commercial use allowed. Dev dependency. | Retain Apache notices if redistributed. | Tests | Lockfile `license` field |
 | typescript | npm 5.9.3 | Apache-2.0. Commercial use allowed. Dev dependency. | Retain Apache notices if redistributed. | Compiler | Lockfile `license` field |
 | tsx | npm 4.23.0 | MIT. Commercial use allowed. Dev dependency. | Copyright notices in the package. | Script runner | Lockfile `license` field |

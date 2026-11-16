@@ -4,6 +4,32 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 175 - Capacitor mobile foundation with temporary Preview bridge
+
+Date: 2026-11-16
+Status: Accepted
+Category: Mobile / Architecture
+
+### Decision
+
+BIQ-0325 / MOB-01. BuildIQ adds Capacitor for iOS/Android while Next.js + Vercel + Supabase remain the web and server platform. MOB-01 may use a remote WebView `server.url` only as a development bridge to a Preview/test host bound to development Supabase. Production (`builtiq-duf7.vercel.app` / live Supabase) is forbidden as the mobile target. Development app id `com.buildiq.health.dev` and name `BuildIQ Health Dev` are temporary. The permanent path is locally bundled mobile assets calling hosted APIs (`docs/mobile/MIGRATION_PATH.md`). HealthKit, Health Connect, push, and mobile UI redesign stay out of MOB-01.
+
+### Reason
+
+Native shells are required for future HealthKit/Health Connect and store distribution, but the app cannot be statically exported as-is (API routes + secrets). An additive Capacitor foundation avoids rewriting workout/session logic or interrupting web feature work.
+
+### Alternatives Considered
+
+- Permanent production-site WebView wrapper — rejected for store risk and architecture
+- React Native rewrite — rejected; too much duplication now
+- Full Next static export — rejected; incompatible with current server routes
+
+### Impact
+
+- Mobile work proceeds on an isolated branch
+- Server secrets remain on Vercel
+- Operators must supply a reachable Preview/test URL before device bridge testing
+
 ## Decision 174 - Dashboard week completed tone follows destination logs
 
 Date: 2026-11-16

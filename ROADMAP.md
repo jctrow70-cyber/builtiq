@@ -193,7 +193,7 @@ Goal: Prepare BuildIQ Health for iOS and Android users.
 ### Priorities
 
 - Mobile-first UI polish
-- ~~PWA support or native app wrapper decision~~ (BIQ-0038 — PWA install shell shipped; native wrapper TBD)
+- ~~PWA support or native app wrapper decision~~ (BIQ-0038 — PWA install shell shipped; **BIQ-0325 / MOB-01** Capacitor foundation started on `cursor/mob-01-mobile-foundation-cb92`)
 - App Store readiness
 - Google Play readiness
 - Privacy policy

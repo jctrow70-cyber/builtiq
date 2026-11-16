@@ -22,9 +22,16 @@
     "test:progress": "tsx scripts/test-progress-analytics.ts",
     "test:progress-view": "tsx scripts/test-progress-view.ts",
     "test:e2e": "playwright test",
-    "test:groups": "tsx scripts/test-member-directory.ts && tsx scripts/test-group-architecture.ts && tsx scripts/test-group-training-workspace.ts && tsx scripts/test-assignment-wizard.ts && tsx scripts/test-member-schedule.ts && tsx scripts/test-workout-reschedule.ts && tsx scripts/test-group-calendar.ts && tsx scripts/test-group-training-workflow.ts && tsx scripts/test-unfollow-training.ts && tsx scripts/test-customize-for-me.ts && tsx scripts/test-group-invitations.ts && tsx scripts/test-notifications.ts && tsx scripts/test-group-communication.ts && tsx scripts/test-unified-schedule.ts && tsx scripts/test-group-activity-stage1.ts && tsx scripts/test-group-activity-stage2.ts && tsx scripts/test-group-strength-workout.ts && tsx scripts/test-group-activity-log.ts && tsx scripts/test-bulk-program-assign.ts && tsx scripts/test-group-member-schedule-batch.ts"
+    "test:groups": "tsx scripts/test-member-directory.ts && tsx scripts/test-group-architecture.ts && tsx scripts/test-group-training-workspace.ts && tsx scripts/test-assignment-wizard.ts && tsx scripts/test-member-schedule.ts && tsx scripts/test-workout-reschedule.ts && tsx scripts/test-group-calendar.ts && tsx scripts/test-group-training-workflow.ts && tsx scripts/test-unfollow-training.ts && tsx scripts/test-customize-for-me.ts && tsx scripts/test-group-invitations.ts && tsx scripts/test-notifications.ts && tsx scripts/test-group-communication.ts && tsx scripts/test-unified-schedule.ts && tsx scripts/test-group-activity-stage1.ts && tsx scripts/test-group-activity-stage2.ts && tsx scripts/test-group-strength-workout.ts && tsx scripts/test-group-activity-log.ts && tsx scripts/test-bulk-program-assign.ts && tsx scripts/test-group-member-schedule-batch.ts",
+    "cap:sync": "npx cap sync",
+    "cap:android": "npx cap open android",
+    "cap:ios": "npx cap open ios",
+    "test:mobile-foundation": "tsx scripts/test-mobile-foundation.ts"
   },
+
   "dependencies": {
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.6.2",
     "@supabase/supabase-js": "^2.45.4",
     "@zxing/browser": "^0.1.5",
     "next": "^14.2.35",
@@ -33,6 +40,9 @@
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/cli": "^8.6.2",
+    "@capacitor/ios": "^8.6.2",
     "@playwright/test": "^1.64.1",
     "@types/node": "^22.5.5",
     "@types/react": "^18.3.8",

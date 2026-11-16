@@ -11,6 +11,56 @@ Branch:
 Status:
 ```
 
+## BIQ-0325 / MOB-01 - Capacitor mobile foundation
+
+Date: 2026-11-16
+Branch: cursor/mob-01-mobile-foundation-cb92
+Status: Approved. Committing and pushing branch only. Not merged. Not deployed to production.
+
+Summary: Adds Capacitor 8 scaffolding, a development-only app id/name, optional Preview/test WebView bridge configuration, a minimal `lib/mobile` abstraction, Android project generation support, and iOS/Codemagic documentation. Does not start HealthKit, Health Connect, push, or UI redesign.
+
+Purpose: Begin native iOS/Android development while preserving the existing Next.js + Vercel + Supabase platform and keeping the remote WebView as a temporary development bridge only.
+
+Files changed:
+- package.json
+- package-lock.json
+- capacitor.config.ts
+- mobile/www/index.html
+- mobile/dev-target.example.json
+- lib/mobile/*
+- app/providers.tsx
+- app/components/InstallAppPrompt.tsx
+- scripts/test-mobile-foundation.ts
+- docs/mobile/MOB-01.md
+- docs/mobile/IOS_SETUP.md
+- docs/mobile/CODEMAGIC.md
+- docs/mobile/MIGRATION_PATH.md
+- .env.example
+- .gitignore
+- CHANGELOG.md
+- DECISIONS.md
+- THIRD_PARTY_NOTICES.md
+- ROADMAP.md
+- android/ (generated; debug APK built successfully in CI agent)
+
+Database changes: None.
+
+Testing steps:
+1. `npm run test:mobile-foundation`
+2. `NEXT_PUBLIC_SUPABASE_URL=… NEXT_PUBLIC_SUPABASE_ANON_KEY=… npm run build` (public anon values only; Vercel already has these)
+3. `npx cap sync`
+4. `cd android && ./gradlew assembleDebug` when Android SDK is available
+5. Confirm no new files under `supabase/migrations/`
+6. Confirm Capacitor config / mobile assets do not embed service role or OpenAI secrets
+
+Known issues:
+- Documented Develop preview URL returns 404; GitHub `Develop` is stale vs `main`.
+- Recent Vercel Preview URLs require SSO — not device-WebView ready until a public test host is provided.
+- iOS native project is not generated in this Linux environment.
+- Local `npm run build` without `NEXT_PUBLIC_SUPABASE_*` fails at route collection (pre-existing client init); not introduced by mobile changes.
+
+Recommended commit message: BIQ-0325 MOB-01 Capacitor mobile foundation
+
 ## BIQ-0324 - Dashboard week chip greens completed moved workouts
 
 Date: 2026-11-16

@@ -37,6 +37,22 @@ next-env.d.ts
 .turbo
 coverage/
 
+# Capacitor / mobile (MOB-01)
+mobile/dev-target.json
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties
+android/captures/
+android/.idea/
+ios/App/Pods/
+ios/App/public/
+ios/DerivedData/
+*.keystore
+*.jks
+*.mobileprovision
+*.p12
+
 # Local debug scripts (never commit secrets)
 .tmp-*.cmd
 scripts/tmp-*
