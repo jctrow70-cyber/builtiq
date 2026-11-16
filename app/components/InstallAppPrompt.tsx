@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { isNativePlatform } from '../../lib/mobile';
 
 const DISMISS_KEY = 'buildiq_install_prompt_dismissed';
 
@@ -29,6 +30,8 @@ export default function InstallAppPrompt() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    // Capacitor native shells are already installed apps — skip the PWA banner.
+    if (isNativePlatform()) return;
     if (isStandaloneDisplay()) return;
     if (localStorage.getItem(DISMISS_KEY) === '1') return;
 
