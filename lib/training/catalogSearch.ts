@@ -164,8 +164,12 @@ function relevanceScore(item: any, tokens: string[], section?: string): number {
   const aliases = Array.isArray(item?.coaching_metadata?.aliases)
     ? item.coaching_metadata.aliases.map((a: unknown) => String(a || '').toLowerCase())
     : [];
+  const query = tokens.length > 1 ? tokens.join(' ').trim() : '';
   let score = contextScore(item, section);
   if (catalogItemHasGuide(item) || hasExerciseGuide(item)) score += 25;
+  // Prefer an exact multi-word name or alias hit over token overlap alone.
+  if (query && name === query) score += 160;
+  else if (query && aliases.some((alias) => alias === query)) score += 140;
   tokens.forEach((t, i) => {
     if (!t) return;
     if (name === t) score += 120;

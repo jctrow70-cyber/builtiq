@@ -380,6 +380,26 @@ const ADD_ON_ROWS: MasterLibraryRecord[] = [
       'Upright plate-loaded iso-lateral chest press with independently moving arms. Distinct from Seated Chest Press (265), Converging Chest Press (262), Machine Chest Press (140), Bench Press (1), Iso-Lateral Decline Press (266), and Iso-Lateral Bench Press (268). Machine only. Own catalog id so progression and PRs stay separate. Bilateral sets store combined plate weight. Single-arm sets store the working arm only. No per-arm weight column. Media placeholders stay null.',
     active: 'Yes',
   },
+  {
+    id: '270',
+    name: 'Iso-Lateral Lat Pulldown (Machine)',
+    aliases:
+      'Iso-Lateral Lat Pulldown; Hammer Strength Pulldown; Machine Lat Pulldown; Wide Pulldown; Plate-Loaded Lat Pulldown; Plate-Loaded Machine Lat Pulldown; Iso-Lateral Pulldown',
+    primary_muscle: 'Lats',
+    secondary_muscles: 'Biceps; Rhomboids; Teres Major',
+    movement_pattern: 'Vertical Pull',
+    category: 'Compound',
+    default_equipment: 'Machine',
+    compatible_equipment: 'Machine',
+    setup:
+      'Sit on the plate-loaded iso-lateral lat pulldown with thighs locked under the pads. Adjust the independent handles so each arm starts at a full overhead reach. Record the weight loaded on each side: 45 lb per side is recorded as 45. If you pull one arm at a time, record only the weight on the working side.',
+    execution:
+      'Pull each handle down on its own path until the elbows travel down and back, then return to a controlled stretch overhead. Work both arms together or one arm at a time as programmed.',
+    form_cues: 'Chest tall; Own each arm; Elbows travel down and back; Control the stretch; Log weight per side',
+    design_notes:
+      'Plate-loaded iso-lateral / Hammer Strength-style lat pulldown with independently moving arms. Distinct from Lat Pulldown (20), Close-Grip Pulldown (21), Straight-Arm Pulldown (22), and Machine Pulldown (143). Do not merge or overwrite those cable/machine cards. Equipment is Machine (plate-loaded style). Own catalog id so search, logging, PRs, and AI generation stay separate. Default weight tracking is load per side (same single actual_weight column as dumbbells; caption defines meaning). Bilateral and unilateral execution are supported. Media placeholders stay null.',
+    active: 'Yes',
+  },
 ];
 
 function splitList(raw?: string): string[] {

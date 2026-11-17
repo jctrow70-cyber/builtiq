@@ -57,7 +57,7 @@ export function runCatalogCleanupChecks() {
   const mapped = mappedByName();
   const catalog = mapped.map((row) => row.catalog);
   const masterCount = expectedMasterCatalogCount();
-  assert(masterCount === 269, `active master count should be 269, got ${masterCount}`);
+  assert(masterCount === 270, `active master count should be 270, got ${masterCount}`);
   assert(catalog.length === masterCount, `mapped master count should be ${masterCount}, got ${catalog.length}`);
 
   assert(!textHasToken('Prowler Push', 'row'), 'word-boundary: Prowler does not match row');
@@ -467,6 +467,85 @@ export function runCatalogCleanupChecks() {
   assert(seatedIsoSearch[0]?.name === 'Seated Iso-Lateral Chest Press', 'seated iso-lateral chest press search finds 269');
   assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '268')), 'Iso-Lateral Bench Press is generation-eligible');
   assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '269')), 'Seated Iso-Lateral Chest Press is generation-eligible');
+
+  const isoLatPulldown = mapped.find((row) => row.record.id === '270');
+  const latPulldown = mapped.find((row) => row.record.id === '20');
+  const closeGripPulldown = mapped.find((row) => row.record.id === '21');
+  const straightArmPulldown = mapped.find((row) => row.record.id === '22');
+  const machinePulldown = mapped.find((row) => row.record.id === '143');
+  assert(isoLatPulldown?.record.name === 'Iso-Lateral Lat Pulldown (Machine)', 'master 270 is Iso-Lateral Lat Pulldown (Machine)');
+  assert(isoLatPulldown?.catalog.equipment === 'Machine', '270 equipment is Machine');
+  assert(isoLatPulldown?.catalog.movement_pattern === 'pull_vertical', '270 is vertical pull');
+  assert(isoLatPulldown?.catalog.media_url === null && isoLatPulldown?.catalog.image_url === null && isoLatPulldown?.catalog.gif_url === null, '270 media placeholders are null');
+  assert(isoLatPulldown?.catalog.external_id === '270', '270 keeps stable external id');
+  assert(/weight loaded on each side/i.test(String(isoLatPulldown?.catalog.instructions || '')), '270 instructions state per-side load');
+  assert(/working side/i.test(String(isoLatPulldown?.catalog.instructions || '')), '270 instructions state single-arm load');
+  assert(/both arms together or one arm/i.test(String(isoLatPulldown?.catalog.instructions || '')), '270 supports bilateral and unilateral');
+  const isoLatPulldownMeta = isoLatPulldown!.catalog.coaching_metadata;
+  assert(
+    isoLatPulldownMeta.exercise_kind === 'compound' &&
+      isoLatPulldownMeta.movement_pattern === 'vertical_pull' &&
+      isoLatPulldownMeta.laterality === 'bilateral',
+    '270 programming fields'
+  );
+  assert(
+    JSON.stringify(isoLatPulldownMeta.hypertrophy_volume_credits) ===
+      JSON.stringify(NEW_MASTER_CLASSIFICATIONS['270'].hypertrophy_volume_credits),
+    '270 volume credits'
+  );
+  assert(JSON.stringify(isoLatPulldownMeta.primary_muscles) === JSON.stringify(['lats']), '270 primary muscles');
+  assert(
+    JSON.stringify(isoLatPulldownMeta.secondary_muscles) === JSON.stringify(['biceps', 'upper_back']),
+    '270 secondary muscles'
+  );
+  const isoLatAliases = stringList(isoLatPulldownMeta.aliases).map((a) => a.toLowerCase());
+  ['iso-lateral lat pulldown', 'hammer strength pulldown', 'machine lat pulldown', 'wide pulldown'].forEach((alias) => {
+    assert(isoLatAliases.includes(alias), `270 missing alias ${alias}`);
+  });
+  assert(latPulldown?.record.name === 'Lat Pulldown', 'Lat Pulldown (20) remains');
+  assert(machinePulldown?.record.name === 'Machine Pulldown', 'Machine Pulldown (143) remains');
+  assert(latPulldown?.catalog.equipment === 'Cable', 'Lat Pulldown stays Cable');
+  assert(
+    distinctCatalogIds(isoLatPulldown!.catalog.external_id, latPulldown!.catalog.external_id),
+    'Iso-Lateral Lat Pulldown stays independent from Lat Pulldown'
+  );
+  assert(
+    distinctCatalogIds(isoLatPulldown!.catalog.external_id, closeGripPulldown!.catalog.external_id),
+    'Iso-Lateral Lat Pulldown stays independent from Close-Grip Pulldown'
+  );
+  assert(
+    distinctCatalogIds(isoLatPulldown!.catalog.external_id, straightArmPulldown!.catalog.external_id),
+    'Iso-Lateral Lat Pulldown stays independent from Straight-Arm Pulldown'
+  );
+  assert(
+    distinctCatalogIds(isoLatPulldown!.catalog.external_id, machinePulldown!.catalog.external_id),
+    'Iso-Lateral Lat Pulldown stays independent from Machine Pulldown'
+  );
+  const isoLatSearch = searchCatalog(catalog, { query: 'iso-lateral lat pulldown', section: 'strength', limit: 5 });
+  assert(isoLatSearch[0]?.name === 'Iso-Lateral Lat Pulldown (Machine)', 'iso-lateral lat pulldown search finds 270');
+  const hammerPulldownSearch = searchCatalog(catalog, { query: 'hammer strength pulldown', section: 'strength', limit: 5 });
+  assert(
+    hammerPulldownSearch[0]?.name === 'Iso-Lateral Lat Pulldown (Machine)',
+    'Hammer Strength Pulldown alias ranks 270 first'
+  );
+  const machineLatSearch = searchCatalog(catalog, { query: 'machine lat pulldown', section: 'strength', limit: 5 });
+  assert(
+    machineLatSearch[0]?.name === 'Iso-Lateral Lat Pulldown (Machine)',
+    'Machine Lat Pulldown alias ranks 270 first'
+  );
+  const widePulldownSearch = searchCatalog(catalog, { query: 'wide pulldown', section: 'strength', limit: 5 });
+  assert(
+    widePulldownSearch[0]?.name === 'Iso-Lateral Lat Pulldown (Machine)',
+    'Wide Pulldown alias ranks 270 first'
+  );
+  const cableLatSearch = searchCatalog(catalog, { query: 'lat pulldown', section: 'strength', limit: 5 });
+  assert(cableLatSearch[0]?.name === 'Lat Pulldown', 'lat pulldown still ranks cable Lat Pulldown first');
+  assert(
+    cableLatSearch.some((row) => row.name === 'Iso-Lateral Lat Pulldown (Machine)'),
+    'iso-lateral card still appears under lat pulldown search'
+  );
+  assert(isAiGenerationEligibleRow(liveShaped.find((row) => row.external_id === '270')), 'Iso-Lateral Lat Pulldown is generation-eligible');
+
   assert(!isAiGenerationEligibleRow(archived), 'archived cards cannot enter generation');
   assert(!isAiGenerationEligibleRow(custom), 'user customs cannot enter generation');
   const adapted = adaptGenerationCatalog([...liveShaped, custom, archived], { allowFallback: false });
@@ -528,6 +607,23 @@ export function runCatalogCleanupChecks() {
   assert(adaptedIsoRow, 'adapted catalog includes Iso-Lateral Row');
   assert(adaptedIsoRow?.movementPattern === 'horizontal_pull', 'AI reads Iso-Lateral Row as horizontal pull');
   assert(adaptedIsoRow?.equipment.some((eq) => eq.toLowerCase() === 'machine'), 'AI reads Iso-Lateral Row Machine equipment');
+  const adaptedIsoLatPulldown = adapted.find((ex) => ex.name === 'Iso-Lateral Lat Pulldown (Machine)');
+  assert(adaptedIsoLatPulldown, 'adapted catalog includes Iso-Lateral Lat Pulldown (Machine)');
+  assert(adaptedIsoLatPulldown?.movementPattern === 'vertical_pull', 'AI reads Iso-Lateral Lat Pulldown as vertical pull');
+  assert(adaptedIsoLatPulldown?.exerciseType === 'compound', 'AI reads Iso-Lateral Lat Pulldown as compound');
+  assert(
+    adaptedIsoLatPulldown?.primaryMuscles.includes('lats') && adaptedIsoLatPulldown?.secondaryMuscles.includes('biceps'),
+    'AI reads Iso-Lateral Lat Pulldown muscles'
+  );
+  assert(adaptedIsoLatPulldown?.equipment.some((eq) => eq.toLowerCase() === 'machine'), 'AI reads Iso-Lateral Lat Pulldown Machine equipment');
+  assert(
+    adaptedIsoLatPulldown?.fatigueCost === 'medium' && adaptedIsoLatPulldown?.defaultRepMin === 5 && adaptedIsoLatPulldown?.defaultRepMax === 10,
+    'AI reads Iso-Lateral Lat Pulldown demand and reps'
+  );
+  assert(
+    adaptedIsoLatPulldown?.programRoles.includes('accessory') && adaptedIsoLatPulldown?.warmupSuitable === false,
+    'AI reads Iso-Lateral Lat Pulldown as accessory, not warmup'
+  );
   assert(adaptGenerationCatalog([], {}).length === FALLBACK_CATALOG.length, 'fallback still works on empty catalog');
 
   console.log('BIQ-0235 catalog cleanup checks passed.');
