@@ -11,6 +11,44 @@ Branch:
 Status:
 ```
 
+## BIQ-0325 - Iso-Lateral Lat Pulldown (Machine)
+
+Date: 2026-11-17
+Branch: cursor/iso-lateral-lat-pulldown-ff9f
+Status: Ready for review. Not deployed. Live import still uses the previous 269-card library until this branch is deployed, then Import Master Library is run again.
+
+Summary: Added master 270 Iso-Lateral Lat Pulldown (Machine). Compound vertical pull, Machine (plate-loaded style), Lats primary, Biceps / Rhomboids / Teres Major secondary. Search aliases include Iso-Lateral Lat Pulldown, Hammer Strength Pulldown, Machine Lat Pulldown, and Wide Pulldown. Default weight caption is load per side on the existing `actual_weight` column. Bilateral default with unilateral supported. Lat Pulldown, Close-Grip Pulldown, Straight-Arm Pulldown, and Machine Pulldown were not changed.
+
+Purpose: Plate-loaded Hammer Strength-style iso-lateral lat pulldowns need their own catalog id, search hits, and progression, separate from cable and selectorized pulldowns.
+
+Files changed:
+- lib/training/masterCatalog.ts
+- lib/training/masterCatalogEnrichment.ts
+- lib/training/equipmentIdentity.ts
+- lib/training/catalogCleanupCheck.ts
+- lib/training/catalogSearch.ts
+- lib/scienceEngine/taxonomy.ts
+- app/components/progress/ExerciseProgressDetail.tsx
+- app/components/training/ExerciseSessionHistoryModal.tsx
+- scripts/test-equipment-identity.ts
+- ROADMAP.md
+- DECISIONS.md
+- CHANGELOG.md
+
+Database changes: None applied. No schema migration. No set logs, planned rows, or existing catalog cards were rewritten. Live insert of 270 waits for approval and a master import.
+
+Testing steps:
+1. `npx tsx scripts/test-equipment-identity.ts`
+2. `npx tsx -e "import { runCatalogCleanupChecks } from './lib/training/catalogCleanupCheck.ts'; runCatalogCleanupChecks()"`
+3. After master import, search `iso-lateral lat pulldown`, `hammer strength pulldown`, `machine lat pulldown`, and `wide pulldown`
+4. Add the exercise in the workout builder and logger; confirm Machine equipment and the per-side weight caption
+5. Log 45 when each side has 45 lb; confirm history and Progress show 45
+6. Confirm Lat Pulldown (Cable) and Machine Pulldown still exist as separate cards
+
+Known issues: The live catalog does not contain 270 until Settings → Import Master Library runs. That import was not run. Masters 268/269 still use combined plate-load captions (Decision 170).
+
+Recommended commit message: BIQ-0325 Add Iso-Lateral Lat Pulldown to the master exercise library
+
 ## BIQ-0324 - Dashboard week chip greens completed moved workouts
 
 Date: 2026-11-16

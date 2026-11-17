@@ -283,6 +283,38 @@ export const NEW_MASTER_CLASSIFICATIONS: Record<string, QualityClassification> =
     anomalies: [],
     primary_assignment: 'assigned',
   },
+  '270': {
+    movement_pattern: 'vertical_pull',
+    primary_muscles: ['lats'],
+    secondary_muscles: ['biceps', 'upper_back'],
+    involved_muscles: ['lats', 'biceps', 'upper_back'],
+    unmapped_muscle_labels: [],
+    hypertrophy_volume_credits: [
+      { muscle: 'lats', credit: 1 },
+      { muscle: 'biceps', credit: 0.5 },
+      { muscle: 'upper_back', credit: 0.5 },
+    ],
+    volume_policy: 'strength_hypertrophy',
+    laterality: 'bilateral',
+    measurement_type: 'reps',
+    exercise_kind: 'compound',
+    fatigue_cost: 'medium',
+    skill_demand: 'low',
+    program_roles: ['secondary', 'accessory'],
+    default_rep_min: 5,
+    default_rep_max: 10,
+    warmup_eligible: false,
+    power_eligible: false,
+    ramp_eligible: true,
+    cooldown_eligible: false,
+    demand_notes:
+      'compound vertical pull; plate-loaded iso-lateral lat pulldown; independent arms; medium fatigue; low skill; bilateral default with unilateral supported; reps measurement; volume policy strength_hypertrophy; hypertrophy credits lats:1, biceps:0.5, upper_back:0.5; weight logged per side; rhomboids and teres major map to upper_back; distinct from cable lat pulldown, close-grip pulldown, straight-arm pulldown, and selectorized machine pulldown',
+    review_required: false,
+    review_reasons: [],
+    confidence: 'high',
+    anomalies: [],
+    primary_assignment: 'assigned',
+  },
 };
 
 export function coachingFieldsFromClassification(proposed: QualityClassification): Record<string, unknown> {

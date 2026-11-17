@@ -73,16 +73,39 @@ export function comparableVariantKey(value?: string | null): string {
 const COMBINED_PLATE_LOAD_IDS = new Set(['268', '269']);
 const COMBINED_PLATE_LOAD_NAMES = new Set(['iso-lateral bench press', 'seated iso-lateral chest press']);
 
+/**
+ * Plate-loaded iso-lateral lat pulldown (BIQ-0325).
+ * Same single actual_weight column as every other lift. Caption means the typed number is the load on each side
+ * (or the working side for a single-arm set). No per-side schema column.
+ */
+const PER_SIDE_PLATE_LOAD_IDS = new Set(['270']);
+const PER_SIDE_PLATE_LOAD_NAMES = new Set([
+  'iso-lateral lat pulldown (machine)',
+  'iso-lateral lat pulldown',
+]);
+
 export const COMBINED_PLATE_LOAD_CAPTION =
   'Record the combined plate weight across both arms. 45 lb per side is 90 lb total. One arm at a time: record only the working arm.';
 
 export const WORKING_ARM_LOAD_CAPTION = 'Record only the weight loaded on the working arm.';
+
+export const PER_SIDE_PLATE_LOAD_CAPTION =
+  'Weight is the load on each side. 45 lb per side is recorded as 45. One arm at a time: record only the working side.';
+
+export const WORKING_SIDE_LOAD_CAPTION = 'Record only the weight loaded on the working side.';
 
 export function usesCombinedPlateLoad(exercise?: { externalId?: string | null; name?: string | null } | null): boolean {
   const id = String(exercise?.externalId || '').trim();
   if (COMBINED_PLATE_LOAD_IDS.has(id)) return true;
   const name = String(exercise?.name || '').trim().toLowerCase();
   return COMBINED_PLATE_LOAD_NAMES.has(name);
+}
+
+export function usesPerSidePlateLoad(exercise?: { externalId?: string | null; name?: string | null } | null): boolean {
+  const id = String(exercise?.externalId || '').trim();
+  if (PER_SIDE_PLATE_LOAD_IDS.has(id)) return true;
+  const name = String(exercise?.name || '').trim().toLowerCase();
+  return PER_SIDE_PLATE_LOAD_NAMES.has(name);
 }
 
 /** Caption for the weight the athlete types. Does not change the stored number. */
@@ -95,6 +118,10 @@ export function loadEntryCaption(
   if (usesCombinedPlateLoad(exercise)) {
     if (variant === 'unilateral' || variant === 'alternating') return WORKING_ARM_LOAD_CAPTION;
     return COMBINED_PLATE_LOAD_CAPTION;
+  }
+  if (usesPerSidePlateLoad(exercise)) {
+    if (variant === 'unilateral' || variant === 'alternating') return WORKING_SIDE_LOAD_CAPTION;
+    return PER_SIDE_PLATE_LOAD_CAPTION;
   }
   const key = canonicalEquipment(equipment).key;
   if (key === 'dumbbell') {

@@ -19,7 +19,9 @@ import {
   COMBINED_PLATE_LOAD_CAPTION,
   equipmentKeysComparable,
   loadEntryCaption,
+  PER_SIDE_PLATE_LOAD_CAPTION,
   WORKING_ARM_LOAD_CAPTION,
+  WORKING_SIDE_LOAD_CAPTION,
 } from '../lib/training/equipmentIdentity';
 import { loadMasterLibraryRecords } from '../lib/training/masterCatalog';
 import { createEquipmentWriteQueue, equipmentChoiceBlockReason, equipmentForSetSnapshot } from '../lib/training/equipmentSelection';
@@ -402,6 +404,19 @@ assert.match(COMBINED_PLATE_LOAD_CAPTION, /45 lb per side is 90 lb total/);
 assert.equal(
   loadEntryCaption('Machine', 'unilateral', { externalId: '269' }),
   WORKING_ARM_LOAD_CAPTION
+);
+assert.equal(
+  loadEntryCaption('Machine', 'bilateral', { externalId: '270', name: 'Iso-Lateral Lat Pulldown (Machine)' }),
+  PER_SIDE_PLATE_LOAD_CAPTION
+);
+assert.equal(
+  loadEntryCaption('Machine', null, { name: 'Iso-Lateral Lat Pulldown' }),
+  PER_SIDE_PLATE_LOAD_CAPTION
+);
+assert.match(PER_SIDE_PLATE_LOAD_CAPTION, /45 lb per side is recorded as 45/);
+assert.equal(
+  loadEntryCaption('Machine', 'unilateral', { externalId: '270' }),
+  WORKING_SIDE_LOAD_CAPTION
 );
 assert.match(loadEntryCaption('Machine', 'bilateral', { externalId: '140', name: 'Machine Chest Press' }) || '', /No bar weight or counterbalance/);
 const e1rm = estimateE1rm({ weight: 70, reps: 8, setType: 'working' });

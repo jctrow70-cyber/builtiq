@@ -4,6 +4,36 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 175 - Iso-Lateral Lat Pulldown logs weight per side
+
+Date: 2026-11-17
+Status: Accepted
+Category: Catalog / Logging
+
+### Decision
+
+Add master 270 Iso-Lateral Lat Pulldown (Machine) as its own Machine card. It is a compound vertical pull with primary Lats (latissimus dorsi) and secondary Biceps, Rhomboids, and Teres Major (rhomboids and teres major map to `upper_back` for programming credits). Equipment stays the existing Machine chip; plate-loaded style is described in aliases and coaching text. Default laterality is bilateral; single-arm execution is supported the same way as other iso-lateral cards.
+
+Weight uses the existing single `actual_weight` column. The logger caption means the typed number is the load on each side (45 lb per side is recorded as 45). A single-arm set records only the working side. Do not add a per-side weight column. Do not change Decision 170 combined-load captions for masters 268 and 269. Do not overwrite or merge Lat Pulldown (20), Close-Grip Pulldown (21), Straight-Arm Pulldown (22), or Machine Pulldown (143).
+
+### Reason
+
+No Iso-Lateral Lat Pulldown card existed. Cable Lat Pulldown and selectorized Machine Pulldown must keep separate progression. Set logs already store one weight; dumbbells already use a per-implement caption without a second column. This card has no history, so a per-side caption cannot disagree with old numbers. Masters 268 and 269 already shipped with combined-load captions and must stay on that scale.
+
+### Alternatives Considered
+
+- Alias onto Lat Pulldown (20) or Machine Pulldown (143) — rejected; independent plate-loaded iso-lateral progression is the point
+- Store weight per side in a new column — rejected; reuse the caption convention
+- Use Decision 170 combined plate load for this card — rejected; product requirement is weight loaded per side
+- Change 268/269 to per-side — rejected; would mix scales inside existing PR series
+
+### Impact
+
+- Search, Program Design, logging, personal records, Progress, and AI generation can select master 270
+- Logger, exercise history, and Exercise Progress show the per-side load sentence for 270
+- Existing cable and machine pulldown cards are unchanged
+- Live catalog still needs Settings → Import Master Library (or an apply script) after deploy
+
 ## Decision 174 - Dashboard week completed tone follows destination logs
 
 Date: 2026-11-16
