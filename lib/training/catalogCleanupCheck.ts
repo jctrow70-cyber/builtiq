@@ -493,10 +493,10 @@ export function runCatalogCleanupChecks() {
       JSON.stringify(NEW_MASTER_CLASSIFICATIONS['270'].hypertrophy_volume_credits),
     '270 volume credits'
   );
-  assert(isoLatPulldownMeta.primary_muscles?.includes('lats'), '270 primary lats');
+  assert(JSON.stringify(isoLatPulldownMeta.primary_muscles) === JSON.stringify(['lats']), '270 primary muscles');
   assert(
-    isoLatPulldownMeta.secondary_muscles?.includes('biceps') && isoLatPulldownMeta.secondary_muscles?.includes('upper_back'),
-    '270 secondary biceps and upper_back'
+    JSON.stringify(isoLatPulldownMeta.secondary_muscles) === JSON.stringify(['biceps', 'upper_back']),
+    '270 secondary muscles'
   );
   const isoLatAliases = stringList(isoLatPulldownMeta.aliases).map((a) => a.toLowerCase());
   ['iso-lateral lat pulldown', 'hammer strength pulldown', 'machine lat pulldown', 'wide pulldown'].forEach((alias) => {

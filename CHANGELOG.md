@@ -15,7 +15,7 @@ Status:
 
 Date: 2026-11-17
 Branch: cursor/iso-lateral-lat-pulldown-ff9f
-Status: Ready for review. Not deployed. Live import still uses the previous 269-card library until this branch is deployed, then Import Master Library is run again.
+Status: Ready for review. Not deployed. Live import still uses the previous 269-card library until this branch is deployed, then Import Master Library is run again. Follow-up commit fixes Vercel `tsc` failure on master-270 muscle asserts.
 
 Summary: Added master 270 Iso-Lateral Lat Pulldown (Machine). Compound vertical pull, Machine (plate-loaded style), Lats primary, Biceps / Rhomboids / Teres Major secondary. Search aliases include Iso-Lateral Lat Pulldown, Hammer Strength Pulldown, Machine Lat Pulldown, and Wide Pulldown. Default weight caption is load per side on the existing `actual_weight` column. Bilateral default with unilateral supported. Lat Pulldown, Close-Grip Pulldown, Straight-Arm Pulldown, and Machine Pulldown were not changed.
 
