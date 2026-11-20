@@ -430,4 +430,84 @@ const fromEmptyEquip = classify({
 assert.equal(fromEmptyEquip.kind, 'unknown_equipment');
 assert.equal(fromEmptyEquip.copyLastEligible, false);
 
+// BIQ-0326: match by set-type ordinal so ramp-shifted stored set_number still pairs Set 1↔first working.
+const rampShiftedMachine = [
+  row({
+    id: 'm-w1',
+    snapshot_equipment: 'Machine',
+    snapshot_set_number: 4,
+    actual_weight: '182',
+    actual_reps: '8',
+    log_date: '2026-11-06',
+    updated_at: '2026-11-06T12:00:00Z',
+  }),
+  row({
+    id: 'm-w2',
+    snapshot_equipment: 'Machine',
+    snapshot_set_number: 5,
+    actual_weight: '182',
+    actual_reps: '7',
+    log_date: '2026-11-06',
+    updated_at: '2026-11-06T12:01:00Z',
+  }),
+  row({
+    id: 'm-w3',
+    snapshot_equipment: 'Machine',
+    snapshot_set_number: 6,
+    actual_weight: '175',
+    actual_reps: '6',
+    log_date: '2026-11-06',
+    updated_at: '2026-11-06T12:02:00Z',
+  }),
+];
+const olderDumbbell = [
+  row({
+    id: 'db-1',
+    snapshot_equipment: 'Dumbbell',
+    snapshot_set_number: 1,
+    actual_weight: '120',
+    actual_reps: '8',
+    log_date: '2026-09-18',
+    updated_at: '2026-09-18T12:00:00Z',
+  }),
+  row({
+    id: 'db-2',
+    snapshot_equipment: 'Dumbbell',
+    snapshot_set_number: 2,
+    actual_weight: '120',
+    actual_reps: '8',
+    log_date: '2026-09-18',
+    updated_at: '2026-09-18T12:01:00Z',
+  }),
+];
+const byRawNumber = classify({
+  equipment: 'Machine',
+  setNumber: 1,
+  sessionDate: '2026-11-20',
+  rows: [...rampShiftedMachine, ...olderDumbbell],
+});
+assert.equal(byRawNumber.kind, 'different_equipment', 'raw set_number 1 misses Machine sets stored as 4–6');
+assert.equal(byRawNumber.otherEquipment[0]?.sourceId, 'db-1');
+
+const byOrdinalSet1 = classify({
+  equipment: 'Machine',
+  setNumber: 1,
+  setOrdinal: 1,
+  sessionDate: '2026-11-20',
+  rows: [...rampShiftedMachine, ...olderDumbbell],
+});
+assert.equal(byOrdinalSet1.kind, 'exact');
+assert.equal(byOrdinalSet1.comparable?.sourceId, 'm-w1');
+assert.equal(byOrdinalSet1.comparable?.weight, '182');
+
+const byOrdinalSet2 = classify({
+  equipment: 'Machine',
+  setNumber: 2,
+  setOrdinal: 2,
+  sessionDate: '2026-11-20',
+  rows: [...rampShiftedMachine, ...olderDumbbell],
+});
+assert.equal(byOrdinalSet2.kind, 'exact');
+assert.equal(byOrdinalSet2.comparable?.sourceId, 'm-w2');
+
 console.log('previous-performance classifier tests passed');

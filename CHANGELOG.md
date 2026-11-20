@@ -11,6 +11,42 @@ Branch:
 Status:
 ```
 
+## BIQ-0326 - Fix previous-set history load and network save UX
+
+Date: 2026-11-20
+Branch: cursor/history-load-network-retry-ad61
+Status: Implemented locally
+
+Summary: Logger previous-performance lines now match by set-type ordinal (Set 1 ↔ first prior working set for that implement), so ramp-shifted stored `set_number` values no longer show older Dumbbell history on Set 2 while Set 1 shows Machine. Lift-history fetches retry Safari `Load failed` / network blips, ignore stale overlapping loads, and show a Retry banner when history still cannot load. Failed set saves clear the optimistic Done check. Session-completion alerts keep “Your set was saved” when the follow-up write hits the same network copy.
+
+Purpose: Mobile Training showed mixed Machine / Dumbbell “Last …” lines after ramps changed stored set numbers, and intermittent Safari network failures left Done checked with a Load failed error while previous history could fail silently.
+
+Files changed:
+- lib/training/previousPerformance.ts
+- lib/training/setLabels.ts
+- app/page.tsx
+- app/components/WorkoutSetLogger.tsx
+- scripts/test-previous-performance.ts
+- scripts/test-set-labels.ts
+- scripts/test-lift-history-load-retry.ts
+- CHANGELOG.md
+- DECISIONS.md
+
+Database changes: None. No schema migration. No set-log rewrites.
+
+Testing steps:
+1. `npx tsx scripts/test-previous-performance.ts`
+2. `npx tsx scripts/test-previous-performance-logger.ts`
+3. `npx tsx scripts/test-set-labels.ts`
+4. `npx tsx scripts/test-lift-history-load-retry.ts`
+5. `npx tsx scripts/test-set-log-network-retry.ts`
+6. Open a workout with ramps + working sets on an exercise that has Machine history under higher stored set numbers; Set 1–N should show Last on Machine for those ordinals, not older Dumbbell for Set 2+
+7. On a flaky mobile connection, confirm history Retry appears if the load fails, and a failed Done save unchecks Done and shows Retry on the set card
+
+Known issues: Persistent offline still needs Retry. History modal filtering by current equipment is unchanged.
+
+Recommended commit message: BIQ-0326 Fix previous-set history matching and Load failed UX
+
 ## BIQ-0325 - Iso-Lateral Lat Pulldown (Machine)
 
 Date: 2026-11-17

@@ -469,6 +469,9 @@ function SetLogCard({
     if (saveGen.current !== gen) return;
     if (result && result.stale) return;
     if (result && result.ok === false) {
+      // Drop optimistic Done/chip so a failed network save does not look completed.
+      setDoneOverride(null);
+      setChipOverride(null);
       setSaveState('error');
       setSaveError(result.error || 'Could not save this set.');
       return;

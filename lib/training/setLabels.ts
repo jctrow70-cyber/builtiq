@@ -20,17 +20,29 @@ export function nextPlannedSortOrder(sets: Array<{ sort_order?: number | null; i
 }
 
 /**
+ * 1-based position within ramp-effort vs working groups (same grouping as labels).
+ * Previous-performance matching uses this so Ramp-shifted stored set_number values
+ * still pair Set 1 with the prior session's first working set.
+ */
+export function setTypeOrdinal(set: SetLabelRow, all: SetLabelRow[]): number {
+  if (isRampEffortSetType(set.set_type)) {
+    const ramps = all.filter((s) => isRampEffortSetType(s.set_type));
+    const idx = ramps.findIndex((s) => s.id === set.id);
+    return (idx >= 0 ? idx : 0) + 1;
+  }
+  const working = all.filter((s) => !isRampEffortSetType(s.set_type));
+  const idx = working.findIndex((s) => s.id === set.id);
+  return (idx >= 0 ? idx : 0) + 1;
+}
+
+/**
  * Visible set label by position within ramp vs working groups.
  * Uses list order (not raw set_number), so duplicate or gapped stored numbers
  * still show Set 1…N / Ramp 1…N without skips or repeats.
  */
 export function setDisplayLabel(set: SetLabelRow, all: SetLabelRow[]): string {
   if (isRampEffortSetType(set.set_type)) {
-    const ramps = all.filter((s) => isRampEffortSetType(s.set_type));
-    const idx = ramps.findIndex((s) => s.id === set.id);
-    return `Ramp ${(idx >= 0 ? idx : 0) + 1}`;
+    return `Ramp ${setTypeOrdinal(set, all)}`;
   }
-  const working = all.filter((s) => !isRampEffortSetType(s.set_type));
-  const idx = working.findIndex((s) => s.id === set.id);
-  return `Set ${(idx >= 0 ? idx : 0) + 1}`;
+  return `Set ${setTypeOrdinal(set, all)}`;
 }

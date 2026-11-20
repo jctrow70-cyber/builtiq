@@ -81,6 +81,12 @@ export type ClassifyPreviousPerformanceInput = {
   equipment?: string | null;
   setType?: string | null;
   setNumber?: number | null;
+  /**
+   * 1-based position within ramp vs working groups (same as logger Set/Ramp labels).
+   * When set, previous performance matches this ordinal among same-day same-type
+   * history instead of raw stored set_number (which can shift after ramps).
+   */
+  setOrdinal?: number | null;
   sessionDate: string;
   userId?: string | null;
   rows?: PreviousPerformanceLog[] | null;
@@ -117,14 +123,18 @@ export function classifyPreviousPerformance(input: ClassifyPreviousPerformanceIn
   const catalog = input.catalog || [];
   const currentType = normalizeLoggedSetType(input.setType);
   const currentNumber = Number(input.setNumber ?? 1) || 1;
+  const useOrdinal = input.setOrdinal != null && String(input.setOrdinal).trim() !== '';
+  const currentOrdinal = useOrdinal ? Math.max(1, Number(input.setOrdinal) || 1) : currentNumber;
   const currentEquip = seriesIdentityFromParts({ equipment: input.equipment });
   const currentKeys = identityKeys(catalog, input.catalogExerciseId, input.exerciseName);
   const currentIds = catalogIdsFor(catalog, input.catalogExerciseId, input.exerciseName);
   const userId = String(input.userId || '').trim();
 
-  const exact: PreviousPerformanceHit[] = [];
-  const uncertain: PreviousPerformanceHit[] = [];
-  const other: PreviousPerformanceHit[] = [];
+  const candidates: Array<{
+    row: PreviousPerformanceLog;
+    date: string;
+    identityMatch: PreviousPerformanceIdentityMatch;
+  }> = [];
 
   (input.rows || []).forEach((row) => {
     if (!row || typeof row !== 'object') return;
@@ -136,7 +146,23 @@ export function classifyPreviousPerformance(input: ClassifyPreviousPerformanceIn
     const identityMatch = exerciseIdentityMatch(currentKeys, currentIds, catalog, row);
     if (!identityMatch) return;
     if (normalizeLoggedSetType(rowSetType(row)) !== currentType) return;
-    if ((Number(rowSetNumber(row)) || 1) !== currentNumber) return;
+    candidates.push({ row, date, identityMatch });
+  });
+
+  const ordinalByRowId = useOrdinal ? historyOrdinalsByEquipmentDay(candidates.map((c) => c.row)) : null;
+
+  const exact: PreviousPerformanceHit[] = [];
+  const uncertain: PreviousPerformanceHit[] = [];
+  const other: PreviousPerformanceHit[] = [];
+
+  candidates.forEach(({ row, date, identityMatch }) => {
+    if (useOrdinal) {
+      const key = String(row.id || '').trim();
+      const ordinal = key && ordinalByRowId ? ordinalByRowId.get(key) : null;
+      if (ordinal == null || ordinal !== currentOrdinal) return;
+    } else if ((Number(rowSetNumber(row)) || 1) !== currentNumber) {
+      return;
+    }
 
     const hit = toHit(row, date, currentEquip.equipmentKey, identityMatch);
     if (!hit) return;
@@ -192,6 +218,46 @@ function rowSetNumber(row: PreviousPerformanceLog): number {
   }
   if (row.st_planned_sets?.set_number != null) return Number(row.st_planned_sets.set_number) || 1;
   return 1;
+}
+
+/**
+ * Assign 1-based ordinals within each log_date + equipment series for type-filtered rows.
+ * Sort by stored set_number, then updated_at, so ramp-shifted numbers still line up
+ * as first/second/third working (or ramp) set for that implement that day.
+ */
+function historyOrdinalsByEquipmentDay(rows: PreviousPerformanceLog[]): Map<string, number> {
+  const byBucket = new Map<string, PreviousPerformanceLog[]>();
+  rows.forEach((row) => {
+    const date = ymd(row.log_date);
+    const id = String(row.id || '').trim();
+    if (!date || !id) return;
+    const equipmentKey = seriesIdentityFromParts({
+      catalogExerciseId: rowCatalogId(row),
+      exerciseName: rowExerciseName(row),
+      equipment: row.snapshot_equipment,
+      variant: row.snapshot_variant,
+    }).equipmentKey;
+    const bucket = `${date}|${equipmentKey}`;
+    const list = byBucket.get(bucket) || [];
+    list.push(row);
+    byBucket.set(bucket, list);
+  });
+  const out = new Map<string, number>();
+  byBucket.forEach((list) => {
+    [...list]
+      .sort((a, b) => {
+        const numCmp = (Number(rowSetNumber(a)) || 1) - (Number(rowSetNumber(b)) || 1);
+        if (numCmp) return numCmp;
+        const updatedCmp = String(a.updated_at || '').localeCompare(String(b.updated_at || ''));
+        if (updatedCmp) return updatedCmp;
+        return String(a.id || '').localeCompare(String(b.id || ''));
+      })
+      .forEach((row, index) => {
+        const id = String(row.id || '').trim();
+        if (id) out.set(id, index + 1);
+      });
+  });
+  return out;
 }
 
 /** Keep ramp distinct from working. Do not coerce unknown types through `normalizeSetType`. */
