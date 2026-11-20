@@ -4,6 +4,32 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 176 - Previous performance matches set-type ordinal
+
+Date: 2026-11-20
+Status: Accepted
+Category: Training / History
+
+### Decision
+
+BIQ-0326. Logger previous-performance matching uses the same 1-based set-type ordinal as Ramp/Set labels (Decision 167), within each log date and equipment series. Stored `set_number` remains the persistence key on planned sets and snapshots and is not rewritten. When `setOrdinal` is supplied, history rows for that implement are ordered by stored set_number (then updated_at) and paired by ordinal so Set 1 follows the prior session’s first working set even when ramps shifted working rows to 4/5/6. Lift-history reads retry transient Safari `Load failed` errors, drop stale overlapping responses, and surface a Retry banner on failure. Failed set-log saves clear optimistic Done. Session-completion network alerts still state that the set was saved.
+
+### Reason
+
+After BIQ-0316 labeled sets by list position, previous performance still compared raw `set_number`. A Machine session logged as working 4–6 looked like missing history for displayed Set 1–3 and fell through to older Dumbbell lines. Silent history-load failures and optimistic Done after a failed save made the same network blip look like wrong or missing history.
+
+### Alternatives Considered
+
+- Rewrite historical `snapshot_set_number` / planned set numbers — rejected; Decision 167 and history integrity forbid renumbering logged rows
+- Keep raw set_number matching and only fix network UX — rejected; ordinal mismatch is the incorrect Last line
+- Match ordinal across all equipment on a day — rejected; Machine and Dumbbell series stay independent
+
+### Impact
+
+- Set N Last lines follow the Nth prior working (or ramp) set for the selected implement
+- History load failures are visible and retryable
+- Done does not stay checked when the save fails
+
 ## Decision 175 - Iso-Lateral Lat Pulldown logs weight per side
 
 Date: 2026-11-17

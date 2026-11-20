@@ -79,7 +79,7 @@ import { canRewritePlannedSetPrescription } from '../lib/training/plannedSetGuar
 import { applyLogSnapshotType, applyProgramSetDeleted, applyProgramSetType, applyWorkoutSetDeleted, applyWorkoutSetType, correctPlannedSetType, isCorrectableSetType, LOGGED_SET_REMOVAL_CONFIRMATION, plannedSetEditQueue, resolvePlannedSetTargets, softDeletePlannedSets } from '../lib/training/setTypeCorrection';
 import { completedSessionDraft, deriveSessionStatus, outstandingRequiredSetIds, sessionStatusAfterPlanChange, shouldHealPartialSession } from '../lib/training/sessionOutcome';
 import { extraLogsFromSetLogs, extraSetInsertPayload, extraSetsForExercise, nextExtraSetNumber, type ExtraSetLog } from '../lib/training/extraSets';
-import { nextPlannedSetNumber, nextPlannedSortOrder } from '../lib/training/setLabels';
+import { nextPlannedSetNumber, nextPlannedSortOrder, setTypeOrdinal } from '../lib/training/setLabels';
 import { classifyPreviousPerformance } from '../lib/training/previousPerformance';
 import { loggerCopyLastEligible, loggerSelectedEquipment } from '../lib/training/previousPerformanceDisplay';
 import { loadWorkoutFeedback, normalizePainFlag, upsertExerciseSession, upsertWorkoutFeel, upsertWorkoutSession } from '../lib/training/workoutSessions';
@@ -247,7 +247,7 @@ export default function Page(){
  const [programs,setPrograms]=useState<any[]>([]),[program,setProgram]=useState<any>(null),[programName,setProgramName]=useState('Strength Program'),[weeks,setWeeks]=useState(6);
  const [programStartDate,setProgramStartDate]=useState(()=>mondayOfWeek(todayYmd()));
  const [week,setWeek]=useState(1),[activeWorkout,setActiveWorkout]=useState('');
- const [logDate,setLogDate]=useState(today()),[localDate,setLocalDate]=useState(today()),[logs,setLogs]=useState<any>({}),[history,setHistory]=useState<any>({}),[liftHistoryRows,setLiftHistoryRows]=useState<any[]>([]),[pendingEquipmentById,setPendingEquipmentById]=useState<Record<string,string>>({}),[applyScope,setApplyScope]=useState<'current'|'future'>('future'),[pendingAddScope,setPendingAddScope]=useState<'current'|'future'|null>(null);
+ const [logDate,setLogDate]=useState(today()),[localDate,setLocalDate]=useState(today()),[logs,setLogs]=useState<any>({}),[history,setHistory]=useState<any>({}),[liftHistoryRows,setLiftHistoryRows]=useState<any[]>([]),[liftHistoryError,setLiftHistoryError]=useState(''),[pendingEquipmentById,setPendingEquipmentById]=useState<Record<string,string>>({}),[applyScope,setApplyScope]=useState<'current'|'future'>('future'),[pendingAddScope,setPendingAddScope]=useState<'current'|'future'|null>(null);
  const [catalog,setCatalog]=useState<any[]>([]);
  const [catalogError,setCatalogError]=useState('');
  const [showCustomForm,setShowCustomForm]=useState<any>({warmup:false,strength:false,cooldown:false});
@@ -403,6 +403,7 @@ export default function Page(){
  const sessionFeedbackIdentityRef=useRef<string|null>(null);
  const sessionFeedbackDirtyRef=useRef(false);
  const sessionFeedbackLoadGenRef=useRef(0);
+ const liftHistoryLoadGenRef=useRef(0);
  const planChangePartialRef=useRef<string|null>(null);
  const prCelebrationTimerRef=useRef<ReturnType<typeof setTimeout>|null>(null);
  const [prCelebration,setPrCelebration]=useState<{exerciseName:string;message:string;subtext:string}|null>(null);
@@ -1336,6 +1337,7 @@ export default function Page(){
   setMemberWorkoutLogDate(today());
   setHistory({});
   setLiftHistoryRows([]);
+  setLiftHistoryError('');
   setViewingMember(member);
   const freshAssignments=await loadMemberAssignments();
   await reloadMemberWorkoutProgram(member,freshAssignments);
@@ -1349,6 +1351,7 @@ export default function Page(){
   setLogs({});
   setHistory({});
   setLiftHistoryRows([]);
+  setLiftHistoryError('');
   logsRef.current={};
  }
  async function closeMemberView(){clearMemberWorkoutView();}
@@ -2092,18 +2095,25 @@ export default function Page(){
   const uid=logUserId();
   if(!uid) return;
   const cutoff=activeLogDateForLogging();
+  const gen=++liftHistoryLoadGenRef.current;
 
-  const { data, error } = await supabase
-    .from('st_set_logs')
-    .select('*, st_planned_sets(set_type,set_number,st_exercises(name,muscle_group,section,catalog_exercise_id))')
-    .eq('user_id', uid)
-    .lt('log_date', cutoff)
-    .order('log_date', { ascending:false })
-    .order('updated_at', { ascending:false })
-    .limit(800);
+  const { data, error } = await retryTransientSupabaseWrite(
+    () => supabase
+      .from('st_set_logs')
+      .select('*, st_planned_sets(set_type,set_number,st_exercises(name,muscle_group,section,catalog_exercise_id))')
+      .eq('user_id', uid)
+      .lt('log_date', cutoff)
+      .order('log_date', { ascending:false })
+      .order('updated_at', { ascending:false })
+      .limit(800),
+    { attempts: 3, delayMs: 400 }
+  );
+
+  if(gen!==liftHistoryLoadGenRef.current) return;
 
   if(error){
     console.warn(error.message);
+    setLiftHistoryError(friendlyWriteError(error,'Could not load previous set history. Check your connection and try again.'));
     return;
   }
 
@@ -2122,6 +2132,7 @@ export default function Page(){
     });
   });
 
+  setLiftHistoryError('');
   setHistory(by);
   setLiftHistoryRows(data || []);
  }
@@ -2152,6 +2163,7 @@ export default function Page(){
   return (liftHistoryRows||[]).find((row:any)=>String(row.id||'')===key)||null;
  }
  function previousPerformanceViewFor(ex:any, set:any, equipment?:string, copyLastDisabled?:boolean){
+  const planned=(ex?.st_planned_sets||[]).filter((s:any)=>!s.is_deleted).sort((a:any,b:any)=>(a.sort_order||0)-(b.sort_order||0));
   const result=classifyPreviousPerformance({
     catalog,
     catalogExerciseId:ex?.catalog_exercise_id,
@@ -2159,6 +2171,7 @@ export default function Page(){
     equipment,
     setType:set?.set_type,
     setNumber:set?.set_number,
+    setOrdinal:setTypeOrdinal(set,planned),
     sessionDate:activeLogDateForLogging(),
     userId:logUserId(),
     rows:liftHistoryRows,
@@ -3228,7 +3241,10 @@ export default function Page(){
       if(savedSession.pendingMigration)setPhase2a1Pending(true);
       if(savedSession.error||savedSession.pendingMigration){
         if(completedSessionKeyRef.current===sessionKey)completedSessionKeyRef.current=null;
-        if(savedSession.error)alert(friendlyWriteError(savedSession.error,'Your set was saved. Workout completion could not finish — try again.'));
+        if(savedSession.error){
+          // Keep "set was saved" even when Safari maps the failure to the Load failed / network copy.
+          alert(`Your set was saved. ${friendlyWriteError(savedSession.error,'Workout completion could not finish — try again.')}`);
+        }
       }else if(workout?.id===draft.workoutId){
         setSessionOutcome('completed');
         if(activity) await completeOpenGroupActivity(activity);
@@ -4410,6 +4426,7 @@ function resolveExerciseTarget(targetWorkout:any,sourceExercise:any,currentWorko
       onStart={()=>{const pending=schedulePreviewRef.current;if(pending&&pending.workoutId===viewingWorkoutId)void startScheduledWorkout(pending);else startTrainingSession(viewingWorkoutId,logDate,'log');}}
       onEdit={()=>startTrainingSession(viewingWorkoutId,logDate,'edit')}
     />}</LazyScreen>}
+    {trainingSessionOpen&&liftHistoryError&&<div className="card program-draft-banner" role="alert"><p className="set-log-status set-log-status-error">{liftHistoryError}{' '}<button type="button" className="btn small secondary" onClick={()=>{void loadLiftHistory();}}>Retry</button></p></div>}
     {trainingSessionOpen&&trainingSessionIntent==='log'&&followingGroupTemplate&&!activeAssignedRecipient&&<div className="card program-draft-banner"><p className="muted" role={customizeForMeBusy?'status':undefined}>{customizeForMeBusy?'Making your private copy so edits stay just for you…':'Logging is only yours. If you change exercises or planned sets, BuildIQ makes a private copy so the group plan stays the same.'}</p></div>}
     {trainingSessionOpen&&customizeForMeBusy&&trainingSessionIntent==='log'&&!followingGroupTemplate&&!activeAssignedRecipient&&<div className="card program-draft-banner" role="status"><p className="muted">Making your private copy so edits stay just for you…</p></div>}
     {trainingSessionOpen&&trainingSessionIntent==='edit'&&!activeAssignedRecipient&&<div className="card program-draft-banner"><div className="topline" style={{justifyContent:'space-between',alignItems:'flex-start',gap:12}}>{customizeForMeBusy?<p className="muted" role="status">Making your private copy so edits stay just for you…</p>:<><p className="muted">{personalizedCopy||!followingGroupTemplate?'This copy is only yours. The group plan is unchanged. ':'Edits during Training stay on your private copy. The group plan is unchanged. '}Change exercises and sets here. Start Workout is only for logging.</p><button type="button" className="btn small green" onClick={()=>setTrainingSessionIntent('log')}>Start Workout</button></>}</div></div>}

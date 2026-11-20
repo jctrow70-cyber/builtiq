@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import { addDraftSet, emptyDraftWorkout, removeDraftSet, type DraftWorkout } from '../lib/training/draftWorkout';
-import { nextPlannedSetNumber, nextPlannedSortOrder, setDisplayLabel } from '../lib/training/setLabels';
+import { nextPlannedSetNumber, nextPlannedSortOrder, setDisplayLabel, setTypeOrdinal } from '../lib/training/setLabels';
 
 const duplicateWorking = [
   { id: 'a', set_type: 'working', set_number: 1 },
@@ -32,6 +32,11 @@ assert.deepEqual(
   withRamps.map((s) => setDisplayLabel(s, withRamps)),
   ['Ramp 1', 'Ramp 2', 'Ramp 3', 'Set 1', 'Set 2', 'Set 3'],
   'ramp/warmup rows label separately from working sets'
+);
+assert.deepEqual(
+  withRamps.map((s) => setTypeOrdinal(s, withRamps)),
+  [1, 2, 3, 1, 2, 3],
+  'setTypeOrdinal restarts within ramp vs working groups'
 );
 
 const plannedPlusExtra = [
