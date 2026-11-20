@@ -11,6 +11,38 @@ Branch:
 Status:
 ```
 
+## BIQ-0326 - Stop bouncing completed users back to profile setup
+
+Date: 2026-11-20
+Branch: cursor/fix-profile-onboarding-bounce
+Status: Ready for review. Not deployed. Run migration `20261120_080_repair_profile_completed.sql` on test then live after merge.
+
+Summary: Returning users who already finished onboarding were getting the empty "Complete your profile" screen again. `loadProfile` ignored read errors and cleared the in-memory profile, which re-opened the setup gate. Saves also did not apply the upsert result immediately, so a follow-up read miss bounced the user back to an empty form. The gate now treats a non-empty display name as onboarded (same rule as the BIQ-0006 backfill), repairs `profile_completed` when needed, shows a retry screen on load failure instead of fake new-user setup, and persists profile upserts with `onConflict: 'user_id'` plus an immediate local apply.
+
+Purpose: A completed account must not be trapped on onboarding after a transient profile read failure or a stuck `profile_completed = false` flag.
+
+Files changed:
+- app/page.tsx
+- lib/profile/onboarding.ts
+- scripts/test-profile-onboarding-gate.ts
+- supabase/migrations/20261120_080_repair_profile_completed.sql
+- DECISIONS.md
+- CHANGELOG.md
+
+Database changes:
+- `supabase/migrations/20261120_080_repair_profile_completed.sql` sets `profile_completed = true` where `display_name` is non-empty and the flag is still false. No deletes, no drops.
+
+Testing steps:
+1. `npx tsx scripts/test-profile-onboarding-gate.ts`
+2. Sign in as an account that already has a display name; confirm the app opens without the setup screen
+3. In Supabase, set that row's `profile_completed` to false, reload; confirm the app still opens and the flag heals back to true
+4. Block or fail `st_profiles` select once; confirm "Could not load your profile" + Retry appears instead of an empty setup form
+5. Complete setup once on a fresh account; confirm Continue lands in the app and a reload stays in the app
+
+Known issues: If the signed-in user has no `st_profiles` row at all (or an empty display name) on this Supabase project, setup is still required. Preview/test vs live database mismatch can look like "I already did this" when the other environment has the row.
+
+Recommended commit message: BIQ-0326 Stop bouncing completed users back to profile setup
+
 ## BIQ-0325 - Iso-Lateral Lat Pulldown (Machine)
 
 Date: 2026-11-17

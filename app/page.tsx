@@ -12,6 +12,7 @@ import { bindExerciseLogMoreItems, exerciseLogMoreItemSpecs } from '../lib/train
 import ExerciseSessionHistoryModal from './components/training/ExerciseSessionHistoryModal';
 import SectionHeader from './components/ui/SectionHeader';
 import { DEFAULT_THEME_ID } from '../lib/theme/themes';
+import { profileHasDisplayName, profileNeedsSetup } from '../lib/profile/onboarding';
 import { supabase, friendlyAuthError, friendlyWriteError, getSupabaseConfigError, retryTransientSupabaseWrite } from '../lib/supabaseClient';
 import { drainSetLogIntent, SET_LOG_WRITE_COALESCE_MS, SetLogIntentLedger, unsavedSetLogGate, type SetLogSaveResult } from '../lib/training/setLogIntent';
 import { automaticSessionCompletionAllowed, createFinishSingleFlight } from '../lib/training/finishWorkoutPersistence';
@@ -204,7 +205,6 @@ const makeInviteCode=()=>(typeof crypto!=='undefined'&&crypto.randomUUID?crypto.
 const REMEMBER_EMAIL_KEY='buildiq_remembered_email';
 const emptyProfileDraft=(source?:any)=>({display_name:source?.display_name||'',height_inches:source?.height_inches??'',weight_lbs:source?.weight_lbs??'',birth_year:source?.birth_year??'',sex:source?.sex||'',experience_level:source?.experience_level||'beginner',primary_goal:source?.primary_goal||'general_health',units_preference:source?.units_preference||'imperial',available_equipment:normalizeEquipmentList(source?.available_equipment),ui_theme:source?.ui_theme||''});
 const toggleEquipmentList=(list:string[],id:string)=>{if(id==='full_gym')return list.includes('full_gym')?[]:['full_gym']; let next=list.filter((x)=>x!=='full_gym'); if(next.includes(id))next=next.filter((x)=>x!==id); else next=[...next,id]; return next;};
-const profileNeedsSetup=(p:any)=>{if(!p)return true; if(p.profile_completed===true)return false; if(p.profile_completed===false)return true; return !String(p.display_name||'').trim();};
 const emptyAddPanelConfig=()=>({mode:'normal' as 'normal'|'superset',supersetGroupId:null as string|null,setCount:3,targetReps:'8-12',targetWeight:''});
 const emptyAddPanelCustom=()=>({name:'',category:'strength',muscle_group:'',equipment:'',movement_pattern:''});
 const resolveCatalogMovementPattern=(raw?:string):{value:string|null;error?:string}=>{const trimmed=String(raw||'').trim();if(!trimmed)return{value:null};const normalized=normalizeMovementPattern(trimmed);if(!normalized)return{value:null,error:`Invalid movement pattern. Choose one of: ${MOVEMENT_PATTERNS.join(', ')}.`};return{value:normalized};};
@@ -240,7 +240,7 @@ export default function Page(){
  const [session,setSession]=useState<any>(null),[authReady,setAuthReady]=useState(false),[profileLoading,setProfileLoading]=useState(false);
  const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[confirmPassword,setConfirmPassword]=useState('');
  const [authMode,setAuthMode]=useState<'signin'|'signup'>('signin'),[rememberEmail,setRememberEmail]=useState(true);
- const [profile,setProfile]=useState<any>(null),[displayName,setDisplayName]=useState(''),[profileDraft,setProfileDraft]=useState<any>(emptyProfileDraft()),[profileSaving,setProfileSaving]=useState(false);
+ const [profile,setProfile]=useState<any>(null),[displayName,setDisplayName]=useState(''),[profileDraft,setProfileDraft]=useState<any>(emptyProfileDraft()),[profileSaving,setProfileSaving]=useState(false),[profileLoadError,setProfileLoadError]=useState('');
  const [appNav,setAppNav]=useState('Dashboard');
  const [pendingGroupMessage,setPendingGroupMessage]=useState<{teamId:string;conversationId:string}|null>(null);
  const [teams,setTeams]=useState<any[]>([]),[selectedTeamId,setSelectedTeamId]=useState<string|null>(null),[members,setMembers]=useState<any[]>([]),[mode,setMode]=useState<'personal'|'team'>('personal');
@@ -454,11 +454,12 @@ export default function Page(){
   setLogDate(todayYmd());
   setAppNav('Dashboard');
   if(!session?.user){
-   setProfile(null);setProfileLoading(false);setSelectedTeamId(null);setTeams([]);setMembers([]);setPrograms([]);setProgram(null);setMode('personal');setAssignedWorkouts([]);setActiveAssignedRecipient(null);setGroupProgramForAssign(null);setClassifications([]);setMemberClassificationIds({});setMemberRosterMeta({});setMemberPerformance(null);
+   setProfile(null);setProfileLoadError('');setProfileLoading(false);setSelectedTeamId(null);setTeams([]);setMembers([]);setPrograms([]);setProgram(null);setMode('personal');setAssignedWorkouts([]);setActiveAssignedRecipient(null);setGroupProgramForAssign(null);setClassifications([]);setMemberClassificationIds({});setMemberRosterMeta({});setMemberPerformance(null);
    return;
   }
   bindScreenSessionUser(session.user.id);
   setProfileLoading(true);
+  setProfileLoadError('');
   setSelectedTeamId(null);setTeams([]);setMembers([]);setMode('personal');
   boot().finally(()=>setProfileLoading(false));
  },[session?.user?.id]);
@@ -673,11 +674,37 @@ export default function Page(){
    alert(friendlyAuthError(e?.message||e?.toString?.()));
   }
  }
+ function applyProfileRow(data:any){
+  setProfile(data);
+  setDisplayName(data?.display_name||'Me');
+  setProfileDraft(emptyProfileDraft(data));
+  setProfileLoadError('');
+ }
+ async function repairProfileCompletedFlag(row:any){
+  if(!session?.user||!row||row.profile_completed===true||!profileHasDisplayName(row))return row;
+  const repaired={...row,profile_completed:true};
+  // Best-effort heal for accounts that finished onboarding before the flag stuck.
+  void supabase.from('st_profiles').update({profile_completed:true}).eq('user_id',session.user.id).then(({error})=>{
+   if(error)console.warn('Could not repair profile_completed:',error.message);
+  });
+  return repaired;
+ }
  async function loadProfile(){
   if(!session?.user)return;
-  const{data}=await supabase.from('st_profiles').select('*').eq('user_id',session.user.id).maybeSingle();
-  if(data){setProfile(data);setDisplayName(data.display_name||'Me');setProfileDraft(emptyProfileDraft(data));}
-  else{setProfile(null);setProfileDraft(emptyProfileDraft());}
+  const{data,error}=await supabase.from('st_profiles').select('*').eq('user_id',session.user.id).maybeSingle();
+  if(error){
+   // Do not wipe a previously loaded profile on a transient read failure — that re-opens onboarding.
+   console.warn('loadProfile failed:',error.message);
+   setProfileLoadError(error.message||'Could not load your profile.');
+   return;
+  }
+  if(data){
+   applyProfileRow(await repairProfileCompletedFlag(data));
+   return;
+  }
+  setProfile(null);
+  setProfileDraft(emptyProfileDraft());
+  setProfileLoadError('');
  }
  async function saveProfile(markComplete=true){
   if(!session?.user)return alert('Sign in first.');
@@ -685,7 +712,7 @@ export default function Page(){
   if(!name)return alert('Enter your name.');
   if(markComplete&&(!profileDraft.height_inches||!profileDraft.weight_lbs))return alert('Enter height and weight.');
   setProfileSaving(true);
-  const{error}=await supabase.from('st_profiles').upsert({
+  const payload={
    user_id:session.user.id,
    display_name:name,
    height_inches:profileDraft.height_inches?Number(profileDraft.height_inches):null,
@@ -698,9 +725,16 @@ export default function Page(){
    available_equipment:normalizeEquipmentList(profileDraft.available_equipment),
    ui_theme:DEFAULT_THEME_ID,
    profile_completed:markComplete,
-  });
+  };
+  const{data,error}=await supabase.from('st_profiles').upsert(payload,{onConflict:'user_id'}).select('*').maybeSingle();
   setProfileSaving(false);
   if(error)return alert(error.message);
+  if(data){
+   applyProfileRow(data);
+   return;
+  }
+  // Upsert reported success but returned no row (RLS/select quirk). Apply locally so onboarding cannot bounce.
+  applyProfileRow(payload);
   await loadProfile();
  }
  async function createProfile(){await saveProfile(true);}
@@ -708,6 +742,7 @@ export default function Page(){
   try{
    clearScreenSession();
    setProfileLoading(false);
+   setProfileLoadError('');
    setProfile(null);
    setPrograms([]);
    setProgram(null);
@@ -4315,6 +4350,7 @@ function resolveExerciseTarget(targetWorkout:any,sourceExercise:any,currentWorko
 
  if(!authReady||(session&&profileLoading))return <div className="auth-shell"><div className="login"><div className="panel auth-loading"><div className="brand">Build<span>IQ</span> Health</div><p className="muted">Loading your account...</p></div></div></div>;
  if(!session)return <div className="auth-shell"><header className="header"><div><div className="brand">Build<span>IQ</span> Health</div><div className="muted">Training · nutrition · progress</div></div></header><div className="login"><div className="panel auth-panel"><div className="tabs auth-tabs"><button className={authMode==='signin'?'active':''} onClick={()=>setAuthMode('signin')}>Sign In</button><button className={authMode==='signup'?'active':''} onClick={()=>setAuthMode('signup')}>Create Account</button></div>{authMode==='signin'?<form onSubmit={e=>{e.preventDefault();signIn();}}><label htmlFor="signin-email">Email</label><input id="signin-email" name="email" type="email" autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)}/><label htmlFor="signin-password">Password</label><input id="signin-password" name="password" type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)}/><label className="remember-row"><input type="checkbox" checked={rememberEmail} onChange={e=>setRememberEmail(e.target.checked)}/> Remember email on this device</label><button className="btn full" style={{marginTop:10}} type="submit">Sign In</button><p className="muted">Use your browser&apos;s password manager to save your password.</p></form>:<form onSubmit={e=>{e.preventDefault();signUp();}}><label htmlFor="signup-email">Email</label><input id="signup-email" name="email" type="email" autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)}/><label htmlFor="signup-password">Password</label><input id="signup-password" name="password" type="password" autoComplete="new-password" value={password} onChange={e=>setPassword(e.target.value)}/><label htmlFor="signup-confirm">Confirm password</label><input id="signup-confirm" name="confirm-password" type="password" autoComplete="new-password" value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)}/><h3 style={{marginTop:14}}>Your profile</h3>{profileFields()}<label className="remember-row"><input type="checkbox" checked={rememberEmail} onChange={e=>setRememberEmail(e.target.checked)}/> Remember email on this device</label><button className="btn green full" style={{marginTop:10}} type="submit" disabled={profileSaving}>{profileSaving?'Creating account...':'Create Account'}</button></form>}</div></div></div>;
+ if(profileLoadError&&!profile)return <div className="auth-shell"><header className="header"><div className="brand">Build<span>IQ</span> Health</div><button className="btn secondary" onClick={signOut}>Sign Out</button></header><div className="login"><div className="panel auth-panel"><h2>Could not load your profile</h2><p className="muted">Your account signed in, but BuildIQ Health could not read your saved profile. This is not a new-account setup screen.</p><p className="muted">{profileLoadError}</p><button className="btn green full" style={{marginTop:10}} onClick={()=>{setProfileLoading(true);setProfileLoadError('');boot().finally(()=>setProfileLoading(false));}} disabled={profileLoading}>{profileLoading?'Retrying...':'Retry loading profile'}</button></div></div></div>;
  if(profileNeedsSetup(profile))return <div className="auth-shell"><header className="header"><div className="brand">Build<span>IQ</span> Health</div><button className="btn secondary" onClick={signOut}>Sign Out</button></header><div className="login"><div className="panel auth-panel"><h2>Complete your profile</h2><p className="muted">A few details help BuildIQ Health personalize workouts and track progress.</p>{profileFields()}<button className="btn green full" style={{marginTop:10}} onClick={createProfile} disabled={profileSaving}>{profileSaving?'Saving...':'Continue to BuildIQ Health'}</button></div></div></div>;
 
  return <>

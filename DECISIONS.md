@@ -4,6 +4,32 @@ This file documents important product, technical, and business decisions.
 
 Each decision should explain what was decided, why it was decided, and what alternatives were considered.
 
+## Decision 176 - Profile onboarding gate trusts display name and never wipes on read failure
+
+Date: 2026-11-20
+Status: Accepted
+Category: Authentication / User Profile
+
+### Decision
+
+Keep `profile_completed` as the preferred onboarding flag, but treat a non-empty `st_profiles.display_name` as already onboarded even when the flag is false or null. On load, best-effort repair `profile_completed = true` for those rows. Profile read errors must not clear a loaded profile or open the empty setup form; show an explicit retry state instead. Profile saves upsert with `onConflict: 'user_id'`, return the row, and apply it locally before any reload.
+
+### Reason
+
+BIQ-0006 already backfilled completed accounts by display name. A later false `profile_completed` value, or a silent `loadProfile` failure after a successful save, was bouncing real users onto "Complete your profile" with blank fields even though they had finished setup. That is worse than showing a load error.
+
+### Alternatives Considered
+
+- Require `profile_completed === true` only — rejected; stranding named accounts
+- Auto-create a minimal profile on first login — rejected; skips intentional onboarding for true new accounts
+- Keep clearing profile to null on any read miss — rejected; that caused the bounce
+
+### Impact
+
+- Named returning users enter the app even if the boolean flag lagged
+- Failed profile reads show retry instead of fake onboarding
+- Migration `20261120_080_repair_profile_completed.sql` re-heals existing rows
+
 ## Decision 175 - Iso-Lateral Lat Pulldown logs weight per side
 
 Date: 2026-11-17
